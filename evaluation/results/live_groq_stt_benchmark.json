@@ -1,0 +1,84 @@
+{
+  "kind": "live_groq_stt_benchmark",
+  "timestamp_utc": "2026-10-01T07:02:50.793617+00:00",
+  "audio_filename": "retail_groq_stt_fleurs_vi_0000.wav",
+  "audio_bytes": 362924,
+  "audio_duration_seconds": 11.34,
+  "source": "Google FLEURS vi_vn_0000 via FluidInference/fleurs-full@f70cb0b (CC-BY 4.0)",
+  "language": "vi",
+  "primary_model": "whisper-large-v3-turbo",
+  "fallback_model": "whisper-large-v3",
+  "trial_count": 3,
+  "reference": "văn hóa và bộ lạc cổ xưa đã bắt đầu giữ những con vật này để dễ lấy sữa tóc thịt và da",
+  "note": "Live API client latency; WER/CER use normalized text and one labeled sample.",
+  "complete": true,
+  "results": [
+    {
+      "trial": 1,
+      "status": "success",
+      "latency_ms": 3875,
+      "model": "whisper-large-v3-turbo",
+      "fallback_trace": [
+        {
+          "model": "whisper-large-v3-turbo",
+          "status": "success"
+        }
+      ],
+      "transcription": "Văn hóa và bộ lạc cổ xưa đã bắt đầu giữ những con vật này để dễ lấy sữa, tóc, thịt và da.",
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 23,
+      "character_errors": 0,
+      "reference_character_count": 64
+    },
+    {
+      "trial": 2,
+      "status": "success",
+      "latency_ms": 4645,
+      "model": "whisper-large-v3-turbo",
+      "fallback_trace": [
+        {
+          "model": "whisper-large-v3-turbo",
+          "status": "success"
+        }
+      ],
+      "transcription": "Văn hóa và bộ lạc cổ xưa đã bắt đầu giữ những con vật này để dễ lấy sữa, tóc, thịt và da.",
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 23,
+      "character_errors": 0,
+      "reference_character_count": 64
+    },
+    {
+      "trial": 3,
+      "status": "success",
+      "latency_ms": 3657,
+      "model": "whisper-large-v3-turbo",
+      "fallback_trace": [
+        {
+          "model": "whisper-large-v3-turbo",
+          "status": "success"
+        }
+      ],
+      "transcription": "Văn hóa và bộ lạc cổ xưa đã bắt đầu giữ những con vật này để dễ lấy sữa, tóc, thịt và da.",
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 23,
+      "character_errors": 0,
+      "reference_character_count": 64
+    }
+  ],
+  "summary": {
+    "success_count": 3,
+    "median_latency_ms": 3875,
+    "p95_latency_ms": 4645,
+    "mean_wer": 0.0,
+    "mean_cer": 0.0,
+    "models_used": [
+      "whisper-large-v3-turbo"
+    ]
+  }
+}
