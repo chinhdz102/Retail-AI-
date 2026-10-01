@@ -21,6 +21,12 @@ FactField = Literal["price_vnd", "stock", "shelf", "promotion", "expiry_at", "in
 ToolStatus = Literal[
     "SUCCESS", "NOT_FOUND", "INVALID_ARGUMENT", "DENIED", "TEMPORARY_FAILURE"
 ]
+ResponseMode = Literal[
+    "DETERMINISTIC_FACT",
+    "DETERMINISTIC_ERROR",
+    "CANDIDATE_LIST",
+    "NEEDS_LLM_COMPOSITION",
+]
 
 CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
@@ -29,9 +35,10 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "name": "search_products",
             "description": (
                 "Resolve product names and retrieve candidates that satisfy hard filters. "
-                "This is candidate retrieval, not authoritative fact lookup. Set in_stock "
-                "only when the customer asks for currently sellable recommendations; omit it "
-                "to resolve a known product even if it may be expired. Use "
+                "This is candidate retrieval, not authoritative fact lookup. For a "
+                "recommendation, the backend enforces sellable stock regardless of this "
+                "argument. Omit in_stock to resolve a known unavailable product when the "
+                "customer explicitly asks about it. Use "
                 "get_product_snapshot for facts, and specify the exact requested fields."
             ),
             "parameters": {
@@ -138,6 +145,8 @@ class ToolObservation:
     requested_fields: tuple[str, ...] = ()
     provenance_id: str = field(default_factory=lambda: uuid4().hex)
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    response_mode: ResponseMode = "NEEDS_LLM_COMPOSITION"
+    terminal: bool = False
 
     def to_envelope(self) -> dict[str, Any]:
         return {
@@ -146,6 +155,8 @@ class ToolObservation:
             "source": self.source,
             "timestamp": self.timestamp,
             "provenance_id": self.provenance_id,
+            "response_mode": self.response_mode,
+            "terminal": self.terminal,
             "data": self.content,
         }
 
@@ -163,16 +174,25 @@ def _tool_error(
     *,
     source: str = "tool_gateway",
     extra: dict[str, Any] | None = None,
+    response_mode: ResponseMode = "NEEDS_LLM_COMPOSITION",
+    terminal: bool = False,
 ) -> ToolObservation:
     return ToolObservation(
         content={"error": error, **(extra or {})},
         tool_name=name,
         status=status,
         source=source,
+        response_mode=response_mode,
+        terminal=terminal,
     )
 
 
-def execute_catalog_tool(name: str, raw_arguments: str) -> ToolObservation:
+def execute_catalog_tool(
+    name: str,
+    raw_arguments: str,
+    *,
+    require_sellable: bool = False,
+) -> ToolObservation:
     if name not in {"search_products", "get_product_snapshot"}:
         return _tool_error(
             name,
@@ -188,13 +208,14 @@ def execute_catalog_tool(name: str, raw_arguments: str) -> ToolObservation:
 
         if name == "search_products":
             parsed = SearchProductsArguments.model_validate(arguments)
+            sellable_only = parsed.in_stock or require_sellable
             products = tuple(
                 search_products(
                     query=parsed.query,
                     category=parsed.category,
                     max_price_vnd=parsed.max_price_vnd,
                     spicy=parsed.spicy,
-                    in_stock=parsed.in_stock,
+                    in_stock=sellable_only,
                     limit=parsed.limit,
                 )
             )
@@ -202,8 +223,10 @@ def execute_catalog_tool(name: str, raw_arguments: str) -> ToolObservation:
                 key
                 for key in ("category", "max_price_vnd", "spicy", "in_stock")
                 if key in parsed.model_fields_set
-                and (key != "in_stock" or parsed.in_stock)
+                and (key != "in_stock" or sellable_only)
             ]
+            if require_sellable and "in_stock" not in matched_constraints:
+                matched_constraints.append("in_stock")
             return ToolObservation(
                 content={
                     "items": [
@@ -216,10 +239,16 @@ def execute_catalog_tool(name: str, raw_arguments: str) -> ToolObservation:
                         for product in products
                     ],
                     "count": len(products),
+                    "recommendation_mode": require_sellable,
+                    "enforced_constraints": (
+                        ["in_stock"] if require_sellable and not parsed.in_stock else []
+                    ),
                     "data_timestamp": DATA_TIMESTAMP.isoformat(),
                 },
                 products=products,
                 tool_name=name,
+                response_mode="CANDIDATE_LIST" if products else "DETERMINISTIC_ERROR",
+                terminal=not products,
             )
 
         parsed = GetProductSnapshotArguments.model_validate(arguments)
@@ -238,6 +267,8 @@ def execute_catalog_tool(name: str, raw_arguments: str) -> ToolObservation:
             "Product not found in the catalog.",
             source="demo_product_catalog",
             extra={"product_id": parsed.product_id},
+            response_mode="DETERMINISTIC_ERROR",
+            terminal=True,
         )
 
     data: dict[str, Any] = {"product_id": product.product_id, "name": product.name}
@@ -261,4 +292,6 @@ def execute_catalog_tool(name: str, raw_arguments: str) -> ToolObservation:
         products=(product,),
         tool_name=name,
         requested_fields=tuple(parsed.fields),
+        response_mode="DETERMINISTIC_FACT",
+        terminal=True,
     )

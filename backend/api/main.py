@@ -238,6 +238,26 @@ def _localized_not_found(language: LanguageCode) -> str:
     }[language]
 
 
+def _localized_no_sellable_match(language: LanguageCode) -> str:
+    return {
+        "en": "I couldn't find a currently sellable product matching that request.",
+        "zh": "我没有找到符合该要求且目前可售的商品。",
+        "vi": "Mình chưa tìm thấy sản phẩm còn bán phù hợp với yêu cầu này.",
+    }[language]
+
+
+def _localized_recommendation_candidates(
+    observation: ToolObservation,
+    language: LanguageCode,
+) -> str:
+    names = [product.name for product in observation.products[:3]]
+    if language == "en":
+        return "Suggestions: " + ", ".join(names) + "."
+    if language == "zh":
+        return "推荐：" + "、".join(names) + "。"
+    return "Gợi ý: " + ", ".join(names) + "."
+
+
 def _localized_tool_failure(language: LanguageCode) -> str:
     return {
         "en": "I couldn't verify the catalog right now. Please try again or ask a staff member.",
@@ -296,8 +316,12 @@ def _grounded_reply(agent_result: RetailAgentResult, language: LanguageCode) -> 
         None,
     )
     if last_search and last_search.status == "SUCCESS" and last_search.content.get("count") == 0:
+        if last_search.content.get("recommendation_mode"):
+            return _localized_no_sellable_match(language)
         return _localized_not_found(language)
     if last_search and last_search.status == "SUCCESS" and last_search.products:
+        if last_search.content.get("recommendation_mode"):
+            return _localized_recommendation_candidates(last_search, language)
         return _localized_candidates(last_search, language)
     return agent_result.text
 
@@ -315,6 +339,8 @@ catalog phù hợp nếu công cụ được cung cấp.
 `search_products` chỉ tìm ứng viên; gọi `get_product_snapshot` để lấy dữ kiện
 và đặt `fields` đúng theo thông tin khách hỏi. Trường `stock` là số lượng còn
 có thể bán sau khi loại hàng hết hạn.
+Khi khách cần gợi ý hoặc đề xuất sản phẩm, backend tự lọc hàng còn bán được.
+Nếu khách hỏi rõ về hàng hết hạn hoặc hết hàng, hãy tìm đúng sản phẩm để kiểm tra.
 Chỉ dùng dữ liệu trong retail_context hoặc kết quả công cụ; nếu không có bằng
 chứng, nói rõ là chưa xác minh được.
 Không suy luận thuộc tính như ít đường, dị ứng hoặc dinh dưỡng nếu dữ liệu trả về không xác nhận.

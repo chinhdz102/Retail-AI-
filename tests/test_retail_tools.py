@@ -26,6 +26,8 @@ def test_snapshot_requires_fields_and_returns_provenance_envelope() -> None:
     assert envelope["status"] == "SUCCESS"
     assert envelope["source"] == "demo_product_catalog"
     assert envelope["provenance_id"]
+    assert envelope["response_mode"] == "DETERMINISTIC_FACT"
+    assert envelope["terminal"] is True
     assert envelope["data"] == verified.content
 
 
@@ -45,6 +47,32 @@ def test_search_tool_returns_candidate_metadata_without_product_facts() -> None:
     }]
     assert "price_vnd" not in observation.content["items"][0]
     assert "stock" not in observation.content["items"][0]
+    assert observation.response_mode == "CANDIDATE_LIST"
+    assert observation.terminal is False
+
+
+def test_empty_search_result_is_terminal_deterministic_error() -> None:
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": "not-a-real-retail-product-9382"}),
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.content["count"] == 0
+    assert observation.response_mode == "DETERMINISTIC_ERROR"
+    assert observation.terminal is True
+
+
+def test_recommendation_search_enforces_sellable_stock() -> None:
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": "MILK01", "in_stock": False}),
+        require_sellable=True,
+    )
+
+    assert observation.content["count"] == 0
+    assert observation.content["enforced_constraints"] == ["in_stock"]
+    assert observation.terminal is True
 
 
 def test_expired_product_snapshot_reports_zero_sellable_stock() -> None:

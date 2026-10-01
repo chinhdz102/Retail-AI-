@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from backend.config import Settings
-from backend.services.groq import GroqConfigurationError, GroqService
+from backend.services.groq import GroqConfigurationError, GroqProviderError, GroqService
 
 
 class FakeChatCompletions:
@@ -167,3 +167,87 @@ async def test_missing_key_fails_without_exposing_secret() -> None:
 
     assert "test-key" not in str(error.value)
     assert "gsk_" not in str(error.value)
+
+
+class RawChatResponse:
+    headers = {
+        "x-ratelimit-remaining-requests": "23",
+        "x-ratelimit-remaining-tokens": "7900",
+    }
+
+    async def parse(self):
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="ok"))],
+            usage=SimpleNamespace(prompt_tokens=11, completion_tokens=5, total_tokens=16),
+        )
+
+
+class RawChatCompletions:
+    @property
+    def with_raw_response(self):
+        return self
+
+    async def create(self, **kwargs):
+        return RawChatResponse()
+
+
+class RateLimitFailure(RuntimeError):
+    def __init__(self) -> None:
+        self.response = SimpleNamespace(headers={"retry-after": "2"})
+
+
+class RateLimitedRawChatCompletions:
+    @property
+    def with_raw_response(self):
+        return self
+
+    async def create(self, **kwargs):
+        raise RateLimitFailure()
+
+
+@pytest.mark.asyncio
+async def test_chat_records_rate_limit_headers_and_token_usage() -> None:
+    client = FakeClient()
+    client.chat = SimpleNamespace(completions=RawChatCompletions())
+    service = GroqService(
+        settings=Settings(groq_api_key="test-key", groq_fallback_model=""),
+        client=client,
+    )
+
+    result = await service.chat([{"role": "user", "content": "hello"}])
+
+    assert result.usage == {
+        "prompt_tokens": 11,
+        "completion_tokens": 5,
+        "total_tokens": 16,
+    }
+    assert result.fallback_trace[0]["rate_limit_headers"] == {
+        "x-ratelimit-remaining-requests": "23",
+        "x-ratelimit-remaining-tokens": "7900",
+    }
+
+
+@pytest.mark.asyncio
+async def test_chat_provider_error_preserves_rate_limit_headers() -> None:
+    client = FakeClient()
+    client.chat = SimpleNamespace(completions=RateLimitedRawChatCompletions())
+    service = GroqService(
+        settings=Settings(
+            groq_api_key="test-key",
+            groq_fallback_model="",
+            groq_fallback_model_2="",
+        ),
+        client=client,
+    )
+
+    with pytest.raises(GroqProviderError) as error:
+        await service.chat([{"role": "user", "content": "hello"}])
+
+    assert error.value.fallback_trace == [
+        {
+            "model": "qwen/qwen3.8-27b",
+            "status": "error",
+            "error_type": "RateLimitFailure",
+            "rate_limit_headers": {"retry-after": "2"},
+        }
+    ]
