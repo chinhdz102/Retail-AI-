@@ -36,4 +36,26 @@ Chạy không có `--resume` sẽ tạo bộ kết quả mới. Latency live g�
 trong tiến trình; chưa gồm ghi âm, STT, TTS, trình duyệt hoặc thời gian đến token
 đầu tiên.
 
+`live_groq_stt_benchmark.py` đo Groq STT trên audio có transcript tham chiếu.
+Nó nhận file audio bên ngoài repo để không lưu audio vào codebase, chạy 3 lượt
+mặc định, ghi model thực sự trả lời, fallback trace, latency, WER và CER nếu có
+transcript chuẩn. Có thể truyền transcript dài bằng `--reference-file`; timestamp
+dạng `[00:00:00]` sẽ được bỏ khi tính lỗi. Dùng `--omit-transcription` khi chỉ
+cần đo tốc độ mà không lưu nội dung nhận dạng vào báo cáo. Ví dụ với một clip
+tiếng Việt:
+
+```powershell
+.\.venv\Scripts\python.exe -m evaluation.live_groq_stt_benchmark `
+  --audio "$env:TEMP\retail_groq_stt_fleurs_vi_0000.wav" `
+  --reference "văn hóa và bộ lạc cổ xưa đã bắt đầu giữ những con vật này để dễ lấy sữa tóc thịt và da" `
+  --source "Google FLEURS vi_vn_0000 (CC-BY 4.0)" `
+  --trials 3
+```
+
+Kết quả mẫu ngày 01/10/2026 ở `evaluation/results/live_groq_stt_benchmark.json`;
+báo cáo tổng hợp nằm trong `evaluation/results/evaluation_report.md`. WER/CER
+được chuẩn hóa chữ hoa/thường, dấu câu và Unicode; WER tách từ theo khoảng
+trắng. Một audio lặp nhiều lượt chỉ hữu ích để đo độ ổn định latency, chưa phải
+đánh giá độ chính xác đại diện.
+
 Báo cáo sửa P0 nằm tại `evaluation/results/evaluation_report.md`.
