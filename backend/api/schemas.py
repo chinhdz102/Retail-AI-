@@ -34,6 +34,7 @@ class AgentRespondResponse(BaseModel):
     text: str
     model: str
     grounded_product_ids: list[str] = Field(default_factory=list)
+    tools_used: list[str] = Field(default_factory=list)
     state: SessionState
 
 
