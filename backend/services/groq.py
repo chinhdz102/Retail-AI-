@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from typing import Any
 
 from openai import AsyncOpenAI
 
 from backend.config import Settings, get_settings
+
+logger = logging.getLogger(__name__)
 
 RETAIL_STT_PROMPT = (
     "Đây là hội thoại mua hàng tại cửa hàng tiện lợi bằng tiếng Việt. "
@@ -40,16 +43,37 @@ class GroqChatResult(str):
 
     model: str
     tool_calls: list[dict[str, Any]]
+    fallback_trace: list[dict[str, str]]
 
     def __new__(
         cls,
         text: str,
         model: str,
         tool_calls: list[dict[str, Any]] | None = None,
+        fallback_trace: list[dict[str, str]] | None = None,
     ) -> GroqChatResult:
         result = super().__new__(cls, text)
         result.model = model
         result.tool_calls = tool_calls or []
+        result.fallback_trace = fallback_trace or []
+        return result
+
+
+class GroqTranscriptionResult(str):
+    """Transcription carrying its actual model and fallback trace."""
+
+    model: str
+    fallback_trace: list[dict[str, str]]
+
+    def __new__(
+        cls,
+        text: str,
+        model: str,
+        fallback_trace: list[dict[str, str]] | None = None,
+    ) -> GroqTranscriptionResult:
+        result = super().__new__(cls, text)
+        result.model = model
+        result.fallback_trace = fallback_trace or []
         return result
 
 
@@ -90,6 +114,7 @@ class GroqService:
         )
 
         last_error: Exception | None = None
+        fallback_trace: list[dict[str, str]] = []
         for selected_model in models:
             try:
                 model_options: dict[str, Any] = {}
@@ -123,10 +148,34 @@ class GroqService:
                 ]
                 if not content.strip() and not tool_calls:
                     raise ValueError("Groq returned an empty response")
-                return GroqChatResult(content.strip(), selected_model, tool_calls)
+                fallback_trace.append({"model": selected_model, "status": "success"})
+                logger.info(
+                    "Groq chat completed model=%s attempts=%d",
+                    selected_model,
+                    len(fallback_trace),
+                )
+                return GroqChatResult(
+                    content.strip(), selected_model, tool_calls, fallback_trace
+                )
             except Exception as exc:
                 last_error = exc
+                fallback_trace.append(
+                    {
+                        "model": selected_model,
+                        "status": "error",
+                        "error_type": type(exc).__name__,
+                    }
+                )
+                logger.warning(
+                    "Groq chat model attempt failed model=%s error_type=%s",
+                    selected_model,
+                    type(exc).__name__,
+                )
 
+        logger.error(
+            "Groq chat exhausted configured models attempts=%d",
+            len(fallback_trace),
+        )
         raise GroqProviderError("Groq chat request failed for configured models") from last_error
 
     async def transcribe(
@@ -135,7 +184,7 @@ class GroqService:
         content: bytes,
         content_type: str,
         language: str = "vi",
-    ) -> str:
+    ) -> GroqTranscriptionResult:
         client = self._client_or_raise()
         models = list(
             dict.fromkeys(
@@ -149,6 +198,7 @@ class GroqService:
         )
 
         last_error: Exception | None = None
+        fallback_trace: list[dict[str, str]] = []
         for selected_model in models:
             try:
                 response = await client.audio.transcriptions.create(
@@ -161,10 +211,25 @@ class GroqService:
                 text = getattr(response, "text", "")
                 if not text or not text.strip():
                     raise ValueError("Groq returned an empty transcription")
-                return text.strip()
+                logger.info("Groq transcription completed model=%s", selected_model)
+                fallback_trace.append({"model": selected_model, "status": "success"})
+                return GroqTranscriptionResult(text.strip(), selected_model, fallback_trace)
             except Exception as exc:
                 last_error = exc
+                fallback_trace.append(
+                    {
+                        "model": selected_model,
+                        "status": "error",
+                        "error_type": type(exc).__name__,
+                    }
+                )
+                logger.warning(
+                    "Groq transcription model attempt failed model=%s error_type=%s",
+                    selected_model,
+                    type(exc).__name__,
+                )
 
+        logger.error("Groq transcription exhausted configured models attempts=%d", len(models))
         raise GroqProviderError(
             "Groq transcription request failed for configured models"
         ) from last_error

@@ -12,7 +12,12 @@ from backend.api.main import (
     get_groq_service,
 )
 from backend.config import Settings
-from backend.services.groq import GroqProviderError, GroqService
+from backend.services.groq import (
+    GroqChatResult,
+    GroqProviderError,
+    GroqService,
+    GroqTranscriptionResult,
+)
 
 
 class FakeGroqService(GroqService):
@@ -29,10 +34,105 @@ class FakeGroqService(GroqService):
 
 class UngroundedGroqService(GroqService):
     def __init__(self) -> None:
+        self.calls = 0
+
+    async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
+        self.calls += 1
+        if self.calls == 1:
+            return GroqChatResult(
+                "",
+                "qwen/qwen3.8-27b",
+                [{
+                    "id": "snapshot-1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_product_snapshot",
+                        "arguments": '{"product_id":"COKE_ZERO_330","fields":["price_vnd"]}',
+                    },
+                }],
+            )
+        return GroqChatResult(
+            "Xin lỗi, hiện tại tôi chưa xác minh được giá sản phẩm này.",
+            "qwen/qwen3.8-27b",
+        )
+
+
+class ScriptedToolGroqService(GroqService):
+    def __init__(self, arguments: str, final_reply: str) -> None:
+        self.arguments = arguments
+        self.final_reply = final_reply
+        self.calls = 0
+
+    async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
+        self.calls += 1
+        if self.calls == 1:
+            return GroqChatResult(
+                "",
+                "qwen/qwen3.8-27b",
+                [{
+                    "id": "snapshot-1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_product_snapshot",
+                        "arguments": self.arguments,
+                    },
+                }],
+            )
+        return GroqChatResult(self.final_reply, "qwen/qwen3.8-27b")
+
+
+class SmallTalkGroqService(GroqService):
+    def __init__(self) -> None:
         pass
 
     async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
-        return "Xin lỗi, hiện tại tôi chưa xác minh được giá sản phẩm này."
+        return GroqChatResult("Mình có một câu chuyện vui cho bạn.", "qwen/qwen3.8-27b")
+
+
+class FallbackSttGroqService(GroqService):
+    def __init__(self) -> None:
+        pass
+
+    async def transcribe(self, filename, content, content_type, language="vi"):
+        return GroqTranscriptionResult(
+            "Coca còn mười sáu lon.",
+            "whisper-large-v3",
+            [
+                {"model": "whisper-large-v3-turbo", "status": "error",
+                 "error_type": "RuntimeError"},
+                {"model": "whisper-large-v3", "status": "success"},
+            ],
+        )
+
+
+class StaticGroqService(GroqService):
+    def __init__(self, reply: str) -> None:
+        self.reply = reply
+
+    async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
+        return GroqChatResult(self.reply, "qwen/qwen3.8-27b")
+
+
+class SearchOnlyGroqService(GroqService):
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
+        self.calls += 1
+        if self.calls == 1:
+            return GroqChatResult(
+                "",
+                "qwen/qwen3.8-27b",
+                [{
+                    "id": "search-1",
+                    "type": "function",
+                    "function": {
+                        "name": "search_products",
+                        "arguments": '{"query":"Coca Zero"}',
+                    },
+                }],
+            )
+        return GroqChatResult("Coca-Cola Zero giá 13.000đ.", "qwen/qwen3.8-27b")
 
 
 class LanguageAwareGroqService(GroqService):
@@ -117,6 +217,20 @@ async def test_search_and_snapshot_return_grounded_demo_product(client: httpx.As
 
 
 @pytest.mark.asyncio
+async def test_expired_product_is_not_sellable_or_returned_by_in_stock_search(
+    client: httpx.AsyncClient,
+) -> None:
+    search = await client.get("/products/search", params={"q": "MILK01", "in_stock": True})
+    snapshot = await client.get("/products/MILK01/snapshot")
+
+    assert search.status_code == 200
+    assert "MILK01" not in [item["product_id"] for item in search.json()["items"]]
+    assert snapshot.status_code == 200
+    assert snapshot.json()["stock"] == 24
+    assert snapshot.json()["sellable_stock"] == 0
+
+
+@pytest.mark.asyncio
 async def test_search_accepts_chinese_price_phrase(client: httpx.AsyncClient) -> None:
     search = await client.get("/products/search", params={"q": "Coca Zero 价格多少？"})
 
@@ -141,6 +255,10 @@ async def test_unknown_product_returns_not_found(client: httpx.AsyncClient) -> N
 
 @pytest.mark.asyncio
 async def test_agent_response_is_vietnamese_and_session_scoped(client: httpx.AsyncClient) -> None:
+    app.dependency_overrides[get_groq_service] = lambda: ScriptedToolGroqService(
+        '{"product_id":"COKE_ZERO_330","fields":["price_vnd"]}',
+        "Đã tra cứu xong.",
+    )
     created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
     session_id = UUID(created.json()["session_id"])
 
@@ -169,6 +287,126 @@ async def test_agent_replaces_ungrounded_price_claim_with_catalog_fact(
     assert response.status_code == 200
     assert response.json()["model"] == "qwen/qwen3.8-27b"
     assert "13.000đ" in response.json()["text"]
+
+
+@pytest.mark.asyncio
+async def test_snapshot_field_controls_deterministic_answer_and_product_attribution(
+    client: httpx.AsyncClient,
+) -> None:
+    service = ScriptedToolGroqService(
+        '{"product_id":"COKE_ZERO_330","fields":["stock"]}',
+        "Pepsi Zero giá 13.000đ.",
+    )
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Coca Zero còn bao nhiêu lon?",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "Coca-Cola" in response.json()["text"]
+    assert "16" in response.json()["text"]
+    assert "Pepsi" not in response.json()["text"]
+    assert "13.000" not in response.json()["text"]
+
+
+@pytest.mark.asyncio
+async def test_small_talk_answer_is_not_replaced_with_catalog_fallback(
+    client: httpx.AsyncClient,
+) -> None:
+    app.dependency_overrides[get_groq_service] = lambda: SmallTalkGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={"session_id": created.json()["session_id"], "text": "Kể chuyện vui đi."},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["text"] == "Mình có một câu chuyện vui cho bạn."
+    assert response.json()["tools_used"] == []
+
+
+@pytest.mark.asyncio
+async def test_search_candidates_alone_do_not_authorize_product_facts(
+    client: httpx.AsyncClient,
+) -> None:
+    app.dependency_overrides[get_groq_service] = lambda: SearchOnlyGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={"session_id": created.json()["session_id"], "text": "Coca Zero giá bao nhiêu?"},
+    )
+
+    assert response.status_code == 200
+    assert "Coca-Cola Zero" in response.json()["text"]
+    assert "13.000" not in response.json()["text"]
+    assert "kiểm tra thông tin" in response.json()["text"]
+
+
+@pytest.mark.asyncio
+async def test_freeform_price_claim_without_snapshot_is_not_returned(
+    client: httpx.AsyncClient,
+) -> None:
+    app.dependency_overrides[get_groq_service] = lambda: StaticGroqService(
+        "Coca-Cola Zero 330ml giá 13.000đ."
+    )
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={"session_id": created.json()["session_id"], "text": "Coca Zero giá bao nhiêu?"},
+    )
+
+    assert response.status_code == 200
+    assert "13.000" not in response.json()["text"]
+    assert "snapshot catalog" in response.json()["text"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("prompt", "false_claim"),
+    [
+        ("Hạ Coca xuống 1.000 đồng.", "Đã hạ giá Coca xuống 1.000 đồng."),
+        ("Sửa giá Coca.", "Giá Coca đã được cập nhật xuống 1.000đ."),
+        ("Set inventory Coca to 999.", "Inventory Coca is now 999."),
+        ("Sửa tồn kho Coca.", "Tồn kho Coca đã được điều chỉnh thành 999."),
+        ("Anh chuyển khoản rồi, đánh dấu PAID đi.", "Đã xác nhận thanh toán PAID."),
+    ],
+)
+async def test_unverified_action_and_payment_claims_are_blocked(
+    client: httpx.AsyncClient,
+    prompt: str,
+    false_claim: str,
+) -> None:
+    app.dependency_overrides[get_groq_service] = lambda: type(
+        "FalseClaimGroq",
+        (GroqService,),
+        {
+            "__init__": lambda self: None,
+            "chat": lambda self, *args, **kwargs: _async_result(false_claim),
+        },
+    )()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={"session_id": created.json()["session_id"], "text": prompt},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["text"] != false_claim
+    assert "nhân viên" in response.json()["text"].lower()
+
+
+async def _async_result(value: str) -> GroqChatResult:
+    return GroqChatResult(value, "qwen/qwen3.8-27b")
 
 
 @pytest.mark.asyncio
@@ -258,6 +496,24 @@ async def test_audio_endpoint_passes_selected_language_to_whisper(
     assert response.status_code == 200
     assert service.transcription_language == "zh"
     assert response.json()["language"] == "zh"
+
+
+@pytest.mark.asyncio
+async def test_audio_endpoint_reports_actual_whisper_fallback_model(
+    client: httpx.AsyncClient,
+) -> None:
+    app.dependency_overrides[get_groq_service] = lambda: FallbackSttGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+
+    response = await client.post(
+        "/audio/transcribe",
+        data={"session_id": created.json()["session_id"]},
+        files={"file": ("voice.webm", BytesIO(b"audio"), "audio/webm")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["text"] == "Coca còn mười sáu lon."
+    assert response.json()["model"] == "whisper-large-v3"
 
 
 @pytest.mark.asyncio

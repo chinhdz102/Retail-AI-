@@ -113,7 +113,8 @@ def tool_observations(service: ScriptedGroq) -> list[dict[str, Any]]:
     for call in service.calls:
         for message in call["messages"]:
             if message["role"] == "tool":
-                observations.append(json.loads(message["content"]))
+                result = json.loads(message["content"])
+                observations.append(result.get("data", result))
     return observations
 
 
@@ -123,13 +124,24 @@ async def benchmark() -> None:
         # A1, A2, A3: the model's tool choice is pre-scripted; only backend
         # execution, evidence plumbing, and reply grounding are evaluated.
         facts = [
-            ("A1", "Coca Zero bao nhiêu tiền?", "Coca-Cola Zero 330ml giá 13.000đ.", "13000"),
-            ("A2", "Coca Zero còn bao nhiêu lon?", "Coca-Cola Zero 330ml còn 16 lon.", "16"),
-            ("A3", "Coca Zero ở kệ nào?", "Coca-Cola Zero 330ml ở kệ A2-L2.", "A2-L2"),
+            (
+                "A1", "Coca Zero bao nhiêu tiền?", "price_vnd",
+                "Coca-Cola Zero 330ml giá 13.000đ.", "13000",
+            ),
+            (
+                "A2", "Coca Zero còn bao nhiêu lon?", "stock",
+                "Coca-Cola Zero 330ml còn 16 lon.", "16",
+            ),
+            (
+                "A3", "Coca Zero ở kệ nào?", "shelf",
+                "Coca-Cola Zero 330ml ở kệ A2-L2.", "A2-L2",
+            ),
         ]
-        for case_id, question, scripted_reply, expected_fact in facts:
+        for case_id, question, fact_field, scripted_reply, expected_fact in facts:
             service = ScriptedGroq(
-                answer("", tool("get_product_snapshot", {"product_id": "COKE_ZERO_330"})),
+                answer("", tool("get_product_snapshot", {
+                    "product_id": "COKE_ZERO_330", "fields": [fact_field],
+                })),
                 answer(scripted_reply),
             )
             response, _ = await respond(client, service, question)
@@ -151,7 +163,9 @@ async def benchmark() -> None:
             )
 
         service = ScriptedGroq(
-            answer("", tool("get_product_snapshot", {"product_id": "COKE_ZERO_330"})),
+            answer("", tool("get_product_snapshot", {
+                "product_id": "COKE_ZERO_330", "fields": ["price_vnd"],
+            })),
             answer("Pepsi Zero giá 13.000đ."),
         )
         response, _ = await respond(client, service, "Coca Zero giá bao nhiêu?")
@@ -188,7 +202,9 @@ async def benchmark() -> None:
                 "category": "snack", "spicy": False,
                 "max_price_vnd": 29999, "in_stock": True,
             }, "search")),
-            answer("", tool("get_product_snapshot", {"product_id": "SNACK01"}, "snapshot")),
+            answer("", tool("get_product_snapshot", {
+                "product_id": "SNACK01", "fields": ["stock", "price_vnd"],
+            }, "snapshot")),
             answer("Snack khoai tây vị tự nhiên còn 12 gói, giá 18.000đ."),
         )
         response, _ = await respond(client, service, "Snack không cay dưới 30k còn hàng?")
@@ -287,7 +303,8 @@ async def benchmark() -> None:
         record(
             "H1-filter", "H",
             bool(filtered.products) and all(
-                p.category == "snack" and not p.spicy and p.price_vnd <= 30000 and p.stock > 0
+                p.category == "snack" and not p.spicy and p.price_vnd <= 30000
+                and p.sellable_stock > 0
                 for p in filtered.products
             ),
             {"product_ids": [p.product_id for p in filtered.products]},
@@ -370,18 +387,21 @@ async def benchmark() -> None:
         )
 
         service = ScriptedGroq(answer("", tool("get_product_snapshot", {
-            "product_id": "COKE_ZERO_330",
+            "product_id": "COKE_ZERO_330", "fields": ["price_vnd"],
         })))
         with patch("backend.services.retail_agent.execute_catalog_tool", side_effect=TimeoutError):
             response, _ = await respond(client, service, "Coca Zero giá bao nhiêu?")
         record(
-            "J3-tool-timeout", "J", response.status_code in {502, 503}
+            "J3-tool-timeout", "J", response.status_code == 200
+            and "chưa tra cứu được" in response.json().get("text", "").lower()
             and "Internal Server Error" not in response.text,
             {"status_code": response.status_code, "body": response.text[:160]},
             "Tool timeout yields controlled abstention or provider error, not HTTP 500",
         )
 
-        calls = [tool("get_product_snapshot", {"product_id": "COKE_ZERO_330"}, f"limit-{n}")
+        calls = [tool("get_product_snapshot", {
+            "product_id": "COKE_ZERO_330", "fields": ["price_vnd"],
+        }, f"limit-{n}")
                  for n in range(6)]
         service = ScriptedGroq(answer("", *calls), answer("Không thể tra cứu thêm."))
         with patch("backend.services.retail_agent.execute_catalog_tool",
@@ -399,15 +419,24 @@ async def benchmark() -> None:
         )
 
     today = datetime.now(UTC).date()
-    expired_stocked = [
+    expired_sellable = [
         {"product_id": p.product_id, "expiry_at": p.expiry_at, "stock": p.stock}
         for p in DEMO_PRODUCTS
-        if p.stock > 0 and date.fromisoformat(p.expiry_at) < today
+        if p.sellable_stock > 0 and date.fromisoformat(p.expiry_at) < today
     ]
+    expired_snapshot = get_product_snapshot("MILK01")
+    expired_lookup = execute_catalog_tool("search_products", json.dumps({
+        "query": "MILK01", "in_stock": True,
+    }))
     record(
-        "catalog-expired-stock", "A/H", not expired_stocked,
-        {"today_utc": today.isoformat(), "expired_stocked_products": expired_stocked},
-        "No in-stock demo product has an expiry date in the past",
+        "catalog-expired-stock", "A/H",
+        not expired_sellable and expired_snapshot.sellable_stock == 0
+        and "MILK01" not in [product.product_id for product in expired_lookup.products],
+        {"today_utc": today.isoformat(), "expired_sellable_products": expired_sellable,
+         "MILK01_physical_stock": expired_snapshot.stock,
+         "MILK01_sellable_stock": expired_snapshot.sellable_stock,
+         "MILK01_in_stock_search": [p.product_id for p in expired_lookup.products]},
+        "Expired products have zero sellable stock and are excluded by in_stock filters",
         mode="local_catalog_data",
     )
 

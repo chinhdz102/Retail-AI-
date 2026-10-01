@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import unicodedata
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 DATA_TIMESTAMP = datetime(2026, 8, 31, tzinfo=UTC)
 
@@ -22,6 +22,17 @@ class ProductSnapshot(BaseModel):
     ingredients: str
     expiry_at: str
     data_timestamp: datetime = DATA_TIMESTAMP
+
+    @computed_field(return_type=int)
+    @property
+    def sellable_stock(self) -> int:
+        """Stock customers can buy, excluding products past their expiry date."""
+        try:
+            is_expired = date.fromisoformat(self.expiry_at) < datetime.now(UTC).date()
+        except ValueError:
+            # An invalid expiry must fail closed for saleability.
+            return 0
+        return 0 if is_expired else self.stock
 
 
 DEMO_PRODUCTS: tuple[ProductSnapshot, ...] = (
@@ -222,7 +233,7 @@ def search_products(
             continue
         if spicy is not None and product.spicy is not spicy:
             continue
-        if in_stock and product.stock <= 0:
+        if in_stock and product.sellable_stock <= 0:
             continue
         matches.append(product)
         if len(matches) >= limit:

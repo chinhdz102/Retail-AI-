@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 from typing import Any
+from uuid import uuid4
 
 from backend.products.catalog import ProductSnapshot
 from backend.services.groq import GroqProviderError, GroqService
@@ -15,6 +17,8 @@ from backend.shared.contracts import SessionState
 
 MAX_AGENT_TOOL_ROUNDS = 2
 MAX_AGENT_TOOL_CALLS = 5
+CATALOG_TOOL_TIMEOUT_SECONDS = 2.0
+TOOL_TIMEOUT_RETRIES = 1
 
 
 @dataclass(frozen=True)
@@ -23,22 +27,55 @@ class RetailAgentResult:
     model: str
     tools_used: tuple[str, ...]
     products: tuple[ProductSnapshot, ...]
+    observations: tuple[ToolObservation, ...] = ()
 
 
-def _execute_tool_call(
+async def _execute_tool_call(
     call: dict[str, Any],
     calls_executed: int,
 ) -> tuple[str, ToolObservation]:
     function = call.get("function") or {}
     name = str(function.get("name") or "")
     if calls_executed >= MAX_AGENT_TOOL_CALLS:
-        observation = ToolObservation({"error": "Tool-call limit reached for this turn."})
+        observation = ToolObservation(
+            content={"error": "Tool-call limit reached for this turn."},
+            tool_name=name,
+            status="DENIED",
+            source="policy_gateway",
+        )
         return name, observation
 
     raw_arguments = function.get("arguments", "{}")
     if not isinstance(raw_arguments, str):
         raw_arguments = json.dumps(raw_arguments, ensure_ascii=False)
-    observation = execute_catalog_tool(name, raw_arguments)
+
+    last_error: Exception | None = None
+    for attempt in range(TOOL_TIMEOUT_RETRIES + 1):
+        try:
+            observation = await asyncio.wait_for(
+                asyncio.to_thread(execute_catalog_tool, name, raw_arguments),
+                timeout=CATALOG_TOOL_TIMEOUT_SECONDS,
+            )
+            return name, observation
+        except TimeoutError as exc:
+            last_error = exc
+            if attempt < TOOL_TIMEOUT_RETRIES:
+                continue
+        except Exception as exc:  # Keep tool implementation errors inside the tool boundary.
+            last_error = exc
+            break
+
+    error_name = type(last_error).__name__ if last_error else "UnknownError"
+    observation = ToolObservation(
+        content={
+            "error": "Catalog lookup is temporarily unavailable. Please try again.",
+            "failure_type": error_name,
+        },
+        tool_name=name,
+        status="TEMPORARY_FAILURE",
+        source="tool_gateway",
+        provenance_id=uuid4().hex,
+    )
     return name, observation
 
 
@@ -60,6 +97,7 @@ async def run_retail_agent(
         )
 
     products_by_id: dict[str, ProductSnapshot] = {}
+    observations: list[ToolObservation] = []
     tools_used: list[str] = []
     calls_executed = 0
 
@@ -72,6 +110,7 @@ async def run_retail_agent(
                 model=getattr(result, "model", ""),
                 tools_used=tuple(dict.fromkeys(tools_used)),
                 products=tuple(products_by_id.values()),
+                observations=tuple(observations),
             )
 
         messages.append(
@@ -83,11 +122,9 @@ async def run_retail_agent(
         )
 
         for call_number, call in enumerate(tool_calls, start=1):
-            name, observation = _execute_tool_call(
-                call,
-                calls_executed,
-            )
+            name, observation = await _execute_tool_call(call, calls_executed)
             calls_executed += 1
+            observations.append(observation)
             if name:
                 tools_used.append(name)
             for product in observation.products:
@@ -99,9 +136,18 @@ async def run_retail_agent(
                     "role": "tool",
                     "tool_call_id": tool_call_id,
                     "name": name,
-                    "content": json.dumps(observation.content, ensure_ascii=False),
+                    "content": json.dumps(observation.to_envelope(), ensure_ascii=False),
                 }
             )
+
+            if observation.status == "TEMPORARY_FAILURE":
+                return RetailAgentResult(
+                    text="",
+                    model=getattr(result, "model", ""),
+                    tools_used=tuple(dict.fromkeys(tools_used)),
+                    products=tuple(products_by_id.values()),
+                    observations=tuple(observations),
+                )
 
     final_result = await groq.chat(messages, tools=tools, tool_choice="none")
     if getattr(final_result, "tool_calls", None):
@@ -111,4 +157,5 @@ async def run_retail_agent(
         model=getattr(final_result, "model", ""),
         tools_used=tuple(dict.fromkeys(tools_used)),
         products=tuple(products_by_id.values()),
+        observations=tuple(observations),
     )

@@ -48,6 +48,7 @@ class RecordingGroq(GroqService):
         self.trace.append(
             {
                 "model": result.model,
+                "fallback_trace": result.fallback_trace,
                 "latency_ms": round((perf_counter() - started) * 1000),
                 "tool_calls": [
                     {
