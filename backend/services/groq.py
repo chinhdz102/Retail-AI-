@@ -36,13 +36,20 @@ class GroqProviderError(RuntimeError):
 
 
 class GroqChatResult(str):
-    """Chat text carrying the exact Groq model that produced it."""
+    """Chat response carrying its model and any structured tool calls."""
 
     model: str
+    tool_calls: list[dict[str, Any]]
 
-    def __new__(cls, text: str, model: str) -> GroqChatResult:
+    def __new__(
+        cls,
+        text: str,
+        model: str,
+        tool_calls: list[dict[str, Any]] | None = None,
+    ) -> GroqChatResult:
         result = super().__new__(cls, text)
         result.model = model
+        result.tool_calls = tool_calls or []
         return result
 
 
@@ -64,28 +71,59 @@ class GroqService:
 
     async def chat(
         self,
-        messages: Sequence[dict[str, str]],
+        messages: Sequence[dict[str, Any]],
         model: str | None = None,
+        tools: Sequence[dict[str, Any]] | None = None,
+        tool_choice: str | None = None,
     ) -> GroqChatResult:
         client = self._client_or_raise()
-        models = [model or self.settings.groq_model]
-        if self.settings.groq_fallback_model not in models:
-            models.append(self.settings.groq_fallback_model)
+        models = list(
+            dict.fromkeys(
+                selected_model
+                for selected_model in (
+                    model or self.settings.groq_model,
+                    self.settings.groq_fallback_model,
+                    self.settings.groq_fallback_model_2,
+                )
+                if selected_model
+            )
+        )
 
         last_error: Exception | None = None
         for selected_model in models:
             try:
+                model_options: dict[str, Any] = {}
+                if selected_model.startswith("qwen/"):
+                    model_options["reasoning_effort"] = "none"
+                elif selected_model.startswith("openai/gpt-oss-"):
+                    model_options["reasoning_effort"] = "low"
+                if tools:
+                    model_options["tools"] = list(tools)
+                    model_options["tool_choice"] = tool_choice or "auto"
+
                 response = await client.chat.completions.create(
                     model=selected_model,
                     messages=list(messages),
                     temperature=0.2,
                     max_tokens=80,
-                    **({"reasoning_effort": "none"} if selected_model.startswith("qwen/") else {}),
+                    **model_options,
                 )
-                content = response.choices[0].message.content
-                if not content or not content.strip():
+                response_message = response.choices[0].message
+                content = response_message.content or ""
+                tool_calls = [
+                    {
+                        "id": tool_call.id,
+                        "type": "function",
+                        "function": {
+                            "name": tool_call.function.name,
+                            "arguments": tool_call.function.arguments,
+                        },
+                    }
+                    for tool_call in (getattr(response_message, "tool_calls", None) or [])
+                ]
+                if not content.strip() and not tool_calls:
                     raise ValueError("Groq returned an empty response")
-                return GroqChatResult(content.strip(), selected_model)
+                return GroqChatResult(content.strip(), selected_model, tool_calls)
             except Exception as exc:
                 last_error = exc
 
@@ -99,19 +137,34 @@ class GroqService:
         language: str = "vi",
     ) -> str:
         client = self._client_or_raise()
-        try:
-            response = await client.audio.transcriptions.create(
-                file=(filename, content, content_type),
-                model=self.settings.groq_stt_model,
-                language=language,
-                prompt=RETAIL_STT_PROMPTS.get(language, RETAIL_STT_PROMPT),
-                response_format="json",
+        models = list(
+            dict.fromkeys(
+                model
+                for model in (
+                    self.settings.groq_stt_model,
+                    self.settings.groq_stt_fallback_model,
+                )
+                if model
             )
-            text = getattr(response, "text", "")
-            if not text or not text.strip():
-                raise ValueError("Groq returned an empty transcription")
-            return text.strip()
-        except GroqConfigurationError:
-            raise
-        except Exception as exc:
-            raise GroqProviderError("Groq transcription request failed") from exc
+        )
+
+        last_error: Exception | None = None
+        for selected_model in models:
+            try:
+                response = await client.audio.transcriptions.create(
+                    file=(filename, content, content_type),
+                    model=selected_model,
+                    language=language,
+                    prompt=RETAIL_STT_PROMPTS.get(language, RETAIL_STT_PROMPT),
+                    response_format="json",
+                )
+                text = getattr(response, "text", "")
+                if not text or not text.strip():
+                    raise ValueError("Groq returned an empty transcription")
+                return text.strip()
+            except Exception as exc:
+                last_error = exc
+
+        raise GroqProviderError(
+            "Groq transcription request failed for configured models"
+        ) from last_error

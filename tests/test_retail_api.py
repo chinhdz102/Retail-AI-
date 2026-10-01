@@ -19,7 +19,7 @@ class FakeGroqService(GroqService):
     def __init__(self) -> None:
         pass
 
-    async def chat(self, messages, model=None) -> str:
+    async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
         assert "retail_context" in messages[0]["content"]
         return "Coca-Cola Zero 330ml hiện có giá 13.000đ và nằm ở kệ A2-L2."
 
@@ -31,7 +31,7 @@ class UngroundedGroqService(GroqService):
     def __init__(self) -> None:
         pass
 
-    async def chat(self, messages, model=None) -> str:
+    async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
         return "Xin lỗi, hiện tại tôi chưa xác minh được giá sản phẩm này."
 
 
@@ -40,7 +40,7 @@ class LanguageAwareGroqService(GroqService):
         self.messages = []
         self.transcription_language = None
 
-    async def chat(self, messages, model=None) -> str:
+    async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
         self.messages = messages
         return "The product is available in aisle A2-L2."
 
@@ -53,7 +53,7 @@ class UnavailableGroqService(GroqService):
     def __init__(self) -> None:
         pass
 
-    async def chat(self, messages, model=None) -> str:
+    async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
         raise GroqProviderError("provider unavailable")
 
 

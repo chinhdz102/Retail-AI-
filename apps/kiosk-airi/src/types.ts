@@ -32,6 +32,7 @@ export interface AgentResponse {
   text: string
   model: string
   grounded_product_ids: string[]
+  tools_used?: string[]
   state: string
 }
 

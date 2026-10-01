@@ -7,7 +7,8 @@ Grounded embodied AI retail assistant described in the V4 architecture plan.
 The vertical slice is in place:
 
 - requirements and architecture contracts in `docs/`;
-- FastAPI health skeleton;
+- FastAPI endpoints for sessions, catalog lookup, agent chat, Groq transcription and
+  ElevenLabs synthesis;
 - shared Pydantic wire enums/contracts;
 - `uv` dependency manifest;
 - PostgreSQL + pgvector and Redis Compose definition;
@@ -79,4 +80,17 @@ Then open `http://127.0.0.1:8000/health` or `http://127.0.0.1:8000/docs`.
 - [Implementation plan](docs/superpowers/plans/2026-08-31-architecture-contract-and-bootstrap.md)
 - [Groq + Vietnamese kiosk plan](docs/superpowers/plans/2026-08-31-groq-vietnamese-kiosk.md)
 
-The LLM must not call arbitrary REST, SQL or shell commands. Real-time retail facts come from structured backend tools; product knowledge comes from approved RAG documents; payment status comes only from provider/backend verification.
+The architecture document defines the target system. The current agent executes read-only
+catalog tools against the demo dataset. Approved RAG, provider-backed payment verification,
+persistent PostgreSQL catalog data and Redis sessions remain roadmap items.
+
+## Agent tool loop
+
+`POST /agent/respond` exposes read-only `search_products` and `get_product_snapshot`
+tools while a session is browsing. Groq selects a tool, the backend validates its
+arguments and executes it against the demo catalog, then sends the observation back
+to Groq for the final answer. Each turn allows at most two tool rounds and five tool
+calls. The response includes `tools_used` and `grounded_product_ids` for inspection.
+
+The catalog is still an in-memory demo dataset. Cart writes, checkout, persistent
+PostgreSQL data and Redis-backed sessions are separate roadmap items.
