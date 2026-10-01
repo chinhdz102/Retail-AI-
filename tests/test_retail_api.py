@@ -42,14 +42,16 @@ class UngroundedGroqService(GroqService):
             return GroqChatResult(
                 "",
                 "qwen/qwen3.8-27b",
-                [{
-                    "id": "snapshot-1",
-                    "type": "function",
-                    "function": {
-                        "name": "get_product_snapshot",
-                        "arguments": '{"product_id":"COKE_ZERO_330","fields":["price_vnd"]}',
-                    },
-                }],
+                [
+                    {
+                        "id": "snapshot-1",
+                        "type": "function",
+                        "function": {
+                            "name": "get_product_snapshot",
+                            "arguments": '{"product_id":"COKE_ZERO_330","fields":["price_vnd"]}',
+                        },
+                    }
+                ],
             )
         return GroqChatResult(
             "Xin lỗi, hiện tại tôi chưa xác minh được giá sản phẩm này.",
@@ -69,14 +71,16 @@ class ScriptedToolGroqService(GroqService):
             return GroqChatResult(
                 "",
                 "qwen/qwen3.8-27b",
-                [{
-                    "id": "snapshot-1",
-                    "type": "function",
-                    "function": {
-                        "name": "get_product_snapshot",
-                        "arguments": self.arguments,
-                    },
-                }],
+                [
+                    {
+                        "id": "snapshot-1",
+                        "type": "function",
+                        "function": {
+                            "name": "get_product_snapshot",
+                            "arguments": self.arguments,
+                        },
+                    }
+                ],
             )
         return GroqChatResult(self.final_reply, "qwen/qwen3.8-27b")
 
@@ -98,8 +102,11 @@ class FallbackSttGroqService(GroqService):
             "Coca còn mười sáu lon.",
             "whisper-large-v3",
             [
-                {"model": "whisper-large-v3-turbo", "status": "error",
-                 "error_type": "RuntimeError"},
+                {
+                    "model": "whisper-large-v3-turbo",
+                    "status": "error",
+                    "error_type": "RuntimeError",
+                },
                 {"model": "whisper-large-v3", "status": "success"},
             ],
         )
@@ -123,14 +130,16 @@ class SearchOnlyGroqService(GroqService):
             return GroqChatResult(
                 "",
                 "qwen/qwen3.8-27b",
-                [{
-                    "id": "search-1",
-                    "type": "function",
-                    "function": {
-                        "name": "search_products",
-                        "arguments": '{"query":"Coca Zero"}',
-                    },
-                }],
+                [
+                    {
+                        "id": "search-1",
+                        "type": "function",
+                        "function": {
+                            "name": "search_products",
+                            "arguments": '{"query":"Coca Zero"}',
+                        },
+                    }
+                ],
             )
         return GroqChatResult("Coca-Cola Zero giá 13.000đ.", "qwen/qwen3.8-27b")
 
@@ -285,14 +294,16 @@ async def test_recommendation_does_not_suggest_expired_catalog_product(
             return GroqChatResult(
                 "",
                 "qwen/qwen3.8-27b",
-                [{
-                    "id": "recommendation-search-1",
-                    "type": "function",
-                    "function": {
-                        "name": "search_products",
-                        "arguments": '{"query":"MILK01","in_stock":false}',
-                    },
-                }],
+                [
+                    {
+                        "id": "recommendation-search-1",
+                        "type": "function",
+                        "function": {
+                            "name": "recommend_products",
+                            "arguments": '{"query":"MILK01"}',
+                        },
+                    }
+                ],
             )
 
     service = ExpiredRecommendationService()
@@ -328,16 +339,19 @@ async def test_recommendation_returns_sellable_matching_candidate(
                 return GroqChatResult(
                     "",
                     "qwen/qwen3.8-27b",
-                    [{
-                        "id": "recommendation-search-1",
-                        "type": "function",
-                        "function": {
-                            "name": "search_products",
-                            "arguments": (
-                                '{"category":"drink","max_price_vnd":10000}'
-                            ),
-                        },
-                    }],
+                    [
+                        {
+                            "id": "recommendation-search-1",
+                            "type": "function",
+                            "function": {
+                                "name": "recommend_products",
+                                "arguments": (
+                                    '{"category":"drink","price_constraint":'
+                                    '{"operator":"LTE","value_vnd":10000}}'
+                                ),
+                            },
+                        }
+                    ],
                 )
             return GroqChatResult("Đồ uống phù hợp có sẵn.", "qwen/qwen3.8-27b")
 
@@ -356,7 +370,7 @@ async def test_recommendation_returns_sellable_matching_candidate(
     assert response.status_code == 200
     assert response.json()["text"] == "Gợi ý: Nước suối 500ml."
     assert response.json()["grounded_product_ids"] == ["WATER01"]
-    assert service.calls == 2
+    assert service.calls == 1
 
 
 @pytest.mark.asyncio

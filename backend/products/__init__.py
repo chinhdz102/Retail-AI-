@@ -1,1 +1,1 @@
-"""Demo retail catalog."""
+"""Retail catalog models and repository implementations."""

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from uuid import UUID
 
+import asyncpg
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -18,7 +19,8 @@ from backend.api.schemas import (
     TranscriptionResponse,
 )
 from backend.config import Settings, get_settings
-from backend.products.catalog import DATA_TIMESTAMP, get_product_snapshot, search_products
+from backend.products.catalog import DATA_TIMESTAMP
+from backend.products.repository import get_product_repository
 from backend.services.elevenlabs import (
     ElevenLabsConfigurationError,
     ElevenLabsProviderError,
@@ -79,7 +81,8 @@ def _render_verified_snapshot(observation: ToolObservation, language: LanguageCo
             facts.append(f"price {price} VND")
         if "stock" in fields:
             facts.append(
-                "no units are currently sellable" if product.sellable_stock == 0
+                "no units are currently sellable"
+                if product.sellable_stock == 0
                 else f"{product.sellable_stock} units are currently sellable"
             )
         if "shelf" in fields:
@@ -97,8 +100,11 @@ def _render_verified_snapshot(observation: ToolObservation, language: LanguageCo
         if "price_vnd" in fields:
             facts.append(f"价格 {price} 越南盾")
         if "stock" in fields:
-            facts.append("目前没有可售库存" if product.sellable_stock == 0
-                         else f"目前有 {product.sellable_stock} 件可售库存")
+            facts.append(
+                "目前没有可售库存"
+                if product.sellable_stock == 0
+                else f"目前有 {product.sellable_stock} 件可售库存"
+            )
         if "shelf" in fields:
             facts.append(f"货架 {product.shelf}")
         if "promotion" in fields:
@@ -180,8 +186,7 @@ def _unsupported_action_claim(reply: str, observations: tuple[ToolObservation, .
             item.status == "SUCCESS"
             and item.tool_name in expected_tools
             and (
-                action != "payment"
-                or str(item.content.get("payment_status", "")).upper() == "PAID"
+                action != "payment" or str(item.content.get("payment_status", "")).upper() == "PAID"
             )
             for item in observations
         )
@@ -291,10 +296,7 @@ def _localized_action_denial(language: LanguageCode) -> str:
 def _localized_candidates(observation: ToolObservation, language: LanguageCode) -> str:
     names = [product.name for product in observation.products[:3]]
     if language == "en":
-        return (
-            "I found " + ", ".join(names)
-            + ". Which product facts would you like me to check?"
-        )
+        return "I found " + ", ".join(names) + ". Which product facts would you like me to check?"
     if language == "zh":
         return "我找到了" + "、".join(names) + "。请问您想查询哪项商品信息？"
     return "Mình tìm thấy " + ", ".join(names) + ". Bạn muốn mình kiểm tra thông tin nào?"
@@ -305,24 +307,51 @@ def _grounded_reply(agent_result: RetailAgentResult, language: LanguageCode) -> 
     if snapshot is not None:
         if snapshot.status == "SUCCESS" and snapshot.products and snapshot.requested_fields:
             return _render_verified_snapshot(snapshot, language)
+        if snapshot.status == "DATA_UNAVAILABLE":
+            return _localized_unverified_fact(language)
         if snapshot.status in {"TEMPORARY_FAILURE", "INVALID_ARGUMENT", "DENIED"}:
             return _localized_tool_failure(language)
         if snapshot.status == "NOT_FOUND":
             return _localized_not_found(language)
 
+    last_recommendation = next(
+        (
+            item
+            for item in reversed(agent_result.observations)
+            if item.tool_name == "recommend_products"
+        ),
+        None,
+    )
+    if last_recommendation and last_recommendation.status == "SUCCESS":
+        if last_recommendation.content.get("count") == 0:
+            return _localized_no_sellable_match(language)
+        if last_recommendation.products:
+            return _localized_recommendation_candidates(last_recommendation, language)
+    if last_recommendation and last_recommendation.status in {
+        "TEMPORARY_FAILURE",
+        "INVALID_ARGUMENT",
+        "DENIED",
+    }:
+        return _localized_tool_failure(language)
+
     last_search = next(
-        (item for item in reversed(agent_result.observations)
-         if item.tool_name == "search_products"),
+        (
+            item
+            for item in reversed(agent_result.observations)
+            if item.tool_name == "search_products"
+        ),
         None,
     )
     if last_search and last_search.status == "SUCCESS" and last_search.content.get("count") == 0:
-        if last_search.content.get("recommendation_mode"):
-            return _localized_no_sellable_match(language)
         return _localized_not_found(language)
     if last_search and last_search.status == "SUCCESS" and last_search.products:
-        if last_search.content.get("recommendation_mode"):
-            return _localized_recommendation_candidates(last_search, language)
         return _localized_candidates(last_search, language)
+    if last_search and last_search.status in {
+        "TEMPORARY_FAILURE",
+        "INVALID_ARGUMENT",
+        "DENIED",
+    }:
+        return _localized_tool_failure(language)
     return agent_result.text
 
 
@@ -335,11 +364,12 @@ Chỉ nêu đúng thông tin được hỏi; không tự thêm tồn kho hoặc 
 Không tự kết thúc cuộc trò chuyện hoặc nói "tạm biệt" trừ khi người dùng chủ động nói lời tạm biệt.
 Trả lời bằng {language_name}, giữ nguyên tên sản phẩm và mã kệ khi cần.
 Khi cần giá, tồn kho, vị trí kệ, hạn dùng hoặc tìm sản phẩm, hãy gọi công cụ
-catalog phù hợp nếu công cụ được cung cấp.
-`search_products` chỉ tìm ứng viên; gọi `get_product_snapshot` để lấy dữ kiện
-và đặt `fields` đúng theo thông tin khách hỏi. Trường `stock` là số lượng còn
-có thể bán sau khi loại hàng hết hạn.
-Khi khách cần gợi ý hoặc đề xuất sản phẩm, backend tự lọc hàng còn bán được.
+catalog phù hợp nếu công cụ được cung cấp. `search_products` tìm sản phẩm để
+tra cứu, kể cả mặt hàng hết hàng. Gọi `get_product_snapshot` để lấy dữ kiện và
+đặt `fields` đúng theo thông tin khách hỏi. Trường `stock` là số lượng có thể bán.
+Chỉ dùng `recommend_products` khi khách nói rõ muốn gợi ý hoặc đề xuất; backend
+luôn lọc sản phẩm còn hàng và áp dụng bộ lọc giá/category/brand như điều kiện cứng.
+Với “dưới X” dùng toán tử LT; với “tối đa/không quá X” dùng LTE.
 Nếu khách hỏi rõ về hàng hết hạn hoặc hết hàng, hãy tìm đúng sản phẩm để kiểm tra.
 Chỉ dùng dữ liệu trong retail_context hoặc kết quả công cụ; nếu không có bằng
 chứng, nói rõ là chưa xác minh được.
@@ -389,20 +419,48 @@ def product_search(
     spicy: bool | None = None,
     in_stock: bool = True,
     limit: int = 10,
+    brand: str | None = None,
+    price_operator: str | None = None,
+    price_value_vnd: int | None = None,
 ) -> ProductSearchResponse:
     if max_price_vnd is not None and max_price_vnd < 0:
         raise HTTPException(status_code=422, detail="max_price_vnd must be non-negative")
     if limit < 1 or limit > 20:
         raise HTTPException(status_code=422, detail="limit must be between 1 and 20")
-    return ProductSearchResponse(
-        items=search_products(q, category, max_price_vnd, spicy, in_stock, limit),
-        data_timestamp=DATA_TIMESTAMP,
-    )
+    if price_operator is not None and price_operator not in {"LT", "LTE", "GT", "GTE", "EQ"}:
+        raise HTTPException(status_code=422, detail="Unsupported price_operator")
+    if price_value_vnd is not None and price_value_vnd < 0:
+        raise HTTPException(status_code=422, detail="price_value_vnd must be non-negative")
+    try:
+        items = get_product_repository().search(
+            query=q,
+            category=category,
+            max_price_vnd=max_price_vnd,
+            spicy=spicy,
+            in_stock=in_stock,
+            limit=limit,
+            brand=brand,
+            price_operator=price_operator,
+            price_value_vnd=price_value_vnd,
+        )
+    except (OSError, asyncpg.PostgresError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Product catalog is temporarily unavailable",
+        ) from exc
+    timestamp = max((item.data_timestamp for item in items), default=DATA_TIMESTAMP)
+    return ProductSearchResponse(items=items, data_timestamp=timestamp)
 
 
 @app.get("/products/{product_id}/snapshot")
 def product_snapshot(product_id: str):
-    product = get_product_snapshot(product_id)
+    try:
+        product = get_product_repository().get_product_snapshot(product_id)
+    except (OSError, asyncpg.PostgresError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Product catalog is temporarily unavailable",
+        ) from exc
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
     return product

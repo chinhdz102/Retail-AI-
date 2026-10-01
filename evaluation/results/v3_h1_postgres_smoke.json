@@ -1,0 +1,100 @@
+{
+  "kind": "live_groq_smoke",
+  "source_plan": "Retail_AI_Evaluation_Test_Plan.md",
+  "timestamp_utc": "2026-10-01T10:37:11.243369+00:00",
+  "trial_count_per_scenario": 1,
+  "scenario_count": 1,
+  "scenario_ids": [
+    "H1_budget"
+  ],
+  "benchmark_mode": "system",
+  "model_locked": false,
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 9.0,
+  "complete": true,
+  "note": "Sequential live subset; both modes pace requests; system mode keeps fallbacks enabled, while model mode locks the primary model.",
+  "metrics": {
+    "task_count": 1,
+    "http_200_count": 1,
+    "median_api_latency_ms": 1701,
+    "p95_api_latency_ms": 1701,
+    "median_api_latency_excluding_pacing_ms": 1701,
+    "p95_api_latency_excluding_pacing_ms": 1701,
+    "median_provider_latency_per_llm_call_ms": 1572,
+    "total_llm_calls": 1,
+    "median_llm_calls_per_task": 1,
+    "total_tool_calls": 1,
+    "median_tool_calls_per_task": 1,
+    "provider_model_attempts": 1,
+    "fallback_attempts": 0,
+    "rate_limit_errors": 0,
+    "rate_limit_header_samples": 1,
+    "models_replied": {
+      "qwen/qwen3.8-27b": 1
+    },
+    "prompt_tokens": 1284,
+    "completion_tokens": 71,
+    "minimum_field_grade": {
+      "scored": 0,
+      "passed": 0
+    }
+  },
+  "results": [
+    {
+      "scenario_id": "H1_budget",
+      "trial": 1,
+      "prompt": "Gợi ý đồ uống dưới 10.000đ.",
+      "status_code": 200,
+      "latency_ms": 1701,
+      "response": {
+        "session_id": "6d701699-744a-4813-a9bd-9d4946eb3fe1",
+        "text": "Gợi ý: Hồng trà C2 vị đào chai 500ml, Nước Giải Khát Coca-Cola Sleek 235ml, Nước Giải Khát Coca-Cola Zero Pet 600ml.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "WIN_10620676",
+          "WIN_10150435",
+          "WIN_10194711"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "state": "BROWSING"
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "6636",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "10.23s"
+              }
+            }
+          ],
+          "latency_ms": 1572,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "recommend_products",
+              "arguments": "{\"category\":\"đồ uống\",\"limit\":3,\"price_constraint\":{\"operator\":\"LT\",\"value_vnd\":10000}}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1284,
+            "completion_tokens": 71,
+            "total_tokens": 1355
+          }
+        }
+      ],
+      "llm_call_count": 1,
+      "tool_call_count": 1,
+      "minimum_field_grade": null
+    }
+  ]
+}

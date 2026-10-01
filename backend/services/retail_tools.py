@@ -8,25 +8,48 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from backend.products.catalog import (
-    DATA_TIMESTAMP,
-    ProductSnapshot,
-    get_product_snapshot,
-    search_products,
-)
+from backend.products.catalog import PriceOperator, ProductSnapshot
+from backend.products.repository import ProductRepository, get_product_repository
 from backend.shared.contracts import SessionState
 
 MAX_PRODUCT_RESULTS = 10
 FactField = Literal["price_vnd", "stock", "shelf", "promotion", "expiry_at", "ingredients"]
 ToolStatus = Literal[
-    "SUCCESS", "NOT_FOUND", "INVALID_ARGUMENT", "DENIED", "TEMPORARY_FAILURE"
+    "SUCCESS", "NOT_FOUND", "INVALID_ARGUMENT", "DENIED", "TEMPORARY_FAILURE", "DATA_UNAVAILABLE"
 ]
 ResponseMode = Literal[
     "DETERMINISTIC_FACT",
     "DETERMINISTIC_ERROR",
+    "DETERMINISTIC_RECOMMENDATION",
     "CANDIDATE_LIST",
     "NEEDS_LLM_COMPOSITION",
 ]
+
+
+def _search_parameters() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Product name, brand, category, code, or barcode.",
+            },
+            "category": {
+                "type": "string",
+                "description": "A catalog category, including free-form categories.",
+            },
+            "brand": {"type": "string"},
+            "max_price_vnd": {"type": "integer", "minimum": 0},
+            "spicy": {"type": "boolean"},
+            "in_stock": {
+                "type": "boolean",
+                "description": "True to filter out products with zero stock.",
+            },
+            "limit": {"type": "integer", "minimum": 1, "maximum": MAX_PRODUCT_RESULTS},
+        },
+        "additionalProperties": False,
+    }
+
 
 CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
@@ -34,39 +57,42 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "function": {
             "name": "search_products",
             "description": (
-                "Resolve product names and retrieve candidates that satisfy hard filters. "
-                "This is candidate retrieval, not authoritative fact lookup. For a "
-                "recommendation, the backend enforces sellable stock regardless of this "
-                "argument. Omit in_stock to resolve a known unavailable product when the "
-                "customer explicitly asks about it. Use "
-                "get_product_snapshot for facts, and specify the exact requested fields."
+                "Find matching catalog products for lookup. This may return out-of-stock products. "
+                "Use get_product_snapshot to verify the exact facts the customer asked for."
+            ),
+            "parameters": _search_parameters(),
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "recommend_products",
+            "description": (
+                "Return product suggestions for an explicit recommendation request. "
+                "The backend always filters to products with positive stock. Apply every "
+                "stated category, brand, spice, and structured price constraint as a hard filter. "
+                "For 'under' use LT; for 'at most/up to' use LTE."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Product name, brand, category, or catalog keyword.",
-                    },
-                    "category": {
-                        "type": "string",
-                        "enum": ["drink", "dairy", "snack", "meal"],
-                    },
-                    "max_price_vnd": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "description": "Maximum unit price in VND.",
+                    "query": {"type": "string"},
+                    "category": {"type": "string"},
+                    "brand": {"type": "string"},
+                    "price_constraint": {
+                        "type": "object",
+                        "properties": {
+                            "operator": {
+                                "type": "string",
+                                "enum": ["LT", "LTE", "GT", "GTE", "EQ"],
+                            },
+                            "value_vnd": {"type": "integer", "minimum": 0},
+                        },
+                        "required": ["operator", "value_vnd"],
+                        "additionalProperties": False,
                     },
                     "spicy": {"type": "boolean"},
-                    "in_stock": {
-                        "type": "boolean",
-                        "description": "Filter to sellable products only when true.",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": MAX_PRODUCT_RESULTS,
-                    },
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 3},
                 },
                 "additionalProperties": False,
             },
@@ -77,19 +103,14 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "function": {
             "name": "get_product_snapshot",
             "description": (
-                "Read authoritative facts for one product ID returned by search_products. "
-                "Always set fields to exactly what the customer asked about: price_vnd, "
-                "stock (sellable quantity), shelf, promotion, expiry_at, or ingredients. "
-                "Never infer a requested field from a different field."
+                "Read verified facts for one product ID returned by search_products. "
+                "Set fields to exactly those requested: price_vnd, stock, shelf, "
+                "promotion, expiry_at, ingredients."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "product_id": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 64,
-                    },
+                    "product_id": {"type": "string", "minLength": 1, "maxLength": 64},
                     "fields": {
                         "type": "array",
                         "items": {
@@ -106,7 +127,6 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
                         "minItems": 1,
                         "maxItems": 6,
                         "uniqueItems": True,
-                        "description": "The exact product facts requested by the customer.",
                     },
                 },
                 "required": ["product_id", "fields"],
@@ -121,11 +141,30 @@ class SearchProductsArguments(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     query: str = Field(default="", max_length=160)
-    category: Literal["drink", "dairy", "snack", "meal"] | None = None
+    category: str | None = Field(default=None, max_length=160)
+    brand: str | None = Field(default=None, max_length=120)
     max_price_vnd: int | None = Field(default=None, ge=0, le=100_000_000)
     spicy: bool | None = None
     in_stock: bool = False
     limit: int = Field(default=5, ge=1, le=MAX_PRODUCT_RESULTS)
+
+
+class PriceConstraint(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    operator: PriceOperator
+    value_vnd: int = Field(ge=0, le=100_000_000)
+
+
+class RecommendProductsArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    query: str = Field(default="", max_length=160)
+    category: str | None = Field(default=None, max_length=160)
+    brand: str | None = Field(default=None, max_length=120)
+    price_constraint: PriceConstraint | None = None
+    spicy: bool | None = None
+    limit: int = Field(default=3, ge=1, le=3)
 
 
 class GetProductSnapshotArguments(BaseModel):
@@ -187,13 +226,32 @@ def _tool_error(
     )
 
 
+def _candidate_content(products: tuple[ProductSnapshot, ...], matched: list[str]) -> dict[str, Any]:
+    return {
+        "items": [
+            {
+                "product_id": product.product_id,
+                "name": product.name,
+                "category": product.category,
+                "brand": product.brand,
+                "matched_constraints": matched,
+            }
+            for product in products
+        ],
+        "count": len(products),
+        "data_timestamp": max(
+            (item.data_timestamp for item in products), default=datetime.now(UTC)
+        ).isoformat(),
+    }
+
+
 def execute_catalog_tool(
     name: str,
     raw_arguments: str,
     *,
-    require_sellable: bool = False,
+    repository: ProductRepository | None = None,
 ) -> ToolObservation:
-    if name not in {"search_products", "get_product_snapshot"}:
+    if name not in {"search_products", "recommend_products", "get_product_snapshot"}:
         return _tool_error(
             name,
             "DENIED",
@@ -205,68 +263,97 @@ def execute_catalog_tool(
         arguments = json.loads(raw_arguments)
         if not isinstance(arguments, dict):
             raise ValueError("Tool arguments must be an object")
-
+        repo = repository or get_product_repository()
         if name == "search_products":
             parsed = SearchProductsArguments.model_validate(arguments)
-            sellable_only = parsed.in_stock or require_sellable
             products = tuple(
-                search_products(
+                repo.search(
                     query=parsed.query,
                     category=parsed.category,
+                    brand=parsed.brand,
                     max_price_vnd=parsed.max_price_vnd,
                     spicy=parsed.spicy,
-                    in_stock=sellable_only,
+                    in_stock=parsed.in_stock,
                     limit=parsed.limit,
                 )
             )
-            matched_constraints = [
+            matched = [
                 key
-                for key in ("category", "max_price_vnd", "spicy", "in_stock")
+                for key in ("category", "brand", "max_price_vnd", "spicy", "in_stock")
                 if key in parsed.model_fields_set
-                and (key != "in_stock" or sellable_only)
             ]
-            if require_sellable and "in_stock" not in matched_constraints:
-                matched_constraints.append("in_stock")
+            content = _candidate_content(products, matched)
             return ToolObservation(
-                content={
-                    "items": [
-                        {
-                            "product_id": product.product_id,
-                            "name": product.name,
-                            "category": product.category,
-                            "matched_constraints": matched_constraints,
-                        }
-                        for product in products
-                    ],
-                    "count": len(products),
-                    "recommendation_mode": require_sellable,
-                    "enforced_constraints": (
-                        ["in_stock"] if require_sellable and not parsed.in_stock else []
-                    ),
-                    "data_timestamp": DATA_TIMESTAMP.isoformat(),
-                },
+                content=content,
                 products=products,
                 tool_name=name,
+                source=repo.source_name,
                 response_mode="CANDIDATE_LIST" if products else "DETERMINISTIC_ERROR",
                 terminal=not products,
+            )
+
+        if name == "recommend_products":
+            parsed = RecommendProductsArguments.model_validate(arguments)
+            price = parsed.price_constraint
+            products = tuple(
+                repo.search(
+                    query=parsed.query,
+                    category=parsed.category,
+                    brand=parsed.brand,
+                    spicy=parsed.spicy,
+                    in_stock=True,
+                    limit=parsed.limit,
+                    price_operator=price.operator if price else None,
+                    price_value_vnd=price.value_vnd if price else None,
+                )
+            )
+            matched = ["sellable_only"]
+            matched.extend(
+                key for key in ("category", "brand", "spicy") if key in parsed.model_fields_set
+            )
+            if price:
+                matched.append(f"price_{price.operator.lower()}_{price.value_vnd}")
+            return ToolObservation(
+                content=_candidate_content(products, matched),
+                products=products,
+                tool_name=name,
+                source=repo.source_name,
+                response_mode="DETERMINISTIC_RECOMMENDATION",
+                terminal=True,
             )
 
         parsed = GetProductSnapshotArguments.model_validate(arguments)
     except (json.JSONDecodeError, TypeError, ValueError, ValidationError):
         return _tool_error(
-            name,
-            "INVALID_ARGUMENT",
-            "Invalid arguments. Follow the provided tool schema.",
+            name, "INVALID_ARGUMENT", "Invalid arguments. Follow the provided tool schema."
         )
 
-    product = get_product_snapshot(parsed.product_id)
+    product = repo.get_product_snapshot(parsed.product_id)
     if product is None:
         return _tool_error(
             name,
             "NOT_FOUND",
             "Product not found in the catalog.",
-            source="demo_product_catalog",
+            source=repo.source_name,
             extra={"product_id": parsed.product_id},
+            response_mode="DETERMINISTIC_ERROR",
+            terminal=True,
+        )
+
+    unavailable = [
+        field_name
+        for field_name in parsed.fields
+        if field_name in {"shelf", "expiry_at", "ingredients"}
+        and getattr(product, field_name) is None
+    ]
+    if unavailable:
+        return ToolObservation(
+            content={"product_id": product.product_id, "unavailable_fields": unavailable},
+            products=(product,),
+            tool_name=name,
+            source=repo.source_name,
+            requested_fields=tuple(parsed.fields),
+            status="DATA_UNAVAILABLE",
             response_mode="DETERMINISTIC_ERROR",
             terminal=True,
         )
@@ -276,21 +363,25 @@ def execute_catalog_tool(
         if field_name == "stock":
             data["stock"] = product.sellable_stock
             if product.sellable_stock == 0:
+                expiry = product.expiry_at
                 try:
-                    expiry_date = datetime.fromisoformat(product.expiry_at).date()
-                    expired = expiry_date < datetime.now(UTC).date()
+                    expired = (
+                        bool(expiry)
+                        and datetime.fromisoformat(expiry).date() < datetime.now(UTC).date()
+                    )
                 except ValueError:
                     expired = True
                 data["availability_status"] = "EXPIRED" if expired else "OUT_OF_STOCK"
                 if expired:
-                    data["expiry_at"] = product.expiry_at
+                    data["expiry_at"] = expiry
         else:
             data[field_name] = getattr(product, field_name)
 
     return ToolObservation(
-        content={"product": data, "data_timestamp": DATA_TIMESTAMP.isoformat()},
+        content={"product": data, "data_timestamp": product.data_timestamp.isoformat()},
         products=(product,),
         tool_name=name,
+        source=repo.source_name,
         requested_fields=tuple(parsed.fields),
         response_mode="DETERMINISTIC_FACT",
         terminal=True,
