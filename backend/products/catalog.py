@@ -2,10 +2,28 @@ from __future__ import annotations
 
 import unicodedata
 from datetime import UTC, date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 DATA_TIMESTAMP = datetime(2026, 8, 31, tzinfo=UTC)
+PriceOperator = Literal["LT", "LTE", "GT", "GTE", "EQ"]
+
+
+def matches_price_constraint(
+    price_vnd: int,
+    operator: PriceOperator | None,
+    value_vnd: int | None,
+) -> bool:
+    if operator is None or value_vnd is None:
+        return True
+    return {
+        "LT": price_vnd < value_vnd,
+        "LTE": price_vnd <= value_vnd,
+        "GT": price_vnd > value_vnd,
+        "GTE": price_vnd >= value_vnd,
+        "EQ": price_vnd == value_vnd,
+    }[operator]
 
 
 class ProductSnapshot(BaseModel):
@@ -16,17 +34,36 @@ class ProductSnapshot(BaseModel):
     category: str
     price_vnd: int = Field(ge=0)
     stock: int = Field(ge=0)
-    shelf: str
+    shelf: str | None = None
     promotion: str | None = None
-    spicy: bool = False
-    ingredients: str
-    expiry_at: str
+    spicy: bool | None = False
+    ingredients: str | None = None
+    expiry_at: str | None = None
     data_timestamp: datetime = DATA_TIMESTAMP
+    brand: str | None = None
+    item_no: str | None = None
+    barcode: str | None = None
+    category_code: str | None = None
+    department: str | None = None
+    sub_department: str | None = None
+    category_hierarchy: str | None = None
+    uom: str | None = None
+    image_url: str | None = None
+    description: str | None = None
+    seo_url: str | None = None
+    list_price_vnd: int | None = None
+    sale_price_vnd: int | None = None
+    price_quality_status: str = "NORMAL"
+    shelf_source: str = "DEMO"
 
     @computed_field(return_type=int)
     @property
     def sellable_stock(self) -> int:
         """Stock customers can buy, excluding products past their expiry date."""
+        if self.stock <= 0:
+            return 0
+        if self.expiry_at is None:
+            return self.stock
         try:
             is_expired = date.fromisoformat(self.expiry_at) < datetime.now(UTC).date()
         except ValueError:
@@ -208,10 +245,23 @@ def search_products(
     spicy: bool | None = None,
     in_stock: bool = True,
     limit: int = 10,
+    brand: str | None = None,
+    price_operator: PriceOperator | None = None,
+    price_value_vnd: int | None = None,
 ) -> list[ProductSnapshot]:
     normalized_query = _normalize(query).strip()
     chinese_intent_phrases = (
-        "价格", "多少钱", "货架", "哪里", "在哪", "哪一个", "库存", "有货", "数量", "保质期", "过期"
+        "价格",
+        "多少钱",
+        "货架",
+        "哪里",
+        "在哪",
+        "哪一个",
+        "库存",
+        "有货",
+        "数量",
+        "保质期",
+        "过期",
     )
     for phrase in chinese_intent_phrases:
         normalized_query = normalized_query.replace(phrase, f" {phrase} ")
@@ -222,14 +272,25 @@ def search_products(
     matches: list[ProductSnapshot] = []
     for product in DEMO_PRODUCTS:
         haystack = _normalize(
-            f"{product.product_id} {product.name} {product.category} {product.ingredients} "
+            f"{product.product_id} {product.item_no or ''} {product.barcode or ''} "
+            f"{product.name} {product.category} {product.category_hierarchy or ''} "
+            f"{product.brand or ''} {product.description or ''} {product.ingredients or ''} "
             f"{PRODUCT_ALIASES.get(product.product_id, '')}"
         )
         if needle and not all(token in haystack for token in needle.split()):
             continue
-        if normalized_category and _normalize(product.category) != normalized_category:
+        if normalized_category:
+            category_text = _normalize(f"{product.category} {product.category_hierarchy or ''}")
+            if not all(token in category_text for token in normalized_category.split()):
+                continue
+        normalized_brand = _normalize(brand) if brand else None
+        if normalized_brand and not all(
+            token in _normalize(product.brand or "") for token in normalized_brand.split()
+        ):
             continue
         if max_price_vnd is not None and product.price_vnd > max_price_vnd:
+            continue
+        if not matches_price_constraint(product.price_vnd, price_operator, price_value_vnd):
             continue
         if spicy is not None and product.spicy is not spicy:
             continue

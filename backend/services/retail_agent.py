@@ -2,104 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import json
-import unicodedata
 from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
 from backend.products.catalog import ProductSnapshot
 from backend.services.groq import GroqProviderError, GroqService
-from backend.services.retail_tools import (
-    ToolObservation,
-    execute_catalog_tool,
-    tools_for_state,
-)
+from backend.services.retail_tools import ToolObservation, execute_catalog_tool, tools_for_state
 from backend.shared.contracts import SessionState
 
 MAX_AGENT_TOOL_ROUNDS = 2
 MAX_AGENT_TOOL_CALLS = 5
 CATALOG_TOOL_TIMEOUT_SECONDS = 2.0
 TOOL_TIMEOUT_RETRIES = 1
-
-_RECOMMENDATION_CUES = (
-    "recommend",
-    "suggest",
-    "goi y",
-    "de xuat",
-    "tu van",
-    "chon giup",
-    "chon ho",
-    "nen chon",
-    "nen mua",
-    "mua gi",
-    "an gi",
-    "uong gi",
-    "cho anh loai",
-    "cho chi loai",
-    "cho toi loai",
-    "cho minh loai",
-    "loai nao",
-    "mon nao",
-    "推荐",
-    "建议",
-    "帮我选",
-)
-_UNAVAILABLE_CUES = (
-    "het hang",
-    "khong con hang",
-    "qua han",
-    "het han",
-    "out of stock",
-    "unavailable",
-    "expired",
-    "缺货",
-    "无货",
-    "没货",
-    "过期",
-)
-_NEGATION_CUES = ("khong", "chua", "not", "no", "不", "没", "没有")
-
-
-def _normalize_intent_text(value: str) -> str:
-    normalized = unicodedata.normalize("NFKD", value.casefold())
-    normalized = normalized.replace("đ", "d")
-    return "".join(
-        character
-        for character in normalized
-        if unicodedata.category(character) != "Mn"
-    )
-
-
-def _content_text(content: Any) -> str:
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return " ".join(
-            str(part.get("text", ""))
-            for part in content
-            if isinstance(part, dict) and isinstance(part.get("text"), str)
-        )
-    return ""
-
-
-def _requires_sellable_recommendation(messages: list[dict[str, Any]]) -> bool:
-    latest_user_text = next(
-        (
-            _content_text(message.get("content"))
-            for message in reversed(messages)
-            if message.get("role") == "user"
-        ),
-        "",
-    )
-    normalized = _normalize_intent_text(latest_user_text)
-    for cue in _UNAVAILABLE_CUES:
-        position = normalized.find(cue)
-        if position < 0:
-            continue
-        prefix = normalized[max(0, position - 12):position].rstrip()
-        if not any(prefix.endswith(negation) for negation in _NEGATION_CUES):
-            return False
-    return any(cue in normalized for cue in _RECOMMENDATION_CUES)
 
 
 @dataclass(frozen=True)
@@ -114,8 +29,6 @@ class RetailAgentResult:
 async def _execute_tool_call(
     call: dict[str, Any],
     calls_executed: int,
-    *,
-    require_sellable: bool = False,
 ) -> tuple[str, ToolObservation]:
     function = call.get("function") or {}
     name = str(function.get("name") or "")
@@ -136,12 +49,7 @@ async def _execute_tool_call(
     for attempt in range(TOOL_TIMEOUT_RETRIES + 1):
         try:
             observation = await asyncio.wait_for(
-                asyncio.to_thread(
-                    execute_catalog_tool,
-                    name,
-                    raw_arguments,
-                    require_sellable=require_sellable,
-                ),
+                asyncio.to_thread(execute_catalog_tool, name, raw_arguments),
                 timeout=CATALOG_TOOL_TIMEOUT_SECONDS,
             )
             return name, observation
@@ -190,7 +98,6 @@ async def run_retail_agent(
     observations: list[ToolObservation] = []
     tools_used: list[str] = []
     calls_executed = 0
-    require_sellable = _requires_sellable_recommendation(messages)
 
     for _ in range(MAX_AGENT_TOOL_ROUNDS):
         result = await groq.chat(messages, tools=tools, tool_choice="auto")
@@ -214,11 +121,7 @@ async def run_retail_agent(
         )
 
         for call_number, call in enumerate(tool_calls, start=1):
-            name, observation = await _execute_tool_call(
-                call,
-                calls_executed,
-                require_sellable=require_sellable,
-            )
+            name, observation = await _execute_tool_call(call, calls_executed)
             calls_executed += 1
             observations.append(observation)
             terminal_observation = terminal_observation or observation.terminal

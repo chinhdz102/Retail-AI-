@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -8,6 +9,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_version: str = "0.1.0"
     database_url: str = "postgresql+asyncpg://retail:retail@localhost:5432/retail"
+    catalog_repository: Literal["demo", "postgres"] = "demo"
     redis_url: str = "redis://localhost:6379/0"
     session_ttl_seconds: int = 1800
 

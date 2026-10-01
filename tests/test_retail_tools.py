@@ -39,12 +39,15 @@ def test_search_tool_returns_candidate_metadata_without_product_facts() -> None:
 
     assert observation.status == "SUCCESS"
     assert observation.content["count"] == 1
-    assert observation.content["items"] == [{
-        "product_id": "COKE_ZERO_330",
-        "name": "Coca-Cola Zero 330ml",
-        "category": "drink",
-        "matched_constraints": [],
-    }]
+    assert observation.content["items"] == [
+        {
+            "product_id": "COKE_ZERO_330",
+            "name": "Coca-Cola Zero 330ml",
+            "category": "drink",
+            "brand": None,
+            "matched_constraints": ["in_stock"],
+        }
+    ]
     assert "price_vnd" not in observation.content["items"][0]
     assert "stock" not in observation.content["items"][0]
     assert observation.response_mode == "CANDIDATE_LIST"
@@ -63,16 +66,59 @@ def test_empty_search_result_is_terminal_deterministic_error() -> None:
     assert observation.terminal is True
 
 
-def test_recommendation_search_enforces_sellable_stock() -> None:
+def test_recommendation_tool_enforces_sellable_stock() -> None:
     observation = execute_catalog_tool(
-        "search_products",
-        json.dumps({"query": "MILK01", "in_stock": False}),
-        require_sellable=True,
+        "recommend_products",
+        json.dumps({"query": "MILK01"}),
     )
 
     assert observation.content["count"] == 0
-    assert observation.content["enforced_constraints"] == ["in_stock"]
+    assert observation.content["items"] == []
+    assert observation.content["data_timestamp"]
+    assert observation.response_mode == "DETERMINISTIC_RECOMMENDATION"
     assert observation.terminal is True
+
+
+def test_search_can_still_resolve_an_expired_product() -> None:
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": "MILK01", "in_stock": False}),
+    )
+
+    assert observation.content["count"] == 1
+    assert observation.products[0].product_id == "MILK01"
+
+
+def test_recommendation_uses_explicit_price_operator_boundaries() -> None:
+    below = execute_catalog_tool(
+        "recommend_products",
+        json.dumps(
+            {
+                "category": "drink",
+                "price_constraint": {"operator": "LT", "value_vnd": 7000},
+            }
+        ),
+    )
+    at_most = execute_catalog_tool(
+        "recommend_products",
+        json.dumps(
+            {
+                "category": "drink",
+                "price_constraint": {"operator": "LTE", "value_vnd": 7000},
+            }
+        ),
+    )
+
+    assert below.content["count"] == 0
+    assert [product.product_id for product in at_most.products] == ["WATER01"]
+
+
+def test_catalog_tool_registry_separates_recommendations_from_lookup() -> None:
+    from backend.services.retail_tools import CATALOG_TOOL_DEFINITIONS
+
+    names = [entry["function"]["name"] for entry in CATALOG_TOOL_DEFINITIONS]
+
+    assert names == ["search_products", "recommend_products", "get_product_snapshot"]
 
 
 def test_expired_product_snapshot_reports_zero_sellable_stock() -> None:
