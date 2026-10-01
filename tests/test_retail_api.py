@@ -273,6 +273,93 @@ async def test_agent_response_is_vietnamese_and_session_scoped(client: httpx.Asy
 
 
 @pytest.mark.asyncio
+async def test_recommendation_does_not_suggest_expired_catalog_product(
+    client: httpx.AsyncClient,
+) -> None:
+    class ExpiredRecommendationService(GroqService):
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            self.calls += 1
+            return GroqChatResult(
+                "",
+                "qwen/qwen3.8-27b",
+                [{
+                    "id": "recommendation-search-1",
+                    "type": "function",
+                    "function": {
+                        "name": "search_products",
+                        "arguments": '{"query":"MILK01","in_stock":false}',
+                    },
+                }],
+            )
+
+    service = ExpiredRecommendationService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Gợi ý sản phẩm MILK01 cho tôi.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["text"] == (
+        "Mình chưa tìm thấy sản phẩm còn bán phù hợp với yêu cầu này."
+    )
+    assert service.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_recommendation_returns_sellable_matching_candidate(
+    client: httpx.AsyncClient,
+) -> None:
+    class BudgetDrinkRecommendationService(GroqService):
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            self.calls += 1
+            if self.calls == 1:
+                return GroqChatResult(
+                    "",
+                    "qwen/qwen3.8-27b",
+                    [{
+                        "id": "recommendation-search-1",
+                        "type": "function",
+                        "function": {
+                            "name": "search_products",
+                            "arguments": (
+                                '{"category":"drink","max_price_vnd":10000}'
+                            ),
+                        },
+                    }],
+                )
+            return GroqChatResult("Đồ uống phù hợp có sẵn.", "qwen/qwen3.8-27b")
+
+    service = BudgetDrinkRecommendationService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Gợi ý đồ uống dưới 10.000đ.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["text"] == "Gợi ý: Nước suối 500ml."
+    assert response.json()["grounded_product_ids"] == ["WATER01"]
+    assert service.calls == 2
+
+
+@pytest.mark.asyncio
 async def test_agent_replaces_ungrounded_price_claim_with_catalog_fact(
     client: httpx.AsyncClient,
 ) -> None:

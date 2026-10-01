@@ -77,3 +77,52 @@ Không mở rộng các phần này trước khi kiểm chứng tool selection l
 So sánh literal MP3 cho ra WER 3.748–3.751 và CER 3.264–3.266. Không dùng các số này làm điểm chính xác: caption là bản tóm lược, chỉ tới 22:14, trong khi nhận diện trả về lời nói chi tiết (5,079 từ sau chuẩn hóa so với 1,195 từ tham chiếu). Chênh lệch phản ánh chủ yếu việc hai văn bản không cùng dạng tham chiếu nguyên văn; không thể diễn giải WER trên 100% như tỷ lệ nhận diện sai của mô hình.
 
 Một lượt trước trên MP3 đầy đủ mất 142,616 ms; ba lượt trên clip 22:14 mất 4,713–6,965 ms. Độ chênh lớn cho thấy latency trên audio dài biến động mạnh, nên median của clip chỉ là smoke benchmark, chưa phải cam kết tốc độ ổn định. File audio và nội dung transcript không được lưu trong repo.
+
+## P0.6 runtime optimization — 01/10/2026
+
+Đã thêm `terminal` và `response_mode` vào tool observation. Snapshot thành công và
+search không có kết quả trả về phản hồi deterministic ngay; agent không gọi LLM
+thêm sau khi đã có câu trả lời terminal. Lỗi catalog tạm thời vẫn dừng an toàn.
+Với yêu cầu gợi ý, backend ép lọc `in_stock` kể cả khi model gửi `false` hoặc bỏ
+trường này. Tra cứu một món hết hạn/hết hàng theo yêu cầu cụ thể vẫn tìm được đúng
+sản phẩm; nếu không có món phù hợp còn bán, câu trả lời không nói nhầm là sản phẩm không tồn tại.
+
+| System benchmark | Trước early-exit | Sau early-exit |
+|---|---:|---:|
+| Tác vụ thành công | 27/27 | 27/27 |
+| Logical LLM calls | 60 | 42 |
+| Median LLM calls/task | 3 | 2 |
+| Tool calls | 33 | 32 |
+| Median API latency | 4.556 giây | 1.192 giây |
+| p95 API latency | 10.794 giây | 2.638 giây |
+
+Lượt sau giảm 30% logical LLM calls; field grader cho price/stock/shelf đạt 9/9,
+với đúng một field cho từng câu hỏi. Đây là system benchmark có fallback bật.
+Lượt sau không pacing; trace ghi 39 lần model attempt bị rate-limit, và hệ thống
+vẫn hoàn thành 27/27 nhờ fallback. Vì vậy không dùng model counts này để kết luận
+riêng Qwen. Dữ liệu nằm trong `evaluation/results/live_groq_smoke_p06.json`.
+
+Benchmark khóa riêng model chạy đủ 9 scenario một lượt, pacing 9 giây, fallback
+tắt: Qwen trả lời 9/9 request, dùng 14 logical LLM calls, không fallback; ba ca
+field tối thiểu đạt 3/3. Median latency xử lý sau khi bỏ pacing là 1.324 giây mỗi
+tác vụ; p95 là 2.549 giây. API latency có pacing median 10.069 giây, p95 18.462
+giây. Đây là một lượt đo, chưa đại diện cho độ ổn định nhiều ngày. Kết quả ở
+`evaluation/results/live_groq_model_qwen_p06.json`.
+
+Benchmark giờ tách `system` và `model`, ghi logical LLM/tool calls mỗi tác vụ,
+token usage, model attempts và các rate-limit headers. Pacing áp dụng cho cả hai
+mode; mặc định 9 giây giữa request, có thể chỉnh theo quota. Header capture dùng
+raw response API của SDK và chỉ lưu các trường rate-limit, không lưu credential.
+
+Benchmark recommendation chạy 1 lượt cho D4 và H1 ở `system` mode: 2/2 HTTP 200,
+4 logical LLM calls tổng cộng, median 2 calls/tác vụ. Median latency là 13.796 giây
+khi tính pacing và 1.916 giây sau khi bỏ pacing; median mỗi provider call là 944 ms.
+Không có fallback hoặc rate-limit. Qwen tự gửi `in_stock=true` ở D4; ở H1 model bỏ
+trường này nhưng backend vẫn áp bộ lọc bán được. Kết quả tại
+`evaluation/results/live_groq_recommendation_system_p06.json`. Đây là một lượt đo,
+chưa đại diện cho độ ổn định dài hạn. Một lần dò riêng `model`-only trước đó trả 502
+`BadRequestError` cho D4 khi fallback tắt; lượt system-mode sau đó hoàn thành ca này
+trên Qwen và không cần fallback.
+
+Kiểm tra sau thay đổi: pytest 59/59 PASS; P0 regression 40/40 PASS; Ruff các file
+đổi PASS. Kết quả benchmark Groq nằm trong các file JSON được dẫn ở trên.

@@ -1,0 +1,203 @@
+{
+  "kind": "live_groq_smoke",
+  "source_plan": "Retail_AI_Evaluation_Test_Plan.md",
+  "timestamp_utc": "2026-10-01T09:35:59.168881+00:00",
+  "trial_count_per_scenario": 1,
+  "scenario_count": 2,
+  "scenario_ids": [
+    "D4_filters",
+    "H1_budget"
+  ],
+  "benchmark_mode": "system",
+  "model_locked": false,
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 9.0,
+  "complete": true,
+  "note": "Sequential live subset; both modes pace requests; system mode keeps fallbacks enabled, while model mode locks the primary model.",
+  "metrics": {
+    "task_count": 2,
+    "http_200_count": 2,
+    "median_api_latency_ms": 13796,
+    "p95_api_latency_ms": 17223,
+    "median_api_latency_excluding_pacing_ms": 1916,
+    "p95_api_latency_excluding_pacing_ms": 2645,
+    "median_provider_latency_per_llm_call_ms": 944,
+    "total_llm_calls": 4,
+    "median_llm_calls_per_task": 2.0,
+    "total_tool_calls": 2,
+    "median_tool_calls_per_task": 1.0,
+    "provider_model_attempts": 4,
+    "fallback_attempts": 0,
+    "rate_limit_errors": 0,
+    "rate_limit_header_samples": 4,
+    "models_replied": {
+      "qwen/qwen3.8-27b": 4
+    },
+    "prompt_tokens": 4903,
+    "completion_tokens": 198,
+    "minimum_field_grade": {
+      "scored": 0,
+      "passed": 0
+    }
+  },
+  "results": [
+    {
+      "scenario_id": "D4_filters",
+      "trial": 1,
+      "prompt": "Cho anh loại snack không cay dưới 30k còn hàng.",
+      "status_code": 200,
+      "latency_ms": 10368,
+      "response": {
+        "session_id": "e36f3e65-b83e-4885-a43a-067aa4ebc741",
+        "text": "Gợi ý: Snack khoai tây vị tự nhiên.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "SNACK01"
+        ],
+        "tools_used": [
+          "search_products"
+        ],
+        "state": "BROWSING"
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "968",
+                "x-ratelimit-remaining-tokens": "6893",
+                "x-ratelimit-reset-requests": "46m4.8s",
+                "x-ratelimit-reset-tokens": "8.302s"
+              }
+            }
+          ],
+          "latency_ms": 1277,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"category\":\"snack\",\"in_stock\":true,\"max_price_vnd\":30000,\"spicy\":false}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1075,
+            "completion_tokens": 70,
+            "total_tokens": 1145
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "967",
+                "x-ratelimit-remaining-tokens": "6455",
+                "x-ratelimit-reset-requests": "47m31.2s",
+                "x-ratelimit-reset-tokens": "12.762s"
+              }
+            }
+          ],
+          "latency_ms": 1351,
+          "pacing_wait_ms": 7723,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 1381,
+            "completion_tokens": 33,
+            "total_tokens": 1414
+          }
+        }
+      ],
+      "llm_call_count": 2,
+      "tool_call_count": 1,
+      "minimum_field_grade": null
+    },
+    {
+      "scenario_id": "H1_budget",
+      "trial": 1,
+      "prompt": "Gợi ý đồ uống dưới 10.000đ.",
+      "status_code": 200,
+      "latency_ms": 17223,
+      "response": {
+        "session_id": "7a29aff2-9af4-436e-8cbc-01eda8e72a3b",
+        "text": "Gợi ý: Nước suối 500ml.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "WATER01"
+        ],
+        "tools_used": [
+          "search_products"
+        ],
+        "state": "BROWSING"
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "966",
+                "x-ratelimit-remaining-tokens": "6400",
+                "x-ratelimit-reset-requests": "48m57.6s",
+                "x-ratelimit-reset-tokens": "13.028s"
+              }
+            }
+          ],
+          "latency_ms": 612,
+          "pacing_wait_ms": 7647,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"category\":\"drink\",\"limit\":5,\"max_price_vnd\":10000}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1076,
+            "completion_tokens": 56,
+            "total_tokens": 1132
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "965",
+                "x-ratelimit-remaining-tokens": "6091",
+                "x-ratelimit-reset-requests": "50m24s",
+                "x-ratelimit-reset-tokens": "15.677s"
+              }
+            }
+          ],
+          "latency_ms": 573,
+          "pacing_wait_ms": 8389,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 1371,
+            "completion_tokens": 39,
+            "total_tokens": 1410
+          }
+        }
+      ],
+      "llm_call_count": 2,
+      "tool_call_count": 1,
+      "minimum_field_grade": null
+    }
+  ]
+}
