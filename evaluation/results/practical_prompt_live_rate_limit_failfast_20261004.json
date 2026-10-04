@@ -1,0 +1,230 @@
+{
+  "kind": "practical_prompt_realworld_live_benchmark",
+  "timestamp_utc": "2026-10-04T11:15:10.025534+00:00",
+  "git_revision": "3faabb11698f6be852397bc99bb0e59f260d9361",
+  "catalog_repository": "demo",
+  "configured_primary_model": "qwen/qwen3.8-27b",
+  "configured_fallback_models": [
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b"
+  ],
+  "prompt_sha256": "1adce25a6985462b69dc2c10792d4b79e8d67826dcb601f6d111d886b970d7d3",
+  "case_set": "evaluation\\cases\\practical_prompt_realworld_v1.json",
+  "case_set_sha256": "2598013c27d25ac82bb28e2e8124d656d5d08e547f2ded87cc43ad4d6312e38f",
+  "case_count": 18,
+  "turn_count": 22,
+  "input_method": "direct text to POST /agent/respond",
+  "transcription_used": false,
+  "stt_calls": 0,
+  "minimum_model_request_interval_seconds": 9.0,
+  "complete": false,
+  "metrics": {
+    "task_count": 1,
+    "http_200_count": 0,
+    "median_api_latency_ms": 9608,
+    "p95_api_latency_ms": 9608,
+    "median_api_latency_excluding_pacing_ms": 2247,
+    "p95_api_latency_excluding_pacing_ms": 2247,
+    "median_provider_latency_per_llm_call_ms": 1123,
+    "total_llm_calls": 2,
+    "median_llm_calls_per_task": 2,
+    "total_tool_calls": 1,
+    "median_tool_calls_per_task": 1,
+    "provider_model_attempts": 6,
+    "fallback_attempts": 5,
+    "rate_limit_errors": 5,
+    "rate_limit_header_samples": 6,
+    "models_replied": {
+      "openai/gpt-oss-20b": 1
+    },
+    "prompt_tokens": 1003,
+    "completion_tokens": 55,
+    "minimum_field_grade": {
+      "scored": 0,
+      "passed": 0
+    }
+  },
+  "grade_summary": {
+    "checks_scored": 1,
+    "checks_passed": 0,
+    "checks_failed": 1,
+    "checks_not_scored": 1,
+    "pass_rate_percent": 0.0,
+    "http_failures": 1,
+    "by_check_type": {
+      "http_200": 1,
+      "answer_quality": 1
+    },
+    "fully_passing_cases": 0,
+    "not_scored_cases": 1,
+    "total_cases": 1
+  },
+  "cases": [
+    {
+      "case_id": "coca_lookup_followup",
+      "kind": "multi_turn_product_lookup",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Chào bạn, Coca Zero 330ml giá hiện tại bao nhiêu?",
+          "checks_expected": {
+            "product_id": "COKE_ZERO_330",
+            "contains": [
+              "13.000"
+            ],
+            "tool_fields": [
+              "price_vnd"
+            ]
+          },
+          "status_code": 502,
+          "latency_ms": 9608,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": "openai/gpt-oss-20b",
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "513",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "146",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "success",
+                  "rate_limit_headers": {
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "6917",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "8.122s"
+                  }
+                }
+              ],
+              "latency_ms": 1640,
+              "pacing_wait_ms": 0,
+              "tool_calls": [
+                {
+                  "name": "search_products",
+                  "arguments": "{\"limit\":1,\"query\":\"Coca Zero 330ml\"}"
+                }
+              ],
+              "usage": {
+                "prompt_tokens": 1003,
+                "completion_tokens": 55,
+                "total_tokens": 1058
+              }
+            },
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "618",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "236",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "295",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 606,
+              "pacing_wait_ms": 7361,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 2,
+          "tool_call_count": 1,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": false,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 1
+      }
+    }
+  ],
+  "stop_reason": "all_configured_models_rate_limited",
+  "rate_limit_halt_after": {
+    "case_id": "coca_lookup_followup",
+    "turn_index": 1
+  },
+  "unattempted_turns": 21
+}

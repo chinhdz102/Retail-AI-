@@ -1,0 +1,232 @@
+{
+  "kind": "practical_prompt_realworld_live_benchmark",
+  "timestamp_utc": "2026-10-04T11:14:50.183421+00:00",
+  "git_revision": "3faabb11698f6be852397bc99bb0e59f260d9361",
+  "catalog_repository": "demo",
+  "configured_primary_model": "qwen/qwen3.8-27b",
+  "configured_fallback_models": [
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b"
+  ],
+  "prompt_sha256": "1adce25a6985462b69dc2c10792d4b79e8d67826dcb601f6d111d886b970d7d3",
+  "case_set": "evaluation\\cases\\practical_prompt_smoke_price_20261004.json",
+  "case_set_sha256": "1686bc411f37fcb61e432be1d85542ab1fec299bca209e052d8ae2f5a352b295",
+  "case_count": 1,
+  "turn_count": 1,
+  "input_method": "direct text to POST /agent/respond",
+  "transcription_used": false,
+  "stt_calls": 0,
+  "minimum_model_request_interval_seconds": 0.0,
+  "complete": true,
+  "metrics": {
+    "task_count": 1,
+    "http_200_count": 1,
+    "median_api_latency_ms": 1862,
+    "p95_api_latency_ms": 1862,
+    "median_api_latency_excluding_pacing_ms": 1862,
+    "p95_api_latency_excluding_pacing_ms": 1862,
+    "median_provider_latency_per_llm_call_ms": 928,
+    "total_llm_calls": 2,
+    "median_llm_calls_per_task": 2,
+    "total_tool_calls": 2,
+    "median_tool_calls_per_task": 2,
+    "provider_model_attempts": 3,
+    "fallback_attempts": 1,
+    "rate_limit_errors": 1,
+    "rate_limit_header_samples": 3,
+    "models_replied": {
+      "qwen/qwen3.8-27b": 1,
+      "openai/gpt-oss-120b": 1
+    },
+    "prompt_tokens": 2474,
+    "completion_tokens": 77,
+    "minimum_field_grade": {
+      "scored": 0,
+      "passed": 0
+    }
+  },
+  "grade_summary": {
+    "checks_scored": 4,
+    "checks_passed": 4,
+    "checks_failed": 0,
+    "checks_not_scored": 0,
+    "pass_rate_percent": 100.0,
+    "http_failures": 0,
+    "by_check_type": {
+      "http_200": 1,
+      "grounded_product": 1,
+      "required_answer_content": 1,
+      "requested_exact_catalog_fields": 1
+    },
+    "fully_passing_cases": 1,
+    "not_scored_cases": 0,
+    "total_cases": 1
+  },
+  "cases": [
+    {
+      "case_id": "probe_direct_text",
+      "kind": "direct_text_probe",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Coca Zero 330ml giá bao nhiêu?",
+          "checks_expected": {
+            "product_id": "COKE_ZERO_330",
+            "contains": [
+              "13.000"
+            ],
+            "tool_fields": [
+              "price_vnd"
+            ]
+          },
+          "status_code": 200,
+          "latency_ms": 1862,
+          "response": {
+            "session_id": "0ae47706-3097-4fe0-90d5-a166543ed6d5",
+            "text": "Coca-Cola Zero 330ml: giá 13.000đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "COKE_ZERO_330"
+            ],
+            "tools_used": [
+              "search_products",
+              "get_product_snapshot"
+            ],
+            "state": "BROWSING"
+          },
+          "llm_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "success",
+                  "rate_limit_headers": {
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "6639",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "10.207s"
+                  }
+                }
+              ],
+              "latency_ms": 1046,
+              "pacing_wait_ms": 0,
+              "tool_calls": [
+                {
+                  "name": "search_products",
+                  "arguments": "{\"query\":\"Coca Zero 330ml\"}"
+                }
+              ],
+              "usage": {
+                "prompt_tokens": 1281,
+                "completion_tokens": 32,
+                "total_tokens": 1313
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "638",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "6745",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "10.534s"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "success",
+                  "rate_limit_headers": {
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "6727",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "9.547s"
+                  }
+                }
+              ],
+              "latency_ms": 810,
+              "pacing_wait_ms": 0,
+              "tool_calls": [
+                {
+                  "name": "get_product_snapshot",
+                  "arguments": "{\"fields\":[\"price_vnd\"],\"product_id\":\"COKE_ZERO_330\"}"
+                }
+              ],
+              "usage": {
+                "prompt_tokens": 1193,
+                "completion_tokens": 45,
+                "total_tokens": 1238
+              }
+            }
+          ],
+          "llm_call_count": 2,
+          "tool_call_count": 2,
+          "grade": {
+            "status": "PASS",
+            "passed_checks": 4,
+            "total_checks": 4,
+            "checks": {
+              "http_200": {
+                "status": "PASS",
+                "expected": 200,
+                "observed": 200
+              },
+              "grounded_product": {
+                "status": "PASS",
+                "expected": "COKE_ZERO_330",
+                "observed": [
+                  "COKE_ZERO_330"
+                ]
+              },
+              "required_answer_content": {
+                "status": "PASS",
+                "expected": [
+                  "13.000"
+                ],
+                "observed": {
+                  "text": "Coca-Cola Zero 330ml: giá 13.000đ.",
+                  "missing": []
+                }
+              },
+              "requested_exact_catalog_fields": {
+                "status": "PASS",
+                "expected": {
+                  "product_id": "COKE_ZERO_330",
+                  "fields": [
+                    "price_vnd"
+                  ]
+                },
+                "observed": [
+                  {
+                    "fields": [
+                      "price_vnd"
+                    ],
+                    "product_id": "COKE_ZERO_330"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "PASS",
+        "passed_checks": 4,
+        "total_checks": 4
+      }
+    }
+  ],
+  "unattempted_turns": 0
+}
