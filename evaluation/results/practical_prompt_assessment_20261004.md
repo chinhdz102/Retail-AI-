@@ -14,12 +14,16 @@ Các lượt chưa chạy trong bộ mở rộng gồm lời cảm ơn, hỏi th
 
 Một probe live riêng chạy được: hỏi giá Coca Zero, nhận “Coca-Cola Zero 330ml: giá 13.000đ.”, HTTP 200 trong 1.869 ms; câu trả lời cuối do OSS 20B tạo sau khi Qwen và OSS 120B bị rate limit. Probe khớp giá và sản phẩm trong catalog.
 
+Sau khi chờ thêm, một probe khác cũng trả đúng câu đó trong 1.862 ms qua OSS 120B. Nhưng lượt benchmark đầy đủ kế tiếp lại gặp 429 ở cả chuỗi fallback ngay câu đầu; runner dừng ở 1/22 lượt và đánh dấu đáp án `NOT_SCORED`. Hai probe là cùng một ý định tra giá, không tăng độ rộng của mẫu chất lượng.
+
 Trace và số liệu:
 
 - [Bộ tình huống 18 case](../cases/practical_prompt_realworld_v1.json)
 - [Runner benchmark text trực tiếp](../run_practical_prompt_benchmark.py)
 - [Trace benchmark dừng do rate limit](practical_prompt_live_20261004.json)
 - [Trace probe live thành công](practical_prompt_smoke_price_20261004.json)
+- [Trace probe sau đó qua OSS 120B](practical_prompt_retry_probe_20261004.json)
+- [Trace runner dừng sớm khi toàn bộ model rate limit](practical_prompt_live_rate_limit_failfast_20261004.json)
 
 ## Bằng chứng chất lượng đã có
 
