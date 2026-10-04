@@ -8,7 +8,7 @@ Chạy từ thư mục gốc repo:
 .\.venv\Scripts\python.exe evaluation\run_smoke_benchmark.py
 .\.venv\Scripts\python.exe evaluation\run_p0_regressions.py
 .\.venv\Scripts\python.exe -m evaluation.live_groq_smoke
-\.venv\Scripts\python.exe -m evaluation.run_product_search_benchmark
+.\.venv\Scripts\python.exe -m evaluation.run_product_search_benchmark
 ```
 
 `run_product_search_benchmark.py` đo riêng bộ phân giải sản phẩm PostgreSQL, không gọi LLM. Bộ ca chuẩn ở `evaluation/cases/product_resolution.jsonl` gồm ID/barcode, tên có dấu/không dấu, partial match, brand và typo. Script chạy warm-up, lặp từng truy vấn 3 lần, ghi Recall@1/3, MRR, latency, revision Git và SHA-256 dataset. Chọn PostgreSQL qua `DATABASE_URL` trong `.env` hoặc `--database-url`; không đưa chuỗi kết nối vào báo cáo. Trước lần chạy đầu sau cập nhật code, chạy lại importer để cập nhật `search_title` và migration schema:
@@ -26,12 +26,14 @@ Mốc Recall@1 ≥ 90%, Recall@3 ≥ 97% và median search < 100 ms là mục ti
 
 `live_groq_smoke.py` chạy benchmark agent bằng Groq thật. Nó mặc định đọc key từ `.env`; có thể chọn file cấu hình khác bằng `RETAIL_EVAL_ENV_FILE`. Script không ghi key vào kết quả, tắt SDK retry, đặt timeout provider 12 giây và timeout tác vụ 50 giây. Kết quả được lưu sau mỗi lượt.
 
+Các probe `A4_nutrition_unsupported`, `N1_casual_drink` và `N2_reservation_request` kiểm tra thuộc tính catalog chưa có, cách hỏi gián tiếp và yêu cầu giữ hàng. Trace ghi câu trả lời cùng tool call; độ tự nhiên cần người đọc chấm, benchmark không tự động coi một câu trả lời an toàn nhưng né câu hỏi là thành công. Bản đánh giá ngày 04/10/2026 ở `evaluation/results/answer_quality_assessment_20261004.md`.
+
 Có hai chế độ riêng:
 
 - `system`: giữ fallback bật để đo khả năng hoàn thành tác vụ end-to-end.
 - `model`: khóa model chính đã cấu hình và tắt fallback, để chấm riêng lựa chọn tool/field của model đó.
 
-Ví dụ chạy system benchmark 9 scenario × 3 lượt và một lượt model-only cho ba câu hỏi fact cơ bản:
+Ví dụ chạy system benchmark 12 scenario × 3 lượt và một lượt model-only cho ba câu hỏi fact cơ bản:
 
 ```powershell
 .\.venv\Scripts\python.exe -m evaluation.live_groq_smoke `

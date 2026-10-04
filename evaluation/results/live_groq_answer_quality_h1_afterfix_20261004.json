@@ -1,0 +1,126 @@
+{
+  "kind": "live_groq_smoke",
+  "source_plan": "Retail_AI_Evaluation_Test_Plan.md",
+  "timestamp_utc": "2026-10-04T07:30:00.974808+00:00",
+  "trial_count_per_scenario": 1,
+  "scenario_count": 1,
+  "scenario_ids": [
+    "H1_budget"
+  ],
+  "benchmark_mode": "system",
+  "model_locked": false,
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 0.0,
+  "complete": true,
+  "note": "Sequential live subset; both modes pace requests; system mode keeps fallbacks enabled, while model mode locks the primary model.",
+  "metrics": {
+    "task_count": 1,
+    "http_200_count": 1,
+    "median_api_latency_ms": 1533,
+    "p95_api_latency_ms": 1533,
+    "median_api_latency_excluding_pacing_ms": 1533,
+    "p95_api_latency_excluding_pacing_ms": 1533,
+    "median_provider_latency_per_llm_call_ms": 1516,
+    "total_llm_calls": 1,
+    "median_llm_calls_per_task": 1,
+    "total_tool_calls": 1,
+    "median_tool_calls_per_task": 1,
+    "provider_model_attempts": 3,
+    "fallback_attempts": 2,
+    "rate_limit_errors": 2,
+    "rate_limit_header_samples": 3,
+    "models_replied": {
+      "openai/gpt-oss-20b": 1
+    },
+    "prompt_tokens": 999,
+    "completion_tokens": 49,
+    "minimum_field_grade": {
+      "scored": 0,
+      "passed": 0
+    }
+  },
+  "results": [
+    {
+      "scenario_id": "H1_budget",
+      "trial": 1,
+      "prompt": "Gợi ý đồ uống dưới 10.000đ.",
+      "status_code": 200,
+      "latency_ms": 1533,
+      "response": {
+        "session_id": "5899324b-3479-458d-8a83-7612f574e8ca",
+        "text": "Gợi ý: Nước suối 500ml.",
+        "model": "openai/gpt-oss-20b",
+        "grounded_product_ids": [
+          "WATER01"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "state": "BROWSING"
+      },
+      "llm_trace": [
+        {
+          "model": "openai/gpt-oss-20b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "38",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "975",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "36m0s",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "132",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-20b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "968",
+                "x-ratelimit-remaining-tokens": "6930",
+                "x-ratelimit-reset-requests": "46m4.8s",
+                "x-ratelimit-reset-tokens": "8.025s"
+              }
+            }
+          ],
+          "latency_ms": 1516,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "recommend_products",
+              "arguments": "{\"category\":\"đồ uống\",\"limit\":3,\"price_constraint\":{\"operator\":\"LTE\",\"value_vnd\":10000}}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 999,
+            "completion_tokens": 49,
+            "total_tokens": 1048
+          }
+        }
+      ],
+      "llm_call_count": 1,
+      "tool_call_count": 1,
+      "minimum_field_grade": null
+    }
+  ]
+}
