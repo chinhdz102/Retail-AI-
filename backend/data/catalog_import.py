@@ -181,6 +181,7 @@ async def import_rows(
                         )
                     )
                 )
+                search_title = normalize_search_text(row.name)
                 search_brand = normalize_search_text(row.brand)
                 search_category = normalize_search_text(
                     " ".join(
@@ -198,10 +199,10 @@ async def import_rows(
                 await conn.execute(
                     """INSERT INTO products(
                         product_id, item_no, barcode, name, brand, category_code,
-                        department, sub_department, spicy, search_name, search_brand,
+                        department, sub_department, spicy, search_name, search_title, search_brand,
                         search_category, uom, image_url, description, seo_url
                     )
-                    VALUES($1,$2,$3,$4,$5,$6,$7,$8,NULL,$9,$10,$11,$12,$13,$14,$15)
+                    VALUES($1,$2,$3,$4,$5,$6,$7,$8,NULL,$9,$10,$11,$12,$13,$14,$15,$16)
                     ON CONFLICT(product_id) DO UPDATE SET
                         item_no=EXCLUDED.item_no,
                         barcode=EXCLUDED.barcode,
@@ -211,6 +212,7 @@ async def import_rows(
                         department=EXCLUDED.department,
                         sub_department=EXCLUDED.sub_department,
                         search_name=EXCLUDED.search_name,
+                        search_title=EXCLUDED.search_title,
                         search_brand=EXCLUDED.search_brand,
                         search_category=EXCLUDED.search_category,
                         uom=EXCLUDED.uom,
@@ -227,6 +229,7 @@ async def import_rows(
                     row.department,
                     row.sub_department,
                     search_name,
+                    search_title,
                     search_brand,
                     search_category,
                     row.uom,

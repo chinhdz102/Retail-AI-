@@ -8,7 +8,17 @@ Chạy từ thư mục gốc repo:
 .\.venv\Scripts\python.exe evaluation\run_smoke_benchmark.py
 .\.venv\Scripts\python.exe evaluation\run_p0_regressions.py
 .\.venv\Scripts\python.exe -m evaluation.live_groq_smoke
+\.venv\Scripts\python.exe -m evaluation.run_product_search_benchmark
 ```
+
+`run_product_search_benchmark.py` đo riêng bộ phân giải sản phẩm PostgreSQL, không gọi LLM. Bộ ca chuẩn ở `evaluation/cases/product_resolution.jsonl` gồm ID/barcode, tên có dấu/không dấu, partial match, brand và typo. Script chạy warm-up, lặp từng truy vấn 3 lần, ghi Recall@1/3, MRR, latency, revision Git và SHA-256 dataset. Chọn PostgreSQL qua `DATABASE_URL` trong `.env` hoặc `--database-url`; không đưa chuỗi kết nối vào báo cáo. Trước lần chạy đầu sau cập nhật code, chạy lại importer để cập nhật `search_title` và migration schema:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\import_winmart.py --apply
+.\.venv\Scripts\python.exe -m evaluation.run_product_search_benchmark
+```
+
+Mốc Recall@1 ≥ 90%, Recall@3 ≥ 97% và median search < 100 ms là mục tiêu của roadmap trên catalog 3.099 SKU; kết quả ở máy local cần điền vào report benchmark để xác nhận.
 
 `run_smoke_benchmark.py` dùng phản hồi Groq được lập trình sẵn để kiểm backend, tool, grounding, phân quyền, session và lỗi. Kết quả ở `evaluation/results/smoke_benchmark.json`; exit code 1 nghĩa là có ca FAIL.
 

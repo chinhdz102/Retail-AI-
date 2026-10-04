@@ -21,6 +21,10 @@ def normalize_search_text(value: str | None) -> str:
     )
 
 
+def _escape_like_literal(value: str) -> str:
+    return value.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+
+
 class PostgresProductRepository:
     source_name = "winmart_postgres_catalog"
 
@@ -34,32 +38,74 @@ class PostgresProductRepository:
     async def _search(self, **criteria) -> list[ProductSnapshot]:
         conn = await asyncpg.connect(self._dsn, timeout=2)
         try:
-            query = normalize_search_text(criteria.get("query", ""))
+            raw_query = str(criteria.get("query", "")).strip()
+            query = normalize_search_text(raw_query)
             category = normalize_search_text(criteria.get("category"))
             brand = normalize_search_text(criteria.get("brand"))
-            where: list[str] = ["s.price_quality_status IN ('NORMAL', 'SALE')"]
+            where: list[str] = [
+                "p.active IS TRUE",
+                "s.price_quality_status IN ('NORMAL', 'SALE')",
+            ]
             args: list[object] = []
 
             def bind(value: object) -> str:
                 args.append(value)
                 return f"${len(args)}"
 
-            tokens = query.split()
-            for token in tokens:
-                placeholder = bind(f"%{token}%")
-                where.append(
-                    f"(p.search_name ILIKE {placeholder} OR "
-                    f"p.search_category ILIKE {placeholder} OR "
-                    f"p.search_brand ILIKE {placeholder})"
+            tokens = [token for token in re.split(r"\W+", query) if token]
+            lexical_tokens: list[str] = []
+            exact_identifier = "false"
+
+            def contains(column: str, token: str) -> str:
+                pattern = bind(f"%{_escape_like_literal(token)}%")
+                return f"{column} ILIKE {pattern} ESCAPE '!'"
+
+            if tokens:
+                raw_exact = bind(raw_query)
+                exact_identifier = (
+                    f"upper(p.product_id) = upper({raw_exact}) OR "
+                    f"upper(p.item_no) = upper({raw_exact}) OR "
+                    f"upper(p.barcode) = upper({raw_exact})"
                 )
+                for token in tokens:
+                    lexical_match = " OR ".join(
+                        contains(column, token)
+                        for column in ("p.search_name", "p.search_category", "p.search_brand")
+                    )
+                    lexical_tokens.append(f"({lexical_match})")
+                query_match = " AND ".join(lexical_tokens)
+                fuzzy_tokens = [token for token in tokens if len(token) >= 4]
+                if fuzzy_tokens:
+                    fuzzy_parts: list[str] = []
+                    for token, lexical_match in zip(tokens, lexical_tokens, strict=True):
+                        if len(token) < 4:
+                            fuzzy_parts.append(lexical_match)
+                            continue
+                        placeholder = bind(token)
+                        fuzzy_parts.append(
+                            f"({lexical_match} OR {placeholder} <% p.search_title OR "
+                            f"{placeholder} <% p.search_brand OR "
+                            f"{placeholder} <% p.search_category)"
+                        )
+                    fuzzy_match = " AND ".join(fuzzy_parts)
+                    where.append(
+                        f"(({exact_identifier}) OR ({query_match}) OR ({fuzzy_match}))"
+                    )
+                else:
+                    fuzzy_tokens = []
+                    where.append(f"(({exact_identifier}) OR ({query_match}))")
+            else:
+                fuzzy_tokens = []
+                if query:
+                    where.append("false")
             if category:
                 for token in category.split():
-                    placeholder = bind(f"%{token}%")
-                    where.append(f"p.search_category ILIKE {placeholder}")
+                    placeholder = bind(f"%{_escape_like_literal(token)}%")
+                    where.append(f"p.search_category ILIKE {placeholder} ESCAPE '!'")
             if brand:
                 for token in brand.split():
-                    placeholder = bind(f"%{token}%")
-                    where.append(f"p.search_brand ILIKE {placeholder}")
+                    placeholder = bind(f"%{_escape_like_literal(token)}%")
+                    where.append(f"p.search_brand ILIKE {placeholder} ESCAPE '!'")
             if criteria.get("max_price_vnd") is not None:
                 where.append(f"s.effective_price_vnd <= {bind(criteria['max_price_vnd'])}")
             operator: PriceOperator | None = criteria.get("price_operator")
@@ -79,7 +125,7 @@ class PostgresProductRepository:
                 where.append("s.physical_stock > 0")
 
             exact = bind(query) if query else "NULL"
-            prefix = bind(f"{query}%") if query else "NULL"
+            prefix = bind(f"{_escape_like_literal(query)}%") if query else "NULL"
             limit = bind(max(1, min(int(criteria.get("limit", 10)), 20)))
             sql = f"""
                 WITH latest AS (
@@ -101,19 +147,25 @@ class PostgresProductRepository:
                 WHERE {" AND ".join(where)}
                 ORDER BY
                     CASE
-                        WHEN upper(p.product_id) = upper({exact})
-                             OR p.item_no = {exact}
-                             OR p.barcode = {exact} THEN 0
-                        WHEN lower(p.name) = {exact} THEN 1
-                        WHEN p.search_name LIKE {prefix} THEN 2
-                        ELSE 3
+                        WHEN {exact_identifier} THEN 0
+                        WHEN p.search_title = {exact} THEN 1
+                        WHEN p.search_title LIKE {prefix} ESCAPE '!' THEN 2
+                        WHEN {" AND ".join(lexical_tokens) if lexical_tokens else "false"} THEN 3
+                        ELSE 4
                     END,
                     CASE WHEN {exact} IS NULL THEN 0
-                         ELSE similarity(p.search_name, {exact}) END DESC,
+                         ELSE word_similarity({exact}, p.search_title) END DESC,
+                    CASE WHEN {exact} IS NULL THEN 0
+                         ELSE similarity(p.search_title, {exact}) END DESC,
                     p.name
                 LIMIT {limit}
             """
-            rows = await conn.fetch(sql, *args)
+            async with conn.transaction():
+                if fuzzy_tokens:
+                    await conn.execute(
+                        "SELECT set_config('pg_trgm.word_similarity_threshold', '0.12', true)"
+                    )
+                rows = await conn.fetch(sql, *args)
             return [self._to_snapshot(row) for row in rows]
         finally:
             await conn.close()
