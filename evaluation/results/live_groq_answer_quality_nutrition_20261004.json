@@ -1,0 +1,179 @@
+{
+  "kind": "live_groq_smoke",
+  "source_plan": "Retail_AI_Evaluation_Test_Plan.md",
+  "timestamp_utc": "2026-10-04T07:32:05.177396+00:00",
+  "trial_count_per_scenario": 1,
+  "scenario_count": 1,
+  "scenario_ids": [
+    "A4_nutrition_unsupported"
+  ],
+  "benchmark_mode": "system",
+  "model_locked": false,
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 9.0,
+  "complete": true,
+  "note": "Sequential live subset; both modes pace requests; system mode keeps fallbacks enabled, while model mode locks the primary model.",
+  "metrics": {
+    "task_count": 1,
+    "http_200_count": 1,
+    "median_api_latency_ms": 10190,
+    "p95_api_latency_ms": 10190,
+    "median_api_latency_excluding_pacing_ms": 2839,
+    "p95_api_latency_excluding_pacing_ms": 2839,
+    "median_provider_latency_per_llm_call_ms": 1412,
+    "total_llm_calls": 2,
+    "median_llm_calls_per_task": 2,
+    "total_tool_calls": 1,
+    "median_tool_calls_per_task": 1,
+    "provider_model_attempts": 6,
+    "fallback_attempts": 4,
+    "rate_limit_errors": 4,
+    "rate_limit_header_samples": 6,
+    "models_replied": {
+      "openai/gpt-oss-20b": 2
+    },
+    "prompt_tokens": 2185,
+    "completion_tokens": 107,
+    "minimum_field_grade": {
+      "scored": 0,
+      "passed": 0
+    }
+  },
+  "results": [
+    {
+      "scenario_id": "A4_nutrition_unsupported",
+      "trial": 1,
+      "prompt": "Coca Zero có bao nhiêu calo?",
+      "status_code": 200,
+      "latency_ms": 10190,
+      "response": {
+        "session_id": "ad342d16-b74b-4dbc-a291-854f3221b561",
+        "text": "Mình tìm thấy Coca-Cola Zero 330ml. Bạn muốn mình kiểm tra thông tin nào?",
+        "model": "openai/gpt-oss-20b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products"
+        ],
+        "state": "BROWSING"
+      },
+      "llm_trace": [
+        {
+          "model": "openai/gpt-oss-20b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "496",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "974",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "37m26.4s",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "7",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "1000",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "1ms",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-20b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "965",
+                "x-ratelimit-remaining-tokens": "6965",
+                "x-ratelimit-reset-requests": "50m24s",
+                "x-ratelimit-reset-tokens": "7.762s"
+              }
+            }
+          ],
+          "latency_ms": 1649,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"limit\":1,\"query\":\"Coca Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 997,
+            "completion_tokens": 71,
+            "total_tokens": 1068
+          }
+        },
+        {
+          "model": "openai/gpt-oss-20b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "599",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "975",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "36m0s",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "95",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "1000",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "1ms",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-20b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "964",
+                "x-ratelimit-remaining-tokens": "6742",
+                "x-ratelimit-reset-requests": "51m50.399s",
+                "x-ratelimit-reset-tokens": "9.435s"
+              }
+            }
+          ],
+          "latency_ms": 1174,
+          "pacing_wait_ms": 7351,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 1188,
+            "completion_tokens": 36,
+            "total_tokens": 1224
+          }
+        }
+      ],
+      "llm_call_count": 2,
+      "tool_call_count": 1,
+      "minimum_field_grade": null
+    }
+  ]
+}

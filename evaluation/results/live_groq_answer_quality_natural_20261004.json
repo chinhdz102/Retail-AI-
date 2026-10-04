@@ -1,0 +1,241 @@
+{
+  "kind": "live_groq_smoke",
+  "source_plan": "Retail_AI_Evaluation_Test_Plan.md",
+  "timestamp_utc": "2026-10-04T07:30:46.944550+00:00",
+  "trial_count_per_scenario": 1,
+  "scenario_count": 2,
+  "scenario_ids": [
+    "N1_casual_drink",
+    "N2_reservation_request"
+  ],
+  "benchmark_mode": "system",
+  "model_locked": false,
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 9.0,
+  "complete": true,
+  "note": "Sequential live subset; both modes pace requests; system mode keeps fallbacks enabled, while model mode locks the primary model.",
+  "metrics": {
+    "task_count": 2,
+    "http_200_count": 2,
+    "median_api_latency_ms": 9466,
+    "p95_api_latency_ms": 17652,
+    "median_api_latency_excluding_pacing_ms": 1578,
+    "p95_api_latency_excluding_pacing_ms": 1876,
+    "median_provider_latency_per_llm_call_ms": 960,
+    "total_llm_calls": 3,
+    "median_llm_calls_per_task": 1.5,
+    "total_tool_calls": 3,
+    "median_tool_calls_per_task": 1.5,
+    "provider_model_attempts": 7,
+    "fallback_attempts": 4,
+    "rate_limit_errors": 4,
+    "rate_limit_header_samples": 7,
+    "models_replied": {
+      "qwen/qwen3.8-27b": 1,
+      "openai/gpt-oss-20b": 2
+    },
+    "prompt_tokens": 3491,
+    "completion_tokens": 164,
+    "minimum_field_grade": {
+      "scored": 0,
+      "passed": 0
+    }
+  },
+  "results": [
+    {
+      "scenario_id": "N1_casual_drink",
+      "trial": 1,
+      "prompt": "T đang khát quá, dưới 10 nghìn thì có gì uống không?",
+      "status_code": 200,
+      "latency_ms": 1281,
+      "response": {
+        "session_id": "e44c33f6-cca9-442f-a1fa-e71c5eb3b258",
+        "text": "Gợi ý: Nước suối 500ml.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "WATER01"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "state": "BROWSING"
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "974",
+                "x-ratelimit-remaining-tokens": "6635",
+                "x-ratelimit-reset-requests": "37m26.4s",
+                "x-ratelimit-reset-tokens": "10.237s"
+              }
+            }
+          ],
+          "latency_ms": 1265,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "recommend_products",
+              "arguments": "{\"category\":\"đồ uống\",\"limit\":3,\"price_constraint\":{\"operator\":\"LT\",\"value_vnd\":10000}}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1285,
+            "completion_tokens": 71,
+            "total_tokens": 1356
+          }
+        }
+      ],
+      "llm_call_count": 1,
+      "tool_call_count": 1,
+      "minimum_field_grade": null
+    },
+    {
+      "scenario_id": "N2_reservation_request",
+      "trial": 1,
+      "prompt": "Coca Zero còn không? Giữ cho t 2 lon nhé.",
+      "status_code": 200,
+      "latency_ms": 17652,
+      "response": {
+        "session_id": "6d012d86-c057-4323-9e14-485dfcf216e6",
+        "text": "Coca-Cola Zero 330ml: giá 13.000đ; còn 16 sản phẩm có thể bán.",
+        "model": "openai/gpt-oss-20b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "llm_trace": [
+        {
+          "model": "openai/gpt-oss-20b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "569",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "974",
+                "x-ratelimit-remaining-tokens": "7694",
+                "x-ratelimit-reset-requests": "37m26.4s",
+                "x-ratelimit-reset-tokens": "2.622s"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "93",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-20b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "967",
+                "x-ratelimit-remaining-tokens": "6928",
+                "x-ratelimit-reset-requests": "47m31.2s",
+                "x-ratelimit-reset-tokens": "8.04s"
+              }
+            }
+          ],
+          "latency_ms": 960,
+          "pacing_wait_ms": 7733,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"in_stock\":true,\"limit\":1,\"query\":\"Coca Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1002,
+            "completion_tokens": 49,
+            "total_tokens": 1051
+          }
+        },
+        {
+          "model": "openai/gpt-oss-20b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "673",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "974",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "37m26.4s",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "171",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-20b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "966",
+                "x-ratelimit-remaining-tokens": "6726",
+                "x-ratelimit-reset-requests": "48m57.6s",
+                "x-ratelimit-reset-tokens": "9.555s"
+              }
+            }
+          ],
+          "latency_ms": 912,
+          "pacing_wait_ms": 8043,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\",\"stock\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1204,
+            "completion_tokens": 44,
+            "total_tokens": 1248
+          }
+        }
+      ],
+      "llm_call_count": 2,
+      "tool_call_count": 2,
+      "minimum_field_grade": null
+    }
+  ]
+}

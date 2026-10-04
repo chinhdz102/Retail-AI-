@@ -147,6 +147,13 @@ PRODUCT_ALIASES = {
     "COFFEE01": "coffee 咖啡",
 }
 
+DEMO_CATEGORY_ALIASES = {
+    "drink": "đồ uống nước uống thức uống nước giải khát",
+    "dairy": "sữa chế phẩm từ sữa",
+    "snack": "đồ ăn vặt thức ăn nhẹ",
+    "meal": "món ăn thức ăn bữa ăn",
+}
+
 QUERY_STOP_WORDS = frozenset(
     {
         "bao",
@@ -274,13 +281,17 @@ def search_products(
         haystack = _normalize(
             f"{product.product_id} {product.item_no or ''} {product.barcode or ''} "
             f"{product.name} {product.category} {product.category_hierarchy or ''} "
+            f"{DEMO_CATEGORY_ALIASES.get(product.category, '')} "
             f"{product.brand or ''} {product.description or ''} {product.ingredients or ''} "
             f"{PRODUCT_ALIASES.get(product.product_id, '')}"
         )
         if needle and not all(token in haystack for token in needle.split()):
             continue
         if normalized_category:
-            category_text = _normalize(f"{product.category} {product.category_hierarchy or ''}")
+            category_text = _normalize(
+                f"{product.category} {product.category_hierarchy or ''} "
+                f"{DEMO_CATEGORY_ALIASES.get(product.category, '')}"
+            )
             if not all(token in category_text for token in normalized_category.split()):
                 continue
         normalized_brand = _normalize(brand) if brand else None

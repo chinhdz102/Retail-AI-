@@ -113,6 +113,20 @@ def test_recommendation_uses_explicit_price_operator_boundaries() -> None:
     assert [product.product_id for product in at_most.products] == ["WATER01"]
 
 
+def test_recommendation_resolves_vietnamese_demo_category() -> None:
+    observation = execute_catalog_tool(
+        "recommend_products",
+        json.dumps(
+            {
+                "category": "đồ uống",
+                "price_constraint": {"operator": "LTE", "value_vnd": 10000},
+            }
+        ),
+    )
+
+    assert [product.product_id for product in observation.products] == ["WATER01"]
+
+
 def test_catalog_tool_registry_separates_recommendations_from_lookup() -> None:
     from backend.services.retail_tools import CATALOG_TOOL_DEFINITIONS
 
