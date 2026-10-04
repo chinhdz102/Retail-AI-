@@ -12,9 +12,7 @@ T dừng lượt benchmark sau 12/22 câu để không tiếp tục gửi reques
 
 Các lượt chưa chạy trong bộ mở rộng gồm lời cảm ơn, hỏi thời tiết, xin giữ hàng, báo sản phẩm móp, injection, xác nhận thanh toán giả, gợi ý món khác và đổi điều kiện lọc ở lượt tiếp theo. Hai test boundary “tối đa 7.000đ” và “dưới 7.000đ” đã được gửi nhưng không nhận được câu trả lời để chấm.
 
-Một probe live riêng chạy được: hỏi giá Coca Zero, nhận “Coca-Cola Zero 330ml: giá 13.000đ.”, HTTP 200 trong 1.869 ms; câu trả lời cuối do OSS 20B tạo sau khi Qwen và OSS 120B bị rate limit. Probe khớp giá và sản phẩm trong catalog.
-
-Sau khi chờ thêm, một probe khác cũng trả đúng câu đó trong 1.862 ms qua OSS 120B. Nhưng lượt benchmark đầy đủ kế tiếp lại gặp 429 ở cả chuỗi fallback ngay câu đầu; runner dừng ở 1/22 lượt và đánh dấu đáp án `NOT_SCORED`. Hai probe là cùng một ý định tra giá, không tăng độ rộng của mẫu chất lượng.
+Ba probe đơn lẻ hỏi giá Coca Zero đều trả đúng câu “Coca-Cola Zero 330ml: giá 13.000đ.”: hai lần hoàn tất qua OSS 20B trong 1.869 ms và 2.335 ms, một lần qua OSS 120B trong 1.862 ms. Các probe xác nhận một ý định tra giá duy nhất, không tăng độ rộng của mẫu chất lượng. Sau đó, full run ở pacing 15 giây vẫn gặp 429 ở cả chuỗi fallback ngay câu đầu; runner dừng ở 1/22 lượt và đánh dấu đáp án `NOT_SCORED`.
 
 Trace và số liệu:
 
@@ -23,7 +21,9 @@ Trace và số liệu:
 - [Trace benchmark dừng do rate limit](practical_prompt_live_20261004.json)
 - [Trace probe live thành công](practical_prompt_smoke_price_20261004.json)
 - [Trace probe sau đó qua OSS 120B](practical_prompt_retry_probe_20261004.json)
+- [Trace probe thứ ba qua OSS 20B](practical_prompt_smoke_price_probe_3_20261004.json)
 - [Trace runner dừng sớm khi toàn bộ model rate limit](practical_prompt_live_rate_limit_failfast_20261004.json)
+- [Trace full run retry với pacing 15 giây](practical_prompt_live_rate_limit_15s_20261004.json)
 
 ## Bằng chứng chất lượng đã có
 
