@@ -1,0 +1,16 @@
+[
+  {
+    "case_id": "probe_direct_text",
+    "kind": "direct_text_probe",
+    "turns": [
+      {
+        "text": "Coca Zero 330ml giá bao nhiêu?",
+        "checks": {
+          "product_id": "COKE_ZERO_330",
+          "contains": ["13.000"],
+          "tool_fields": ["price_vnd"]
+        }
+      }
+    ]
+  }
+]
