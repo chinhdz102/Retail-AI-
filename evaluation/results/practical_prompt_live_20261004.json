@@ -1,0 +1,1284 @@
+{
+  "kind": "practical_prompt_realworld_live_benchmark",
+  "timestamp_utc": "2026-10-04T11:05:16.366150+00:00",
+  "git_revision": "44eaaa11858ff2ff7eafded88125776a14979be0",
+  "catalog_repository": "demo",
+  "configured_primary_model": "qwen/qwen3.8-27b",
+  "configured_fallback_models": [
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b"
+  ],
+  "prompt_sha256": "1adce25a6985462b69dc2c10792d4b79e8d67826dcb601f6d111d886b970d7d3",
+  "case_set": "evaluation\\cases\\practical_prompt_realworld_v1.json",
+  "case_set_sha256": "2598013c27d25ac82bb28e2e8124d656d5d08e547f2ded87cc43ad4d6312e38f",
+  "case_count": 18,
+  "turn_count": 22,
+  "input_method": "direct text to POST /agent/respond",
+  "transcription_used": false,
+  "stt_calls": 0,
+  "minimum_model_request_interval_seconds": 9.0,
+  "complete": false,
+  "metrics": {
+    "task_count": 12,
+    "http_200_count": 0,
+    "median_api_latency_ms": 9032,
+    "p95_api_latency_ms": 9643,
+    "median_api_latency_excluding_pacing_ms": 674,
+    "p95_api_latency_excluding_pacing_ms": 1750,
+    "median_provider_latency_per_llm_call_ms": 671,
+    "total_llm_calls": 13,
+    "median_llm_calls_per_task": 1.0,
+    "total_tool_calls": 1,
+    "median_tool_calls_per_task": 0.0,
+    "provider_model_attempts": 37,
+    "fallback_attempts": 36,
+    "rate_limit_errors": 36,
+    "rate_limit_header_samples": 37,
+    "models_replied": {
+      "qwen/qwen3.8-27b": 1
+    },
+    "prompt_tokens": 1286,
+    "completion_tokens": 32,
+    "minimum_field_grade": {
+      "scored": 0,
+      "passed": 0
+    }
+  },
+  "grade_summary": {
+    "checks_scored": 12,
+    "checks_passed": 0,
+    "checks_failed": 12,
+    "checks_not_scored": 12,
+    "pass_rate_percent": 0.0,
+    "http_failures": 12,
+    "by_check_type": {
+      "http_200": 12,
+      "answer_quality": 12
+    },
+    "fully_passing_cases": 0,
+    "not_scored_cases": 10,
+    "total_cases": 10
+  },
+  "cases": [
+    {
+      "case_id": "coca_lookup_followup",
+      "kind": "multi_turn_product_lookup",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Chào bạn, Coca Zero 330ml giá hiện tại bao nhiêu?",
+          "checks_expected": {
+            "product_id": "COKE_ZERO_330",
+            "contains": [
+              "13.000"
+            ],
+            "tool_fields": [
+              "price_vnd"
+            ]
+          },
+          "status_code": 502,
+          "latency_ms": 9643,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "success",
+                  "rate_limit_headers": {
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "998",
+                    "x-ratelimit-remaining-tokens": "6634",
+                    "x-ratelimit-reset-requests": "2m52.8s",
+                    "x-ratelimit-reset-tokens": "10.245s"
+                  }
+                }
+              ],
+              "latency_ms": 1115,
+              "pacing_wait_ms": 0,
+              "tool_calls": [
+                {
+                  "name": "search_products",
+                  "arguments": "{\"query\":\"Coca Zero 330ml\"}"
+                }
+              ],
+              "usage": {
+                "prompt_tokens": 1286,
+                "completion_tokens": 32,
+                "total_tokens": 1318
+              }
+            },
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "616",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "998",
+                    "x-ratelimit-remaining-tokens": "7716",
+                    "x-ratelimit-reset-requests": "2m52.8s",
+                    "x-ratelimit-reset-tokens": "2.434s"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "294",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "430",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 633,
+              "pacing_wait_ms": 7893,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 2,
+          "tool_call_count": 1,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Còn hàng không?",
+          "checks_expected": {
+            "product_id": "COKE_ZERO_330",
+            "contains_any": [
+              "16",
+              "hết hàng",
+              "không có sản phẩm"
+            ],
+            "tool_fields": [
+              "stock"
+            ]
+          },
+          "status_code": 502,
+          "latency_ms": 9060,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "496",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "998",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "2m52.8s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "197",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "334",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 693,
+              "pacing_wait_ms": 8365,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        },
+        {
+          "turn_index": 3,
+          "input_text": "Ở kệ nào vậy?",
+          "checks_expected": {
+            "product_id": "COKE_ZERO_330",
+            "contains": [
+              "A2-L2"
+            ],
+            "tool_fields": [
+              "shelf"
+            ]
+          },
+          "status_code": 502,
+          "latency_ms": 8781,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "508",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "998",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "2m52.8s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "189",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "325",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 465,
+              "pacing_wait_ms": 8315,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 3
+      }
+    },
+    {
+      "case_id": "casual_drink_budget",
+      "kind": "implicit_recommendation",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "T đang khát, dưới 10 nghìn thì có gì uống được không?",
+          "checks_expected": {
+            "product_id": "WATER01",
+            "price_lte": 10000,
+            "must_be_sellable": true
+          },
+          "status_code": 502,
+          "latency_ms": 9213,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "503",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "998",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "2m52.8s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "185",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "306",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 677,
+              "pacing_wait_ms": 8535,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 1
+      }
+    },
+    {
+      "case_id": "snack_constraints",
+      "kind": "constrained_recommendation",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Có món ăn vặt không cay, còn hàng mà dưới 20 nghìn không?",
+          "checks_expected": {
+            "product_id": "SNACK01",
+            "category": "snack",
+            "spicy": false,
+            "price_lt": 20000,
+            "must_be_sellable": true
+          },
+          "status_code": 502,
+          "latency_ms": 9007,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "474",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "998",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "2m52.8s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "176",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "312",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 676,
+              "pacing_wait_ms": 8330,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 1
+      }
+    },
+    {
+      "case_id": "budget_inclusive_boundary",
+      "kind": "price_boundary",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Có nước nào tối đa 7.000 đồng không?",
+          "checks_expected": {
+            "product_id": "WATER01",
+            "price_operator": "LTE",
+            "price_value_vnd": 7000
+          },
+          "status_code": 502,
+          "latency_ms": 8986,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "484",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "998",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "2m52.8s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "164",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "301",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 651,
+              "pacing_wait_ms": 8334,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 1
+      }
+    },
+    {
+      "case_id": "budget_strict_boundary",
+      "kind": "price_boundary",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Có nước nào dưới 7.000 đồng không?",
+          "checks_expected": {
+            "no_sellable_match": true,
+            "price_operator": "LT",
+            "price_value_vnd": 7000
+          },
+          "status_code": 502,
+          "latency_ms": 9057,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "454",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "998",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "2m52.8s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "155",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "291",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 709,
+              "pacing_wait_ms": 8347,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 1
+      }
+    },
+    {
+      "case_id": "expired_milk_availability",
+      "kind": "availability_and_expiry",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Sữa tươi ít đường 180ml còn bán được không? Nếu hết hạn thì cho mình biết hạn dùng luôn.",
+          "checks_expected": {
+            "product_id": "MILK01",
+            "contains": [
+              "2026-09-15"
+            ],
+            "tool_fields": [
+              "stock",
+              "expiry_at"
+            ]
+          },
+          "status_code": 502,
+          "latency_ms": 9358,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "451",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "998",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "2m52.8s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "152",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "288",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 1067,
+              "pacing_wait_ms": 8290,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 1
+      }
+    },
+    {
+      "case_id": "unsupported_nutrition",
+      "kind": "unsupported_attribute",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Coca Zero có bao nhiêu calo?",
+          "checks_expected": {
+            "must_not_claim": [
+              "calo",
+              "kcal",
+              "calorie"
+            ],
+            "must_acknowledge_unavailable": true
+          },
+          "status_code": 502,
+          "latency_ms": 8472,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "455",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "998",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "2m52.8s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "137",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "273",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 532,
+              "pacing_wait_ms": 7939,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 1
+      }
+    },
+    {
+      "case_id": "unknown_product",
+      "kind": "unknown_entity",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Coca Mango Dragon chai 5 lít giá bao nhiêu?",
+          "checks_expected": {
+            "no_product_match": true,
+            "must_not_claim": [
+              "13.000",
+              "18.000",
+              "7.000"
+            ]
+          },
+          "status_code": 502,
+          "latency_ms": 9148,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "427",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "129",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "251",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 671,
+              "pacing_wait_ms": 8476,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 1
+      }
+    },
+    {
+      "case_id": "typo_product_name",
+      "kind": "typo_tolerance",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Coca zreo bn tiền?",
+          "checks_expected": {
+            "product_id": "COKE_ZERO_330",
+            "contains": [
+              "13.000"
+            ],
+            "tool_fields": [
+              "price_vnd"
+            ]
+          },
+          "status_code": 502,
+          "latency_ms": 8999,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "416",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "117",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "254",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 668,
+              "pacing_wait_ms": 8330,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 1
+      }
+    },
+    {
+      "case_id": "self_correction_text",
+      "kind": "disfluency_without_audio",
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Cho anh... à thôi, cho em mì bò hầm cay ly nhỏ giá bao nhiêu?",
+          "checks_expected": {
+            "product_id": "NOODLE01",
+            "contains": [
+              "17.000"
+            ],
+            "tool_fields": [
+              "price_vnd"
+            ]
+          },
+          "status_code": 502,
+          "latency_ms": 8899,
+          "response": {
+            "detail": "Groq chat provider unavailable"
+          },
+          "llm_trace": [
+            {
+              "model": null,
+              "fallback_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "411",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "999",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1m26.4s",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "114",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                },
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "status": "error",
+                  "error_type": "RateLimitError",
+                  "rate_limit_headers": {
+                    "retry-after": "235",
+                    "x-ratelimit-limit-requests": "1000",
+                    "x-ratelimit-limit-tokens": "8000",
+                    "x-ratelimit-remaining-requests": "1000",
+                    "x-ratelimit-remaining-tokens": "8000",
+                    "x-ratelimit-reset-requests": "1ms",
+                    "x-ratelimit-reset-tokens": "1ms"
+                  }
+                }
+              ],
+              "latency_ms": 558,
+              "pacing_wait_ms": 8340,
+              "tool_calls": [],
+              "error_type": "GroqProviderError"
+            }
+          ],
+          "llm_call_count": 1,
+          "tool_call_count": 0,
+          "grade": {
+            "status": "NOT_SCORED",
+            "passed_checks": 0,
+            "total_checks": 1,
+            "checks": {
+              "http_200": {
+                "status": "FAIL",
+                "expected": 200,
+                "observed": 502
+              },
+              "answer_quality": {
+                "status": "NOT_SCORED",
+                "expected": "an LLM response to evaluate",
+                "observed": "Groq chat provider unavailable"
+              }
+            }
+          }
+        }
+      ],
+      "complete": true,
+      "grade": {
+        "status": "NOT_SCORED",
+        "passed_checks": 0,
+        "total_checks": 1
+      }
+    }
+  ],
+  "stop_reason": "repeated_all_model_rate_limits",
+  "rate_limited_turn_count": 12,
+  "unattempted_turns": 10
+}
