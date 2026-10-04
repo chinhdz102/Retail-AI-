@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 CREATE TABLE IF NOT EXISTS categories (
     category_code text PRIMARY KEY,
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS products (
     sub_department text,
     spicy boolean,
     search_name text NOT NULL,
+    search_title text NOT NULL DEFAULT '',
     search_brand text NOT NULL DEFAULT '',
     search_category text NOT NULL DEFAULT '',
     uom text,
@@ -28,6 +30,11 @@ CREATE TABLE IF NOT EXISTS products (
     active boolean NOT NULL DEFAULT true,
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS search_title text NOT NULL DEFAULT '';
+UPDATE products
+SET search_title = lower(unaccent(replace(replace(name, 'Đ', 'D'), 'đ', 'd')))
+WHERE search_title = '';
 
 CREATE TABLE IF NOT EXISTS store_product_snapshots (
     snapshot_id bigserial PRIMARY KEY,
@@ -58,6 +65,7 @@ CREATE TABLE IF NOT EXISTS catalog_quarantine_records (
 );
 
 CREATE INDEX IF NOT EXISTS ix_products_search_name_trgm ON products USING gin (search_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS ix_products_search_title_trgm ON products USING gin (search_title gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS ix_products_search_brand_trgm ON products USING gin (search_brand gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS ix_products_search_category_trgm ON products USING gin (search_category gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS ix_snapshots_latest ON store_product_snapshots(store_code, product_id, source_timestamp DESC);
