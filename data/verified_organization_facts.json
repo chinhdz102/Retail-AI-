@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "profiles": [
     {
       "entity_id": "wincommerce",
@@ -9,26 +9,38 @@
         "vi": "WinCommerce",
         "en": "WinCommerce"
       },
-      "facts": {
-        "vi": [
-          "Công ty Cổ phần Dịch vụ Thương mại Tổng hợp WinCommerce là thành viên của Tập đoàn Masan.",
-          "WinCommerce sở hữu và vận hành chuỗi siêu thị WinMart và chuỗi cửa hàng WinMart+/WiN."
-        ],
-        "en": [
-          "WinCommerce General Trading Services Joint Stock Company is a member of Masan Group.",
-          "WinCommerce owns and operates the WinMart supermarket and WinMart+/WiN store chains."
-        ]
-      },
-      "sources": [
+      "claims": [
         {
-          "name": "WinCommerce official company profile",
-          "url": "https://tuyendung.winmart.vn/home",
-          "verified_at": "2026-10-18"
+          "claim_id": "legal_identity_and_group",
+          "facts": {
+            "vi": "Công ty Cổ phần Dịch vụ Thương mại Tổng hợp WinCommerce là thành viên của Tập đoàn Masan.",
+            "en": "WinCommerce General Trading Services Joint Stock Company is a member of Masan Group."
+          },
+          "source_ids": ["wincommerce_official_profile"]
         },
         {
+          "claim_id": "operated_retail_chains",
+          "facts": {
+            "vi": "WinCommerce sở hữu và vận hành chuỗi siêu thị WinMart và chuỗi cửa hàng WinMart+/WiN.",
+            "en": "WinCommerce owns and operates the WinMart supermarket and WinMart+/WiN store chains."
+          },
+          "source_ids": ["wincommerce_official_profile", "winmart_transaction_policy"]
+        }
+      ],
+      "sources": [
+        {
+          "source_id": "wincommerce_official_profile",
+          "name": "WinCommerce official company profile",
+          "url": "https://tuyendung.winmart.vn/",
+          "verified_at": "2026-10-18",
+          "basis": "official_public"
+        },
+        {
+          "source_id": "winmart_transaction_policy",
           "name": "WinMart official transaction policy",
           "url": "https://winmart.vn/info/transaction-policy",
-          "verified_at": "2026-10-18"
+          "verified_at": "2026-10-18",
+          "basis": "official_public"
         }
       ]
     },
@@ -40,19 +52,23 @@
         "vi": "FPT Corporation",
         "en": "FPT Corporation"
       },
-      "facts": {
-        "vi": [
-          "Theo trang giới thiệu chính thức, FPT là tập đoàn công nghệ tại Việt Nam, hoạt động trong chuyển đổi số, tư vấn, công nghệ và viễn thông."
-        ],
-        "en": [
-          "FPT describes itself as a Vietnam technology corporation working in digital transformation, consulting, technology, and telecommunications."
-        ]
-      },
+      "claims": [
+        {
+          "claim_id": "company_profile",
+          "facts": {
+            "vi": "FPT là tập đoàn công nghệ tại Việt Nam, cung cấp dịch vụ và giải pháp về chuyển đổi số, tư vấn, công nghệ và viễn thông.",
+            "en": "FPT is a technology corporation in Vietnam providing digital transformation, consulting, technology, and telecommunications services and solutions."
+          },
+          "source_ids": ["fpt_official_about"]
+        }
+      ],
       "sources": [
         {
+          "source_id": "fpt_official_about",
           "name": "FPT official About Us",
           "url": "https://fpt.com/en/about-us",
-          "verified_at": "2026-10-18"
+          "verified_at": "2026-10-18",
+          "basis": "official_public"
         }
       ]
     },
@@ -62,6 +78,10 @@
       "aliases": [
         "chatvrm",
         "đồ án chatvrm",
+        "đồ án fpt",
+        "dự án fpt",
+        "fpt chatvrm",
+        "chatvrm fpt",
         "chatvrm fpt project",
         "development of ai agents to support retail store chains in vietnam"
       ],
@@ -69,23 +89,39 @@
         "vi": "Đồ án ChatVRM hỗ trợ chuỗi bán lẻ",
         "en": "Retail AI Agents project"
       },
-      "facts": {
-        "vi": [
-          "Tên đồ án là “Development of AI agents to support retail store chains in Vietnam”.",
-          "Theo thông tin nhóm cung cấp: Chinh phụ trách agent cho người mua, Quân phụ trách agent cho chủ cửa hàng, Long phụ trách frontend và hỗ trợ.",
-          "Chưa có nguồn xác nhận quan hệ tài trợ, sở hữu hoặc hợp tác chính thức giữa đồ án này và FPT."
-        ],
-        "en": [
-          "The project title is “Development of AI agents to support retail store chains in Vietnam”.",
-          "According to the team-provided context: Chinh owns the buyer agent, Quân the store-owner agent, and Long the frontend and support work.",
-          "No source currently verifies an official sponsorship, ownership, or partnership between this project and FPT."
-        ]
-      },
+      "claims": [
+        {
+          "claim_id": "project_title",
+          "facts": {
+            "vi": "Theo thông tin nhóm cung cấp, tên đồ án là “Development of AI agents to support retail store chains in Vietnam”.",
+            "en": "According to the team-provided context, the project is titled “Development of AI agents to support retail store chains in Vietnam”."
+          },
+          "source_ids": ["team_provided_project_context"]
+        },
+        {
+          "claim_id": "team_responsibilities",
+          "facts": {
+            "vi": "Theo thông tin nhóm cung cấp: Chinh phụ trách agent cho người mua, Quân phụ trách agent cho chủ cửa hàng, Long phụ trách frontend và hỗ trợ.",
+            "en": "According to the team-provided context: Chinh owns the buyer agent, Quân the store-owner agent, and Long the frontend and support work."
+          },
+          "source_ids": ["team_provided_project_context"]
+        },
+        {
+          "claim_id": "fpt_context_and_relationship_limit",
+          "facts": {
+            "vi": "Theo thông tin nhóm cung cấp, đây là đồ án trong bối cảnh FPT; hiện chưa có nguồn xác nhận quan hệ tài trợ, sở hữu hoặc hợp tác chính thức giữa FPT và dự án.",
+            "en": "According to the team-provided context, this is an FPT-context project; no source currently verifies an official sponsorship, ownership, or business partnership between FPT and the project."
+          },
+          "source_ids": ["team_provided_project_context"]
+        }
+      ],
       "sources": [
         {
+          "source_id": "team_provided_project_context",
           "name": "User-provided project context",
           "url": null,
-          "verified_at": null
+          "verified_at": null,
+          "basis": "user_provided"
         }
       ]
     }

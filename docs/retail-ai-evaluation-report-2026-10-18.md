@@ -2,7 +2,7 @@
 
 ## Kết luận
 
-Các luồng backend chính, kiểm soát dữ liệu và hồi quy đạt bộ kiểm thử tự động. Đợt đánh giá này chạy **394/394 pytest pass**, **40/40 P0 regression pass**, Ruff và compile pass. Regression runner phát hiện một lỗi định tuyến tồn kho; lỗi đã được sửa và kiểm tra lại.
+Các luồng backend chính, kiểm soát dữ liệu và hồi quy đạt bộ kiểm thử tự động. Sau khi hoàn thiện nguồn dữ liệu doanh nghiệp và định tuyến câu hỏi về đơn vị vận hành, vòng kiểm tra cuối chạy **399/399 pytest pass**, **40/40 P0 regression pass**, Ruff và compile pass. Regression runner trước đó phát hiện một lỗi định tuyến tồn kho; lỗi đã được sửa và kiểm tra lại.
 
 Các tính năng thông tin chi nhánh, khuyến mãi đang chạy, hàng vừa nhập và địa điểm gần cửa hàng đã có schema, tool và kiểm tra freshness/provenance. Tuy vậy, PostgreSQL hiện không kết nối được và chưa có dữ liệu chi nhánh/feed được xác minh. Vì vậy các tính năng này **chưa thể cung cấp dữ liệu thật cho kiosk**. Catalog hiện có 3.099 dòng nhưng lần thu thập mới nhất là 15/09/2026; khuyến mãi dạng text không chứng minh chương trình còn hiệu lực.
 
@@ -18,7 +18,7 @@ Các tính năng thông tin chi nhánh, khuyến mãi đang chạy, hàng vừa 
 
 | Hạng mục | Kết quả | Ý nghĩa |
 |---|---:|---|
-| Toàn bộ pytest | **394 passed** | Không còn test fail sau khi sửa lỗi tồn kho. |
+| Toàn bộ pytest | **399 passed** | Không còn test fail sau khi sửa lỗi tồn kho và bổ sung kiểm tra provenance/định tuyến doanh nghiệp. |
 | P0 regression | **40/40 passed** | Tồn kho, small talk, ràng buộc đúng sản phẩm, chặn sửa giá/tồn kho/thanh toán giả, timeout và hàng hết hạn; mỗi ca lặp 5 lần. |
 | Live Groq text | **5/5 lượt pass**, 3 tình huống | 4/4 quyết định không gọi tool đúng; câu hỏi giá viết kiểu “nhiu z” gọi đúng tool model 1/1. |
 | Live Groq latency | Median turn **5,41 giây**; median lần gọi model ghi nhận **577 ms** | Turn latency có thể gồm pacing và fallback; không phải time-to-first-token. Không đo STT, TTS hoặc thời gian hiển thị trên trình duyệt. |
@@ -27,13 +27,21 @@ Các tính năng thông tin chi nhánh, khuyến mãi đang chạy, hàng vừa 
 | Compile | **Pass** | `compileall backend tests`. |
 | Diff whitespace | **Pass** | `git diff --check`; Git chỉ in cảnh báo chuẩn hóa LF/CRLF trên Windows. |
 
+### Bổ sung sau vòng hoàn thiện dữ liệu
+
+- Kết quả cuối hiện tại là **399/399 pytest pass** (tăng từ 394 test ở vòng báo cáo trước); P0 vẫn **40/40**.
+- Câu hỏi như “Ai vận hành cửa hàng này?” và “Cửa hàng này thuộc công ty nào?” được định tuyến xác định tới hồ sơ WinCommerce trong ngữ cảnh chuỗi WinMart, kèm liên kết nguồn chính thức. Kiểm thử xác nhận luồng không gọi LLM.
+- “Đồ án FPT/ChatVRM” được phân giải thành hồ sơ dự án từ thông tin nhóm cung cấp; “FPT” đứng riêng vẫn phân giải thành FPT Corporation. Claim dự án có provenance riêng và không khẳng định FPT tài trợ, sở hữu hoặc hợp tác chính thức.
+- Hồ sơ doanh nghiệp chuyển sang claim-level provenance: mỗi claim khai báo source ID; dữ liệu không hợp lệ nếu thiếu nguồn, tham chiếu nguồn lạ, ID trùng, hoặc nguồn công khai thiếu URL/ngày xác minh. Facts công khai quá 180 ngày hoặc có ngày xác minh trong tương lai bị loại khỏi câu trả lời.
+- Hỏi đáp địa điểm chung đã bị loại khỏi luồng kiến thức: API trả lời chính sách rõ ràng, không gọi LLM hay POI tool. Lookup địa điểm quanh một chi nhánh cụ thể vẫn là luồng riêng, yêu cầu snapshot có nguồn và dữ liệu vị trí đã xác minh.
+
 Live benchmark chi tiết tạm thời nằm trong `.tmp/live_eval_text_20261018.json`; thư mục `.tmp` không được đưa vào commit. Kết quả được tóm tắt tại đây để repo chỉ có một file báo cáo mới.
 
 ### Lỗi hồi quy tìm thấy và sửa
 
 P0 ban đầu chỉ đạt 35/40. Câu **“Coca Zero còn bao nhiêu?”** bị nhận nhầm thành câu hỏi giá: bước chuẩn hóa biến “bao nhiêu” thành “bao bao nhiêu”, sau đó bộ nhận diện chọn `price_vnd`. Agent trả giá thay vì số lượng tồn.
 
-Đã sửa chuẩn hóa để không viết lại từ “nhiêu” nằm trong cụm “bao nhiêu”, đồng thời phân biệt “còn bao nhiêu” (số lượng) với “giá … còn bao nhiêu” hoặc “còn bao nhiêu tiền” (giá). Thêm ba biến thể kiểm tra: câu tồn kho chuẩn, viết tắt “còn nhiu”, và câu hỏi giá còn bao nhiêu tiền. Sau sửa, pytest đạt 394/394 và P0 đạt 40/40.
+Đã sửa chuẩn hóa để không viết lại từ “nhiêu” nằm trong cụm “bao nhiêu”, đồng thời phân biệt “còn bao nhiêu” (số lượng) với “giá … còn bao nhiêu” hoặc “còn bao nhiêu tiền” (giá). Thêm ba biến thể kiểm tra: câu tồn kho chuẩn, viết tắt “còn nhiu”, và câu hỏi giá còn bao nhiêu tiền. Sau sửa, vòng trước đạt 394/394 và P0 đạt 40/40; sau phần hoàn thiện dữ liệu doanh nghiệp, vòng cuối đạt 399/399 và P0 vẫn 40/40.
 
 ## Đánh giá các chức năng retail
 
@@ -46,8 +54,9 @@ P0 ban đầu chỉ đạt 35/40. Câu **“Coca Zero còn bao nhiêu?”** bị
 | Sản phẩm mới trong danh mục | Có so sánh hai lần import hoàn chỉnh; import chưa phân loại đủ các dòng nguồn không được coi là hoàn chỉnh. | Chưa có lịch sử hai import hoàn chỉnh để trả danh sách mới. “Mới thêm vào catalog” không bị đổi thành “mới ra mắt thị trường”. |
 | Hàng vừa nhập kho | Có tool nhận sự kiện receipt theo cửa hàng, mã hàng, số lượng, thời điểm và chứng từ; feed phải tươi và đủ cửa sổ 7 ngày mới được kết luận không có hàng mới. | Chưa có receipt/feed thật. Không suy diễn hàng nhập từ chênh lệch tồn kho. |
 | Thông tin cửa hàng | Có store master và ánh xạ kiosk → chi nhánh; chỉ dùng hồ sơ còn hạn xác minh. | Chưa có bản ghi chi nhánh/kiosk đã xác minh. Câu hỏi giờ mở cửa phải báo thiếu dữ liệu thay vì tự bịa giờ. |
-| Giới thiệu doanh nghiệp | Có hồ sơ riêng cho WinCommerce, FPT và thông tin đồ án do người dùng cung cấp; facts công khai có nguồn và ngày kiểm tra. | Có thể trả facts tĩnh trong JSON. Không suy ra quan hệ hợp tác chính thức giữa đồ án và FPT. |
-| Địa điểm gần cửa hàng | Có lookup POI theo tọa độ chi nhánh và dữ liệu có attribution, thời hạn; câu “gần đây có gì” chưa gắn chi nhánh sẽ hỏi làm rõ. | Chưa có tọa độ chi nhánh/POI feed. Hỏi đáp địa điểm chung không phải nguồn kiến thức hiện tại của agent. |
+| Giới thiệu doanh nghiệp | Có hồ sơ riêng cho WinCommerce, FPT và đồ án ChatVRM; resolver ưu tiên alias dự án như “đồ án FPT/ChatVRM”, còn FPT đứng riêng là FPT Corporation. Câu hỏi đơn vị vận hành cửa hàng mặc định về WinCommerce; mỗi claim công khai có source riêng, ngày xác minh và link trong câu trả lời. | Facts dự án dựa trên thông tin nhóm cung cấp, được gắn nhãn rõ. Không suy ra quan hệ hợp tác chính thức giữa đồ án và FPT. |
+| Hỏi đáp địa điểm chung | Đã loại khỏi customer agent; chỉ trả chính sách nêu rõ phạm vi không hỗ trợ, không gọi model/search/geocoder. | Không tra cứu địa điểm chung. |
+| Địa điểm gần một cửa hàng cụ thể | Có lookup POI theo tọa độ chi nhánh và snapshot có attribution, hạn dùng; bắt buộc gắn với một chi nhánh. | Chưa có tọa độ chi nhánh/POI feed. Luồng cụ thể chưa thể trả kết quả thật đến khi có dữ liệu đã xác minh. |
 | Chăm sóc khách hàng / phân tích tương tác | Các câu hỏi dịch vụ được xử lý bằng phản hồi chính sách an toàn; request quản trị/thanh toán giả bị chặn. | Chưa có quy trình chuyển nhân viên thực, lưu khiếu nại hoặc pipeline thống kê câu hỏi/sản phẩm được hỏi nhiều. Agent không được tuyên bố đã báo nhân viên hay ghi nhận ticket. |
 | Tiếng Anh | Có nhánh trả lời tiếng Anh cho một số chức năng store/company/catalog và test tương ứng. | Benchmark live trong báo cáo này chỉ dùng tiếng Việt; chưa đánh giá bao phủ tiếng Anh đầu-cuối. |
 

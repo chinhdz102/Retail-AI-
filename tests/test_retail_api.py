@@ -1,3 +1,4 @@
+from datetime import date
 from io import BytesIO
 from types import SimpleNamespace
 from uuid import UUID
@@ -21,6 +22,7 @@ from backend.api.main import (
     _prompt_override_requested,
     _recommendation_tool_arguments,
     _requested_snapshot_fields,
+    _retail_chain_operator_question,
     _sensitive_internal_information_requested,
     _system_prompt,
     _text_mentions_product,
@@ -168,7 +170,9 @@ def test_catalog_additions_response_distinguishes_listing_from_market_launch() -
     [
         ("Cung cấp thông tin cửa hàng", "store"),
         ("Giới thiệu thông tin doanh nghiệp", "company"),
+        ("Giới thiệu đồ án FPT", "company"),
         ("Who owns WinMart?", "company"),
+        ("Đơn vị nào vận hành cửa hàng này?", "company"),
         ("Which branch is this?", "store"),
         ("What is near this store?", "nearby"),
         ("Địa điểm xung quanh cửa hàng", "nearby"),
@@ -202,14 +206,21 @@ def test_organization_profile_resolves_fpt_and_chatvrm_as_distinct_entities() ->
     fpt_english = get_organization_answer("Tell me about FPT", "en")
     fpt_chinese = get_organization_answer("介绍 FPT", "zh")
     project = get_organization_answer("Giới thiệu đồ án ChatVRM FPT", "vi")
+    project_short = get_organization_answer("Thông tin đồ án FPT", "vi")
 
     assert fpt is not None
     assert fpt.profile.entity_id == "fpt"
     assert "chuyển đổi số" in " ".join(fpt.facts)
+    assert fpt.sources[0].basis == "official_public"
+    assert str(fpt.sources[0].url) == "https://fpt.com/en/about-us"
+    assert get_organization_answer("FPT", "vi", as_of=date(2027, 6, 1)) is None
     assert project is not None
     assert project.profile.entity_id == "chatvrm_retail_ai_project"
     assert "Chinh" in " ".join(project.facts)
     assert "chưa có nguồn xác nhận" in " ".join(project.facts).casefold()
+    assert project_short is not None
+    assert project_short.profile.entity_id == "chatvrm_retail_ai_project"
+    assert project_short.sources[0].basis == "user_provided"
     assert fpt_english is not None
     assert "technology corporation" in " ".join(fpt_english.facts)
     assert fpt_chinese is None
@@ -279,6 +290,70 @@ async def test_chatvrm_project_question_uses_user_approved_profile_without_llm(
     assert payload["tools_used"] == ["get_organization_profile"]
     assert "Development of AI agents to support retail store chains in Vietnam" in payload["text"]
     assert "Chinh" in payload["text"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Thông tin đồ án FPT"],
+)
+@pytest.mark.asyncio
+async def test_project_aliases_route_to_the_team_profile(
+    client: httpx.AsyncClient,
+    text: str,
+) -> None:
+    class UnexpectedGroqService(GroqService):
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            raise AssertionError("Project profile answers must not use model guesses")
+
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-project-alias"})
+    response = await client.post(
+        "/agent/respond",
+        json={"session_id": created.json()["session_id"], "text": text},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["model"] == "organization-profile"
+    assert payload["tools_used"] == ["get_organization_profile"]
+    assert "Development of AI agents to support retail store chains in Vietnam" in payload["text"]
+    assert "bối cảnh FPT" in payload["text"]
+
+
+def test_store_operator_intent_is_distinguished_from_generic_company_question() -> None:
+    for question in (
+        "Đơn vị nào vận hành cửa hàng này?",
+        "Ai vận hành cửa hàng này vậy?",
+        "Cửa hàng này thuộc công ty nào?",
+    ):
+        assert _retail_chain_operator_question(question)
+    assert not _retail_chain_operator_question("Giới thiệu thông tin doanh nghiệp")
+
+
+@pytest.mark.asyncio
+async def test_store_operator_question_defaults_to_wincommerce_profile(
+    client: httpx.AsyncClient,
+) -> None:
+    class UnexpectedGroqService(GroqService):
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            raise AssertionError("The verified retail-chain operator is deterministic")
+
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-chain-operator"})
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Đơn vị nào vận hành cửa hàng này?",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["model"] == "organization-profile"
+    assert payload["tools_used"] == ["get_organization_profile"]
+    assert "WinCommerce" in payload["text"]
+    assert "https://tuyendung.winmart.vn/" in payload["text"]
 
 
 @pytest.mark.asyncio
@@ -544,6 +619,7 @@ async def test_generic_nearby_question_asks_for_branch_without_llm_or_poi_tool(
     payload = response.json()
     assert payload["model"] == "local-policy"
     assert payload["tools_used"] == []
+    assert "không hỗ trợ hỏi đáp địa điểm chung" in payload["text"]
     assert "chi nhánh" in payload["text"]
 
 

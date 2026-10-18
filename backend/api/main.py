@@ -447,6 +447,31 @@ def _store_service_policy_requested(text: str) -> bool:
     return any(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized) for phrase in phrases)
 
 
+def _retail_chain_operator_question(text: str) -> bool:
+    normalized = _normalize_request_text(text)
+    return any(
+        phrase in normalized
+        for phrase in (
+            "cong ty nao van hanh cua hang",
+            "cong ty nao dieu hanh cua hang",
+            "don vi van hanh cua hang",
+            "don vi nao van hanh cua hang",
+            "don vi nao quan ly cua hang",
+            "ai van hanh cua hang",
+            "ai dieu hanh cua hang",
+            "cua hang duoc van hanh boi ai",
+            "cua hang nay thuoc cong ty nao",
+            "cua hang nay cua ai",
+            "chu quan cua hang",
+            "who operates this store",
+            "who operates this chain",
+            "who runs this store",
+            "who owns this store",
+            "who owns this chain",
+        )
+    )
+
+
 def _unverified_retail_information_kind(text: str) -> str | None:
     """Route branch/company questions away from model-only answers without sources."""
     normalized = _normalize_request_text(text)
@@ -474,6 +499,8 @@ def _unverified_retail_information_kind(text: str) -> str | None:
         )
     ):
         return "nearby"
+    if _retail_chain_operator_question(text):
+        return "company"
     if any(
         phrase in normalized
         for phrase in (
@@ -494,6 +521,10 @@ def _unverified_retail_information_kind(text: str) -> str | None:
             "gioi thieu fpt",
             "about fpt",
             "fpt corporation",
+            "do an fpt",
+            "du an fpt",
+            "fpt chatvrm",
+            "chatvrm fpt",
             "winmart do ai so huu",
             "who owns winmart",
             "wincommerce la cong ty nao",
@@ -1025,14 +1056,13 @@ def _localized_retail_information_unavailable(
     messages = {
         "company": {
             "en": (
-                "Which profile do you mean: WinCommerce/WinMart, FPT Corporation, "
-                "or the ChatVRM retail-AI project?"
+                "Do you mean the WinMart operator, FPT Corporation, or the ChatVRM/FPT project?"
             ),
             "zh": (
                 "您想了解 WinCommerce/WinMart、FPT Corporation，还是 ChatVRM 零售 AI 项目？"
             ),
             "vi": (
-                "Bạn muốn hỏi WinCommerce/WinMart, FPT Corporation hay đồ án ChatVRM về bán lẻ?"
+                "Bạn muốn hỏi đơn vị vận hành WinMart, công ty FPT hay đồ án ChatVRM/FPT?"
             ),
         },
         "store": {
@@ -1062,6 +1092,24 @@ def _localized_retail_information_unavailable(
     return messages[kind][language]
 
 
+def _localized_generic_nearby_unavailable(language: LanguageCode) -> str:
+    return {
+        "en": (
+            "I don't answer general nearby-place questions. If you mean places around a "
+            "specific store, tell me the branch; verified location data is not connected yet."
+        ),
+        "zh": (
+            "我不提供周边地点的通用问答。若要查询特定门店附近地点，请说明门店；"
+            "目前尚未接入已核实的位置数据。"
+        ),
+        "vi": (
+            "Mình không hỗ trợ hỏi đáp địa điểm chung quanh đây. Nếu bạn muốn tìm địa điểm "
+            "gần một cửa hàng cụ thể, hãy cho mình biết chi nhánh; dữ liệu vị trí đã xác "
+            "minh hiện chưa được kết nối."
+        ),
+    }[language]
+
+
 def _localized_organization_answer(
     answer: OrganizationAnswer,
     language: LanguageCode,
@@ -1069,20 +1117,18 @@ def _localized_organization_answer(
     facts = answer.facts
     if answer.profile.entity_type == "project":
         fact_text = " ".join(facts[:3])
-        if language == "vi":
-            return fact_text
         return fact_text
     fact_text = " ".join(facts[:2])
-    if answer.source_url:
-        source_date = (
-            answer.verified_at.strftime("%d/%m/%Y") if answer.verified_at else ""
-        )
-        source_label = "Nguồn" if language == "vi" else "Source"
-        source = (
-            f" {source_label}: [{answer.source_name}]({answer.source_url})"
-            f" ({source_date})."
-        )
-        return fact_text + source
+    cited_sources = []
+    for source in answer.sources:
+        if source.url is None:
+            continue
+        source_date = source.verified_at.strftime("%d/%m/%Y") if source.verified_at else ""
+        citation = f"[{source.name}]({source.url})"
+        cited_sources.append(f"{citation} ({source_date})" if source_date else citation)
+    if cited_sources:
+        source_label = {"vi": "Nguồn", "en": "Source", "zh": "来源"}[language]
+        return f"{fact_text} {source_label}: {'; '.join(cited_sources)}."
     return fact_text
 
 
@@ -1781,8 +1827,13 @@ async def agent_respond(
     retail_information_kind = _unverified_retail_information_kind(request.text)
     if retail_information_kind is not None:
         if retail_information_kind == "company":
+            organization_query = (
+                "WinCommerce"
+                if _retail_chain_operator_question(request.text)
+                else request.text
+            )
             organization_answer = get_organization_answer(
-                request.text,
+                organization_query,
                 request.language,
             )
             if organization_answer is not None:
@@ -1830,7 +1881,7 @@ async def agent_respond(
         return _local_policy_response(
             request,
             record.state,
-            _localized_retail_information_unavailable("nearby", request.language),
+            _localized_generic_nearby_unavailable(request.language),
         )
     if _interaction_analytics_requested(request.text):
         return _local_policy_response(
