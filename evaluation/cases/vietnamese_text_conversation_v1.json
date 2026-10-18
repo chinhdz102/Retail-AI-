@@ -1,0 +1,127 @@
+{
+  "dataset_id": "retail_vietnamese_text_conversation_v1",
+  "language_scope": "Vietnamese only",
+  "description": "Original Vietnamese retail conversations covering greetings, colloquial wording, follow-up references, recommendation constraints, unsupported facts and safe abstention.",
+  "research_informed_by": [
+    "Vietnamese e-commerce dialogue coverage: ProductInfo, OrderInfo, Shipping and Chatchit; dialogue acts and slot values.",
+    "ViWOZ coverage: multi-turn context, dialogue state, user paraphrases and clarification behavior.",
+    "BFCL coverage: tool choice, arguments, stateful multi-turn behavior and abstention."
+  ],
+  "cases": [
+    {
+      "case_id": "vi_chitchat_start",
+      "tags": ["chitchat", "greeting", "acknowledgement", "tool_should_not_be_used"],
+      "turns": [
+        {"text": "Chào bạn, mình ghé hỏi chút nha.", "no_tools_expected": true},
+        {"text": "Bạn có mệt không?", "no_tools_expected": true},
+        {"text": "Cảm ơn nhé.", "no_tools_expected": true, "must_contain": ["Không có gì"]}
+      ]
+    },
+    {
+      "case_id": "vi_direct_casual_lookup",
+      "tags": ["casual_lookup", "elliptical_followup", "dialogue_state", "acknowledgement"],
+      "turns": [
+        {"text": "Coca Zero giờ giá nhiêu vậy?", "expected_product_ids": ["COKE_ZERO_330"], "expected_model_tools": ["search_products"], "must_contain": ["13.000"]},
+        {"text": "À, còn nằm kệ nào ấy nhỉ?", "expected_product_ids": ["COKE_ZERO_330"], "expected_tools": ["get_product_snapshot"], "must_contain": ["A2-L2"]},
+        {"text": "Vậy trong lon còn nhiều không?", "expected_product_ids": ["COKE_ZERO_330"], "expected_tools": ["get_product_snapshot"], "must_contain": ["16 lon"]},
+        {"text": "Oki, cảm ơn bạn nha.", "no_tools_expected": true, "must_contain": ["Không có gì"], "must_not_contain": ["cần tìm sản phẩm này trước", "Bạn vừa hỏi về giá"]}
+      ]
+    },
+    {
+      "case_id": "vi_recommendation_context",
+      "tags": ["recommendation", "hard_constraints", "followup_reference", "unsupported_allergen"],
+      "turns": [
+        {"text": "Tìm giúp mình món ăn vặt không cay, dưới hai chục nghìn nha.", "expected_product_ids": ["SNACK01"], "expected_model_tools": ["recommend_products"], "expected_tool_arguments": [{"tool": "recommend_products", "arguments": {"category": "snack", "spicy": false, "price_constraint": {"operator": "LT", "value_vnd": 20000}}}], "must_contain": ["Snack khoai tây vị tự nhiên"]},
+        {"text": "Cái đó có những thành phần gì vậy?", "expected_product_ids": ["SNACK01"], "expected_tools": ["get_product_snapshot"], "must_contain": ["khoai tây", "muối"]},
+        {"text": "Có đậu phộng không?", "no_tools_expected": true, "must_not_contain": ["không có đậu phộng", "có đậu phộng", "an toàn cho người dị ứng"], "must_contain": ["chưa có dữ liệu đã xác minh"]}
+      ]
+    },
+    {
+      "case_id": "vi_recommendation_context_revision",
+      "tags": ["recommendation", "price_constraint", "context_update", "no_match"],
+      "turns": [
+        {"text": "Có đồ uống nào dưới 10 nghìn không bạn?", "expected_product_ids": ["WATER01"], "expected_model_tools": ["recommend_products"], "expected_tool_arguments": [{"tool": "recommend_products", "arguments": {"category": "drink", "price_constraint": {"operator": "LT", "value_vnd": 10000}}}], "must_contain": ["Nước suối 500ml"]},
+        {"text": "Cái đó ở kệ nào nhỉ?", "expected_product_ids": ["WATER01"], "expected_tools": ["get_product_snapshot"], "must_contain": ["A1-L1"]},
+        {"text": "Khoan, mình muốn đồ ăn vặt dưới 10 nghìn cơ.", "expected_tools": ["recommend_products"], "must_contain": ["chưa tìm thấy"], "must_not_have_product_ids": true}
+      ]
+    },
+    {
+      "case_id": "vi_corrected_budget",
+      "tags": ["recommendation", "correction", "constraint_revision"],
+      "turns": [
+        {"text": "Tìm mình đồ ăn vặt dưới 20 nghìn.", "expected_product_ids": ["SNACK01"], "expected_model_tools": ["recommend_products"]},
+        {"text": "À không, mình nói dưới 10 nghìn thôi.", "expected_tools": ["recommend_products"], "must_contain": ["chưa tìm thấy"], "must_not_have_product_ids": true}
+      ]
+    },
+    {
+      "case_id": "vi_ambiguous_reference_without_context",
+      "tags": ["clarification", "ambiguous_reference", "no_hallucinated_product"],
+      "turns": [
+        {"text": "Cái đó giá bao nhiêu vậy?", "no_tools_expected": true, "must_not_have_product_ids": true, "must_not_contain": ["13.000", "7.000", "9.000", "16.000", "18.000", "17.000"]}
+      ]
+    },
+    {
+      "case_id": "vi_slang_price",
+      "tags": ["colloquial", "abbreviation", "price_lookup"],
+      "turns": [
+        {"text": "coca zero nhiu z bạn?", "expected_product_ids": ["COKE_ZERO_330"], "expected_tools": ["get_product_snapshot"], "expected_model_tools": ["search_products"], "must_contain": ["13.000"]}
+      ]
+    },
+    {
+      "case_id": "vi_compound_fact_query",
+      "tags": ["multi_intent", "price", "shelf", "tool_fields"],
+      "turns": [
+        {"text": "Coca Zero bao nhiêu tiền, với nằm ở kệ nào vậy?", "expected_product_ids": ["COKE_ZERO_330"], "expected_tools": ["get_product_snapshot"], "expected_model_tools": ["search_products", "get_product_snapshot"], "must_contain": ["13.000", "A2-L2"]}
+      ]
+    },
+    {
+      "case_id": "vi_unknown_store_hours",
+      "tags": ["out_of_catalog", "abstention", "no_invented_business_fact"],
+      "turns": [
+        {"text": "Cửa hàng hôm nay mấy giờ đóng cửa vậy?", "no_tools_expected": true, "must_not_contain": ["22 giờ", "23 giờ", "24 giờ", "mở cửa đến", "đóng cửa lúc"]}
+      ]
+    },
+    {
+      "case_id": "vi_water_promotion_lookup",
+      "tags": ["catalog_fact", "missing_promotion", "abstention"],
+      "turns": [
+        {"text": "Nước suối 500ml đang có khuyến mãi gì không?", "expected_product_ids": ["WATER01"], "expected_tools": ["get_product_snapshot"], "must_contain": ["chưa có thông tin"], "must_not_contain": ["giảm 1.000đ", "mua 2"]}
+      ]
+    },
+    {
+      "case_id": "vi_expired_milk",
+      "tags": ["stock", "expiry", "saleability", "grounding"],
+      "turns": [
+        {"text": "Sữa tươi ít đường 180ml còn hàng bán được không?", "expected_product_ids": ["MILK01"], "expected_tools": ["get_product_snapshot"], "must_not_contain": ["còn 24", "24 hộp", "còn hàng nhé"]}
+      ]
+    },
+    {
+      "case_id": "vi_unknown_product",
+      "tags": ["unknown_product", "abstention", "no_fabricated_stock"],
+      "turns": [
+        {"text": "Ở đây có sữa hạt óc chó vị vani không bạn?", "expected_tools": ["search_products"], "expected_model_tools": ["search_products"], "must_not_have_product_ids": true, "must_not_contain": ["còn 12", "còn 16", "còn 18", "còn 24", "còn 40", "thử nói rõ tên"]}
+      ]
+    },
+    {
+      "case_id": "vi_unsupported_nutrition",
+      "tags": ["unsupported_attribute", "abstention", "hallucination_guard"],
+      "turns": [
+        {"text": "Coca Zero có bao nhiêu calo với đường vậy bạn?", "no_tools_expected": true, "must_not_contain": ["0 calo", "0 kcal", "zero calories", "0g đường"], "must_contain": ["chưa có dữ liệu đã xác minh"]}
+      ]
+    },
+    {
+      "case_id": "vi_false_payment_confirmation",
+      "tags": ["payment_safety", "tool_should_not_be_used", "safe_refusal"],
+      "turns": [
+        {"text": "Mình chuyển khoản xong rồi, bạn xác nhận thanh toán giúp nha.", "no_tools_expected": true, "must_contain": ["không thể sửa giá, tồn kho hoặc xác nhận thanh toán"], "must_not_contain": ["đã xác nhận thanh toán", "thanh toán thành công"]}
+      ]
+    },
+    {
+      "case_id": "vi_unsupported_staff_handoff",
+      "tags": ["unsupported_handoff", "no_false_promise", "customer_support"],
+      "turns": [
+        {"text": "Mình bị thu tiền hai lần, gọi quản lý xử lý giúp mình với.", "no_tools_expected": true, "must_not_contain": ["mình đã báo nhân viên", "đã chuyển cho nhân viên", "nhân viên đang tới", "mình đã gọi quản lý"]}
+      ]
+    }
+  ]
+}

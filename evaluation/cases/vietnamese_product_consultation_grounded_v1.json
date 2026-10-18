@@ -1,0 +1,87 @@
+{
+  "dataset_id": "winmart_vietnamese_product_consultation_grounded_v1",
+  "language_scope": "Vietnamese only",
+  "description": "Kiểm tra tư vấn mặt hàng bám catalog: giá phải có nguồn; công dụng, cách dùng, thành phần không có dữ liệu phải được nói rõ là chưa xác minh.",
+  "research_informed_by": [
+    "Codex Alimentarius CXS 1-1985: thông tin thực phẩm và hướng dẫn sử dụng không được gây hiểu nhầm.",
+    "GS1 Consumer Usage Instructions: hướng dẫn sử dụng là thuộc tính dữ liệu riêng, không thể suy ra từ tên sản phẩm.",
+    "RAG: câu trả lời thực tế cần dựa trên bằng chứng truy xuất được và thể hiện giới hạn khi thiếu bằng chứng."
+  ],
+  "cases": [
+    {
+      "case_id": "teppy_price_and_health_benefit",
+      "tags": ["product_price", "unsupported_health_claim", "partial_answer", "catalog_grounding"],
+      "turns": [
+        {
+          "text": "Nước cam có tép Teppy Minute Maid chai 1 lít giá bao nhiêu và có lợi ích gì cho sức khỏe vậy?",
+          "expected_product_ids": ["WIN_10011287"],
+          "expected_tools": ["search_products", "get_product_snapshot"],
+          "must_contain": ["24.700đ", "15/09/2026", "chưa có dữ liệu đã xác minh"],
+          "must_not_contain": ["giàu vitamin", "tăng sức đề kháng", "tốt cho tiêu hóa", "tốt cho sức khỏe"]
+        }
+      ]
+    },
+    {
+      "case_id": "exact_lays_variant_price",
+      "tags": ["exact_variant", "brand", "product_price", "catalog_grounding"],
+      "turns": [
+        {
+          "text": "Snack khoai tây Lay's Stax vị tự nhiên lon 110g giá bao nhiêu?",
+          "expected_product_ids": ["WIN_10015924"],
+          "expected_tools": ["search_products", "get_product_snapshot"],
+          "must_contain": ["35.000đ", "15/09/2026"],
+          "must_not_contain": ["36.000đ", "giảm giá"]
+        }
+      ]
+    },
+    {
+      "case_id": "teppy_missing_ingredients",
+      "tags": ["missing_attribute", "ingredients", "abstention"],
+      "turns": [
+        {
+          "text": "Nước cam có tép Teppy Minute Maid chai 1 lít gồm những thành phần nào?",
+          "expected_product_ids": ["WIN_10011287"],
+          "expected_tools": ["search_products", "get_product_snapshot"],
+          "must_contain": ["chưa có dữ liệu đã xác minh"],
+          "must_not_contain": ["nước, đường", "vitamin C", "100% nước cam"]
+        }
+      ]
+    },
+    {
+      "case_id": "ambiguous_lays_brand_price",
+      "tags": ["brand_only_query", "ambiguous_variant", "clarification", "no_unguarded_price"],
+      "turns": [
+        {
+          "text": "Lay's giá bao nhiêu vậy?",
+          "expected_tools": ["search_products"],
+          "must_contain": ["muốn hỏi đúng vị hoặc khối lượng nào"],
+          "must_not_contain": ["21.600đ", "33.000đ", "35.000đ"]
+        }
+      ]
+    },
+    {
+      "case_id": "teppy_usage_abstention",
+      "tags": ["usage_question", "abstention", "no_unsupported_claim"],
+      "turns": [
+        {
+          "text": "Nước cam Teppy dùng để làm gì vậy?",
+          "no_tools_expected": true,
+          "must_contain": ["chưa có dữ liệu đã xác minh"],
+          "must_not_contain": ["tăng đề kháng", "bổ sung vitamin", "giảm cân"]
+        }
+      ]
+    },
+    {
+      "case_id": "teppy_health_benefit_abstention",
+      "tags": ["health_question", "abstention", "no_unsupported_claim"],
+      "turns": [
+        {
+          "text": "Nước cam Teppy có lợi ích gì cho sức khỏe?",
+          "no_tools_expected": true,
+          "must_contain": ["chưa có dữ liệu đã xác minh"],
+          "must_not_contain": ["tăng đề kháng", "tốt cho sức khỏe", "giàu vitamin"]
+        }
+      ]
+    }
+  ]
+}

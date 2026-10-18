@@ -33,8 +33,13 @@ def _rate_limit_headers(headers: Any) -> dict[str, str]:
 
 RETAIL_STT_PROMPT = (
     "Đây là hội thoại mua hàng tại cửa hàng tiện lợi bằng tiếng Việt. "
-    "Ưu tiên nhận đúng các từ: Coca-Cola, Coca Zero, sữa, snack, nước, cà phê, "
-    "giá, kệ, tồn kho, hạn dùng, giỏ hàng, thanh toán. Không dịch sang ngôn ngữ khác."
+    "Người nói có thể dùng giọng Bắc, Trung hoặc Nam và cách nói địa phương; "
+    "các ví dụ gồm mô/chi (hỏi nào/gì), nhứt (nhất), hông/hem (không). "
+    "Giữ đúng từ thực sự được nói, nhất là tên hàng; chỉ ghi các từ địa phương "
+    "khi nghe thấy, không tự thêm từ hoặc viết lại câu. "
+    "Ưu tiên nhận đúng các từ: Coca-Cola, Coca Zero, sữa, snack, quà vặt, đồ ăn vặt, "
+    "cửa hàng tiện lợi, ngoài cổng trường, dòng tiền, nước, cà phê, giá, kệ, tồn kho, "
+    "hạn dùng, giỏ hàng, thanh toán. Không dịch sang ngôn ngữ khác."
 )
 
 RETAIL_STT_PROMPTS = {

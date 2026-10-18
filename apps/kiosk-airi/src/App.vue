@@ -9,9 +9,10 @@ import {
 } from '@phosphor-icons/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
-import { createSession, respond, synthesize, transcribe } from './api'
+import { createSession, createSynthesisTicket, respond, transcribe } from './api'
 import ChatPanel from './components/ChatPanel.vue'
 import SkyAvatar from './components/SkyAvatar.vue'
+import { listMicrophoneOptions, preferredMicrophoneId } from './microphone-devices'
 import type { AssistantStatus, ChatMessage, LanguageCode } from './types'
 import {
   VoiceConversationController,
@@ -19,8 +20,6 @@ import {
   type VoiceState,
 } from './voice-controller'
 
-const WELCOME_MESSAGE =
-  'Chào bạn, mình là Sky. Bạn cứ nói điều mình có thể giúp trong cửa hàng nhé.'
 const SILENT_AUDIO_DATA_URI =
   'data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA=='
 const sessionId = ref<string | null>(null)
@@ -30,8 +29,12 @@ const status = ref<AssistantStatus>('idle')
 const errorMessage = ref<string | null>(null)
 const isRecording = ref(false)
 const isVoiceActive = ref(false)
+const microphoneLevel = ref(0)
+const microphoneDevices = ref<Array<{ id: string; label: string }>>([])
+const selectedMicrophone = ref('')
+const activeMicrophone = ref('')
 const isBooting = ref(true)
-const isHandsFree = ref(true)
+const isHandsFree = ref(false)
 const isTextOpen = ref(false)
 const language = ref<LanguageCode>('vi')
 const voiceHint = ref('Đang chuẩn bị chế độ hội thoại tiếng Việt')
@@ -43,15 +46,16 @@ const pendingSpeechText = ref<string | null>(null)
 
 let isUnmounted = false
 let audioPlayback: HTMLAudioElement | null = null
-let audioObjectUrl: string | null = null
 let audioUnlockPromise: Promise<boolean> | null = null
 let speechRequestId = 0
 let voiceController: VoiceConversationController | null = null
+let listeningStartedAt = 0
 
 const languageSettings: Record<LanguageCode, {
   label: string
   locale: string
   switching: string
+  ready: string
   listening: string
   preparing: string
   thinking: string
@@ -65,6 +69,7 @@ const languageSettings: Record<LanguageCode, {
     label: 'tiếng Việt',
     locale: 'vi-VN',
     switching: 'Đang chuyển sang tiếng Việt',
+    ready: 'Nhập câu hỏi hoặc bấm mic để nói',
     listening: 'Mình đang nghe, bạn cứ nói tự nhiên nhé',
     preparing: 'Đang chuẩn bị chế độ hội thoại tiếng Việt',
     thinking: 'Mình đang tìm câu trả lời cho bạn',
@@ -78,6 +83,7 @@ const languageSettings: Record<LanguageCode, {
     label: 'English',
     locale: 'en-US',
     switching: 'Switching to English',
+    ready: 'Type a question or tap the mic to speak.',
     listening: "I'm listening. Speak naturally.",
     preparing: 'Preparing English conversation mode',
     thinking: 'Finding the right answer for you',
@@ -91,6 +97,7 @@ const languageSettings: Record<LanguageCode, {
     label: '中文',
     locale: 'zh-CN',
     switching: '正在切换到中文',
+    ready: '输入问题，或点击麦克风开始说话。',
     listening: '我在听，请自然地说话。',
     preparing: '正在准备中文对话模式',
     thinking: '正在为你查找答案',
@@ -109,9 +116,9 @@ const audioUnlockLabel = computed(() => {
 })
 
 const audioUnlockHint = computed(() => {
-  if (language.value === 'en') return 'Click once to let Sky play the ElevenLabs voice.'
-  if (language.value === 'zh') return '请点击一次，让 Sky 播放 ElevenLabs 语音。'
-  return 'Bấm một lần để cho phép Sky phát giọng ElevenLabs.'
+  if (language.value === 'en') return 'Click once to let Sky play audio.'
+  if (language.value === 'zh') return '请点击一次，让 Sky 播放语音。'
+  return 'Bấm một lần để cho phép Sky phát giọng nói.'
 })
 
 const textPanelLabel = computed(() => {
@@ -123,7 +130,7 @@ const textPanelLabel = computed(() => {
 const voiceButtonLabel = computed(() => {
   if (language.value === 'en') return isVoiceActive.value ? 'Stop listening' : 'Start speaking'
   if (language.value === 'zh') return isVoiceActive.value ? '停止聆听' : '开始说话'
-  return isVoiceActive.value ? 'Dừng nghe' : 'Bắt đầu nói'
+  return isHandsFree.value ? 'Dừng nghe' : 'Bắt đầu nói'
 })
 
 const statusHint = computed(() => {
@@ -134,6 +141,10 @@ const statusHint = computed(() => {
   if (status.value === 'error') return language.value === 'en' ? 'Needs attention' : language.value === 'zh' ? '需要重试' : 'Cần thử lại'
   return isBooting.value ? (language.value === 'en' ? 'Starting' : language.value === 'zh' ? '正在启动' : 'Đang khởi tạo') : (language.value === 'en' ? 'Ready' : language.value === 'zh' ? '已准备好' : 'Sẵn sàng')
 })
+
+const microphoneLevelLabel = computed(() => language.value === 'en'
+  ? 'Microphone signal level'
+  : language.value === 'zh' ? '麦克风信号强度' : 'Mức tín hiệu micro')
 
 function toErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback
@@ -150,9 +161,10 @@ function pushMessage(role: ChatMessage['role'], text: string, metadata?: Partial
 
 function handleVoiceState(state: VoiceState) {
   isVoiceActive.value = state.mode !== 'idle'
-  isHandsFree.value = state.mode !== 'idle'
   isRecording.value = state.phase === 'recording'
   if (state.phase === 'listening') {
+    listeningStartedAt = Date.now()
+    void refreshMicrophones()
     status.value = 'listening'
     voiceHint.value = languageSettings[language.value].listening
     return
@@ -171,6 +183,7 @@ function handleVoiceError(error: VoiceControllerError) {
   isVoiceActive.value = false
   isHandsFree.value = false
   isRecording.value = false
+  microphoneLevel.value = 0
   errorMessage.value = error.kind === 'permission'
     ? languageSettings[language.value].permission
     : error.message
@@ -183,7 +196,7 @@ async function handleVoiceAudio(audio: Blob) {
   status.value = 'transcribing'
   voiceHint.value = languageSettings[language.value].transcribing
   try {
-    const result = await transcribe(sessionId.value, audio, language.value)
+    const result = await withSessionRecovery((id) => transcribe(id, audio, language.value))
     if (!result.text.trim()) throw new Error(
       language.value === 'vi'
         ? 'Không nghe rõ câu nói, bạn thử lại nhé'
@@ -203,7 +216,7 @@ async function handleVoiceAudio(audio: Blob) {
     )
     status.value = 'error'
     voiceHint.value = languageSettings[language.value].retry
-    void startHandsFree()
+    void resumeHandsFree()
   }
 }
 
@@ -211,9 +224,22 @@ function ensureVoiceController(): VoiceConversationController {
   if (!voiceController) {
     voiceController = new VoiceConversationController({
       locale: languageSettings[language.value].locale,
+      preferRecorder: true,
+      deviceId: selectedMicrophone.value,
       onState: handleVoiceState,
-      onTranscript: (text) => { void sendMessage(text) },
+      onTranscript: (text) => { void sendMessage(text, true) },
       onAudio: (audio) => { void handleVoiceAudio(audio) },
+      onLevel: (level) => {
+        microphoneLevel.value = level
+        if (isVoiceActive.value && !isRecording.value && Date.now() - listeningStartedAt > 8_000) {
+          voiceHint.value = language.value === 'en'
+            ? 'I have not heard you yet. Move closer to the microphone or check the selected input.'
+            : language.value === 'zh'
+              ? '还没有听到你的声音。请靠近麦克风或检查所选输入设备。'
+              : 'Chưa nhận được câu nói. Bạn nói gần mic hoặc kiểm tra micro đầu vào nhé.'
+        }
+      },
+      onInputDevice: (label) => { activeMicrophone.value = label },
       onError: handleVoiceError,
     })
   }
@@ -221,11 +247,78 @@ function ensureVoiceController(): VoiceConversationController {
   return voiceController
 }
 
+async function refreshMicrophones() {
+  try {
+    const devices = await navigator.mediaDevices?.enumerateDevices()
+    // Browsers hide physical labels until microphone permission is granted.
+    // Wait for the first capture/listening event before choosing a device.
+    if (!devices?.some((device) => device.kind === 'audioinput' && device.label.trim())) return
+    const options = listMicrophoneOptions(devices ?? [])
+    microphoneDevices.value = options
+    let savedId = ''
+    try {
+      savedId = window.localStorage.getItem('retail-ai-microphone-device') ?? ''
+    } catch {
+      // Storage can be unavailable in private browsing; device selection still works in memory.
+    }
+    const preferredId = preferredMicrophoneId(options, selectedMicrophone.value, savedId)
+    if (!preferredId) return
+
+    const changed = selectedMicrophone.value !== preferredId
+    selectedMicrophone.value = preferredId
+    voiceController?.setInputDevice(preferredId)
+    try {
+      window.localStorage.setItem('retail-ai-microphone-device', preferredId)
+    } catch {
+      // Keep the selection for this page even when it cannot be persisted.
+    }
+
+    const selectedLabel = options.find((device) => device.id === preferredId)?.label ?? ''
+    const normalizeDeviceLabel = (label: string) => label
+      .replace(/^(?:default|communications)\s*-\s*/i, '')
+      .trim()
+      .toLocaleLowerCase()
+    if (
+      changed
+      && isHandsFree.value
+      && isVoiceActive.value
+      && activeMicrophone.value
+      && normalizeDeviceLabel(activeMicrophone.value) !== normalizeDeviceLabel(selectedLabel)
+    ) {
+      void changeMicrophone(preferredId)
+    }
+  } catch {
+    // Capture can still work when the browser restricts device enumeration.
+  }
+}
+
+async function changeMicrophone(deviceId: string) {
+  const wasEnabled = isHandsFree.value
+  pauseVoice()
+  selectedMicrophone.value = deviceId
+  voiceController?.setInputDevice(deviceId)
+  try {
+    window.localStorage.setItem('retail-ai-microphone-device', deviceId)
+  } catch {
+    // Keep the selection for this page even when it cannot be persisted.
+  }
+  activeMicrophone.value = ''
+  if (wasEnabled) await startHandsFree()
+}
+
 async function startHandsFree() {
+  if (isUnmounted) return
+  if (!sessionId.value) await bootKiosk()
   if (!sessionId.value || isUnmounted) return
+  // Voice turns need visible feedback: show listening state, transcript and any errors.
+  isTextOpen.value = true
   unlockAudio()
   isHandsFree.value = true
-  errorMessage.value = null
+  voiceHint.value = language.value === 'en'
+    ? 'Opening the microphone. Allow microphone access if your browser asks.'
+    : language.value === 'zh'
+      ? '正在打开麦克风。如果浏览器询问，请允许使用麦克风。'
+      : 'Đang mở micro. Hãy cho phép dùng micro nếu trình duyệt hỏi.'
   try {
     await ensureVoiceController().start()
   } catch (error) {
@@ -233,10 +326,15 @@ async function startHandsFree() {
   }
 }
 
+async function resumeHandsFree() {
+  if (isHandsFree.value) await startHandsFree()
+}
+
 function pauseVoice() {
   voiceController?.pause()
   isVoiceActive.value = false
   isRecording.value = false
+  microphoneLevel.value = 0
 }
 
 function unlockAudio(): Promise<boolean> {
@@ -265,7 +363,7 @@ function unlockAudio(): Promise<boolean> {
     .then(() => {
       audioUnlocked.value = true
       needsAudioUnlock.value = false
-      if (!existingAudio) {
+      if (!existingAudio && audio.src === SILENT_AUDIO_DATA_URI) {
         audio.pause()
         audio.removeAttribute('src')
         try {
@@ -297,10 +395,6 @@ function releaseAudioPlayback() {
     audioPlayback.pause()
     audioPlayback.removeAttribute('src')
     audioPlayback = null
-  }
-  if (audioObjectUrl) {
-    URL.revokeObjectURL(audioObjectUrl)
-    audioObjectUrl = null
   }
 }
 
@@ -340,17 +434,18 @@ async function speak(text: string, afterSpeech?: () => void) {
   pauseVoice()
   releaseAudioPlayback()
   status.value = 'speaking'
+  voiceHint.value = language.value === 'vi' ? 'Mình đang trả lời bằng giọng nói' : statusHint.value
   try {
-    if (!sessionId.value || typeof Audio === 'undefined' || typeof URL.createObjectURL !== 'function') {
-      throw new Error('ElevenLabs audio playback is unavailable')
+    if (!sessionId.value || typeof Audio === 'undefined') {
+      throw new Error('Cloud audio playback is unavailable')
     }
-    const blob = await synthesize(sessionId.value, text, language.value)
+    const audioUrl = await withSessionRecovery((id) => createSynthesisTicket(id, text, language.value))
     if (requestId !== speechRequestId || isUnmounted) return
-    audioObjectUrl = URL.createObjectURL(blob)
     pendingSpeechText.value = text
     const audio = audioElement.value ?? new Audio()
     if (!audioElement.value) audioElement.value = audio
-    audio.src = audioObjectUrl
+    audio.preload = 'auto'
+    audio.src = audioUrl
     audioPlayback = audio
     audio.onplay = () => {
       if (requestId !== speechRequestId || isUnmounted) return
@@ -398,7 +493,7 @@ async function activateAudio() {
   }
   if (!audioPlayback && pendingSpeechText.value) {
     const pending = pendingSpeechText.value
-    void speak(pending, startHandsFree)
+    void speak(pending, resumeHandsFree)
     return
   }
   void startHandsFree()
@@ -410,8 +505,7 @@ async function bootKiosk() {
   try {
     const session = await createSession('kiosk-01')
     sessionId.value = session.session_id
-    pushMessage('assistant', WELCOME_MESSAGE)
-    void speak(WELCOME_MESSAGE, startHandsFree)
+    voiceHint.value = languageSettings[language.value].ready
   } catch (error) {
     errorMessage.value = toErrorMessage(error, 'Không mở được phiên kiosk')
     status.value = 'error'
@@ -421,11 +515,26 @@ async function bootKiosk() {
   }
 }
 
+async function withSessionRecovery<T>(action: (id: string) => Promise<T>): Promise<T> {
+  if (!sessionId.value) throw new Error('Chưa kết nối được phiên trò chuyện.')
+  try {
+    return await action(sessionId.value)
+  } catch (error) {
+    const failure = error as { status?: number; message?: string }
+    if (![404, 410].includes(failure?.status ?? 0) || !/session/i.test(failure?.message ?? '')) throw error
+    const session = await createSession('kiosk-01')
+    sessionId.value = session.session_id
+    return action(session.session_id)
+  }
+}
+
 async function sendMessage(value = draft.value, fromVoice = false) {
   const text = value.trim()
-  if (!text || !sessionId.value || status.value === 'thinking' || (status.value === 'transcribing' && !fromVoice)) return
+  if (!text || status.value === 'thinking' || (status.value === 'transcribing' && !fromVoice)) return
+  if (!sessionId.value) await bootKiosk()
+  if (!sessionId.value || isUnmounted) return
 
-  void unlockAudio()
+  if (fromVoice) void unlockAudio()
   pauseVoice()
   draft.value = ''
   lastPrompt.value = text
@@ -435,12 +544,18 @@ async function sendMessage(value = draft.value, fromVoice = false) {
   voiceHint.value = languageSettings[language.value].thinking
 
   try {
-    const response = await respond(sessionId.value, text, language.value)
+    const response = await withSessionRecovery((id) => respond(id, text, language.value))
     pushMessage('assistant', response.text, {
       model: response.model,
       groundedProductIds: response.grounded_product_ids,
     })
-    void speak(response.text, startHandsFree)
+    if (fromVoice) {
+      void speak(response.text, resumeHandsFree)
+    } else {
+      status.value = 'idle'
+      voiceHint.value = languageSettings[language.value].ready
+      void resumeHandsFree()
+    }
   } catch (error) {
     errorMessage.value = toErrorMessage(
       error,
@@ -469,15 +584,20 @@ function toggleTextPanel() {
 
 function toggleRecording() {
   unlockAudio()
-  if (voiceController?.isActive || isVoiceActive.value) {
-    voiceController?.stopCapture()
+  if (isHandsFree.value || voiceController?.isActive || isVoiceActive.value) {
     isHandsFree.value = false
+    speechRequestId += 1
+    pendingSpeechText.value = null
+    releaseAudioPlayback()
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    voiceController?.stopCapture()
     isVoiceActive.value = false
     isRecording.value = false
-    voiceHint.value = languageSettings[language.value].retry
+    voiceHint.value = languageSettings[language.value].ready
     status.value = 'idle'
     return
   }
+  errorMessage.value = null
   void startHandsFree()
 }
 
@@ -488,7 +608,7 @@ function stopSpeaking() {
   if ('speechSynthesis' in window) window.speechSynthesis.cancel()
   status.value = 'idle'
   voiceHint.value = languageSettings[language.value].listening
-  void startHandsFree()
+  void resumeHandsFree()
 }
 
 function retryLastPrompt() {
@@ -502,6 +622,7 @@ function retryLastPrompt() {
 function handleLanguageChange(nextLanguage: LanguageCode) {
   if (language.value === nextLanguage) return
   language.value = nextLanguage
+  document.documentElement.lang = nextLanguage === 'en' ? 'en-US' : nextLanguage === 'zh' ? 'zh-CN' : 'vi-VN'
   voiceHint.value = languageSettings[nextLanguage].switching
   errorMessage.value = null
   const wasVoiceActive = isVoiceActive.value
@@ -511,9 +632,14 @@ function handleLanguageChange(nextLanguage: LanguageCode) {
   if (sessionId.value && (wasVoiceActive || isHandsFree.value) && canResumeListening) void startHandsFree()
 }
 
-onMounted(() => { void bootKiosk() })
+onMounted(() => {
+  void bootKiosk()
+  void refreshMicrophones()
+  navigator.mediaDevices?.addEventListener?.('devicechange', refreshMicrophones)
+})
 onUnmounted(() => {
   isUnmounted = true
+  navigator.mediaDevices?.removeEventListener?.('devicechange', refreshMicrophones)
   voiceController?.stop()
   speechRequestId += 1
   releaseAudioPlayback()
@@ -523,12 +649,16 @@ onUnmounted(() => {
 
 <template>
   <main class="vrm-only-shell" :class="{ 'text-is-open': isTextOpen }">
-    <section class="vrm-stage" aria-label="Avatar Sky">
+    <section class="vrm-stage" :aria-label="language === 'en' ? 'Sky avatar' : language === 'zh' ? 'Sky 虚拟形象' : 'Avatar Sky'">
       <SkyAvatar src="/avatars/sky.glb" :state="status" />
 
-      <div class="sr-only" role="status" aria-live="polite">{{ statusHint }}</div>
+      <div class="voice-feedback" role="status" aria-live="polite">
+        <strong>{{ statusHint }}</strong>
+        <p>{{ errorMessage || voiceHint }}</p>
+        <meter v-if="isVoiceActive" class="microphone-level" min="0" max="1" :value="microphoneLevel" :aria-label="microphoneLevelLabel"></meter>
+      </div>
 
-      <div class="vrm-controls" aria-label="Điều khiển Sky">
+      <div class="vrm-controls" :aria-label="language === 'en' ? 'Sky controls' : language === 'zh' ? 'Sky 控制' : 'Điều khiển Sky'">
         <button
           v-if="needsAudioUnlock"
           type="button"
@@ -549,6 +679,7 @@ onUnmounted(() => {
         >
           <Stop v-if="isVoiceActive" :size="22" weight="fill" aria-hidden="true" />
           <Microphone v-else :size="22" weight="duotone" aria-hidden="true" />
+          <span>{{ voiceButtonLabel }}</span>
         </button>
         <button
           v-if="status === 'speaking'"
@@ -573,11 +704,11 @@ onUnmounted(() => {
     </section>
 
     <Transition name="text-drawer">
-      <aside v-if="isTextOpen" class="text-drawer" aria-label="Bảng hội thoại dạng chữ">
+      <aside v-if="isTextOpen" class="text-drawer" :aria-label="language === 'en' ? 'Text conversation' : language === 'zh' ? '文字对话' : 'Bảng hội thoại dạng chữ'">
         <button
           type="button"
           class="drawer-close"
-          aria-label="Đóng phần chữ"
+          :aria-label="language === 'en' ? 'Close text panel' : language === 'zh' ? '关闭文字面板' : 'Đóng phần chữ'"
           @click="isTextOpen = false"
         >
           <X :size="20" weight="bold" aria-hidden="true" />
@@ -592,12 +723,17 @@ onUnmounted(() => {
           :language="language"
           :voice-hint="voiceHint"
           :error-message="errorMessage"
+          :microphone-level="microphoneLevel"
+          :microphone-devices="microphoneDevices"
+          :selected-microphone="selectedMicrophone"
+          :active-microphone="activeMicrophone"
           @update:draft="draft = $event"
           @send="sendMessage()"
           @quick-prompt="handleQuickPrompt"
           @toggle-recording="toggleRecording"
           @stop-speaking="stopSpeaking"
           @change-language="handleLanguageChange"
+          @change-microphone="changeMicrophone"
           @retry="retryLastPrompt"
         />
       </aside>

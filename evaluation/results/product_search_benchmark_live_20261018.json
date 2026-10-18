@@ -1,0 +1,610 @@
+{
+  "kind": "product_search_benchmark",
+  "benchmark_version": "1",
+  "timestamp_utc": "2026-10-18T04:13:33.170017+00:00",
+  "git_commit": "3c9abb17e36155443706c126aaae3948c8f09391",
+  "git_dirty": true,
+  "database_schema_version": "winmart-catalog-search-v2",
+  "database_schema_sha256": "97baa3854e9a233b21a55605ee47e6d2ce382d7d7b31a9235967c435e20e18bf",
+  "tool_schema_version": null,
+  "model": null,
+  "catalog_repository": "winmart_postgres_catalog",
+  "dataset_snapshot": {
+    "file": "winmart_products.json",
+    "sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "rows_total": 3099,
+    "rows_accepted": 3081,
+    "rows_quarantined": 18
+  },
+  "case_set": {
+    "file": "product_resolution.jsonl",
+    "sha256": "45da439ed822d64211837981d93e66a3a6a8a05bce669f8717a0e58778849961"
+  },
+  "case_count": 12,
+  "iterations": 3,
+  "top_k": 3,
+  "metrics": {
+    "overall": {
+      "queries": 36,
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "median_latency_ms": 177.214,
+      "p95_latency_ms": 281.105
+    },
+    "by_query_kind": {
+      "accentless_name": {
+        "queries": 6,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "mrr": 1.0,
+        "median_latency_ms": null,
+        "p95_latency_ms": null
+      },
+      "brand_and_product": {
+        "queries": 9,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "mrr": 1.0,
+        "median_latency_ms": null,
+        "p95_latency_ms": null
+      },
+      "exact_name": {
+        "queries": 3,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "mrr": 1.0,
+        "median_latency_ms": null,
+        "p95_latency_ms": null
+      },
+      "identifier": {
+        "queries": 9,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "mrr": 1.0,
+        "median_latency_ms": null,
+        "p95_latency_ms": null
+      },
+      "prefix_or_partial": {
+        "queries": 3,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "mrr": 1.0,
+        "median_latency_ms": null,
+        "p95_latency_ms": null
+      },
+      "typo": {
+        "queries": 6,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "mrr": 1.0,
+        "median_latency_ms": null,
+        "p95_latency_ms": null
+      }
+    },
+    "cases": {
+      "product_id_exact": {
+        "query": "WIN_10005885",
+        "kind": "identifier",
+        "gold_product_ids": [
+          "WIN_10005885"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10005885",
+            "WIN_10281875",
+            "WIN_10281880"
+          ],
+          [
+            "WIN_10005885",
+            "WIN_10281875",
+            "WIN_10281880"
+          ],
+          [
+            "WIN_10005885",
+            "WIN_10281875",
+            "WIN_10281880"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 188.295
+      },
+      "item_no_exact": {
+        "query": "10005885",
+        "kind": "identifier",
+        "gold_product_ids": [
+          "WIN_10005885"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10005885",
+            "WIN_10619545",
+            "WIN_10250121"
+          ],
+          [
+            "WIN_10005885",
+            "WIN_10619545",
+            "WIN_10250121"
+          ],
+          [
+            "WIN_10005885",
+            "WIN_10619545",
+            "WIN_10250121"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 147.939
+      },
+      "barcode_exact": {
+        "query": "8938502525016",
+        "kind": "identifier",
+        "gold_product_ids": [
+          "WIN_10005885"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10005885",
+            "WIN_10280962",
+            "WIN_10025670"
+          ],
+          [
+            "WIN_10005885",
+            "WIN_10280962",
+            "WIN_10025670"
+          ],
+          [
+            "WIN_10005885",
+            "WIN_10280962",
+            "WIN_10025670"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 151.853
+      },
+      "name_accented_exact": {
+        "query": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+        "kind": "exact_name",
+        "gold_product_ids": [
+          "WIN_10005885"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10005885"
+          ],
+          [
+            "WIN_10005885"
+          ],
+          [
+            "WIN_10005885"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 146.239
+      },
+      "name_accentless_exact": {
+        "query": "banh bao nhan thit heo trung cut tho phat goi 250g",
+        "kind": "accentless_name",
+        "gold_product_ids": [
+          "WIN_10005885"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10005885"
+          ],
+          [
+            "WIN_10005885"
+          ],
+          [
+            "WIN_10005885"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 149.512
+      },
+      "name_prefix": {
+        "query": "banh bao nhan thit heo",
+        "kind": "prefix_or_partial",
+        "gold_product_ids": [
+          "WIN_10005885"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10005885",
+            "WIN_10007184"
+          ],
+          [
+            "WIN_10005885",
+            "WIN_10007184"
+          ],
+          [
+            "WIN_10005885",
+            "WIN_10007184"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 139.635
+      },
+      "transposed_typo_coca_zero": {
+        "query": "coca zreo pet 600ml",
+        "kind": "typo",
+        "gold_product_ids": [
+          "WIN_10194711"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10194711",
+            "WIN_10194712"
+          ],
+          [
+            "WIN_10194711",
+            "WIN_10194712"
+          ],
+          [
+            "WIN_10194711",
+            "WIN_10194712"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 223.83
+      },
+      "typo_lays_classic": {
+        "query": "lays clasic 150g",
+        "kind": "typo",
+        "gold_product_ids": [
+          "WIN_10194182"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10194182",
+            "WIN_10195427",
+            "WIN_10023970"
+          ],
+          [
+            "WIN_10194182",
+            "WIN_10195427",
+            "WIN_10023970"
+          ],
+          [
+            "WIN_10194182",
+            "WIN_10195427",
+            "WIN_10023970"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 252.725
+      },
+      "brand_and_product_cosy_dau": {
+        "query": "cosy dau 132g",
+        "kind": "brand_and_product",
+        "gold_product_ids": [
+          "WIN_10013649"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10013649",
+            "WIN_10005419",
+            "WIN_10196789"
+          ],
+          [
+            "WIN_10013649",
+            "WIN_10005419",
+            "WIN_10196789"
+          ],
+          [
+            "WIN_10013649",
+            "WIN_10005419",
+            "WIN_10196789"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 217.68
+      },
+      "brand_match_teppy": {
+        "query": "minute maid teppy",
+        "kind": "brand_and_product",
+        "gold_product_ids": [
+          "WIN_10011287"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10011287",
+            "WIN_10011288",
+            "WIN_10625598"
+          ],
+          [
+            "WIN_10011287",
+            "WIN_10011288",
+            "WIN_10625598"
+          ],
+          [
+            "WIN_10011287",
+            "WIN_10011288",
+            "WIN_10625598"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 241.639
+      },
+      "name_accentless_coffee": {
+        "query": "ca phe sua birdy 170ml",
+        "kind": "accentless_name",
+        "gold_product_ids": [
+          "WIN_10012923"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10012923",
+            "WIN_10195828",
+            "WIN_10195829"
+          ],
+          [
+            "WIN_10012923",
+            "WIN_10195828",
+            "WIN_10195829"
+          ],
+          [
+            "WIN_10012923",
+            "WIN_10195828",
+            "WIN_10195829"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 156.629
+      },
+      "brand_variant_stax": {
+        "query": "lays stax vi tu nhien 110g",
+        "kind": "brand_and_product",
+        "gold_product_ids": [
+          "WIN_10015924"
+        ],
+        "result_product_ids_by_trial": [
+          [
+            "WIN_10015924",
+            "WIN_10192428",
+            "WIN_10194182"
+          ],
+          [
+            "WIN_10015924",
+            "WIN_10192428",
+            "WIN_10194182"
+          ],
+          [
+            "WIN_10015924",
+            "WIN_10192428",
+            "WIN_10194182"
+          ]
+        ],
+        "trial_scores": [
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          },
+          {
+            "recall_at_1": true,
+            "recall_at_3": true,
+            "reciprocal_rank": 1.0,
+            "first_relevant_rank": 1
+          }
+        ],
+        "median_latency_ms": 234.081
+      }
+    }
+  }
+}

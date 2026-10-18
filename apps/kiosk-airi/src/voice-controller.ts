@@ -58,6 +58,7 @@ export interface SpeechRecognitionConstructor {
 
 export interface MediaStreamTrackLike {
   stop: () => void
+  label?: string
 }
 
 export interface MediaStreamLike {
@@ -69,6 +70,7 @@ export interface VoiceMediaConstraints {
     echoCancellation?: boolean
     noiseSuppression?: boolean
     autoGainControl?: boolean
+    deviceId?: { exact: string }
   }
 }
 
@@ -101,6 +103,8 @@ export interface AudioMediaStreamSourceLike {
 }
 
 export interface AudioContextLike {
+  state?: string
+  resume?: () => Promise<void> | void
   createMediaStreamSource: (stream: MediaStreamLike) => AudioMediaStreamSourceLike
   createAnalyser: () => AudioAnalyserLike
   close: () => Promise<void> | void
@@ -119,15 +123,22 @@ export interface VoiceControllerDependencies {
 
 export interface VoiceConversationOptions extends VoiceControllerDependencies {
   locale: string
+  deviceId?: string
+  preferRecorder?: boolean
   onState: (state: VoiceState) => void
   onTranscript: (text: string) => void
   onAudio: (audio: Blob) => void
+  onLevel?: (level: number) => void
+  onInputDevice?: (label: string) => void
   onError: (error: VoiceControllerError) => void
 }
 
-const SPEECH_THRESHOLD = 0.035
+const MIN_SPEECH_THRESHOLD = 0.012
+const MAX_SPEECH_THRESHOLD = 0.12
+const NOISE_FLOOR_ALPHA = 0.08
 const SILENCE_DURATION_MS = 600
 const MAX_SEGMENT_DURATION_MS = 12_000
+const MIN_VOICED_DURATION_MS = 120
 const POLL_INTERVAL_MS = 40
 const RECOGNITION_START_TIMEOUT_MS = 500
 const MICROPHONE_CONSTRAINTS: VoiceMediaConstraints = {
@@ -194,6 +205,7 @@ export class VoiceConversationController {
   private readonly options: VoiceConversationOptions
   private readonly dependencies: VoiceControllerDependencies
   private locale: string
+  private deviceId: string
   private active = false
   private destroyed = false
   private currentMode: VoiceMode = 'idle'
@@ -201,6 +213,7 @@ export class VoiceConversationController {
   private permission: VoicePermission = 'unknown'
   private recognition: SpeechRecognitionLike | null = null
   private recognitionStartTimer: number | null = null
+  private recorderStartTimer: number | null = null
   private recognitionRestartTimer: number | null = null
   private stream: MediaStreamLike | null = null
   private audioContext: AudioContextLike | null = null
@@ -211,12 +224,17 @@ export class VoiceConversationController {
   private segmentChunks: Blob[] = []
   private segmentStartedAt = 0
   private lastVoiceAt = 0
+  private lastPollAt: number | null = null
+  private noiseFloor = 0.008
+  private voicedDurationMs = 0
+  private forceSegmentEmit = false
   private generation = 0
 
   constructor(options: VoiceConversationOptions) {
     this.options = options
     this.dependencies = { ...defaultDependencies(), ...options }
     this.locale = options.locale
+    this.deviceId = options.deviceId ?? ''
   }
 
   get mode(): VoiceMode {
@@ -236,7 +254,7 @@ export class VoiceConversationController {
     this.active = true
     const token = ++this.generation
     const Recognition = this.dependencies.getRecognition?.() ?? null
-    if (Recognition) {
+    if (Recognition && !this.options.preferRecorder) {
       try {
         this.startRecognition(Recognition, token)
         return
@@ -259,9 +277,11 @@ export class VoiceConversationController {
     this.active = false
     this.generation += 1
     this.clearRecognitionStart()
+    this.clearRecorderStart()
     this.clearRecognitionRestart()
     this.stopRecognition()
     this.stopMonitor(true)
+    this.options.onLevel?.(0)
     this.setState('idle', 'idle')
   }
 
@@ -274,6 +294,10 @@ export class VoiceConversationController {
     this.locale = locale
   }
 
+  setInputDevice(deviceId: string): void {
+    this.deviceId = deviceId
+  }
+
   stopCapture(): void {
     if (this.segmentRecorder?.state === 'recording') {
       this.active = false
@@ -281,7 +305,7 @@ export class VoiceConversationController {
       this.stopRecognition()
       this.stopMonitor(false)
       this.setState('idle', 'idle')
-      this.stopSegment(true)
+      this.stopSegment(true, true)
       return
     }
     this.pause()
@@ -385,12 +409,32 @@ export class VoiceConversationController {
     }
 
     try {
-      const stream = await getUserMedia(MICROPHONE_CONSTRAINTS)
+      this.recorderStartTimer = this.schedule(() => {
+        this.recorderStartTimer = null
+        if (!this.active || token !== this.generation) return
+        this.pause()
+        this.emitError('runtime', 'Chưa mở được micro. Hãy kiểm tra quyền micro rồi bấm mic để thử lại.')
+      }, 12_000)
+      const audioConstraints = typeof MICROPHONE_CONSTRAINTS.audio === 'object' ? MICROPHONE_CONSTRAINTS.audio : {}
+      const stream = await getUserMedia(this.deviceId
+        ? { audio: { ...audioConstraints, deviceId: { exact: this.deviceId } } }
+        : MICROPHONE_CONSTRAINTS)
       if (!this.active || token !== this.generation) {
         stream.getTracks().forEach((track) => track.stop())
         return
       }
       const context = createAudioContext()
+      this.stream = stream
+      this.audioContext = context
+      if (context.resume && context.state !== 'running') await context.resume()
+      if (!this.active || token !== this.generation) {
+        if (this.audioContext === context) this.releaseAudioResources()
+        return
+      }
+      if (context.state === 'suspended') {
+        throw new Error('Bộ xử lý âm thanh chưa chạy. Bạn bấm mic để thử lại nhé.')
+      }
+      this.clearRecorderStart()
       const analyser = context.createAnalyser()
       analyser.fftSize = 512
       const source = context.createMediaStreamSource(stream)
@@ -400,11 +444,25 @@ export class VoiceConversationController {
       this.audioSource = source
       this.analyser = analyser
       this.permission = 'granted'
+      this.options.onInputDevice?.(stream.getTracks()[0]?.label || 'Micro mặc định')
+      this.noiseFloor = 0.008
+      this.lastPollAt = this.dependencies.now?.() ?? Date.now()
       this.setState('recorder', 'listening')
       this.pollAudio(token)
     } catch (error) {
+      this.clearRecorderStart()
+      if (token !== this.generation) return
       this.stopMonitor(true)
-      this.emitError('permission', 'Microphone permission is required for voice conversation.', error)
+      const name = (error as { name?: string })?.name
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        this.emitError('permission', 'Microphone permission is required for voice conversation.', error)
+      } else {
+        this.emitError('runtime', name === 'NotFoundError'
+          ? 'Không tìm thấy micro. Bạn kiểm tra thiết bị đầu vào nhé.'
+          : name === 'NotReadableError'
+            ? 'Không mở được micro. Bạn kiểm tra xem ứng dụng khác có đang giữ micro không.'
+            : error instanceof Error ? error.message : 'Không khởi động được micro.', error)
+      }
     }
   }
 
@@ -413,17 +471,35 @@ export class VoiceConversationController {
     const data = new Uint8Array(this.analyser.fftSize)
     this.analyser.getByteTimeDomainData(data)
     const level = rms(data)
+    this.options.onLevel?.(Math.min(1, level / 0.15))
     const now = this.dependencies.now?.() ?? Date.now()
-    if (level >= SPEECH_THRESHOLD) {
+    const elapsed = this.lastPollAt === null
+      ? POLL_INTERVAL_MS
+      : Math.max(0, Math.min(now - this.lastPollAt, POLL_INTERVAL_MS * 2))
+    this.lastPollAt = now
+    let threshold = Math.max(
+      MIN_SPEECH_THRESHOLD,
+      Math.min(MAX_SPEECH_THRESHOLD, this.noiseFloor * 2),
+    )
+    if (!this.segmentRecorder && level < threshold) {
+      this.noiseFloor += (level - this.noiseFloor) * NOISE_FLOOR_ALPHA
+      threshold = Math.max(
+        MIN_SPEECH_THRESHOLD,
+        Math.min(MAX_SPEECH_THRESHOLD, this.noiseFloor * 2),
+      )
+    }
+    const speechDetected = level >= (this.segmentRecorder ? threshold * 0.68 : threshold)
+    if (speechDetected) {
       if (!this.segmentRecorder) this.startSegment(now)
       this.lastVoiceAt = now
-    } else if (this.segmentRecorder) {
-      const silentFor = now - this.lastVoiceAt
-      const segmentAge = now - this.segmentStartedAt
-      if (silentFor >= SILENCE_DURATION_MS || segmentAge >= MAX_SEGMENT_DURATION_MS) {
-        this.stopSegment(true)
-        return
-      }
+      this.voicedDurationMs += elapsed
+    }
+    if (this.segmentRecorder && (
+      now - this.lastVoiceAt >= SILENCE_DURATION_MS
+      || now - this.segmentStartedAt >= MAX_SEGMENT_DURATION_MS
+    )) {
+      this.stopSegment(true)
+      return
     }
     this.monitorTimer = this.schedule(() => {
       this.monitorTimer = null
@@ -443,16 +519,32 @@ export class VoiceConversationController {
       this.segmentChunks = []
       this.segmentStartedAt = now
       this.lastVoiceAt = now
+      this.voicedDurationMs = 0
+      this.forceSegmentEmit = false
       this.segmentRecorder = recorder
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) this.segmentChunks.push(event.data)
       }
       recorder.onstop = () => {
         const blob = new Blob(this.segmentChunks, { type: mimeType })
+        const hasSpeech = this.forceSegmentEmit || this.voicedDurationMs >= MIN_VOICED_DURATION_MS
         this.segmentRecorder = null
         this.segmentChunks = []
-        this.releaseAudioResources()
-        if (blob.size > 0 && token === this.generation) this.options.onAudio(blob)
+        this.voicedDurationMs = 0
+        this.forceSegmentEmit = false
+        if (blob.size > 0 && token === this.generation && hasSpeech) {
+          this.releaseAudioResources()
+          this.lastPollAt = null
+          this.options.onAudio(blob)
+        } else if (token === this.generation && !this.destroyed) {
+          this.active = true
+          this.lastPollAt = this.dependencies.now?.() ?? Date.now()
+          this.setState('recorder', 'listening')
+          this.pollAudio(token)
+        } else {
+          this.releaseAudioResources()
+          this.lastPollAt = null
+        }
       }
       recorder.onerror = (event) => {
         this.emitError('runtime', event.error || 'Audio recording failed')
@@ -467,22 +559,25 @@ export class VoiceConversationController {
     }
   }
 
-  private stopSegment(emitAudio: boolean): void {
+  private stopSegment(emitAudio: boolean, forceEmit = false): void {
     const recorder = this.segmentRecorder
     if (!recorder) return
     this.active = false
     this.stopMonitor(false)
     if (!emitAudio) {
+      this.forceSegmentEmit = false
       recorder.ondataavailable = null
       recorder.onstop = null
       this.segmentRecorder = null
       this.segmentChunks = []
     }
     try {
+      if (forceEmit) this.forceSegmentEmit = true
       if (recorder.state !== 'inactive') recorder.stop()
     } catch (error) {
       this.segmentRecorder = null
       this.segmentChunks = []
+      this.forceSegmentEmit = false
       this.releaseAudioResources()
       if (emitAudio) this.emitError('runtime', 'Audio recording could not stop.', error)
     }
@@ -502,6 +597,11 @@ export class VoiceConversationController {
     } catch {
       recognition.abort?.()
     }
+  }
+
+  private clearRecorderStart(): void {
+    if (this.recorderStartTimer !== null) this.clearTimer(this.recorderStartTimer)
+    this.recorderStartTimer = null
   }
 
   private stopMonitor(discardSegment: boolean): void {

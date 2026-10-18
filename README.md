@@ -8,12 +8,20 @@ The vertical slice is in place:
 
 - requirements and architecture contracts in `docs/`;
 - FastAPI endpoints for sessions, catalog lookup, agent chat, Groq transcription and
-  ElevenLabs synthesis;
+  Azure Speech / ElevenLabs synthesis;
 - shared Pydantic wire enums/contracts;
 - `uv` dependency manifest;
 - PostgreSQL + pgvector and Redis Compose definition;
 - One-screen Vue kiosk with local `sky.glb`, hands-free conversation, and selectable
   Vietnamese, English or Chinese speech/chat.
+
+English is supported across the chat interface, Groq Whisper transcription, catalog
+intent routing and speech synthesis. English category and product terms such as `milk`,
+`coffee`, `snacks` and `instant noodles` are mapped to the Vietnamese WinMart taxonomy
+when needed; product facts still come from the active catalog. Prices are in VND. The
+catalog does not contain loyalty rules, return policies, store hours, sales rankings,
+taste ratings or interaction analytics. Sky states that those facts are unverified and
+suggests asking store staff instead of guessing.
 
 ## Prerequisites
 
@@ -26,19 +34,25 @@ The vertical slice is in place:
 ```powershell
 uv sync --all-groups
 Copy-Item .env.example .env
-# Open .env and set GROQ_API_KEY and ELEVENLABS_API_KEY to local secrets.
+# Open .env and set GROQ_API_KEY. Azure Speech is optional but recommended for free cloud TTS.
 uv run pytest -q
 uv run ruff check .
 ```
 
 `GROQ_API_KEY` stays on the FastAPI process. Do not put it in `apps/kiosk-airi/.env`, a
 `VITE_*` variable, or any browser extension bundle. The browser only calls the backend.
-`ELEVENLABS_API_KEY` follows the same rule. Vietnamese is configured for
-`Giang - Northern female Narrator` (`f5q6kePPoQAjCPYG6moa`); ElevenLabs Free plans
-cannot synthesize that Professional voice through the API, so the backend automatically
-uses the configured free Sarah voice for Vietnamese until the account is upgraded, then
-the browser voice as a final fallback. All three languages use the low-latency ElevenLabs
-Flash v2.5 model; English uses Sarah and Chinese uses River.
+TTS uses Azure Speech F0 when `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION` are configured.
+The F0 tier includes 500,000 Neural characters per month; its real-time TTS quota is 20
+requests per 60 seconds. Azure supplies Vietnamese `vi-VN-HoaiMyNeural`, English
+`en-US-JennyNeural`, and Mandarin `zh-CN-XiaoxiaoNeural` voices. See Microsoft's
+[Speech pricing](https://azure.microsoft.com/en-us/pricing/details/speech/),
+[TTS quotas](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-services-quotas-and-limits),
+and [voice list](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts).
+Create an Azure Speech resource on the F0 tier and copy its key and region into the root
+`.env`. Azure is preferred when configured. Without Azure credentials, the API uses
+ElevenLabs if configured; if cloud synthesis is unavailable, the kiosk falls back to the
+browser's built-in speech synthesis. Azure failures go directly to the browser fallback so
+the app does not silently switch to a potentially billable provider.
 
 Run the kiosk in a second PowerShell window:
 
@@ -47,11 +61,15 @@ npm --prefix apps/kiosk-airi install
 npm --prefix apps/kiosk-airi run dev
 ```
 
-Open `http://127.0.0.1:5173`. Sky greets the visitor, requests microphone access and
-starts a continuous voice loop. Browsers with Speech Recognition use it directly;
-other browsers use the microphone recorder with silence detection and Groq Whisper.
+Open `http://127.0.0.1:5173`. Sky waits in a ready state without adding a chat bubble or
+requesting microphone access. Open the text panel to type a question or select a quick
+prompt. Voice capture starts only after the visitor clicks the microphone button.
+The microphone recorder sends captured speech to Groq Whisper (`whisper-large-v3-turbo`,
+then `whisper-large-v3` on provider failure). Local adaptive voice detection trims silence
+and very short noise before upload. Cloud TTS streams through a short-lived, one-use URL;
+see [the voice pipeline notes](docs/voice-pipeline.md).
 If the browser blocks autoplay, click \`Bật âm thanh\` once; the same gesture unlocks the
-ElevenLabs audio element and resumes the pending reply. The supplied \`sky.glb\` includes
+audio element and resumes the pending reply. The supplied \`sky.glb\` includes
 its own \`talk\` animation, which the kiosk uses directly while Sky is speaking. If the API
 runs on another origin, copy
 `apps/kiosk-airi/.env.example` to `apps/kiosk-airi/.env` and set `VITE_API_BASE_URL`.

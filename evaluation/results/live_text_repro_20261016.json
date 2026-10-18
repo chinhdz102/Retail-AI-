@@ -1,0 +1,231 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-16T04:40:01.831754+00:00",
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 12.0,
+  "catalog_scope": {
+    "runtime_repository": "demo",
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "catalog_coke_price",
+      "turn": 1,
+      "prompt": "Ê, Coca Zero giờ giá nhiêu vậy bạn?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 12580,
+      "response": {
+        "session_id": "dde00e6a-221a-4898-8a9d-63d9a9ec3749",
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "6509",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "11.182s"
+              }
+            }
+          ],
+          "latency_ms": 2230,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"Coca Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1411,
+            "completion_tokens": 27,
+            "total_tokens": 1438
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "998",
+                "x-ratelimit-remaining-tokens": "6059",
+                "x-ratelimit-reset-requests": "2m52.8s",
+                "x-ratelimit-reset-tokens": "15.951s"
+              }
+            }
+          ],
+          "latency_ms": 565,
+          "pacing_wait_ms": 9778,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1654,
+            "completion_tokens": 52,
+            "total_tokens": 1706
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "repro_coke_price_filler_word",
+      "turn": 1,
+      "prompt": "thế giá Coca Zero là bao nhiêu",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 23975,
+      "response": {
+        "session_id": "397bae61-cee3-43e7-bfc0-0671ffbb4d91",
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "997",
+                "x-ratelimit-remaining-tokens": "6119",
+                "x-ratelimit-reset-requests": "4m19.2s",
+                "x-ratelimit-reset-tokens": "15.891s"
+              }
+            }
+          ],
+          "latency_ms": 776,
+          "pacing_wait_ms": 11440,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"Coca Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1409,
+            "completion_tokens": 27,
+            "total_tokens": 1436
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "996",
+                "x-ratelimit-remaining-tokens": "5825",
+                "x-ratelimit-reset-requests": "5m45.6s",
+                "x-ratelimit-reset-tokens": "18.197s"
+              }
+            }
+          ],
+          "latency_ms": 529,
+          "pacing_wait_ms": 11228,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1653,
+            "completion_tokens": 52,
+            "total_tokens": 1705
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "case_count": 2,
+    "turn_count": 2,
+    "http_200_count": 2,
+    "automated_grounding_safety_passes": 2,
+    "automated_grounding_safety_failures": 0,
+    "median_turn_latency_ms": 18278,
+    "total_llm_calls": 4,
+    "total_tool_calls": 4
+  }
+}

@@ -54,3 +54,7 @@ class SynthesizeRequest(BaseModel):
     session_id: UUID
     text: str = Field(min_length=1, max_length=2000)
     language: LanguageCode = "vi"
+
+
+class SynthesizeTicketResponse(BaseModel):
+    audio_url: str

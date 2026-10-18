@@ -1,0 +1,58 @@
+{
+  "input_kind": "Azure-generated Vietnamese audio; real backend/Groq calls",
+  "turns": [
+    {
+      "expected_text": "Xin chào, cho mình hỏi Coca Zero giá bao nhiêu?",
+      "transcript": "Xin chào, cho mình hỏi Coca Zero giá bao nhiêu?",
+      "stt_model": "whisper-large-v3-turbo",
+      "answer": "Mình tìm thấy vài mặt hàng gần giống: Thùng 24 lon nước giải khát Zero Coca Cola không đường 330ml, Nước Giải Khát Coca-Cola Zero Pet 600ml, Nước giải khát Coca-Cola Zero chai nhựa 1,5lít. Bạn muốn hỏi đúng vị hoặc khối lượng nào để mình tra cho chuẩn?",
+      "llm_model": "qwen/qwen3.8-27b",
+      "grounded_product_ids": [
+        "WIN_10011651",
+        "WIN_10194711",
+        "WIN_10307381",
+        "WIN_10194712",
+        "WIN_10606942"
+      ],
+      "input_tts_ms": 1074,
+      "stt_ms": 549,
+      "agent_ms": 1218,
+      "reply_tts_download_ms": 552,
+      "reply_audio_bytes": 101808
+    },
+    {
+      "expected_text": "Coca Zero chai 600ml giá bao nhiêu?",
+      "transcript": "Coca Zero chai 600ml giá bao nhiêu?",
+      "stt_model": "whisper-large-v3-turbo",
+      "answer": "Theo dữ liệu ngày 15/09/2026, giá Nước Giải Khát Coca-Cola Zero Pet 600ml là 9.900đ. Giá tại cửa hàng có thể đã thay đổi nhé.",
+      "llm_model": "openai/gpt-oss-120b",
+      "grounded_product_ids": [
+        "WIN_10194711"
+      ],
+      "input_tts_ms": 320,
+      "stt_ms": 354,
+      "agent_ms": 25120,
+      "reply_tts_download_ms": 2209,
+      "reply_audio_bytes": 70848
+    },
+    {
+      "expected_text": "Thế nó nằm ở kệ nào vậy bạn?",
+      "transcript": "Thế nó nằm ở kệ nào vậy bạn?",
+      "stt_model": "whisper-large-v3-turbo",
+      "answer": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+      "llm_model": "catalog",
+      "grounded_product_ids": [],
+      "input_tts_ms": 301,
+      "stt_ms": 359,
+      "agent_ms": 103,
+      "reply_tts_download_ms": 399,
+      "reply_audio_bytes": 40176
+    }
+  ],
+  "checks": {
+    "all_transcripts_exact": true,
+    "ambiguous_product_asks_for_variant": true,
+    "specific_product_returns_catalog_price": true,
+    "missing_shelf_is_not_invented": true
+  }
+}

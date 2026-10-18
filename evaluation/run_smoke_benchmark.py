@@ -214,11 +214,19 @@ async def benchmark() -> None:
             "D4", "D",
             response.status_code == 200
             and body.get("tools_used") == ["search_products", "get_product_snapshot"]
-            and any(item.get("count", 0) >= 1 for item in observations)
-            and any(item.get("product", {}).get("product_id") == "SNACK01"
-                    for item in observations),
-            {"status_code": response.status_code, "tools_used": body.get("tools_used"),
-             "observations": observations[-2:]},
+            and body.get("grounded_product_ids") == ["SNACK01"]
+            and "Snack khoai tây vị tự nhiên" in body.get("text", "")
+            and "12" in body.get("text", "")
+            and any(
+                {"category", "max_price_vnd", "spicy"}.issubset(
+                    set(item.get("items", [{}])[0].get("matched_constraints", []))
+                )
+                for item in observations
+                if item.get("items")
+            ),
+            {"status_code": response.status_code, "text": body.get("text"),
+             "grounded_product_ids": body.get("grounded_product_ids"),
+             "tools_used": body.get("tools_used"), "observations": observations[-2:]},
             "Scripted search then snapshot both execute and return matching catalog evidence",
             note="Sequence was scripted; live LLM tool planning is unmeasured.",
         )
@@ -404,17 +412,29 @@ async def benchmark() -> None:
         }, f"limit-{n}")
                  for n in range(6)]
         service = ScriptedGroq(answer("", *calls), answer("Không thể tra cứu thêm."))
-        with patch("backend.services.retail_agent.execute_catalog_tool",
-                   wraps=execute_catalog_tool) as executed:
+        from backend.services import retail_agent
+
+        observed_tool_statuses = []
+        execute_tool_call = retail_agent._execute_tool_call
+
+        async def record_tool_call(call, calls_executed):
+            result = await execute_tool_call(call, calls_executed)
+            observed_tool_statuses.append(result[1].status)
+            return result
+
+        with (
+            patch("backend.services.retail_agent.execute_catalog_tool",
+                  wraps=execute_catalog_tool) as executed,
+            patch("backend.services.retail_agent._execute_tool_call",
+                  side_effect=record_tool_call),
+        ):
             response, _ = await respond(client, service, "Tra sản phẩm nhiều lần.")
-        observations = tool_observations(service)
         record(
             "J3-tool-call-limit", "J",
             response.status_code == 200 and executed.call_count == 5
-            and any("limit reached" in item.get("error", "").lower()
-                    for item in observations),
+            and observed_tool_statuses.count("DENIED") == 1,
             {"status_code": response.status_code, "executed_calls": executed.call_count,
-             "tool_observations": len(observations)},
+             "tool_statuses": observed_tool_statuses},
             "At most five catalog tool calls execute per turn",
         )
 

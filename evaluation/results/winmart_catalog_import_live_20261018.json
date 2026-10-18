@@ -1,0 +1,22 @@
+{
+  "valid": true,
+  "dataset_version": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "source_file": "winmart_products.json",
+  "rows_total": 3099,
+  "rows_schema_valid": 3099,
+  "rows_accepted": 3081,
+  "rows_quarantined": 18,
+  "quarantine_reasons": {
+    "SALE_PRICE_EXCEEDS_REGULAR_PRICE": 18
+  },
+  "warning_counts": {
+    "description_equals_name": 2860,
+    "brand_missing": 30,
+    "image_missing": 3
+  },
+  "fatal_errors": [],
+  "category_count": 74,
+  "brand_count": 699,
+  "mode": "apply",
+  "imported": true
+}

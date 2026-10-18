@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import {
   PhArrowClockwise as ArrowClockwise,
   PhArrowUp as ArrowUp,
@@ -25,7 +25,17 @@ const props = defineProps<{
   voiceHint: string
   language: LanguageCode
   errorMessage: string | null
+  microphoneLevel?: number
+  microphoneDevices?: Array<{ id: string; label: string }>
+  selectedMicrophone?: string
+  activeMicrophone?: string
 }>()
+
+const conversation = ref<HTMLElement | null>(null)
+watch(() => [props.messages.length, props.status], async () => {
+  await nextTick()
+  if (conversation.value) conversation.value.scrollTop = conversation.value.scrollHeight
+})
 
 const emit = defineEmits<{
   'update:draft': [value: string]
@@ -34,6 +44,7 @@ const emit = defineEmits<{
   'toggle-recording': []
   'stop-speaking': []
   'change-language': [value: LanguageCode]
+  'change-microphone': [deviceId: string]
   retry: []
 }>()
 
@@ -63,6 +74,14 @@ const copy = computed(() => {
       voiceStop: 'Stop listening',
       stopSpeaking: 'Stop Sky speaking',
       languageLabel: 'Conversation language',
+      sectionLabel: 'Conversation with Sky',
+      microphone: 'Input microphone',
+      defaultMicrophone: 'Default microphone',
+      microphoneAriaLabel: 'Choose an input microphone',
+      microphoneLevel: 'Microphone signal level',
+      inputLabel: 'Type a question for Sky',
+      quickPromptsLabel: 'Suggested questions',
+      sendLabel: 'Send question',
     }
   }
   if (props.language === 'zh') {
@@ -84,6 +103,14 @@ const copy = computed(() => {
       voiceStop: '停止聆听',
       stopSpeaking: '停止 Sky 朗读',
       languageLabel: '对话语言',
+      sectionLabel: '与 Sky 对话',
+      microphone: '输入麦克风',
+      defaultMicrophone: '默认麦克风',
+      microphoneAriaLabel: '选择输入麦克风',
+      microphoneLevel: '麦克风信号强度',
+      inputLabel: '输入问题给 Sky',
+      quickPromptsLabel: '推荐问题',
+      sendLabel: '发送问题',
     }
   }
   return {
@@ -104,6 +131,14 @@ const copy = computed(() => {
     voiceStop: 'Dừng nghe',
     stopSpeaking: 'Dừng Sky nói',
     languageLabel: 'Ngôn ngữ hội thoại',
+    sectionLabel: 'Trò chuyện với Sky',
+    microphone: 'Micro đầu vào',
+    defaultMicrophone: 'Micro mặc định',
+    microphoneAriaLabel: 'Chọn micro đầu vào',
+    microphoneLevel: 'Mức tín hiệu micro',
+    inputLabel: 'Nhập câu hỏi cho Sky',
+    quickPromptsLabel: 'Câu hỏi gợi ý',
+    sendLabel: 'Gửi câu hỏi',
   }
 })
 
@@ -111,20 +146,20 @@ const quickPrompts = computed(() => {
   if (props.language === 'en') {
     return [
       { label: 'Coca Zero price', icon: Barcode },
-      { label: 'Non-spicy snack', icon: Sparkle },
+      { label: 'Recommend a non-spicy snack', icon: Sparkle },
       { label: 'Where is milk?', icon: CaretRight },
     ]
   }
   if (props.language === 'zh') {
     return [
       { label: 'Coca Zero 价格', icon: Barcode },
-      { label: '不辣的零食', icon: Sparkle },
+      { label: '推荐不辣的零食', icon: Sparkle },
       { label: '牛奶在哪？', icon: CaretRight },
     ]
   }
   return [
     { label: 'Giá Coca Zero', icon: Barcode },
-    { label: 'Snack không cay', icon: Sparkle },
+    { label: 'Gợi ý snack không cay', icon: Sparkle },
     { label: 'Sữa ở kệ nào?', icon: CaretRight },
   ]
 })
@@ -138,12 +173,13 @@ function onKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <section class="chat-panel" aria-label="Trò chuyện với Sky">
+  <section class="chat-panel" :aria-label="copy.sectionLabel">
     <header class="chat-header">
       <div class="chat-title-copy">
         <p class="panel-eyebrow">{{ copy.eyebrow }}</p>
         <h1>{{ copy.title }}</h1>
         <p class="chat-voice-hint" role="status" aria-live="polite">{{ voiceHint }}</p>
+        <meter v-if="isVoiceActive" class="microphone-level" min="0" max="1" :value="microphoneLevel ?? 0" :aria-label="copy.microphoneLevel"></meter>
       </div>
       <div class="chat-header-tools">
         <div class="voice-mode-chip" :class="{ active: isHandsFree }">
@@ -166,9 +202,16 @@ function onKeydown(event: KeyboardEvent) {
           </button>
         </div>
       </div>
+      <label v-if="microphoneDevices?.length" class="microphone-picker">
+        <span>{{ copy.microphone }}</span>
+        <select :value="selectedMicrophone || ''" :disabled="['thinking', 'transcribing', 'speaking'].includes(status)" :aria-label="copy.microphoneAriaLabel" @change="emit('change-microphone', ($event.target as HTMLSelectElement).value)">
+          <option value="">{{ activeMicrophone || copy.defaultMicrophone }}</option>
+          <option v-for="device in microphoneDevices" :key="device.id" :value="device.id">{{ device.label }}</option>
+        </select>
+      </label>
     </header>
 
-    <div class="conversation" aria-live="polite" aria-label="Nội dung hội thoại">
+    <div ref="conversation" class="conversation" aria-live="polite" aria-label="Nội dung hội thoại">
       <div v-if="messages.length === 0" class="conversation-empty">
         <div class="empty-icon"><Sparkle :size="22" weight="duotone" aria-hidden="true" /></div>
         <h2>{{ copy.emptyTitle }}</h2>
@@ -207,7 +250,7 @@ function onKeydown(event: KeyboardEvent) {
       </button>
     </div>
 
-    <div class="quick-prompts" aria-label="Câu hỏi gợi ý">
+    <div v-if="messages.length === 0" class="quick-prompts" :aria-label="copy.quickPromptsLabel">
       <button
         v-for="prompt in quickPrompts"
         :key="prompt.label"
@@ -222,7 +265,7 @@ function onKeydown(event: KeyboardEvent) {
     </div>
 
     <form class="composer" @submit.prevent="emit('send')">
-      <label class="sr-only" for="assistant-input">Nhập câu hỏi cho Sky</label>
+      <label class="sr-only" for="assistant-input">{{ copy.inputLabel }}</label>
       <textarea
         id="assistant-input"
         :value="draft"
@@ -237,7 +280,7 @@ function onKeydown(event: KeyboardEvent) {
           type="button"
           class="mic-button"
           :class="{ recording: isRecording }"
-          :aria-label="isVoiceActive ? copy.voiceStop : copy.micStart"
+          :aria-label="isVoiceActive || isHandsFree ? copy.voiceStop : copy.micStart"
           :disabled="status === 'transcribing' || status === 'thinking'"
           @click="emit('toggle-recording')"
         >
@@ -256,7 +299,7 @@ function onKeydown(event: KeyboardEvent) {
         <button
           type="submit"
           class="send-button"
-          aria-label="Gửi câu hỏi"
+          :aria-label="copy.sendLabel"
           :disabled="!draft.trim() || status === 'thinking' || status === 'transcribing'"
         >
           <ArrowUp :size="20" weight="bold" aria-hidden="true" />

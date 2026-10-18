@@ -1,0 +1,1542 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-17T18:53:35.088865+00:00",
+  "dataset_id": "retail_vietnamese_text_conversation_v1",
+  "language_scope": "Vietnamese only",
+  "research_informed_by": [
+    "Vietnamese e-commerce dialogue coverage: ProductInfo, OrderInfo, Shipping and Chatchit; dialogue acts and slot values.",
+    "ViWOZ coverage: multi-turn context, dialogue state, user paraphrases and clarification behavior.",
+    "BFCL coverage: tool choice, arguments, stateful multi-turn behavior and abstention."
+  ],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 12.0,
+  "catalog_scope": {
+    "runtime_repository": "demo",
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "vi_chitchat_start",
+      "turn": 1,
+      "prompt": "Chào bạn, mình ghé hỏi chút nha.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 1195,
+      "response": {
+        "session_id": "36302832-f3d4-45b0-85c0-ac158349f161",
+        "text": "Chào bạn, mình ở đây sẵn sàng hỗ trợ. Bạn cần tìm sản phẩm hay hỏi thông tin gì ạ?",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "chitchat",
+        "greeting",
+        "acknowledgement",
+        "tool_should_not_be_used"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "972",
+                "x-ratelimit-remaining-tokens": "6465",
+                "x-ratelimit-reset-requests": "40m19.2s",
+                "x-ratelimit-reset-tokens": "11.512s"
+              }
+            }
+          ],
+          "latency_ms": 1189,
+          "pacing_wait_ms": 0,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 1455,
+            "completion_tokens": 25,
+            "total_tokens": 1480
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_chitchat_start",
+      "turn": 2,
+      "prompt": "Bạn có mệt không?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 11327,
+      "response": {
+        "session_id": "36302832-f3d4-45b0-85c0-ac158349f161",
+        "text": "Mình là trợ lý ảo nên không biết mệt. Bạn cần mình hỗ trợ gì tiếp không?",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "chitchat",
+        "greeting",
+        "acknowledgement",
+        "tool_should_not_be_used"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "971",
+                "x-ratelimit-remaining-tokens": "6274",
+                "x-ratelimit-reset-requests": "41m45.6s",
+                "x-ratelimit-reset-tokens": "14.108s"
+              }
+            }
+          ],
+          "latency_ms": 505,
+          "pacing_wait_ms": 10820,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 1498,
+            "completion_tokens": 21,
+            "total_tokens": 1519
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_chitchat_start",
+      "turn": 3,
+      "prompt": "Cảm ơn nhé.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 11928,
+      "response": {
+        "session_id": "36302832-f3d4-45b0-85c0-ac158349f161",
+        "text": "Không có gì, bạn nhé!",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "must_contain": [
+          "Không có gì"
+        ],
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "chitchat",
+        "greeting",
+        "acknowledgement",
+        "tool_should_not_be_used"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "970",
+                "x-ratelimit-remaining-tokens": "6203",
+                "x-ratelimit-reset-requests": "43m12s",
+                "x-ratelimit-reset-tokens": "15.188s"
+              }
+            }
+          ],
+          "latency_ms": 433,
+          "pacing_wait_ms": 11493,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 1537,
+            "completion_tokens": 8,
+            "total_tokens": 1545
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_direct_casual_lookup",
+      "turn": 1,
+      "prompt": "Coca Zero giờ giá nhiêu vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 24091,
+      "response": {
+        "session_id": "be9a7566-ccda-4d29-bc73-4830cdc65f41",
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "expected_model_tools": [
+          "search_products"
+        ],
+        "must_contain": [
+          "13.000"
+        ]
+      },
+      "conversation_tags": [
+        "casual_lookup",
+        "elliptical_followup",
+        "dialogue_state",
+        "acknowledgement"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "969",
+                "x-ratelimit-remaining-tokens": "6093",
+                "x-ratelimit-reset-requests": "44m38.4s",
+                "x-ratelimit-reset-tokens": "15.66s"
+              }
+            }
+          ],
+          "latency_ms": 476,
+          "pacing_wait_ms": 11566,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"Coca Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1453,
+            "completion_tokens": 27,
+            "total_tokens": 1480
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "968",
+                "x-ratelimit-remaining-tokens": "5802",
+                "x-ratelimit-reset-requests": "46m4.8s",
+                "x-ratelimit-reset-tokens": "18.154s"
+              }
+            }
+          ],
+          "latency_ms": 513,
+          "pacing_wait_ms": 11533,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1693,
+            "completion_tokens": 52,
+            "total_tokens": 1745
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_direct_casual_lookup",
+      "turn": 2,
+      "prompt": "À, còn nằm kệ nào ấy nhỉ?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 2,
+      "response": {
+        "session_id": "be9a7566-ccda-4d29-bc73-4830cdc65f41",
+        "text": "Coca-Cola Zero 330ml ở kệ A2-L2 nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "expected_tools": [
+          "get_product_snapshot"
+        ],
+        "must_contain": [
+          "A2-L2"
+        ]
+      },
+      "conversation_tags": [
+        "casual_lookup",
+        "elliptical_followup",
+        "dialogue_state",
+        "acknowledgement"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "vi_direct_casual_lookup",
+      "turn": 3,
+      "prompt": "Vậy trong lon còn nhiều không?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 2,
+      "response": {
+        "session_id": "be9a7566-ccda-4d29-bc73-4830cdc65f41",
+        "text": "Coca-Cola Zero 330ml hiện còn 16 sản phẩm nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "expected_tools": [
+          "get_product_snapshot"
+        ],
+        "must_contain": [
+          "16"
+        ]
+      },
+      "conversation_tags": [
+        "casual_lookup",
+        "elliptical_followup",
+        "dialogue_state",
+        "acknowledgement"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "vi_direct_casual_lookup",
+      "turn": 4,
+      "prompt": "Oki, cảm ơn bạn nha.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 11898,
+      "response": {
+        "session_id": "be9a7566-ccda-4d29-bc73-4830cdc65f41",
+        "text": "Không có gì, bạn nhé!",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "must_contain": [
+          "Không có gì"
+        ],
+        "must_not_contain": [
+          "cần tìm sản phẩm này trước",
+          "Bạn vừa hỏi về giá"
+        ],
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "casual_lookup",
+        "elliptical_followup",
+        "dialogue_state",
+        "acknowledgement"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "967",
+                "x-ratelimit-remaining-tokens": "5682",
+                "x-ratelimit-reset-requests": "47m31.2s",
+                "x-ratelimit-reset-tokens": "19.654s"
+              }
+            }
+          ],
+          "latency_ms": 401,
+          "pacing_wait_ms": 11496,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 1574,
+            "completion_tokens": 8,
+            "total_tokens": 1582
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_recommendation_context",
+      "turn": 1,
+      "prompt": "Tìm giúp mình món ăn vặt không cay, dưới hai chục nghìn nha.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 12893,
+      "response": {
+        "session_id": "9a769dbc-bec1-4b53-a6fa-b4720eb31cef",
+        "text": "Snack khoai tây vị tự nhiên không cay nhé.",
+        "model": "openai/gpt-oss-120b",
+        "grounded_product_ids": [
+          "SNACK01"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "SNACK01"
+        ],
+        "expected_model_tools": [
+          "recommend_products"
+        ],
+        "expected_tool_arguments": [
+          {
+            "tool": "recommend_products",
+            "arguments": {
+              "category": "snack",
+              "spicy": false,
+              "price_constraint": {
+                "operator": "LT",
+                "value_vnd": 20000
+              }
+            }
+          }
+        ],
+        "must_contain": [
+          "Snack khoai tây vị tự nhiên"
+        ]
+      },
+      "conversation_tags": [
+        "recommendation",
+        "hard_constraints",
+        "followup_reference",
+        "unsupported_allergen"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "openai/gpt-oss-120b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "BadRequestError",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "966",
+                "x-ratelimit-remaining-tokens": "5623",
+                "x-ratelimit-reset-requests": "48m57.6s",
+                "x-ratelimit-reset-tokens": "20.16s"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "6722",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "9.585s"
+              }
+            }
+          ],
+          "latency_ms": 1293,
+          "pacing_wait_ms": 11596,
+          "tool_calls": [
+            {
+              "name": "recommend_products",
+              "arguments": "{\"category\":\"snack\",\"limit\":3,\"price_constraint\":{\"operator\":\"LT\",\"value_vnd\":20000},\"spicy\":false}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1198,
+            "completion_tokens": 74,
+            "total_tokens": 1272
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_recommendation_context",
+      "turn": 2,
+      "prompt": "Cái đó có những thành phần gì vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 2,
+      "response": {
+        "session_id": "9a769dbc-bec1-4b53-a6fa-b4720eb31cef",
+        "text": "Thành phần của Snack khoai tây vị tự nhiên gồm Khoai tây, dầu thực vật, muối nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "SNACK01"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "SNACK01"
+        ],
+        "expected_tools": [
+          "get_product_snapshot"
+        ],
+        "must_contain": [
+          "khoai tây",
+          "muối"
+        ]
+      },
+      "conversation_tags": [
+        "recommendation",
+        "hard_constraints",
+        "followup_reference",
+        "unsupported_allergen"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "vi_recommendation_context",
+      "turn": 3,
+      "prompt": "Có đậu phộng không?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 1,
+      "response": {
+        "session_id": "9a769dbc-bec1-4b53-a6fa-b4720eb31cef",
+        "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+        "model": "local-policy",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "must_contain": [
+          "chưa có dữ liệu đã xác minh"
+        ],
+        "must_not_contain": [
+          "không có đậu phộng",
+          "có đậu phộng",
+          "an toàn cho người dị ứng"
+        ]
+      },
+      "conversation_tags": [
+        "recommendation",
+        "hard_constraints",
+        "followup_reference",
+        "unsupported_allergen"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "vi_recommendation_context_revision",
+      "turn": 1,
+      "prompt": "Có đồ uống nào dưới 10 nghìn không bạn?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 11273,
+      "response": {
+        "session_id": "c265b80f-2b07-4e3e-8c1e-be800f621c06",
+        "text": "Bạn có thể thử Nước suối 500ml nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "WATER01"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "expected_model_tools": [
+          "recommend_products"
+        ],
+        "expected_tool_arguments": [
+          {
+            "tool": "recommend_products",
+            "arguments": {
+              "category": "drink",
+              "price_constraint": {
+                "operator": "LT",
+                "value_vnd": 10000
+              }
+            }
+          }
+        ],
+        "must_contain": [
+          "Nước suối 500ml"
+        ]
+      },
+      "conversation_tags": [
+        "recommendation",
+        "price_constraint",
+        "context_update",
+        "no_match"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "965",
+                "x-ratelimit-remaining-tokens": "5564",
+                "x-ratelimit-reset-requests": "50m24s",
+                "x-ratelimit-reset-tokens": "20.648s"
+              }
+            }
+          ],
+          "latency_ms": 569,
+          "pacing_wait_ms": 10702,
+          "tool_calls": [
+            {
+              "name": "recommend_products",
+              "arguments": "{\"category\":\"đồ uống\",\"limit\":3,\"price_constraint\":{\"operator\":\"LT\",\"value_vnd\":10000}}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1457,
+            "completion_tokens": 71,
+            "total_tokens": 1528
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_recommendation_context_revision",
+      "turn": 2,
+      "prompt": "Cái đó ở kệ nào nhỉ?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 2,
+      "response": {
+        "session_id": "c265b80f-2b07-4e3e-8c1e-be800f621c06",
+        "text": "Nước suối 500ml ở kệ A1-L1 nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WATER01"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "expected_tools": [
+          "get_product_snapshot"
+        ],
+        "must_contain": [
+          "A1-L1"
+        ]
+      },
+      "conversation_tags": [
+        "recommendation",
+        "price_constraint",
+        "context_update",
+        "no_match"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "vi_recommendation_context_revision",
+      "turn": 3,
+      "prompt": "Khoan, mình muốn đồ ăn vặt dưới 10 nghìn cơ.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 11891,
+      "response": {
+        "session_id": "c265b80f-2b07-4e3e-8c1e-be800f621c06",
+        "text": "Mình chưa tìm thấy sản phẩm còn bán phù hợp với yêu cầu này.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "must_contain": [
+          "chưa tìm thấy"
+        ],
+        "must_not_have_product_ids": true
+      },
+      "conversation_tags": [
+        "recommendation",
+        "price_constraint",
+        "context_update",
+        "no_match"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "964",
+                "x-ratelimit-remaining-tokens": "5385",
+                "x-ratelimit-reset-requests": "51m50.399s",
+                "x-ratelimit-reset-tokens": "21.805s"
+              }
+            }
+          ],
+          "latency_ms": 455,
+          "pacing_wait_ms": 11433,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 1537,
+            "completion_tokens": 23,
+            "total_tokens": 1560
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_corrected_budget",
+      "turn": 1,
+      "prompt": "Tìm mình đồ ăn vặt dưới 20 nghìn.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 12246,
+      "response": {
+        "session_id": "52e0f3ac-5624-46ca-a9f2-4af7e8eff709",
+        "text": "Bạn có thể thử Snack khoai tây vị tự nhiên nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "SNACK01"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "SNACK01"
+        ],
+        "expected_model_tools": [
+          "recommend_products"
+        ]
+      },
+      "conversation_tags": [
+        "recommendation",
+        "correction",
+        "constraint_revision"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "963",
+                "x-ratelimit-remaining-tokens": "5355",
+                "x-ratelimit-reset-requests": "53m16.799s",
+                "x-ratelimit-reset-tokens": "22.225s"
+              }
+            }
+          ],
+          "latency_ms": 697,
+          "pacing_wait_ms": 11546,
+          "tool_calls": [
+            {
+              "name": "recommend_products",
+              "arguments": "{\"category\":\"đồ ăn vặt\",\"limit\":3,\"price_constraint\":{\"operator\":\"LT\",\"value_vnd\":20000}}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1456,
+            "completion_tokens": 72,
+            "total_tokens": 1528
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_corrected_budget",
+      "turn": 2,
+      "prompt": "À không, mình nói dưới 10 nghìn thôi.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 11750,
+      "response": {
+        "session_id": "52e0f3ac-5624-46ca-a9f2-4af7e8eff709",
+        "text": "Mình chưa tìm thấy sản phẩm còn bán phù hợp với yêu cầu này.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "must_contain": [
+          "chưa tìm thấy"
+        ],
+        "must_not_have_product_ids": true
+      },
+      "conversation_tags": [
+        "recommendation",
+        "correction",
+        "constraint_revision"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "962",
+                "x-ratelimit-remaining-tokens": "5282",
+                "x-ratelimit-reset-requests": "54m43.2s",
+                "x-ratelimit-reset-tokens": "23.082s"
+              }
+            }
+          ],
+          "latency_ms": 441,
+          "pacing_wait_ms": 11307,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 1494,
+            "completion_tokens": 22,
+            "total_tokens": 1516
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_ambiguous_reference_without_context",
+      "turn": 1,
+      "prompt": "Cái đó giá bao nhiêu vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 1,
+      "response": {
+        "session_id": "6cfb8ecd-af9c-4870-8992-a6a8a9593475",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "must_not_contain": [
+          "13.000",
+          "7.000",
+          "9.000",
+          "16.000",
+          "18.000",
+          "17.000"
+        ],
+        "must_not_have_product_ids": true
+      },
+      "conversation_tags": [
+        "clarification",
+        "ambiguous_reference",
+        "no_hallucinated_product"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "vi_slang_price",
+      "turn": 1,
+      "prompt": "coca zero nhiu z bạn?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 24088,
+      "response": {
+        "session_id": "a2b9e31b-2ff3-4478-a5eb-fe3c657d5d87",
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "13.000"
+        ]
+      },
+      "conversation_tags": [
+        "colloquial",
+        "abbreviation",
+        "price_lookup"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "961",
+                "x-ratelimit-remaining-tokens": "5184",
+                "x-ratelimit-reset-requests": "56m9.6s",
+                "x-ratelimit-reset-tokens": "23.528s"
+              }
+            }
+          ],
+          "latency_ms": 487,
+          "pacing_wait_ms": 11554,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"Coca Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1453,
+            "completion_tokens": 27,
+            "total_tokens": 1480
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "960",
+                "x-ratelimit-remaining-tokens": "4939",
+                "x-ratelimit-reset-requests": "57m36s",
+                "x-ratelimit-reset-tokens": "26.022s"
+              }
+            }
+          ],
+          "latency_ms": 517,
+          "pacing_wait_ms": 11527,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1691,
+            "completion_tokens": 52,
+            "total_tokens": 1743
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_compound_fact_query",
+      "turn": 1,
+      "prompt": "Coca Zero bao nhiêu tiền, với nằm ở kệ nào vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 24030,
+      "response": {
+        "session_id": "abcab674-ab5e-4b66-82b7-6fca53356052",
+        "text": "Mình kiểm tra rồi, Coca-Cola Zero 330ml giá 13.000đ, ở kệ A2-L2 nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "expected_tools": [
+          "get_product_snapshot"
+        ],
+        "must_contain": [
+          "13.000",
+          "A2-L2"
+        ]
+      },
+      "conversation_tags": [
+        "multi_intent",
+        "price",
+        "shelf",
+        "tool_fields"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "959",
+                "x-ratelimit-remaining-tokens": "4835",
+                "x-ratelimit-reset-requests": "59m2.4s",
+                "x-ratelimit-reset-tokens": "26.52s"
+              }
+            }
+          ],
+          "latency_ms": 471,
+          "pacing_wait_ms": 11488,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"Coca Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1459,
+            "completion_tokens": 27,
+            "total_tokens": 1486
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "958",
+                "x-ratelimit-remaining-tokens": "4551",
+                "x-ratelimit-reset-requests": "1h0m28.8s",
+                "x-ratelimit-reset-tokens": "29.117s"
+              }
+            }
+          ],
+          "latency_ms": 537,
+          "pacing_wait_ms": 11532,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\",\"shelf\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1704,
+            "completion_tokens": 55,
+            "total_tokens": 1759
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_unknown_product",
+      "turn": 1,
+      "prompt": "Ở đây có sữa hạt óc chó vị vani không bạn?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 11989,
+      "response": {
+        "session_id": "9928b5a3-8052-42ac-a86d-6b4b80b8ffda",
+        "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "must_not_contain": [
+          "còn 12",
+          "còn 16",
+          "còn 18",
+          "còn 24",
+          "còn 40",
+          "thử nói rõ tên"
+        ],
+        "must_not_have_product_ids": true
+      },
+      "conversation_tags": [
+        "unknown_product",
+        "abstention",
+        "no_fabricated_stock"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "957",
+                "x-ratelimit-remaining-tokens": "4468",
+                "x-ratelimit-reset-requests": "1h1m55.2s",
+                "x-ratelimit-reset-tokens": "29.657s"
+              }
+            }
+          ],
+          "latency_ms": 526,
+          "pacing_wait_ms": 11461,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"sữa hạt óc chó vị vani\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1458,
+            "completion_tokens": 32,
+            "total_tokens": 1490
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_unsupported_nutrition",
+      "turn": 1,
+      "prompt": "Coca Zero có bao nhiêu calo với đường vậy bạn?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 1,
+      "response": {
+        "session_id": "5dc60542-c223-44a8-8abd-5ce46846e3c4",
+        "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+        "model": "local-policy",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "state": "BROWSING"
+      },
+      "evaluation_expectations": {
+        "must_contain": [
+          "chưa có dữ liệu đã xác minh"
+        ],
+        "must_not_contain": [
+          "0 calo",
+          "0 kcal",
+          "zero calories",
+          "0g đường"
+        ]
+      },
+      "conversation_tags": [
+        "unsupported_attribute",
+        "abstention",
+        "hallucination_guard"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    }
+  ],
+  "summary": {
+    "case_count": 10,
+    "turn_count": 20,
+    "http_200_count": 20,
+    "automated_grounding_safety_passes": 20,
+    "automated_grounding_safety_failures": 0,
+    "expected_model_tool_selection_passes": 4,
+    "expected_model_tool_selection_count": 4,
+    "no_tool_decision_passes": 4,
+    "no_tool_decision_count": 4,
+    "tool_argument_passes": 2,
+    "tool_argument_check_count": 2,
+    "median_turn_latency_ms": 11538,
+    "total_llm_calls": 16,
+    "total_tool_calls": 10
+  }
+}

@@ -1,0 +1,571 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-16T04:54:13.466292+00:00",
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 12.0,
+  "catalog_scope": {
+    "runtime_repository": "demo",
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "repro_coke_price_filler_word",
+      "turn": 1,
+      "prompt": "thế giá Coca Zero là bao nhiêu",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 12625,
+      "response": {
+        "session_id": "7e0503f3-4a95-4c20-a70f-f6b89eecbdeb",
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "956",
+                "x-ratelimit-remaining-tokens": "6529",
+                "x-ratelimit-reset-requests": "1h3m21.6s",
+                "x-ratelimit-reset-tokens": "11.032s"
+              }
+            }
+          ],
+          "latency_ms": 1418,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"Coca Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1409,
+            "completion_tokens": 27,
+            "total_tokens": 1436
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "955",
+                "x-ratelimit-remaining-tokens": "6198",
+                "x-ratelimit-reset-requests": "1h4m48s",
+                "x-ratelimit-reset-tokens": "15.025s"
+              }
+            }
+          ],
+          "latency_ms": 614,
+          "pacing_wait_ms": 10583,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1648,
+            "completion_tokens": 52,
+            "total_tokens": 1700
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "catalog_milk_shelf",
+      "turn": 1,
+      "prompt": "Sữa tươi ít đường để chỗ nào vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 24097,
+      "response": {
+        "session_id": "4599ce6f-9893-448b-8672-edcd460e336b",
+        "text": "Sữa tươi ít đường 180ml ở kệ B1-L1 nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "MILK01"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "954",
+                "x-ratelimit-remaining-tokens": "6185",
+                "x-ratelimit-reset-requests": "1h6m14.4s",
+                "x-ratelimit-reset-tokens": "15.111s"
+              }
+            }
+          ],
+          "latency_ms": 615,
+          "pacing_wait_ms": 11381,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"sữa tươi ít đường\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1411,
+            "completion_tokens": 46,
+            "total_tokens": 1457
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "953",
+                "x-ratelimit-remaining-tokens": "5916",
+                "x-ratelimit-reset-requests": "1h7m40.8s",
+                "x-ratelimit-reset-tokens": "17.365s"
+              }
+            }
+          ],
+          "latency_ms": 701,
+          "pacing_wait_ms": 11396,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"shelf\"],\"product_id\":\"milk01\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1672,
+            "completion_tokens": 59,
+            "total_tokens": 1731
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "catalog_water_stock",
+      "turn": 1,
+      "prompt": "Bên mình còn chai nước suối 500ml không nhỉ?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 23874,
+      "response": {
+        "session_id": "53387b13-29ec-4493-8164-15e661c8d5a3",
+        "text": "Nước suối 500ml hiện còn 40 sản phẩm nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "WATER01"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "952",
+                "x-ratelimit-remaining-tokens": "5897",
+                "x-ratelimit-reset-requests": "1h9m7.2s",
+                "x-ratelimit-reset-tokens": "17.58s"
+              }
+            }
+          ],
+          "latency_ms": 610,
+          "pacing_wait_ms": 11302,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"limit\":5,\"query\":\"nước suối 500ml\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1416,
+            "completion_tokens": 44,
+            "total_tokens": 1460
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "951",
+                "x-ratelimit-remaining-tokens": "5623",
+                "x-ratelimit-reset-requests": "1h10m33.6s",
+                "x-ratelimit-reset-tokens": "19.937s"
+              }
+            }
+          ],
+          "latency_ms": 556,
+          "pacing_wait_ms": 11403,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"stock\"],\"product_id\":\"WATER01\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1672,
+            "completion_tokens": 46,
+            "total_tokens": 1718
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "owner_inventory_change_denied",
+      "turn": 1,
+      "prompt": "Tăng tồn kho Coca Zero lên 100 lon giúp mình.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 11998,
+      "response": {
+        "session_id": "7c119fa4-238b-40a1-9e10-8333137b746e",
+        "text": "Xin lỗi, mình không thể tự tăng tồn kho sản phẩm. Bạn vui lòng liên hệ nhân viên cửa hàng để được hỗ trợ nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "state": "BROWSING"
+      },
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "950",
+                "x-ratelimit-remaining-tokens": "5605",
+                "x-ratelimit-reset-requests": "1h12m0s",
+                "x-ratelimit-reset-tokens": "20.022s"
+              }
+            }
+          ],
+          "latency_ms": 551,
+          "pacing_wait_ms": 11444,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 1416,
+            "completion_tokens": 30,
+            "total_tokens": 1446
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "english_catalog_price",
+      "turn": 1,
+      "prompt": "How much is Coca-Cola Zero?",
+      "language": "en",
+      "status_code": 200,
+      "latency_ms": 24021,
+      "response": {
+        "session_id": "1df54952-aa06-45f4-b8f1-9130c13b30ed",
+        "text": "I checked: Coca-Cola Zero 330ml price 13.000 VND.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "949",
+                "x-ratelimit-remaining-tokens": "5618",
+                "x-ratelimit-reset-requests": "1h13m26.4s",
+                "x-ratelimit-reset-tokens": "19.98s"
+              }
+            }
+          ],
+          "latency_ms": 679,
+          "pacing_wait_ms": 11451,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"Coca-Cola Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1407,
+            "completion_tokens": 28,
+            "total_tokens": 1435
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "948",
+                "x-ratelimit-remaining-tokens": "5343",
+                "x-ratelimit-reset-requests": "1h14m52.8s",
+                "x-ratelimit-reset-tokens": "22.268s"
+              }
+            }
+          ],
+          "latency_ms": 564,
+          "pacing_wait_ms": 11324,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1650,
+            "completion_tokens": 52,
+            "total_tokens": 1702
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "chinese_catalog_price",
+      "turn": 1,
+      "prompt": "可口可乐零度多少钱？",
+      "language": "zh",
+      "status_code": 200,
+      "latency_ms": 23989,
+      "response": {
+        "session_id": "41fc3efb-5dfa-4b85-83ee-c0f1fcc2e2ec",
+        "text": "我查了一下，Coca-Cola Zero 330ml价格 13.000 越南盾。",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING"
+      },
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "947",
+                "x-ratelimit-remaining-tokens": "5337",
+                "x-ratelimit-reset-requests": "1h16m19.2s",
+                "x-ratelimit-reset-tokens": "22.328s"
+              }
+            }
+          ],
+          "latency_ms": 536,
+          "pacing_wait_ms": 11440,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"可口可乐零度\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1408,
+            "completion_tokens": 27,
+            "total_tokens": 1435
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "946",
+                "x-ratelimit-remaining-tokens": "5081",
+                "x-ratelimit-reset-requests": "1h17m45.6s",
+                "x-ratelimit-reset-tokens": "24.497s"
+              }
+            }
+          ],
+          "latency_ms": 540,
+          "pacing_wait_ms": 11471,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1649,
+            "completion_tokens": 52,
+            "total_tokens": 1701
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "case_count": 6,
+    "turn_count": 6,
+    "http_200_count": 6,
+    "automated_grounding_safety_passes": 6,
+    "automated_grounding_safety_failures": 0,
+    "median_turn_latency_ms": 23932,
+    "total_llm_calls": 11,
+    "total_tool_calls": 10
+  }
+}

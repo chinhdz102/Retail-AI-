@@ -26,6 +26,51 @@ Mốc Recall@1 ≥ 90%, Recall@3 ≥ 97% và median search < 100 ms là mục ti
 
 `live_groq_smoke.py` chạy benchmark agent bằng Groq thật. Nó mặc định đọc key từ `.env`; có thể chọn file cấu hình khác bằng `RETAIL_EVAL_ENV_FILE`. Script không ghi key vào kết quả, tắt SDK retry, đặt timeout provider 12 giây và timeout tác vụ 50 giây. Kết quả được lưu sau mỗi lượt.
 
+`live_text_conversation_benchmark.py` kiểm tra các câu hỏi tiếng Việt kiểu hội thoại, hội thoại nhiều lượt, sản phẩm demo, dữ kiện thiếu, sản phẩm hết hạn, yêu cầu giữ hàng/sửa giá và bộ case tùy chỉnh. Benchmark gọi Groq thật nhưng chỉ dùng text; phần tự nhiên vẫn cần người đọc chấm theo rubric trong JSON. Report ghi runtime repository và đánh dấu lượt tìm kiếm PostgreSQL thật nếu có.
+
+Bộ hội thoại tiếng Việt mới nằm trong `evaluation/cases/vietnamese_text_conversation_v1.json`. Nó chỉ gửi câu tiếng Việt và chấm riêng việc model có chọn đúng tool, đưa đúng tham số, tránh tool khi chỉ chào hỏi/cảm ơn, giữ tham chiếu qua các lượt và từ chối bịa dữ kiện. Chạy bằng Groq thật:
+
+```powershell
+.\.venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark `
+  --case-file evaluation/cases/vietnamese_text_conversation_v1.json `
+  --pace-seconds 12 `
+  --output evaluation/results/live_vietnamese_conversation.json
+```
+
+Pacing 12 giây giúp giữ nhịp dưới quota TPM đã quan sát ở các lần chạy trước. Kết quả tự động chỉ là coverage probe trên sáu sản phẩm demo; độ tự nhiên, cách hỏi làm rõ và đúng ngữ cảnh vẫn cần người đọc nghe/đọc lại từng lượt.
+
+`vietnamese_safety_and_injection_v1.json` bổ sung câu hỏi hỗ trợ thường gặp và prompt injection tiếng Việt: giả quyền quản trị, đòi lộ prompt/key/session, tool giả, câu không dấu, chỉ dẫn được trích dẫn và bẻ lái giá qua nhiều lượt. Bộ này dùng cùng runner Groq thật; trace cuối ngày 18/10/2026 ở `evaluation/results/live_vietnamese_safety_injection_final_20261018.json`. Chạy lại bằng:
+
+```powershell
+.\.venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark `
+  --case-file evaluation/cases/vietnamese_safety_and_injection_v1.json `
+  --pace-seconds 12 `
+  --output evaluation/results/live_vietnamese_safety_injection.json
+```
+
+Các prompt lộ thông tin nội bộ và thao tác quản trị bị chặn bằng local policy, nên lượt đó xác nhận luồng backend chặn trước model; nó không đo khả năng Qwen tự từ chối một jailbreak chưa được nhận diện. Injection gián tiếp qua dữ liệu catalog bên ngoài vẫn cần đánh giá riêng.
+
+`vietnamese_product_consultation_grounded_v1.json` kiểm tra catalog WinMart thật với Qwen: hỏi đúng biến thể và giá, hỏi brand mơ hồ, gộp giá với lợi ích sức khỏe, hỏi thành phần, công dụng và sức khỏe khi các field không có trong data. Lần chạy ngày 18/10/2026 đạt 6/6; report `evaluation/results/live_vietnamese_product_consultation_final_20261018.json` xác nhận `runtime_repository=postgres` và 4 lượt gọi tìm catalog PostgreSQL. Cách chạy:
+
+```powershell
+.\.venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark `
+  --case-file evaluation/cases/vietnamese_product_consultation_grounded_v1.json `
+  --pace-seconds 12 `
+  --output evaluation/results/live_vietnamese_product_consultation.json
+```
+
+Lần chạy trên dùng pacing 12 giây để tránh giới hạn TPM. Median turn latency có cả pacing; xem `llm_trace[].latency_ms` để biết thời gian của từng lần gọi model. Bối cảnh, giới hạn dữ liệu và hướng bổ sung product knowledge nằm trong `docs/product-consultation-grounding.md`.
+
+Chọn một nhóm ca để chạy lại sau thay đổi:
+
+```powershell
+.\.venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark `
+  --pace-seconds 9 `
+  --cases catalog_snack_recommendation multi_turn_product_reference
+```
+
+Báo cáo nghiên cứu và kết quả text ngày 13/10/2026 nằm ở `evaluation/results/text_conversation_review_20261013.md`.
+
 Các probe `A4_nutrition_unsupported`, `N1_casual_drink` và `N2_reservation_request` kiểm tra thuộc tính catalog chưa có, cách hỏi gián tiếp và yêu cầu giữ hàng. Trace ghi câu trả lời cùng tool call; độ tự nhiên cần người đọc chấm, benchmark không tự động coi một câu trả lời an toàn nhưng né câu hỏi là thành công. Bản đánh giá ngày 04/10/2026 ở `evaluation/results/answer_quality_assessment_20261004.md`.
 
 Có hai chế độ riêng:

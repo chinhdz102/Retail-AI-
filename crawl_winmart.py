@@ -21,7 +21,7 @@ import csv
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +32,10 @@ sys.stdout.reconfigure(encoding="utf-8")
 BASE_API = "https://api-crownx.winmart.vn/it/api/web/v3/item/category"
 SITEMAP_URL = "https://winmart.vn/api/sitemap"
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    ),
     "Accept": "application/json, text/plain, */*",
     "Origin": "https://winmart.vn",
     "Referer": "https://winmart.vn/",
@@ -159,8 +162,10 @@ def transform_product(raw: dict[str, Any]) -> dict[str, Any]:
         "uom": uom,
         "image_url": media_url,
         "description": full_desc,
-        "seo_url": f"https://winmart.vn/products/{raw.get('seoName')}" if raw.get("seoName") else "",
-        "scraped_at": datetime.now(timezone.utc).isoformat(),
+        "seo_url": (
+            f"https://winmart.vn/products/{raw.get('seoName')}" if raw.get("seoName") else ""
+        ),
+        "scraped_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -209,7 +214,8 @@ async def crawl_winmart(max_categories: int | None = None) -> list[dict[str, Any
                             unique_products[key] = prod
 
             print(
-                f"[{idx}/{len(slugs)}] {cat_name}: {total_count} SP (Tổng hiện tại: {len(unique_products)} SP độc nhất)"
+                f"[{idx}/{len(slugs)}] {cat_name}: {total_count} SP "
+                f"(Tổng hiện tại: {len(unique_products)} SP độc nhất)"
             )
 
     return list(unique_products.values())

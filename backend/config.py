@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     groq_stt_fallback_model: str = "whisper-large-v3"
     groq_timeout_seconds: float = 45.0
 
+    azure_speech_key: SecretStr = SecretStr("")
+    azure_speech_region: str = ""
+    azure_speech_timeout_seconds: float = 20.0
+
     elevenlabs_base_url: str = "https://api.elevenlabs.io"
     elevenlabs_api_key: SecretStr = SecretStr("")
     elevenlabs_model: str = "eleven_flash_v2_5"
@@ -56,6 +60,13 @@ class Settings(BaseSettings):
     @property
     def has_elevenlabs_key(self) -> bool:
         return bool(self.elevenlabs_api_key.get_secret_value().strip())
+
+    @property
+    def has_azure_speech(self) -> bool:
+        return bool(
+            self.azure_speech_key.get_secret_value().strip()
+            and self.azure_speech_region.strip()
+        )
 
 
 @lru_cache(maxsize=1)
