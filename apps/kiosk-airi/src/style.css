@@ -696,6 +696,7 @@ h2 {
 
 .message-row {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 6px;
   max-width: 82%;
@@ -1346,7 +1347,7 @@ body {
 }
 
 .text-is-open .vrm-stage::after {
-  background: rgb(2 6 23 / 0.3);
+  background: transparent;
 }
 
 .sky-avatar {
@@ -1355,6 +1356,7 @@ body {
   z-index: 1;
   display: grid;
   place-items: center;
+  transition: right 220ms ease;
 }
 
 .sky-avatar .avatar-wrap {
@@ -1366,12 +1368,76 @@ body {
 }
 
 .sky-avatar .sky-model {
-  width: min(100vw, 980px);
-  height: min(100dvh, 860px);
+  width: min(38vw, 380px);
+  height: min(40dvh, 340px);
   --poster-color: transparent;
   --progress-bar-color: var(--accent);
   --progress-mask: rgb(7 11 18 / 0.75);
   filter: drop-shadow(0 32px 34px rgb(0 0 0 / 0.4));
+}
+
+.text-is-open .sky-avatar {
+  right: calc(min(450px, calc(100vw - 32px)) + 32px);
+}
+
+.text-is-open .sky-avatar .sky-model {
+  width: min(36vw, calc(100vw - 500px), 440px);
+}
+
+.text-is-open .vrm-controls {
+  display: none;
+}
+
+.voice-feedback {
+  position: absolute;
+  bottom: max(108px, calc(env(safe-area-inset-bottom) + 92px));
+  left: 50%;
+  z-index: 5;
+  width: min(340px, calc(100vw - 32px));
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.voice-feedback strong {
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.voice-feedback p {
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+}
+
+.microphone-level {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin-top: 6px;
+  accent-color: var(--accent-strong);
+}
+
+.microphone-picker {
+  display: grid;
+  width: 100%;
+  gap: 3px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.microphone-picker select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  color: var(--text-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  font: inherit;
+}
+
+.text-is-open .voice-feedback {
+  display: none;
 }
 
 .vrm-controls {
@@ -1415,6 +1481,16 @@ body {
   opacity: 0.45;
 }
 
+.vrm-mic-control {
+  width: auto;
+  display: flex;
+  gap: 8px;
+  padding-inline: 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
 .vrm-mic-control.active,
 .vrm-mic-control.recording,
 .vrm-audio-control {
@@ -1450,16 +1526,37 @@ body {
   min-height: 0;
   overflow: hidden;
   border-radius: 24px;
-  box-shadow: 0 28px 80px rgb(0 0 0 / 0.45);
+  background: transparent;
 }
 
 .text-drawer .chat-panel {
   width: 100%;
   height: 100%;
   min-height: 0;
-  border-color: rgb(179 208 230 / 0.25);
-  border-radius: inherit;
+  display: flex;
+  flex-direction: column;
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
+}
+
+.text-drawer .chat-header,
+.text-drawer .quick-prompts,
+.text-drawer .composer,
+.text-drawer .composer-hint,
+.text-drawer .chat-error {
+  flex-shrink: 0;
+}
+
+.text-drawer .chat-header {
+  flex-wrap: wrap;
+}
+
+.text-drawer .conversation {
+  flex: 1 1 0;
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .drawer-close {
@@ -1488,8 +1585,8 @@ body {
 
 @media (max-width: 680px) {
   .sky-avatar .sky-model {
-    width: 100vw;
-    height: 78dvh;
+    width: 46vw;
+    height: 34dvh;
   }
 
   .vrm-controls {
@@ -1501,9 +1598,65 @@ body {
     height: 48px;
   }
 
+  .vrm-mic-control {
+    width: auto;
+  }
+
   .text-drawer {
-    inset: 8px 8px 8px auto;
+    inset: auto 8px env(safe-area-inset-bottom);
     width: min(450px, calc(100vw - 16px));
+    height: min(68dvh, 520px);
     border-radius: 20px;
+  }
+
+  .text-drawer .conversation-empty {
+    display: none;
+  }
+
+  .text-drawer .chat-header {
+    padding: 10px 17px;
+    gap: 6px;
+  }
+
+  .text-drawer .chat-header h1 {
+    margin-top: 0;
+    padding-right: 42px;
+    font-size: 1.05rem;
+  }
+
+  .text-drawer .panel-eyebrow {
+    display: none;
+  }
+
+  .text-drawer .chat-voice-hint {
+    margin-top: 4px;
+    padding-right: 30px;
+    font-size: 0.75rem;
+  }
+
+  .text-drawer .chat-title-copy {
+    width: 100%;
+  }
+
+  .text-drawer .conversation {
+    padding: 12px 17px;
+  }
+
+  .text-drawer .composer-hint {
+    padding: 6px 17px 10px;
+  }
+
+  .text-is-open .sky-avatar {
+    right: 0;
+  }
+
+  .text-is-open .sky-avatar .avatar-wrap {
+    place-items: start center;
+    padding-top: 8px;
+  }
+
+  .text-is-open .sky-avatar .sky-model {
+    width: min(44vw, 220px);
+    height: min(28dvh, 180px);
   }
 }

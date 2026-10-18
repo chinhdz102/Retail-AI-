@@ -27,6 +27,8 @@ class SessionRecord:
     created_at: datetime
     expires_at: datetime
     messages: list[dict[str, str]] = field(default_factory=list)
+    last_grounded_product_id: str | None = None
+    last_grounded_product_name: str | None = None
 
 
 class InMemorySessionStore:
@@ -77,3 +79,13 @@ class InMemorySessionStore:
 
     def messages_for_model(self, session_id: UUID) -> list[dict[str, str]]:
         return list(self.get(session_id).messages)
+
+    def set_last_grounded_product(
+        self,
+        session_id: UUID,
+        product_id: str | None,
+        product_name: str | None = None,
+    ) -> None:
+        record = self.get(session_id)
+        record.last_grounded_product_id = product_id
+        record.last_grounded_product_name = product_name if product_id else None

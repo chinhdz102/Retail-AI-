@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-01T06:33:06.141144+00:00",
+  "generated_at_utc": "2026-10-13T13:29:05.454519+00:00",
   "benchmark": "Retail-AI evaluation plan deterministic smoke subset",
   "provider_mode": "scripted Groq; no live network/provider calls",
   "scope": "Backend/tool behavior only; no live LLM selection accuracy or latency metrics",
@@ -17,7 +17,7 @@
       "expected": "Verified COKE_ZERO_330 fact 13000 is returned after snapshot tool",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: giá 13.000đ.",
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé.",
         "tools_used": [
           "get_product_snapshot"
         ],
@@ -35,7 +35,7 @@
       "expected": "Verified COKE_ZERO_330 fact 16 is returned after snapshot tool",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: còn 16 sản phẩm có thể bán.",
+        "text": "Coca-Cola Zero 330ml hiện còn 16 sản phẩm nhé.",
         "tools_used": [
           "get_product_snapshot"
         ],
@@ -53,7 +53,7 @@
       "expected": "Verified COKE_ZERO_330 fact A2-L2 is returned after snapshot tool",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: ở kệ A2-L2.",
+        "text": "Coca-Cola Zero 330ml ở kệ A2-L2 nhé.",
         "tools_used": [
           "get_product_snapshot"
         ],
@@ -71,7 +71,7 @@
       "expected": "Reply attributes the verified 13,000 VND price to Coca Zero, not Pepsi Zero",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: giá 13.000đ.",
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé.",
         "grounded_product_ids": [
           "COKE_ZERO_330"
         ]
@@ -99,6 +99,10 @@
       "expected": "Scripted search then snapshot both execute and return matching catalog evidence",
       "observed": {
         "status_code": 200,
+        "text": "Mình kiểm tra rồi, Snack khoai tây vị tự nhiên hiện còn 12 sản phẩm, không cay nhé.",
+        "grounded_product_ids": [
+          "SNACK01"
+        ],
         "tools_used": [
           "search_products",
           "get_product_snapshot"
@@ -110,6 +114,7 @@
                 "product_id": "SNACK01",
                 "name": "Snack khoai tây vị tự nhiên",
                 "category": "snack",
+                "brand": null,
                 "matched_constraints": [
                   "category",
                   "max_price_vnd",
@@ -119,15 +124,6 @@
               }
             ],
             "count": 1,
-            "data_timestamp": "2026-08-31T00:00:00+00:00"
-          },
-          {
-            "product": {
-              "product_id": "SNACK01",
-              "name": "Snack khoai tây vị tự nhiên",
-              "stock": 12,
-              "price_vnd": 18000
-            },
             "data_timestamp": "2026-08-31T00:00:00+00:00"
           }
         ]
@@ -326,7 +322,7 @@
       "expected": "Tool timeout yields controlled abstention or provider error, not HTTP 500",
       "observed": {
         "status_code": 200,
-        "body": "{\"session_id\":\"2beeb9a5-f233-4820-b688-265d208c88de\",\"text\":\"Mình chưa tra cứu được catalog lúc này. Bạn thử lại sau hoặc hỏi nhân viên nhé.\",\"model\":\"scripted-"
+        "body": "{\"session_id\":\"a95172d9-562e-40b2-9525-5c4770825106\",\"text\":\"Mình chưa tra cứu được catalog lúc này. Bạn thử lại sau hoặc hỏi nhân viên nhé.\",\"model\":\"scripted-"
       },
       "note": ""
     },
@@ -339,7 +335,14 @@
       "observed": {
         "status_code": 200,
         "executed_calls": 5,
-        "tool_observations": 6
+        "tool_statuses": [
+          "SUCCESS",
+          "SUCCESS",
+          "SUCCESS",
+          "SUCCESS",
+          "SUCCESS",
+          "DENIED"
+        ]
       },
       "note": ""
     },
@@ -350,7 +353,7 @@
       "mode": "local_catalog_data",
       "expected": "Expired products have zero sellable stock and are excluded by in_stock filters",
       "observed": {
-        "today_utc": "2026-10-01",
+        "today_utc": "2026-10-13",
         "expired_sellable_products": [],
         "MILK01_physical_stock": 24,
         "MILK01_sellable_stock": 0,

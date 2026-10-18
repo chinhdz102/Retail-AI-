@@ -26,11 +26,11 @@ Microphone
   → POST /agent/respond
   → Groq OpenAI-compatible endpoint, qwen/qwen3.8-27b
   → grounded Vietnamese response
-  → browser SpeechSynthesis (lang=vi-VN)
+  → Azure Speech Neural (F0) when configured; otherwise ElevenLabs or browser SpeechSynthesis
   → sky avatar speaking state
 ```
 
-Groq account hiện có Qwen 3.8/3.6 và Whisper nhưng không có model TTS tiếng Việt. Vì vậy TTS browser là lựa chọn mặc định không cần thêm credential; giao diện có trạng thái lỗi nếu browser không có voice `vi-VN`.
+Groq account hiện có Qwen 3.8/3.6 và Whisper nhưng không có model TTS tiếng Việt. Azure Speech F0 là lựa chọn cloud miễn phí ưu tiên khi có `AZURE_SPEECH_KEY` và `AZURE_SPEECH_REGION`; gói này có 500.000 ký tự Neural mỗi tháng. Nếu Azure chưa cấu hình, API dùng ElevenLabs khi có key. Nếu cloud TTS lỗi hoặc chưa cấu hình, giao diện dùng browser SpeechSynthesis (`lang=vi-VN`) mà không cần credential; lỗi provider Azure không tự chuyển sang dịch vụ có thể tính phí.
 
 ## Backend boundaries
 

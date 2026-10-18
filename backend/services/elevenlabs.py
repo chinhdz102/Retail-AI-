@@ -7,6 +7,7 @@ from urllib.parse import quote
 import httpx
 
 from backend.config import Settings, get_settings
+from backend.services.speech_stream import SpeechAudioStream
 
 
 class ElevenLabsConfigurationError(RuntimeError):
@@ -168,6 +169,75 @@ class ElevenLabsService:
         except ElevenLabsConfigurationError:
             raise
         except ElevenLabsProviderError:
+            raise
+        except Exception as exc:
+            raise ElevenLabsProviderError("ElevenLabs text-to-speech request failed") from exc
+
+    async def _open_stream_for_voice(
+        self, client: Any, text: str, voice_id: str
+    ) -> SpeechAudioStream:
+        encoded_voice_id = quote(voice_id, safe="")
+        output_format = quote(self.settings.elevenlabs_output_format, safe="")
+        url = f"/v1/text-to-speech/{encoded_voice_id}?output_format={output_format}"
+        payload = {
+            "text": text,
+            "model_id": self.settings.elevenlabs_model,
+            "voice_settings": {
+                "stability": 0.45,
+                "similarity_boost": 0.75,
+                "style": 0.15,
+                "use_speaker_boost": True,
+                "speed": self.settings.elevenlabs_speed,
+            },
+        }
+        response = None
+        try:
+            request = client.build_request(
+                "POST", url, headers=self._headers(audio=True), json=payload
+            )
+            response = await client.send(request, stream=True)
+            if response.status_code == 402:
+                raise ElevenLabsPaymentRequiredError(
+                    "ElevenLabs voice requires a paid plan"
+                )
+            if response.status_code >= 400:
+                raise ElevenLabsProviderError("ElevenLabs text-to-speech request failed")
+            content_type = response.headers.get("content-type", "audio/mpeg").split(";", 1)[0]
+            if not content_type.startswith("audio/"):
+                raise ElevenLabsProviderError("ElevenLabs returned a non-audio response")
+            return SpeechAudioStream(response, content_type, voice_id)
+        except (ElevenLabsPaymentRequiredError, ElevenLabsProviderError):
+            if response is not None:
+                await response.aclose()
+            raise
+        except httpx.HTTPStatusError as exc:
+            if response is not None:
+                await response.aclose()
+            if exc.response.status_code == 402:
+                raise ElevenLabsPaymentRequiredError(
+                    "ElevenLabs voice requires a paid plan"
+                ) from exc
+            raise ElevenLabsProviderError("ElevenLabs text-to-speech request failed") from exc
+        except Exception as exc:
+            if response is not None:
+                await response.aclose()
+            raise ElevenLabsProviderError("ElevenLabs text-to-speech request failed") from exc
+
+    async def open_stream(self, text: str, language: str = "vi") -> SpeechAudioStream:
+        if not text.strip():
+            raise ElevenLabsProviderError("ElevenLabs text is empty")
+        client = self._client_or_raise()
+        voice_id = await self._resolve_voice_id(language)
+        try:
+            return await self._open_stream_for_voice(client, text, voice_id)
+        except ElevenLabsPaymentRequiredError:
+            fallback_voice_id = self.settings.elevenlabs_vi_fallback_voice_id.strip()
+            if language != "vi" or not fallback_voice_id or fallback_voice_id == voice_id:
+                raise
+            stream = await self._open_stream_for_voice(client, text, fallback_voice_id)
+            self._voice_cache[language] = fallback_voice_id
+            return stream
+        except (ElevenLabsConfigurationError, ElevenLabsProviderError):
             raise
         except Exception as exc:
             raise ElevenLabsProviderError("ElevenLabs text-to-speech request failed") from exc

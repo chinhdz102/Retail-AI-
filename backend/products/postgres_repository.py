@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 import asyncpg
 
 from backend.products.catalog import PriceOperator, ProductSnapshot
+from backend.products.planogram import recommended_shelf
 
 
 def normalize_search_text(value: str | None) -> str:
@@ -140,7 +141,7 @@ class PostgresProductRepository:
                        p.image_url, p.description, p.seo_url, p.spicy,
                        s.effective_price_vnd, s.regular_price_vnd, s.sale_price_vnd,
                        s.physical_stock, s.discount_promotion, s.source_timestamp,
-                       s.price_quality_status
+                       s.price_quality_status, s.dataset_version
                 FROM products p
                 JOIN latest s ON s.product_id = p.product_id
                 LEFT JOIN categories c ON c.category_code = p.category_code
@@ -212,7 +213,7 @@ class PostgresProductRepository:
                        p.image_url, p.description, p.seo_url, p.spicy,
                        s.effective_price_vnd, s.regular_price_vnd, s.sale_price_vnd,
                        s.physical_stock, s.discount_promotion, s.source_timestamp,
-                       s.price_quality_status
+                       s.price_quality_status, s.dataset_version
                 FROM products p JOIN latest s USING(product_id)
                 LEFT JOIN categories c ON c.category_code = p.category_code
                 WHERE upper(p.product_id) = upper($1) OR p.item_no = $1 OR p.barcode = $1
@@ -231,13 +232,14 @@ class PostgresProductRepository:
     @staticmethod
     def _to_snapshot(row) -> ProductSnapshot:
         timestamp = row["source_timestamp"] or datetime.now(UTC)
+        shelf = recommended_shelf(row["product_id"], row["dataset_version"])
         return ProductSnapshot(
             product_id=row["product_id"],
             name=row["name"],
             category=row["category_name"] or "",
             price_vnd=row["effective_price_vnd"],
             stock=row["physical_stock"],
-            shelf=None,  # Source shelf values are simulated by the crawler.
+            shelf=shelf,
             promotion=row["discount_promotion"],
             spicy=row["spicy"],
             ingredients=None,
@@ -257,5 +259,5 @@ class PostgresProductRepository:
             list_price_vnd=row["regular_price_vnd"],
             sale_price_vnd=row["sale_price_vnd"],
             price_quality_status=row["price_quality_status"],
-            shelf_source="SIMULATED",
+            shelf_source="RECOMMENDED_PLANOGRAM" if shelf else "SIMULATED",
         )

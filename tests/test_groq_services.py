@@ -118,6 +118,10 @@ async def test_transcribe_forces_vietnamese_whisper_prompt() -> None:
     assert call["model"] == "whisper-large-v3-turbo"
     assert call["language"] == "vi"
     assert "Coca" in call["prompt"]
+    assert "giọng Bắc, Trung hoặc Nam" in call["prompt"]
+    assert "nhứt" in call["prompt"]
+    assert "đồ ăn vặt" in call["prompt"]
+    assert "không tự thêm từ" in call["prompt"]
 
 
 @pytest.mark.asyncio
@@ -131,6 +135,20 @@ async def test_transcribe_uses_chinese_prompt_when_selected() -> None:
     call = client.audio.transcriptions.calls[0]
     assert call["language"] == "zh"
     assert "可口可乐" in call["prompt"]
+
+
+@pytest.mark.asyncio
+async def test_transcribe_uses_english_prompt_when_selected() -> None:
+    client = FakeClient()
+    settings = Settings(groq_api_key="test-key", groq_stt_model="whisper-large-v3-turbo")
+    service = GroqService(settings=settings, client=client)
+
+    await service.transcribe("voice.webm", b"audio", "audio/webm", language="en")
+
+    call = client.audio.transcriptions.calls[0]
+    assert call["language"] == "en"
+    assert "retail conversation in English" in call["prompt"]
+    assert "Do not translate" in call["prompt"]
 
 
 @pytest.mark.asyncio

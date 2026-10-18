@@ -1,3 +1,6 @@
+import json
+
+import httpx
 import pytest
 
 from backend.config import Settings
@@ -164,3 +167,38 @@ async def test_missing_elevenlabs_key_fails_without_exposing_secret() -> None:
 
     assert "test-key" not in str(error.value)
     assert "xi-api-key" not in str(error.value)
+
+
+@pytest.mark.asyncio
+async def test_open_stream_returns_audio_stream_without_buffering_synthesis() -> None:
+    seen = {}
+
+    async def handler(request):
+        seen["request"] = request
+        return httpx.Response(
+            200,
+            headers={"content-type": "audio/mpeg"},
+            content=b"first-second",
+        )
+
+    async with httpx.AsyncClient(
+        base_url="https://api.elevenlabs.io",
+        transport=httpx.MockTransport(handler),
+    ) as client:
+        service = ElevenLabsService(
+            settings=Settings(
+                elevenlabs_api_key="test-key",
+                elevenlabs_vi_voice_id="giang-voice-id",
+            ),
+            client=client,
+        )
+        stream = await service.open_stream("Xin chào")
+        chunks = [chunk async for chunk in stream.iter_bytes()]
+        await stream.aclose()
+
+    request = seen["request"]
+    assert b"".join(chunks) == b"first-second"
+    assert request.headers["xi-api-key"] == "test-key"
+    assert request.url.path.endswith("/giang-voice-id")
+    assert json.loads(request.content)["text"] == "Xin chào"
+    assert stream.voice_id == "giang-voice-id"

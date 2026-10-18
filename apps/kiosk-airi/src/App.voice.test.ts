@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
   createSession: vi.fn(),
   respond: vi.fn(),
   transcribe: vi.fn(),
-  synthesize: vi.fn(),
+  createSynthesisTicket: vi.fn(),
 }))
 
   const controllerStore = vi.hoisted(() => ({ current: null as any }))
@@ -26,7 +26,11 @@ vi.mock('./voice-controller', () => ({
     async start() {
       this.startCalls = (this.startCalls ?? 0) + 1
       this.isActive = true
-      this.options.onState({ mode: 'recognition', phase: 'listening', permission: 'granted' })
+      this.options.onState({
+        mode: this.options.preferRecorder ? 'recorder' : 'recognition',
+        phase: 'listening',
+        permission: 'granted',
+      })
     }
 
     startCalls = 0
@@ -44,6 +48,40 @@ vi.mock('./voice-controller', () => ({
 import App from './App.vue'
 
 describe('voice transcript integration', () => {
+  it('recovers an expired backend session and resends the same microphone audio once', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValueOnce({ session_id: 'old-session' })
+      .mockResolvedValueOnce({ session_id: 'recovered-session' })
+    apiMocks.transcribe.mockRejectedValueOnce(Object.assign(new Error('Session not found'), { status: 404 }))
+      .mockResolvedValueOnce({ text: 'Coca Zero giá bao nhiêu?' })
+    apiMocks.respond.mockResolvedValue({ text: 'Bạn muốn hỏi loại Coca Zero nào?', model: 'catalog' })
+    apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    const audio = new Blob(['microphone audio'])
+    controllerStore.current.options.onAudio(audio)
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Bạn muốn hỏi loại Coca Zero nào?'))
+    expect(apiMocks.createSession).toHaveBeenCalledTimes(2)
+    expect(apiMocks.transcribe).toHaveBeenNthCalledWith(1, 'old-session', audio, 'vi')
+    expect(apiMocks.transcribe).toHaveBeenNthCalledWith(2, 'recovered-session', audio, 'vi')
+    expect(apiMocks.respond).toHaveBeenCalledWith('recovered-session', 'Coca Zero giá bao nhiêu?', 'vi')
+  })
+
+  it('keeps transcription errors visible when hands-free listening resumes', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({ session_id: 'session-test' })
+    apiMocks.transcribe.mockRejectedValue(new Error('Không nhận diện được tiếng nói: thử lại'))
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onAudio(new Blob(['voice']))
+    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(2))
+    expect(wrapper.get('.chat-error').text()).toContain('Không nhận diện được tiếng nói: thử lại')
+    expect(wrapper.get('.voice-mode-chip').text()).toContain('AUTO')
+    expect(apiMocks.createSession).toHaveBeenCalledTimes(1)
+  })
+
   afterEach(() => {
     controllerStore.current = null
   })
@@ -68,11 +106,13 @@ describe('voice transcript integration', () => {
       grounded_product_ids: ['COKE_ZERO_330'],
       state: 'BROWSING',
     })
-    apiMocks.synthesize.mockRejectedValue(new Error('tts unavailable'))
+    apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
 
     const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]')).toBeTruthy())
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
     await vi.waitFor(() => expect(controllerStore.current).not.toBeNull())
-    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    expect(wrapper.get('button[aria-label="Đóng phần chữ"]')).toBeTruthy()
 
     controllerStore.current.options.onAudio(new Blob(['voice']))
 
@@ -86,7 +126,53 @@ describe('voice transcript integration', () => {
       'Cho tôi biết giá Coca Zero.',
       'vi',
     ))
+    await vi.waitFor(() => expect(wrapper.get('.message-user .message-bubble').text()).toBe('Cho tôi biết giá Coca Zero.'))
     await vi.waitFor(() => expect(wrapper.text()).toContain('Coca Zero giá 13.000đ.'))
+  })
+
+  it('plays cloud TTS from the one-use streaming URL', async () => {
+    const play = vi.fn().mockResolvedValue(undefined)
+    const pause = vi.fn()
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      configurable: true,
+      value: play,
+    })
+    Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
+      configurable: true,
+      value: pause,
+    })
+    apiMocks.createSession.mockResolvedValue({
+      session_id: 'session-test',
+      kiosk_id: 'kiosk-01',
+      state: 'BROWSING',
+      expires_at: '2026-08-31T13:00:00Z',
+    })
+    apiMocks.respond.mockResolvedValue({
+      session_id: 'session-test',
+      text: 'Coca Zero giá 13.000đ.',
+      model: 'qwen/qwen3.8-27b',
+      grounded_product_ids: ['COKE_ZERO_330'],
+      state: 'BROWSING',
+    })
+    apiMocks.createSynthesisTicket.mockResolvedValue(
+      'http://127.0.0.1:8000/audio/synthesize/stream/one-use-token',
+    )
+
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]')).toBeTruthy())
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    await vi.waitFor(() => expect(controllerStore.current).not.toBeNull())
+    controllerStore.current.options.onTranscript('Cho tôi biết giá Coca Zero.')
+
+    await vi.waitFor(() => expect(apiMocks.createSynthesisTicket).toHaveBeenCalledWith(
+      'session-test',
+      'Coca Zero giá 13.000đ.',
+      'vi',
+    ))
+    await vi.waitFor(() => expect(wrapper.get('audio').element.getAttribute('src')).toBe(
+      'http://127.0.0.1:8000/audio/synthesize/stream/one-use-token',
+    ))
+    expect(play).toHaveBeenCalled()
   })
 
   it('unlocks browser speech audio when the user starts voice mode', async () => {
@@ -128,14 +214,15 @@ describe('voice transcript integration', () => {
       state: 'BROWSING',
       expires_at: '2026-08-31T13:00:00Z',
     })
-    apiMocks.synthesize.mockRejectedValue(new Error('tts unavailable'))
+    apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
 
     const wrapper = mount(App)
-    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Dừng nghe"]')).toBeTruthy())
-    await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]')).toBeTruthy())
+    expect(spokenUtterance).toBeUndefined()
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
 
     expect(resume).toHaveBeenCalled()
-    expect(spokenUtterance.rate).toBe(0.88)
+    expect(spokenUtterance).toBeUndefined()
   })
 
   it('unlocks a real audio element from the voice-mode click', async () => {
@@ -155,16 +242,16 @@ describe('voice transcript integration', () => {
       state: 'BROWSING',
       expires_at: '2026-08-31T13:00:00Z',
     })
-    apiMocks.synthesize.mockRejectedValue(new Error('tts unavailable'))
+    apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
 
     const wrapper = mount(App)
-    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Dừng nghe"]')).toBeTruthy())
-    await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]')).toBeTruthy())
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
 
     expect(play).toHaveBeenCalled()
   })
 
-  it('ignores a cancelled browser utterance callback from an older turn', async () => {
+  it('ignores a cancelled browser utterance callback from an older voice turn', async () => {
     const utterances: Array<{ onstart?: () => void; onend?: () => void; onerror?: () => void }> = []
     let activeUtterance: typeof utterances[number] | null = null
     Object.defineProperty(window, 'speechSynthesis', {
@@ -203,7 +290,7 @@ describe('voice transcript integration', () => {
       state: 'BROWSING',
       expires_at: '2026-08-31T13:00:00Z',
     })
-    apiMocks.synthesize.mockRejectedValue(new Error('tts unavailable'))
+    apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
     apiMocks.respond.mockResolvedValue({
       session_id: 'session-test',
       text: 'Mình đang kiểm tra giúp bạn.',
@@ -213,16 +300,19 @@ describe('voice transcript integration', () => {
     })
 
     const wrapper = mount(App)
-    await vi.waitFor(() => expect(utterances).toHaveLength(1))
-    const firstUtterance = utterances[0]
+    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]')).toBeTruthy())
+    expect(utterances).toHaveLength(0)
     await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
     await vi.waitFor(() => expect(controllerStore.current).not.toBeNull())
     controllerStore.current.options.onTranscript('Cho tôi hỏi một chút')
+    await vi.waitFor(() => expect(utterances).toHaveLength(1))
+    controllerStore.current.options.onTranscript('Và thêm một câu nữa')
     await vi.waitFor(() => expect(utterances).toHaveLength(2))
 
     expect(controllerStore.current.startCalls).toBe(1)
+    utterances[0].onend?.()
+    expect(controllerStore.current.startCalls).toBe(1)
     utterances[1].onend?.()
     expect(controllerStore.current.startCalls).toBe(2)
-    expect(firstUtterance).toBeTruthy()
   })
 })

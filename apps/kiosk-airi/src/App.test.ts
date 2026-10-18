@@ -7,12 +7,16 @@ const apiMocks = vi.hoisted(() => ({
   createSession: vi.fn(),
   respond: vi.fn(),
   transcribe: vi.fn(),
+  createSynthesisTicket: vi.fn(),
 }))
 
 vi.mock('./api', () => apiMocks)
 
 describe('kiosk app', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
+    document.documentElement.lang = 'vi'
+    window.localStorage.removeItem('retail-ai-microphone-device')
     apiMocks.createSession.mockResolvedValue({
       session_id: 'session-test',
       kiosk_id: 'kiosk-01',
@@ -37,6 +41,8 @@ describe('kiosk app', () => {
   afterEach(() => {
     delete (window as Window & { SpeechRecognition?: unknown }).SpeechRecognition
     delete (window as Window & { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition
+    Reflect.deleteProperty(navigator, 'mediaDevices')
+    window.localStorage.removeItem('retail-ai-microphone-device')
   })
 
   it('keeps the text drawer closed while showing only the avatar controls', async () => {
@@ -66,7 +72,73 @@ describe('kiosk app', () => {
     expect(wrapper.find('.text-drawer').exists()).toBe(false)
   })
 
-  it('starts continuous Vietnamese listening when the browser supports it', async () => {
+  it('switches the chat to English and sends the selected language to the API', async () => {
+    const wrapper = mount(App)
+
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('button[aria-label="English"]').trigger('click')
+
+    expect(wrapper.text()).toContain('What can I help you find?')
+    expect(document.documentElement.lang).toBe('en-US')
+    expect(wrapper.get('textarea').attributes('placeholder')).toBe('Try: How much is Coca Zero?')
+    await wrapper.get('textarea').setValue('How much is Coca-Cola Zero?')
+    await wrapper.get('.composer').trigger('submit')
+    await vi.waitFor(() =>
+      expect(apiMocks.respond).toHaveBeenCalledWith(
+        'session-test',
+        'How much is Coca-Cola Zero?',
+        'en',
+      ),
+    )
+  })
+
+  it('does not add an unsolicited chat message when the session starts', async () => {
+    const wrapper = mount(App)
+
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+
+    expect(wrapper.findAll('.message-row')).toHaveLength(0)
+    expect(wrapper.text()).toContain('Bạn muốn tìm gì hôm nay?')
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+  })
+
+  it('defaults to the physical AMD microphone and hides duplicate browser aliases', async () => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        enumerateDevices: vi.fn(async () => [
+          { deviceId: 'default', groupId: 'amd', kind: 'audioinput', label: 'Default - Microphone Array (AMD Audio Device)' },
+          { deviceId: 'desk-in', groupId: 'deskin', kind: 'audioinput', label: 'Microphone (DeskIn(R) Virtual Audio Device)' },
+          { deviceId: 'amd-direct', groupId: 'amd', kind: 'audioinput', label: 'Microphone Array (AMD Audio Device)' },
+          { deviceId: 'communications', groupId: 'amd', kind: 'audioinput', label: 'Communications - Microphone Array (AMD Audio Device)' },
+        ]),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      },
+    })
+
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    const microphonePicker = wrapper.get('select[aria-label="Chọn micro đầu vào"]')
+    await vi.waitFor(() =>
+      expect((microphonePicker.element as HTMLSelectElement).value).toBe('amd-direct'),
+    )
+
+    const microphoneOptions = wrapper
+      .findAll('select[aria-label="Chọn micro đầu vào"] option')
+      .map((option) => option.text())
+    expect(microphoneOptions).toEqual([
+      'Micro mặc định',
+      'Microphone (DeskIn(R) Virtual Audio Device)',
+      'Microphone Array (AMD Audio Device)',
+    ])
+    expect(window.localStorage.getItem('retail-ai-microphone-device')).toBe('amd-direct')
+  })
+
+  it('waits for the user and prefers the Groq recorder when browser recognition exists', async () => {
     let recognitionInstance: {
       lang: string
       continuous: boolean
@@ -87,21 +159,6 @@ describe('kiosk app', () => {
       }
     }
 
-    Object.defineProperty(window, 'SpeechRecognition', {
-      configurable: true,
-      value: FakeSpeechRecognition,
-    })
-
-    const wrapper = mount(App)
-    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
-    await vi.waitFor(() => expect(recognitionInstance?.start).toHaveBeenCalled())
-
-    expect(recognitionInstance?.lang).toBe('vi-VN')
-    expect(recognitionInstance?.continuous).toBe(true)
-    expect(wrapper.text()).toContain('Đang nghe')
-  })
-
-  it('automatically starts the recorder fallback when SpeechRecognition is unavailable', async () => {
     const getUserMedia = vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn() }] }))
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,
@@ -131,11 +188,23 @@ describe('kiosk app', () => {
       close = vi.fn(async () => undefined)
     }
 
+    Object.defineProperty(window, 'SpeechRecognition', {
+      configurable: true,
+      value: FakeSpeechRecognition,
+    })
     Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: FakeMediaRecorder })
     Object.defineProperty(window, 'AudioContext', { configurable: true, value: FakeAudioContext })
 
     const wrapper = mount(App)
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Nhập câu hỏi hoặc bấm mic để nói'))
+
+    expect(recognitionInstance).toBeUndefined()
+    expect(getUserMedia).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Sẵn sàng')
+
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
     await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledWith({
       audio: {
         echoCancellation: true,
@@ -144,7 +213,8 @@ describe('kiosk app', () => {
       },
     }))
 
-    await vi.waitFor(() => expect(wrapper.text()).toContain('Đang nghe'))
+    expect(recognitionInstance).toBeUndefined()
+    expect(wrapper.text()).toContain('Đang nghe')
   })
 
   it('sends a quick prompt into the conversation', async () => {
@@ -156,6 +226,23 @@ describe('kiosk app', () => {
 
     expect(apiMocks.respond).toHaveBeenCalledWith('session-test', 'Giá Coca Zero', 'vi')
     await vi.waitFor(() => expect(wrapper.text()).toContain('Coca-Cola Zero hiện có giá'))
+    expect(apiMocks.createSynthesisTicket).not.toHaveBeenCalled()
+  })
+
+  it('frames the snack quick prompt as a catalog-backed recommendation', async () => {
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+
+    await wrapper
+      .get('button[data-quick-prompt="Gợi ý snack không cay"]')
+      .trigger('click')
+
+    expect(apiMocks.respond).toHaveBeenCalledWith(
+      'session-test',
+      'Gợi ý snack không cay',
+      'vi',
+    )
   })
 
   it('shows an inline recovery message when the agent fails', async () => {

@@ -9,50 +9,47 @@ import type {
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '')
   ?? 'http://127.0.0.1:8000'
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      Accept: 'application/json',
-      ...init?.headers,
-    },
-  })
+export class ApiError extends Error {
+  readonly status: number
 
-  if (!response.ok) {
-    let detail = `Request failed (${response.status})`
-    try {
-      const body = await response.json() as { detail?: string }
-      detail = body.detail ?? detail
-    } catch {
-      // Keep the status-based message when the server returns no JSON.
-    }
-    throw new Error(detail)
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
   }
-
-  return response.json() as Promise<T>
 }
 
-async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      Accept: 'audio/mpeg',
-      ...init?.headers,
-    },
-  })
+async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000): Promise<T> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        ...init?.headers,
+      },
+    })
 
-  if (!response.ok) {
-    let detail = `Request failed (${response.status})`
-    try {
-      const body = await response.json() as { detail?: string }
-      detail = body.detail ?? detail
-    } catch {
-      // Keep the status-based message when the server returns no JSON.
+    if (!response.ok) {
+      let detail = `Request failed (${response.status})`
+      try {
+        const body = await response.json() as { detail?: string }
+        detail = body.detail ?? detail
+      } catch {
+        // Keep the status-based message when the server returns no JSON.
+      }
+      throw new ApiError(detail, response.status)
     }
-    throw new Error(detail)
-  }
 
-  return response.blob()
+    return await response.json() as T
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error('Kết nối phản hồi quá lâu. Bạn thử lại giúp mình nhé.')
+    throw error
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export function createSession(kioskId = 'kiosk-01'): Promise<SessionResponse> {
@@ -86,16 +83,17 @@ export function transcribe(
   })
 }
 
-export function synthesize(
+export async function createSynthesisTicket(
   sessionId: string,
   text: string,
   language: LanguageCode = 'vi',
-): Promise<Blob> {
-  return requestBlob('/audio/synthesize', {
+): Promise<string> {
+  const result = await request<{ audio_url: string }>('/audio/synthesize/tickets', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ session_id: sessionId, text, language }),
   })
+  return result.audio_url.startsWith('http') ? result.audio_url : `${API_BASE_URL}${result.audio_url}`
 }
 
 export function searchProducts(query = '', limit = 6): Promise<ProductSearchResponse> {

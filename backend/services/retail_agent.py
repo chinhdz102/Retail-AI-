@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
+import re
+import unicodedata
+from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
@@ -9,12 +13,99 @@ from uuid import uuid4
 from backend.products.catalog import ProductSnapshot
 from backend.services.groq import GroqProviderError, GroqService
 from backend.services.retail_tools import ToolObservation, execute_catalog_tool, tools_for_state
+from backend.services.vietnamese_intent import (
+    explicit_recommendation_category as _parse_recommendation_category,
+)
 from backend.shared.contracts import SessionState
 
 MAX_AGENT_TOOL_ROUNDS = 2
 MAX_AGENT_TOOL_CALLS = 5
 CATALOG_TOOL_TIMEOUT_SECONDS = 2.0
 TOOL_TIMEOUT_RETRIES = 1
+
+
+def _normalize_vietnamese(text: str) -> str:
+    decomposed = unicodedata.normalize("NFD", text.casefold())
+    unaccented = "".join(
+        character for character in decomposed if unicodedata.category(character) != "Mn"
+    )
+    return " ".join(unaccented.replace("đ", "d").split())
+
+
+def _explicit_recommendation_category(text: str) -> str | None:
+    return _parse_recommendation_category(text)
+
+
+def _enforce_recommendation_category(
+    tool_calls: list[dict[str, Any]], user_text: str
+) -> list[dict[str, Any]]:
+    category = _explicit_recommendation_category(user_text)
+    if category is None:
+        return tool_calls
+    normalized_calls = []
+    for call in tool_calls:
+        copied_call = copy.deepcopy(call)
+        function = copied_call.get("function") or {}
+        if function.get("name") == "recommend_products":
+            raw_arguments = function.get("arguments", "{}")
+            try:
+                arguments = (
+                    json.loads(raw_arguments)
+                    if isinstance(raw_arguments, str)
+                    else raw_arguments
+                )
+            except (json.JSONDecodeError, TypeError):
+                arguments = None
+            if isinstance(arguments, dict):
+                arguments["category"] = category
+                function["arguments"] = json.dumps(arguments, ensure_ascii=False)
+                copied_call["function"] = function
+        normalized_calls.append(copied_call)
+    return normalized_calls
+
+
+async def lookup_followup_snapshot(
+    product_id: str, fields: tuple[str, ...]
+) -> ToolObservation:
+    """Use the catalog tool boundary to resolve an elliptical follow-up safely."""
+    call = {
+        "function": {
+            "name": "get_product_snapshot",
+            "arguments": json.dumps(
+                {"product_id": product_id, "fields": list(fields)},
+                ensure_ascii=False,
+            ),
+        }
+    }
+    _, observation = await _execute_tool_call(call, calls_executed=0)
+    return observation
+
+
+async def lookup_product_candidates(query: str) -> ToolObservation:
+    """Search the active catalog through the same bounded tool gateway as the agent."""
+    call = {
+        "function": {
+            "name": "search_products",
+            "arguments": json.dumps(
+                {"query": query, "limit": 5},
+                ensure_ascii=False,
+            ),
+        }
+    }
+    _, observation = await _execute_tool_call(call, calls_executed=0)
+    return observation
+
+
+async def lookup_recommendation_products(arguments: dict[str, Any]) -> ToolObservation:
+    """Run a structured recommendation through the same bounded tool gateway."""
+    call = {
+        "function": {
+            "name": "recommend_products",
+            "arguments": json.dumps(arguments, ensure_ascii=False),
+        }
+    }
+    _, observation = await _execute_tool_call(call, calls_executed=0)
+    return observation
 
 
 @dataclass(frozen=True)
@@ -81,6 +172,7 @@ async def run_retail_agent(
     groq: GroqService,
     messages: list[dict[str, Any]],
     state: SessionState,
+    candidate_query: str = "",
 ) -> RetailAgentResult:
     tools = tools_for_state(state)
     if not tools:
@@ -102,6 +194,12 @@ async def run_retail_agent(
     for _ in range(MAX_AGENT_TOOL_ROUNDS):
         result = await groq.chat(messages, tools=tools, tool_choice="auto")
         tool_calls = getattr(result, "tool_calls", None) or []
+        latest_user_text = next(
+            (str(message.get("content", "")) for message in reversed(messages)
+             if message.get("role") == "user"),
+            "",
+        )
+        tool_calls = _enforce_recommendation_category(tool_calls, latest_user_text)
         if not tool_calls:
             return RetailAgentResult(
                 text=str(result),
@@ -121,11 +219,44 @@ async def run_retail_agent(
         )
 
         for call_number, call in enumerate(tool_calls, start=1):
-            name, observation = await _execute_tool_call(call, calls_executed)
+            function = call.get("function") or {}
+            name = str(function.get("name") or "")
+            if name == "get_product_snapshot":
+                raw_arguments = function.get("arguments", "{}")
+                try:
+                    arguments = (
+                        json.loads(raw_arguments)
+                        if isinstance(raw_arguments, str)
+                        else raw_arguments
+                    )
+                except (json.JSONDecodeError, TypeError):
+                    arguments = None
+                product_id = arguments.get("product_id") if isinstance(arguments, dict) else None
+                candidates = tuple(products_by_id.values())
+                matched_product_id = _unique_product_match_id(candidate_query, candidates)
+                is_allowed_candidate = matched_product_id == product_id
+                if not is_allowed_candidate:
+                    observation = ToolObservation(
+                        content={
+                            "error": (
+                                "Search the catalog first and select only a uniquely matching "
+                                "product candidate."
+                            )
+                        },
+                        tool_name=name,
+                        status="DENIED",
+                        source="policy_gateway",
+                        response_mode="DETERMINISTIC_ERROR",
+                        terminal=True,
+                    )
+                else:
+                    name, observation = await _execute_tool_call(call, calls_executed)
+            else:
+                name, observation = await _execute_tool_call(call, calls_executed)
             calls_executed += 1
             observations.append(observation)
             terminal_observation = terminal_observation or observation.terminal
-            if name:
+            if name and observation.status != "DENIED":
                 tools_used.append(name)
             for product in observation.products:
                 products_by_id[product.product_id] = product
@@ -168,3 +299,36 @@ async def run_retail_agent(
         products=tuple(products_by_id.values()),
         observations=tuple(observations),
     )
+
+
+def _unique_product_match_id(
+    query: str,
+    candidates: tuple[ProductSnapshot, ...],
+) -> str | None:
+    if not query or not candidates:
+        return None
+    query_tokens = [
+        token
+        for token in re.findall(r"\w+", _normalize_vietnamese(query))
+        if len(token) > 1
+    ]
+    query_counts = Counter(query_tokens)
+    repeated_bim_bim_phrase = query_tokens == ["bim", "bim"]
+    if len(set(query_tokens)) < 2 and not repeated_bim_bim_phrase:
+        return None
+    matches = []
+    for product in candidates:
+        product_tokens = re.findall(
+            r"\w+", _normalize_vietnamese(f"{product.name} {product.uom or ''}")
+        )
+        if repeated_bim_bim_phrase:
+            is_match = not (query_counts - Counter(product_tokens))
+        else:
+            is_match = set(query_tokens).issubset(set(product_tokens))
+        if is_match:
+            matches.append(product)
+    if len(matches) != 1:
+        return None
+    if len(candidates) > 1 and len(query_tokens) < 3:
+        return None
+    return matches[0].product_id

@@ -1,5 +1,5 @@
 {
-  "created_at_utc": "2026-10-01T09:40:24.023232+00:00",
+  "created_at_utc": "2026-10-13T13:29:05.496780+00:00",
   "mode": "scripted_backend_regression",
   "trials_per_case": 5,
   "summary": {
@@ -47,7 +47,7 @@
       "status": "PASS",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: còn 16 sản phẩm có thể bán."
+        "text": "Coca-Cola Zero 330ml hiện còn 16 sản phẩm nhé."
       },
       "expected": "Deterministic Coca stock answer from requested stock field"
     },
@@ -67,7 +67,7 @@
       "status": "PASS",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: giá 13.000đ."
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé."
       },
       "expected": "Price is deterministically attributed to the snapshotted Coca product"
     },
@@ -128,7 +128,7 @@
       "status": "PASS",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: còn 16 sản phẩm có thể bán."
+        "text": "Coca-Cola Zero 330ml hiện còn 16 sản phẩm nhé."
       },
       "expected": "Deterministic Coca stock answer from requested stock field"
     },
@@ -148,7 +148,7 @@
       "status": "PASS",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: giá 13.000đ."
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé."
       },
       "expected": "Price is deterministically attributed to the snapshotted Coca product"
     },
@@ -209,7 +209,7 @@
       "status": "PASS",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: còn 16 sản phẩm có thể bán."
+        "text": "Coca-Cola Zero 330ml hiện còn 16 sản phẩm nhé."
       },
       "expected": "Deterministic Coca stock answer from requested stock field"
     },
@@ -229,7 +229,7 @@
       "status": "PASS",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: giá 13.000đ."
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé."
       },
       "expected": "Price is deterministically attributed to the snapshotted Coca product"
     },
@@ -290,7 +290,7 @@
       "status": "PASS",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: còn 16 sản phẩm có thể bán."
+        "text": "Coca-Cola Zero 330ml hiện còn 16 sản phẩm nhé."
       },
       "expected": "Deterministic Coca stock answer from requested stock field"
     },
@@ -310,7 +310,7 @@
       "status": "PASS",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: giá 13.000đ."
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé."
       },
       "expected": "Price is deterministically attributed to the snapshotted Coca product"
     },
@@ -371,7 +371,7 @@
       "status": "PASS",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: còn 16 sản phẩm có thể bán."
+        "text": "Coca-Cola Zero 330ml hiện còn 16 sản phẩm nhé."
       },
       "expected": "Deterministic Coca stock answer from requested stock field"
     },
@@ -391,7 +391,7 @@
       "status": "PASS",
       "observed": {
         "status_code": 200,
-        "text": "Coca-Cola Zero 330ml: giá 13.000đ."
+        "text": "Giá Coca-Cola Zero 330ml là 13.000đ nhé."
       },
       "expected": "Price is deterministically attributed to the snapshotted Coca product"
     },
