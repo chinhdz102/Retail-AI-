@@ -199,6 +199,9 @@ def test_retail_profile_intents_require_their_own_verified_source(
         "Có cây xăng quanh đây không?",
         "Có quán ăn gần Thanh Lam Mart không?",
         "Có nhà hàng quanh khu vực này không?",
+        "Có quán nào ở gần đây không?",
+        "Cửa hàng tiện lợi gần nhà tôi?",
+        "Where is the closest Circle K?",
     ],
 )
 def test_unanchored_nearby_questions_do_not_get_a_general_place_search(
@@ -360,7 +363,7 @@ async def test_store_operator_question_defaults_to_thanh_lam_mart_profile(
     assert payload["model"] == "organization-profile"
     assert payload["tools_used"] == ["get_organization_profile"]
     assert "Thanh Lam Mart" in payload["text"]
-    assert "https://thanhlammart.vn/" in payload["text"]
+    assert "https://thanhlammart.vn/about" in payload["text"]
 
 
 @pytest.mark.asyncio
