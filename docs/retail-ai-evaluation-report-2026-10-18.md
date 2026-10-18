@@ -29,12 +29,12 @@ Các tính năng thông tin chi nhánh, khuyến mãi đang chạy, hàng vừa 
 
 ### Bổ sung sau vòng hoàn thiện dữ liệu
 
-- Mốc sau hoàn thiện hồ sơ doanh nghiệp là 399/399; sau khi mở rộng nhận diện hỏi địa điểm chung, kết quả mới nhất là **411/411 pytest pass**. P0 vẫn **40/40**.
+- Mốc sau hoàn thiện hồ sơ doanh nghiệp là 399/399; sau khi mở rộng nhận diện yêu cầu vị trí, kết quả mới nhất là **411/411 pytest pass**. P0 vẫn **40/40**.
 - Câu hỏi như “Ai vận hành cửa hàng này?” và “Cửa hàng này thuộc công ty nào?” được định tuyến xác định tới hồ sơ WinCommerce trong ngữ cảnh chuỗi WinMart, kèm liên kết nguồn chính thức. Kiểm thử xác nhận luồng không gọi LLM.
 - “Đồ án FPT/ChatVRM” được phân giải thành hồ sơ dự án từ thông tin nhóm cung cấp; “FPT” đứng riêng vẫn phân giải thành FPT Corporation. Claim dự án có provenance riêng và không khẳng định FPT tài trợ, sở hữu hoặc hợp tác chính thức.
 - Hồ sơ doanh nghiệp chuyển sang claim-level provenance: mỗi claim khai báo source ID; dữ liệu không hợp lệ nếu thiếu nguồn, tham chiếu nguồn lạ, ID trùng, hoặc nguồn công khai thiếu URL/ngày xác minh. Facts công khai quá 180 ngày hoặc có ngày xác minh trong tương lai bị loại khỏi câu trả lời.
-- Hỏi đáp địa điểm chung đã bị loại khỏi luồng kiến thức: API trả lời chính sách rõ ràng, không gọi LLM hay POI tool. Lookup địa điểm quanh một chi nhánh cụ thể vẫn là luồng riêng, yêu cầu snapshot có nguồn và dữ liệu vị trí đã xác minh.
-- Guard địa điểm chung kiểm tra cả cụm vị trí và loại địa điểm, gồm các cách hỏi như “quán ăn gần đây”, “hiệu thuốc gần nhất”, “ATM nearby”, “restaurants near me”, “nhà hàng quanh khu vực này” và “closest Circle K”; câu hỏi không gắn chi nhánh không được chuyển cho LLM đoán.
+- Yêu cầu tìm địa điểm chưa gắn với chi nhánh nhận phản hồi thiếu dữ liệu đã xác minh trước khi gọi LLM/tool. Tra cứu quanh chi nhánh cụ thể cần snapshot có nguồn và dữ liệu vị trí đã xác minh.
+- Guard yêu cầu vị trí kiểm tra cả cụm vị trí và loại nơi chốn, gồm “quán ăn gần đây”, “hiệu thuốc gần nhất”, “ATM nearby”, “restaurants near me”, “nhà hàng quanh khu vực này” và “closest Circle K”; câu hỏi không gắn chi nhánh không được chuyển cho LLM đoán.
 
 Live benchmark chi tiết tạm thời nằm trong `.tmp/live_eval_text_20261018.json`; thư mục `.tmp` không được đưa vào commit. Kết quả được tóm tắt tại đây để repo chỉ có một file báo cáo mới.
 
@@ -56,7 +56,6 @@ P0 ban đầu chỉ đạt 35/40. Câu **“Coca Zero còn bao nhiêu?”** bị
 | Hàng vừa nhập kho | Có tool nhận sự kiện receipt theo cửa hàng, mã hàng, số lượng, thời điểm và chứng từ; feed phải tươi và đủ cửa sổ 7 ngày mới được kết luận không có hàng mới. | Chưa có receipt/feed thật. Không suy diễn hàng nhập từ chênh lệch tồn kho. |
 | Thông tin cửa hàng | Có store master và ánh xạ kiosk → chi nhánh; chỉ dùng hồ sơ còn hạn xác minh. | Chưa có bản ghi chi nhánh/kiosk đã xác minh. Câu hỏi giờ mở cửa phải báo thiếu dữ liệu thay vì tự bịa giờ. |
 | Giới thiệu doanh nghiệp | Có hồ sơ riêng cho WinCommerce, FPT và đồ án ChatVRM; resolver ưu tiên alias dự án như “đồ án FPT/ChatVRM”, còn FPT đứng riêng là FPT Corporation. Câu hỏi đơn vị vận hành cửa hàng mặc định về WinCommerce; mỗi claim công khai có source riêng, ngày xác minh và link trong câu trả lời. | Facts dự án dựa trên thông tin nhóm cung cấp, được gắn nhãn rõ. Không suy ra quan hệ hợp tác chính thức giữa đồ án và FPT. |
-| Hỏi đáp địa điểm chung | Đã loại khỏi customer agent; chỉ trả chính sách nêu rõ phạm vi không hỗ trợ, không gọi model/search/geocoder. | Không tra cứu địa điểm chung. |
 | Địa điểm gần một cửa hàng cụ thể | Có lookup POI theo tọa độ chi nhánh và snapshot có attribution, hạn dùng; bắt buộc gắn với một chi nhánh. | Chưa có tọa độ chi nhánh/POI feed. Luồng cụ thể chưa thể trả kết quả thật đến khi có dữ liệu đã xác minh. |
 | Chăm sóc khách hàng / phân tích tương tác | Các câu hỏi dịch vụ được xử lý bằng phản hồi chính sách an toàn; request quản trị/thanh toán giả bị chặn. | Chưa có quy trình chuyển nhân viên thực, lưu khiếu nại hoặc pipeline thống kê câu hỏi/sản phẩm được hỏi nhiều. Agent không được tuyên bố đã báo nhân viên hay ghi nhận ticket. |
 | Tiếng Anh | Có nhánh trả lời tiếng Anh cho một số chức năng store/company/catalog và test tương ứng. | Benchmark live trong báo cáo này chỉ dùng tiếng Việt; chưa đánh giá bao phủ tiếng Anh đầu-cuối. |

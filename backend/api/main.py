@@ -1184,17 +1184,13 @@ def _localized_retail_information_unavailable(
 def _localized_generic_nearby_unavailable(language: LanguageCode) -> str:
     return {
         "en": (
-            "I don't answer general nearby-place questions. If you mean places around a "
-            "specific store, tell me the branch; verified location data is not connected yet."
+            "I don't have verified location data for that. I can help with products "
+            "or store information."
         ),
-        "zh": (
-            "我不提供周边地点的通用问答。若要查询特定门店附近地点，请说明门店；"
-            "目前尚未接入已核实的位置数据。"
-        ),
+        "zh": "目前没有已核实的位置数据。我可以帮您查询商品或门店信息。",
         "vi": (
-            "Mình không hỗ trợ hỏi đáp địa điểm chung quanh đây. Nếu bạn muốn tìm địa điểm "
-            "gần một cửa hàng cụ thể, hãy cho mình biết chi nhánh; dữ liệu vị trí đã xác "
-            "minh hiện chưa được kết nối."
+            "Mình chưa có dữ liệu địa điểm đã xác minh để tra cứu. Bạn có thể hỏi về "
+            "sản phẩm hoặc thông tin cửa hàng."
         ),
     }[language]
 
@@ -1760,7 +1756,8 @@ Tra cứu địa chỉ, giờ mở cửa, ưu đãi đang áp dụng, phiếu nh
 qua tool theo kiosk đã được server ánh xạ sang chi nhánh. Nếu nguồn thiếu, dữ liệu chưa phủ đủ
 kỳ hoặc kiosk chưa gắn với chi nhánh đã xác minh, nói rõ chưa thể xác minh; không suy ra hàng mới
 nhập từ số tồn kho. Chỉ trả lời địa điểm gắn với chi nhánh cụ thể bằng snapshot có nguồn và còn
-hạn; hỏi đáp địa điểm chung quanh không thuộc phạm vi trợ lý này. Dùng hồ sơ doanh nghiệp đã
+hạn; nếu thiếu dữ liệu vị trí đã xác minh, không suy đoán và hướng người dùng sang câu hỏi về
+sản phẩm hoặc thông tin cửa hàng. Dùng hồ sơ doanh nghiệp đã
 duyệt; giữ riêng WinCommerce, FPT và đồ án ChatVRM.
 Trong câu hỏi nối tiếp như “giá bao nhiêu?” hoặc “ở kệ nào?”, hãy dùng sản phẩm đã
 được xác định trong hội thoại trước; nếu có thể đang nói về nhiều sản phẩm thì hỏi lại.

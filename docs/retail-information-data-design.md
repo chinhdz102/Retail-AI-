@@ -1,9 +1,8 @@
 # Retail information data and retrieval design
 
 **Scope:** promotions, catalog additions, receipts, store and company facts, and
-store-specific nearby places. General “Q&A about nearby places” is removed from the
-customer assistant. The remaining nearby-place path is only a branch-scoped lookup of
-attributed, verified snapshots when the user names or is bound to a specific store.
+branch-specific nearby-place snapshots. Nearby-place lookups require an identified store,
+verified coordinates, and an attributed, current snapshot.
 
 ## What the repository currently has
 
@@ -80,8 +79,8 @@ evidence that a product was launched or physically received on that date.
   FPT alone resolves to the company profile.
 - Store-specific answers require a `store_id`. Near-store place results require that
   store's verified coordinates; without them, ask which branch the visitor means.
-- A generic nearby-place request gets only a scope/clarification response. It does not
-  invoke a general search, geocoder, or local-trivia knowledge source.
+- A nearby-place request without a branch does not invoke search, geocoding, or the LLM;
+  the assistant says location data is unavailable and offers supported store/catalog help.
 
 ## Runtime coverage checked on 2026-10-18
 
@@ -92,7 +91,6 @@ evidence that a product was launched or physically received on that date.
 | Products newly received into stock | `list_recent_stock_receipts` reads receiving events for the kiosk-mapped branch; the schema stores event, item, quantity, time, step, and source document. | Only event records from a fresh receiving feed are reported. The agent abstains if the branch mapping/feed is missing; an empty result is called “none” only when the feed certifies a complete seven-day window. |
 | Store address, hours, and contact | `get_store_information` reads the verified branch profile mapped from the session kiosk. The current repository has no branch seed data. | Return only current, source-stamped store master fields; otherwise say the kiosk is not mapped to a verified branch. |
 | Company introduction | `get_organization_profile` resolves distinct WinCommerce, FPT, and ChatVRM project entities. Each claim points to its own source IDs in `data/verified_organization_facts.json`. | Public claims include source links and verification dates. Project claims are marked as team-provided. “Đồ án FPT/ChatVRM” resolves to the project; FPT alone resolves to FPT Corporation. |
-| General Q&A about nearby places | Removed from this customer agent; only a safe clarification guard remains. | No general place search or geocoding is run. |
 | Nearby places for a specific store | `list_nearby_places_for_store` reads only attributed, unexpired nearby-place snapshots for the kiosk-mapped branch. The current repository has no branch coordinates or POI snapshot. | Require verified branch coordinates and a fresh attributed snapshot. Do not call a public geocoder on every customer turn. |
 
 The PostgreSQL endpoint was unavailable during this check. API behavior and repository guardrails
