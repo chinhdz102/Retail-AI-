@@ -2,7 +2,7 @@
 
 ## Kết luận
 
-Các luồng backend chính, kiểm soát dữ liệu và hồi quy đạt bộ kiểm thử tự động. Sau khi hoàn thiện nguồn dữ liệu doanh nghiệp và định tuyến câu hỏi về đơn vị vận hành, vòng kiểm tra cuối chạy **399/399 pytest pass**, **40/40 P0 regression pass**, Ruff và compile pass. Regression runner trước đó phát hiện một lỗi định tuyến tồn kho; lỗi đã được sửa và kiểm tra lại.
+Các luồng backend chính, kiểm soát dữ liệu và hồi quy đạt bộ kiểm thử tự động. Sau khi hoàn thiện nguồn dữ liệu doanh nghiệp, định tuyến đơn vị vận hành và chặn các biến thể hỏi địa điểm chung, vòng kiểm tra mới nhất chạy **408/408 pytest pass**, **40/40 P0 regression pass**, Ruff và compile pass. Regression runner trước đó phát hiện một lỗi định tuyến tồn kho; lỗi đã được sửa và kiểm tra lại.
 
 Các tính năng thông tin chi nhánh, khuyến mãi đang chạy, hàng vừa nhập và địa điểm gần cửa hàng đã có schema, tool và kiểm tra freshness/provenance. Tuy vậy, PostgreSQL hiện không kết nối được và chưa có dữ liệu chi nhánh/feed được xác minh. Vì vậy các tính năng này **chưa thể cung cấp dữ liệu thật cho kiosk**. Catalog hiện có 3.099 dòng nhưng lần thu thập mới nhất là 15/09/2026; khuyến mãi dạng text không chứng minh chương trình còn hiệu lực.
 
@@ -18,7 +18,7 @@ Các tính năng thông tin chi nhánh, khuyến mãi đang chạy, hàng vừa 
 
 | Hạng mục | Kết quả | Ý nghĩa |
 |---|---:|---|
-| Toàn bộ pytest | **399 passed** | Không còn test fail sau khi sửa lỗi tồn kho và bổ sung kiểm tra provenance/định tuyến doanh nghiệp. |
+| Toàn bộ pytest | **408 passed** | Không còn test fail; bao gồm provenance doanh nghiệp, định tuyến và các biến thể hỏi địa điểm chung. |
 | P0 regression | **40/40 passed** | Tồn kho, small talk, ràng buộc đúng sản phẩm, chặn sửa giá/tồn kho/thanh toán giả, timeout và hàng hết hạn; mỗi ca lặp 5 lần. |
 | Live Groq text | **5/5 lượt pass**, 3 tình huống | 4/4 quyết định không gọi tool đúng; câu hỏi giá viết kiểu “nhiu z” gọi đúng tool model 1/1. |
 | Live Groq latency | Median turn **5,41 giây**; median lần gọi model ghi nhận **577 ms** | Turn latency có thể gồm pacing và fallback; không phải time-to-first-token. Không đo STT, TTS hoặc thời gian hiển thị trên trình duyệt. |
@@ -29,11 +29,12 @@ Các tính năng thông tin chi nhánh, khuyến mãi đang chạy, hàng vừa 
 
 ### Bổ sung sau vòng hoàn thiện dữ liệu
 
-- Kết quả cuối hiện tại là **399/399 pytest pass** (tăng từ 394 test ở vòng báo cáo trước); P0 vẫn **40/40**.
+- Mốc sau hoàn thiện hồ sơ doanh nghiệp là 399/399; sau khi mở rộng nhận diện hỏi địa điểm chung, kết quả mới nhất là **408/408 pytest pass**. P0 vẫn **40/40**.
 - Câu hỏi như “Ai vận hành cửa hàng này?” và “Cửa hàng này thuộc công ty nào?” được định tuyến xác định tới hồ sơ WinCommerce trong ngữ cảnh chuỗi WinMart, kèm liên kết nguồn chính thức. Kiểm thử xác nhận luồng không gọi LLM.
 - “Đồ án FPT/ChatVRM” được phân giải thành hồ sơ dự án từ thông tin nhóm cung cấp; “FPT” đứng riêng vẫn phân giải thành FPT Corporation. Claim dự án có provenance riêng và không khẳng định FPT tài trợ, sở hữu hoặc hợp tác chính thức.
 - Hồ sơ doanh nghiệp chuyển sang claim-level provenance: mỗi claim khai báo source ID; dữ liệu không hợp lệ nếu thiếu nguồn, tham chiếu nguồn lạ, ID trùng, hoặc nguồn công khai thiếu URL/ngày xác minh. Facts công khai quá 180 ngày hoặc có ngày xác minh trong tương lai bị loại khỏi câu trả lời.
 - Hỏi đáp địa điểm chung đã bị loại khỏi luồng kiến thức: API trả lời chính sách rõ ràng, không gọi LLM hay POI tool. Lookup địa điểm quanh một chi nhánh cụ thể vẫn là luồng riêng, yêu cầu snapshot có nguồn và dữ liệu vị trí đã xác minh.
+- Guard địa điểm chung kiểm tra cả cụm vị trí và loại địa điểm, gồm các cách hỏi như “quán ăn gần đây”, “hiệu thuốc gần nhất”, “ATM nearby”, “restaurants near me” và “nhà hàng quanh khu vực này”; câu hỏi không gắn chi nhánh không được chuyển cho LLM đoán.
 
 Live benchmark chi tiết tạm thời nằm trong `.tmp/live_eval_text_20261018.json`; thư mục `.tmp` không được đưa vào commit. Kết quả được tóm tắt tại đây để repo chỉ có một file báo cáo mới.
 
@@ -41,7 +42,7 @@ Live benchmark chi tiết tạm thời nằm trong `.tmp/live_eval_text_20261018
 
 P0 ban đầu chỉ đạt 35/40. Câu **“Coca Zero còn bao nhiêu?”** bị nhận nhầm thành câu hỏi giá: bước chuẩn hóa biến “bao nhiêu” thành “bao bao nhiêu”, sau đó bộ nhận diện chọn `price_vnd`. Agent trả giá thay vì số lượng tồn.
 
-Đã sửa chuẩn hóa để không viết lại từ “nhiêu” nằm trong cụm “bao nhiêu”, đồng thời phân biệt “còn bao nhiêu” (số lượng) với “giá … còn bao nhiêu” hoặc “còn bao nhiêu tiền” (giá). Thêm ba biến thể kiểm tra: câu tồn kho chuẩn, viết tắt “còn nhiu”, và câu hỏi giá còn bao nhiêu tiền. Sau sửa, vòng trước đạt 394/394 và P0 đạt 40/40; sau phần hoàn thiện dữ liệu doanh nghiệp, vòng cuối đạt 399/399 và P0 vẫn 40/40.
+Đã sửa chuẩn hóa để không viết lại từ “nhiêu” nằm trong cụm “bao nhiêu”, đồng thời phân biệt “còn bao nhiêu” (số lượng) với “giá … còn bao nhiêu” hoặc “còn bao nhiêu tiền” (giá). Thêm ba biến thể kiểm tra: câu tồn kho chuẩn, viết tắt “còn nhiu”, và câu hỏi giá còn bao nhiêu tiền. Sau sửa, vòng trước đạt 394/394 và P0 đạt 40/40; phần hoàn thiện doanh nghiệp đạt 399/399; vòng gần nhất sau khi mở rộng guard địa điểm đạt 408/408 và P0 vẫn 40/40.
 
 ## Đánh giá các chức năng retail
 

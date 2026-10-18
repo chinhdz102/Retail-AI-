@@ -480,6 +480,8 @@ def _unverified_retail_information_kind(text: str) -> str | None:
         for phrase in (
             "dia diem gan cua hang",
             "dia diem gan chi nhanh",
+            "gan cua hang",
+            "gan chi nhanh",
             "gan cua hang nay",
             "around this store",
             "places near the store",
@@ -558,19 +560,92 @@ def _generic_nearby_places_requested(text: str) -> bool:
     if _unverified_retail_information_kind(text) == "nearby":
         return False
     normalized = _normalize_request_text(text)
-    return any(
+    if any(
         phrase in normalized
         for phrase in (
             "dia diem xung quanh",
             "dia diem o gan day",
             "dia diem quanh day",
+            "gan day co gi",
+            "quanh day co gi",
+            "xung quanh day co gi",
+            "o gan toi co gi",
+            "lan can co gi",
             "places around me",
             "places around here",
+            "places near me",
             "what places are around here",
             "what is nearby",
             "what is around here",
+            "what is near me",
             "nearby places",
+            "near me",
+            "around me",
         )
+    ):
+        return True
+
+    place_terms = (
+        "dia diem",
+        "quan an",
+        "nha hang",
+        "quan cafe",
+        "ca phe",
+        "cafe",
+        "coffee shop",
+        "restaurant",
+        "pharmacy",
+        "nha thuoc",
+        "hieu thuoc",
+        "benh vien",
+        "hospital",
+        "atm",
+        "ngan hang",
+        "bank",
+        "cay xang",
+        "tram xang",
+        "gas station",
+        "truong hoc",
+        "school",
+        "bai do xe",
+        "parking",
+        "hotel",
+        "khach san",
+        "post office",
+        "buu dien",
+    )
+    location_terms = (
+        "gan day",
+        "gan nhat",
+        "gan toi",
+        "gan cho toi",
+        "gan nha toi",
+        "gan khu vuc",
+        "gan minh",
+        "gan winmart",
+        "quanh day",
+        "quanh toi",
+        "quanh khu vuc",
+        "quanh winmart",
+        "xung quanh",
+        "lan can",
+        "near me",
+        "nearby",
+        "around here",
+        "around me",
+        "near my location",
+        "around my location",
+        "near my house",
+        "around my house",
+        "in the area",
+        "close by",
+        "nearest",
+        "closest",
+        "near winmart",
+        "around winmart",
+    )
+    return any(term in normalized for term in place_terms) and any(
+        term in normalized for term in location_terms
     )
 
 

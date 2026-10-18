@@ -192,6 +192,13 @@ def test_retail_profile_intents_require_their_own_verified_source(
         "Hỏi đáp về địa điểm xung quanh",
         "What is nearby?",
         "What places are around here?",
+        "Gần đây có quán ăn nào không?",
+        "Tìm hiệu thuốc gần nhất",
+        "Is there an ATM nearby?",
+        "Any restaurants near me?",
+        "Có cây xăng quanh đây không?",
+        "Có quán ăn gần WinMart không?",
+        "Có nhà hàng quanh khu vực này không?",
     ],
 )
 def test_unanchored_nearby_questions_do_not_get_a_general_place_search(
@@ -598,8 +605,17 @@ async def test_english_store_information_uses_the_verified_branch_profile(
 
 
 @pytest.mark.asyncio
-async def test_generic_nearby_question_asks_for_branch_without_llm_or_poi_tool(
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Hỏi đáp về địa điểm xung quanh",
+        "Gần đây có quán ăn nào không?",
+        "Is there an ATM nearby?",
+    ],
+)
+async def test_generic_nearby_question_is_disabled_without_llm_or_poi_tool(
     client: httpx.AsyncClient,
+    text: str,
 ) -> None:
     class UnexpectedGroqService(GroqService):
         async def chat(self, messages, model=None, tools=None, tool_choice=None):
@@ -611,7 +627,7 @@ async def test_generic_nearby_question_asks_for_branch_without_llm_or_poi_tool(
         "/agent/respond",
         json={
             "session_id": created.json()["session_id"],
-            "text": "Hỏi đáp về địa điểm xung quanh",
+            "text": text,
         },
     )
 
