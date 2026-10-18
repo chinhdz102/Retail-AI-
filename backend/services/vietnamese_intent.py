@@ -33,8 +33,8 @@ def normalize_vietnamese(text: str) -> str:
         (r"\b(mon|cai|loai)\s+chi(?=\s+(?:ngon|hop|re|tot|duoc)\b)", r"\1 nao"),
         (r"\b(an|uong)\s+chi\b", r"\1 gi"),
         (r"\bmo(?=\s+(?:ngon|an|uong|ban|chay|hop|re|tot|duoc)\b)", "nao"),
-        (r"\b(?:nhiu|nhieu)(?=\s+(?:tien|dong|vay|the|a|ban)\b)", "bao nhieu"),
-        (r"\b(?:nhiu|nhieu)(?=\W*$)", "bao nhieu"),
+        (r"(?<!bao )\b(?:nhiu|nhieu)(?=\s+(?:tien|dong|vay|the|a|ban)\b)", "bao nhieu"),
+        (r"(?<!bao )\b(?:nhiu|nhieu)(?=\W*$)", "bao nhieu"),
         (r"\b(?:bao\s+nhiu|bao\s+nhieu)\b", "bao nhieu"),
         (r"\b(?:bn|bnh)\b", "bao nhieu"),
         (r"\b(?:hien\s+gio|bay\s+gio)\b", "hien tai"),
@@ -177,7 +177,6 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "con khong",
             "het chua",
             "con chua",
-            "con bao nhieu",
             "con may",
             "con nhieu",
             "ton kho",
@@ -201,6 +200,18 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
         or re.search(r"\bco san\b.{0,40}\bkhong\b", normalized)
         or re.search(r"\bcon\s+\d+\s+(?:chai|lon|hop|goi|ly|cai)\b", normalized)
     )
+    remaining_quantity_question = _has_phrase(normalized, ("con bao nhieu",))
+    remaining_amount_is_price = (
+        _has_phrase(normalized, ("con bao nhieu tien", "con bao nhieu dong"))
+        or bool(
+            re.search(
+                r"\b(?:gia|price|cost)\b.{0,60}\bcon bao nhieu\b",
+                normalized,
+            )
+        )
+    )
+    if remaining_quantity_question and not remaining_amount_is_price:
+        stock = True
     if nutrition:
         stock = False
 

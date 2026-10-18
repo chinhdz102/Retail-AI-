@@ -12,7 +12,12 @@ from uuid import uuid4
 
 from backend.products.catalog import ProductSnapshot
 from backend.services.groq import GroqProviderError, GroqService
-from backend.services.retail_tools import ToolObservation, execute_catalog_tool, tools_for_state
+from backend.services.retail_tools import (
+    ToolObservation,
+    execute_catalog_tool,
+    execute_retail_information_tool,
+    tools_for_state,
+)
 from backend.services.vietnamese_intent import (
     explicit_recommendation_category as _parse_recommendation_category,
 )
@@ -106,6 +111,70 @@ async def lookup_recommendation_products(arguments: dict[str, Any]) -> ToolObser
     }
     _, observation = await _execute_tool_call(call, calls_executed=0)
     return observation
+
+
+async def lookup_product_promotions(arguments: dict[str, Any] | None = None) -> ToolObservation:
+    """List recorded product offers through the same bounded tool gateway."""
+    call = {
+        "function": {
+            "name": "list_product_promotions",
+            "arguments": json.dumps(arguments or {"limit": 5}, ensure_ascii=False),
+        }
+    }
+    _, observation = await _execute_tool_call(call, calls_executed=0)
+    return observation
+
+
+async def lookup_catalog_additions(arguments: dict[str, Any] | None = None) -> ToolObservation:
+    """Compare imported catalog versions to identify products newly listed."""
+    call = {
+        "function": {
+            "name": "list_new_catalog_products",
+            "arguments": json.dumps(arguments or {"limit": 5}, ensure_ascii=False),
+        }
+    }
+    _, observation = await _execute_tool_call(call, calls_executed=0)
+    return observation
+
+
+async def lookup_branch_information(
+    name: str,
+    kiosk_id: str,
+    arguments: dict[str, Any] | None = None,
+) -> ToolObservation:
+    """Read branch-scoped operational facts with the kiosk bound by the API."""
+    raw_arguments = json.dumps(arguments or {}, ensure_ascii=False)
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                execute_retail_information_tool,
+                name,
+                raw_arguments,
+                kiosk_id=kiosk_id,
+            ),
+            timeout=CATALOG_TOOL_TIMEOUT_SECONDS,
+        )
+    except TimeoutError:
+        return ToolObservation(
+            content={"error": "Retail information lookup timed out."},
+            tool_name=name,
+            status="TEMPORARY_FAILURE",
+            source="tool_gateway",
+            response_mode="DETERMINISTIC_ERROR",
+            terminal=True,
+        )
+    except Exception as exc:  # Keep connector failures inside the tool boundary.
+        return ToolObservation(
+            content={
+                "error": "Retail information lookup is temporarily unavailable.",
+                "failure_type": type(exc).__name__,
+            },
+            tool_name=name,
+            status="TEMPORARY_FAILURE",
+            source="tool_gateway",
+            response_mode="DETERMINISTIC_ERROR",
+            terminal=True,
+        )
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "entity_id": "thanh_lam_mart",
+      "entity_type": "organization",
+      "aliases": [
+        "thanh lam mart",
+        "thanh lam",
+        "cửa hàng thanh lam",
+        "siêu thị thanh lam"
+      ],
+      "display_name": {
+        "vi": "Thanh Lam Mart",
+        "en": "Thanh Lam Mart"
+      },
+      "facts": {
+        "vi": [
+          "Theo thông tin nhóm cung cấp, Thanh Lam Mart là cửa hàng bán lẻ độc lập gần nhà thành viên nhóm và là đơn vị cung cấp bộ dữ liệu danh mục sản phẩm thực tế cho dự án.",
+          "Thanh Lam Mart vận hành cửa hàng bán lẻ và cung cấp bộ dữ liệu danh mục sản phẩm phục vụ tư vấn mua sắm."
+        ],
+        "en": [
+          "According to the team-provided context, Thanh Lam Mart is a local independent retail store that provided the real product catalog dataset for the project.",
+          "Thanh Lam Mart operates a retail store and provides the product catalog dataset for shopping consultation."
+        ]
+      },
+      "sources": [
+        {
+          "name": "Thanh Lam Mart official company profile",
+          "url": "https://thanhlammart.vn/about",
+          "verified_at": "2026-10-18"
+        },
+        {
+          "name": "Thanh Lam Mart official transaction policy",
+          "url": "https://thanhlammart.vn/info/transaction-policy",
+          "verified_at": "2026-10-18"
+        }
+      ]
+    },
+    {
+      "entity_id": "fpt",
+      "entity_type": "organization",
+      "aliases": [
+        "fpt",
+        "fpt corporation"
+      ],
+      "display_name": {
+        "vi": "FPT Corporation",
+        "en": "FPT Corporation"
+      },
+      "facts": {
+        "vi": [
+          "Theo trang giới thiệu chính thức, FPT là tập đoàn công nghệ tại Việt Nam, hoạt động trong chuyển đổi số, tư vấn, công nghệ và viễn thông."
+        ],
+        "en": [
+          "FPT describes itself as a Vietnam technology corporation working in digital transformation, consulting, technology, and telecommunications."
+        ]
+      },
+      "sources": [
+        {
+          "name": "FPT official About Us",
+          "url": "https://fpt.com/en/about-us",
+          "verified_at": "2026-10-18"
+        }
+      ]
+    },
+    {
+      "entity_id": "chatvrm_retail_ai_project",
+      "entity_type": "project",
+      "aliases": [
+        "chatvrm",
+        "đồ án chatvrm",
+        "chatvrm fpt project",
+        "development of ai agents to support retail store chains in vietnam"
+      ],
+      "display_name": {
+        "vi": "Đồ án ChatVRM hỗ trợ chuỗi bán lẻ",
+        "en": "Retail AI Agents project"
+      },
+      "facts": {
+        "vi": [
+          "Tên đồ án là “Development of AI agents to support retail store chains in Vietnam”.",
+          "Theo thông tin nhóm cung cấp: Chinh phụ trách agent cho người mua, Quân phụ trách agent cho chủ cửa hàng, Long phụ trách frontend và hỗ trợ.",
+          "Chưa có nguồn xác nhận quan hệ tài trợ, sở hữu hoặc hợp tác chính thức giữa đồ án này và FPT."
+        ],
+        "en": [
+          "The project title is “Development of AI agents to support retail store chains in Vietnam”.",
+          "According to the team-provided context: Chinh owns the buyer agent, Quân the store-owner agent, and Long the frontend and support work.",
+          "No source currently verifies an official sponsorship, ownership, or partnership between this project and FPT."
+        ]
+      },
+      "sources": [
+        {
+          "name": "User-provided project context",
+          "url": null,
+          "verified_at": null
+        }
+      ]
+    }
+  ]
+}

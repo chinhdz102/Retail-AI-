@@ -47,6 +47,54 @@ def test_snapshot_can_verify_spice_attribute() -> None:
     assert observation.content["product"]["spicy"] is True
 
 
+def test_promotion_list_returns_only_catalog_records_with_snapshot_provenance() -> None:
+    observation = execute_catalog_tool(
+        "list_product_promotions",
+        json.dumps({"limit": 5}),
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.tool_name == "list_product_promotions"
+    assert observation.requested_fields == ("promotion",)
+    assert observation.content["snapshot_only"] is True
+    assert observation.content["campaign_validity_verified"] is False
+    assert observation.content["count"] == 1
+    assert observation.content["items"][0] == {
+        "product_id": "MILK01",
+        "name": "Sữa tươi ít đường 180ml",
+        "promotion": "Mua 2 hộp giảm 1.000đ",
+        "data_timestamp": observation.products[0].data_timestamp.isoformat(),
+    }
+
+
+def test_promotion_list_rejects_unsupported_repository_instead_of_guessing() -> None:
+    class SnapshotOnlyRepository:
+        source_name = "snapshot_only_test_catalog"
+
+        def get_product_snapshot(self, product_id: str):
+            return None
+
+    observation = execute_catalog_tool(
+        "list_product_promotions",
+        json.dumps({"limit": 5}),
+        repository=SnapshotOnlyRepository(),
+    )
+
+    assert observation.status == "DATA_UNAVAILABLE"
+    assert observation.content["error"]
+
+
+def test_new_catalog_products_requires_two_imports() -> None:
+    observation = execute_catalog_tool(
+        "list_new_catalog_products",
+        json.dumps({"limit": 5}),
+    )
+
+    assert observation.status == "DATA_UNAVAILABLE"
+    assert "two complete" in observation.content["error"]
+    assert observation.content["previous_imported_at"] is None
+
+
 def test_snapshot_returns_verified_fields_when_another_requested_field_is_missing() -> None:
     class PartialRepository:
         source_name = "partial_test_catalog"
@@ -205,7 +253,13 @@ def test_catalog_tool_registry_separates_recommendations_from_lookup() -> None:
 
     names = [entry["function"]["name"] for entry in CATALOG_TOOL_DEFINITIONS]
 
-    assert names == ["search_products", "recommend_products", "get_product_snapshot"]
+    assert names == [
+        "search_products",
+        "recommend_products",
+        "get_product_snapshot",
+        "list_product_promotions",
+        "list_new_catalog_products",
+    ]
 
 
 def test_expired_product_snapshot_reports_zero_sellable_stock() -> None:

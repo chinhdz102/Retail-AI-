@@ -11,6 +11,10 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from backend.products.catalog import PriceOperator, ProductSnapshot
 from backend.products.repository import ProductRepository, get_product_repository
+from backend.services.retail_information import (
+    RetailInformationKind,
+    lookup_retail_information,
+)
 from backend.services.vietnamese_intent import (
     explicit_recommendation_category as _explicit_category,
 )
@@ -144,6 +148,52 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_product_promotions",
+            "description": (
+                "List product-level promotion text recorded in the latest catalog snapshot. "
+                "Use for broad questions about recorded offers when no single product is named. "
+                "This is not a campaign calendar: the source has no verified start/end dates, "
+                "eligibility rules, or guarantee that an offer is still active."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "description": "Optional product category from the user's question.",
+                    },
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 5},
+                },
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_new_catalog_products",
+            "description": (
+                "List products newly present in the latest complete catalog compared with "
+                "the previous imported catalog. This proves only that the product is new to "
+                "the catalog, not when it launched in the market. If fewer than two complete "
+                "catalog versions exist, the tool returns DATA_UNAVAILABLE."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "description": "Optional product category from the user's question.",
+                    },
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 5},
+                },
+                "additionalProperties": False,
+            },
+        },
+    },
 ]
 
 
@@ -182,6 +232,26 @@ class GetProductSnapshotArguments(BaseModel):
 
     product_id: str = Field(min_length=1, max_length=64)
     fields: list[FactField] = Field(min_length=1, max_length=7)
+
+
+class ListProductPromotionsArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    category: str | None = Field(default=None, max_length=160)
+    limit: int = Field(default=5, ge=1, le=5)
+
+
+class ListNewCatalogProductsArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    category: str | None = Field(default=None, max_length=160)
+    limit: int = Field(default=5, ge=1, le=5)
+
+
+class RetailInformationArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    category: str | None = Field(default=None, max_length=160)
 
 
 @dataclass(frozen=True)
@@ -412,7 +482,13 @@ def execute_catalog_tool(
     *,
     repository: ProductRepository | None = None,
 ) -> ToolObservation:
-    if name not in {"search_products", "recommend_products", "get_product_snapshot"}:
+    if name not in {
+        "search_products",
+        "recommend_products",
+        "get_product_snapshot",
+        "list_product_promotions",
+        "list_new_catalog_products",
+    }:
         return _tool_error(
             name,
             "DENIED",
@@ -425,6 +501,103 @@ def execute_catalog_tool(
         if not isinstance(arguments, dict):
             raise ValueError("Tool arguments must be an object")
         repo = repository or get_product_repository()
+        if name == "list_product_promotions":
+            parsed = ListProductPromotionsArguments.model_validate(arguments)
+            list_promotions = getattr(repo, "list_promotions", None)
+            if list_promotions is None:
+                return _tool_error(
+                    name,
+                    "DATA_UNAVAILABLE",
+                    "The active catalog does not provide a promotion listing.",
+                    source=repo.source_name,
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
+            category = _category_for_repository(parsed.category, repo)
+            products = tuple(list_promotions(category=category, limit=parsed.limit))
+            latest_timestamp = max(
+                (product.data_timestamp for product in products),
+                default=None,
+            )
+            return ToolObservation(
+                content={
+                    "items": [
+                        {
+                            "product_id": product.product_id,
+                            "name": product.name,
+                            "promotion": product.promotion,
+                            "data_timestamp": product.data_timestamp.isoformat(),
+                        }
+                        for product in products
+                    ],
+                    "count": len(products),
+                    "latest_snapshot_at": (
+                        latest_timestamp.isoformat() if latest_timestamp else None
+                    ),
+                    "snapshot_only": True,
+                    "campaign_validity_verified": False,
+                },
+                products=products,
+                tool_name=name,
+                source=repo.source_name,
+                requested_fields=("promotion",),
+                response_mode="DETERMINISTIC_FACT" if products else "DETERMINISTIC_ERROR",
+                terminal=True,
+            )
+        if name == "list_new_catalog_products":
+            parsed = ListNewCatalogProductsArguments.model_validate(arguments)
+            list_additions = getattr(repo, "list_catalog_additions", None)
+            if list_additions is None:
+                return _tool_error(
+                    name,
+                    "DATA_UNAVAILABLE",
+                    "The active catalog cannot compare complete import versions.",
+                    source=repo.source_name,
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
+            category = _category_for_repository(parsed.category, repo)
+            comparison = list_additions(category=category, limit=parsed.limit)
+            if not comparison.comparable:
+                return _tool_error(
+                    name,
+                    "DATA_UNAVAILABLE",
+                    "At least two complete imported catalog versions are required.",
+                    source=repo.source_name,
+                    extra={
+                        "current_imported_at": (
+                            comparison.current_imported_at.isoformat()
+                            if comparison.current_imported_at
+                            else None
+                        ),
+                        "previous_imported_at": None,
+                    },
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
+            products = tuple(comparison.products)
+            return ToolObservation(
+                content={
+                    "items": [
+                        {
+                            "product_id": product.product_id,
+                            "name": product.name,
+                            "category": product.category,
+                            "brand": product.brand,
+                        }
+                        for product in products
+                    ],
+                    "count": len(products),
+                    "current_imported_at": comparison.current_imported_at.isoformat(),
+                    "previous_imported_at": comparison.previous_imported_at.isoformat(),
+                    "meaning": "newly present in catalog; market launch date is unknown",
+                },
+                products=products,
+                tool_name=name,
+                source=repo.source_name,
+                response_mode="DETERMINISTIC_FACT",
+                terminal=True,
+            )
         if name == "search_products":
             parsed = SearchProductsArguments.model_validate(arguments)
             query_category, category_only_query = _query_category_hint(parsed.query)
@@ -573,5 +746,74 @@ def execute_catalog_tool(
         source=repo.source_name,
         requested_fields=available_fields,
         response_mode="DETERMINISTIC_FACT",
+        terminal=True,
+    )
+
+
+def execute_retail_information_tool(
+    name: str,
+    raw_arguments: str,
+    *,
+    kiosk_id: str,
+) -> ToolObservation:
+    """Execute a branch-scoped read-only tool; kiosk identity is server supplied."""
+    kinds: dict[str, RetailInformationKind] = {
+        "get_store_information": "store",
+        "list_active_store_promotions": "promotions",
+        "list_recent_stock_receipts": "receipts",
+        "list_nearby_places_for_store": "nearby",
+    }
+    kind = kinds.get(name)
+    if kind is None:
+        return _tool_error(
+            name,
+            "DENIED",
+            "This tool is not available to the customer agent.",
+            source="policy_gateway",
+            response_mode="DETERMINISTIC_ERROR",
+            terminal=True,
+        )
+    try:
+        raw = json.loads(raw_arguments)
+        if not isinstance(raw, dict):
+            raise ValueError("Tool arguments must be an object")
+        parsed = RetailInformationArguments.model_validate(raw)
+    except (json.JSONDecodeError, TypeError, ValueError, ValidationError):
+        return _tool_error(
+            name,
+            "INVALID_ARGUMENT",
+            "Invalid arguments. Follow the provided tool schema.",
+            response_mode="DETERMINISTIC_ERROR",
+            terminal=True,
+        )
+
+    result = lookup_retail_information(kind, kiosk_id, parsed.category)
+
+    def json_safe(value: Any) -> Any:
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, dict):
+            return {key: json_safe(item) for key, item in value.items()}
+        if isinstance(value, (tuple, list)):
+            return [json_safe(item) for item in value]
+        return value
+
+    content = {
+        "store": json_safe(result.store),
+        "items": json_safe(result.items),
+        "count": len(result.items),
+        "reason": result.reason,
+        "source_updated_at": json_safe(result.source_updated_at),
+    }
+    return ToolObservation(
+        content=content,
+        tool_name=name,
+        status=result.status,
+        source=result.source,
+        response_mode=(
+            "DETERMINISTIC_FACT"
+            if result.status == "SUCCESS" and result.items
+            else "DETERMINISTIC_ERROR"
+        ),
         terminal=True,
     )
