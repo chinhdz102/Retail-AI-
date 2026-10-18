@@ -638,8 +638,8 @@ async def test_generic_nearby_question_is_disabled_without_llm_or_poi_tool(
     payload = response.json()
     assert payload["model"] == "local-policy"
     assert payload["tools_used"] == []
-    assert "không hỗ trợ hỏi đáp địa điểm chung" in payload["text"]
-    assert "chi nhánh" in payload["text"]
+    assert "chưa có dữ liệu địa điểm đã xác minh" in payload["text"]
+    assert "hỏi đáp địa điểm chung" not in payload["text"]
 
 
 class FakeGroqService(GroqService):
