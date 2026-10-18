@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import replace
+from datetime import datetime
 from time import perf_counter
 from uuid import UUID
 
@@ -36,12 +37,16 @@ from backend.services.elevenlabs import (
     ElevenLabsService,
 )
 from backend.services.groq import GroqConfigurationError, GroqProviderError, GroqService
+from backend.services.organization_profiles import OrganizationAnswer, get_organization_answer
 from backend.services.retail_agent import (
     RetailAgentResult,
     _explicit_recommendation_category,
     _unique_product_match_id,
+    lookup_branch_information,
+    lookup_catalog_additions,
     lookup_followup_snapshot,
     lookup_product_candidates,
+    lookup_product_promotions,
     lookup_recommendation_products,
     run_retail_agent,
 )
@@ -442,6 +447,102 @@ def _store_service_policy_requested(text: str) -> bool:
     return any(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized) for phrase in phrases)
 
 
+def _unverified_retail_information_kind(text: str) -> str | None:
+    """Route branch/company questions away from model-only answers without sources."""
+    normalized = _normalize_request_text(text)
+    if any(
+        phrase in normalized
+        for phrase in (
+            "dia diem gan cua hang",
+            "dia diem gan chi nhanh",
+            "gan cua hang nay",
+            "around this store",
+            "places near the store",
+            "nearby places for this branch",
+            "near this branch",
+            "near this store",
+            "nearby this store",
+            "around the store",
+            "around this store",
+            "around this branch",
+            "places around this store",
+            "places around the store",
+            "xung quanh cua hang nay",
+            "xung quanh cua hang",
+            "gan chi nhanh nay",
+            "gan day cua hang",
+        )
+    ):
+        return "nearby"
+    if any(
+        phrase in normalized
+        for phrase in (
+            "thong tin doanh nghiep",
+            "gioi thieu doanh nghiep",
+            "cong ty nao van hanh",
+            "ve doanh nghiep",
+            "company profile",
+            "about the company",
+            "who operates this chain",
+            "who owns this store",
+            "cua hang nay cua ai",
+            "don vi nao van hanh cua hang",
+            "chu quan cua hang",
+            "fpt company",
+            "fpt la gi",
+            "thong tin fpt",
+            "gioi thieu fpt",
+            "about fpt",
+            "fpt corporation",
+            "winmart do ai so huu",
+            "who owns winmart",
+            "wincommerce la cong ty nao",
+            "gioi thieu winmart",
+            "gioi thieu wincommerce",
+            "chatvrm",
+        )
+    ):
+        return "company"
+    if any(
+        phrase in normalized
+        for phrase in (
+            "dia chi cua hang",
+            "cua hang o dau",
+            "thong tin cua hang",
+            "so dien thoai cua hang",
+            "dia chi chi nhanh",
+            "store address",
+            "store information",
+            "store phone number",
+            "which branch is this",
+            "this branch address",
+        )
+    ):
+        return "store"
+    return None
+
+
+def _generic_nearby_places_requested(text: str) -> bool:
+    """Detect unanchored local-place questions so the LLM cannot guess a location."""
+    if _unverified_retail_information_kind(text) == "nearby":
+        return False
+    normalized = _normalize_request_text(text)
+    return any(
+        phrase in normalized
+        for phrase in (
+            "dia diem xung quanh",
+            "dia diem o gan day",
+            "dia diem quanh day",
+            "places around me",
+            "places around here",
+            "what places are around here",
+            "what is nearby",
+            "what is around here",
+            "nearby places",
+        )
+    )
+
+
 def _interaction_analytics_requested(text: str) -> bool:
     normalized = _normalize_request_text(text)
     phrases = (
@@ -547,6 +648,14 @@ def _unsupported_catalog_fact_claim(
         reverse=True,
     ):
         text = text.replace(name, " ")
+    for observation in observations:
+        if observation.status != "SUCCESS":
+            continue
+        for item in observation.content.get("items", []):
+            if observation.tool_name == "list_product_promotions":
+                promotion = item.get("promotion")
+                if isinstance(promotion, str):
+                    text = text.replace(promotion.casefold(), " ")
     claimed_fields = {
         field
         for field, patterns in field_patterns.items()
@@ -612,6 +721,162 @@ def _localized_recommendation_candidates(
     if language == "zh":
         return "可以试试" + "、".join(items) + f"（目录数据日期：{data_date}）。"
     return "Mình gợi ý " + ", ".join(items) + f" nhé (dữ liệu {data_date})."
+
+
+def _localized_catalog_promotions(
+    observation: ToolObservation,
+    language: LanguageCode,
+) -> str:
+    items = observation.content.get("items", [])[:2]
+    raw_timestamp = observation.content.get("latest_snapshot_at")
+    try:
+        data_date = datetime.fromisoformat(str(raw_timestamp)).strftime("%d/%m/%Y")
+    except ValueError:
+        data_date = ""
+    if not items:
+        if language == "en":
+            return (
+                "The catalog snapshot doesn't list a promotion for that request. "
+                "I can't verify whether the store has other current offers."
+            )
+        if language == "zh":
+            return "目录快照中没有该商品类别的促销记录；我还不能确认门店是否有其他当前优惠。"
+        return (
+            "Catalog hiện chưa ghi nhận khuyến mãi phù hợp; mình chưa xác minh được "
+            "các ưu đãi khác tại cửa hàng."
+        )
+
+    summaries = [
+        f"{item['name']}: {item['promotion']}"
+        for item in items
+        if item.get("name") and item.get("promotion")
+    ]
+    if not summaries:
+        return _localized_tool_failure(language)
+    dated = f" ({data_date})" if data_date else ""
+    rendered = "; ".join(summaries)
+    if language == "en":
+        return (
+            f"The catalog snapshot{dated} records {rendered}. "
+            "It has no verified offer dates or terms, so please confirm in store."
+        )
+    if language == "zh":
+        return (
+            f"目录快照{dated}记录：{rendered}。" "有效期限和适用条件尚未核实，请到店确认。"
+        )
+    return (
+        f"Catalog{dated} ghi nhận {rendered}. "
+        "Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé."
+    )
+
+
+def _catalog_additions_requested(text: str) -> bool:
+    normalized = " ".join(_normalize_request_text(text).split())
+    arrival_cues = (
+        "moi nhap",
+        "nhap hang",
+        "hang moi ve",
+        "moi ve",
+        "new arrivals",
+        "newly stocked",
+        "just arrived",
+        "restocked",
+    )
+    if any(cue in normalized for cue in arrival_cues):
+        return False
+    return any(
+        cue in normalized
+        for cue in (
+            "san pham moi",
+            "mat hang moi",
+            "mon moi",
+            "moi ra mat",
+            "new product",
+            "new products",
+            "newly listed",
+            "new to catalog",
+            "新商品",
+        )
+    )
+
+
+def _new_stock_arrival_requested(text: str) -> bool:
+    normalized = " ".join(_normalize_request_text(text).split())
+    cues = (
+        "moi nhap",
+        "nhap hang",
+        "hang moi ve",
+        "moi ve",
+        "nhap kho",
+        "new arrivals",
+        "newly stocked",
+        "just arrived",
+        "restocked",
+        "new stock",
+        "newly received",
+    )
+    return any(cue in normalized for cue in cues)
+
+
+def _localized_catalog_additions(
+    observation: ToolObservation,
+    language: LanguageCode,
+) -> str:
+    try:
+        current_date = datetime.fromisoformat(
+            str(observation.content.get("current_imported_at"))
+        ).strftime("%d/%m/%Y")
+        previous_date = datetime.fromisoformat(
+            str(observation.content.get("previous_imported_at"))
+        ).strftime("%d/%m/%Y")
+    except ValueError:
+        current_date = previous_date = ""
+    if observation.status == "DATA_UNAVAILABLE":
+        if language == "en":
+            return (
+                "I need two complete catalog imports to identify newly listed products. "
+                "The crawl date alone doesn't prove a product is new."
+            )
+        if language == "zh":
+            return "需要两个完整目录版本才能识别新上架商品；抓取日期本身不能证明商品是新上市的。"
+        return (
+            "Mình cần hai bản catalog đầy đủ để biết món nào mới được thêm; "
+            "ngày crawl không chứng minh đó là hàng mới ra mắt."
+        )
+
+    names = [item["name"] for item in observation.content.get("items", [])[:3]]
+    date_range = f" ({previous_date} → {current_date})" if current_date and previous_date else ""
+    if not names:
+        if language == "en":
+            return (
+                f"Comparing the latest two catalog imports{date_range}, "
+                "I found no new catalog listings. "
+                "That doesn't confirm market launch dates."
+            )
+        if language == "zh":
+            return (
+                f"对比最近两个目录版本{date_range}，"
+                "没有发现新加入目录的商品；这不能确认市场上市日期。"
+            )
+        return (
+            f"So sánh hai bản catalog gần nhất{date_range}, mình chưa thấy mặt hàng mới được thêm. "
+            "Dữ liệu này không xác nhận ngày ra mắt thị trường."
+        )
+    rendered = ", ".join(names)
+    if language == "en":
+        return (
+            f"The catalog comparison{date_range} shows {rendered} newly listed in the catalog. "
+            "I can't confirm their market launch dates."
+        )
+    if language == "zh":
+        return (
+            f"目录对比{date_range}显示{rendered}是新加入目录的商品；"
+            "我无法确认它们的市场上市日期。"
+        )
+    return (
+        f"Đối chiếu catalog{date_range} cho thấy {rendered} mới xuất hiện trong danh mục. "
+        "Mình chưa xác minh được ngày ra mắt thị trường."
+    )
 
 
 def _localized_unranked_candidates(
@@ -753,6 +1018,283 @@ def _localized_store_policy_unavailable(language: LanguageCode) -> str:
     }[language]
 
 
+def _localized_retail_information_unavailable(
+    kind: str,
+    language: LanguageCode,
+) -> str:
+    messages = {
+        "company": {
+            "en": (
+                "Which profile do you mean: WinCommerce/WinMart, FPT Corporation, "
+                "or the ChatVRM retail-AI project?"
+            ),
+            "zh": (
+                "您想了解 WinCommerce/WinMart、FPT Corporation，还是 ChatVRM 零售 AI 项目？"
+            ),
+            "vi": (
+                "Bạn muốn hỏi WinCommerce/WinMart, FPT Corporation hay đồ án ChatVRM về bán lẻ?"
+            ),
+        },
+        "store": {
+            "en": (
+                "I don't have a verified profile for the specific branch. "
+                "Please provide its name or address."
+            ),
+            "zh": "我没有该门店的已核实资料。请提供门店名称或地址。",
+            "vi": (
+                "Mình chưa có hồ sơ đã xác minh của chi nhánh cụ thể. "
+                "Bạn cho mình tên hoặc địa chỉ chi nhánh nhé."
+            ),
+        },
+        "nearby": {
+            "en": (
+                "I need the specific branch and its verified location to answer "
+                "about nearby places. "
+                "That data isn't connected yet."
+            ),
+            "zh": "要查询附近地点，我需要具体门店及已核实的位置；目前尚未接入这些数据。",
+            "vi": (
+                "Mình cần biết chi nhánh cụ thể và vị trí đã xác minh để tra địa điểm gần đó; "
+                "dữ liệu này chưa được kết nối."
+            ),
+        },
+    }
+    return messages[kind][language]
+
+
+def _localized_organization_answer(
+    answer: OrganizationAnswer,
+    language: LanguageCode,
+) -> str:
+    facts = answer.facts
+    if answer.profile.entity_type == "project":
+        fact_text = " ".join(facts[:3])
+        if language == "vi":
+            return fact_text
+        return fact_text
+    fact_text = " ".join(facts[:2])
+    if answer.source_url:
+        source_date = (
+            answer.verified_at.strftime("%d/%m/%Y") if answer.verified_at else ""
+        )
+        source_label = "Nguồn" if language == "vi" else "Source"
+        source = (
+            f" {source_label}: [{answer.source_name}]({answer.source_url})"
+            f" ({source_date})."
+        )
+        return fact_text + source
+    return fact_text
+
+
+def _localized_stock_arrival_unavailable(language: LanguageCode) -> str:
+    return {
+        "en": (
+            "I don't have verified receiving records, so I can't confirm which items "
+            "were just delivered."
+        ),
+        "zh": "我没有经过核实的收货记录，因此无法确认哪些商品刚刚到货。",
+        "vi": (
+            "Mình chưa có phiếu nhận hàng đã xác minh nên chưa thể xác nhận "
+            "món nào vừa nhập kho."
+        ),
+    }[language]
+
+
+def _localized_retail_information_observation(
+    observation: ToolObservation,
+    kind: str,
+    language: LanguageCode,
+) -> str:
+    if observation.status == "TEMPORARY_FAILURE":
+        return _localized_tool_failure(language)
+    if observation.status == "DATA_UNAVAILABLE":
+        if kind == "promotions":
+            return {
+                "vi": "Mình chưa có nguồn khuyến mãi hiện hành đã xác minh cho kiosk này.",
+                "en": "I don't have a verified current-promotion feed for this kiosk.",
+                "zh": "此自助终端尚未连接经过验证的当前促销数据源。",
+            }[language]
+        if kind == "receipts":
+            return _localized_stock_arrival_unavailable(language)
+        return _localized_retail_information_unavailable(kind, language)
+
+    store = observation.content.get("store") or {}
+    items = observation.content.get("items") or []
+    source_updated_at = observation.content.get("source_updated_at")
+
+    def date_text(value: object, include_time: bool = False) -> str:
+        if not value:
+            return ""
+        try:
+            parsed = datetime.fromisoformat(str(value))
+            return parsed.strftime("%d/%m/%Y %H:%M" if include_time else "%d/%m/%Y")
+        except ValueError:
+            return ""
+
+    checked = date_text(source_updated_at, include_time=True)
+    store_name = store.get("store_name") or store.get("store_code") or "cửa hàng này"
+    if kind == "store":
+        address = store.get("address")
+        phone = store.get("phone")
+        verified = date_text(store.get("verified_at"))
+        hours = store.get("opening_hours")
+        if language == "en":
+            facts = [
+                f"{store.get('store_name', store.get('store_code'))}: "
+                f"{address or 'address not recorded'}"
+            ]
+            if phone:
+                facts.append(f"Phone {phone}")
+            if hours:
+                facts.append(f"Opening hours: {hours}")
+            return ". ".join(facts) + (f" Verified {verified}." if verified else "")
+        if language == "zh":
+            facts = [f"{store_name}：{address or '暂无地址记录'}"]
+            if phone:
+                facts.append(f"电话 {phone}")
+            if hours:
+                facts.append(f"营业时间：{hours}")
+            return "。".join(facts) + (f" 核实日期：{verified}。" if verified else "")
+        facts = [f"{store_name}: {address}" if address else str(store_name)]
+        if phone:
+            facts.append(f"SĐT {phone}")
+        if hours:
+            facts.append(f"Giờ mở cửa: {hours}")
+        return ". ".join(facts) + (f" (xác minh {verified})" if verified else "")
+
+    if kind == "promotions":
+        if not items:
+            checked_en = f" at {checked}" if checked else ""
+            checked_zh = f"（{checked}）" if checked else ""
+            checked_vi = f" lúc {checked}" if checked else ""
+            if language == "en":
+                return (
+                    f"The current promotion feed for {store_name} was checked"
+                    f"{checked_en}; it lists no active campaigns."
+                )
+            if language == "zh":
+                return (
+                    f"已检查 {store_name} 的当前促销数据{checked_zh}，"
+                    "没有记录正在进行的活动。"
+                )
+            return (
+                f"Nguồn khuyến mãi hiện hành của {store_name} đã được kiểm tra"
+                f"{checked_vi}; hiện không ghi nhận chương trình đang áp dụng."
+            )
+        summaries = []
+        for item in items[:3]:
+            name = item.get("campaign_name") or item.get("description") or "Khuyến mãi"
+            detail = item.get("description") or item.get("terms") or ""
+            terms = item.get("terms") or ""
+            products = item.get("product_names") or []
+            end_date = date_text(item.get("ends_at"))
+            source_name = item.get("source_name") or observation.source
+            verified_date = date_text(item.get("verified_at"))
+            part = f"{name}: {detail or terms}"
+            if detail and terms and terms != detail:
+                part += f" Điều kiện: {terms}"
+            if products:
+                part += f" Áp dụng: {', '.join(products[:4])}"
+            if end_date:
+                part += f" đến {end_date}"
+            if language == "en":
+                part += f" Source: {source_name}"
+                if verified_date:
+                    part += f" (verified {verified_date})"
+            elif language == "zh":
+                part += f" 来源：{source_name}"
+                if verified_date:
+                    part += f"（核实于 {verified_date}）"
+            else:
+                part += f" Nguồn: {source_name}"
+                if verified_date:
+                    part += f" (xác minh {verified_date})"
+            summaries.append(part)
+        if language == "en":
+            return f"Active offers at {store_name}: " + "; ".join(summaries)
+        if language == "zh":
+            return f"{store_name} 的有效优惠：" + "；".join(summaries)
+        return f"Ưu đãi đang áp dụng tại {store_name}: " + "; ".join(summaries)
+
+    if kind == "receipts":
+        if not items:
+            checked_en = f" (checked {checked})" if checked else ""
+            checked_zh = f"（检查时间 {checked}）" if checked else ""
+            checked_vi = f" (cập nhật {checked})" if checked else ""
+            if language == "en":
+                return (
+                    f"The verified receiving feed for {store_name} records no arrivals "
+                    f"in its covered period{checked_en}."
+                )
+            if language == "zh":
+                return (
+                    f"{store_name} 的已验证收货数据在覆盖时段内没有记录新到货"
+                    f"{checked_zh}。"
+                )
+            return (
+                f"Nguồn phiếu nhận hàng đã xác minh của {store_name} không ghi nhận "
+                f"hàng mới trong khoảng dữ liệu được phủ{checked_vi}."
+            )
+        if language == "en":
+            summaries = [
+                f"{item.get('product_name')} "
+                f"(received {date_text(item.get('received_at'), True)})"
+                for item in items[:5]
+            ]
+            return f"Recent verified arrivals at {store_name}: " + "; ".join(summaries)
+        if language == "zh":
+            summaries = [
+                f"{item.get('product_name')}（到货时间 "
+                f"{date_text(item.get('received_at'), True)}）"
+                for item in items[:5]
+            ]
+            return f"{store_name} 最近确认到货：" + "；".join(summaries)
+        summaries = [
+            f"{item.get('product_name')} (nhận lúc "
+            f"{date_text(item.get('received_at'), True)})"
+            for item in items[:5]
+        ]
+        return f"Các phiếu nhận hàng gần đây đã xác minh tại {store_name}: " + "; ".join(summaries)
+
+    if not items:
+        if language == "en":
+            return f"The verified nearby-place feed for {store_name} has no current results."
+        if language == "zh":
+            return f"{store_name} 的已验证附近地点数据目前没有结果。"
+        return f"Nguồn địa điểm gần {store_name} hiện không có kết quả còn hiệu lực."
+    summaries = []
+    for item in items[:5]:
+        label = item.get("place_name") or "Địa điểm"
+        category = item.get("place_category")
+        distance = item.get("distance_m")
+        address = item.get("address")
+        details = [
+            str(part)
+            for part in (
+                category,
+                f"{distance} m" if distance is not None else None,
+                address,
+            )
+            if part
+        ]
+        summaries.append(label + (f" ({', '.join(details)})" if details else ""))
+    attribution = next((item.get("attribution") for item in items if item.get("attribution")), "")
+    if language == "en":
+        suffix = f". Data: {attribution}." if attribution else "."
+        if checked:
+            suffix = f" Data updated {checked}." + suffix
+        return f"Nearby places for {store_name}: " + "; ".join(summaries) + suffix
+    if language == "zh":
+        suffix = f"。数据来源：{attribution}。" if attribution else "。"
+        if checked:
+            suffix = f"数据更新于 {checked}。" + suffix
+        return f"{store_name} 附近地点：" + "；".join(summaries) + suffix
+    suffix = f". Nguồn dữ liệu: {attribution}." if attribution else "."
+    if checked:
+        suffix = f" Dữ liệu cập nhật {checked}." + suffix
+    return f"Địa điểm gần {store_name}: " + "; ".join(summaries) + suffix
+
+
 def _localized_vnd_budget_clarification(language: LanguageCode) -> str:
     return {
         "en": (
@@ -795,6 +1337,26 @@ def _local_policy_response(
         model="local-policy",
         grounded_product_ids=[],
         tools_used=[],
+        state=state,
+    )
+
+
+def _deterministic_tool_response(
+    request: AgentRespondRequest,
+    state: SessionState,
+    observation: ToolObservation,
+    reply: str,
+    *,
+    model: str = "verified-retail-information",
+) -> AgentRespondResponse:
+    session_store.add_message(request.session_id, "user", request.text)
+    session_store.add_message(request.session_id, "assistant", reply)
+    return AgentRespondResponse(
+        session_id=request.session_id,
+        text=reply,
+        model=model,
+        grounded_product_ids=[],
+        tools_used=[observation.tool_name],
         state=state,
     )
 
@@ -898,6 +1460,34 @@ def _grounded_reply(
     language: LanguageCode,
     requested_fields: tuple[str, ...] = (),
 ) -> str:
+    catalog_additions = next(
+        (
+            item
+            for item in reversed(agent_result.observations)
+            if item.tool_name == "list_new_catalog_products"
+        ),
+        None,
+    )
+    if catalog_additions is not None:
+        if catalog_additions.status in {"SUCCESS", "DATA_UNAVAILABLE"}:
+            return _localized_catalog_additions(catalog_additions, language)
+        if catalog_additions.status in {"TEMPORARY_FAILURE", "INVALID_ARGUMENT"}:
+            return _localized_tool_failure(language)
+
+    promotion_list = next(
+        (
+            item
+            for item in reversed(agent_result.observations)
+            if item.tool_name == "list_product_promotions"
+        ),
+        None,
+    )
+    if promotion_list is not None:
+        if promotion_list.status == "SUCCESS":
+            return _localized_catalog_promotions(promotion_list, language)
+        if promotion_list.status in {"DATA_UNAVAILABLE", "TEMPORARY_FAILURE"}:
+            return _localized_tool_failure(language)
+
     snapshot = _latest_snapshot_observation(agent_result.observations)
     if snapshot is not None:
         if snapshot.status == "SUCCESS" and snapshot.products and snapshot.requested_fields:
@@ -979,6 +1569,17 @@ invent prices, stock, shelf locations, promotions, ingredients, expiry dates, or
 For product search or verified facts, use the catalog tools when available. Search first, then
 call `get_product_snapshot` with only the requested fields. A shelf marked
 `RECOMMENDED_PLANOGRAM` is proposed and has not been physically verified.
+For a broad question about recorded offers without a named product, call
+`list_product_promotions`; describe these as catalog snapshot records, never as guaranteed-active
+campaigns because start/end dates and terms are not provided.
+For a broad question about newly listed products, call `list_new_catalog_products`. This only
+compares complete imported catalog versions; do not describe a listing as a market launch.
+Branch-specific store facts, active campaigns, receiving events, and nearby-place snapshots are
+looked up by server-side tools using the kiosk's mapped branch. If a source is unavailable,
+coverage is partial, or the branch is unmapped, say you cannot verify the answer. Never infer a
+delivery from stock counts. Nearby-place answers are limited to a named store and attributed,
+cached results; general local Q&A is outside this assistant's scope. Company facts come from an
+approved profile; keep WinCommerce, FPT, and the ChatVRM project separate.
 Use the product already identified in the conversation for a clear follow-up such as “what about
 the price?” If more than one product could be meant, ask which one.
 For an explicit recommendation or preference, use `recommend_products`. Keep the requested
@@ -1015,6 +1616,17 @@ Khi cần giá, tồn kho, vị trí kệ, hạn dùng, thành phần, độ cay
 catalog phù hợp nếu công cụ được cung cấp. `search_products` tìm sản phẩm để
 tra cứu, kể cả mặt hàng hết hàng. Gọi `get_product_snapshot` để lấy dữ kiện và
 đặt `fields` đúng theo thông tin khách hỏi. Trường `stock` là số lượng có thể bán.
+Nếu khách hỏi chung về ưu đãi mà không nêu một sản phẩm cụ thể, gọi
+`list_product_promotions`; chỉ mô tả là ghi nhận trong snapshot catalog, không khẳng định
+chương trình còn hiệu lực vì dữ liệu chưa có thời hạn và điều kiện áp dụng.
+Nếu khách hỏi sản phẩm mới được thêm vào danh mục, gọi `list_new_catalog_products`; chỉ kết luận
+“mới có trong catalog” khi đối chiếu được hai bản nhập đầy đủ, không khẳng định ngày ra mắt.
+Tra cứu địa chỉ, giờ mở cửa, ưu đãi đang áp dụng, phiếu nhận hàng và địa điểm gần cửa hàng
+qua tool theo kiosk đã được server ánh xạ sang chi nhánh. Nếu nguồn thiếu, dữ liệu chưa phủ đủ
+kỳ hoặc kiosk chưa gắn với chi nhánh đã xác minh, nói rõ chưa thể xác minh; không suy ra hàng mới
+nhập từ số tồn kho. Chỉ trả lời địa điểm gắn với chi nhánh cụ thể bằng snapshot có nguồn và còn
+hạn; hỏi đáp địa điểm chung quanh không thuộc phạm vi trợ lý này. Dùng hồ sơ doanh nghiệp đã
+duyệt; giữ riêng WinCommerce, FPT và đồ án ChatVRM.
 Trong câu hỏi nối tiếp như “giá bao nhiêu?” hoặc “ở kệ nào?”, hãy dùng sản phẩm đã
 được xác định trong hội thoại trước; nếu có thể đang nói về nhiều sản phẩm thì hỏi lại.
 Khi khách nói rõ muốn gợi ý/tư vấn/chọn hộ, đang phân vân, hoặc nêu tiêu chí để tìm món
@@ -1155,6 +1767,71 @@ async def agent_respond(
             record.state,
             _localized_store_policy_unavailable(request.language),
         )
+    if _new_stock_arrival_requested(request.text):
+        receipt_observation = await lookup_branch_information(
+            "list_recent_stock_receipts",
+            record.kiosk_id,
+        )
+        reply = _localized_retail_information_observation(
+            receipt_observation, "receipts", request.language
+        )
+        return _deterministic_tool_response(
+            request, record.state, receipt_observation, reply
+        )
+    retail_information_kind = _unverified_retail_information_kind(request.text)
+    if retail_information_kind is not None:
+        if retail_information_kind == "company":
+            organization_answer = get_organization_answer(
+                request.text,
+                request.language,
+            )
+            if organization_answer is not None:
+                reply = _localized_organization_answer(
+                    organization_answer,
+                    request.language,
+                )
+                session_store.add_message(request.session_id, "user", request.text)
+                session_store.add_message(request.session_id, "assistant", reply)
+                return AgentRespondResponse(
+                    session_id=request.session_id,
+                    text=reply,
+                    model="organization-profile",
+                    grounded_product_ids=[],
+                    tools_used=["get_organization_profile"],
+                    state=record.state,
+                )
+        elif retail_information_kind in {"store", "nearby"}:
+            tool_name = (
+                "get_store_information"
+                if retail_information_kind == "store"
+                else "list_nearby_places_for_store"
+            )
+            observation = await lookup_branch_information(
+                tool_name,
+                record.kiosk_id,
+            )
+            reply = _localized_retail_information_observation(
+                observation,
+                retail_information_kind,
+                request.language,
+            )
+            return _deterministic_tool_response(
+                request, record.state, observation, reply
+            )
+        return _local_policy_response(
+            request,
+            record.state,
+            _localized_retail_information_unavailable(
+                retail_information_kind,
+                request.language,
+            ),
+        )
+    if _generic_nearby_places_requested(request.text):
+        return _local_policy_response(
+            request,
+            record.state,
+            _localized_retail_information_unavailable("nearby", request.language),
+        )
     if _interaction_analytics_requested(request.text):
         return _local_policy_response(
             request,
@@ -1182,6 +1859,25 @@ async def agent_respond(
         )
 
     followup_fields = _implicit_followup_fields(request.text)
+    promotion_list_arguments = _promotion_list_tool_arguments(request.text)
+    catalog_additions_arguments = _catalog_additions_tool_arguments(request.text)
+    if promotion_list_arguments is not None:
+        campaign_observation = await lookup_branch_information(
+            "list_active_store_promotions",
+            record.kiosk_id,
+        )
+        if campaign_observation.status in {"SUCCESS", "TEMPORARY_FAILURE"}:
+            reply = _localized_retail_information_observation(
+                campaign_observation,
+                "promotions",
+                request.language,
+            )
+            return _deterministic_tool_response(
+                request,
+                record.state,
+                campaign_observation,
+                reply,
+            )
     explicit_grounded_reference = (
         record.last_grounded_product_id
         if requested_fields
@@ -1207,7 +1903,13 @@ async def agent_respond(
             requested_fields,
             product_query,
         )
-    if requested_fields and followup_fields and not record.last_grounded_product_id:
+    if (
+        requested_fields
+        and followup_fields
+        and not record.last_grounded_product_id
+        and promotion_list_arguments is None
+        and catalog_additions_arguments is None
+    ):
         reply = _localized_product_clarification(request.language)
         session_store.add_message(request.session_id, "user", request.text)
         session_store.add_message(request.session_id, "assistant", reply)
@@ -1282,7 +1984,29 @@ async def agent_respond(
             state=record.state,
         )
     try:
-        if recommendation_arguments:
+        if catalog_additions_arguments is not None:
+            additions_observation = await lookup_catalog_additions(
+                catalog_additions_arguments
+            )
+            agent_result = RetailAgentResult(
+                text="",
+                model="catalog",
+                tools_used=("list_new_catalog_products",),
+                products=additions_observation.products,
+                observations=(additions_observation,),
+            )
+        elif promotion_list_arguments is not None:
+            promotion_observation = await lookup_product_promotions(
+                promotion_list_arguments
+            )
+            agent_result = RetailAgentResult(
+                text="",
+                model="catalog",
+                tools_used=("list_product_promotions",),
+                products=promotion_observation.products,
+                observations=(promotion_observation,),
+            )
+        elif recommendation_arguments:
             ranking_observation = await lookup_recommendation_products(recommendation_arguments)
             agent_result = RetailAgentResult(
                 text="",
@@ -1471,6 +2195,8 @@ async def agent_respond(
                 "search_products",
                 "recommend_products",
                 "get_product_snapshot",
+                "list_product_promotions",
+                "list_new_catalog_products",
             }
         ),
         None,
@@ -1480,6 +2206,8 @@ async def agent_respond(
             latest_catalog_observation.products[0]
             if latest_catalog_observation.status == "SUCCESS"
             and len(latest_catalog_observation.products) == 1
+            and latest_catalog_observation.tool_name
+            not in {"list_product_promotions", "list_new_catalog_products"}
             else None
         )
         session_store.set_last_grounded_product(
@@ -1513,6 +2241,43 @@ def _text_mentions_product(text: str, product_name: str) -> bool:
 
 def _requested_snapshot_fields(text: str) -> tuple[str, ...]:
     return _parse_snapshot_fields(text)
+
+
+def _promotion_list_tool_arguments(text: str) -> dict[str, object] | None:
+    if "promotion" not in _requested_snapshot_fields(text):
+        return None
+    category = _explicit_recommendation_category(text)
+    product_query = _fact_product_query(text)
+    if not product_query:
+        return {"category": category, "limit": 5} if category else {"limit": 5}
+
+    category_terms = {
+        "snack": {"snack", "snacks", "bim", "banh", "keo", "chips", "crisps"},
+        "drink": {
+            "nuoc", "uong", "do", "giai", "khat", "soda", "water", "drink",
+            "drinks", "beverage", "beverages", "coffee", "tea",
+        },
+        "dairy": {"sua", "milk", "dairy", "yogurt", "yoghurt", "cheese"},
+        "meal": {"mi", "noodles", "meal", "meals", "food", "thuc", "an"},
+    }
+    generic_terms = {"hom", "nay", "hien", "tai", "today", "current", "currently"}
+    remaining = set(re.findall(r"\w+", _normalize_request_text(product_query)))
+    if category:
+        remaining.difference_update(category_terms.get(category, set()))
+    remaining.difference_update(generic_terms)
+    if not remaining:
+        return {"category": category, "limit": 5} if category else {"limit": 5}
+    return None
+
+
+def _catalog_additions_tool_arguments(text: str) -> dict[str, object] | None:
+    if not _catalog_additions_requested(text):
+        return None
+    arguments: dict[str, object] = {"limit": 5}
+    category = _explicit_recommendation_category(text)
+    if category:
+        arguments["category"] = category
+    return arguments
 
 
 _FACT_QUERY_STOP_WORDS = {

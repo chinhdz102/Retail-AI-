@@ -7,10 +7,17 @@ import pytest
 
 from backend.api.main import (
     _administrative_action_requested,
+    _catalog_additions_requested,
+    _catalog_additions_tool_arguments,
     _fact_product_query,
+    _generic_nearby_places_requested,
     _implicit_followup_fields,
+    _localized_catalog_additions,
+    _localized_catalog_promotions,
+    _new_stock_arrival_requested,
     _price_constraint_from_text,
     _product_ranking_requested,
+    _promotion_list_tool_arguments,
     _prompt_override_requested,
     _recommendation_tool_arguments,
     _requested_snapshot_fields,
@@ -19,6 +26,7 @@ from backend.api.main import (
     _text_mentions_product,
     _unsupported_catalog_attribute_requested,
     _unsupported_catalog_fact_claim,
+    _unverified_retail_information_kind,
     app,
     get_azure_speech_service,
     get_elevenlabs_service,
@@ -27,6 +35,8 @@ from backend.api.main import (
 )
 from backend.config import Settings, get_settings
 from backend.products.catalog import ProductSnapshot
+from backend.products.repository import DemoProductRepository
+from backend.services import retail_tools
 from backend.services.azure_speech import AzureSpeechProviderError
 from backend.services.groq import (
     GroqChatResult,
@@ -34,6 +44,8 @@ from backend.services.groq import (
     GroqService,
     GroqTranscriptionResult,
 )
+from backend.services.organization_profiles import get_organization_answer
+from backend.services.retail_information import RetailInformationResult
 from backend.services.retail_tools import ToolObservation
 
 
@@ -61,6 +73,478 @@ def test_pack_size_in_catalog_name_is_not_an_unverified_stock_claim() -> None:
 )
 def test_product_query_ignores_conversational_greeting(text: str, expected: str) -> None:
     assert _fact_product_query(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Có chương trình khuyến mãi gì?", {"limit": 5}),
+        ("Nước uống có khuyến mãi gì?", {"category": "drink", "limit": 5}),
+        ("Hôm nay có giảm giá cho sữa không?", {"category": "dairy", "limit": 5}),
+        ("Coca Zero có khuyến mãi không?", None),
+    ],
+)
+def test_broad_promotion_intent_lists_records_but_named_product_uses_snapshot(
+    text: str, expected: dict[str, object] | None
+) -> None:
+    assert _promotion_list_tool_arguments(text) == expected
+
+
+def test_catalog_promotion_response_keeps_snapshot_and_validity_caveat() -> None:
+    observation = ToolObservation(
+        content={
+            "items": [
+                {
+                    "product_id": "MILK01",
+                    "name": "Sữa tươi ít đường 180ml",
+                    "promotion": "Mua 2 hộp giảm 1.000đ",
+                }
+            ],
+            "latest_snapshot_at": "2026-08-31T00:00:00+00:00",
+        },
+        tool_name="list_product_promotions",
+    )
+
+    reply = _localized_catalog_promotions(observation, "vi")
+
+    assert "31/08/2026" in reply
+    assert "Mua 2 hộp giảm 1.000đ" in reply
+    assert "chưa có hạn và điều kiện" in reply
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Có sản phẩm mới nào?", True),
+        ("What are the new products?", True),
+        ("Đồ uống có sản phẩm mới không?", True),
+        ("Có hàng mới nhập về không?", False),
+        ("What just arrived?", False),
+    ],
+)
+def test_catalog_addition_intent_does_not_claim_new_stock_receipts(
+    text: str, expected: bool
+) -> None:
+    assert _catalog_additions_requested(text) is expected
+    arguments = _catalog_additions_tool_arguments(text)
+    assert (arguments is not None) is expected
+    if expected and "Đồ uống" in text:
+        assert arguments == {"category": "drink", "limit": 5}
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Sản phẩm mới nhập kho có gì?", True),
+        ("Hàng mới về hôm nay không?", True),
+        ("What was just restocked?", True),
+        ("Có sản phẩm mới nào?", False),
+    ],
+)
+def test_stock_arrivals_require_receipt_events(text: str, expected: bool) -> None:
+    assert _new_stock_arrival_requested(text) is expected
+
+
+def test_catalog_additions_response_distinguishes_listing_from_market_launch() -> None:
+    observation = ToolObservation(
+        content={
+            "items": [{"name": "Nước cam Teppy 1L"}],
+            "current_imported_at": "2026-09-15T13:53:58+00:00",
+            "previous_imported_at": "2026-08-15T13:53:58+00:00",
+        },
+        tool_name="list_new_catalog_products",
+        status="SUCCESS",
+    )
+
+    reply = _localized_catalog_additions(observation, "vi")
+
+    assert "Nước cam Teppy 1L" in reply
+    assert "mới xuất hiện trong danh mục" in reply
+    assert "chưa xác minh được ngày ra mắt thị trường" in reply
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Cung cấp thông tin cửa hàng", "store"),
+        ("Giới thiệu thông tin doanh nghiệp", "company"),
+        ("Who owns WinMart?", "company"),
+        ("Which branch is this?", "store"),
+        ("What is near this store?", "nearby"),
+        ("Địa điểm xung quanh cửa hàng", "nearby"),
+        ("Trả lời thông tin về các địa điểm gần cửa hàng", "nearby"),
+        ("Hỏi đáp về địa điểm xung quanh", None),
+    ],
+)
+def test_retail_profile_intents_require_their_own_verified_source(
+    text: str, expected: str | None
+) -> None:
+    assert _unverified_retail_information_kind(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Hỏi đáp về địa điểm xung quanh",
+        "What is nearby?",
+        "What places are around here?",
+    ],
+)
+def test_unanchored_nearby_questions_do_not_get_a_general_place_search(
+    text: str,
+) -> None:
+    assert _unverified_retail_information_kind(text) is None
+    assert _generic_nearby_places_requested(text) is True
+
+
+def test_organization_profile_resolves_fpt_and_chatvrm_as_distinct_entities() -> None:
+    fpt = get_organization_answer("Giới thiệu FPT", "vi")
+    fpt_english = get_organization_answer("Tell me about FPT", "en")
+    fpt_chinese = get_organization_answer("介绍 FPT", "zh")
+    project = get_organization_answer("Giới thiệu đồ án ChatVRM FPT", "vi")
+
+    assert fpt is not None
+    assert fpt.profile.entity_id == "fpt"
+    assert "chuyển đổi số" in " ".join(fpt.facts)
+    assert project is not None
+    assert project.profile.entity_id == "chatvrm_retail_ai_project"
+    assert "Chinh" in " ".join(project.facts)
+    assert "chưa có nguồn xác nhận" in " ".join(project.facts).casefold()
+    assert fpt_english is not None
+    assert "technology corporation" in " ".join(fpt_english.facts)
+    assert fpt_chinese is None
+
+
+@pytest.mark.asyncio
+async def test_missing_company_store_and_nearby_sources_abstain_before_llm(
+    client: httpx.AsyncClient,
+) -> None:
+    class UnexpectedGroqService(GroqService):
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            raise AssertionError("Unverified business facts must not reach the LLM")
+
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
+    for index, question in enumerate(
+        (
+            "Cung cấp thông tin cửa hàng",
+            "Giới thiệu thông tin doanh nghiệp",
+            "Địa điểm gần cửa hàng có gì?",
+        )
+    ):
+        created = await client.post(
+            "/sessions",
+            json={"kiosk_id": f"kiosk-retail-profile-{index}"},
+        )
+        response = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": created.json()["session_id"],
+                "text": question,
+            },
+        )
+
+        assert response.status_code == 200
+        if "doanh nghiệp" in question:
+            assert response.json()["model"] == "local-policy"
+            assert response.json()["tools_used"] == []
+        else:
+            assert response.json()["model"] == "verified-retail-information"
+            assert response.json()["tools_used"] in (
+                ["get_store_information"],
+                ["list_nearby_places_for_store"],
+            )
+
+
+@pytest.mark.asyncio
+async def test_chatvrm_project_question_uses_user_approved_profile_without_llm(
+    client: httpx.AsyncClient,
+) -> None:
+    class UnexpectedGroqService(GroqService):
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            raise AssertionError("Verified organization answers must be deterministic")
+
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-project-profile"})
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Giới thiệu đồ án ChatVRM FPT",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["model"] == "organization-profile"
+    assert payload["tools_used"] == ["get_organization_profile"]
+    assert "Development of AI agents to support retail store chains in Vietnam" in payload["text"]
+    assert "Chinh" in payload["text"]
+
+
+@pytest.mark.asyncio
+async def test_new_product_question_uses_catalog_comparison_without_llm(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        retail_tools,
+        "get_product_repository",
+        lambda: DemoProductRepository(),
+    )
+
+    class UnexpectedGroqService(StaticGroqService):
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            raise AssertionError("New catalog comparison should be deterministic")
+
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService("unused")
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-new-products"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Có sản phẩm mới nào?",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "hai bản catalog đầy đủ" in payload["text"]
+    assert "ngày crawl không chứng minh" in payload["text"]
+    assert payload["tools_used"] == ["list_new_catalog_products"]
+    assert payload["grounded_product_ids"] == []
+
+
+@pytest.mark.asyncio
+async def test_broad_promotion_question_uses_catalog_list_without_llm(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        retail_tools,
+        "get_product_repository",
+        lambda: DemoProductRepository(),
+    )
+
+    class UnexpectedGroqService(StaticGroqService):
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            raise AssertionError("Broad promotion lookup should be deterministic")
+
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService("unused")
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-promotions"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Có chương trình khuyến mãi gì?",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "Mua 2 hộp giảm 1.000đ" in payload["text"]
+    assert "hạn và điều kiện" in payload["text"]
+    assert payload["tools_used"] == ["list_product_promotions"]
+    assert payload["grounded_product_ids"] == ["MILK01"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("question", "kind", "tool_name", "expected_text"),
+    [
+        (
+            "Cung cấp thông tin cửa hàng",
+            "store",
+            "get_store_information",
+            "12 phố Minh Khai",
+        ),
+        (
+            "Hôm nay có hàng mới nhập không?",
+            "receipts",
+            "list_recent_stock_receipts",
+            "Sữa tươi 180ml",
+        ),
+        (
+            "Có địa điểm gần cửa hàng này không?",
+            "nearby",
+            "list_nearby_places_for_store",
+            "Nhà thuốc Minh Khai",
+        ),
+    ],
+)
+async def test_branch_information_flows_use_server_bound_kiosk_without_llm(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    question: str,
+    kind: str,
+    tool_name: str,
+    expected_text: str,
+) -> None:
+    def fake_lookup(requested_kind, kiosk_id, category=None):
+        assert kiosk_id == "kiosk-branch-12"
+        assert requested_kind == kind
+        store = {
+            "store_code": "BRANCH_12",
+            "store_name": "WinMart Minh Khai",
+            "address": "12 phố Minh Khai",
+            "phone": "0241234567",
+            "verified_at": "2026-10-17T10:00:00+00:00",
+        }
+        item_by_kind = {
+            "receipts": {
+                "product_name": "Sữa tươi 180ml",
+                "quantity": 12,
+                "received_at": "2026-10-18T08:30:00+00:00",
+            },
+            "nearby": {
+                "place_name": "Nhà thuốc Minh Khai",
+                "place_category": "Nhà thuốc",
+                "distance_m": 250,
+                "address": "10 phố Minh Khai",
+                "attribution": "OpenStreetMap contributors",
+            },
+        }
+        items = (item_by_kind[kind],) if kind in item_by_kind else ()
+        return RetailInformationResult("SUCCESS", kind, store=store, items=items)
+
+    monkeypatch.setattr(retail_tools, "lookup_retail_information", fake_lookup)
+
+    class UnexpectedGroqService(GroqService):
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            raise AssertionError("Branch-scoped verified facts must bypass LLM composition")
+
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-branch-12"})
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": question,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["model"] == "verified-retail-information"
+    assert payload["tools_used"] == [tool_name]
+    assert expected_text in payload["text"]
+
+
+@pytest.mark.asyncio
+async def test_active_campaign_feed_answers_current_offer_without_snapshot_fallback(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_lookup(kind, kiosk_id, category=None):
+        assert kind == "promotions"
+        return RetailInformationResult(
+            "SUCCESS",
+            "promotions",
+            store={"store_code": "BRANCH_12", "store_name": "WinMart Minh Khai"},
+            items=(
+                {
+                    "campaign_name": "Giảm 20% sữa tươi",
+                    "description": "Giảm 20% cho dòng sữa tươi 180ml",
+                    "terms": "Áp dụng thành viên từ 18/10 đến 20/10",
+                    "product_names": ["Sữa tươi 180ml"],
+                    "ends_at": "2026-10-20T23:59:00+07:00",
+                },
+            ),
+        )
+
+    monkeypatch.setattr(retail_tools, "lookup_retail_information", fake_lookup)
+
+    class UnexpectedGroqService(GroqService):
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            raise AssertionError("Verified campaign records must bypass the LLM")
+
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-branch-12"})
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Có chương trình khuyến mãi gì?",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tools_used"] == ["list_active_store_promotions"]
+    assert "đang áp dụng" in payload["text"]
+    assert "Giảm 20%" in payload["text"]
+    assert "20/10/2026" in payload["text"]
+
+
+@pytest.mark.asyncio
+async def test_english_store_information_uses_the_verified_branch_profile(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_lookup(kind, kiosk_id, category=None):
+        assert kind == "store"
+        return RetailInformationResult(
+            "SUCCESS",
+            "store",
+            store={
+                "store_code": "BRANCH_12",
+                "store_name": "WinMart Minh Khai",
+                "address": "12 Minh Khai Street",
+                "phone": "+84 24 1234 5678",
+                "opening_hours": "08:00–22:00",
+                "verified_at": "2026-10-17T10:00:00+00:00",
+            },
+        )
+
+    monkeypatch.setattr(retail_tools, "lookup_retail_information", fake_lookup)
+
+    class UnexpectedGroqService(GroqService):
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            raise AssertionError("Verified store information should bypass the LLM")
+
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-branch-12"})
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Store information",
+            "language": "en",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "12 Minh Khai Street" in payload["text"]
+    assert "Phone" in payload["text"]
+    assert "Opening hours" in payload["text"]
+    assert payload["tools_used"] == ["get_store_information"]
+
+
+@pytest.mark.asyncio
+async def test_generic_nearby_question_asks_for_branch_without_llm_or_poi_tool(
+    client: httpx.AsyncClient,
+) -> None:
+    class UnexpectedGroqService(GroqService):
+        async def chat(self, messages, model=None, tools=None, tool_choice=None):
+            raise AssertionError("An unanchored location query must not be guessed")
+
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-no-branch"})
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Hỏi đáp về địa điểm xung quanh",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["model"] == "local-policy"
+    assert payload["tools_used"] == []
+    assert "chi nhánh" in payload["text"]
 
 
 class FakeGroqService(GroqService):
@@ -333,6 +817,9 @@ def test_fact_query_extraction_removes_request_words_without_guessing_product(
     [
         ("Sữa tươi ít đường để chỗ nào vậy?", ("shelf",)),
         ("Bên mình còn chai nước suối 500ml không nhỉ?", ("stock",)),
+        ("Coca Zero còn bao nhiêu?", ("stock",)),
+        ("Coca Zero còn nhiu?", ("stock",)),
+        ("Coca Zero còn bao nhiêu tiền?", ("price_vnd",)),
     ],
 )
 def test_snapshot_field_detection_handles_natural_shelf_and_stock_questions(

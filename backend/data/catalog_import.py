@@ -38,6 +38,14 @@ class WinMartRow(BaseModel):
     scraped_at: str
 
 
+def is_complete_import(report: dict[str, Any]) -> bool:
+    return bool(
+        report.get("valid") is True
+        and report.get("rows_total")
+        == report.get("rows_accepted", -1) + report.get("rows_quarantined", -1)
+    )
+
+
 def _is_aware_timestamp(value: str) -> bool:
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -152,7 +160,12 @@ async def import_rows(
         schema = Path(__file__).with_name("schema.sql").read_text(encoding="utf-8")
         await conn.execute(schema)
         version = report["dataset_version"]
+        import_complete = is_complete_import(report)
         quarantine_ids = {item["product_id"] for item in quarantined}
+        source_timestamps = [
+            datetime.fromisoformat(row.scraped_at.replace("Z", "+00:00"))
+            for row in rows
+        ]
         async with conn.transaction():
             for row in rows:
                 if row.category_code and row.category_name:
@@ -280,5 +293,27 @@ async def import_rows(
                     item["reason"],
                     json.dumps(item["raw_record"], ensure_ascii=False),
                 )
+            await conn.execute(
+                """INSERT INTO catalog_import_runs(
+                    store_code, dataset_version, imported_at, source_record_count,
+                    accepted_record_count, quarantined_record_count,
+                    source_timestamp_min, source_timestamp_max, is_complete
+                ) VALUES('WINMART_WEB', $1, now(), $2, $3, $4, $5, $6, $7)
+                ON CONFLICT(store_code, dataset_version) DO UPDATE SET
+                    imported_at=EXCLUDED.imported_at,
+                    source_record_count=EXCLUDED.source_record_count,
+                    accepted_record_count=EXCLUDED.accepted_record_count,
+                    quarantined_record_count=EXCLUDED.quarantined_record_count,
+                    source_timestamp_min=EXCLUDED.source_timestamp_min,
+                    source_timestamp_max=EXCLUDED.source_timestamp_max,
+                    is_complete=EXCLUDED.is_complete""",
+                version,
+                report["rows_total"],
+                report["rows_accepted"],
+                report["rows_quarantined"],
+                min(source_timestamps) if source_timestamps else None,
+                max(source_timestamps) if source_timestamps else None,
+                import_complete,
+            )
     finally:
         await conn.close()

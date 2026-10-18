@@ -139,9 +139,9 @@
 <line x1="265.75" y1="225.00" x2="294.00" y2="225.00" stroke="#8191a5" stroke-width="1.1"/>
 <text x="279.875" y="322" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="68,308 294,308 309,298 83,298" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="296" y="242" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="296" y="242" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="336.0" y="257" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A01</text>
-<text x="336.0" y="277" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">DỆT MAY</text>
+<text x="336.0" y="284.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">DỆT MAY</text>
 <rect x="398" y="164" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="412" y="187" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A02 · Hoá mỹ phẩm</text>
 <text x="412" y="207" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">288 SKU · 8 bay · 5 category</text>
@@ -532,9 +532,9 @@
 <rect x="636.55" y="226.40" width="2.03" height="14.10" rx="1.2" fill="#f97316" stroke="#173044" stroke-width=".35"><title>Bộ 3 bàn chải đánh răng Sensodyne chăm sóc răng ê buốt · WIN_10171251 · A02-B08-L05-P01</title></rect>
 <text x="649.875" y="322" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="438,308 664,308 679,298 453,298" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="666" y="242" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="666" y="242" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="706.0" y="257" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A02</text>
-<text x="706.0" y="277" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">HOÁ MỸ PHẨM</text>
+<text x="706.0" y="284.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">HOÁ MỸ PHẨM</text>
 <rect x="768" y="164" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="782" y="187" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A03 · Hoá mỹ phẩm</text>
 <text x="782" y="207" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">304 SKU · 8 bay · 9 category</text>
@@ -941,9 +941,9 @@
 <rect x="1017.14" y="226.40" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Túi 5 viên treo bồn cầu Vim hương oải hương 55g · WIN_10171194 · A03-B08-L05-P04</title></rect>
 <text x="1019.875" y="322" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="808,308 1034,308 1049,298 823,298" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="1036" y="242" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="1036" y="242" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="1076.0" y="257" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A03</text>
-<text x="1076.0" y="277" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">HOÁ MỸ PHẨM</text>
+<text x="1076.0" y="284.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">HOÁ MỸ PHẨM</text>
 <rect x="1138" y="164" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="1152" y="187" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A04 · Hoá mỹ phẩm</text>
 <text x="1152" y="207" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">52 SKU · 2 bay · 4 category</text>
@@ -1098,9 +1098,9 @@
 <line x1="1375.75" y1="225.00" x2="1404.00" y2="225.00" stroke="#8191a5" stroke-width="1.1"/>
 <text x="1389.875" y="322" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="1178,308 1404,308 1419,298 1193,298" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="1406" y="242" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="1406" y="242" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="1446.0" y="257" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A04</text>
-<text x="1446.0" y="277" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">HOÁ MỸ PHẨM</text>
+<text x="1446.0" y="284.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">HOÁ MỸ PHẨM</text>
 <rect x="28" y="358" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="42" y="381" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A05 · Homeline</text>
 <text x="42" y="401" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">245 SKU · 7 bay · 7 category</text>
@@ -1448,9 +1448,9 @@
 <line x1="265.75" y1="419.00" x2="294.00" y2="419.00" stroke="#8191a5" stroke-width="1.1"/>
 <text x="279.875" y="516" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="68,502 294,502 309,492 83,492" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="296" y="436" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="296" y="436" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="336.0" y="451" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A05</text>
-<text x="336.0" y="471" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">HOMELINE</text>
+<text x="336.0" y="478.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">HOMELINE</text>
 <rect x="398" y="358" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="412" y="381" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A06 · Thực phẩm công nghệ</text>
 <text x="412" y="401" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">313 SKU · 8 bay · 6 category</text>
@@ -1866,10 +1866,10 @@
 <rect x="654.21" y="420.40" width="2.03" height="14.10" rx="1.2" fill="#22d3ee" stroke="#173044" stroke-width=".35"><title>Bơ mặn Westgold 250g · WIN_10170183 · A06-B08-L05-P06</title></rect>
 <text x="649.875" y="516" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="438,502 664,502 679,492 453,492" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="666" y="436" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="666" y="436" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="706.0" y="451" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A06</text>
-<text x="706.0" y="465" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">THỰC PHẨM</text>
-<text x="706.0" y="474" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">CÔNG NGHỆ</text>
+<text x="706.0" y="474.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">THỰC PHẨM</text>
+<text x="706.0" y="482.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">CÔNG NGHỆ</text>
 <rect x="768" y="358" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="782" y="381" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A07 · Thực phẩm công nghệ</text>
 <text x="782" y="401" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">233 SKU · 6 bay · 10 category</text>
@@ -2205,10 +2205,10 @@
 <line x1="1005.75" y1="419.00" x2="1034.00" y2="419.00" stroke="#8191a5" stroke-width="1.1"/>
 <text x="1019.875" y="516" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="808,502 1034,502 1049,492 823,492" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="1036" y="436" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="1036" y="436" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="1076.0" y="451" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A07</text>
-<text x="1076.0" y="465" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">THỰC PHẨM</text>
-<text x="1076.0" y="474" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">CÔNG NGHỆ</text>
+<text x="1076.0" y="474.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">THỰC PHẨM</text>
+<text x="1076.0" y="482.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">CÔNG NGHỆ</text>
 <rect x="1138" y="358" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="1152" y="381" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A08 · Thực phẩm công nghệ</text>
 <text x="1152" y="401" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">209 SKU · 6 bay · 5 category</text>
@@ -2520,10 +2520,10 @@
 <line x1="1375.75" y1="419.00" x2="1404.00" y2="419.00" stroke="#8191a5" stroke-width="1.1"/>
 <text x="1389.875" y="516" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="1178,502 1404,502 1419,492 1193,492" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="1406" y="436" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="1406" y="436" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="1446.0" y="451" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A08</text>
-<text x="1446.0" y="465" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">THỰC PHẨM</text>
-<text x="1446.0" y="474" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">CÔNG NGHỆ</text>
+<text x="1446.0" y="474.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">THỰC PHẨM</text>
+<text x="1446.0" y="482.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">CÔNG NGHỆ</text>
 <rect x="28" y="552" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="42" y="575" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A09 · Thực phẩm công nghệ</text>
 <text x="42" y="595" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">292 SKU · 8 bay · 3 category</text>
@@ -2918,10 +2918,10 @@
 <rect x="270.08" y="614.40" width="2.03" height="14.10" rx="1.2" fill="#2dd4bf" stroke="#173044" stroke-width=".35"><title>Mì gói ăn liền hai tôm chính hiệu Vifon thùng 30 gói x75g · WIN_10605185 · A09-B08-L05-P02</title></rect>
 <text x="279.875" y="710" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="68,696 294,696 309,686 83,686" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="296" y="630" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="296" y="630" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="336.0" y="645" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A09</text>
-<text x="336.0" y="659" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">THỰC PHẨM</text>
-<text x="336.0" y="668" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">CÔNG NGHỆ</text>
+<text x="336.0" y="668.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">THỰC PHẨM</text>
+<text x="336.0" y="676.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">CÔNG NGHỆ</text>
 <rect x="398" y="552" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="412" y="575" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A10 · Thực phẩm công nghệ</text>
 <text x="412" y="595" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">310 SKU · 8 bay · 7 category</text>
@@ -3334,10 +3334,10 @@
 <rect x="654.21" y="614.40" width="2.03" height="14.10" rx="1.2" fill="#22d3ee" stroke="#173044" stroke-width=".35"><title>Phở thịt gà Vifon gói 65g · WIN_10007959 · A10-B08-L05-P06</title></rect>
 <text x="649.875" y="710" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="438,696 664,696 679,686 453,686" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="666" y="630" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="666" y="630" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="706.0" y="645" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A10</text>
-<text x="706.0" y="659" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">THỰC PHẨM</text>
-<text x="706.0" y="668" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">CÔNG NGHỆ</text>
+<text x="706.0" y="668.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">THỰC PHẨM</text>
+<text x="706.0" y="676.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">CÔNG NGHỆ</text>
 <rect x="768" y="552" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="782" y="575" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A11 · Thực phẩm công nghệ</text>
 <text x="782" y="595" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">308 SKU · 8 bay · 10 category</text>
@@ -3748,10 +3748,10 @@
 <rect x="1020.67" y="614.40" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Lẩu Tomyum ba chỉ bò Mỹ  Orifood 1.3kg · WIN_10601287 · A11-B08-L05-P05</title></rect>
 <text x="1019.875" y="710" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="808,696 1034,696 1049,686 823,686" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="1036" y="630" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="1036" y="630" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="1076.0" y="645" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A11</text>
-<text x="1076.0" y="659" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">THỰC PHẨM</text>
-<text x="1076.0" y="668" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">CÔNG NGHỆ</text>
+<text x="1076.0" y="668.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">THỰC PHẨM</text>
+<text x="1076.0" y="676.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">CÔNG NGHỆ</text>
 <rect x="1138" y="552" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="1152" y="575" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A12 · Thực phẩm công nghệ</text>
 <text x="1152" y="595" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">219 SKU · 6 bay · 7 category</text>
@@ -4073,10 +4073,10 @@
 <line x1="1375.75" y1="613.00" x2="1404.00" y2="613.00" stroke="#8191a5" stroke-width="1.1"/>
 <text x="1389.875" y="710" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="1178,696 1404,696 1419,686 1193,686" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="1406" y="630" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="1406" y="630" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="1446.0" y="645" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A12</text>
-<text x="1446.0" y="659" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">THỰC PHẨM</text>
-<text x="1446.0" y="668" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">CÔNG NGHỆ</text>
+<text x="1446.0" y="668.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">THỰC PHẨM</text>
+<text x="1446.0" y="676.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">CÔNG NGHỆ</text>
 <rect x="28" y="746" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="42" y="769" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A13 · Thực phẩm Tươi sống, Chế biến</text>
 <text x="42" y="789" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">277 SKU · 7 bay · 12 category</text>
@@ -4456,9 +4456,10 @@
 <line x1="265.75" y1="807.00" x2="294.00" y2="807.00" stroke="#8191a5" stroke-width="1.1"/>
 <text x="279.875" y="904" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="middle">B08</text>
 <polygon points="68,890 294,890 309,880 83,880" fill="#35465c" stroke="#71839a" stroke-width="1"/>
-<rect x="296" y="824" width="80" height="48" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
+<rect x="296" y="824" width="80" height="56" rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>
 <text x="336.0" y="839" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">A13</text>
-<text x="336.0" y="853" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">TƯƠI SỐNG</text>
-<text x="336.0" y="862" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="6" text-anchor="middle">CHẾ BIẾN</text>
+<text x="336.0" y="858.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">THỰC PHẨM</text>
+<text x="336.0" y="866.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">TƯƠI SỐNG,</text>
+<text x="336.0" y="874.0" fill="#ccfbf1" font-family="Segoe UI,Arial,sans-serif" font-size="5.5" text-anchor="middle">CHẾ BIẾN</text>
 <text x="40" y="980" fill="#94a9c0" font-family="Segoe UI,Arial,sans-serif" font-size="13">Vị trí shelf gốc trong catalog là placeholder mô phỏng; cột này được giữ riêng để đối chiếu. · Tầng L1 ở dưới, L5 ở trên.</text>
 </svg>

@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "entity_id": "wincommerce",
+      "entity_type": "organization",
+      "aliases": ["wincommerce", "winmart", "winmart+", "winmart plus", "win"],
+      "display_name": {
+        "vi": "WinCommerce",
+        "en": "WinCommerce"
+      },
+      "facts": {
+        "vi": [
+          "Công ty Cổ phần Dịch vụ Thương mại Tổng hợp WinCommerce là thành viên của Tập đoàn Masan.",
+          "WinCommerce sở hữu và vận hành chuỗi siêu thị WinMart và chuỗi cửa hàng WinMart+/WiN."
+        ],
+        "en": [
+          "WinCommerce General Trading Services Joint Stock Company is a member of Masan Group.",
+          "WinCommerce owns and operates the WinMart supermarket and WinMart+/WiN store chains."
+        ]
+      },
+      "sources": [
+        {
+          "name": "WinCommerce official company profile",
+          "url": "https://tuyendung.winmart.vn/home",
+          "verified_at": "2026-10-18"
+        },
+        {
+          "name": "WinMart official transaction policy",
+          "url": "https://winmart.vn/info/transaction-policy",
+          "verified_at": "2026-10-18"
+        }
+      ]
+    },
+    {
+      "entity_id": "fpt",
+      "entity_type": "organization",
+      "aliases": ["fpt", "fpt corporation"],
+      "display_name": {
+        "vi": "FPT Corporation",
+        "en": "FPT Corporation"
+      },
+      "facts": {
+        "vi": [
+          "Theo trang giới thiệu chính thức, FPT là tập đoàn công nghệ tại Việt Nam, hoạt động trong chuyển đổi số, tư vấn, công nghệ và viễn thông."
+        ],
+        "en": [
+          "FPT describes itself as a Vietnam technology corporation working in digital transformation, consulting, technology, and telecommunications."
+        ]
+      },
+      "sources": [
+        {
+          "name": "FPT official About Us",
+          "url": "https://fpt.com/en/about-us",
+          "verified_at": "2026-10-18"
+        }
+      ]
+    },
+    {
+      "entity_id": "chatvrm_retail_ai_project",
+      "entity_type": "project",
+      "aliases": [
+        "chatvrm",
+        "đồ án chatvrm",
+        "chatvrm fpt project",
+        "development of ai agents to support retail store chains in vietnam"
+      ],
+      "display_name": {
+        "vi": "Đồ án ChatVRM hỗ trợ chuỗi bán lẻ",
+        "en": "Retail AI Agents project"
+      },
+      "facts": {
+        "vi": [
+          "Tên đồ án là “Development of AI agents to support retail store chains in Vietnam”.",
+          "Theo thông tin nhóm cung cấp: Chinh phụ trách agent cho người mua, Quân phụ trách agent cho chủ cửa hàng, Long phụ trách frontend và hỗ trợ.",
+          "Chưa có nguồn xác nhận quan hệ tài trợ, sở hữu hoặc hợp tác chính thức giữa đồ án này và FPT."
+        ],
+        "en": [
+          "The project title is “Development of AI agents to support retail store chains in Vietnam”.",
+          "According to the team-provided context: Chinh owns the buyer agent, Quân the store-owner agent, and Long the frontend and support work.",
+          "No source currently verifies an official sponsorship, ownership, or partnership between this project and FPT."
+        ]
+      },
+      "sources": [
+        {
+          "name": "User-provided project context",
+          "url": null,
+          "verified_at": null
+        }
+      ]
+    }
+  ]
+}

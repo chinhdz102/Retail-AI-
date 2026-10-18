@@ -1,14 +1,25 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 
 from backend.config import Settings, get_settings
 from backend.products.catalog import (
+    DEMO_PRODUCTS,
     PriceOperator,
     ProductSnapshot,
     get_product_snapshot,
     search_products,
 )
+
+
+@dataclass(frozen=True)
+class CatalogAdditions:
+    comparable: bool
+    products: tuple[ProductSnapshot, ...] = ()
+    current_imported_at: datetime | None = None
+    previous_imported_at: datetime | None = None
 
 
 class ProductRepository(Protocol):
@@ -29,6 +40,14 @@ class ProductRepository(Protocol):
 
     def get_product_snapshot(self, product_id: str) -> ProductSnapshot | None: ...
 
+    def list_promotions(
+        self, category: str | None = None, limit: int = 5
+    ) -> list[ProductSnapshot]: ...
+
+    def list_catalog_additions(
+        self, category: str | None = None, limit: int = 5
+    ) -> CatalogAdditions: ...
+
 
 class DemoProductRepository:
     source_name = "demo_product_catalog"
@@ -38,6 +57,26 @@ class DemoProductRepository:
 
     def get_product_snapshot(self, product_id: str) -> ProductSnapshot | None:
         return get_product_snapshot(product_id)
+
+    def list_promotions(
+        self, category: str | None = None, limit: int = 5
+    ) -> list[ProductSnapshot]:
+        products = [product for product in DEMO_PRODUCTS if product.promotion]
+        if category:
+            normalized_category = category.casefold().strip()
+            products = [
+                product
+                for product in products
+                if normalized_category in product.category.casefold()
+                or normalized_category in (product.category_hierarchy or "").casefold()
+            ]
+        return products[: max(1, min(limit, 10))]
+
+    def list_catalog_additions(
+        self, category: str | None = None, limit: int = 5
+    ) -> CatalogAdditions:
+        # The demo catalog has no prior complete import to compare against.
+        return CatalogAdditions(comparable=False)
 
 
 def get_product_repository(settings: Settings | None = None) -> ProductRepository:

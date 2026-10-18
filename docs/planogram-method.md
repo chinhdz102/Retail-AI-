@@ -16,10 +16,12 @@ bay, level, and slot, and labels the result as proposed because the physical she
 not been checked. A missing assignment or version mismatch stays unavailable.
 
 The SVG overview is rendered deterministically from the catalog snapshot and its
-assignment records, not from generated image content. Each aisle-end sign uses the
-catalog's aisle code and `sub_department` label; each colored SKU block carries the
-catalog product name, ID, and locator in its SVG hover title. The rendered file prints
-the source dataset version so it can be compared with the database import version.
+assignment records, not from generated image content. Every aisle-end sign prints the
+catalog's aisle code and complete `sub_department` name. Long names wrap across lines
+without dropping words (for example, “Thực phẩm Tươi sống, Chế biến”). Each colored
+SKU block carries the catalog product name, ID, and locator in its SVG hover title.
+The rendered file prints the source dataset version so it can be compared with the
+database import version.
 
 ## Research basis
 
@@ -89,3 +91,4 @@ Generated files:
 - `data/winmart_planogram_3d.svg` — data-derived isometric shelf schematic
 - `data/winmart_planogram_3d_concept.png` — original generated presentation concept
 - `data/winmart_planogram_3d_labeled.png` — labeled concept with aisle groups and the location-code legend; it does not encode exact SKU positions
+- `data/winmart_planogram_3d_each_aisle.svg` and `.png` — the same 3D concept with a compact individual A-code plaque on each mapped fixture; aisle codes and department names come from the planogram JSON, while sign coordinates are presentation annotations. Department names remain on the image's zone banners and in each SVG plaque title.

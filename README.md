@@ -132,3 +132,10 @@ prices, and quarantines rows whose sale price exceeds their regular price. The d
 shelf locations are crawler-generated placeholders; PostgreSQL preserves them with
 `shelf_source=SIMULATED`, while customer snapshots omit shelf values. Cart writes,
 checkout and Redis-backed sessions remain separate roadmap items.
+
+Branch profiles, active promotion campaigns, receiving events, and nearby-place snapshots
+use separate source tables and freshness checks. The WinMart catalog importer does not populate
+those operational feeds. Until the store master maps each kiosk to a real branch and the feeds
+are loaded, the assistant will say the information is unavailable. See
+[`docs/retail-information-data-design.md`](docs/retail-information-data-design.md) for the data
+contract and source-coverage status.

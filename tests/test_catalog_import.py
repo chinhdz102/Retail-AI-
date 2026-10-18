@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from backend.data.catalog_import import analyze_dataset
+from backend.data.catalog_import import analyze_dataset, is_complete_import
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -32,3 +32,18 @@ def test_winmart_catalog_import_rejects_duplicate_identifiers(tmp_path: Path) ->
 
     assert report["valid"] is False
     assert any("duplicate product_id" in str(error) for error in report["fatal_errors"])
+
+
+def test_catalog_version_is_complete_only_after_every_source_row_is_classified() -> None:
+    complete = {
+        "valid": True,
+        "rows_total": 3099,
+        "rows_accepted": 3081,
+        "rows_quarantined": 18,
+    }
+    incomplete = {**complete, "rows_accepted": 3080}
+    invalid = {**complete, "valid": False}
+
+    assert is_complete_import(complete)
+    assert not is_complete_import(incomplete)
+    assert not is_complete_import(invalid)

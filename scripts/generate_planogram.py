@@ -96,7 +96,7 @@ def aisle_sign_lines(sub_department: str) -> tuple[str, ...]:
     if normalized == "thuc pham cong nghe":
         return "THỰC PHẨM", "CÔNG NGHỆ"
     if normalized == "thuc pham tuoi song che bien":
-        return "TƯƠI SỐNG", "CHẾ BIẾN"
+        return "THỰC PHẨM", "TƯƠI SỐNG,", "CHẾ BIẾN"
     return (sub_department.upper(),)
 
 
@@ -458,32 +458,28 @@ def svg_overview(
         sign_x = rack_x + rack_width + 2
         sign_y = rack_y + 17
         sign_width = 80
+        sign_height = 56
         sign_lines = aisle_sign_lines(aisle["sub_department"])
         elements.append(
-            f'<rect x="{sign_x}" y="{sign_y}" width="{sign_width}" height="48" '
+            f'<rect x="{sign_x}" y="{sign_y}" width="{sign_width}" height="{sign_height}" '
             'rx="4" fill="#0f766e" stroke="#5eead4" stroke-width="1.2"/>'
         )
         elements.append(
             svg_text(sign_x + sign_width / 2, sign_y + 15, aisle["aisle"], "#ffffff", 11,
                      weight="700", anchor="middle")
         )
-        if len(sign_lines) == 1:
+        first_label_y = sign_y + 42 - 8 * (len(sign_lines) - 1) / 2
+        for line_number, label in enumerate(sign_lines):
             elements.append(
-                svg_text(sign_x + sign_width / 2, sign_y + 35, sign_lines[0],
-                         "#ccfbf1", 6, anchor="middle")
-            )
-        else:
-            for line_number, label in enumerate(sign_lines):
-                elements.append(
-                    svg_text(
-                        sign_x + sign_width / 2,
-                        sign_y + 29 + line_number * 9,
-                        label,
-                        "#ccfbf1",
-                        6,
-                        anchor="middle",
-                    )
+                svg_text(
+                    sign_x + sign_width / 2,
+                    first_label_y + line_number * 8,
+                    label,
+                    "#ccfbf1",
+                    5.5,
+                    anchor="middle",
                 )
+            )
 
     source_shelf_note = (
         "Vị trí shelf gốc trong catalog là placeholder mô phỏng; "

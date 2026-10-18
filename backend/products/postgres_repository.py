@@ -9,6 +9,7 @@ import asyncpg
 
 from backend.products.catalog import PriceOperator, ProductSnapshot
 from backend.products.planogram import recommended_shelf
+from backend.products.repository import CatalogAdditions
 
 
 def normalize_search_text(value: str | None) -> str:
@@ -228,6 +229,135 @@ class PostgresProductRepository:
 
     def get_product_snapshot(self, product_id: str) -> ProductSnapshot | None:
         return self._run(self._get_product_snapshot(product_id))
+
+    async def _list_promotions(
+        self, category: str | None, limit: int
+    ) -> list[ProductSnapshot]:
+        conn = await asyncpg.connect(self._dsn, timeout=2)
+        try:
+            args: list[object] = [max(1, min(int(limit), 10))]
+            category_filter = ""
+            if category:
+                args.append(f"%{_escape_like_literal(category.strip())}%")
+                category_filter = (
+                    "AND (c.category_name ILIKE $2 ESCAPE '!' "
+                    "OR c.category_hierarchy ILIKE $2 ESCAPE '!')"
+                )
+            rows = await conn.fetch(
+                f"""
+                WITH latest AS (
+                    SELECT DISTINCT ON (product_id) *
+                    FROM store_product_snapshots
+                    WHERE store_code = 'WINMART_WEB'
+                    ORDER BY product_id, source_timestamp DESC, ingested_at DESC
+                )
+                SELECT p.product_id, p.item_no, p.barcode, p.name, p.brand,
+                       p.category_code, c.category_name, p.department,
+                       p.sub_department, c.category_hierarchy, p.uom,
+                       p.image_url, p.description, p.seo_url, p.spicy,
+                       s.effective_price_vnd, s.regular_price_vnd, s.sale_price_vnd,
+                       s.physical_stock, s.discount_promotion, s.source_timestamp,
+                       s.price_quality_status, s.dataset_version
+                FROM products p
+                JOIN latest s ON s.product_id = p.product_id
+                LEFT JOIN categories c ON c.category_code = p.category_code
+                WHERE p.active IS TRUE
+                  AND s.discount_promotion IS NOT NULL
+                  AND btrim(s.discount_promotion) <> ''
+                  {category_filter}
+                ORDER BY s.source_timestamp DESC, p.name
+                LIMIT $1
+                """,
+                *args,
+            )
+            return [self._to_snapshot(row) for row in rows]
+        finally:
+            await conn.close()
+
+    def list_promotions(
+        self, category: str | None = None, limit: int = 5
+    ) -> list[ProductSnapshot]:
+        return self._run(self._list_promotions(category, limit))
+
+    async def _list_catalog_additions(
+        self, category: str | None, limit: int
+    ) -> CatalogAdditions:
+        conn = await asyncpg.connect(self._dsn, timeout=2)
+        try:
+            versions = await conn.fetch(
+                """
+                SELECT dataset_version, imported_at
+                FROM catalog_import_runs
+                WHERE store_code = 'WINMART_WEB'
+                  AND is_complete IS TRUE
+                ORDER BY imported_at DESC, dataset_version DESC
+                LIMIT 2
+                """
+            )
+            if len(versions) < 2:
+                return CatalogAdditions(
+                    comparable=False,
+                    current_imported_at=versions[0]["imported_at"] if versions else None,
+                )
+
+            current_version, previous_version = versions
+            args: list[object] = [
+                current_version["dataset_version"],
+                previous_version["dataset_version"],
+                max(1, min(int(limit), 10)),
+            ]
+            category_filter = ""
+            if category:
+                args.append(f"%{_escape_like_literal(category.strip())}%")
+                placeholder = f"${len(args)}"
+                category_filter = (
+                    f"AND (c.category_name ILIKE {placeholder} ESCAPE '!' "
+                    f"OR c.category_hierarchy ILIKE {placeholder} ESCAPE '!')"
+                )
+            rows = await conn.fetch(
+                f"""
+                SELECT p.product_id, p.item_no, p.barcode, p.name, p.brand,
+                       p.category_code, c.category_name, p.department,
+                       p.sub_department, c.category_hierarchy, p.uom,
+                       p.image_url, p.description, p.seo_url, p.spicy,
+                       s.effective_price_vnd, s.regular_price_vnd, s.sale_price_vnd,
+                       s.physical_stock, s.discount_promotion, s.source_timestamp,
+                       s.price_quality_status, s.dataset_version
+                FROM store_product_snapshots s
+                JOIN products p ON p.product_id = s.product_id
+                LEFT JOIN categories c ON c.category_code = p.category_code
+                WHERE s.store_code = 'WINMART_WEB'
+                  AND s.dataset_version = $1
+                  AND NOT EXISTS (
+                      SELECT 1 FROM store_product_snapshots prior
+                      WHERE prior.store_code = s.store_code
+                        AND prior.dataset_version = $2
+                        AND prior.product_id = s.product_id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM catalog_quarantine_records prior_quarantine
+                      WHERE prior_quarantine.dataset_version = $2
+                        AND prior_quarantine.product_id = s.product_id
+                  )
+                  {category_filter}
+                ORDER BY s.source_timestamp DESC, p.name
+                LIMIT $3
+                """,
+                *args,
+            )
+            return CatalogAdditions(
+                comparable=True,
+                products=tuple(self._to_snapshot(row) for row in rows),
+                current_imported_at=current_version["imported_at"],
+                previous_imported_at=previous_version["imported_at"],
+            )
+        finally:
+            await conn.close()
+
+    def list_catalog_additions(
+        self, category: str | None = None, limit: int = 5
+    ) -> CatalogAdditions:
+        return self._run(self._list_catalog_additions(category, limit))
 
     @staticmethod
     def _to_snapshot(row) -> ProductSnapshot:

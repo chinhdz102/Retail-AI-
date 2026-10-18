@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024">
+<defs><filter id="tag-shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#020617" flood-opacity=".6"/></filter></defs>
+<image href="file:///C:/Users/Chinhdz/Desktop/retail/Retail-AI--main/Retail-AI--main/data/winmart_planogram_3d_labeled.png" x="0" y="0" width="1536" height="1024"/>
+<g filter="url(#tag-shadow)"><title>A01 · Dệt may</title>
+<rect x="275" y="330" width="42" height="21" rx="3" fill="#86198f" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="276.5" y="331.5" width="39" height="18" rx="2" fill="none" stroke="#f0abfc" stroke-width=".8"/>
+<text x="296.0" y="345" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A01</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A02 · Hoá mỹ phẩm</title>
+<rect x="347" y="342" width="42" height="21" rx="3" fill="#1d4ed8" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="348.5" y="343.5" width="39" height="18" rx="2" fill="none" stroke="#93c5fd" stroke-width=".8"/>
+<text x="368.0" y="357" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A02</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A03 · Hoá mỹ phẩm</title>
+<rect x="477" y="370" width="42" height="21" rx="3" fill="#1d4ed8" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="478.5" y="371.5" width="39" height="18" rx="2" fill="none" stroke="#93c5fd" stroke-width=".8"/>
+<text x="498.0" y="385" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A03</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A04 · Hoá mỹ phẩm</title>
+<rect x="604" y="343" width="42" height="21" rx="3" fill="#1d4ed8" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="605.5" y="344.5" width="39" height="18" rx="2" fill="none" stroke="#93c5fd" stroke-width=".8"/>
+<text x="625.0" y="358" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A04</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A05 · Homeline</title>
+<rect x="891" y="257" width="42" height="21" rx="3" fill="#c2410c" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="892.5" y="258.5" width="39" height="18" rx="2" fill="none" stroke="#fdba74" stroke-width=".8"/>
+<text x="912.0" y="272" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A05</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A06 · Thực phẩm công nghệ</title>
+<rect x="431" y="673" width="42" height="21" rx="3" fill="#b91c1c" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="432.5" y="674.5" width="39" height="18" rx="2" fill="none" stroke="#fca5a5" stroke-width=".8"/>
+<text x="452.0" y="688" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A06</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A07 · Thực phẩm công nghệ</title>
+<rect x="596" y="598" width="42" height="21" rx="3" fill="#b91c1c" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="597.5" y="599.5" width="39" height="18" rx="2" fill="none" stroke="#fca5a5" stroke-width=".8"/>
+<text x="617.0" y="613" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A07</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A08 · Thực phẩm công nghệ</title>
+<rect x="714" y="573" width="42" height="21" rx="3" fill="#b91c1c" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="715.5" y="574.5" width="39" height="18" rx="2" fill="none" stroke="#fca5a5" stroke-width=".8"/>
+<text x="735.0" y="588" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A08</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A09 · Thực phẩm công nghệ</title>
+<rect x="861" y="538" width="42" height="21" rx="3" fill="#b91c1c" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="862.5" y="539.5" width="39" height="18" rx="2" fill="none" stroke="#fca5a5" stroke-width=".8"/>
+<text x="882.0" y="553" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A09</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A10 · Thực phẩm công nghệ</title>
+<rect x="996" y="498" width="42" height="21" rx="3" fill="#b91c1c" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="997.5" y="499.5" width="39" height="18" rx="2" fill="none" stroke="#fca5a5" stroke-width=".8"/>
+<text x="1017.0" y="513" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A10</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A11 · Thực phẩm công nghệ</title>
+<rect x="1130" y="459" width="42" height="21" rx="3" fill="#b91c1c" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="1131.5" y="460.5" width="39" height="18" rx="2" fill="none" stroke="#fca5a5" stroke-width=".8"/>
+<text x="1151.0" y="474" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A11</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A12 · Thực phẩm công nghệ</title>
+<rect x="1230" y="426" width="42" height="21" rx="3" fill="#b91c1c" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="1231.5" y="427.5" width="39" height="18" rx="2" fill="none" stroke="#fca5a5" stroke-width=".8"/>
+<text x="1251.0" y="441" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A12</text>
+</g>
+<g filter="url(#tag-shadow)"><title>A13 · Thực phẩm Tươi sống, Chế biến</title>
+<rect x="1377" y="417" width="42" height="21" rx="3" fill="#15803d" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
+<rect x="1378.5" y="418.5" width="39" height="18" rx="2" fill="none" stroke="#86efac" stroke-width=".8"/>
+<text x="1398.0" y="432" fill="#ffffff" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" text-anchor="middle">A13</text>
+</g>
+</svg>
