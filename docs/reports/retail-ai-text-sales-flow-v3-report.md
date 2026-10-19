@@ -127,7 +127,7 @@ Giới hạn: held-out slang/typo và đổi sản phẩm “Coca → nước su
 
 P50 request latency là 67 ms ở dev và 65 ms ở held-out; phần lớn lượt được xử lý deterministic/local. Khi provider rate limit, một số request chờ fallback khoảng 8–10 giây và held-out có 2 HTTP 502. Dev ghi 8 lỗi thử fallback trước khi model sau trong cấu hình thành công; held-out ghi 18 lỗi thử fallback. Qwen qwen/qwen3.8-27b và OSS120B bị rate limit; OSS20B đã được gọi và có lúc thành công, nhưng có lúc cả chuỗi fallback cạn.
 
-Pacing giữa các request là 9 giây để giảm rate limit và không nằm trong median request latency. Vì vậy median này không phải thời gian mà người dùng luôn chờ thấy phản hồi. Tổng token chỉ cộng usage trả về từ các lượt thành công. Không quy đổi ra USD vì không lưu chi phí provider cho từng lần gọi. Chưa đo provider TTFT, SSE first-visible-text hoặc production network latency. SSE hiện chia nhỏ câu trả lời sau khi đã tạo xong; không gọi đó là token streaming.
+Pacing giữa các request là 9 giây để giảm rate limit và không nằm trong median request latency. Vì vậy median này không phải thời gian mà người dùng luôn chờ thấy phản hồi. Tổng token chỉ cộng usage trả về từ các lượt thành công. Không quy đổi ra USD vì không lưu chi phí provider cho từng lần gọi. Các chỉ số mới nhất về provider, tool và SSE in-process được đo bổ sung ở mục R; chúng không gồm production network latency hoặc thời gian trình duyệt vẽ. SSE vẫn chia nhỏ câu trả lời sau khi đã tạo xong; không gọi đó là token streaming.
 
 ## I. Error Analysis
 
@@ -374,6 +374,9 @@ Kết quả hiện tại không chứng minh chất lượng model live dưới 
 | Ruff / compileall | Pass / Pass |
 | Live Groq development | **41 phiên / 203 lượt; HTTP 203/203; grounding/safety 203/203; 0 lỗi** |
 | Live dev latency / model usage | Median lượt **47 ms**; 3 LLM calls; 1 tool call; **7.409 prompt + 86 completion = 7.495 tokens** |
+| Groq service call trên 3 lượt live | P50 **1.194 s**, max **1.981 s**; separate pacing wait p50 **6.519 s**, max **7.729 s**; cả 3 primary 429 rồi fallback_1 thành công |
+| `search_products` tool execution | 20 lần qua thread gateway, catalog demo: p50 **0,675 ms**, p95 **0,858 ms**, max **0,919 ms** |
+| SSE in-process | 10 lượt: validated response p50/p95 **54,16/59,73 ms**; first body delta **54,23/59,81 ms**; toàn stream **123,97/126,85 ms** |
 | Exposed held-out regression | **10 phiên / 50 lượt; HTTP 50/50; automated assertions 47/50; 0 LLM calls; median 58 ms** |
 | P0 regression | **40/40** trên 8 case × 5 lần, catalog demo |
 | Shopping sandbox | **100/100**; 0/20 false payment; 0/20 cross-session leakage; 0 LLM calls |
@@ -382,6 +385,8 @@ Kết quả hiện tại không chứng minh chất lượng model live dưới 
 Live trace ghi nhận cả ba request LLM bị primary trả 429 rồi fallback_1 thành công; output benchmark chỉ lưu tên slot/model và không chứa secret. Ba credential duy nhất đều xác thực được qua GET `/models`, mỗi slot hiển thị 11 model. Hai giá trị vừa gửi trong chat thực ra trùng fallback_1 và fallback_2, vì vậy cấu hình hiện có ba key khác nhau. Code đã sẵn sàng nhận key mới ở `GROQ_API_KEY_FALLBACK_3` và `_4`; hai slot này hiện chưa có giá trị riêng.
 
 Bộ live dev có 3 model calls, dùng **7.409 prompt tokens** và **86 completion tokens**; các output đã xem trực tiếp đều từ chối sửa kho khi bị injection và nói rõ khi catalog không có mặt hàng. Đây chỉ là 3 câu trả lời LLM nên không đủ để kết luận naturalness hay độ chính xác model trên diện rộng. `expected_model_tool_selection_count=0`, vì vậy lượt chạy không đo accuracy chọn tool của model. Median 47 ms cũng không phản ánh trễ ở các turn gặp primary rate-limit.
+
+SSE được đo trên 10 request lặp lại “Coca Zero giá bao nhiêu?” bằng ASGI in-process; `validated response` là thời điểm server đã chạy xong toàn bộ `agent_respond`, `first body delta` là chunk text đầu gửi qua ASGI, và `total stream` là đến event cuối. UI handler tích lũy các delta trong `onTextDelta`; số đo không gồm socket, parse ở browser hoặc paint. First delta đến sau khi câu trả lời đã được kiểm tra hoàn chỉnh, nên đây là progressive delivery an toàn chứ không phải provider token streaming. Tool timing là 20 lần gọi trực tiếp `execute_catalog_tool` qua `asyncio.to_thread` với demo catalog, không phải PostgreSQL latency.
 
 Tập 10 phiên/50 lượt được chạy lại làm regression sau các sửa đổi; tập này đã lộ trước đó, không phải held-out mù. Kết quả raw là **47/50 automated assertions**. Ba assertion fail đã được xem lại: câu hỏi Coca 600ml được trả lời rõ không có quy cách 600ml nhưng grader cấm cả ID sản phẩm thay thế; câu hỏi sữa hết hạn được trả lời không có hàng bán được nhưng grader cấm ID mặt hàng; câu “Coca Zero lon 330ml đang có” hỏi tồn kho nhưng grader lại bắt buộc có giá. Đây là sai khác giữa expectation và nghĩa câu trả lời; vẫn giữ nguyên số raw 47/50, không sửa grader để nâng điểm. Held-out regression không gọi Groq (`0` LLM calls), nên chỉ đánh giá routing/catalog/policy.
 
@@ -394,6 +399,7 @@ Artifacts:
 - [P0 regression, 40/40](../../evaluation/results/goal_postfix_p0_20261020.json)
 - [Shopping sandbox, 100/100](../../evaluation/results/goal_postfix_shopping_20261020.json)
 - [Offline product retrieval](../../evaluation/results/goal_postfix_product_resolution_20261020.json)
+- [SSE và tool latency samples, in-process](../../evaluation/results/goal_postfix_sse_tool_latency_20261020.json)
 - [Code regression for cart/context fixes](../../tests/test_shopping_flow.py) và [API follow-up regression](../../tests/test_retail_api.py)
 
 Lệnh tái lập benchmark hội thoại (catalog demo, không tạo thanh toán thật):

@@ -1,0 +1,210 @@
+{
+  "kind": "in_process_sse_and_catalog_tool_latency",
+  "generated_at_utc": "2026-10-19T18:31:55.447385+00:00",
+  "catalog_repository": "demo",
+  "sse_scope": "ASGI send timing; excludes sockets, browser parsing, and paint; each turn uses a new session",
+  "sse_prompt": "Coca Zero giá bao nhiêu?",
+  "sse_samples": [
+    {
+      "sample": 1,
+      "validated_answer_ms": 59.73,
+      "body_times_ms": [
+        59.81,
+        88.42,
+        120.39,
+        120.57
+      ],
+      "body_bytes": 786,
+      "delta_events": 3,
+      "complete_events": 1,
+      "status_code": 200,
+      "first_body_delta_ms": 59.81,
+      "total_stream_ms": 120.57
+    },
+    {
+      "sample": 2,
+      "validated_answer_ms": 53.97,
+      "body_times_ms": [
+        54.05,
+        91.8,
+        122.84,
+        123.03
+      ],
+      "body_bytes": 786,
+      "delta_events": 3,
+      "complete_events": 1,
+      "status_code": 200,
+      "first_body_delta_ms": 54.05,
+      "total_stream_ms": 123.03
+    },
+    {
+      "sample": 3,
+      "validated_answer_ms": 54.34,
+      "body_times_ms": [
+        54.41,
+        91.94,
+        122.27,
+        122.44
+      ],
+      "body_bytes": 786,
+      "delta_events": 3,
+      "complete_events": 1,
+      "status_code": 200,
+      "first_body_delta_ms": 54.41,
+      "total_stream_ms": 122.44
+    },
+    {
+      "sample": 4,
+      "validated_answer_ms": 54.54,
+      "body_times_ms": [
+        54.61,
+        92.55,
+        124.6,
+        124.75
+      ],
+      "body_bytes": 786,
+      "delta_events": 3,
+      "complete_events": 1,
+      "status_code": 200,
+      "first_body_delta_ms": 54.61,
+      "total_stream_ms": 124.75
+    },
+    {
+      "sample": 5,
+      "validated_answer_ms": 53.94,
+      "body_times_ms": [
+        54.01,
+        94.05,
+        126.07,
+        126.19
+      ],
+      "body_bytes": 786,
+      "delta_events": 3,
+      "complete_events": 1,
+      "status_code": 200,
+      "first_body_delta_ms": 54.01,
+      "total_stream_ms": 126.19
+    },
+    {
+      "sample": 6,
+      "validated_answer_ms": 53.51,
+      "body_times_ms": [
+        53.58,
+        94.25,
+        126.66,
+        126.85
+      ],
+      "body_bytes": 786,
+      "delta_events": 3,
+      "complete_events": 1,
+      "status_code": 200,
+      "first_body_delta_ms": 53.58,
+      "total_stream_ms": 126.85
+    },
+    {
+      "sample": 7,
+      "validated_answer_ms": 55.26,
+      "body_times_ms": [
+        55.33,
+        91.3,
+        122.43,
+        122.61
+      ],
+      "body_bytes": 786,
+      "delta_events": 3,
+      "complete_events": 1,
+      "status_code": 200,
+      "first_body_delta_ms": 55.33,
+      "total_stream_ms": 122.61
+    },
+    {
+      "sample": 8,
+      "validated_answer_ms": 53.19,
+      "body_times_ms": [
+        53.28,
+        92.96,
+        124.89,
+        124.99
+      ],
+      "body_bytes": 786,
+      "delta_events": 3,
+      "complete_events": 1,
+      "status_code": 200,
+      "first_body_delta_ms": 53.28,
+      "total_stream_ms": 124.99
+    },
+    {
+      "sample": 9,
+      "validated_answer_ms": 53.55,
+      "body_times_ms": [
+        53.62,
+        94.65,
+        125.2,
+        125.35
+      ],
+      "body_bytes": 786,
+      "delta_events": 3,
+      "complete_events": 1,
+      "status_code": 200,
+      "first_body_delta_ms": 53.62,
+      "total_stream_ms": 125.35
+    },
+    {
+      "sample": 10,
+      "validated_answer_ms": 54.46,
+      "body_times_ms": [
+        54.53,
+        93.15,
+        123.1,
+        123.19
+      ],
+      "body_bytes": 786,
+      "delta_events": 3,
+      "complete_events": 1,
+      "status_code": 200,
+      "first_body_delta_ms": 54.53,
+      "total_stream_ms": 123.19
+    }
+  ],
+  "sse_summary_ms": {
+    "validated_answer_p50": 54.16,
+    "validated_answer_p95": 59.73,
+    "first_body_delta_p50": 54.23,
+    "first_body_delta_p95": 59.81,
+    "total_stream_p50": 123.97,
+    "total_stream_p95": 126.85
+  },
+  "tool_scope": "execute_catalog_tool via asyncio.to_thread against demo repository; not PostgreSQL",
+  "tool_name": "search_products",
+  "tool_query": "nước yến vị đào",
+  "tool_status_counts": {
+    "SUCCESS": 20
+  },
+  "tool_samples_ms": [
+    0.919,
+    0.625,
+    0.818,
+    0.627,
+    0.634,
+    0.858,
+    0.74,
+    0.751,
+    0.661,
+    0.711,
+    0.813,
+    0.693,
+    0.641,
+    0.689,
+    0.65,
+    0.624,
+    0.608,
+    0.743,
+    0.632,
+    0.617
+  ],
+  "tool_summary_ms": {
+    "p50": 0.675,
+    "p95": 0.858,
+    "max": 0.919
+  }
+}
