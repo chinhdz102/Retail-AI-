@@ -1,82 +1,332 @@
-# Báo cáo hoàn thiện và kiểm thử Retail AI
+# Báo cáo kỹ thuật, nghiên cứu và đánh giá Retail AI
 
-- **Ngày:** 19/10/2026
-- **Phạm vi:** kiosk khách hàng, session, tra cứu catalog và luồng giỏ hàng/checkout sandbox
-- **Môi trường kiểm thử:** catalog demo; không thực hiện giao dịch tiền thật
+- **Ngày đánh giá:** 19/10/2026 (Asia/Saigon)
+- **Nhánh:** main
+- **Commit code được đánh giá:** 1757bbd988de141ae23a6cf3f475a9c496d0340f
+- **Baseline:** 2f8b0368cf006286f3188d0f2188ee728fac954d
+- **Môi trường giao dịch:** catalog demo và checkout sandbox; không có giao dịch tiền thật
+- **Báo cáo chăm sóc khách hàng cũ:** được giữ tại [archive/retail-ai-optimization-report-customer-care-2026-10-19.md](archive/retail-ai-optimization-report-customer-care-2026-10-19.md)
 
-## Tóm tắt
+## 1. Executive Summary
 
-Đã hoàn thiện luồng mua thử theo session từ thêm sản phẩm đến kiểm tra trạng thái thanh toán, bổ sung bộ nhớ session có cấu trúc, giao diện giỏ hàng và xác nhận checkout, đồng thời sửa intent parser để câu hỏi “bán đắt hàng nhất” không bị hiểu nhầm thành lệnh đặt hàng.
+Retail AI đã có thể dẫn dắt phiên mua sắm demo từ tra cứu sản phẩm, tư vấn có ràng buộc, cập nhật ngữ cảnh, thêm nhiều món vào giỏ, checkout có xác nhận, đến kiểm tra trạng thái thanh toán sandbox hoặc mở yêu cầu hỗ trợ demo. Backend kiểm soát thao tác nhạy cảm; model không tự sửa giá/tồn hay chuyển đơn thành PAID.
 
-Kiểm tra cuối: **468 test backend**, **40 test frontend**, Ruff, Python compile và production build đều qua. Đây là kết quả của bộ test tự động trên catalog demo, không phải phần trăm độ chính xác ngoài cửa hàng hay benchmark tải production.
+Benchmark tiếng Việt phát hiện ba vấn đề: grader tìm tham số recommendation trong trace LLM dù router chạy xác định; câu “chuyển khoản xong rồi” không được nhận diện khi chờ thanh toán; yêu cầu “bỏ qua xác minh” có thể bị hiểu thành gọi nhân viên. Sau sửa, hội thoại live v2 đạt 13/13 assertion; ba ca mặc định về thêm giỏ, checkout giỏ trống và yêu cầu nhân viên demo đạt 3/3.
 
-## Thay đổi
+Kết quả kiểm thử: **490 backend**, **41 frontend**, **40/40 P0 regression**, **20/20 shopping sandbox**; TypeScript, production build, Ruff trên source, compileall và diff check đều qua. Đây là bằng chứng test/sandbox và một mẫu Groq live nhỏ, không phải độ chính xác khách hàng thật hay chứng nhận production.
 
-| Khu vực | Hoàn thiện |
+Giới hạn chính: PostgreSQL và Redis đã cấu hình nhưng probe kết nối timeout; demo có 6 sản phẩm; kho WinMart 3.099 dòng là snapshot, không phải tồn kho chi nhánh thời gian thực; ticket nhân viên và payment chỉ là simulator; text chat chưa stream token; voice/STT/TTS và kiosk thật không nằm trong benchmark này.
+
+## 2. Repository Audit
+
+### Kiến trúc thực tế
+
+| Thành phần | Trách nhiệm và trạng thái |
 |---|---|
-| Session | Lưu intent, sản phẩm đang hỏi, ràng buộc và trạng thái xác nhận. Session in-memory cô lập cho development/test; production chọn Redis và fail-closed nếu Redis lỗi. Đóng/hết hạn session xóa hội thoại và ngữ cảnh mua sắm. |
-| Intent mua sắm | Hỗ trợ câu tiếng Việt và tiếng Anh phổ biến để xem giỏ, thêm/bớt/sửa số lượng, chuẩn bị checkout, xác nhận, hủy và hỏi trạng thái thanh toán. |
-| Catalog và giỏ | Giá, tồn bán được, số lượng, giới hạn mặt hàng và tổng tiền do backend tính. Từ chối SKU hết hạn/hết hàng; hỏi lại khi có nhiều ứng viên. Idempotency key chặn yêu cầu thêm hàng bị gửi lặp. |
-| Checkout sandbox | Tóm tắt có token xác nhận và thời hạn; backend kiểm tra lại giá/tồn và giữ lượng hàng trong sandbox. Trạng thái `PAID` chỉ đổi qua endpoint mô phỏng thanh toán; lời khách nói đã chuyển khoản không được xem là bằng chứng. |
-| Cô lập dữ liệu | Cart và order kiểm tra `session_id`; session khác không đọc được order. Thanh toán sandbox xử lý event lặp có tính idempotent. |
-| Kiosk | Thêm thẻ sản phẩm, xem/sửa giỏ, xác nhận checkout và nút mô phỏng thanh toán; xóa hội thoại khi phiên kết thúc. Avatar tải bất đồng bộ để giảm bundle chính. |
-| Tài liệu | README ghi rõ phạm vi demo và giới hạn hạ tầng. |
+| backend/api/main.py | FastAPI, policy, intent routing, grounding và điều phối; tệp còn khoảng 4,9 nghìn dòng, một số trách nhiệm vẫn tập trung tại đây. |
+| backend/services/retail_agent.py | Vòng gọi tool LLM; tối đa 2 vòng, 5 tool calls và một retry timeout theo cấu hình. Có unit/API coverage; chưa kiểm tra live tool planning ở mọi lượt. |
+| backend/services/retail_tools.py | Hợp đồng và thực thi tìm kiếm, snapshot, recommendation, promotion/store info và các thao tác đọc. |
+| backend/services/vietnamese_intent.py | Chuẩn hóa dấu, cách viết chat và một số biến thể vùng miền; deterministic routing cho intent phổ biến, chưa bao phủ hết cách nói tự do. |
+| backend/services/sessions.py | ShoppingSessionState, TTL, state version, SET/REPLACE/REMOVE/KEEP. Redis adapter có fail-closed; chưa kết nối live được. |
+| backend/services/shopping_flow.py và backend/services/shopping.py | Phân loại cart/checkout; cart, quote, order, idempotency và payment sandbox. Dữ liệu ghi là in-memory demo, không phải POS/order DB bền. |
+| backend/services/support.py | Phân loại vấn đề và ticket idempotent trong SupportTicketStore một process; trạng thái RECEIVED_DEMO, không thông báo nhân viên thật. |
+| backend/products/postgres_repository.py | Đọc catalog PostgreSQL; không coi catalog snapshot là tồn chi nhánh. Query live không kiểm chứng do timeout. |
+| apps/kiosk-airi/src/App.vue | Kiosk Vue: chat, session, product cards, cart/checkout và hỗ trợ. Unit test/build pass; chưa có e2e trên browser kiosk thật. |
+| data/ và backend/data/ | Snapshot sản phẩm, nguồn doanh nghiệp, planogram và schema/import. Ảnh 3D là sơ đồ đề xuất từ dữ liệu gán kệ, không phải bản vẽ hiện trạng. |
 
-## Luồng đã kiểm tra
+### Mức hỗ trợ dựa trên bằng chứng
 
-1. Tạo hai session độc lập.
-2. Khách thêm 2 lon Coca Zero; giá lấy từ catalog demo là 13.000đ/lon, tổng 26.000đ.
-3. Gửi lại cùng một yêu cầu với cùng idempotency key; số lượng không bị nhân đôi.
-4. Session thứ hai vẫn có giỏ rỗng và không truy cập được order của session đầu.
-5. Chuẩn bị checkout, kiểm tra tổng, xác nhận rõ ràng và tạo order `PENDING`.
-6. Câu khách tự khai đã chuyển khoản không cập nhật trạng thái. Hỏi trạng thái trả về `PENDING` cho đến khi endpoint sandbox nhận event mô phỏng.
-7. Event thanh toán lặp được xử lý idempotent; event khác cố sửa trạng thái terminal bị từ chối.
-8. SKU sữa đã quá hạn trong catalog demo bị từ chối khi thêm vào giỏ.
-9. Kiểm tra câu địa phương “Cái chi bán đắt hàng nhứt?” không kích hoạt checkout.
-10. Đóng/hết hạn session xóa hội thoại, sản phẩm gần nhất và memory mua sắm.
-
-## Kết quả xác minh
-
-| Lệnh | Kết quả |
+| Mức | Chức năng |
 |---|---|
-| `CATALOG_REPOSITORY=demo .venv\Scripts\python.exe -m pytest -q` | **468 passed** |
-| `npm run test:run -- --maxWorkers=2` trong `apps/kiosk-airi` | **40 passed**, 5 test files |
-| `.venv\Scripts\ruff.exe check backend tests\test_sessions.py tests\test_shopping_flow.py` | Pass |
-| `.venv\Scripts\python.exe -m compileall -q backend` | Pass |
-| `npm run build` trong `apps/kiosk-airi` | Pass; bundle chính 167.04 kB (gzip 54.86 kB) |
-| `git diff --check` | Pass |
+| Implemented and verified | Tra cứu sản phẩm demo; trả giá/kệ/tồn khi field có dữ liệu; từ chối thuộc tính thiếu nguồn; recommendation theo nhóm/giá/cay và constraint đa lượt; giỏ nhiều món; sửa/xóa số lượng; checkout token/xác nhận; false-payment guard; idempotency; session ownership; ticket demo; kết thúc phiên; prompt-injection guard; tiếng Việt và một phần tiếng Anh. |
+| Implemented but not verified live | Catalog Postgres chỉ đọc; Redis sessions; một phần runtime/schema/tool cho campaign, hàng mới, store profile, receipt, nearby POI và nguồn doanh nghiệp. Feed/DB không hoạt động trong probe nên chưa xác minh dữ liệu chi nhánh thật. |
+| Partially implemented | Agent/policy orchestration còn tập trung trong main.py; state extraction dựa nhiều vào cụm/regex; tiếng Anh có test nhưng live v2 chỉ tiếng Việt; UI chưa browser-tested; chất lượng hội thoại tự nhiên cần người chấm. |
+| Documented only hoặc thiếu runtime | Tài liệu requirements/architecture/tool contracts mô tả một số gateway/module riêng chưa có class/runtime tương ứng. RAG tài liệu đã duyệt chưa thành retrieval pipeline độc lập. |
+| Missing | POS/tồn chi nhánh live; thanh toán thật; CRM/handoff thật; số liệu bán chạy/hài lòng; tải production; đánh giá tiếng nói và streaming end-to-end trong lượt này. |
 
-Build vẫn cảnh báo chunk `model-viewer` khoảng 1.02 MB (gzip 290.30 kB). Chunk này đã được tách lazy-load khỏi bundle chính, nhưng vẫn lớn khi avatar được tải. JSDOM cũng in cảnh báo giả lập media/canvas; các test liên quan vẫn pass.
+**Ngoài phạm vi theo yêu cầu trước:** hỏi địa điểm chung không gắn cửa hàng cụ thể bị từ chối do không có chi nhánh/tọa độ đã xác minh. Nearby POI cho một cửa hàng chỉ có thể trả lời khi feed và attribution sẵn sàng.
 
-## Hạn chế cần giữ rõ
+## 3. Research & Literature Review
 
-- Giỏ hàng, reservation, order và payment simulator hiện ở bộ nhớ của một process. Đây là **sandbox demo**, không lưu bền và không dùng chung giữa nhiều backend replica.
-- Checkout bị tắt ở production. Không kết nối POS, tồn kho chi nhánh, cơ sở dữ liệu order hoặc cổng thanh toán; `PAID` trong test chỉ là kết quả mô phỏng.
-- Chỉ cho phép ghi giỏ với catalog demo đã biết. Catalog WinMart nhập từ web là snapshot tham khảo, không đủ thẩm quyền để trừ tồn hay đặt hàng.
-- Redis adapter có test fail-closed, nhưng không được xác minh với Redis đang chạy trong lượt này. PostgreSQL/Redis không được dùng cho test end-to-end; hạ tầng cửa hàng thật vẫn cần cấu hình và kiểm thử riêng.
-- Không chạy benchmark gọi LLM trực tiếp trong lượt này. Bộ test đánh giá routing, hợp đồng tool, policy và kết quả có cấu trúc; nó không chứng minh tỷ lệ factuality trên khách hàng thật.
-- Thống kê “bán chạy nhất”, “ngon nhất” hoặc sở thích khách hàng chỉ được nêu khi có dữ liệu bán/đánh giá được xác minh; catalog hiện tại không cung cấp các số liệu đó.
+Nghiên cứu dưới đây định hình test và lựa chọn kiến trúc; kết quả của paper không phải điểm số Retail AI.
 
-## Cơ sở thiết kế
+| Nghiên cứu | Bài toán, phương pháp và kết quả công bố | Áp dụng và giới hạn |
+|---|---|---|
+| **ProductAgent: Benchmarking Conversational Product Search Agent with Asking Clarification Questions** — Jingheng Ye, Yong Jiang, Xiaobin Wang, Yinghui Li, Yangning Li, Hai-Tao Zheng, Pengjun Xie, Fei Huang (2024). [arXiv:2407.00942](https://arxiv.org/abs/2407.00942) | PROCLARE đánh giá hỏi làm rõ, tóm tắt thuộc tính, query generation và retrieval động. Trong thí nghiệm retrieval, GTE đạt MRR@10 52,29; rerank GTE 63,82. Hiệu quả phụ thuộc dữ liệu và lượt hội thoại. | Ưu tiên lexical/fuzzy baseline và hỏi khi thiếu thuộc tính ảnh hưởng quyết định. Kết quả không chứng minh vector DB tốt hơn trên WinMart; chưa thêm vector DB khi benchmark dự án chưa cho thấy lợi ích. |
+| **ShoppingBench: A Real-World Intent-Grounded Shopping Benchmark for LLM-based Agents** — Jiangyuan Wang et al. (2025). [arXiv:2508.04266](https://arxiv.org/abs/2508.04266) | 3.310 chỉ dẫn mua sắm, sandbox hơn 2,5 triệu sản phẩm; GPT‑4.1 đạt success dưới 50% tổng thể trong thiết lập tác giả. | Dùng để nhấn mạnh chuỗi hành động, budget, coupon và nhiều sản phẩm. Không dùng số paper làm kết quả Retail AI. |
+| **Shopping Reasoning Bench: An Expert-Authored Benchmark for Multi-Turn Conversational Shopping Assistants** — Shuxian Fan, Seonwoo Min, Youna Hu, Botao Xia, Jayakrishnan Unnikrishnan, Rowan Musselmann, Yifan Gao, Qingyu Yin, Priyanka Nigam, Bing Yin (2026). [arXiv:2606.12608](https://arxiv.org/abs/2606.12608) | 525 mission (232 single-turn, 293 multi-turn), 10.863 rubric nhị phân có trọng số. Chín model đạt 57–77% overall; rubric tùy chọn thấp hơn rubric bắt buộc 13–29 điểm ở multi-turn và hiệu quả giảm 4–18 điểm khi hội thoại dài thêm. | Tách rubric yêu cầu bắt buộc khỏi tư vấn thêm; thêm ca sửa constraint, tham chiếu cũ, cart và payment. Bộ v2 có 7 hội thoại, nhỏ hơn nhiều và không phải expert annotation. |
+| **Berkeley Function-Calling Leaderboard V4 (BFCL)** — Berkeley Gorilla Team (methodology V4, 2025). [Leaderboard](https://gorilla.cs.berkeley.edu/leaderboard) · [V4 methodology](https://gorilla.cs.berkeley.edu/blogs/15_bfcl_v4_web_search.html) | Mở rộng function call đơn sang tool choice/arguments, multi-turn, memory, web search và error recovery. | Grader kiểm tra state/cart/order/ticket thay vì chỉ câu chữ. Không chạy BFCL đầy đủ; số pass nội bộ không phải BFCL score. |
+| **ViWOZ: A Multi-Domain Task-Oriented Dialogue Systems Dataset For Low-resource Language** — Phi Nguyen Van et al. (2022). [arXiv:2203.07742](https://arxiv.org/abs/2203.07742) | Dataset tiếng Việt gồm 5.000 dialogues và 60.946 annotated utterances. | Gợi ý biến thể tiếng Việt và multi-turn; không phải miền retail nên không suy ra retail accuracy. |
+| **Diable: Efficient Dialogue State Tracking as Operations on Tables** — Pietro Lesci, Yoshinari Fujinuma, Momchil Hardalov, Chao Shang, Yassine Benajiba, Lluis Marquez (Findings ACL 2023). [ACL Anthology](https://aclanthology.org/2023.findings-acl.615/) · DOI 10.18653/v1/2023.findings-acl.615 | Biểu diễn state thành bảng và áp dụng thao tác theo lượt. Trên MultiWOZ, paper báo cáo nhanh hơn 2,4× phương pháp được so sánh, với Joint Goal Accuracy cạnh tranh. | Củng cố SET/REPLACE/REMOVE/KEEP. Đây không phải số latency/accuracy của Retail AI. |
+| **Wizard of Shopping: Target-Oriented E-commerce Dialogue Generation with Decision Tree Branching** — Xiangci Li et al. (ACL 2025). [ACL Anthology](https://aclanthology.org/2025.acl-long.641/) | TRACER dùng decision-tree branching; tác giả cung cấp khoảng 3,6 nghìn hội thoại trên 3 miền cho hội thoại thương mại điện tử hướng mục tiêu. | Áp dụng nguyên tắc hỏi ngắn, có mục tiêu; không ép cây hội thoại cố định vì khách có thể đổi mục tiêu. |
+| **SpokenWOZ: A Large-Scale Speech-Text Benchmark for Spoken Task-Oriented Dialogue Agents** — Shuzheng Si et al. (NeurIPS 2023). [NeurIPS paper](https://papers.nips.cc/paper_files/paper/2023/hash/7b16688a2b053a1b01474ab5c78ce662-Abstract-Datasets_and_Benchmarks.html) | 5.700 dialogues, khoảng 203 nghìn turns và 249 giờ audio ở 8 miền; setup paper báo cáo best end-to-end completion 52,1% và spoken TOD joint goal accuracy 25,65%. | Cho thấy text test không xác minh STT/TTS; không dùng SpokenWOZ score làm score cho kiosk tiếng Việt. |
 
-- [ShoppingBench (2025)](https://arxiv.org/abs/2508.04266) đánh giá tác vụ mua sắm theo chuỗi bước. Áp dụng bằng cách kiểm tra cả hội thoại mua hàng, thay vì chỉ chấm câu trả lời độc lập.
-- [Berkeley Function Calling Leaderboard](https://gorilla.cs.berkeley.edu/leaderboard) tập trung vào chọn và thực thi lời gọi hàm. Áp dụng bằng kiểm thử route intent, giới hạn quyền theo session và xác nhận hiệu lực của tool qua kết quả backend.
-- [ViWOZ (2022)](https://arxiv.org/abs/2203.07742) cung cấp hội thoại tác vụ tiếng Việt nhiều lượt; dữ liệu không phải miền bán lẻ. Áp dụng ở mức thiết kế kiểm tra cách nói tự nhiên và lượt nối tiếp, không xem đây là bằng chứng độ chính xác retail.
+### Lựa chọn kỹ thuật
 
-## Chạy demo cục bộ
+1. Dùng pipeline dễ đo: chuẩn hóa query → lấy candidate → lọc hard constraint bằng code → xếp hạng → kiểm tra nguồn.
+2. Không xem lời văn model là state hay bằng chứng giao dịch; chấm cả tool/state transition.
+3. Cập nhật state từng phần thay vì tái tạo toàn bộ intent mỗi lượt.
+4. Chỉ hỏi làm rõ khi thuộc tính thiếu ảnh hưởng lựa chọn.
+5. Không thêm vector store/model agent/workflow nặng nếu chưa cải thiện benchmark cùng catalog.
 
-Trong terminal backend tại thư mục repo:
+## 4. Proposed and Implemented Architecture
 
-```powershell
-$env:CATALOG_REPOSITORY = "demo"
-.venv\Scripts\python.exe -m uvicorn backend.api.main:app --reload
-```
+### Trước
 
-Trong terminal frontend:
+Giao diện gọi API hội thoại trung tâm. Policy, intent, grounding và một phần business flow tập trung trong main.py; không phải mọi module trong tài liệu đều có class/runtime tương ứng.
 
-```powershell
+~~~mermaid
+flowchart LR
+  UI[Kiosk Vue] --> API[FastAPI main.py]
+  API --> POLICY[Intent and policy checks]
+  API --> AGENT[RetailAgent]
+  AGENT --> TOOLS[Retail tools]
+  TOOLS --> DB[(Catalog source)]
+  API --> SESSION[Session store]
+~~~
+
+### Hiện tại
+
+~~~mermaid
+flowchart LR
+  USER[Khách text hoặc touch] --> UI[Kiosk Vue]
+  UI --> API[FastAPI API]
+  API --> GUARD[Policy and action guards]
+  GUARD --> FLOW[Shopping flow controller]
+  GUARD --> AGENT[RetailAgent tool loop]
+  FLOW --> MEMORY[ShoppingSessionState]
+  AGENT --> TOOLS[Retail tools and validators]
+  TOOLS --> DEMO[(Demo catalog)]
+  TOOLS --> PG[(PostgreSQL read-only snapshot)]
+  FLOW --> SHOP[In-memory cart and checkout sandbox]
+  GUARD --> TICKET[Single-process demo support ticket]
+  MEMORY -. production adapter .-> REDIS[(Redis shared sessions)]
+  SHOP --> API
+  TICKET --> API
+  API --> UI
+~~~
+
+API vẫn điều phối nhiều logic. PostgreSQL/Redis là adapter có trong code nhưng probe hiện tại timeout. Production không nên dùng cart/ticket in-memory; snapshot không phải POS tồn live.
+
+### Luồng dữ liệu
+
+~~~mermaid
+sequenceDiagram
+  participant C as Khách
+  participant K as Kiosk
+  participant A as API policy/router
+  participant S as Session state
+  participant T as Retail tools
+  participant D as Catalog
+  participant H as Shopping sandbox
+  C->>K: Hỏi, đổi tiêu chí hoặc chọn hàng
+  K->>A: POST /agent/respond + session_id
+  A->>S: Đọc state/constraint hiện tại
+  A->>A: Policy + deterministic intent
+  alt Tìm/tư vấn catalog
+    A->>T: search/recommend/snapshot
+    T->>D: Candidate/query có giới hạn
+    D-->>T: Dữ kiện và provenance
+    T-->>A: Observation đã validate
+  else Cart/checkout
+    A->>H: Cập nhật giỏ, quote hoặc order sandbox
+    H-->>A: Trạng thái có cấu trúc
+  end
+  A->>S: Lưu state transition
+  A-->>K: Text + state/cart/order/ticket
+  K-->>C: Hiển thị phản hồi
+~~~
+
+## 5. Standard Retail Sales Flow
+
+### Hành trình mua sắm
+
+START SESSION → DISCOVER NEEDS → CLARIFY (nếu cần) → SEARCH / RECOMMEND → COMPARE / SELECT → CART → CONFIRM CHECKOUT → PAYMENT STATUS hoặc STAFF HANDOFF → CLOSE SESSION
+
+Khách có thể vào thẳng câu hỏi giá/vị trí, đổi tiêu chí, hỏi lại sản phẩm, thêm nhiều món, hủy checkout, nhờ nhân viên hoặc kết thúc phiên. Flow không bắt buộc mọi bước.
+
+### State và ràng buộc
+
+Runtime lưu current intent, active product/category, constraints, selected/comparison IDs, cart reference, pending clarification/action/quantity/confirmation/order, handoff/payment status và state version.
+
+- **SET:** thêm/cập nhật một tiêu chí.
+- **REPLACE:** thay toàn bộ constraint khi bắt đầu lại.
+- **REMOVE:** bỏ một tiêu chí.
+- **KEEP:** giữ tiêu chí không đổi.
+
+“Tìm snack không cay dưới 30 nghìn” rồi “đổi thành dưới 20 nghìn” giữ category=snack, spicy=false và thay budget thành LT 20.000 VND. API test xác nhận state này.
+
+### Tra cứu và recommendation
+
+- Giá/kệ/tồn/hạn dùng/thuộc tính chỉ được nói khi tool trả field tương ứng.
+- Hard constraint như nhóm hàng, giá, độ cay và sellable stock lọc bằng code; brand/khẩu vị có thể là preference mềm.
+- Thiếu nhãn dinh dưỡng hoặc promotion còn hạn thì agent nói chưa xác minh.
+- Không có dữ liệu doanh số/đánh giá để xác nhận “bán chạy nhất”, “ngon nhất” hoặc “được yêu thích nhất”.
+
+### Giỏ, checkout, payment, handoff
+
+Cart dùng integer VND, kiểm tra session ownership, stock/expiry, số lượng, idempotency và tổng tiền ở backend. Checkout tạo quote/token có hạn, yêu cầu xác nhận rõ ràng rồi mới tạo order PENDING. Chỉ sự kiện sandbox được xác minh mới cập nhật status; câu khách tự báo đã chuyển khoản không làm order thành PAID. Không có ngân hàng/gateway thật và không gửi QR thật.
+
+Yêu cầu hỗ trợ rõ ràng tạo ticket demo có ID, loại vấn đề, mô tả đã lọc contact data và status RECEIVED_DEMO. Response nói rõ chưa liên hệ nhân viên thật. Session cô lập theo session_id; idle TTL và close xóa memory hội thoại. Redis adapter có kiểm thử fail-closed nhưng chưa xác minh live. Cart/order/ticket chỉ bền trong process demo.
+
+## 6. Implementation Details
+
+| Vấn đề | Thay đổi | Bằng chứng |
+|---|---|---|
+| “Chuyển khoản xong” bị nhận thành câu hỏi sản phẩm | Mở rộng intent mẫu trong backend/services/shopping_flow.py để route CHECK_PAYMENT_STATUS. | API test dùng chính câu “Mình chuyển khoản xong rồi, kiểm tra giúp nhé”; response PENDING, chưa xác minh ngân hàng thật. |
+| Injection “bỏ qua xác minh” có thể tạo ticket demo | Thêm marker trong main.py và support.py; chặn override trước shopping/support, không gọi tool hay tạo ticket. | Test xác nhận local policy, state không đổi, ticket null, tools_used rỗng. |
+| “Tạo đơn … gửi QR” không được nhận là checkout | Thêm “tạo đơn/create order”; giỏ trống trả lời yêu cầu thêm món, không tạo QR hay claim giao dịch. | Ba ca live về cart, empty checkout và demo handoff đạt 3/3. |
+| Grader sai ở recommendation deterministic | evaluation/live_text_conversation_benchmark.py đọc session state và kiểm constraint/cart/order/ticket/tool/response. | Bộ v2 kiểm tra category=snack, spicy=false, LT 20.000 và transaction fields. |
+| Default cases cũ khẳng định tính năng chưa hỗ trợ | Đổi sang cart write, checkout giỏ trống, demo handoff; cập nhật evaluation/README.md. | Default live cases pass 3/3; file v1 và kết quả cũ được giữ nguyên. |
+| Thiếu field dễ bị bịa | Grounding layer render snapshot/tool observations; policy từ chối thuộc tính chưa có. | v2 kiểm nutrition thiếu dữ liệu và false payment; P0 kiểm false-paid/expired stock. |
+| Đổi lựa chọn qua nhiều lượt | ShoppingSessionState và thao tác constraint; parser ghép state cũ với query mới. | API multi-turn test và live grader đọc state để assert. |
+| Giỏ/hỗ trợ bị hiểu như thật | ShoppingService, SupportTicketStore đánh dấu sandbox/demo; commerce write chỉ dùng demo catalog. | Sandbox 0 false-paid; cross-session checks không leakage. |
+| Snapshot bị hiểu nhầm là store feed | Importer quarantine dữ liệu lỗi, tools gắn source/freshness; campaign/receipt/POI cần feed riêng. | 3.099 rows, 3.081 accepted, 18 quarantine; không dùng promotion text cũ để báo campaign active. |
+| Planogram bị hiểu là vị trí vật lý | Phân biệt RECOMMENDED_PLANOGRAM và SIMULATED; ảnh theo dữ liệu gán SKU/aisle. | Vị trí là đề xuất, chưa xác minh tại cửa hàng. |
+
+## 7. Evaluation Methodology
+
+### Môi trường
+
+- Windows; Python 3.13.15; Node 24.21.0; npm 11.19.0.
+- Frontend dùng Vite 8.2.2 và Vitest 4.1.11.
+- API test chạy CATALOG_REPOSITORY=demo với 6 SKU.
+- data/winmart_products.json: 3.099 rows, 3.081 accepted, 18 quarantined; SHA-256 a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6.
+- Live v2 chỉ text tiếng Việt; không mở mic, gọi STT/TTS hoặc đo browser streaming.
+- Model-only smoke dùng Qwen qwen/qwen3.8-27b, fallback tắt. Live v2 gọi Groq thật qua API local ASGI; local intent/catalog xử lý phần deterministic.
+
+### Phân biệt kết quả
+
+| Loại | Chứng minh | Không chứng minh |
+|---|---|---|
+| Unit/API | Parser, state, ownership, policy, tool contract, sandbox. | Hội thoại khách thật hoặc availability ngoài test. |
+| P0 regression | 8 nhóm lỗi × 5 lượt; response giả lập. | Model tự chọn tool hay độ tự nhiên. |
+| Shopping sandbox | API workflow/cart/order/payment/session, không gọi LLM. | Latency mạng, DB production, payment thật. |
+| Live Groq text | Provider thật trên tập nhỏ; grader kiểm dữ kiện/state. | Hallucination rate đại diện, giọng nói, browser UX hoặc model planning tổng quát. |
+| Frontend unit/build | Component test, TypeScript, bundle build. | E2E browser, mic/camera, kiosk touch thiết bị thật. |
+| Provider probe | Groq model-list trả 200; key chỉ được kiểm sự hiện diện, không in giá trị. | Availability liên tục hoặc quota trong tương lai. |
+
+## 8. Experimental Results
+
+### Kết quả cuối trên code commit 1757bbd
+
+| Kiểm tra | Kết quả | Giới hạn |
+|---|---:|---|
+| Backend pytest | **490 passed** | Catalog demo, in-process. |
+| Frontend Vitest | **41 passed / 5 files** | JSDOM cảnh báo media/canvas chưa được giả lập. |
+| Vue TypeScript + production build | **Pass** | Vite cảnh báo chunk model-viewer 1.024,05 kB (gzip 290,30 kB); main JS 168,28 kB (gzip 55,29 kB). |
+| Ruff | **Pass** cho backend/tests/evaluation | Quét toàn workspace có 6 lỗi format trong .tmp/check_voice_repair.py; file tạm chưa track được giữ nguyên, không commit. |
+| compileall / git diff --check | **Pass** | Có cảnh báo chuẩn hóa LF/CRLF trên Windows. |
+| P0 regression | **40/40 pass** (8 × 5) | Scripted/fake responses. Artifact: evaluation/results/p0_regression_20261019T085321Z.json. |
+| Shopping sandbox | **20/20 pass**, 98 API calls, 0 LLM calls | 4 false-payment check, 0 false confirmation; 4 cross-session check, 0 leak. P50 1.833 ms, P95 12.551 ms, mean 5.351 ms in-process; không phải latency mạng. |
+| Live text v2 | **13/13 pass**, 7 hội thoại; 2 provider requests, 2 tool calls | P50 9 ms, P95 nearest-rank 9.693 ms; đuôi dài do Groq. 4.646 prompt / 79 completion tokens. Các lời gọi tool từ model chưa có expected-tool assertion riêng trong bộ này. Mẫu nhỏ. |
+| Default live cases sau cập nhật | **3/3 pass** | Thêm một SKU, checkout giỏ trống, handoff demo; không gọi LLM. |
+| Live Groq model-only smoke | **5/5 HTTP 200**, Qwen trả 4 provider calls; fallback/rate-limit 0 | Provider median 751 ms; API P95 17.787 ms có pacing 9 giây, P95 bỏ pacing 2.600 ms. 9.271 prompt / 156 completion tokens. 2 trường price/shelf đạt 2/2 minimum-field grade. Không đo first token. |
+
+### Trước/sau và triage
+
+- Baseline commit 2f8b036 có 487 backend pass và 41 frontend pass. Sau regression injection và checkout, code cuối có 490 backend pass.
+- Lần v2 đầu đạt 10/13 theo grader cũ. Một assertion là false negative: grader yêu cầu arguments trong LLM trace trong khi recommendation chạy deterministic và session constraints đúng. Hai lỗi thật là phrase “chuyển khoản xong” và injection “bỏ qua xác minh”. Sau sửa parser, policy gate và state-aware grader, đạt 13/13.
+- Lần đầu chạy 3 default cases đạt 2/3; “Tạo đơn … QR” không được route sang checkout. Thêm “tạo đơn/create order”; chạy lại đạt 3/3, không phát QR hay claim thanh toán.
+- Sandbox benchmark cũ cũng 20/20. Chênh lệch timing in-process giữa lần chạy không đại diện hiệu năng production.
+- 13/13 là assertion định trước (ID, phrase, state, cart, order, ticket), không phải chấm thủ công naturalness và không có nghĩa hallucination rate bằng 0.
+
+Artifact mới được giữ riêng, không ghi đè lịch sử:
+
+- evaluation/results/live_text_retail_v2_final_20261019.json
+- evaluation/results/live_text_retail_v2_after_fixes_20261019.json
+- evaluation/results/live_text_retail_v2_20261019.json
+- evaluation/results/live_text_retail_default_cases_20261019.json
+- evaluation/results/live_text_retail_default_cases_after_fixes_20261019.json
+- evaluation/results/p0_regression_20261019T085321Z.json
+- evaluation/results/shopping_flow_sandbox_20261019T085320Z.json
+- evaluation/results/live_groq_model_after_shopping_20261019.json
+
+## 9. Error Analysis
+
+| Nhóm | Lỗi/rủi ro còn lại | Xử lý hoặc bước cần làm |
+|---|---|---|
+| Intent | Cụm thanh toán có biến thể vùng miền; trước đây “chuyển khoản xong” rơi vào product intent. | Đã thêm mẫu và test. Mở rộng theo hội thoại gán nhãn, tránh regex quá rộng. |
+| State tracking | Grader cũ bỏ sót deterministic state; parser còn dựa trên cụm đã biết. | Grader đọc session state; API test giữ category/spicy, thay budget. Thêm typo/ASR/no-diacritic/conflict cases. |
+| Retrieval | Demo live chỉ 6 SKU; retrieval PostgreSQL trên 3.099 dòng không chạy được. | Chưa kết luận Recall@k/typo quality; chạy lại khi DB hoạt động. |
+| Grounding | Snapshot có ngày cũ; giá demo có thể khác quầy hiện tại. | Gắn freshness khi có; cần feed giá/tồn theo chi nhánh và SLA. Thiếu field thì không khẳng định. |
+| Recommendation | Không có doanh số/ratings để xếp “bán chạy nhất/ngon nhất”. | Chỉ gợi ý theo constraint có dữ liệu; chưa có analytics khách hàng/thị trường. |
+| Database | PostgreSQL và Redis cấu hình có nhưng timeout. | Chưa chạy query/session integration live; unit adapter không thay cho vận hành thật. |
+| Payment | Không có bank webhook. | Sandbox giữ PENDING; LLM không đặt PAID. Chưa có payment provider, không gửi QR thật. |
+| Customer support | Ticket simulator không liên hệ nhân viên/CRM. | Response ghi rõ demo; cần queue có ack nếu triển khai handoff thật. |
+| Security | Guard chặn các injection đã nhận diện, gồm bypass verification. | Chưa penetration test, chưa đánh giá injection gián tiếp từ feed/catalog. |
+| UI/voice | Test/build pass nhưng text chờ JSON hoàn tất; chưa đo streaming, mic, TTS, lip-sync. | Cần browser e2e và latency tới first visible/audio token trên thiết bị thật. |
+| Latency | Median live thấp do nhiều route local; một query Groq mất khoảng 9,7 giây. | Tách provider/local ASGI; cần benchmark nhiều lượt trên mạng/thiết bị thật. |
+
+## 10. Limitations and Future Work
+
+### Trước demo dùng dữ liệu cửa hàng thật
+
+1. Khôi phục PostgreSQL và Redis; chạy catalog, session, TTL, state ownership và store routing trên staging.
+2. Nạp store master/kiosk mapping, giá/tồn theo chi nhánh, campaign có hạn/terms, receipt event và vị trí kệ đã kiểm chứng. Catalog web không xác nhận stock chi nhánh.
+3. Thay in-memory cart/order/ticket bằng storage transactional bền vững; test retry đồng thời và multi-replica.
+4. Nếu có thanh toán, dùng sandbox provider và xác minh signature/idempotency/replay/expiry trước production.
+5. Chỉ tích hợp CRM/staff queue khi có API ack; simulator phải giữ nhãn demo.
+
+### Cải tiến chất lượng
+
+- Mở rộng lên hàng trăm tác vụ tiếng Việt do người Việt viết/đọc lại; phân tầng Bắc/Trung/Nam, dấu/không dấu, ASR noise và sửa ý.
+- Chấm riêng intent, entity, state update, retrieval, hard constraint, grounding, tool selection, handoff và naturalness.
+- Paired before/after cùng dataset/catalog/version; lưu raw JSON, grader version, git SHA.
+- Browser e2e cho chat/cart/session reset, streaming, mic permission, chọn device, STT/TTS cleanup và lip-sync.
+- Tối ưu model-viewer chunk sau khi đo trên thiết bị thật.
+- Chỉ làm RAG chính sách khi có tài liệu được duyệt, provenance/version và retrieval benchmark.
+
+### Chưa xác minh
+
+Không có load test production, payment thật, POS, PostgreSQL/Redis live, staff CRM, microphone/TTS, network latency, user study hay full BFCL/ShoppingBench/Shopping Reasoning Bench. Không tuyên bố production-ready.
+
+## 11. Reproducibility
+
+### Mã nguồn và cấu hình
+
+- Branch main; code commit được đánh giá: 1757bbd988de141ae23a6cf3f475a9c496d0340f.
+- Runtime test dùng catalog demo với CATALOG_REPOSITORY=demo.
+- Live Groq cần key trong .env; báo cáo và artifact không chứa giá trị key.
+- PostgreSQL/Redis probe timeout; không dùng chúng để tạo kết quả pass giả.
+- Python 3.13.15, Node 24.21.0, npm 11.19.0.
+
+### Lệnh kiểm tra
+
+~~~powershell
+$env:CATALOG_REPOSITORY = 'demo'
+.venv\Scripts\python.exe -m pytest -q
+.venv\Scripts\ruff.exe check backend tests evaluation
+.venv\Scripts\python.exe -m compileall -q backend evaluation tests
+git diff --check
+
 cd apps\kiosk-airi
-npm run dev
-```
+npm run test:run -- --maxWorkers=2
+npm run build
+~~~
 
-Thiết lập `CATALOG_REPOSITORY=demo` chỉ dành cho demo/test. Không thay URL database hoặc bật checkout sandbox như hệ thống thanh toán thật.
+### Lệnh benchmark và demo
+
+~~~powershell
+$env:CATALOG_REPOSITORY = 'demo'
+.venv\Scripts\python.exe evaluation\run_p0_regressions.py --trials-per-case 5
+.venv\Scripts\python.exe evaluation\run_shopping_flow_benchmark.py --trials 2
+.venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark --case-file evaluation\cases\vietnamese_retail_shopping_v2.json --pace-seconds 9 --output evaluation\results\live_text_retail_v2_reproduced.json
+~~~
+
+Demo: terminal backend đặt CATALOG_REPOSITORY=demo rồi chạy uvicorn backend.api.main:app --reload; terminal frontend chạy npm run dev trong apps/kiosk-airi. Demo không thay database URL hay bật giao dịch thật.
+
+Artifact tái lập nằm trong evaluation/results với timestamp ở mục 8. Dùng tên output mới, không ghi đè lịch sử. Báo cáo customer-care cũ được giữ tại docs/reports/archive/.
+
+## 12. References
+
+1. Ye, Jingheng et al. 2024. **ProductAgent: Benchmarking Conversational Product Search Agent with Asking Clarification Questions.** arXiv:2407.00942. https://arxiv.org/abs/2407.00942
+2. Wang, Jiangyuan et al. 2025. **ShoppingBench: A Real-World Intent-Grounded Shopping Benchmark for LLM-based Agents.** arXiv:2508.04266. https://arxiv.org/abs/2508.04266
+3. Fan, Shuxian et al. 2026. **Shopping Reasoning Bench: An Expert-Authored Benchmark for Multi-Turn Conversational Shopping Assistants.** arXiv:2606.12608. https://arxiv.org/abs/2606.12608
+4. Berkeley Gorilla Team. 2025. **Berkeley Function-Calling Leaderboard V4.** https://gorilla.cs.berkeley.edu/leaderboard and https://gorilla.cs.berkeley.edu/blogs/15_bfcl_v4_web_search.html
+5. Nguyen Van, Phi et al. 2022. **ViWOZ: A Multi-Domain Task-Oriented Dialogue Systems Dataset For Low-resource Language.** arXiv:2203.07742. https://arxiv.org/abs/2203.07742
+6. Lesci, Pietro et al. 2023. **Diable: Efficient Dialogue State Tracking as Operations on Tables.** Findings of ACL 2023, DOI 10.18653/v1/2023.findings-acl.615. https://aclanthology.org/2023.findings-acl.615/
+7. Li, Xiangci et al. 2025. **Wizard of Shopping: Target-Oriented E-commerce Dialogue Generation with Decision Tree Branching.** ACL 2025. https://aclanthology.org/2025.acl-long.641/
+8. Si, Shuzheng et al. 2023. **SpokenWOZ: A Large-Scale Speech-Text Benchmark for Spoken Task-Oriented Dialogue Agents.** NeurIPS Datasets and Benchmarks 2023. https://papers.nips.cc/paper_files/paper/2023/hash/7b16688a2b053a1b01474ab5c78ce662-Abstract-Datasets_and_Benchmarks.html
+9. W3C. **Web Content Accessibility Guidelines (WCAG) 2.2, Target Size (Minimum), Success Criterion 2.5.8.** https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum
+10. W3C. **Web Content Accessibility Guidelines (WCAG) 2.2, Target Size (Enhanced), Success Criterion 2.5.5.** https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced
