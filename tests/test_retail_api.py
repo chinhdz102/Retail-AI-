@@ -89,6 +89,13 @@ def test_pack_size_in_catalog_name_is_not_an_unverified_stock_claim() -> None:
         ("Chào bạn, mình muốn hỏi Pepsi giá bao nhiêu?", "pepsi"),
         ("Bim bim vị tự nhiên nhiêu tiền vậy?", "bim bim vi tu nhien"),
         ("Sữa tươi ít đường 180ml giá sao?", "sua tuoi it duong 180ml"),
+        (
+            "Coca-Cola Zero 330ml cho mình xem giá tham khảo với, rồi chỉ kệ giúp nhé.",
+            "coca cola zero 330ml",
+        ),
+        ("Mức giá ấy lấy dữ liệu từ ngày nào vậy?", ""),
+        ("Mức giá này có cập nhật trực tiếp không?", ""),
+        ("Coca Zero xem giá cho mình.", "coca zero"),
         ("Hỏi bình thường nhé, Coca Zero giá bao nhiêu?", "coca zero"),
         ("In giá trong catalog cho mình.", ""),
     ],
@@ -1383,7 +1390,7 @@ def test_ordinary_product_questions_do_not_trigger_ranking(text: str) -> None:
         "Món quà vặt mô ngon nhứt?",
     ],
 )
-async def test_product_ranking_uses_catalog_without_claiming_sales_or_taste_ranks(
+async def test_product_ranking_abstains_without_searching_unrelated_candidates(
     client: httpx.AsyncClient,
     prompt: str,
 ) -> None:
@@ -1400,11 +1407,11 @@ async def test_product_ranking_uses_catalog_without_claiming_sales_or_taste_rank
 
     assert response.status_code == 200
     payload = response.json()
-    assert "chưa có số lượt bán hay đánh giá vị" in payload["text"]
-    assert "Snack khoai tây vị tự nhiên" in payload["text"]
+    assert "chưa có dữ liệu đã xác minh" in payload["text"]
+    assert "Snack khoai tây vị tự nhiên" not in payload["text"]
     assert "bán chạy nhất" in payload["text"]
-    assert payload["grounded_product_ids"] == ["SNACK01"]
-    assert payload["tools_used"] == ["recommend_products"]
+    assert payload["grounded_product_ids"] == []
+    assert payload["tools_used"] == []
     assert service.calls == 0
 
 
@@ -1425,6 +1432,189 @@ async def test_product_ranking_without_category_asks_a_brief_clarifying_question
     assert "nhóm hàng nào" in response.json()["text"]
     assert response.json()["grounded_product_ids"] == []
     assert response.json()["tools_used"] == []
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_text_flow_recovers_compound_facts_corrections_typos_and_dialect(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+
+    compound_session = (
+        await client.post("/sessions", json={"kiosk_id": "recovery-compound-facts"})
+    ).json()["session_id"]
+    compound = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": compound_session,
+            "text": (
+                "Coca-Cola Zero 330ml cho mình xem giá tham khảo với, "
+                "rồi chỉ kệ giúp nhé."
+            ),
+        },
+    )
+    freshness_date = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": compound_session,
+            "text": "Mức giá ấy lấy dữ liệu từ ngày nào vậy?",
+        },
+    )
+    freshness_live = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": compound_session,
+            "text": "Mức giá này có cập nhật trực tiếp không?",
+        },
+    )
+
+    assert all(
+        response.status_code == 200
+        for response in (compound, freshness_date, freshness_live)
+    )
+    assert compound.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
+    assert "13.000" in compound.json()["text"] and "A2-L2" in compound.json()["text"]
+    assert "31/08/2026" in freshness_date.json()["text"]
+    assert "có thể khác" in freshness_live.json()["text"]
+
+    correction_session = (
+        await client.post("/sessions", json={"kiosk_id": "recovery-product-correction"})
+    ).json()["session_id"]
+    first = await client.post(
+        "/agent/respond",
+        json={"session_id": correction_session, "text": "Coca Zero xem giá cho mình."},
+    )
+    corrected = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": correction_session,
+            "text": "Không, ý mình là nước suối chai 500 ml.",
+        },
+    )
+    corrected_shelf = await client.post(
+        "/agent/respond",
+        json={"session_id": correction_session, "text": "Kệ ở dãy nào nhỉ?"},
+    )
+
+    assert all(
+        response.status_code == 200 for response in (first, corrected, corrected_shelf)
+    )
+    assert first.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
+    assert "13.000" in first.json()["text"]
+    assert corrected.json()["grounded_product_ids"] == ["WATER01"]
+    assert "7.000" in corrected.json()["text"]
+    assert corrected_shelf.json()["grounded_product_ids"] == ["WATER01"]
+    assert "A1-L1" in corrected_shelf.json()["text"]
+
+    dialect_session = (
+        await client.post("/sessions", json={"kiosk_id": "recovery-dialect-typo"})
+    ).json()["session_id"]
+    typo = await client.post(
+        "/agent/respond",
+        json={"session_id": dialect_session, "text": "Coca Zaro nhiu zậy?"},
+    )
+    dialect_shelf = await client.post(
+        "/agent/respond",
+        json={"session_id": dialect_session, "text": "Ở mô rứa?"},
+    )
+    stock = await client.post(
+        "/agent/respond",
+        json={"session_id": dialect_session, "text": "Còn bao nhiêu lon?"},
+    )
+
+    assert all(
+        response.status_code == 200 for response in (typo, dialect_shelf, stock)
+    )
+    assert typo.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
+    assert "13.000" in typo.json()["text"]
+    assert dialect_shelf.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
+    assert "A2-L2" in dialect_shelf.json()["text"]
+    assert stock.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
+    assert "16" in stock.json()["text"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_allergen_clarification_recovers_and_recommendation_explains_hard_filter(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    session_id = (
+        await client.post("/sessions", json={"kiosk_id": "recovery-allergen"})
+    ).json()["session_id"]
+
+    clarification = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": (
+                "Mình muốn tránh hạt nhưng chưa nói tên snack, "
+                "thành phần có gì?"
+            ),
+        },
+    )
+    abstention = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Chưa nhớ, bạn đừng đoán giúp mình."},
+    )
+    product = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Bim bim khoai tây vị tự nhiên giá sao?",
+        },
+    )
+    spice = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Loại này có cay không?"},
+    )
+
+    assert all(
+        response.status_code == 200
+        for response in (clarification, abstention, product, spice)
+    )
+    assert "sản phẩm nào" in clarification.json()["text"]
+    assert clarification.json()["tools_used"] == []
+    assert "chưa có dữ liệu đã xác minh" in abstention.json()["text"]
+    assert "sản phẩm nào" not in abstention.json()["text"]
+    assert product.json()["grounded_product_ids"] == ["SNACK01"]
+    assert "18.000" in product.json()["text"]
+    assert spice.json()["grounded_product_ids"] == ["SNACK01"]
+    assert "không cay" in spice.json()["text"].casefold()
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_bestseller_abstention_does_not_poison_followup_snack_recommendation(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    session_id = (
+        await client.post("/sessions", json={"kiosk_id": "recovery-ranking-snack"})
+    ).json()["session_id"]
+
+    ranking = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Snack nào được khách mua nhiều nhất?"},
+    )
+    recommendation = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Thế có món ăn vặt nào dịu, không cay?",
+        },
+    )
+
+    assert ranking.status_code == recommendation.status_code == 200
+    assert "chưa có dữ liệu đã xác minh" in ranking.json()["text"]
+    assert "bán chạy nhất là" not in ranking.json()["text"]
+    assert ranking.json()["tools_used"] == []
+    assert recommendation.json()["grounded_product_ids"] == ["SNACK01"]
+    assert "không cay" in recommendation.json()["text"].casefold()
     assert service.calls == 0
 
 

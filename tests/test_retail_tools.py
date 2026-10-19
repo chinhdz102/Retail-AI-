@@ -3,10 +3,44 @@ from datetime import UTC, datetime
 
 import pytest
 
-from backend.products.catalog import ProductSnapshot
+from backend.products.catalog import ProductSnapshot, search_products
 from backend.products.repository import DemoProductRepository
 from backend.services.retail_tools import execute_catalog_tool
 from backend.services.vietnamese_intent import normalize_vietnamese
+
+
+def test_demo_catalog_allows_one_conservative_typo_with_an_exact_product_anchor() -> None:
+    assert [product.product_id for product in search_products(query="Coca Zaro")] == [
+        "COKE_ZERO_330"
+    ]
+    assert [product.product_id for product in search_products(query="Coca Zreo")] == [
+        "COKE_ZERO_330"
+    ]
+    assert search_products(query="Zaro") == []
+
+
+def test_demo_catalog_matches_packaging_unit_and_normalizes_central_vietnamese() -> None:
+    assert [product.product_id for product in search_products(query="nuoc suoi chai 500 ml")] == [
+        "WATER01"
+    ]
+    assert normalize_vietnamese("Ở mô rứa?").strip() == "o dau vay"
+
+
+def test_recommendation_observation_preserves_applied_hard_constraints() -> None:
+    observation = execute_catalog_tool(
+        "recommend_products",
+        json.dumps({"category": "snack", "spicy": False}),
+    )
+
+    assert observation.content["constraints"] == {
+        "category": "snack",
+        "brand": None,
+        "spicy": False,
+        "price_operator": None,
+        "price_value_vnd": None,
+    }
+    assert observation.products
+    assert all(product.spicy is False for product in observation.products)
 
 
 def test_snapshot_requires_fields_and_returns_provenance_envelope() -> None:

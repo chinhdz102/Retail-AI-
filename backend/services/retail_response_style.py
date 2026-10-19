@@ -52,13 +52,17 @@ def render_verified_snapshot(
         if language == "en":
             return (
                 f"This catalog record is dated {data_date}; "
-                "I can't confirm it reflects today's store data."
+                "I can't confirm it reflects today's store data, and current store "
+                "information may differ."
             )
         if language == "zh":
-            return f"这条商品目录记录的日期是 {data_date}；我无法确认它是否反映门店的最新数据。"
+            return (
+                f"这条商品目录记录的日期是 {data_date}；我无法确认它是否反映门店的最新数据，"
+                "门店当前信息可能有所不同。"
+            )
         return (
             f"Mục dữ liệu này được ghi nhận ngày {data_date}; "
-            "mình chưa thể xác nhận đây là dữ liệu mới nhất tại cửa hàng."
+            "mình chưa thể xác nhận đây là dữ liệu mới nhất; thông tin tại cửa hàng có thể khác."
         )
 
     if language == "en":
