@@ -70,6 +70,9 @@ let voiceController: VoiceConversationController | null = null
 let listeningStartedAt = 0
 let sessionExpiryTimer: ReturnType<typeof setTimeout> | undefined
 let sessionIdleTimeoutMs = 30 * 60 * 1000
+let sessionGeneration = 0
+let bootInFlight: { generation: number; promise: Promise<void> } | null = null
+let resetInFlight: Promise<void> | null = null
 
 const languageSettings: Record<LanguageCode, {
   label: string
@@ -213,13 +216,14 @@ function handleVoiceError(error: VoiceControllerError) {
 
 async function handleVoiceAudio(audio: Blob) {
   if (!sessionId.value || isUnmounted) return
+  const generation = sessionGeneration
   status.value = 'transcribing'
   voiceHint.value = languageSettings[language.value].transcribing
   try {
     const result = await withSessionRecovery(
       (id) => transcribe(id, audio, language.value),
-      true,
     )
+    if (generation !== sessionGeneration || isUnmounted) return
     if (!result.text.trim()) throw new Error(
       language.value === 'vi'
         ? 'Không nghe rõ câu nói, bạn thử lại nhé'
@@ -229,6 +233,7 @@ async function handleVoiceAudio(audio: Blob) {
     )
     await sendMessage(result.text, true)
   } catch (error) {
+    if (generation !== sessionGeneration || isUnmounted) return
     errorMessage.value = toErrorMessage(
       error,
       language.value === 'vi'
@@ -523,26 +528,60 @@ async function activateAudio() {
 }
 
 async function bootKiosk() {
+  if (isUnmounted || sessionId.value) return
+  const generation = sessionGeneration
+  if (bootInFlight?.generation === generation) return bootInFlight.promise
+
   isBooting.value = true
   voiceHint.value = languageSettings[language.value].preparing
-  try {
-    const session = await createSession('kiosk-01')
-    sessionId.value = session.session_id
-    sessionIdleTimeoutMs = Math.max(1_000, new Date(session.expires_at).getTime() - Date.now())
-    scheduleSessionExpiry(session.expires_at)
+  const pending = (async () => {
     try {
-      cart.value = await getCart(session.session_id)
-    } catch {
-      // Catalog configuration can disable sandbox carts while text lookup is still available.
-      cart.value = null
+      const session = await createSession('kiosk-01')
+      if (isUnmounted || generation !== sessionGeneration) {
+        try {
+          await closeSession(session.session_id)
+        } catch {
+          // A stale boot must not leave a usable session behind when it can be closed.
+        }
+        return
+      }
+      sessionId.value = session.session_id
+      const expiresAt = Date.parse(session.expires_at)
+      if (Number.isFinite(expiresAt)) {
+        sessionIdleTimeoutMs = Math.max(1_000, expiresAt - Date.now())
+        scheduleSessionExpiry(session.expires_at)
+      } else {
+        sessionIdleTimeoutMs = 30 * 60 * 1000
+      }
+      try {
+        const initialCart = await getCart(session.session_id)
+        if (generation === sessionGeneration && sessionId.value === session.session_id) {
+          cart.value = initialCart
+        }
+      } catch {
+        // Catalog configuration can disable sandbox carts while text lookup is still available.
+        if (generation === sessionGeneration && sessionId.value === session.session_id) {
+          cart.value = null
+        }
+      }
+      if (generation === sessionGeneration && sessionId.value === session.session_id) {
+        voiceHint.value = languageSettings[language.value].ready
+      }
+    } catch (error) {
+      if (generation === sessionGeneration && !isUnmounted) {
+        errorMessage.value = toErrorMessage(error, 'Không mở được phiên kiosk')
+        status.value = 'error'
+        voiceHint.value = languageSettings[language.value].sessionError
+      }
+    } finally {
+      if (generation === sessionGeneration) isBooting.value = false
     }
-    voiceHint.value = languageSettings[language.value].ready
-  } catch (error) {
-    errorMessage.value = toErrorMessage(error, 'Không mở được phiên kiosk')
-    status.value = 'error'
-    voiceHint.value = languageSettings[language.value].sessionError
+  })()
+  bootInFlight = { generation, promise: pending }
+  try {
+    await pending
   } finally {
-    isBooting.value = false
+    if (bootInFlight?.promise === pending) bootInFlight = null
   }
 }
 
@@ -557,6 +596,9 @@ function scheduleSessionExpiry(expiresAt: string) {
 }
 
 async function resetKioskSession(notice?: string) {
+  if (resetInFlight) return resetInFlight
+
+  const generation = ++sessionGeneration
   const oldSessionId = sessionId.value
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   sessionExpiryTimer = undefined
@@ -577,44 +619,50 @@ async function resetKioskSession(notice?: string) {
   isRecording.value = false
   isVoiceActive.value = false
   status.value = 'idle'
-  if (oldSessionId) {
-    try {
-      await closeSession(oldSessionId)
-    } catch {
-      // The server may already have expired or closed this session.
+  const pending = (async () => {
+    if (oldSessionId) {
+      try {
+        await closeSession(oldSessionId)
+      } catch {
+        // The server may already have expired or closed this session.
+      }
     }
+    if (isUnmounted || generation !== sessionGeneration) return
+    await bootKiosk()
+    if (!isUnmounted && generation === sessionGeneration && notice) voiceHint.value = notice
+  })()
+  resetInFlight = pending
+  try {
+    await pending
+  } finally {
+    if (resetInFlight === pending) resetInFlight = null
   }
-  await bootKiosk()
-  if (notice) voiceHint.value = notice
 }
 
 async function withSessionRecovery<T>(
   action: (id: string) => Promise<T>,
-  retryAfterSessionLoss = false,
 ): Promise<T> {
   if (!sessionId.value) throw new Error('Chưa kết nối được phiên trò chuyện.')
   const activeSessionId = sessionId.value
+  const generation = sessionGeneration
+  const isCurrentSession = () => !isUnmounted
+    && generation === sessionGeneration
+    && sessionId.value === activeSessionId
+  scheduleSessionExpiry(new Date(Date.now() + sessionIdleTimeoutMs).toISOString())
   try {
     const result = await action(activeSessionId)
-    if (sessionId.value === activeSessionId) {
+    if (isCurrentSession()) {
       scheduleSessionExpiry(new Date(Date.now() + sessionIdleTimeoutMs).toISOString())
     }
     return result
   } catch (error) {
+    if (!isCurrentSession()) throw error
     const failure = error as { status?: number; message?: string }
     const sessionGone = /session (?:is )?(?:closed|expired|not found)/i.test(failure?.message ?? '')
     if (![404, 409, 410].includes(failure?.status ?? 0) || !sessionGone) throw error
     await resetKioskSession(
       'Phiên trước đã kết thúc. Mình đã xóa hội thoại; bạn nói lại yêu cầu trong phiên mới nhé.',
     )
-    if (retryAfterSessionLoss && sessionId.value) {
-      const resumedSessionId = sessionId.value
-      const result = await action(resumedSessionId)
-      if (sessionId.value === resumedSessionId) {
-        scheduleSessionExpiry(new Date(Date.now() + sessionIdleTimeoutMs).toISOString())
-      }
-      return result
-    }
     throw new Error('Phiên trước đã kết thúc. Hội thoại cũ đã được xóa; vui lòng nói lại yêu cầu.')
   }
 }
@@ -622,8 +670,11 @@ async function withSessionRecovery<T>(
 async function sendMessage(value = draft.value, fromVoice = false) {
   const text = value.trim()
   if (!text || status.value === 'thinking' || (status.value === 'transcribing' && !fromVoice)) return
+  const callGeneration = sessionGeneration
   if (!sessionId.value) await bootKiosk()
+  if (callGeneration !== sessionGeneration) return
   if (!sessionId.value || isUnmounted) return
+  const generation = sessionGeneration
 
   if (fromVoice) void unlockAudio()
   pauseVoice()
@@ -637,6 +688,7 @@ async function sendMessage(value = draft.value, fromVoice = false) {
   try {
     const clientTurnId = createRequestId()
     const response = await withSessionRecovery((id) => respond(id, text, language.value, clientTurnId))
+    if (generation !== sessionGeneration || isUnmounted) return
     if (response.state === 'CLOSED') {
       await resetKioskSession('Phiên đã kết thúc. Nội dung cũ đã được xóa khỏi kiosk.')
       return
@@ -658,6 +710,7 @@ async function sendMessage(value = draft.value, fromVoice = false) {
       void resumeHandsFree()
     }
   } catch (error) {
+    if (generation !== sessionGeneration || isUnmounted) return
     errorMessage.value = toErrorMessage(
       error,
       language.value === 'vi'
@@ -686,75 +739,99 @@ function showShoppingError(error: unknown) {
 
 async function handleAddProduct(productId: string) {
   if (!sessionId.value) return
+  const generation = sessionGeneration
   try {
-    cart.value = await withSessionRecovery((id) => addCartItem(id, productId, 1, createRequestId()))
+    const updatedCart = await withSessionRecovery((id) => addCartItem(id, productId, 1, createRequestId()))
+    if (generation !== sessionGeneration || isUnmounted) return
+    cart.value = updatedCart
     checkoutQuote.value = null
     sandboxOrder.value = null
     status.value = 'idle'
     pushMessage('assistant', 'Mình đã thêm sản phẩm vào giỏ demo. Bạn có thể xem lại số lượng hoặc bắt đầu checkout.')
   } catch (error) {
+    if (generation !== sessionGeneration || isUnmounted) return
     showShoppingError(error)
   }
 }
 
 async function handleSetCartQuantity(productId: string, quantity: number) {
   if (!sessionId.value) return
+  const generation = sessionGeneration
   try {
-    cart.value = await withSessionRecovery((id) => setCartItemQuantity(id, productId, quantity, createRequestId()))
+    const updatedCart = await withSessionRecovery((id) => setCartItemQuantity(id, productId, quantity, createRequestId()))
+    if (generation !== sessionGeneration || isUnmounted) return
+    cart.value = updatedCart
     checkoutQuote.value = null
     sandboxOrder.value = null
   } catch (error) {
+    if (generation !== sessionGeneration || isUnmounted) return
     showShoppingError(error)
   }
 }
 
 async function handlePrepareCheckout() {
   if (!sessionId.value) return
+  const generation = sessionGeneration
   try {
-    checkoutQuote.value = await withSessionRecovery((id) => prepareCheckout(id))
-    cart.value = checkoutQuote.value.cart
+    const quote = await withSessionRecovery((id) => prepareCheckout(id))
+    if (generation !== sessionGeneration || isUnmounted) return
+    checkoutQuote.value = quote
+    cart.value = quote.cart
     sandboxOrder.value = null
   } catch (error) {
+    if (generation !== sessionGeneration || isUnmounted) return
     showShoppingError(error)
   }
 }
 
 async function handleConfirmCheckout() {
   if (!sessionId.value || !checkoutQuote.value) return
+  const generation = sessionGeneration
   try {
     const quote = checkoutQuote.value
     sandboxOrder.value = await withSessionRecovery((id) =>
       confirmCheckout(id, quote.confirmation_token, createRequestId()),
     )
+    if (generation !== sessionGeneration || isUnmounted) return
     checkoutQuote.value = null
   } catch (error) {
+    if (generation !== sessionGeneration || isUnmounted) return
     showShoppingError(error)
   }
 }
 
 async function handleCancelCheckout() {
   if (!sessionId.value) return
+  const generation = sessionGeneration
   try {
-    cart.value = await withSessionRecovery((id) => cancelCheckout(id))
+    const updatedCart = await withSessionRecovery((id) => cancelCheckout(id))
+    if (generation !== sessionGeneration || isUnmounted) return
+    cart.value = updatedCart
     checkoutQuote.value = null
   } catch (error) {
+    if (generation !== sessionGeneration || isUnmounted) return
     showShoppingError(error)
   }
 }
 
 async function handleSandboxPayment(outcome: 'PAID' | 'FAILED') {
   if (!sessionId.value || !sandboxOrder.value) return
+  const generation = sessionGeneration
   try {
     const order = await withSessionRecovery((id) =>
       simulateSandboxPayment(id, sandboxOrder.value!.order_id, outcome, createRequestId()),
     )
+    if (generation !== sessionGeneration || isUnmounted) return
     if (order.payment_status === 'PAID') {
       await resetKioskSession('Thanh toán mô phỏng hoàn tất; không phát sinh giao dịch thật. Kiosk đã mở phiên mới.')
       return
     }
     sandboxOrder.value = order
-    cart.value = await withSessionRecovery((id) => getCart(id))
+    const updatedCart = await withSessionRecovery((id) => getCart(id))
+    if (generation !== sessionGeneration || isUnmounted) return
+    cart.value = updatedCart
   } catch (error) {
+    if (generation !== sessionGeneration || isUnmounted) return
     showShoppingError(error)
   }
 }
@@ -838,12 +915,16 @@ onMounted(() => {
 })
 onUnmounted(() => {
   isUnmounted = true
+  const closingSessionId = sessionId.value
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   navigator.mediaDevices?.removeEventListener?.('devicechange', refreshMicrophones)
   voiceController?.stop()
   speechRequestId += 1
   releaseAudioPlayback()
   if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  if (closingSessionId) void closeSession(closingSessionId).catch(() => {
+    // The browser may be navigating away; backend TTL still bounds any session that cannot close.
+  })
 })
 </script>
 

@@ -57,27 +57,24 @@ vi.mock('./voice-controller', () => ({
 import App from './App.vue'
 
 describe('voice transcript integration', () => {
-  it('recovers an expired backend session and resends the same microphone audio once', async () => {
+  it('does not replay microphone audio into a new customer session after expiry', async () => {
     vi.clearAllMocks()
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
     apiMocks.createSession.mockResolvedValueOnce({ session_id: 'old-session', expires_at: expiresAt })
       .mockResolvedValueOnce({ session_id: 'recovered-session', expires_at: expiresAt })
     apiMocks.transcribe.mockRejectedValueOnce(Object.assign(new Error('Session not found'), { status: 404 }))
-      .mockResolvedValueOnce({ text: 'Coca Zero giá bao nhiêu?' })
-    apiMocks.respond.mockResolvedValue({ text: 'Bạn muốn hỏi loại Coca Zero nào?', model: 'catalog' })
-    apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
     const wrapper = mount(App)
     await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
     await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
     const audio = new Blob(['microphone audio'])
     controllerStore.current.options.onAudio(audio)
-    await vi.waitFor(() => expect(wrapper.text()).toContain('Bạn muốn hỏi loại Coca Zero nào?'))
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Phiên trước đã kết thúc'))
     expect(apiMocks.createSession).toHaveBeenCalledTimes(2)
     expect(apiMocks.transcribe).toHaveBeenNthCalledWith(1, 'old-session', audio, 'vi')
-    expect(apiMocks.transcribe).toHaveBeenNthCalledWith(2, 'recovered-session', audio, 'vi')
-    expect(apiMocks.respond).toHaveBeenCalledWith(
-      'recovered-session', 'Coca Zero giá bao nhiêu?', 'vi', expect.any(String),
-    )
+    expect(apiMocks.transcribe).toHaveBeenCalledTimes(1)
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.message-row')).toHaveLength(0)
   })
 
   it('keeps transcription errors visible when hands-free listening resumes', async () => {
