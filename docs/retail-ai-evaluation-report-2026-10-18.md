@@ -94,3 +94,30 @@ $env:CATALOG_REPOSITORY='demo'
 ```
 
 P0 runner có thể gọi bằng `asyncio.run(evaluation.run_p0_regressions.benchmark())` để lấy kết quả mà không ghi đè file kết quả đã theo dõi trong repo.
+
+## Bổ sung đánh giá chăm sóc khách hàng — 19/10/2026
+
+### Phạm vi và kết quả
+
+Đã rà soát đường đi từ câu nhập trong kiosk → `POST /agent/respond` → định tuyến policy/catalog → hiển thị bong bóng chat. Bộ câu kiểm tra bao gồm tích điểm/thành viên, đổi trả/hoàn tiền, giờ mở cửa, tiền mặt/thẻ/MoMo/QR/chuyển khoản, giao dịch lỗi hoặc bị tính tiền hai lần, hàng lỗi/hết hạn, phàn nàn/phản ánh, yêu cầu gặp quản lý, tiếng Anh và các câu hỏi sản phẩm gần giống để kiểm tra bắt nhầm. Một ca injection yêu cầu giả vờ đã ghi nhận khiếu nại cũng được kiểm tra.
+
+Trước khi sửa, Groq thật (`qwen/qwen3.8-27b`) nhận câu “Mình cần hỗ trợ với một giao dịch. Bạn có thể giúp gì?” và trả lời theo hướng kiểm tra nhãn sản phẩm. Lượt đó mất **2.05 giây**, không gọi tool nhưng chọn sai ngữ cảnh. Các biến thể như “phàn nàn”, “phản ánh”, hỏi MoMo/chuyển khoản hoặc gặp quản lý cũng chưa được định tuyến đầy đủ; LLM giả lập có thể khẳng định sai rằng đã báo quản lý và hứa hoàn tiền.
+
+Đã mở rộng nhận diện chính sách/chăm sóc khách hàng tiếng Việt và tiếng Anh, thêm câu trả lời riêng cho câu hỏi chính sách và yêu cầu khiếu nại, và thêm chốt đầu ra để từ chối lời khẳng định đã tạo ticket, liên hệ nhân viên hoặc hoàn tiền nếu không có tool thực hiện. Các câu hỏi giá sản phẩm kiểu “nhân viên ơi, Coca Zero giá bao nhiêu?”, đổi nhãn hàng và hỏi hạn dùng của sản phẩm vẫn đi theo luồng catalog.
+
+| Kiểm tra | Kết quả |
+|---|---:|
+| Backend pytest | **453 passed** |
+| P0 regression | **40/40 passed** (8 nhóm × 5 lượt) |
+| Intent chăm sóc khách hàng | **25 câu** tiếng Việt/Anh; gồm ca không bắt nhầm câu hỏi sản phẩm |
+| API policy flow | **8 ca** xác nhận trả lời an toàn, không gọi LLM/tool |
+| Vue kiosk | **39 tests passed**; kiểm tra gửi câu phàn nàn dạng text và hiển thị phản hồi |
+| Production build | **Pass** |
+| Ruff, compileall, diff check | **Pass** |
+
+### Giới hạn còn lại
+
+- Catalog không có chính sách tích điểm, đổi trả, giờ mở cửa hay phương thức thanh toán đã xác minh. Sky báo thiếu thông tin và hướng dẫn hỏi nhân viên.
+- Hiện không có API/ticket để lưu khiếu nại, kiểm tra giao dịch, gọi nhân viên hoặc gửi yêu cầu tới hệ thống cửa hàng. Agent không được tuyên bố đã thực hiện các việc đó; người dùng vẫn phải báo trực tiếp tại quầy.
+- Chat text vẫn chờ toàn bộ JSON từ `/agent/respond` rồi mới hiển thị; chỉ audio TTS có luồng streaming riêng. Build kiosk thành công nhưng Vite còn cảnh báo bundle JavaScript chính khoảng **1.17 MB** trước gzip, nên cần tối ưu tải trang trước khi demo trên thiết bị yếu.
+- Kiểm tra Groq thật chỉ dùng một câu hỗ trợ giao dịch tổng quát trước khi sửa. Sau sửa, API test xác nhận các câu giao dịch được chặn trước LLM; không chạy lại benchmark nhiều lượt với Groq thật.

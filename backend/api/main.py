@@ -371,6 +371,31 @@ def _unsupported_action_claim(reply: str, observations: tuple[ToolObservation, .
     return False
 
 
+def _unsupported_customer_care_action_claim(reply: str) -> bool:
+    """Reject promises/actions the customer-care integration cannot perform."""
+    normalized = _normalize_request_text(reply)
+    patterns = (
+        r"\b(?:da|vua|moi|se|will|have|has)\b.{0,60}\b(?:ghi nhan|tiep nhan|bao|"
+        r"chuyen|gui|lien he|goi|tao ticket|tao yeu cau|hoan tien|doi hang|xu ly)\b",
+        r"\b(?:manager|staff|employee|support team|customer service)\b.{0,50}\b"
+        r"(?:has been notified|was notified|will contact|has contacted|logged|received)\b",
+        r"\b(?:i|we|our store|the store)\b.{0,40}\b(?:have logged|logged|created a ticket|"
+        r"reported your complaint|contacted staff|notified the manager|forwarded your complaint|"
+        r"escalated your complaint|will refund|can refund|have refunded|issued a refund|"
+        r"submit a refund|process a refund|approve a refund|will process your refund)\b",
+        r"\b(?:your complaint|your request|your refund)\b.{0,50}\b"
+        r"(?:has been logged|has been received|is being processed|will be processed|"
+        r"has been approved)\b",
+        r"\b(?:refund|refund request|refund transaction)\b.{0,50}\b"
+        r"(?:has been approved|was approved|has been issued|was issued|was processed|"
+        r"has been processed|will be processed|will be issued)\b",
+        r"\b(?:hoan tien|yeu cau hoan tien)\b.{0,50}\b"
+        r"(?:da duoc xu ly|da duoc duyet|se duoc xu ly|da chuyen|thanh cong)\b",
+        r"\b(?:ban|quy khach)\s+(?:se duoc|duoc)\s+(?:hoan tien|doi hang)\b",
+    )
+    return any(re.search(pattern, normalized) for pattern in patterns)
+
+
 def _administrative_action_requested(text: str) -> bool:
     normalized = _normalize_request_text(text)
     patterns = (
@@ -405,8 +430,17 @@ def _store_service_policy_requested(text: str) -> bool:
         "rewards",
         "earn points",
         "redeem points",
+        "member id",
+        "diem thanh vien",
+        "diem tich luy",
+        "doi diem thuong",
+        "doi diem",
+        "ma thanh vien",
         "tich diem",
         "the thanh vien",
+        "dang ky thanh vien",
+        "membership registration",
+        "sign up for membership",
         "doi tra",
         "hoan tien",
         "chinh sach tra hang",
@@ -417,34 +451,192 @@ def _store_service_policy_requested(text: str) -> bool:
         "return",
         "refund",
         "exchange",
+        "transaction",
+        "payment",
+        "payment issue",
+        "payment failed",
+        "payment did not go through",
+        "incorrect charge",
+        "unauthorized charge",
+        "giao dich",
+        "thanh toan",
+        "hoa don",
+        "bi thu tien nham",
+        "thu tien nham",
+        "tinh tien sai",
+        "tru tien sai",
+        "thanh toan bi loi",
+        "khong thanh toan duoc",
+        "the bi tu choi",
         "charged twice",
+        "charged me twice",
         "payment method",
         "payment methods",
         "accepted payment",
         "cash or card",
+        "do you accept cash",
+        "does this store accept cash",
         "do you accept cards",
+        "phuong thuc thanh toan",
+        "thanh toan bang momo",
+        "co nhan momo",
+        "nhan momo",
+        "thanh toan bang zalopay",
+        "co nhan zalopay",
+        "co nhan chuyen khoan",
+        "nhan chuyen khoan",
+        "thanh toan bang tien mat",
+        "thanh toan chuyen khoan",
+        "thanh toan bang qr",
+        "quet ma qr",
+        "chuyen khoan duoc khong",
+        "co nhan the ngan hang",
+        "co nhan tien mat",
+        "chap nhan tien mat",
+        "doi hang",
+        "doi san pham",
+        "tra hang",
         "opening hours",
         "store hours",
         "what time do you open",
         "what time do you close",
+        "what time does it open",
+        "what time does it close",
+        "what are your hours",
+        "business hours",
+        "store opening hours",
+        "when does the store open",
+        "when does the store close",
         "when do you close",
+        "is the store open",
+        "are you open",
         "gio mo cua",
         "gio dong cua",
+        "mo den may gio",
+        "mo luc may gio",
+        "mo may gio",
+        "mo toi may gio",
+        "may gio thi cua hang mo",
+        "may gio thi cua hang dong",
+        "dong den may gio",
+        "dong luc may gio",
+        "dong may gio",
+        "mo cua may gio",
+        "dong cua may gio",
         "customer service",
         "complaint",
         "complain",
         "feedback",
         "phan hoi",
         "khieu nai",
+        "phan nan",
+        "phan anh",
+        "gop y",
+        "thai do phuc vu",
+        "bad service",
+        "file a complaint",
+        "report a complaint",
+        "expired food",
+        "spoiled food",
+        "damaged item",
+        "defective product",
+        "out of date food",
+        "hang loi",
+        "san pham bi hong",
+        "san pham bi hu",
+        "thuc pham bi hong",
+        "do an bi hong",
+        "mua phai hang het han",
+        "mua phai san pham het han",
+        "nhan vien khong lich su",
+        "nhan vien to tieng",
         "call a staff member",
         "call staff",
         "contact a staff member",
         "get a staff member",
         "talk to an employee",
+        "speak to a manager",
+        "talk to a manager",
+        "get me a manager",
+        "speak to a human",
+        "noi chuyen voi quan ly",
+        "gap quan ly",
+        "gap nhan vien",
+        "goi quan ly",
         "goi nhan vien",
         "bao nhan vien",
     )
-    return any(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized) for phrase in phrases)
+    phrase_match = any(
+        re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized)
+        for phrase in phrases
+    )
+    contextual_patterns = (
+        r"\b(?:bi\s+)?(?:tinh|tru|charge)\s+(?:tien\s+)?(?:hai|2|two)\s+lan\b",
+        r"\b(?:co nhan|chap nhan|thanh toan bang|quet ma|pay with|pay by|accept)\s+"
+        r"(?:momo|zalopay|bank transfer|qr|visa|mastercard|card|cash|contactless|"
+        r"apple pay|google pay|the ngan hang)\b",
+        r"\b(?:co nhan|chap nhan|thanh toan bang|pay with|pay by|accept)\s+"
+        r"(?:chuyen khoan|tien mat|the|apple pay|google pay)\b",
+        r"\b(?:toi|minh|i)\s+(?:muon|can|want|need)\s+(?:to\s+)?"
+        r"(?:gap|noi chuyen voi|speak to|talk to)\s+(?:the\s+|a\s+)?"
+        r"(?:quan ly|nhan vien|manager|staff|employee|human)\b",
+        r"\b(?:mua phai|toi mua phai|i bought|i got)\b.{0,50}\b"
+        r"(?:het han|qua han|expired|out of date|spoiled|damaged|defective)\b",
+        r"\b(?:hang|san pham|do an|thuc pham|item|product|food)\b.{0,35}\b"
+        r"(?:bi hong|bi hu|hang loi|damaged|broken|spoiled|defective)\b",
+        r"\b(?:can|could|may) i (?:speak|talk) to (?:the |a )?manager\b",
+    )
+    return phrase_match or any(
+        re.search(pattern, normalized) for pattern in contextual_patterns
+    )
+
+
+def _customer_report_or_escalation_requested(text: str) -> bool:
+    normalized = _normalize_request_text(text)
+    phrases = (
+        "complaint",
+        "complain",
+        "feedback",
+        "phan hoi",
+        "khieu nai",
+        "phan nan",
+        "phan anh",
+        "gop y",
+        "charged twice",
+        "charged me twice",
+        "file a complaint",
+        "report a complaint",
+        "damaged item",
+        "defective product",
+        "expired food",
+        "spoiled food",
+        "hang loi",
+        "san pham bi hong",
+        "san pham bi hu",
+        "mua phai hang het han",
+        "mua phai san pham het han",
+        "goi nhan vien",
+        "bao nhan vien",
+        "gap nhan vien",
+        "gap quan ly",
+        "noi chuyen voi quan ly",
+        "contact a staff member",
+        "speak to a manager",
+        "talk to a manager",
+        "get me a manager",
+    )
+    phrase_match = any(
+        re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized)
+        for phrase in phrases
+    )
+    report_patterns = (
+        r"\b(?:bi\s+)?(?:tinh|tru|charge)\s+(?:tien\s+)?(?:hai|2|two)\s+lan\b",
+        r"\b(?:mua phai|toi mua phai|i bought|i got)\b.{0,50}\b"
+        r"(?:het han|qua han|expired|out of date|spoiled|damaged|defective)\b",
+        r"\b(?:hang|san pham|do an|thuc pham|item|product|food)\b.{0,35}\b"
+        r"(?:bi hong|bi hu|hang loi|damaged|broken|spoiled|defective)\b",
+    )
+    return phrase_match or any(re.search(pattern, normalized) for pattern in report_patterns)
 
 
 def _retail_chain_operator_question(text: str) -> bool:
@@ -1122,20 +1314,39 @@ def _localized_prompt_override_denial(language: LanguageCode) -> str:
     }[language]
 
 
-def _localized_store_policy_unavailable(language: LanguageCode) -> str:
-    return {
-        "en": (
-            "I don't have verified information about that store policy. "
-            "I can't record feedback or contact staff. "
-            "Please ask a store associate."
-        ),
-        "zh": "我没有经过核实的门店政策信息，也不能代为记录反馈或联系员工。请询问店员。",
-        "vi": (
-            "Mình chưa có thông tin đã xác minh về chính sách cửa hàng "
-            "và chưa thể ghi nhận phản hồi "
-            "hay gọi nhân viên thay bạn. Bạn hỏi nhân viên tại quầy nhé."
-        ),
-    }[language]
+def _localized_store_policy_unavailable(
+    language: LanguageCode,
+    *,
+    report_or_escalation: bool = False,
+) -> str:
+    messages = {
+        "en": {
+            "policy": (
+                "I don't have verified information about that store policy. "
+                "Please ask a store associate to confirm it."
+            ),
+            "report": (
+                "I can't record a complaint or contact staff for you. "
+                "Please tell a store associate at the counter."
+            ),
+        },
+        "zh": {
+            "policy": "我没有经过核实的门店政策信息，请向店员确认。",
+            "report": "我不能代为记录投诉或联系员工，请直接告知柜台店员。",
+        },
+        "vi": {
+            "policy": (
+                "Mình chưa có thông tin đã xác minh về chính sách này. "
+                "Bạn hỏi nhân viên tại quầy để được xác nhận nhé."
+            ),
+            "report": (
+                "Mình chưa thể ghi nhận phản ánh hay liên hệ nhân viên thay bạn. "
+                "Bạn báo trực tiếp với nhân viên tại quầy nhé."
+            ),
+        },
+    }
+    response_type = "report" if report_or_escalation else "policy"
+    return messages[language][response_type]
 
 
 def _localized_retail_information_unavailable(
@@ -1897,7 +2108,12 @@ async def agent_respond(
         return _local_policy_response(
             request,
             record.state,
-            _localized_store_policy_unavailable(request.language),
+            _localized_store_policy_unavailable(
+                request.language,
+                report_or_escalation=_customer_report_or_escalation_requested(
+                    request.text
+                ),
+            ),
         )
     if _new_stock_arrival_requested(request.text):
         receipt_observation = await lookup_branch_information(
@@ -2300,7 +2516,12 @@ async def agent_respond(
             )
         else:
             reply = _grounded_reply(agent_result, request.language, requested_fields)
-        if _administrative_action_requested(request.text) or _unsupported_action_claim(
+        if _unsupported_customer_care_action_claim(reply):
+            reply = _localized_store_policy_unavailable(
+                request.language,
+                report_or_escalation=True,
+            )
+        elif _administrative_action_requested(request.text) or _unsupported_action_claim(
             reply, agent_result.observations
         ):
             reply = _localized_action_denial(request.language)
