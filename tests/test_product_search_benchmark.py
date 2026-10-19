@@ -88,7 +88,7 @@ def test_like_wildcards_are_treated_as_literal_search_text(monkeypatch) -> None:
     assert "%win!_10005885%" in connection.args
 
 
-def test_bim_bim_slang_searches_the_product_title_and_avoids_diaper_category_collision(
+def test_bim_bim_slang_searches_snack_titles_and_categories_without_diapers(
     monkeypatch,
 ) -> None:
     connection = _Connection()
@@ -102,8 +102,28 @@ def test_bim_bim_slang_searches_the_product_title_and_avoids_diaper_category_col
     for query in ("bim bim", "bimbim", "giá bim bim"):
         assert repository.search(query=query, limit=3) == []
         assert "p.search_title ILIKE" in connection.query
-        assert "p.search_category ILIKE" not in connection.query
+        assert "p.search_category ILIKE" in connection.query
         assert "%bim bim%" in connection.args
+        assert "%snack%" in connection.args
+
+
+def test_bim_bim_with_flavor_preserves_modifiers_and_restricts_to_snacks(monkeypatch) -> None:
+    connection = _Connection()
+
+    async def connect(*args, **kwargs):
+        return connection
+
+    monkeypatch.setattr(postgres_repository.asyncpg, "connect", connect)
+    repository = postgres_repository.PostgresProductRepository("postgresql://unused")
+
+    assert repository.search(query="Bim bim vị phô mai", limit=5) == []
+
+    assert "%bim bim%" in connection.args
+    assert "%snack%" in connection.args
+    assert "%pho%" in connection.args
+    assert "%mai%" in connection.args
+    assert "p.search_category ILIKE" in connection.query
+    assert " AND " in connection.query
 
 
 def test_diacritic_bim_word_keeps_the_regular_category_search_path(monkeypatch) -> None:

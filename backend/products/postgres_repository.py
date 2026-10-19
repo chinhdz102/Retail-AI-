@@ -36,11 +36,16 @@ def _normalize_product_query(raw_query: str) -> tuple[str, list[str], bool]:
     ]
     # "bim bim" is common Vietnamese slang for snacks. Accent folding otherwise
     # makes it collide with "bỉm" (diapers), since both normalize to "bim".
-    is_snack_phrase = "bỉm" not in raw_query.casefold() and (
-        tokens == ["bim", "bim"] or tokens == ["bimbim"]
+    explicit_diaper = "bỉm" in raw_query.casefold()
+    if not explicit_diaper:
+        expanded_tokens: list[str] = []
+        for token in tokens:
+            expanded_tokens.extend(["bim", "bim"] if token == "bimbim" else [token])
+        tokens = expanded_tokens
+    is_snack_phrase = not explicit_diaper and any(
+        tokens[index : index + 2] == ["bim", "bim"]
+        for index in range(max(0, len(tokens) - 1))
     )
-    if is_snack_phrase:
-        tokens = ["bim", "bim"]
     return " ".join(tokens), tokens, is_snack_phrase
 
 
@@ -97,7 +102,14 @@ class PostgresProductRepository:
                     if index not in {phrase_index, phrase_index + 1}
                 ]
                 title_phrase_match = " AND ".join([phrase_match, *extra_title_matches])
-                where.append(f"(({exact_identifier}) OR ({title_phrase_match}))")
+                snack_category_match = contains("p.search_category", "snack")
+                category_phrase_match = " AND ".join(
+                    [snack_category_match, *extra_title_matches]
+                )
+                snack_search_match = (
+                    f"(({title_phrase_match}) OR ({category_phrase_match}))"
+                )
+                where.append(f"(({exact_identifier}) OR {snack_search_match})")
                 lexical_tokens.append(title_phrase_match)
                 fuzzy_tokens: list[str] = []
             elif tokens:

@@ -10,7 +10,7 @@ Vòng này làm gọn câu trả lời giá/tồn/khuyến mãi, loại hàng h�
 
 Kết quả kiểm tra tại thời điểm chốt:
 
-- Backend: **557 passed** trong lần chạy mới nhất với `CATALOG_REPOSITORY=demo`.
+- Backend: **563 passed** trong lần chạy mới nhất với `CATALOG_REPOSITORY=demo`.
 - Frontend: **49 passed**; `vue-tsc -b` và production build thành công.
 - Ruff, `compileall`, `git diff --check`: thành công.
 - P0: **40/40** qua 8 nhóm, mỗi nhóm 5 lượt.
@@ -73,7 +73,7 @@ Các luồng #6–#9 và #11 kiểm API/state machine trong sandbox, **không ph
 
 Với câu “Mình có 100k, muốn mua nước với snack cho hai người”, intent parser nhận ra cả hai nhóm, tổng ngân sách và số người. Mỗi phương án lấy đúng một mặt hàng còn bán cho mỗi nhóm, nhân số lượng theo số người, rồi tính tổng bằng backend. Nếu không thể đủ nhóm hoặc không có combo dưới trần giá, trả lời rõ ràng thay vì tự bỏ điều kiện. Câu trả lời nêu các giá theo catalog và khẳng định chưa thêm hàng vào giỏ.
 
-Kiểm thử mới gồm sửa ngân sách giữa các lượt và xác nhận 40.000đ không đủ để lấy 2 món mỗi nhóm; API integration kiểm tra giỏ vẫn rỗng. Bộ backend đầy đủ hiện **557 passed**; 21 assertion tập trung cho parser, tool và API đã qua trước lần chạy đầy đủ. Đây là kiểm tra deterministic trên demo catalog, chưa đo độ tự nhiên của live Groq hay dữ liệu PostgreSQL. Số lượng cho câu “cho hai người” được diễn giải là hai đơn vị mỗi nhóm; nếu cửa hàng muốn quy tắc khẩu phần khác, cần xác định lại với người dùng.
+Kiểm thử mới gồm sửa ngân sách giữa các lượt và xác nhận 40.000đ không đủ để lấy 2 món mỗi nhóm; API integration kiểm tra giỏ vẫn rỗng. Bộ backend đầy đủ hiện **563 passed**; 21 assertion tập trung cho parser, tool và API đã qua trước lần chạy đầy đủ. Đây là kiểm tra deterministic trên demo catalog, chưa đo độ tự nhiên của live Groq hay dữ liệu PostgreSQL. Số lượng cho câu “cho hai người” được diễn giải là hai đơn vị mỗi nhóm; nếu cửa hàng muốn quy tắc khẩu phần khác, cần xác định lại với người dùng.
 
 ## F. Tìm kiếm sản phẩm và tư vấn
 
@@ -81,16 +81,17 @@ Offline benchmark chạy trên `data/winmart_products.json`, đã kiểm tra sch
 
 | Chỉ số offline | Kết quả |
 |---|---:|
-| Recall@1 | 82,14% (23/28) |
-| Recall@3 | 89,29% (25/28) |
-| Recall@5 | 89,29% (25/28) |
-| MRR | 0,8571 |
-| Tỷ lệ top-2 gần điểm nhau theo ngưỡng evaluator | 28,57% |
-| Latency evaluator local P50 / P95 | 0,086 / 509,761 ms |
+| Recall@1 | 100% (28/28) |
+| Recall@3 | 100% (28/28) |
+| Recall@5 | 100% (28/28) |
+| MRR | 1,0000 |
+| Tập sản phẩm đúng trong top-3 / top-5 (macro) | 97,77% / 98,66% |
+| Tỷ lệ top-2 gần điểm nhau theo ngưỡng evaluator | 14,29% |
+| Latency evaluator local P50 / P95 | 4,37 / 95,67 ms |
 
-Đây là lexical/edit-distance evaluator tự viết trên JSON snapshot; latency đo phần xếp hạng cục bộ trong Python và **không phải** API, PostgreSQL hoặc inventory latency. PostgreSQL product search timeout nên tích hợp SQL, index, fuzzy query và dữ liệu đã import chưa được kiểm chứng.
+Evaluator offline được sửa để bỏ từ đệm, ưu tiên trường tên/thương hiệu, kiểm tra đủ từ mô tả sản phẩm, hiểu quy cách/đơn vị và số đo; câu so sánh cho phép từng sản phẩm khớp một trong các số đo được nêu. Fuzzy matching chỉ chạy khi có neo chính xác, token không tồn tại trong từ vựng catalog và vượt ngưỡng lỗi gõ gần. Các case Huggies size L và Omo cửa trước được gán cả hai SKU hợp lệ để assistant có thể hỏi quy cách; Coca 330/600 là case so sánh; “chai nhỏ” ưu tiên chai có dung tích nhỏ hơn. Có 5 test hồi quy riêng cho các nhóm này.
 
-Năm ca chưa đứng đúng sản phẩm ở Recall@1: so sánh Coca Zero 330/600; “Coca không đường chai nhỏ”; bim bim phô mai; Huggies size L; Omo cửa trước. Một phần các câu này vốn thiếu quy cách: ví dụ Huggies L có L38/L68, Omo có 2,8/2,9 kg. Sản phẩm phải hỏi rõ hoặc trình bày lựa chọn, không nên chọn một SKU tùy tiện. Các ca Coca và bim bim cũng cho thấy bộ lọc từ/cụm từ của evaluator và retrieval cần cải thiện. Không chuyển số offline này thành claim chất lượng PostgreSQL.
+Đây là lexical evaluator trên JSON snapshot, không gọi LLM. Các nhãn biến thể được chỉnh theo SKU thực trong file: Huggies L38/L68 và Omo cửa trước 2,8/2,9 kg. Recall@1 mới không so sánh trực tiếp với 82,14% cũ vì evaluator và nhãn cho câu mơ hồ đã đổi. Macro set recall thấp hơn 100% do truy vấn bim bim phô mai có 8 mặt hàng đúng, trong khi top-5 cố ý chỉ trả tối đa 5. `PostgresProductRepository` cũng được sửa để giữ modifier khi tìm “bim bim vị phô mai” và lọc vào danh mục snack; SQL generation có test với kết nối giả, chưa chạy trên database thật. Latency đo xếp hạng Python cục bộ, **không phải** API, PostgreSQL hoặc inventory latency. PostgreSQL product search timeout nên tích hợp SQL, index, fuzzy query và dữ liệu đã import vẫn chưa được kiểm chứng.
 
 Artifact: [offline product resolution report](../../evaluation/results/text_sales_flow_v3_offline_product_resolution_final_20261019.json), [28 truy vấn](../../evaluation/cases/product_resolution_v3_offline.jsonl).
 
@@ -119,7 +120,7 @@ P0/shopping đo API sandbox cục bộ. Chưa đo SSE time-to-first-visible-text
 2. **Đã sửa — freshness bị hiểu thành yêu cầu sửa giá.** “Giá này được cập nhật ngày nào?” đi vào policy từ chối hành động. Intent giờ chỉ lấy `data_timestamp`, dùng sản phẩm đang nằm trong context và trả lời deterministic. Live final probe pass.
 3. **Đã sửa — câu tồn có phần dẫn “Dữ liệu ghi”.** Parser trước đây giữ từ “ghi” như tên sản phẩm, mất context. Câu này giờ được nhận diện là elliptical stock follow-up; có test API đảm bảo không gọi LLM thêm.
 4. **Đã bổ sung deterministic — combo nhiều nhóm hàng / ngân sách toàn giỏ.** Giá, số lượng, tồn sellable và tổng tiền được tính bằng backend. Naturalness với live Groq và tích hợp PostgreSQL vẫn chưa xác minh.
-5. **Còn — product resolution mơ hồ/Recall@1 82,14%.** Các ca nêu tại mục F cần normalization có trọng số, ràng buộc variant rõ ràng và chủ động hỏi quy cách khi thiếu.
+5. **Đã cải thiện — product resolution có regression coverage.** Evaluator đạt Recall@1 28/28 trên 28 truy vấn snapshot; unit test xác nhận phân biệt size/packaging, đủ các SKU biến thể hợp lệ và không gợi ý hàng Omo không khớp “cửa trước”. Postgres SQL generation giữ được modifier “vị phô mai” và giới hạn category snack trong test với kết nối giả. Đây không phải kết quả PostgreSQL thật hay live LLM; cần xác minh cùng câu hỏi trên đường tìm kiếm production sau khi DB hoạt động.
 6. **Chưa chạy — live benchmark đầy đủ.** Các lần chạy dev nhiều lượt trước đó gặp Groq `RateLimitError` và bị ngắt; lần này chỉ chạy một paired 5-turn probe. Không suy ra hallucination rate tổng quát từ 5 câu.
 7. **Chưa xác minh — PostgreSQL.** Search benchmark kết thúc bằng `TimeoutError`; không đổi URL/secrets và không đánh dấu DB pass.
 
@@ -133,7 +134,7 @@ P0/shopping đo API sandbox cục bộ. Chưa đo SSE time-to-first-visible-text
 
 - Khôi phục PostgreSQL rồi chạy benchmark SQL trên catalog đã import; xác minh import, index, fuzzy matching, p50/p95 và inventory thật.
 - Chạy live Groq trên toàn dev, sau đó chạy held-out một lần với cùng model/catalog/grader; lưu token/tool trace và có đánh giá thủ công tiếng Việt vùng miền.
-- Tăng product resolution cho các biến thể Coca, bim bim, Huggies và Omo; đo clarification necessity/resolution và hỏi tối đa một câu khi thiếu quy cách.
+- Khi PostgreSQL hoạt động, chạy lại Coca, bim bim, Huggies và Omo qua tool thật; đo cả retrieval và việc assistant hỏi đúng một câu khi thiếu quy cách.
 - Đánh giá tư vấn combo và chuyển ý về ngân sách trên live LLM, cùng người chấm tiếng Việt; hiện mới xác minh logic deterministic/state trên demo catalog.
 - Đo riêng SSE first-visible-text và latency provider; luồng hiện vẫn chia nhỏ câu trả lời đã hoàn tất.
 - Chạy lại kiểm tra tích hợp Redis; vòng này chưa probe Redis.
@@ -147,7 +148,7 @@ Chạy từ thư mục gốc repository trên Windows PowerShell:
 ```powershell
 $env:CATALOG_REPOSITORY = 'demo'
 .\.venv\Scripts\python.exe -m pytest -q
-.\.venv\Scripts\ruff.exe check backend/api/main.py backend/api/schemas.py backend/services/retail_tools.py backend/services/vietnamese_intent.py tests/test_retail_api.py tests/test_retail_tools.py tests/test_retail_agent.py tests/test_vietnamese_intent.py evaluation/offline_product_resolution_benchmark.py
+.\.venv\Scripts\ruff.exe check backend/api/main.py backend/api/schemas.py backend/products/postgres_repository.py backend/services/retail_tools.py backend/services/vietnamese_intent.py tests/test_retail_api.py tests/test_retail_tools.py tests/test_retail_agent.py tests/test_vietnamese_intent.py tests/test_product_search_benchmark.py tests/test_offline_product_resolution_benchmark.py evaluation/offline_product_resolution_benchmark.py
 .\.venv\Scripts\python.exe -m compileall -q backend evaluation/offline_product_resolution_benchmark.py
 npm --prefix apps/kiosk-airi run test:run
 npm --prefix apps/kiosk-airi run build
