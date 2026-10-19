@@ -69,12 +69,40 @@ def accuracy(reference: str, hypothesis: str) -> dict[str, float | int]:
     }
 
 
-def audio_duration_seconds(path: Path) -> float | None:
+def _mp4_duration_seconds(content: bytes) -> float | None:
+    """Read the movie header duration used by M4A/MP4 audio containers."""
+    marker = b"mvhd"
+    offset = content.find(marker)
+    while offset >= 0:
+        version_offset = offset + len(marker)
+        if version_offset < len(content):
+            version = content[version_offset]
+            if version == 0 and len(content) >= offset + 24:
+                timescale = int.from_bytes(content[offset + 16 : offset + 20], "big")
+                duration = int.from_bytes(content[offset + 20 : offset + 24], "big")
+            elif version == 1 and len(content) >= offset + 36:
+                timescale = int.from_bytes(content[offset + 24 : offset + 28], "big")
+                duration = int.from_bytes(content[offset + 28 : offset + 36], "big")
+            else:
+                timescale = duration = 0
+            if timescale > 0 and duration > 0:
+                return duration / timescale
+        offset = content.find(marker, offset + len(marker))
+    return None
+
+
+def audio_duration_seconds(path: Path, content: bytes | None = None) -> float | None:
     try:
         with wave.open(str(path), "rb") as audio:
             return audio.getnframes() / audio.getframerate()
     except (wave.Error, OSError, ZeroDivisionError):
-        return None
+        pass
+    if content is None:
+        try:
+            content = path.read_bytes()
+        except OSError:
+            return None
+    return _mp4_duration_seconds(content)
 
 
 def save_report(report: dict[str, Any], output: Path) -> None:
@@ -100,7 +128,7 @@ async def run(
         "timestamp_utc": datetime.now(UTC).isoformat(),
         "audio_filename": audio_path.name,
         "audio_bytes": len(audio_bytes),
-        "audio_duration_seconds": audio_duration_seconds(audio_path),
+        "audio_duration_seconds": audio_duration_seconds(audio_path, audio_bytes),
         "source": source,
         "language": language,
         "primary_model": settings.groq_stt_model,
@@ -108,7 +136,12 @@ async def run(
         "trial_count": trials,
         "timeout_seconds": timeout_seconds,
         "reference": reference,
-        "note": "Live API client latency; WER/CER are omitted when no reference is supplied.",
+        "note": (
+            "WER/CER require a complete verbatim reference for the full audio; "
+            "partial captions or summaries are not valid accuracy references."
+            if reference is not None
+            else "Latency-only run; WER/CER are omitted because no reference was supplied."
+        ),
         "transcription_saved": record_transcription,
         "complete": False,
         "results": [],
@@ -195,8 +228,18 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--audio", type=Path, required=True)
     reference_group = parser.add_mutually_exclusive_group()
-    reference_group.add_argument("--reference")
-    reference_group.add_argument("--reference-file", type=Path)
+    reference_group.add_argument(
+        "--reference",
+        help=(
+            "Complete verbatim transcript for the full audio; partial summaries "
+            "invalidate WER/CER."
+        ),
+    )
+    reference_group.add_argument(
+        "--reference-file",
+        type=Path,
+        help="File containing a complete verbatim transcript for the full audio.",
+    )
     parser.add_argument("--source")
     parser.add_argument("--language", default="vi")
     parser.add_argument("--trials", type=int, default=3)

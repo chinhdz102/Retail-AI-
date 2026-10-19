@@ -1,0 +1,63 @@
+{
+  "kind": "live_groq_stt_benchmark",
+  "timestamp_utc": "2026-10-19T10:23:45.619813+00:00",
+  "audio_filename": "YTSave_Shorts_Media_lfinJJlJ8HM_Để-mở-cửa-hàng-tiện-lợi-ở-quê-cần-biết-những-gì-rubytienloi-cuahangtienloi-sieut_008_128k.m4a",
+  "audio_bytes": 772651,
+  "audio_duration_seconds": 47.69378684807256,
+  "source": null,
+  "language": "vi",
+  "primary_model": "whisper-large-v3-turbo",
+  "fallback_model": "whisper-large-v3",
+  "trial_count": 3,
+  "timeout_seconds": 90.0,
+  "reference": null,
+  "note": "Live API client latency; WER/CER are omitted when no reference is supplied.",
+  "transcription_saved": false,
+  "complete": true,
+  "results": [
+    {
+      "trial": 1,
+      "status": "success",
+      "latency_ms": 1965,
+      "model": "whisper-large-v3-turbo",
+      "fallback_trace": [
+        {
+          "model": "whisper-large-v3-turbo",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "trial": 2,
+      "status": "success",
+      "latency_ms": 816,
+      "model": "whisper-large-v3-turbo",
+      "fallback_trace": [
+        {
+          "model": "whisper-large-v3-turbo",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "trial": 3,
+      "status": "success",
+      "latency_ms": 837,
+      "model": "whisper-large-v3-turbo",
+      "fallback_trace": [
+        {
+          "model": "whisper-large-v3-turbo",
+          "status": "success"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "success_count": 3,
+    "median_latency_ms": 837,
+    "p95_latency_ms": 1965,
+    "models_used": [
+      "whisper-large-v3-turbo"
+    ]
+  }
+}
