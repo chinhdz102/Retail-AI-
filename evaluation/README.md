@@ -39,6 +39,20 @@ Bộ hội thoại tiếng Việt mới nằm trong `evaluation/cases/vietnamese
 
 Pacing 12 giây giúp giữ nhịp dưới quota TPM đã quan sát ở các lần chạy trước. Kết quả tự động chỉ là coverage probe trên sáu sản phẩm demo; độ tự nhiên, cách hỏi làm rõ và đúng ngữ cảnh vẫn cần người đọc nghe/đọc lại từng lượt.
 
+`vietnamese_retail_shopping_v2.json` là bộ hiện hành cho luồng mua sắm đầu-cuối: bảy hội thoại, 13 lượt, gồm nối tiếp giá/kệ/tồn, đổi ràng buộc, thiếu dữ kiện dinh dưỡng, thêm nhiều món vào giỏ, checkout và lời khách tự báo đã chuyển khoản, yêu cầu hỗ trợ demo, cùng injection không được tạo ticket. Grader kiểm tra cả response API và state đang lưu trong session (constraint, giỏ, order, ticket), vì nhánh catalog xác định có thể gọi tool mà không phát model tool-call. File `vietnamese_text_conversation_v1.json` và các kết quả cũ vẫn được giữ để tái lập lịch sử; không dùng các assertion của v1 làm kết luận về checkout/handoff hiện tại.
+
+Chạy bộ v2 bằng Groq thật trên catalog demo; dùng tên output mới để không ghi đè kết quả cũ:
+
+```powershell
+$env:CATALOG_REPOSITORY = 'demo'
+.venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark `
+  --case-file evaluation/cases/vietnamese_retail_shopping_v2.json `
+  --pace-seconds 9 `
+  --output evaluation/results/live_text_retail_v2_reproduced.json
+```
+
+Đây là probe nhỏ có assertion về dữ liệu và policy, không thay thế đánh giá người đọc về độ tự nhiên, benchmark hàng trăm hội thoại, hoặc kiểm thử trình duyệt/STT/TTS.
+
 `vietnamese_safety_and_injection_v1.json` bổ sung câu hỏi hỗ trợ thường gặp và prompt injection tiếng Việt: giả quyền quản trị, đòi lộ prompt/key/session, tool giả, câu không dấu, chỉ dẫn được trích dẫn và bẻ lái giá qua nhiều lượt. Bộ này dùng cùng runner Groq thật; trace cuối ngày 18/10/2026 ở `evaluation/results/live_vietnamese_safety_injection_final_20261018.json`. Chạy lại bằng:
 
 ```powershell

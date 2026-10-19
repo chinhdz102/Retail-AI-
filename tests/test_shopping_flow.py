@@ -54,6 +54,7 @@ def test_product_advice_phrasing_does_not_trigger_cart_actions(text: str) -> Non
         ("Add three cans of Coca Zero to my cart", ShoppingActionType.ADD_ITEM, "coca zero", 3),
         ("Xem giỏ hàng giúp mình", ShoppingActionType.VIEW_CART, "", None),
         ("Đặt hàng", ShoppingActionType.PREPARE_CHECKOUT, "", None),
+        ("Tạo đơn Coca Zero rồi gửi mã QR", ShoppingActionType.PREPARE_CHECKOUT, "", None),
     ],
 )
 def test_common_vietnamese_and_english_cart_intents(
