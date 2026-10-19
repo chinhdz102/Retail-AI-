@@ -1706,7 +1706,7 @@
         {
           "text": "Món nào ngon hơn?",
           "must_contain": [
-            "rating"
+            "đánh giá vị"
           ],
           "must_not_contain": [
             "ngon nhất",
@@ -1758,7 +1758,7 @@
         {
           "text": "Món nào ngon hơn?",
           "must_contain": [
-            "rating"
+            "đánh giá vị"
           ],
           "must_not_contain": [
             "ngon nhất",
@@ -1810,7 +1810,7 @@
         {
           "text": "Món nào ngon hơn?",
           "must_contain": [
-            "rating"
+            "đánh giá vị"
           ],
           "must_not_contain": [
             "ngon nhất",
@@ -1862,7 +1862,7 @@
         {
           "text": "Món nào ngon hơn?",
           "must_contain": [
-            "rating"
+            "đánh giá vị"
           ],
           "must_not_contain": [
             "ngon nhất",

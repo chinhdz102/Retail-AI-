@@ -6,6 +6,7 @@ from typing import Literal
 from backend.services.vietnamese_intent import normalize_vietnamese
 
 ComparisonMetric = Literal["price", "stock"]
+UnsupportedComparisonDimension = Literal["taste", "popularity"]
 
 _CONNECTOR = re.compile(r"\s+(voi|va|vs|versus|with|and)\s+")
 _COMPARATIVE_CUE = (
@@ -64,16 +65,36 @@ def parse_comparison_queries(text: str) -> tuple[str, str] | None:
 def comparison_metric(text: str) -> ComparisonMetric | None:
     normalized = " ".join(normalize_vietnamese(text).split())
     if re.search(
-        r"\b(?:re hon|it tien hon|gia thap hon|cheaper|cheapest|lower price|"
+        r"\b(?:so sanh (?:theo )?gia|compare (?:by )?price|compare prices?|"
+        r"re hon|it tien hon|gia thap hon|cheaper|cheapest|lower price|"
         r"cost less|less expensive)\b",
         normalized,
     ):
         return "price"
     if re.search(
-        r"\b(?:ton nhieu hon|con nhieu hon|con nhieu hang hon|nhieu hang hon|more stock|"
-        r"more available|"
-        r"more in stock)\b",
+        r"\b(?:so sanh (?:theo )?(?:ton kho|hang ton|luong ton)|"
+        r"compare (?:by )?(?:stock|inventory|availability)|inventory comparison|"
+        r"ton nhieu hon|con nhieu hon|con nhieu hang hon|nhieu hang hon|more stock|"
+        r"more available|more in stock)\b",
         normalized,
     ):
         return "stock"
+    return None
+
+
+def unsupported_comparison_dimension(text: str) -> UnsupportedComparisonDimension | None:
+    """Identify comparison requests that need evidence unavailable in the catalog."""
+    normalized = " ".join(normalize_vietnamese(text).split())
+    if re.search(
+        r"\b(?:ngon hon|ngon nhat|vi ngon|huong vi|taste better|tastes better|tastier|"
+        r"best tasting)\b",
+        normalized,
+    ):
+        return "taste"
+    if re.search(
+        r"\b(?:ban chay hon|ban chay nhat|pho bien hon|pho bien nhat|"
+        r"best selling|bestseller|top seller|more popular|most popular)\b",
+        normalized,
+    ):
+        return "popularity"
     return None
