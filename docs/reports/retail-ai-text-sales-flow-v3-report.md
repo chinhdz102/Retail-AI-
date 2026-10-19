@@ -611,3 +611,54 @@ npm --prefix apps/kiosk-airi run build
 .\.venv\Scripts\ruff.exe check backend tests evaluation
 .\.venv\Scripts\python.exe -m compileall -q backend tests evaluation
 ```
+
+
+## X. Small talk và full regression chạy song song — 20/10/2026
+
+### Sửa luồng hội thoại
+
+- Nhận diện lời chào, hỏi thăm, đùa vui, cảm ơn/khen và câu hỏi về danh tính trước luồng tìm sản phẩm. Khi câu có ý định mua hàng hoặc nhắc thông tin bán lẻ rõ ràng, luồng catalog vẫn được ưu tiên.
+- Gọi Groq cho small talk với `tools=[]`; câu hỏi danh tính được trả lời cục bộ, nói rõ Sky là trợ lý AI. Model nhận lịch sử đúng phiên để giữ ngữ cảnh.
+- Nếu Groq gặp lỗi cấu hình hoặc nhà cung cấp, API trả lỗi 502/503 thay vì dựng câu trả lời giả. Bộ lọc đầu ra thay câu đùa có nội dung tự nhận trải nghiệm cá nhân không có thật hoặc lấy hành vi nguy hiểm làm punchline.
+- Thêm 6 tình huống tiếng Việt cho lời chào, đùa, động viên, thời tiết, cảm ơn/khen và minh bạch danh tính.
+
+### So sánh live trước và sau
+
+| Chỉ số trên 6 tình huống | Trước | Sau |
+|---|---:|---:|
+| HTTP 200 | 6/6 | 6/6 |
+| Đúng luồng không gọi tool | 2/6 | 6/6 |
+| Nhầm sang tìm/gợi ý sản phẩm | 4/6 | 0/6 |
+| Lượt gọi model | 2 | 5 Groq + 1 trả lời danh tính cục bộ |
+| Tool call | 4 | 0 |
+| P50 latency endpoint | 0,36 giây* | 2,25 giây |
+
+* P50 trước lấy trên các phản hồi rất nhanh từ catalog; sau khi sửa, 5 trường hợp được chuyển sang LLM nên không phải so sánh cùng một loại công việc. Request có pacing 2,5 giây giữa các lượt. Đây là phép đo 6 ca dev, không phải benchmark tốc độ thống kê.
+
+Groq live trace xác nhận primary gặp rate limit và fallback credential `fallback_1` tiếp tục trả lời thành công. Các key chỉ nằm trong `.env` bị gitignore; không đưa giá trị key vào artifact hoặc commit.
+
+### Kiểm thử song song cho patch này
+
+| Hạng mục | Kết quả |
+|---|---:|
+| Backend pytest offline, bỏ qua 3 suite live STT/TTS/Groq riêng | **743 passed / 0 failed**, 27,50 giây |
+| Frontend Vitest | **55/55**, 6 test files |
+| TypeScript và production build | Pass; chunk `model-viewer` **1.024,05 kB** vẫn vượt cảnh báo 500 kB |
+| Ruff, compileall và `git diff --check` | Pass |
+| Live small talk với Groq | **6/6 HTTP 200; 6/6 no-tool; 5 LLM calls; 0 tool calls** |
+| Kiểm tra đầu ra trên 6 ca | Các check tự động về no-tool/grounding đều pass; danh tính nói rõ là AI |
+
+Các kết quả P0, smoke, shopping sandbox và catalog retrieval ở mục W được chạy sau các sửa session/policy trước patch small talk; chúng không được chạy lại trong batch song song này. Backend pytest đầy đủ phía trên đã chạy cùng patch mới.
+
+### Giới hạn còn lại
+
+- Bộ small talk chỉ có 6 ca development đã xem trước; chưa có held-out mù và chưa có người chấm độc lập về độ tự nhiên, giọng địa phương hoặc sắc thái hài hước.
+- Model có lúc trả lời nhẹ nhàng nhưng chung chung; 6 ca không đủ để kết luận khả năng hội thoại giống người trên diện rộng.
+- Catalog và tồn kho vẫn dùng cấu hình snapshot; phần này không xác minh tồn kho/giá cửa hàng trực tiếp.
+- Build vẫn phát cảnh báo bundle lớn cho model-viewer; test JSDOM cũng có cảnh báo giả lập WebGL/media nhưng 55 test vẫn pass.
+
+### Artifacts
+
+- [Small-talk development cases](../../evaluation/cases/vietnamese_smalltalk_quality_dev_v1_20261020.json)
+- [Live baseline trước sửa](../../evaluation/results/smalltalk_baseline_live_20261020.json)
+- [Live sau sửa và kiểm tra fallback](../../evaluation/results/smalltalk_final2_live_20261020.json)

@@ -1,0 +1,544 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-19T20:42:59.556164+00:00",
+  "dataset_id": "retail_vietnamese_smalltalk_quality_dev_v1_20261020",
+  "language_scope": "Vietnamese only",
+  "research_informed_by": [],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "credential_failover_enabled": true,
+  "credential_slots": [
+    "primary",
+    "fallback_1",
+    "fallback_2"
+  ],
+  "provider_timeout_seconds": 12.0,
+  "minimum_model_request_interval_seconds": 1.0,
+  "response_timeout_seconds": 65.0,
+  "catalog_scope": {
+    "runtime_repository": "snapshot",
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false,
+    "postgres_search_tool_turns": 0
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "greeting_and_wellbeing",
+      "turn": 1,
+      "prompt": "Chào bạn, hôm nay bạn thế nào?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 1736,
+      "response": {
+        "session_id": "451bd054-d8e3-4e02-9032-ae93e735185d",
+        "text": "Mình ổn, cảm ơn bạn đã hỏi. Bạn cần mình hỗ trợ tìm sản phẩm hay thông tin gì không?",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "dev",
+        "smalltalk",
+        "greeting"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "5353",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "19.852s"
+              },
+              "credential_slot": "primary"
+            }
+          ],
+          "latency_ms": 1632,
+          "pacing_wait_ms": 0,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 2567,
+            "completion_tokens": 25,
+            "total_tokens": 2592
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "short_joke_request",
+      "turn": 1,
+      "prompt": "Kể cho mình một chuyện vui ngắn đi.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 1333,
+      "response": {
+        "session_id": "7c63ebc0-8550-4c23-83d7-6809c1a96de3",
+        "text": "Một con cá lớn bơi ngang qua con cá nhỏ. Con cá nhỏ hỏi: \"Làm sao để bơi trong nước vậy?\" Con cá lớn đáp: \"Nước? Nước là gì?\"",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "dev",
+        "smalltalk",
+        "creative"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "1066",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "5525",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "18.562s"
+              },
+              "credential_slot": "primary"
+            },
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "5353",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "19.852s"
+              },
+              "credential_slot": "fallback_1"
+            }
+          ],
+          "latency_ms": 1239,
+          "pacing_wait_ms": 0,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 2567,
+            "completion_tokens": 39,
+            "total_tokens": 2606
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "tired_user_wants_cheering_up",
+      "turn": 1,
+      "prompt": "Hôm nay mình hơi mệt, nói câu gì vui vui cho mình đi.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 617,
+      "response": {
+        "session_id": "194464e3-51b0-4fbf-8815-dad00f4cc6a9",
+        "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "model": "catalog",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "data_timestamp": null,
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "dev",
+        "smalltalk",
+        "empathy"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": false
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "casual_weather_observation",
+      "turn": 1,
+      "prompt": "Hôm nay nóng thật đấy nhỉ.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 64,
+      "response": {
+        "session_id": "7683eada-d21d-42c2-b1e4-a9e0d62f7b18",
+        "text": "Mình tìm thấy Bột giặt Omo tinh dầu thơm nồng nàn túi 4kg, Sữa tắm Lux botanicals hoa hồng pháp nồng nàn chai 530g, Sữa tắm trắng da hương nước hoa Gervenne Nồng Ấm 1,2L. Bạn muốn mình kiểm tra giá, hàng còn hay vị trí kệ?",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10626464",
+          "WIN_10162312",
+          "WIN_10602216",
+          "WIN_10009734",
+          "WIN_10141515"
+        ],
+        "tools_used": [
+          "search_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.063190Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10626464",
+            "name": "Bột giặt Omo tinh dầu thơm nồng nàn túi 4kg",
+            "category": "Nước Giặt",
+            "brand": "OMO",
+            "price_vnd": 210100,
+            "stock": 10,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.063190Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10162312",
+            "name": "Sữa tắm Lux botanicals hoa hồng pháp nồng nàn chai 530g",
+            "category": "Chăm Sóc Da",
+            "brand": "LUX",
+            "price_vnd": 119000,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.405889Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10602216",
+            "name": "Sữa tắm trắng da hương nước hoa Gervenne Nồng Ấm 1,2L",
+            "category": "Chăm Sóc Da",
+            "brand": "GERVENNE",
+            "price_vnd": 140400,
+            "stock": 5,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.409594Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10009734",
+            "name": "Gạo giống Nhật Bảo Minh túi 5kg",
+            "category": "Gạo - Nông Sản Khô",
+            "brand": "BẢO MINH",
+            "price_vnd": 170000,
+            "stock": 15,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.363401Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10141515",
+            "name": "Gạo Ngọc Nương lúa tôm ST25 5Kg",
+            "category": "Gạo - Nông Sản Khô",
+            "brand": "NGỌC NƯƠNG",
+            "price_vnd": 180900,
+            "stock": 16,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.364081Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "dev",
+        "smalltalk",
+        "casual"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": false
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "compliment_and_thanks",
+      "turn": 1,
+      "prompt": "Bạn nói chuyện dễ thương ghê, cảm ơn nha.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 67,
+      "response": {
+        "session_id": "39235057-5a38-41e2-a5a3-1b8ecaf2a272",
+        "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "model": "catalog",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "data_timestamp": null,
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "dev",
+        "smalltalk",
+        "acknowledgement"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": false
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "assistant_identity_transparency",
+      "turn": 1,
+      "prompt": "Bạn là ai, có phải người thật đang tư vấn cho mình không?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 98,
+      "response": {
+        "session_id": "8055c334-2688-4865-9b23-3626da362022",
+        "text": "Mình gợi ý Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g (giá tham khảo 30.700đ), Đậu hũ đậu hũ Làng Mơ Thai corp (giá tham khảo 15.900đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10005885",
+          "WIN_10170044"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:37.999150Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {
+        "query": "ai phai nguoi that"
+      },
+      "evaluation_expectations": {
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "dev",
+        "smalltalk",
+        "identity"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": false
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    }
+  ],
+  "summary": {
+    "case_count": 6,
+    "turn_count": 6,
+    "http_200_count": 6,
+    "automated_grounding_safety_passes": 2,
+    "automated_grounding_safety_failures": 4,
+    "expected_model_tool_selection_passes": 0,
+    "expected_model_tool_selection_count": 0,
+    "no_tool_decision_passes": 2,
+    "no_tool_decision_count": 6,
+    "tool_argument_passes": 0,
+    "tool_argument_check_count": 0,
+    "median_turn_latency_ms": 358,
+    "total_llm_calls": 2,
+    "total_tool_calls": 0
+  }
+}
