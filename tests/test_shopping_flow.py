@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from uuid import uuid4
+from datetime import UTC, datetime, timedelta
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
 
-from backend.api.main import app, get_groq_service
+from backend.api.main import app, get_groq_service, session_store, shopping_service
+from backend.products.catalog import get_product_snapshot
 from backend.services.groq import GroqService
+from backend.services.shopping import CartConflictError, ShoppingService
 from backend.services.shopping_flow import ShoppingActionType, classify_shopping_action
 from backend.shared.contracts import SessionState
 
@@ -65,6 +68,98 @@ def test_common_vietnamese_and_english_cart_intents(
     assert action.action == expected
     assert action.query == query
     assert action.quantity == quantity
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "Thêm 2 lon Coca Zero và 1 chai nước suối vào giỏ",
+            (("coca zero", 2), ("nuoc suoi", 1)),
+        ),
+        (
+            "Thêm Coca Zero, nước suối và snack vào giỏ",
+            (("coca zero", 1), ("nuoc suoi", 1), ("snack", 1)),
+        ),
+    ],
+)
+def test_multi_item_add_request_is_parsed_without_losing_quantities(
+    text: str,
+    expected: tuple[tuple[str, int], ...],
+) -> None:
+    action = classify_shopping_action(text, SessionState.BROWSING)
+
+    assert action is not None
+    assert action.action == ShoppingActionType.ADD_ITEM
+    assert action.line_items == expected
+
+
+@pytest.mark.asyncio
+async def test_multi_item_request_adds_all_lines_atomically_and_idempotently(
+    client: httpx.AsyncClient,
+) -> None:
+    async with client:
+        created = await client.post("/sessions", json={"kiosk_id": "multi-cart-test"})
+        session_id = created.json()["session_id"]
+        turn_id = str(uuid4())
+        payload = {
+            "session_id": session_id,
+            "text": "Thêm 2 lon Coca Zero, 1 chai nước suối và 1 gói SNACK01 vào giỏ",
+            "client_turn_id": turn_id,
+        }
+        first = await client.post("/agent/respond", json=payload)
+        repeated = await client.post("/agent/respond", json=payload)
+
+        assert first.status_code == repeated.status_code == 200
+        assert first.json()["cart"]["item_count"] == 4
+        assert {line["product_id"] for line in first.json()["cart"]["items"]} == {
+            "COKE_ZERO_330",
+            "WATER01",
+            "SNACK01",
+        }
+        assert repeated.json()["cart"]["item_count"] == 4
+
+
+@pytest.mark.asyncio
+async def test_multi_item_add_rejects_unavailable_line_without_partial_cart_write(
+    client: httpx.AsyncClient,
+) -> None:
+    async with client:
+        created = await client.post("/sessions", json={"kiosk_id": "multi-cart-atomic-test"})
+        session_id = created.json()["session_id"]
+        response = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session_id,
+                "text": "Thêm Coca Zero và MILK01 vào giỏ",
+            },
+        )
+        cart = await client.get(f"/sessions/{session_id}/cart")
+
+        assert response.status_code == 200
+        assert "giỏ được giữ nguyên" in response.json()["text"].casefold()
+        assert cart.json()["items"] == []
+
+
+def test_cart_line_limit_applies_across_repeated_add_requests() -> None:
+    product = get_product_snapshot("COKE_ZERO_330")
+    assert product is not None
+
+    class HighStockRepository:
+        source_name = "demo_product_catalog"
+
+        def get_product_snapshot(self, product_id: str):
+            found = get_product_snapshot(product_id)
+            return found.model_copy(update={"stock": 60}) if found else None
+
+    service = ShoppingService(sandbox_enabled=True, repository=HighStockRepository())
+    session_id = uuid4()
+    service.add_item(session_id, product.product_id, 11, idempotency_key=str(uuid4()))
+
+    with pytest.raises(CartConflictError, match="at most 20"):
+        service.add_item(session_id, product.product_id, 10, idempotency_key=str(uuid4()))
+
+    assert service.get_cart(session_id).items[0].quantity == 11
 
 
 @pytest.mark.asyncio
@@ -223,6 +318,42 @@ async def test_natural_checkout_and_payment_question_keep_payment_unverified(
         assert status.status_code == 200
         assert status.json()["order"]["payment_status"] == "PENDING"
         assert "chưa xác minh" in status.json()["text"].casefold()
+
+
+@pytest.mark.asyncio
+async def test_expired_order_releases_payment_pending_session_back_to_cart(
+    client: httpx.AsyncClient,
+) -> None:
+    async with client:
+        created = await client.post("/sessions", json={"kiosk_id": "expired-order-test"})
+        session_id = created.json()["session_id"]
+        session_uuid = UUID(session_id)
+        await client.post(
+            f"/sessions/{session_id}/cart/items",
+            json={
+                "product_id": "COKE_ZERO_330",
+                "quantity": 1,
+                "idempotency_key": str(uuid4()),
+            },
+        )
+        quote = await client.post(f"/sessions/{session_id}/checkout/prepare")
+        order = await client.post(
+            f"/sessions/{session_id}/checkout/confirm",
+            json={
+                "confirmation_token": quote.json()["confirmation_token"],
+                "idempotency_key": str(uuid4()),
+            },
+        )
+        order_id = UUID(order.json()["order_id"])
+        shopping_service._orders[order_id].expires_at = datetime.now(UTC) - timedelta(seconds=1)
+
+        cart = await client.get(f"/sessions/{session_id}/cart")
+        refreshed_order = await client.get(f"/sessions/{session_id}/orders/{order_id}")
+
+        assert cart.status_code == refreshed_order.status_code == 200
+        assert refreshed_order.json()["payment_status"] == "EXPIRED"
+        assert session_store.get(session_uuid).state == SessionState.CART_ACTIVE
+        assert cart.json()["items"][0]["product_id"] == "COKE_ZERO_330"
 
 
 @pytest.mark.asyncio

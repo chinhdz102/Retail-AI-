@@ -18,6 +18,7 @@ class ShoppingActionType(StrEnum):
     CHECK_PAYMENT_STATUS = "CHECK_PAYMENT_STATUS"
     CANCEL_CHECKOUT = "CANCEL_CHECKOUT"
     END_SESSION = "END_SESSION"
+    RESUME_SHOPPING = "RESUME_SHOPPING"
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class ShoppingAction:
     query: str = ""
     quantity: int | None = None
     candidate_index: int | None = None
+    line_items: tuple[tuple[str, int], ...] = ()
 
 
 _NUMBER_WORDS = {
@@ -124,6 +126,16 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
     ):
         return ShoppingAction(ShoppingActionType.END_SESSION)
 
+    if state == SessionState.HANDOFF and compact in {
+        "tiep tuc mua sam",
+        "quay lai mua sam",
+        "tiep tuc",
+        "resume shopping",
+        "continue shopping",
+        "back to shopping",
+    }:
+        return ShoppingAction(ShoppingActionType.RESUME_SHOPPING)
+
     if state == SessionState.CHECKOUT_CONFIRMATION and compact in {
         "xac nhan",
         "dong y",
@@ -180,8 +192,34 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
         flags=re.IGNORECASE,
     )
     if add_match:
-        raw_query = next((part for part in add_match.groups() if part), "")
-        quantity, query = _quantity_and_query(_strip_filler(raw_query))
+        original_add_match = re.search(
+            r"\b(?:thêm|them|bổ sung|bo sung|cho|add)\s+(.+?)\s+"
+            r"(?:vào|vao|vo)\s+(?:cái\s+)?(?:giỏ|gio)(?:\s+(?:hàng|hang))?\b|"
+            r"\badd\s+(.+?)\s+to\s+(?:my\s+)?cart\b",
+            text,
+            flags=re.IGNORECASE,
+        )
+        raw_query = (
+            next((part for part in original_add_match.groups() if part), "")
+            if original_add_match
+            else next((part for part in add_match.groups() if part), "")
+        )
+        cleaned_query = _strip_filler(raw_query)
+        parts = re.split(
+            r"\s*(?:,|;|\bvà\b|\bva\b|\bvới\b|\bvoi\b|\bcùng\b|\bcung\b|\band\b|\bplus\b)\s*",
+            cleaned_query,
+            flags=re.IGNORECASE,
+        )
+        if len(parts) > 1:
+            parsed_items = tuple(
+                (query, quantity)
+                for part in parts
+                for quantity, query in [_quantity_and_query(part)]
+                if query and 1 <= quantity <= 20
+            )
+            if len(parsed_items) == len(parts):
+                return ShoppingAction(ShoppingActionType.ADD_ITEM, line_items=parsed_items)
+        quantity, query = _quantity_and_query(cleaned_query)
         return ShoppingAction(ShoppingActionType.ADD_ITEM, query=query, quantity=quantity)
 
     remove_match = re.search(

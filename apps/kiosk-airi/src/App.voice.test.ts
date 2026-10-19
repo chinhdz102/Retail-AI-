@@ -59,8 +59,9 @@ import App from './App.vue'
 describe('voice transcript integration', () => {
   it('recovers an expired backend session and resends the same microphone audio once', async () => {
     vi.clearAllMocks()
-    apiMocks.createSession.mockResolvedValueOnce({ session_id: 'old-session' })
-      .mockResolvedValueOnce({ session_id: 'recovered-session' })
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+    apiMocks.createSession.mockResolvedValueOnce({ session_id: 'old-session', expires_at: expiresAt })
+      .mockResolvedValueOnce({ session_id: 'recovered-session', expires_at: expiresAt })
     apiMocks.transcribe.mockRejectedValueOnce(Object.assign(new Error('Session not found'), { status: 404 }))
       .mockResolvedValueOnce({ text: 'Coca Zero giá bao nhiêu?' })
     apiMocks.respond.mockResolvedValue({ text: 'Bạn muốn hỏi loại Coca Zero nào?', model: 'catalog' })

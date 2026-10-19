@@ -114,6 +114,42 @@ describe('kiosk app', () => {
     expect(apiMocks.respond).not.toHaveBeenCalled()
   })
 
+  it('creates and displays a clearly marked demo support request', async () => {
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Mình đã tạo yêu cầu hỗ trợ demo mã ticket-demo-1. Hệ thống chưa liên hệ nhân viên thật.',
+      model: 'support-simulator',
+      grounded_product_ids: [],
+      tools_used: ['handoff_to_staff'],
+      state: 'HANDOFF',
+      support_ticket: {
+        ticket_id: 'ticket-demo-1',
+        session_id: 'session-test',
+        kiosk_id: 'kiosk-01',
+        issue_type: 'OTHER',
+        description: 'Mình muốn gặp nhân viên.',
+        status: 'RECEIVED_DEMO',
+        created_at: new Date().toISOString(),
+        demo: true,
+      },
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+
+    await wrapper.get('.support-request-button').trigger('click')
+
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledWith(
+      'session-test',
+      'Mình muốn gặp nhân viên.',
+      'vi',
+      expect.any(String),
+    ))
+    await vi.waitFor(() => expect(wrapper.find('.support-ticket-card').exists()).toBe(true))
+    expect(wrapper.get('.support-ticket-card').text()).toContain('ticket-demo-1')
+    expect(wrapper.get('.support-ticket-card').text()).toContain('Chỉ là bản demo')
+  })
+
   it('defaults to the physical AMD microphone and hides duplicate browser aliases', async () => {
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,

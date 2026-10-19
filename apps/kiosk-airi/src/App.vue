@@ -69,6 +69,7 @@ let speechRequestId = 0
 let voiceController: VoiceConversationController | null = null
 let listeningStartedAt = 0
 let sessionExpiryTimer: ReturnType<typeof setTimeout> | undefined
+let sessionIdleTimeoutMs = 30 * 60 * 1000
 
 const languageSettings: Record<LanguageCode, {
   label: string
@@ -527,6 +528,7 @@ async function bootKiosk() {
   try {
     const session = await createSession('kiosk-01')
     sessionId.value = session.session_id
+    sessionIdleTimeoutMs = Math.max(1_000, new Date(session.expires_at).getTime() - Date.now())
     scheduleSessionExpiry(session.expires_at)
     try {
       cart.value = await getCart(session.session_id)
@@ -591,8 +593,13 @@ async function withSessionRecovery<T>(
   retryAfterSessionLoss = false,
 ): Promise<T> {
   if (!sessionId.value) throw new Error('Chưa kết nối được phiên trò chuyện.')
+  const activeSessionId = sessionId.value
   try {
-    return await action(sessionId.value)
+    const result = await action(activeSessionId)
+    if (sessionId.value === activeSessionId) {
+      scheduleSessionExpiry(new Date(Date.now() + sessionIdleTimeoutMs).toISOString())
+    }
+    return result
   } catch (error) {
     const failure = error as { status?: number; message?: string }
     const sessionGone = /session (?:is )?(?:closed|expired|not found)/i.test(failure?.message ?? '')
@@ -600,7 +607,14 @@ async function withSessionRecovery<T>(
     await resetKioskSession(
       'Phiên trước đã kết thúc. Mình đã xóa hội thoại; bạn nói lại yêu cầu trong phiên mới nhé.',
     )
-    if (retryAfterSessionLoss && sessionId.value) return action(sessionId.value)
+    if (retryAfterSessionLoss && sessionId.value) {
+      const resumedSessionId = sessionId.value
+      const result = await action(resumedSessionId)
+      if (sessionId.value === resumedSessionId) {
+        scheduleSessionExpiry(new Date(Date.now() + sessionIdleTimeoutMs).toISOString())
+      }
+      return result
+    }
     throw new Error('Phiên trước đã kết thúc. Hội thoại cũ đã được xóa; vui lòng nói lại yêu cầu.')
   }
 }
@@ -631,6 +645,7 @@ async function sendMessage(value = draft.value, fromVoice = false) {
       model: response.model,
       groundedProductIds: response.grounded_product_ids,
       products: response.products,
+      supportTicket: response.support_ticket ?? undefined,
     })
     if (response.cart) cart.value = response.cart
     if (response.checkout_quote) checkoutQuote.value = response.checkout_quote
@@ -730,14 +745,15 @@ async function handleCancelCheckout() {
 async function handleSandboxPayment(outcome: 'PAID' | 'FAILED') {
   if (!sessionId.value || !sandboxOrder.value) return
   try {
-    const session = sessionId.value
-    const order = await simulateSandboxPayment(session, sandboxOrder.value.order_id, outcome, createRequestId())
+    const order = await withSessionRecovery((id) =>
+      simulateSandboxPayment(id, sandboxOrder.value!.order_id, outcome, createRequestId()),
+    )
     if (order.payment_status === 'PAID') {
       await resetKioskSession('Thanh toán mô phỏng hoàn tất; không phát sinh giao dịch thật. Kiosk đã mở phiên mới.')
       return
     }
     sandboxOrder.value = order
-    cart.value = await getCart(session)
+    cart.value = await withSessionRecovery((id) => getCart(id))
   } catch (error) {
     showShoppingError(error)
   }
@@ -749,6 +765,16 @@ function clearSandboxOrder() {
 
 function handleEndSession() {
   void resetKioskSession('Phiên đã kết thúc. Nội dung cũ đã được xóa khỏi kiosk.')
+}
+
+function handleRequestSupport() {
+  void sendMessage(
+    language.value === 'en'
+      ? "I'd like to speak to a staff member."
+      : language.value === 'zh'
+        ? '我想联系店员。'
+        : 'Mình muốn gặp nhân viên.',
+  )
 }
 
 function toggleTextPanel() {
@@ -920,6 +946,7 @@ onUnmounted(() => {
           @simulate-payment="handleSandboxPayment"
           @clear-order="clearSandboxOrder"
           @end-session="handleEndSession"
+          @request-support="handleRequestSupport"
         />
       </aside>
     </Transition>

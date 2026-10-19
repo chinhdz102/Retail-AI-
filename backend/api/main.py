@@ -27,6 +27,8 @@ from backend.api.schemas import (
     SandboxPaymentRequest,
     SessionCreateRequest,
     SessionResponse,
+    SupportTicketCreateRequest,
+    SupportTicketResponse,
     SynthesizeRequest,
     SynthesizeTicketResponse,
     TranscriptionResponse,
@@ -82,6 +84,12 @@ from backend.services.shopping_flow import (
     classify_shopping_action,
 )
 from backend.services.speech_tickets import SpeechTicketStore
+from backend.services.support import (
+    SupportIdempotencyConflictError,
+    SupportTicketNotFoundError,
+    SupportTicketStore,
+    classify_support_intent,
+)
 from backend.services.vietnamese_intent import (
     consultation_product_query as _consultation_product_query,
 )
@@ -115,6 +123,7 @@ session_store = build_session_store(
 shopping_service = ShoppingService(
     sandbox_enabled=settings.app_env.casefold() not in {"production", "prod"},
 )
+support_ticket_store = SupportTicketStore()
 speech_ticket_store = SpeechTicketStore()
 logger = logging.getLogger(__name__)
 _groq_service: GroqService | None = None
@@ -2046,6 +2055,63 @@ def close_session(session_id: UUID) -> SessionResponse:
     )
 
 
+def _support_ticket_response(ticket) -> SupportTicketResponse:
+    return SupportTicketResponse(
+        ticket_id=ticket.ticket_id,
+        session_id=ticket.session_id,
+        kiosk_id=ticket.kiosk_id,
+        issue_type=ticket.issue_type,
+        description=ticket.description,
+        status=ticket.status,
+        created_at=ticket.created_at,
+        demo=ticket.demo,
+    )
+
+
+@app.post(
+    "/sessions/{session_id}/support/tickets",
+    response_model=SupportTicketResponse,
+    status_code=201,
+)
+def create_support_ticket(
+    session_id: UUID,
+    request: SupportTicketCreateRequest,
+) -> SupportTicketResponse:
+    record = _session_or_http_error(session_id)
+    try:
+        ticket = support_ticket_store.create(
+            session_id=session_id,
+            kiosk_id=record.kiosk_id,
+            issue_type=request.issue_type,
+            description=request.description,
+            idempotency_key=request.idempotency_key,
+        )
+        if record.state != SessionState.HANDOFF:
+            session_store.transition(session_id, SessionState.HANDOFF)
+        session_store.update_shopping(
+            session_id,
+            current_intent=IntentType.HANDOFF,
+            handoff_status=ticket.status,
+            handoff_ticket_id=str(ticket.ticket_id),
+            handoff_previous_state=record.shopping.handoff_previous_state or record.state.value,
+        )
+        return _support_ticket_response(ticket)
+    except SupportIdempotencyConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.get(
+    "/sessions/{session_id}/support/tickets/{ticket_id}",
+    response_model=SupportTicketResponse,
+)
+def get_support_ticket(session_id: UUID, ticket_id: UUID) -> SupportTicketResponse:
+    _session_or_http_error(session_id)
+    try:
+        return _support_ticket_response(support_ticket_store.get(session_id, ticket_id))
+    except SupportTicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Support ticket not found") from exc
+
+
 def _cart_response(cart) -> CartResponse:
     return CartResponse(
         cart_id=cart.cart_id,
@@ -2085,6 +2151,27 @@ def _order_response(order) -> SandboxOrderResponse:
     )
 
 
+def _refresh_terminal_order_session(session_id: UUID, record):
+    if record.state != SessionState.PAYMENT_PENDING or not record.shopping.pending_order_id:
+        return record
+    try:
+        order = shopping_service.get_order(
+            session_id,
+            UUID(record.shopping.pending_order_id),
+        )
+    except (ShoppingError, ValueError):
+        return record
+    if order.payment_status in {"FAILED", "CANCELLED", "EXPIRED"}:
+        session_store.transition(session_id, SessionState.CART_ACTIVE)
+        session_store.update_shopping(
+            session_id,
+            payment_status=order.payment_status,
+            pending_confirmation_id=None,
+        )
+        return session_store.get(session_id)
+    return record
+
+
 def _shopping_http_error(exc: Exception) -> HTTPException:
     if isinstance(exc, ShoppingUnavailableError):
         return HTTPException(status_code=503, detail=str(exc))
@@ -2101,7 +2188,8 @@ def _shopping_http_error(exc: Exception) -> HTTPException:
 
 @app.get("/sessions/{session_id}/cart", response_model=CartResponse)
 def get_session_cart(session_id: UUID) -> CartResponse:
-    _session_or_http_error(session_id)
+    record = _session_or_http_error(session_id)
+    _refresh_terminal_order_session(session_id, record)
     try:
         return _cart_response(shopping_service.get_cart(session_id))
     except Exception as exc:
@@ -2111,6 +2199,7 @@ def get_session_cart(session_id: UUID) -> CartResponse:
 @app.post("/sessions/{session_id}/cart/items", response_model=CartResponse)
 def add_cart_item(session_id: UUID, request: CartAddRequest) -> CartResponse:
     record = _session_or_http_error(session_id)
+    record = _refresh_terminal_order_session(session_id, record)
     if record.state not in {
         SessionState.BROWSING,
         SessionState.CART_ACTIVE,
@@ -2136,6 +2225,7 @@ def add_cart_item(session_id: UUID, request: CartAddRequest) -> CartResponse:
             cart_reference=str(cart.cart_id),
             pending_confirmation_id=None,
         )
+        session_store.update_constraints(session_id, [{"action": "REPLACE", "value": {}}])
         return _cart_response(cart)
     except Exception as exc:
         raise _shopping_http_error(exc) from exc
@@ -2148,6 +2238,7 @@ def set_cart_item_quantity(
     request: CartQuantityRequest,
 ) -> CartResponse:
     record = _session_or_http_error(session_id)
+    record = _refresh_terminal_order_session(session_id, record)
     if record.state not in {
         SessionState.BROWSING,
         SessionState.CART_ACTIVE,
@@ -2174,6 +2265,7 @@ def set_cart_item_quantity(
             cart_reference=str(cart.cart_id) if cart.items else None,
             pending_confirmation_id=None,
         )
+        session_store.update_constraints(session_id, [{"action": "REPLACE", "value": {}}])
         return _cart_response(cart)
     except Exception as exc:
         raise _shopping_http_error(exc) from exc
@@ -2182,6 +2274,7 @@ def set_cart_item_quantity(
 @app.post("/sessions/{session_id}/checkout/prepare", response_model=CheckoutQuoteResponse)
 def prepare_session_checkout(session_id: UUID) -> CheckoutQuoteResponse:
     record = _session_or_http_error(session_id)
+    record = _refresh_terminal_order_session(session_id, record)
     if record.state not in {SessionState.CART_ACTIVE, SessionState.CHECKOUT_CONFIRMATION}:
         raise HTTPException(status_code=409, detail="Add an item to the cart before checkout")
     try:
@@ -2251,8 +2344,11 @@ def confirm_session_checkout(
 
 @app.get("/sessions/{session_id}/orders/{order_id}", response_model=SandboxOrderResponse)
 def get_session_order(session_id: UUID, order_id: UUID) -> SandboxOrderResponse:
+    record = _session_or_http_error(session_id)
     try:
-        return _order_response(shopping_service.get_order(session_id, order_id))
+        order = shopping_service.get_order(session_id, order_id)
+        _refresh_terminal_order_session(session_id, record)
+        return _order_response(order)
     except Exception as exc:
         raise _shopping_http_error(exc) from exc
 
@@ -2430,6 +2526,7 @@ def _record_shopping_turn(
     cart: CartResponse | None = None,
     checkout_quote: CheckoutQuoteResponse | None = None,
     order: SandboxOrderResponse | None = None,
+    support_ticket: SupportTicketResponse | None = None,
     state: SessionState | None = None,
 ) -> AgentRespondResponse:
     if state != SessionState.CLOSED:
@@ -2448,6 +2545,7 @@ def _record_shopping_turn(
         cart=cart,
         checkout_quote=checkout_quote,
         order=order,
+        support_ticket=support_ticket,
     )
 
 
@@ -2516,12 +2614,47 @@ async def _handle_shopping_action(
                 state=SessionState.CLOSED,
             )
 
+        if action.action == ShoppingActionType.RESUME_SHOPPING:
+            prior_state = record.shopping.handoff_previous_state
+            try:
+                resume_state = SessionState(prior_state) if prior_state else SessionState.BROWSING
+            except ValueError:
+                resume_state = SessionState.BROWSING
+            if resume_state == SessionState.CHECKOUT_CONFIRMATION:
+                resume_state = SessionState.CART_ACTIVE
+            session_store.transition(request.session_id, resume_state)
+            session_store.update_shopping(
+                request.session_id,
+                current_intent=(
+                    IntentType.PAYMENT_STATUS
+                    if resume_state == SessionState.PAYMENT_PENDING
+                    else IntentType.UNKNOWN
+                ),
+                pending_clarification=None,
+                handoff_previous_state=None,
+            )
+            reply = (
+                "You can continue shopping. The previous staff request remains a demo record."
+                if request.language == "en"
+                else "Mình đã mở lại phiên mua sắm. Yêu cầu hỗ trợ trước đó vẫn là bản ghi demo."
+            )
+            return _record_shopping_turn(
+                request,
+                reply,
+                model="shopping-controller",
+                tools_used=["resume_shopping"],
+            )
+
         if action.action == ShoppingActionType.VIEW_CART:
             cart = _cart_response(shopping_service.get_cart(request.session_id))
             session_store.update_shopping(
                 request.session_id,
                 current_intent=IntentType.CART_VIEW,
                 cart_reference=str(cart.cart_id),
+            )
+            session_store.update_constraints(
+                request.session_id,
+                [{"action": "REPLACE", "value": {}}],
             )
             return _record_shopping_turn(
                 request,
@@ -2536,6 +2669,34 @@ async def _handle_shopping_action(
             ShoppingActionType.REMOVE_ITEM,
             ShoppingActionType.SET_QUANTITY,
         }:
+            if current_state == SessionState.HANDOFF:
+                reply = (
+                    "A demo support request is open. Say ‘continue shopping’ to return to "
+                    "the catalog."
+                    if request.language == "en"
+                    else "Đang có yêu cầu hỗ trợ demo. Bạn nói ‘tiếp tục mua sắm’ để quay lại "
+                    "catalog nhé."
+                )
+                return _record_shopping_turn(
+                    request,
+                    reply,
+                    model="shopping-controller",
+                    tools_used=["shopping_policy"],
+                )
+            if current_state == SessionState.PAYMENT_PENDING:
+                reply = (
+                    "A sandbox order is waiting for payment status. Check that order before "
+                    "changing the cart."
+                    if request.language == "en"
+                    else "Đơn sandbox đang chờ trạng thái thanh toán. Bạn kiểm tra đơn đó trước "
+                    "khi sửa giỏ nhé."
+                )
+                return _record_shopping_turn(
+                    request,
+                    reply,
+                    model="shopping-controller",
+                    tools_used=["shopping_policy"],
+                )
             quantity = action.quantity if action.quantity is not None else 1
             if action.action == ShoppingActionType.ADD_ITEM and not 1 <= quantity <= 20:
                 reply = "Mỗi lần mình có thể thêm tối đa 20 sản phẩm cùng mã vào giỏ."
@@ -2543,6 +2704,102 @@ async def _handle_shopping_action(
 
             query = action.query
             selected_products: list[ProductSnapshot] = []
+            if action.action == ShoppingActionType.ADD_ITEM and action.line_items:
+                resolved_lines: dict[str, tuple[ProductSnapshot, int]] = {}
+                for item_query, item_quantity in action.line_items:
+                    observation = await lookup_product_candidates(item_query)
+                    candidates = [
+                        product for product in observation.products if product.sellable_stock > 0
+                    ]
+                    if not candidates:
+                        reply = (
+                            f"I could not find a sellable match for {item_query} in the active "
+                            "catalog. "
+                            "I left the cart unchanged."
+                            if request.language == "en"
+                            else f"Mình chưa tìm thấy {item_query} đang bán được trong catalog; "
+                            "giỏ được giữ nguyên nhé."
+                        )
+                        return _record_shopping_turn(
+                            request,
+                            reply,
+                            model="shopping-controller",
+                            tools_used=["search_products"],
+                        )
+                    if len(candidates) > 1:
+                        names = "; ".join(
+                            f"{product.name} — {product.price_vnd:,}đ".replace(",", ".")
+                            for product in candidates
+                        )
+                        reply = (
+                            f"I found multiple matches for {item_query}: {names}. Please specify "
+                            "that item; I left the cart unchanged."
+                            if request.language == "en"
+                            else f"Mình thấy nhiều món khớp với {item_query}: {names}. Bạn nói rõ "
+                            "món đó giúp mình; giỏ vẫn giữ nguyên nhé."
+                        )
+                        return _record_shopping_turn(
+                            request,
+                            reply,
+                            model="shopping-controller",
+                            tools_used=["search_products"],
+                            products=candidates,
+                        )
+                    product = candidates[0]
+                    current = resolved_lines.get(product.product_id)
+                    resolved_lines[product.product_id] = (
+                        product,
+                        item_quantity + (current[1] if current else 0),
+                    )
+                try:
+                    cart_snapshot = shopping_service.add_items(
+                        request.session_id,
+                        [
+                            (product_id, amount)
+                            for product_id, (_, amount) in resolved_lines.items()
+                        ],
+                        idempotency_key=idempotency_key,
+                    )
+                except (ShoppingError, ValueError) as exc:
+                    return _record_shopping_turn(
+                        request,
+                        _localized_shopping_error(exc, request.language),
+                        model="shopping-controller",
+                        tools_used=["search_products", "shopping_policy"],
+                    )
+                next_state = SessionState.CART_ACTIVE
+                if current_state != next_state:
+                    session_store.transition(request.session_id, next_state)
+                cart = _cart_response(cart_snapshot)
+                selected_products = [product for product, _ in resolved_lines.values()]
+                reply = (
+                    f"Mình đã thêm {len(selected_products)} mặt hàng vào giỏ demo. "
+                    if request.language == "vi"
+                    else f"I added {len(selected_products)} products to the demo cart. "
+                ) + _shopping_reply_for_cart(cart, request.language)
+                session_store.update_shopping(
+                    request.session_id,
+                    current_intent=IntentType.CART_UPDATE,
+                    active_product_id=selected_products[-1].product_id,
+                    selected_product_ids=[product.product_id for product in selected_products],
+                    cart_reference=str(cart.cart_id),
+                    pending_action=None,
+                    pending_quantity=None,
+                    pending_clarification=None,
+                    pending_confirmation_id=None,
+                )
+                session_store.update_constraints(
+                    request.session_id,
+                    [{"action": "REPLACE", "value": {}}],
+                )
+                return _record_shopping_turn(
+                    request,
+                    reply,
+                    model="shopping-controller",
+                    tools_used=["search_products", "update_cart"],
+                    products=selected_products,
+                    cart=cart,
+                )
             if action.candidate_index is not None:
                 pending = record.shopping.pending_action or ""
                 candidate_ids = record.shopping.selected_product_ids
@@ -2668,6 +2925,10 @@ async def _handle_shopping_action(
                     pending_quantity=None,
                     pending_clarification=None,
                 )
+                session_store.update_constraints(
+                    request.session_id,
+                    [{"action": "REPLACE", "value": {}}],
+                )
                 return _record_shopping_turn(
                     request,
                     reply,
@@ -2695,6 +2956,10 @@ async def _handle_shopping_action(
                 selected_product_ids=[product_id],
                 cart_reference=str(cart.cart_id) if cart.items else None,
                 pending_confirmation_id=None,
+            )
+            session_store.update_constraints(
+                request.session_id,
+                [{"action": "REPLACE", "value": {}}],
             )
             reply = "Mình đã cập nhật giỏ demo. " + _shopping_reply_for_cart(cart, request.language)
             return _record_shopping_turn(
@@ -2829,6 +3094,7 @@ async def agent_respond(
     settings: Settings = Depends(get_settings),
 ) -> AgentRespondResponse:
     record = _session_or_http_error(request.session_id)
+    record = _refresh_terminal_order_session(request.session_id, record)
     if record.state in {SessionState.CLOSED, SessionState.EXPIRED}:
         raise HTTPException(status_code=409, detail="Session is closed")
 
@@ -2854,6 +3120,45 @@ async def agent_respond(
     shopping_response = await _handle_shopping_action(request, record)
     if shopping_response is not None:
         return shopping_response
+    support_intent = classify_support_intent(request.text)
+    if support_intent is not None:
+        ticket = support_ticket_store.create(
+            session_id=request.session_id,
+            kiosk_id=record.kiosk_id,
+            issue_type=support_intent.issue_type,
+            description=support_intent.description,
+            idempotency_key=str(request.client_turn_id),
+        )
+        if record.state != SessionState.HANDOFF:
+            session_store.transition(request.session_id, SessionState.HANDOFF)
+        session_store.update_shopping(
+            request.session_id,
+            current_intent=IntentType.PRODUCT_ISSUE
+            if support_intent.issue_type.value != "OTHER"
+            else IntentType.HANDOFF,
+            handoff_status=ticket.status,
+            handoff_ticket_id=str(ticket.ticket_id),
+            handoff_previous_state=record.shopping.handoff_previous_state or record.state.value,
+        )
+        support_ticket = _support_ticket_response(ticket)
+        reply = (
+            f"I created demo support request {ticket.ticket_id}. A real staff member has not "
+            "been contacted."
+            if request.language == "en"
+            else (
+                f"已创建演示服务请求 {ticket.ticket_id}。系统尚未联系真实店员。"
+                if request.language == "zh"
+                else f"Mình đã tạo yêu cầu hỗ trợ demo mã {ticket.ticket_id}. Hệ thống chưa "
+                "liên hệ nhân viên thật."
+            )
+        )
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="support-simulator",
+            tools_used=["handoff_to_staff"],
+            support_ticket=support_ticket,
+        )
     if _store_service_policy_requested(request.text):
         return _local_policy_response(
             request,
@@ -3046,7 +3351,51 @@ async def agent_respond(
     recommendation_arguments = _recommendation_tool_arguments(
         request.text,
         previous_user_text,
+        stored_constraints=record.shopping.constraints,
+        active_context=record.shopping.current_intent == IntentType.RECOMMENDATION,
     )
+    spicy_recommendation_constraint = (
+        bool(recommendation_arguments)
+        and set(requested_fields) == {"spicy"}
+        and not re.search(
+            r"\b(?:co cay khong|cay khong|is it spicy|does it contain chili)\b",
+            _normalize_request_text(request.text),
+        )
+    )
+    if (
+        requested_fields
+        and record.shopping.current_intent == IntentType.RECOMMENDATION
+        and not spicy_recommendation_constraint
+    ):
+        recommendation_arguments = None
+        session_store.update_constraints(
+            request.session_id,
+            [{"action": "REPLACE", "value": {}}],
+        )
+        session_store.update_shopping(
+            request.session_id,
+            current_intent=IntentType.PRODUCT_LOOKUP,
+            active_category=None,
+        )
+    elif recommendation_arguments:
+        updates = _recommendation_constraint_updates(
+            request.text,
+            record.shopping.constraints,
+        )
+        session_store.update_constraints(request.session_id, updates)
+        saved_constraints = session_store.get(request.session_id).shopping.constraints
+        session_store.update_shopping(
+            request.session_id,
+            current_intent=IntentType.RECOMMENDATION,
+            active_category=saved_constraints.get("category"),
+            pending_clarification=None,
+        )
+        recommendation_arguments = _recommendation_tool_arguments(
+            request.text,
+            previous_user_text,
+            stored_constraints=saved_constraints,
+            active_context=True,
+        )
     if ranking_requested and recommendation_arguments is None:
         reply = _localized_ranking_clarification(request.language)
         session_store.add_message(request.session_id, "user", request.text)
@@ -3934,11 +4283,28 @@ def _unparsed_recommendation_budget_requested(text: str) -> bool:
 def _recommendation_tool_arguments(
     text: str,
     previous_user_text: str | None = None,
+    *,
+    stored_constraints: dict[str, object] | None = None,
+    active_context: bool = False,
 ) -> dict[str, object] | None:
     if is_recommendation_negated(text):
         return None
-    category = _explicit_recommendation_category(text)
+    stored = stored_constraints or {}
+    category = _explicit_recommendation_category(text) or stored.get("category")
     normalized = _normalize_request_text(text)
+    current_price_constraint = _price_constraint_from_text(text)
+    current_brand = _recommendation_brand_from_text(text)
+    current_spice_signal = bool(
+        re.search(
+            r"\bkhong cay\b|\bnot spicy\b|\bmild\b|\bnon spicy\b|"
+            r"\b(?:co cay|vi cay)\b|\bspicy\b|\bhot\b|"
+            r"cay cung duoc|khong can loc do cay|any spice level",
+            normalized,
+        )
+    )
+    current_size_signal = bool(
+        re.search(r"\b\d+(?:[.,]\d+)?\s?(?:ml|l|g|kg|gram|grams)\b", text, re.IGNORECASE)
+    )
     has_correction_cue = any(
         cue in normalized
         for cue in (
@@ -3966,7 +4332,7 @@ def _recommendation_tool_arguments(
         and not _has_specific_product_reference(text)
     ):
         category = _explicit_recommendation_category(previous_user_text)
-    product_query = _explicit_recommendation_query(text)
+    product_query = _explicit_recommendation_query(text) or stored.get("query")
     if category is None and not product_query:
         product_query = _consultation_product_query(text)
     if category is None and not product_query:
@@ -3985,20 +4351,150 @@ def _recommendation_tool_arguments(
         previous_product_query = _fact_product_query(previous_user_text)
         if previous_product_query:
             arguments["query"] = previous_product_query
-    price_constraint = _price_constraint_from_text(text)
+    price_constraint = current_price_constraint or stored.get("price_constraint")
     if price_constraint:
         arguments["price_constraint"] = price_constraint
+    brand = current_brand or stored.get("brand")
+    if brand:
+        arguments["brand"] = brand
+    size_match = re.search(
+        r"\b\d+(?:[.,]\d+)?\s?(?:ml|l|g|kg|gram|grams)\b",
+        text,
+        re.IGNORECASE,
+    )
+    size = size_match.group(0).replace(" ", "") if size_match else stored.get("size")
+    if isinstance(size, str) and size:
+        query_value = str(arguments.get("query", "")).strip()
+        if size.casefold() not in query_value.casefold():
+            arguments["query"] = " ".join(part for part in (query_value, size) if part)
     if re.search(r"\bkhong cay\b|\bnot spicy\b|\bmild\b|\bnon spicy\b", normalized):
         arguments["spicy"] = False
     elif re.search(r"\b(?:co cay|vi cay)\b|\bspicy\b|\bhot\b", normalized):
         arguments["spicy"] = True
-    if (
-        not is_recommendation_request(text)
-        and price_constraint is None
-        and not _product_ranking_requested(text)
-    ):
+    elif "spicy" in stored:
+        arguments["spicy"] = stored["spicy"]
+    previous_context = bool(
+        previous_user_text
+        and (
+            is_recommendation_request(previous_user_text)
+            or _product_ranking_requested(previous_user_text)
+            or _explicit_recommendation_category(previous_user_text)
+            or _explicit_recommendation_query(previous_user_text)
+        )
+    )
+    has_recommendation_signal = (
+        is_recommendation_request(text)
+        or _product_ranking_requested(text)
+        or (
+            (active_context or previous_context)
+            and (
+                current_price_constraint is not None
+                or current_brand is not None
+                or current_spice_signal
+                or (current_size_signal and has_correction_cue)
+            )
+        )
+        or (current_price_constraint is not None and bool(category or product_query))
+    )
+    if not has_recommendation_signal:
         return None
     return arguments
+
+
+def _recommendation_brand_from_text(text: str) -> str | None:
+    normalized = _normalize_request_text(text)
+    match = re.search(
+        r"\b(?:thuong hieu|nhan hang|brand)\s+([a-z0-9][a-z0-9 '-]{0,32})",
+        normalized,
+    )
+    if not match and re.search(r"\b(?:hãng|hãng hàng)\s+", text, re.IGNORECASE):
+        match = re.search(
+            r"\b(?:hãng|hãng hàng)\s+([\w '-]{1,32})",
+            text.casefold(),
+            re.IGNORECASE,
+        )
+    if not match and not re.search(r"[à-ỹđ]", text, re.IGNORECASE):
+        match = re.search(
+            r"\bhang\s+([a-z0-9][a-z0-9 '-]{0,32})",
+            normalized,
+        )
+    if not match:
+        return None
+    brand = re.split(
+        r"\b(?:duoi|toi da|khong qua|under|below|and|va|voi|cung)\b|\d",
+        match.group(1),
+        maxsplit=1,
+    )[0].strip(" -'")
+    return brand or None
+
+
+def _recommendation_constraint_updates(
+    text: str,
+    current: dict[str, object],
+) -> list[dict[str, object]]:
+    normalized = _normalize_request_text(text)
+    updates: list[dict[str, object]] = []
+    if any(cue in normalized for cue in ("tim lai tu dau", "bo het yeu cau cu", "start over")):
+        updates.append({"action": "REPLACE", "value": {}})
+    category = _explicit_recommendation_category(text)
+    if category:
+        updates.append({"action": "SET", "key": "category", "value": category})
+    query = _explicit_recommendation_query(text)
+    if not query and not category and not current.get("category"):
+        query = _consultation_product_query(text)
+    if query:
+        updates.append({"action": "SET", "key": "query", "value": query})
+    brand = _recommendation_brand_from_text(text)
+    if brand:
+        updates.append({"action": "SET", "key": "brand", "value": brand})
+    elif any(
+        cue in normalized
+        for cue in ("hang nao cung duoc", "any brand", "no brand preference")
+    ):
+        updates.append({"action": "REMOVE", "key": "brand"})
+    price_constraint = _price_constraint_from_text(text)
+    if price_constraint:
+        updates.append({"action": "SET", "key": "price_constraint", "value": price_constraint})
+    elif any(
+        cue in normalized
+        for cue in ("khong gioi han gia", "bo gioi han gia", "no budget limit")
+    ):
+        updates.append({"action": "REMOVE", "key": "price_constraint"})
+    if re.search(r"\bkhong cay\b|\bnot spicy\b|\bmild\b|\bnon spicy\b", normalized):
+        updates.append({"action": "SET", "key": "spicy", "value": False})
+    elif re.search(r"\b(?:co cay|vi cay)\b|\bspicy\b|\bhot\b", normalized):
+        updates.append({"action": "SET", "key": "spicy", "value": True})
+    elif any(
+        cue in normalized
+        for cue in ("cay cung duoc", "khong can loc do cay", "any spice level")
+    ):
+        updates.append({"action": "REMOVE", "key": "spicy"})
+    size = re.search(r"\b\d+(?:[.,]\d+)?\s?(?:ml|l|g|kg|gram|grams)\b", text, re.IGNORECASE)
+    if size:
+        new_size = size.group(0).replace(" ", "")
+        updates.append({"action": "SET", "key": "size", "value": new_size})
+        old_size = current.get("size")
+        old_query = current.get("query")
+        if isinstance(old_size, str) and old_size != new_size and isinstance(old_query, str):
+            updated_query = re.sub(
+                re.escape(old_size), new_size, old_query, flags=re.IGNORECASE
+            ).strip()
+            if updated_query:
+                updates.append({"action": "SET", "key": "query", "value": updated_query})
+    elif any(
+        cue in normalized
+        for cue in ("co nao cung duoc", "any size", "khong quan trong dung tich")
+    ):
+        updates.append({"action": "REMOVE", "key": "size"})
+        old_size = current.get("size")
+        old_query = current.get("query")
+        if isinstance(old_size, str) and isinstance(old_query, str):
+            updated_query = re.sub(re.escape(old_size), "", old_query, flags=re.IGNORECASE).strip()
+            if updated_query:
+                updates.append({"action": "SET", "key": "query", "value": updated_query})
+            else:
+                updates.append({"action": "REMOVE", "key": "query"})
+    return updates or [{"action": "KEEP"}]
 
 
 def _product_ranking_requested(text: str) -> bool:

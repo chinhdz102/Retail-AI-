@@ -38,6 +38,18 @@ export interface AgentResponse {
   cart?: ShoppingCart | null
   checkout_quote?: CheckoutQuote | null
   order?: SandboxOrder | null
+  support_ticket?: SupportTicket | null
+}
+
+export interface SupportTicket {
+  ticket_id: string
+  session_id: string
+  kiosk_id: string
+  issue_type: string
+  description: string
+  status: string
+  created_at: string
+  demo: boolean
 }
 
 export interface ProductCard {
@@ -111,4 +123,5 @@ export interface ChatMessage {
   model?: string
   groundedProductIds?: string[]
   products?: ProductCard[]
+  supportTicket?: SupportTicket
 }
