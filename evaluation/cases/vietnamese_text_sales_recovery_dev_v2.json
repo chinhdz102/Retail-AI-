@@ -1,0 +1,139 @@
+{
+  "dataset_id": "retail_vietnamese_text_sales_recovery_dev_v2",
+  "language_scope": "Vietnamese only",
+  "description": "Six new development sessions covering compound product requests, freshness follow-ups, stock context, product correction, regional wording, typo tolerance, and safe clarification. This dataset is separate from the previously reviewed held-out set.",
+  "catalog_scope": "backend/products/catalog.py demo catalog; no PostgreSQL or production inventory claims",
+  "cases": [
+    {
+      "case_id": "compound_price_and_aisle_request",
+      "tags": ["dev", "multi_intent", "query_cleanup", "catalog_grounding"],
+      "turns": [
+        {
+          "text": "Coca-Cola Zero 330ml cho mình xem giá tham khảo với, rồi chỉ kệ giúp nhé.",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["13.000", "A2-L2"],
+          "must_not_contain": ["Theo dữ liệu ngày"]
+        }
+      ]
+    },
+    {
+      "case_id": "freshness_stock_and_location_followups",
+      "tags": ["dev", "freshness", "context", "stock", "shelf"],
+      "turns": [
+        {
+          "text": "Coca Zero giá sao?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["13.000"]
+        },
+        {
+          "text": "Mức giá ấy lấy dữ liệu từ ngày nào vậy?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["31/08/2026"]
+        },
+        {
+          "text": "Hôm nay cửa hàng còn bán món đó chứ?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["16"],
+          "must_not_contain": ["chắc chắn còn hàng"]
+        },
+        {
+          "text": "Dãy để món đó ở đâu nhỉ?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["A2-L2"]
+        }
+      ]
+    },
+    {
+      "case_id": "product_correction_keeps_fact_and_context",
+      "tags": ["dev", "correction", "context", "shelf", "price_provenance"],
+      "turns": [
+        {
+          "text": "Coca Zero xem giá cho mình.",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["13.000"]
+        },
+        {
+          "text": "Không, ý mình là nước suối chai 500 ml.",
+          "expected_product_ids": ["WATER01"],
+          "must_contain": ["7.000"]
+        },
+        {
+          "text": "Kệ ở dãy nào nhỉ?",
+          "expected_product_ids": ["WATER01"],
+          "must_contain": ["A1-L1"]
+        },
+        {
+          "text": "Mức giá này có cập nhật trực tiếp không?",
+          "expected_product_ids": ["WATER01"],
+          "must_contain": ["có thể khác"]
+        }
+      ]
+    },
+    {
+      "case_id": "typo_and_central_vietnamese_followups",
+      "tags": ["dev", "typo", "regional_vietnamese", "context"],
+      "turns": [
+        {
+          "text": "Coca Zaro nhiu zậy?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["13.000"]
+        },
+        {
+          "text": "Ở mô rứa?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["A2-L2"]
+        },
+        {
+          "text": "Còn bao nhiêu lon?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["16"]
+        }
+      ]
+    },
+    {
+      "case_id": "allergen_clarification_and_safe_recovery",
+      "tags": ["dev", "clarification", "allergen", "context_recovery"],
+      "turns": [
+        {
+          "text": "Mình muốn tránh hạt nhưng chưa nói tên snack, thành phần có gì?",
+          "must_contain": ["sản phẩm nào"],
+          "must_not_contain": ["an toàn tuyệt đối", "không gây dị ứng"],
+          "no_tools_expected": true
+        },
+        {
+          "text": "Chưa nhớ, bạn đừng đoán giúp mình.",
+          "must_contain": ["chưa có dữ liệu đã xác minh"],
+          "must_not_contain": ["sản phẩm nào", "an toàn tuyệt đối"],
+          "no_tools_expected": true
+        },
+        {
+          "text": "Bim bim khoai tây vị tự nhiên giá sao?",
+          "expected_product_ids": ["SNACK01"],
+          "must_contain": ["18.000"]
+        },
+        {
+          "text": "Loại này có cay không?",
+          "expected_product_ids": ["SNACK01"],
+          "must_contain": ["không cay"]
+        }
+      ]
+    },
+    {
+      "case_id": "sales_popularity_abstention_then_recommendation",
+      "tags": ["dev", "unsupported_sales_data", "recommendation", "hard_constraint"],
+      "turns": [
+        {
+          "text": "Snack nào được khách mua nhiều nhất?",
+          "must_contain": ["chưa có dữ liệu đã xác minh"],
+          "must_not_contain": ["bán chạy nhất là", "được khách mua nhiều nhất là"],
+          "no_tools_expected": true
+        },
+        {
+          "text": "Thế có món ăn vặt nào dịu, không cay?",
+          "expected_product_ids": ["SNACK01"],
+          "must_contain": ["Snack khoai tây vị tự nhiên", "không cay"]
+        }
+      ]
+    }
+  ]
+}
