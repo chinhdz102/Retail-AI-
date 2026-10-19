@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     groq_base_url: str = "https://api.groq.com/openai/v1"
     groq_api_key: SecretStr = SecretStr("")
+    groq_api_key_fallback_1: SecretStr = SecretStr("")
+    groq_api_key_fallback_2: SecretStr = SecretStr("")
     groq_model: str = "qwen/qwen3.8-27b"
     groq_fallback_model: str = "openai/gpt-oss-120b"
     groq_fallback_model_2: str = "openai/gpt-oss-20b"
@@ -55,7 +57,24 @@ class Settings(BaseSettings):
 
     @property
     def has_groq_key(self) -> bool:
-        return bool(self.groq_api_key.get_secret_value().strip())
+        return bool(self.groq_api_credentials)
+
+    @property
+    def groq_api_credentials(self) -> tuple[tuple[str, str], ...]:
+        """Configured Groq credentials in primary-to-fallback order."""
+        configured = (
+            ("primary", self.groq_api_key),
+            ("fallback_1", self.groq_api_key_fallback_1),
+            ("fallback_2", self.groq_api_key_fallback_2),
+        )
+        credentials: list[tuple[str, str]] = []
+        seen: set[str] = set()
+        for slot, secret in configured:
+            value = secret.get_secret_value().strip()
+            if value and value not in seen:
+                credentials.append((slot, value))
+                seen.add(value)
+        return tuple(credentials)
 
     @property
     def has_elevenlabs_key(self) -> bool:

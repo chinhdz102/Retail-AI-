@@ -2,6 +2,13 @@
 
 Các script này kiểm tra những phần đã có trong `Retail_AI_Evaluation_Test_Plan.md` và roadmap P0. Chúng không thay thế bộ 120–180 scenario hoặc đánh giá người dùng.
 
+The default `pytest` suite is an offline system test. `tests/conftest.py` forces
+`CATALOG_REPOSITORY=demo` and blanks local Groq key variables so a developer's
+`.env` cannot silently turn unit/API tests into PostgreSQL integration tests or
+send test traffic to Groq. PostgreSQL connectivity and catalog search must be
+tested separately with `evaluation.run_product_search_benchmark`; do not treat
+the demo fixture as evidence that PostgreSQL is available.
+
 Chạy từ thư mục gốc repo:
 
 ```powershell

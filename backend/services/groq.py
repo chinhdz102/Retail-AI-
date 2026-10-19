@@ -100,7 +100,7 @@ class GroqTranscriptionResult(str):
     """Transcription carrying its actual model and fallback trace."""
 
     model: str
-    fallback_trace: list[dict[str, str]]
+    fallback_trace: list[dict[str, Any]]
 
     def __new__(
         cls,
@@ -118,17 +118,39 @@ class GroqService:
     def __init__(self, settings: Settings | None = None, client: Any | None = None) -> None:
         self.settings = settings or get_settings()
         self.client = client
+        self._clients_by_credential: dict[str, Any] = {}
 
-    def _client_or_raise(self) -> Any:
-        if not self.settings.has_groq_key:
+    def _credentials_or_raise(self) -> tuple[tuple[str, str], ...]:
+        credentials = self.settings.groq_api_credentials
+        if not credentials:
             raise GroqConfigurationError("Groq API key is not configured")
-        if self.client is None:
-            self.client = AsyncOpenAI(
-                api_key=self.settings.groq_api_key.get_secret_value(),
+        return credentials
+
+    def _client_for_credential(self, slot: str, api_key: str) -> Any:
+        # Injected clients keep unit tests and app integrations deterministic.
+        if self.client is not None:
+            return self.client
+        if slot not in self._clients_by_credential:
+            self._clients_by_credential[slot] = AsyncOpenAI(
+                api_key=api_key,
                 base_url=self.settings.groq_base_url,
                 timeout=self.settings.groq_timeout_seconds,
             )
-        return self.client
+        return self._clients_by_credential[slot]
+
+    @staticmethod
+    def _can_rotate_credential(exc: Exception) -> bool:
+        response = getattr(exc, "response", None)
+        status_code = getattr(exc, "status_code", None) or getattr(
+            response, "status_code", None
+        )
+        if status_code in {401, 403, 429}:
+            return True
+        return type(exc).__name__.lower() in {
+            "authenticationerror",
+            "permissiondeniederror",
+            "ratelimiterror",
+        }
 
     async def chat(
         self,
@@ -137,7 +159,7 @@ class GroqService:
         tools: Sequence[dict[str, Any]] | None = None,
         tool_choice: str | None = None,
     ) -> GroqChatResult:
-        client = self._client_or_raise()
+        credentials = self._credentials_or_raise()
         models = list(
             dict.fromkeys(
                 selected_model
@@ -151,94 +173,105 @@ class GroqService:
         )
 
         last_error: Exception | None = None
-        fallback_trace: list[dict[str, str]] = []
+        fallback_trace: list[dict[str, Any]] = []
         for selected_model in models:
-            try:
-                model_options: dict[str, Any] = {}
-                if selected_model.startswith("qwen/"):
-                    model_options["reasoning_effort"] = "none"
-                elif selected_model.startswith("openai/gpt-oss-"):
-                    model_options["reasoning_effort"] = "low"
-                if tools:
-                    model_options["tools"] = list(tools)
-                    model_options["tool_choice"] = tool_choice or "auto"
+            for credential_slot, api_key in credentials:
+                client = self._client_for_credential(credential_slot, api_key)
+                try:
+                    model_options: dict[str, Any] = {}
+                    if selected_model.startswith("qwen/"):
+                        model_options["reasoning_effort"] = "none"
+                    elif selected_model.startswith("openai/gpt-oss-"):
+                        model_options["reasoning_effort"] = "low"
+                    if tools:
+                        model_options["tools"] = list(tools)
+                        model_options["tool_choice"] = tool_choice or "auto"
 
-                request_options = {
-                    "model": selected_model,
-                    "messages": list(messages),
-                    "temperature": 0.2,
-                    "max_tokens": 80,
-                    **model_options,
-                }
-                completion_endpoint = client.chat.completions
-                raw_endpoint = getattr(completion_endpoint, "with_raw_response", None)
-                response_headers: dict[str, str] = {}
-                if raw_endpoint is None:
-                    response = await completion_endpoint.create(**request_options)
-                else:
-                    raw_response = await raw_endpoint.create(**request_options)
-                    response_headers = _rate_limit_headers(raw_response.headers)
-                    parsed_response = raw_response.parse()
-                    response = (
-                        await parsed_response
-                        if inspect.isawaitable(parsed_response)
-                        else parsed_response
-                    )
-                response_message = response.choices[0].message
-                content = response_message.content or ""
-                tool_calls = [
-                    {
-                        "id": tool_call.id,
-                        "type": "function",
-                        "function": {
-                            "name": tool_call.function.name,
-                            "arguments": tool_call.function.arguments,
-                        },
+                    request_options = {
+                        "model": selected_model,
+                        "messages": list(messages),
+                        "temperature": 0.2,
+                        "max_tokens": 80,
+                        **model_options,
                     }
-                    for tool_call in (getattr(response_message, "tool_calls", None) or [])
-                ]
-                if not content.strip() and not tool_calls:
-                    raise ValueError("Groq returned an empty response")
-                successful_attempt: dict[str, Any] = {
-                    "model": selected_model,
-                    "status": "success",
-                }
-                if response_headers:
-                    successful_attempt["rate_limit_headers"] = response_headers
-                fallback_trace.append(successful_attempt)
-                logger.info(
-                    "Groq chat completed model=%s attempts=%d",
-                    selected_model,
-                    len(fallback_trace),
-                )
-                usage = getattr(response, "usage", None)
-                usage_summary = {
-                    field: int(value)
-                    for field in ("prompt_tokens", "completion_tokens", "total_tokens")
-                    if (value := getattr(usage, field, None)) is not None
-                }
-                return GroqChatResult(
-                    content.strip(), selected_model, tool_calls, fallback_trace, usage_summary
-                )
-            except Exception as exc:
-                last_error = exc
-                failed_attempt: dict[str, Any] = {
-                    "model": selected_model,
-                    "status": "error",
-                    "error_type": type(exc).__name__,
-                }
-                error_response = getattr(exc, "response", None)
-                response_headers = _rate_limit_headers(
-                    getattr(error_response, "headers", None)
-                )
-                if response_headers:
-                    failed_attempt["rate_limit_headers"] = response_headers
-                fallback_trace.append(failed_attempt)
-                logger.warning(
-                    "Groq chat model attempt failed model=%s error_type=%s",
-                    selected_model,
-                    type(exc).__name__,
-                )
+                    completion_endpoint = client.chat.completions
+                    raw_endpoint = getattr(completion_endpoint, "with_raw_response", None)
+                    response_headers: dict[str, str] = {}
+                    if raw_endpoint is None:
+                        response = await completion_endpoint.create(**request_options)
+                    else:
+                        raw_response = await raw_endpoint.create(**request_options)
+                        response_headers = _rate_limit_headers(raw_response.headers)
+                        parsed_response = raw_response.parse()
+                        response = (
+                            await parsed_response
+                            if inspect.isawaitable(parsed_response)
+                            else parsed_response
+                        )
+                    response_message = response.choices[0].message
+                    content = response_message.content or ""
+                    tool_calls = [
+                        {
+                            "id": tool_call.id,
+                            "type": "function",
+                            "function": {
+                                "name": tool_call.function.name,
+                                "arguments": tool_call.function.arguments,
+                            },
+                        }
+                        for tool_call in (getattr(response_message, "tool_calls", None) or [])
+                    ]
+                    if not content.strip() and not tool_calls:
+                        raise ValueError("Groq returned an empty response")
+                    successful_attempt: dict[str, Any] = {
+                        "model": selected_model,
+                        "status": "success",
+                    }
+                    if response_headers:
+                        successful_attempt["rate_limit_headers"] = response_headers
+                    if len(credentials) > 1:
+                        successful_attempt["credential_slot"] = credential_slot
+                    fallback_trace.append(successful_attempt)
+                    logger.info(
+                        "Groq chat completed model=%s attempts=%d",
+                        selected_model,
+                        len(fallback_trace),
+                    )
+                    usage = getattr(response, "usage", None)
+                    usage_summary = {
+                        field: int(value)
+                        for field in ("prompt_tokens", "completion_tokens", "total_tokens")
+                        if (value := getattr(usage, field, None)) is not None
+                    }
+                    return GroqChatResult(
+                        content.strip(), selected_model, tool_calls, fallback_trace, usage_summary
+                    )
+                except Exception as exc:
+                    last_error = exc
+                    failed_attempt: dict[str, Any] = {
+                        "model": selected_model,
+                        "status": "error",
+                        "error_type": type(exc).__name__,
+                    }
+                    error_response = getattr(exc, "response", None)
+                    response_headers = _rate_limit_headers(
+                        getattr(error_response, "headers", None)
+                    )
+                    if response_headers:
+                        failed_attempt["rate_limit_headers"] = response_headers
+                    if len(credentials) > 1:
+                        failed_attempt["credential_slot"] = credential_slot
+                    fallback_trace.append(failed_attempt)
+                    logger.warning(
+                        "Groq chat model attempt failed model=%s credential_slot=%s error_type=%s",
+                        selected_model,
+                        credential_slot if len(credentials) > 1 else "primary",
+                        type(exc).__name__,
+                    )
+                    # Only retry a different key for credential/quota failures.
+                    # Other errors move directly to the next model.
+                    if not self._can_rotate_credential(exc):
+                        break
 
         logger.error(
             "Groq chat exhausted configured models attempts=%d",
@@ -256,7 +289,7 @@ class GroqService:
         content_type: str,
         language: str = "vi",
     ) -> GroqTranscriptionResult:
-        client = self._client_or_raise()
+        credentials = self._credentials_or_raise()
         models = list(
             dict.fromkeys(
                 model
@@ -269,36 +302,45 @@ class GroqService:
         )
 
         last_error: Exception | None = None
-        fallback_trace: list[dict[str, str]] = []
+        fallback_trace: list[dict[str, Any]] = []
         for selected_model in models:
-            try:
-                response = await client.audio.transcriptions.create(
-                    file=(filename, content, content_type),
-                    model=selected_model,
-                    language=language,
-                    prompt=RETAIL_STT_PROMPTS.get(language, RETAIL_STT_PROMPT),
-                    response_format="json",
-                )
-                text = getattr(response, "text", "")
-                if not text or not text.strip():
-                    raise ValueError("Groq returned an empty transcription")
-                logger.info("Groq transcription completed model=%s", selected_model)
-                fallback_trace.append({"model": selected_model, "status": "success"})
-                return GroqTranscriptionResult(text.strip(), selected_model, fallback_trace)
-            except Exception as exc:
-                last_error = exc
-                fallback_trace.append(
-                    {
+            for credential_slot, api_key in credentials:
+                client = self._client_for_credential(credential_slot, api_key)
+                try:
+                    response = await client.audio.transcriptions.create(
+                        file=(filename, content, content_type),
+                        model=selected_model,
+                        language=language,
+                        prompt=RETAIL_STT_PROMPTS.get(language, RETAIL_STT_PROMPT),
+                        response_format="json",
+                    )
+                    text = getattr(response, "text", "")
+                    if not text or not text.strip():
+                        raise ValueError("Groq returned an empty transcription")
+                    logger.info("Groq transcription completed model=%s", selected_model)
+                    successful_attempt = {"model": selected_model, "status": "success"}
+                    if len(credentials) > 1:
+                        successful_attempt["credential_slot"] = credential_slot
+                    fallback_trace.append(successful_attempt)
+                    return GroqTranscriptionResult(text.strip(), selected_model, fallback_trace)
+                except Exception as exc:
+                    last_error = exc
+                    failed_attempt = {
                         "model": selected_model,
                         "status": "error",
                         "error_type": type(exc).__name__,
                     }
-                )
-                logger.warning(
-                    "Groq transcription model attempt failed model=%s error_type=%s",
-                    selected_model,
-                    type(exc).__name__,
-                )
+                    if len(credentials) > 1:
+                        failed_attempt["credential_slot"] = credential_slot
+                    fallback_trace.append(failed_attempt)
+                    logger.warning(
+                        "Groq transcription failed model=%s credential_slot=%s error_type=%s",
+                        selected_model,
+                        credential_slot if len(credentials) > 1 else "primary",
+                        type(exc).__name__,
+                    )
+                    if not self._can_rotate_credential(exc):
+                        break
 
         logger.error("Groq transcription exhausted configured models attempts=%d", len(models))
         raise GroqProviderError(

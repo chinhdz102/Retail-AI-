@@ -269,3 +269,54 @@ Artifacts:
 - [Full v3 dev live rerun, 203/203](../../evaluation/results/goal_v3_dev_after_recovery_v2_20261019.json)
 
 The previously reviewed held-out set was not rerun after these changes and was not used to tune them. A new unseen evaluation set and PostgreSQL integration test remain outstanding.
+
+## P. Stress evaluation and Groq credential failover — 20/10/2026
+
+### Customer-flow stress run
+
+Một bộ 10 phiên / 50 lượt tiếng Việt được chạy trên API local với catalog demo sáu sản phẩm. Bộ này gồm cách gọi vùng miền/không dấu, sửa sản phẩm, gợi ý giỏ theo tổng ngân sách, biến thể dung tích, sản phẩm hết hạn, thông tin sức khỏe không có trong nhãn, prompt injection, chuyển nhân viên, so sánh giá và thay đổi giỏ.
+
+| Chỉ số trước thay đổi key rotation | Kết quả |
+|---|---:|
+| Lượt HTTP 200 | 40/50 |
+| Grounding / safety assertions | 12/50 |
+| Lượt gọi LLM / tool của model | 13 / 2 |
+| Median request latency | 48 ms |
+| Phiên đã chạy | 10/10 |
+
+`complete: true` trong trace chỉ nghĩa là evaluator đã chạy đủ 50 lượt; nó **không** có nghĩa là các lượt đều đạt. Có 38 lượt không đạt assertion. Một số lỗi ban đầu làm hỏng các lượt follow-up cùng phiên, nên không nên đọc 38 như 38 lỗi độc lập. Mười lượt HTTP lỗi tập trung vào thời điểm Groq giới hạn Qwen và OSS-120B, OSS-20B cũng không luôn cứu được lượt gọi.
+
+Bộ này đã được mở để kiểm tra lỗi và **không còn là held-out mù**. Bản sao development được lưu riêng để tiếp tục sửa; không dùng kết quả trên làm bằng chứng tổng quát hóa. Baseline từ `a7b79ef` chỉ có 9 lượt trước khi bị dừng do quota, vì vậy không có paired score hợp lệ.
+
+Các lỗi code được ghi nhận để tiếp tục xử lý: cụm “bimbim”/“nửa lít” chưa tìm được biến thể demo; câu hỏi giá+cập nhật trực tiếp mất context; gợi ý nhiều nhóm theo ngân sách và follow-up “mỗi loại một phần” chưa giữ constraint; một số câu hỏi hàng hết hạn hoặc thuộc tính sức khỏe đi sang LLM thay vì trả lời/abstain theo catalog; tra biến thể 600ml; nhớ ticket hỗ trợ; phân tích giá bằng “so ... với ... chai nào rẻ hơn”; và tham chiếu “cái rẻ hơn”. Đây là lỗi định tuyến/context nhìn thấy trong trace, chưa được tuyên bố đã sửa.
+
+### Regression và môi trường
+
+| Kiểm tra | Kết quả |
+|---|---:|
+| Backend pytest sau bổ sung key failover | 647 passed |
+| Ruff / compileall | Pass / Pass |
+| Frontend Vitest | 49 passed (6 files) |
+| Frontend production build | Pass; model-viewer chunk 1,024 kB vẫn vượt ngưỡng cảnh báo 500 kB |
+| P0 regression | 40/40 |
+| Shopping sandbox | 10/10; 0 false-paid, 0 cross-session leakage |
+| Offline product retrieval trên JSON 3.099 dòng | Recall@1/3/5 = 1,0; MRR = 1,0; gold-set recall@3/@5 = 0,9777/0,9866 |
+
+Bộ pytest mặc định đặt `CATALOG_REPOSITORY=demo` trong `tests/conftest.py`, nên `.env` của lập trình viên không biến unit/API tests thành PostgreSQL integration. PostgreSQL và Redis thật vẫn timeout; benchmark truy hồi là snapshot JSON ngoại tuyến, không xác nhận dữ liệu kho runtime.
+
+### Failover credential Groq
+
+Ứng dụng nay đọc `GROQ_API_KEY`, `GROQ_API_KEY_FALLBACK_1`, và `GROQ_API_KEY_FALLBACK_2` theo thứ tự. Chat và Whisper thử key tiếp theo khi provider trả lỗi xác thực/quota HTTP 401/403/429; sau khi các key đã thử cho model hiện tại, mới chuyển qua model dự phòng đã cấu hình. Trace chỉ ghi slot `primary`/`fallback_1`/`fallback_2`, không ghi giá trị key. Hai key mới nằm trong `.env` bị Git ignore; chỉ tên biến rỗng được thêm vào `.env.example`.
+
+Test giả lập đã xác minh chat chuyển từ key primary sang key dự phòng, chuyển sang model dự phòng sau khi cả ba key bị giới hạn, và Whisper đổi key khi gặp quota. Đây là kiểm tra thứ tự failover bằng fake provider; **chưa gửi request live bằng hai key mới**, nên chưa xác nhận chúng còn hiệu lực hoặc có quota riêng. Pytest chủ động blank cả ba Groq key variables để secret trong `.env` không bị dùng trong test traffic.
+
+Artifacts:
+
+- [Stress cases, bản development đã được kiểm tra](../../evaluation/cases/vietnamese_text_sales_flow_v5_exploratory_20261020.json)
+- [Held-out trace trước key failover, 12/50 assertions](../../evaluation/results/v5_heldout_current_b887ebc_20261020.json)
+- [Baseline dừng sớm do quota, không đủ paired](../../evaluation/results/v5_heldout_baseline_a7b79ef_20261020.json)
+- [P0 40/40](../../evaluation/results/goal_v5_p0_20261020.json)
+- [Shopping sandbox 10/10](../../evaluation/results/goal_v5_shopping_20261020.json)
+- [Offline product retrieval](../../evaluation/results/goal_v5_product_resolution_20261020.json)
+
+Phần cần tiếp tục trước khi tuyên bố full-flow đạt: sửa các lỗi định tuyến/context ở trên, chạy một bộ unseen mới sau khi khóa case, thử failover live khi quota/API sẵn sàng, kết nối PostgreSQL/Redis và kiểm tra tay tính tự nhiên của toàn bộ hội thoại. STT/TTS không được benchmark lại trong vòng text này.
