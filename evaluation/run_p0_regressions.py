@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -23,6 +24,12 @@ import httpx
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+# These cases assert behavior against the six-product demo catalog. Pin the
+# repository before importing the API so a developer's .env cannot switch the
+# benchmark to a snapshot or external database.
+os.environ["APP_ENV"] = "development"
+os.environ["CATALOG_REPOSITORY"] = "demo"
 
 from backend.api.main import app, get_groq_service  # noqa: E402
 from backend.products.catalog import get_product_snapshot  # noqa: E402
