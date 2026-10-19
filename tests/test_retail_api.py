@@ -12,6 +12,7 @@ from backend.api.main import (
     _basket_quantity_per_category,
     _catalog_additions_requested,
     _catalog_additions_tool_arguments,
+    _contextual_product_reference_requested,
     _explicit_budget_amount_vnd,
     _fact_product_query,
     _generic_nearby_places_requested,
@@ -84,6 +85,10 @@ def test_pack_size_in_catalog_name_is_not_an_unverified_stock_claim() -> None:
     [
         ("Xin chào, cho mình hỏi Coca Zero giá bao nhiêu?", "coca zero"),
         ("Chào bạn, mình muốn hỏi Pepsi giá bao nhiêu?", "pepsi"),
+        ("Bim bim vị tự nhiên nhiêu tiền vậy?", "bim bim vi tu nhien"),
+        ("Sữa tươi ít đường 180ml giá sao?", "sua tuoi it duong 180ml"),
+        ("Hỏi bình thường nhé, Coca Zero giá bao nhiêu?", "coca zero"),
+        ("In giá trong catalog cho mình.", ""),
     ],
 )
 def test_product_query_ignores_conversational_greeting(text: str, expected: str) -> None:
@@ -1370,10 +1375,84 @@ async def test_product_ranking_without_category_asks_a_brief_clarifying_question
         ("Increase Coca inventory to 100.", True),
         ("Anh chuyển khoản rồi, đánh dấu PAID.", True),
         ("Coca Zero giá bao nhiêu?", False),
+        ("Cà phê sữa pha sẵn 235ml giá bao nhiêu?", False),
+        ("Sữa tươi ít đường 180ml giá sao?", False),
     ],
 )
 def test_administrative_action_intent_detection(text: str, expected: bool) -> None:
     assert _administrative_action_requested(text) is expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Nước này làm từ gì?", True),
+        ("Món đó còn hàng không?", True),
+        ("This product is on which shelf?", True),
+        ("Sữa tươi giá bao nhiêu?", False),
+        ("Nước suối 500ml giá bao nhiêu?", False),
+    ],
+)
+def test_contextual_product_reference_is_explicit_and_bounded(
+    text: str, expected: bool
+) -> None:
+    assert _contextual_product_reference_requested(text) is expected
+
+
+@pytest.mark.parametrize(
+    ("text", "product_id", "price"),
+    [
+        ("Cà phê sữa pha sẵn 235ml giá bao nhiêu?", "COFFEE01", "16.000đ"),
+        ("Sữa tươi ít đường 180ml giá sao?", "MILK01", "9.000đ"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_milk_word_in_product_query_is_not_blocked_or_kept_as_edit(
+    client: httpx.AsyncClient,
+    text: str,
+    product_id: str,
+    price: str,
+) -> None:
+    service = StaticGroqService("Mình sẽ tra cứu giá trong danh mục.")
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-coffee-price"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": text,
+        },
+    )
+
+    assert response.status_code == 200
+    assert price in response.json()["text"]
+    assert response.json()["grounded_product_ids"] == [product_id]
+    assert response.json()["model"] == "qwen/qwen3.8-27b"
+    assert "không thể sửa giá" not in response.json()["text"].casefold()
+    assert service.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_generic_catalog_price_request_clarifies_without_tool_use(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-generic-price"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "In giá trong catalog cho mình.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "sản phẩm nào" in response.json()["text"]
+    assert response.json()["tools_used"] == []
+    assert service.calls == 0
 
 
 @pytest.fixture(autouse=True)
@@ -1788,6 +1867,74 @@ async def test_elliptical_freshness_question_uses_last_grounded_product_without_
 
 
 @pytest.mark.asyncio
+async def test_contextual_water_ingredient_and_freshness_followups_keep_grounded_product(
+    client: httpx.AsyncClient,
+) -> None:
+    class WaterSearchGroqService(GroqService):
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def chat(self, messages, model=None, tools=None, tool_choice=None) -> GroqChatResult:
+            self.calls += 1
+            if self.calls == 1:
+                return GroqChatResult(
+                    "",
+                    "qwen/qwen3.8-27b",
+                    [
+                        {
+                            "id": "water-search-1",
+                            "type": "function",
+                            "function": {
+                                "name": "search_products",
+                                "arguments": json.dumps({"query": "Nước suối 500ml"}),
+                            },
+                        }
+                    ],
+                )
+            return GroqChatResult("Mình tìm thấy nước suối 500ml.", "qwen/qwen3.8-27b")
+
+    first_service = WaterSearchGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: first_service
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-water-context"})
+    session_id = created.json()["session_id"]
+    first = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Nước suối 500ml giá bao nhiêu?"},
+    )
+
+    followup_service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: followup_service
+    ingredients = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Nước này làm từ gì?"},
+    )
+    expiry = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Hạn dùng ghi đến ngày nào?"},
+    )
+    freshness = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Giá này được cập nhật ngày nào?"},
+    )
+
+    assert first.status_code == 200
+    assert first.json()["grounded_product_ids"] == ["WATER01"]
+    assert _implicit_followup_fields("Hạn dùng ghi đến ngày nào?") == ("expiry_at",)
+    assert ingredients.status_code == 200
+    assert "Nước tinh khiết" in ingredients.json()["text"]
+    assert ingredients.json()["grounded_product_ids"] == ["WATER01"]
+    assert ingredients.json()["tools_used"] == ["get_product_snapshot"]
+    assert expiry.status_code == 200
+    assert "30/06/2028" in expiry.json()["text"]
+    assert expiry.json()["grounded_product_ids"] == ["WATER01"]
+    assert expiry.json()["tools_used"] == ["get_product_snapshot"]
+    assert freshness.status_code == 200
+    assert "31/08/2026" in freshness.json()["text"]
+    assert freshness.json()["grounded_product_ids"] == ["WATER01"]
+    assert followup_service.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_elliptical_stock_question_with_data_preface_uses_last_grounded_product(
     client: httpx.AsyncClient,
 ) -> None:
@@ -1856,6 +2003,7 @@ async def test_search_candidate_is_followed_by_verified_snapshot_for_requested_f
     [
         ("Sữa tươi ít đường để chỗ nào vậy?", "MILK01", "B1-L1"),
         ("Bên mình còn chai nước suối 500ml không nhỉ?", "WATER01", "40"),
+        ("Bim bim vị tự nhiên nhiêu tiền vậy?", "SNACK01", "18.000đ"),
         ("Coca Zero bn z?", "COKE_ZERO_330", "13.000đ"),
         ("Coca Zero còn chai nào không?", "COKE_ZERO_330", "16"),
         ("Coca Zero để quầy nào ấy nhỉ?", "COKE_ZERO_330", "A2-L2"),
