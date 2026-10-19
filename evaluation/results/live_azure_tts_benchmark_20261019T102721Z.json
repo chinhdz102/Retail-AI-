@@ -1,0 +1,55 @@
+{
+  "kind": "live_azure_tts_benchmark",
+  "timestamp_utc": "2026-10-19T10:27:21.309292+00:00",
+  "language": "vi",
+  "text_saved": false,
+  "text_characters": 50,
+  "trial_count": 2,
+  "results": [
+    {
+      "trial": 1,
+      "synthesize": {
+        "status": "success",
+        "latency_ms": 900,
+        "audio_bytes": 23184,
+        "content_type": "audio/mpeg"
+      },
+      "stream": {
+        "status": "success",
+        "first_chunk_ms": 140,
+        "total_ms": 250,
+        "audio_bytes": 23184,
+        "content_type": "audio/mpeg"
+      },
+      "voice_id": "vi-VN-HoaiMyNeural"
+    },
+    {
+      "trial": 2,
+      "synthesize": {
+        "status": "success",
+        "latency_ms": 265,
+        "audio_bytes": 23184,
+        "content_type": "audio/mpeg"
+      },
+      "stream": {
+        "status": "success",
+        "first_chunk_ms": 164,
+        "total_ms": 315,
+        "audio_bytes": 23184,
+        "content_type": "audio/mpeg"
+      },
+      "voice_id": "vi-VN-HoaiMyNeural"
+    }
+  ],
+  "complete": true,
+  "summary": {
+    "synthesize_successes": 2,
+    "synthesize_median_ms": 582,
+    "synthesize_p95_ms": 900,
+    "stream_successes": 2,
+    "stream_first_chunk_median_ms": 152,
+    "stream_first_chunk_p95_ms": 164,
+    "stream_total_median_ms": 282,
+    "stream_total_p95_ms": 315
+  }
+}
