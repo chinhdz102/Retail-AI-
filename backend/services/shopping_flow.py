@@ -158,6 +158,11 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
             "trang thai don",
             "minh chuyen tien roi",
             "toi chuyen khoan roi",
+            "minh chuyen khoan xong",
+            "toi chuyen khoan xong",
+            "chuyen khoan xong roi",
+            "minh thanh toan xong",
+            "toi thanh toan xong",
             "i have paid",
             "payment status",
         )

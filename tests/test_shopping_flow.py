@@ -312,7 +312,7 @@ async def test_natural_checkout_and_payment_question_keep_payment_unverified(
             "/agent/respond",
             json={
                 "session_id": session_id,
-                "text": "Mình chuyển tiền rồi, kiểm tra thanh toán giúp nhé",
+                "text": "Mình chuyển khoản xong rồi, kiểm tra giúp nhé",
             },
         )
         assert status.status_code == 200

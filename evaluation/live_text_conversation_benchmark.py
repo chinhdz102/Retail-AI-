@@ -20,11 +20,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
 from typing import Any
+from uuid import UUID
 
 import httpx
 from openai import AsyncOpenAI
 
-from backend.api.main import app, get_groq_service
+from backend.api.main import app, get_groq_service, session_store
 from backend.config import Settings
 from backend.data.catalog_import import analyze_dataset
 from backend.products.catalog import DEMO_PRODUCTS
@@ -253,6 +254,7 @@ def grade_turn(
     body: dict[str, Any],
     status_code: int | None,
     llm_trace: list[dict[str, Any]] | None = None,
+    session_constraints: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     response_text = str(body.get("text", ""))
     normalized = response_text.casefold()
@@ -267,6 +269,14 @@ def grade_turn(
     ]
     model_tool_names = [str(call.get("name", "")) for call in model_tool_calls]
     all_tool_names = [str(name) for name in body.get("tools_used", [])]
+    support_ticket = body.get("support_ticket")
+    cart = body.get("cart")
+    cart_items = {
+        str(item.get("product_id")): int(item.get("quantity", 0))
+        for item in (cart.get("items", []) if isinstance(cart, dict) else [])
+        if isinstance(item, dict)
+    }
+    order = body.get("order")
 
     checks = {
         "http_200": status_code == 200,
@@ -287,6 +297,52 @@ def grade_turn(
         "excluded_product_ids": not any(
             product_id in product_ids
             for product_id in turn.get("must_not_include_product_ids", [])
+        ),
+        "expected_state": (
+            "expected_state" not in turn or body.get("state") == turn["expected_state"]
+        ),
+        "expected_cart_items": (
+            "expected_cart_items" not in turn
+            or cart_items == turn["expected_cart_items"]
+        ),
+        "expected_order_payment_status": (
+            "expected_order_payment_status" not in turn
+            or (
+                isinstance(order, dict)
+                and order.get("payment_status") == turn["expected_order_payment_status"]
+            )
+        ),
+        "expected_constraints": (
+            "expected_constraints" not in turn
+            or _contains_expected_values(
+                session_constraints or {}, turn["expected_constraints"]
+            )
+        ),
+        "expected_support_ticket": (
+            "expected_support_ticket" not in turn
+            or isinstance(support_ticket, dict) == turn["expected_support_ticket"]
+        ),
+        "expected_support_ticket_status": (
+            "expected_support_ticket_status" not in turn
+            or (
+                isinstance(support_ticket, dict)
+                and support_ticket.get("status") == turn["expected_support_ticket_status"]
+            )
+        ),
+        "expected_support_ticket_issue_type": (
+            "expected_support_ticket_issue_type" not in turn
+            or (
+                isinstance(support_ticket, dict)
+                and support_ticket.get("issue_type")
+                == turn["expected_support_ticket_issue_type"]
+            )
+        ),
+        "expected_support_ticket_demo": (
+            "expected_support_ticket_demo" not in turn
+            or (
+                isinstance(support_ticket, dict)
+                and support_ticket.get("demo") == turn["expected_support_ticket_demo"]
+            )
         ),
         "no_tools_when_expected": not turn.get("no_tools_expected")
         or (not all_tool_names and not model_tool_names),
@@ -454,7 +510,17 @@ async def run(
                 finally:
                     app.dependency_overrides.pop(get_groq_service, None)
 
-                grade = grade_turn(turn, body, status_code, service.trace)
+                try:
+                    session_constraints = session_store.get(UUID(session_id)).shopping.constraints
+                except Exception:
+                    session_constraints = None
+                grade = grade_turn(
+                    turn,
+                    body,
+                    status_code,
+                    service.trace,
+                    session_constraints=session_constraints,
+                )
                 turn_results.append({
                     "turn": turn_number,
                     "prompt": turn["text"],
@@ -462,6 +528,7 @@ async def run(
                     "status_code": status_code,
                     "latency_ms": round((perf_counter() - started) * 1000),
                     "response": body,
+                    "observed_session_constraints": session_constraints,
                     "evaluation_expectations": {
                         key: turn[key]
                         for key in (
@@ -473,6 +540,14 @@ async def run(
                             "must_not_contain",
                             "must_not_have_product_ids",
                             "no_tools_expected",
+                            "expected_state",
+                            "expected_cart_items",
+                            "expected_order_payment_status",
+                            "expected_constraints",
+                            "expected_support_ticket",
+                            "expected_support_ticket_status",
+                            "expected_support_ticket_issue_type",
+                            "expected_support_ticket_demo",
                         )
                         if key in turn
                     },
