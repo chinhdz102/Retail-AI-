@@ -332,6 +332,9 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "cap nhat luc nao",
             "ngay cap nhat",
             "ngay du lieu",
+            "ghi nhan ngay nao",
+            "du lieu ghi nhan ngay nao",
+            "gia ghi nhan ngay nao",
             "du lieu moi khong",
             "du lieu co moi khong",
             "thong tin moi khong",
@@ -339,6 +342,8 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "when was this updated",
             "when was it updated",
             "when was the data updated",
+            "what date was the data recorded",
+            "recorded on what date",
             "data freshness",
             "last updated",
             "updated when",
@@ -532,6 +537,15 @@ def explicit_recommendation_categories(text: str) -> list[str]:
 
     for category, cues in _CATEGORY_CUES.items():
         for cue in cues:
+            if (
+                category == "dairy"
+                and cue in {"sua", "milk"}
+                and any(
+                    phrase in normalized
+                    for phrase in ("ca phe sua", "tra sua", "coffee milk", "milk tea")
+                )
+            ):
+                continue
             for match in re.finditer(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized):
                 if is_negated(match.start()):
                     negated_matches.append((match.start(), category))
@@ -635,6 +649,8 @@ _RECOMMENDATION_CUES = (
     "chon ho",
     "chon dum",
     "tim giup",
+    "tim mon",
+    "tim do an",
     "coi giup",
     "xem giup",
     "bay tui",
@@ -665,11 +681,15 @@ _RECOMMENDATION_CUES = (
     "do uong nao",
     "muon mua",
     "can mua",
+    "can mon",
+    "can do an",
     "dang tim",
     "thich an",
     "thich uong",
     "muon an",
     "muon uong",
+    "nham nhi",
+    "mon an vat",
     "them mon",
     "uong gi",
     "an gi",

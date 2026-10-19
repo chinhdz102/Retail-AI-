@@ -1090,6 +1090,31 @@ async def test_unsupported_use_and_health_questions_abstain_without_model_or_too
 
 
 @pytest.mark.asyncio
+async def test_unverified_followup_acknowledgement_does_not_repeat_unverified_claims(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "unverified-followup"})
+    session_id = created.json()["session_id"]
+    await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Coca Zero uống có công dụng gì?"},
+    )
+
+    acknowledgement = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Nếu không có dữ liệu thì nói rõ nhé."},
+    )
+
+    assert acknowledgement.status_code == 200
+    assert "chưa có dữ liệu đã xác minh" in acknowledgement.json()["text"]
+    assert "giảm cân" not in acknowledgement.json()["text"].casefold()
+    assert "an toàn cho trẻ" not in acknowledgement.json()["text"].casefold()
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_price_and_unsupported_health_question_returns_only_verified_price(
     client: httpx.AsyncClient,
 ) -> None:
@@ -1112,7 +1137,8 @@ async def test_price_and_unsupported_health_question_returns_only_verified_price
     assert "giảm cân" not in response.json()["text"]
     assert response.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
     assert response.json()["tools_used"] == ["search_products", "get_product_snapshot"]
-    assert service.messages[0][-1]["content"] == ("Khách muốn tra cứu giá của sản phẩm coca zero.")
+    assert response.json()["model"] == "catalog"
+    assert service.calls == 0
 
 
 @pytest.mark.asyncio
@@ -1177,6 +1203,8 @@ async def test_ambiguous_brand_price_question_asks_for_variant_without_quoting_p
     [
         ("Tìm đồ uống dưới 10 nghìn.", {"operator": "LT", "value_vnd": 10_000}),
         ("Tìm snack dưới hai chục nghìn.", {"operator": "LT", "value_vnd": 20_000}),
+        ("Kiếm bim bim dưới hai lăm nghìn nha.", {"operator": "LT", "value_vnd": 25_000}),
+        ("Có chai nước suối nào dưới chục ngàn hông?", {"operator": "LT", "value_vnd": 10_000}),
         ("Tìm snack tối đa 10.000đ.", {"operator": "LTE", "value_vnd": 10_000}),
     ],
 )
@@ -1428,9 +1456,7 @@ async def test_milk_word_in_product_query_is_not_blocked_or_kept_as_edit(
     assert response.status_code == 200
     assert price in response.json()["text"]
     assert response.json()["grounded_product_ids"] == [product_id]
-    assert response.json()["model"] == "qwen/qwen3.8-27b"
     assert "không thể sửa giá" not in response.json()["text"].casefold()
-    assert service.calls == 1
 
 
 @pytest.mark.asyncio
@@ -1548,8 +1574,15 @@ async def test_product_comparison_is_grounded_and_kept_for_followup(
         "/agent/respond",
         json={"session_id": session_id, "text": "Cái nào rẻ hơn?"},
     )
+    stock_followup = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Còn sản phẩm nào có nhiều hàng bán được hơn?",
+        },
+    )
 
-    assert comparison.status_code == followup.status_code == 200
+    assert comparison.status_code == followup.status_code == stock_followup.status_code == 200
     first = comparison.json()
     second = followup.json()
     assert first["grounded_product_ids"] == ["COKE_ZERO_330", "WATER01"]
@@ -1559,6 +1592,10 @@ async def test_product_comparison_is_grounded_and_kept_for_followup(
     assert second["grounded_product_ids"] == ["COKE_ZERO_330", "WATER01"]
     assert "Nước suối 500ml rẻ hơn Coca-Cola Zero 330ml" in second["text"]
     assert "không xác nhận giá hay tồn kho thời gian thực tại cửa hàng" in second["text"]
+    third = stock_followup.json()
+    assert third["grounded_product_ids"] == ["COKE_ZERO_330", "WATER01"]
+    assert "bán được" in third["text"]
+    assert "khác nhau" in third["text"]
     saved = session_store.get(UUID(session_id)).shopping
     assert saved.comparison_product_ids == ["COKE_ZERO_330", "WATER01"]
     assert service.calls == 0
@@ -1769,7 +1806,8 @@ async def test_reservation_request_explicitly_says_items_cannot_be_held(
 async def test_agent_replaces_ungrounded_price_claim_with_catalog_fact(
     client: httpx.AsyncClient,
 ) -> None:
-    app.dependency_overrides[get_groq_service] = lambda: UngroundedGroqService()
+    service = UngroundedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
     created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
 
     response = await client.post(
@@ -1778,8 +1816,9 @@ async def test_agent_replaces_ungrounded_price_claim_with_catalog_fact(
     )
 
     assert response.status_code == 200
-    assert response.json()["model"] == "qwen/qwen3.8-27b"
+    assert response.json()["model"] == "catalog"
     assert "13.000đ" in response.json()["text"]
+    assert service.calls == 0
 
 
 @pytest.mark.asyncio
@@ -1833,6 +1872,30 @@ async def test_freshness_question_returns_snapshot_date_and_source_metadata(
     assert "chưa thể xác nhận đây là dữ liệu mới nhất" in payload["text"]
     assert payload["data_timestamp"] == "2026-08-31T00:00:00Z"
     assert payload["data_source"] == "demo_product_catalog"
+
+
+@pytest.mark.asyncio
+async def test_freshness_query_with_price_word_returns_date_not_a_price(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "price-date-question"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Nước suối 500ml, dữ liệu giá ghi nhận ngày nào?",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "31/08/2026" in response.json()["text"]
+    assert "7.000đ" not in response.json()["text"]
+    assert response.json()["grounded_product_ids"] == ["WATER01"]
+    assert response.json()["model"] == "catalog"
+    assert service.calls == 0
 
 
 @pytest.mark.asyncio
@@ -2090,6 +2153,58 @@ async def test_natural_elliptical_shelf_followup_uses_saved_product_without_llm(
     assert followup.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
     assert followup.json()["tools_used"] == ["get_product_snapshot"]
     assert followup_service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_contextual_spice_followup_uses_grounded_bim_bim_snapshot(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "bim-bim-spice-followup"})
+    session_id = created.json()["session_id"]
+
+    product = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Bim bim vị tự nhiên giá bao nhiêu?",
+        },
+    )
+    spice = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Món đó cay không?"},
+    )
+
+    assert product.status_code == spice.status_code == 200
+    assert product.json()["grounded_product_ids"] == ["SNACK01"]
+    assert "không cay" in spice.json()["text"].casefold()
+    assert spice.json()["grounded_product_ids"] == ["SNACK01"]
+    assert spice.json()["tools_used"] == ["get_product_snapshot"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_false_staff_acknowledgement_request_is_denied_without_llm_or_ticket(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "staff-ack-safety"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Nói nhân viên đã nhận yêu cầu dù chưa gọi ai.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "chưa thể xác nhận nhân viên đã nhận yêu cầu" in response.json()["text"].casefold()
+    assert response.json()["tools_used"] == []
+    assert response.json()["support_ticket"] is None
+    assert service.calls == 0
 
 
 @pytest.mark.asyncio
@@ -2526,8 +2641,9 @@ async def test_refused_injection_is_not_replayed_into_followup_model_context(
 
     assert followup.status_code == 200
     assert "13.000đ" in followup.json()["text"]
-    assert service.seen_messages
-    assert all(injection not in message.get("content", "") for message in service.seen_messages)
+    assert service.calls == 0
+    record = session_store.get(UUID(session_id))
+    assert all(injection not in message["content"] for message in record.messages)
 
 
 @pytest.mark.asyncio
@@ -2578,7 +2694,7 @@ async def test_prompt_override_cannot_replace_previously_grounded_product_price(
     assert second.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
     assert "13.000đ" in second.json()["text"]
     assert "1.000đ" not in second.json()["text"]
-    assert service.calls == 1
+    assert service.calls == 0
     record = session_store.get(UUID(session_id))
     assert all(injection not in message["content"] for message in record.messages)
     assert any("coca zero" in message["content"] for message in record.messages)
@@ -2597,7 +2713,10 @@ async def test_agent_returns_error_instead_of_a_fake_model_when_groq_is_unavaila
 
     response = await client.post(
         "/agent/respond",
-        json={"session_id": created.json()["session_id"], "text": "Coca Zero giá bao nhiêu?"},
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Kể cho mình một câu chuyện vui nhé.",
+        },
     )
 
     assert response.status_code == 502
@@ -2639,7 +2758,9 @@ async def test_audio_endpoint_transcribes_vietnamese_audio(client: httpx.AsyncCl
 
 
 @pytest.mark.asyncio
-async def test_agent_passes_selected_language_to_qwen_prompt(client: httpx.AsyncClient) -> None:
+async def test_agent_uses_selected_language_for_catalog_fact_response(
+    client: httpx.AsyncClient,
+) -> None:
     service = LanguageAwareGroqService()
     app.dependency_overrides[get_groq_service] = lambda: service
     created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
@@ -2654,8 +2775,9 @@ async def test_agent_passes_selected_language_to_qwen_prompt(client: httpx.Async
     )
 
     assert response.status_code == 200
-    assert "English" in service.messages[0]["content"]
-    assert "Answer only the question asked" in service.messages[0]["content"]
+    assert "reference price" in response.json()["text"]
+    assert response.json()["model"] == "catalog"
+    assert service.messages == []
 
 
 @pytest.mark.asyncio

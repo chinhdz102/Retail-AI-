@@ -41,6 +41,7 @@ def client() -> httpx.AsyncClient:
         "Cái nào bán chạy nhất?",
         "Món mô ngon nhứt?",
         "Which snack is most popular?",
+        "Tôi mua phải sữa hết hạn, báo giúp nhân viên.",
     ],
 )
 def test_product_advice_phrasing_does_not_trigger_cart_actions(text: str) -> None:
@@ -53,6 +54,8 @@ def test_product_advice_phrasing_does_not_trigger_cart_actions(text: str) -> Non
         ("Thêm 2 lon Coca Zero vào giỏ nhé", ShoppingActionType.ADD_ITEM, "coca zero", 2),
         ("Add three cans of Coca Zero to my cart", ShoppingActionType.ADD_ITEM, "coca zero", 3),
         ("Xem giỏ hàng giúp mình", ShoppingActionType.VIEW_CART, "", None),
+        ("Mở giỏ hàng cho mình xem", ShoppingActionType.VIEW_CART, "", None),
+        ("Xem lại giỏ hàng giúp mình", ShoppingActionType.VIEW_CART, "", None),
         ("Đặt hàng", ShoppingActionType.PREPARE_CHECKOUT, "", None),
         ("Tạo đơn Coca Zero rồi gửi mã QR", ShoppingActionType.PREPARE_CHECKOUT, "", None),
     ],
@@ -93,6 +96,233 @@ def test_multi_item_add_request_is_parsed_without_losing_quantities(
     assert action is not None
     assert action.action == ShoppingActionType.ADD_ITEM
     assert action.line_items == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_query", "expected_quantity"),
+    [
+        ("Lấy giúp mình 2 chai nước suối 500ml.", "nuoc suoi 500ml", 2),
+        ("Mình lấy 1 gói Snack khoai tây vị tự nhiên.", "snack khoai tay vi tu nhien", 1),
+        ("Thêm 1 chai cà phê sữa pha sẵn.", "ca phe sua pha san", 1),
+        ("Cho mình 1 chai cà phê sữa pha sẵn.", "ca phe sua pha san", 1),
+        ("Lấy giúp mình chai nước suối đó.", "chai nuoc suoi do", 1),
+        ("Mua Coca Zero giá bao nhiêu?", None, None),
+    ],
+)
+def test_implicit_purchase_requires_a_clear_non_question_purchase_request(
+    text: str,
+    expected_query: str | None,
+    expected_quantity: int | None,
+) -> None:
+    action = classify_shopping_action(text, SessionState.BROWSING)
+    if expected_query is None:
+        assert action is None
+        return
+
+    assert action is not None
+    assert action.action == ShoppingActionType.ADD_ITEM
+    assert action.query == expected_query
+    assert action.quantity == expected_quantity
+
+
+def test_implicit_multi_item_purchase_keeps_each_quantity() -> None:
+    action = classify_shopping_action(
+        "Mình lấy 1 Coca Zero và 1 cà phê sữa pha sẵn.",
+        SessionState.BROWSING,
+    )
+
+    assert action is not None
+    assert action.action == ShoppingActionType.ADD_ITEM
+    assert action.line_items == (("coca zero", 1), ("ca phe sua pha san", 1))
+
+
+def test_cart_removal_quantity_and_payment_status_intents_are_readable() -> None:
+    removed = classify_shopping_action("Bỏ một lon Coca ra.", SessionState.CART_ACTIVE)
+    quantity = classify_shopping_action(
+        "Tăng nước suối thành hai chai.",
+        SessionState.CART_ACTIVE,
+    )
+    payment = classify_shopping_action(
+        "Mình chuyển khoản xong rồi, đơn đã thanh toán chưa?",
+        SessionState.BROWSING,
+    )
+    total = classify_shopping_action("Xem tổng tiền giúp mình.", SessionState.CART_ACTIVE)
+
+    assert removed is not None and removed.action == ShoppingActionType.REMOVE_ITEM
+    assert removed.query == "coca"
+    assert removed.quantity == 1
+    assert quantity is not None and quantity.action == ShoppingActionType.SET_QUANTITY
+    assert quantity.quantity == 2
+    assert payment is not None and payment.action == ShoppingActionType.CHECK_PAYMENT_STATUS
+    assert total is not None and total.action == ShoppingActionType.VIEW_CART
+
+
+@pytest.mark.asyncio
+async def test_natural_cart_and_payment_flow_uses_verified_deterministic_actions(
+    client: httpx.AsyncClient,
+) -> None:
+    async with client:
+        created = await client.post("/sessions", json={"kiosk_id": "natural-cart-v4"})
+        session_id = created.json()["session_id"]
+        add = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session_id,
+                "text": "Lấy giúp mình 2 chai nước suối 500ml.",
+            },
+        )
+        assert add.status_code == 200
+        assert add.json()["state"] == "CART_ACTIVE"
+        assert add.json()["cart"]["items"][0]["product_id"] == "WATER01"
+        assert add.json()["cart"]["items"][0]["quantity"] == 2
+
+        view = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Mở giỏ hàng cho mình xem."},
+        )
+        assert view.json()["cart"]["total_vnd"] == 14_000
+
+        quote = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Chuẩn bị thanh toán giỏ này."},
+        )
+        assert quote.json()["state"] == "CHECKOUT_CONFIRMATION"
+        order = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Xác nhận đặt hàng."},
+        )
+        assert order.json()["state"] == "PAYMENT_PENDING"
+        assert order.json()["order"]["payment_status"] == "PENDING"
+
+        status = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session_id,
+                "text": "Mình chuyển khoản xong rồi, đơn đã thanh toán chưa?",
+            },
+        )
+        assert status.json()["order"]["payment_status"] == "PENDING"
+        assert "chưa xác minh" in status.json()["text"].casefold()
+        assert "thanh toán thành công" not in status.json()["text"].casefold()
+
+
+@pytest.mark.asyncio
+async def test_removing_one_item_reduces_quantity_instead_of_clearing_the_line(
+    client: httpx.AsyncClient,
+) -> None:
+    async with client:
+        created = await client.post("/sessions", json={"kiosk_id": "remove-one-v4"})
+        session_id = created.json()["session_id"]
+        await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Lấy 2 chai nước suối 500ml."},
+        )
+
+        removed = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Bỏ một chai nước suối ra."},
+        )
+
+        assert removed.status_code == 200
+        assert removed.json()["cart"]["items"][0]["quantity"] == 1
+        assert removed.json()["cart"]["total_vnd"] == 7_000
+
+
+@pytest.mark.asyncio
+async def test_purchase_and_product_reference_followups_do_not_need_the_llm(
+    client: httpx.AsyncClient,
+) -> None:
+    async with client:
+        created = await client.post("/sessions", json={"kiosk_id": "natural-product-v4"})
+        session_id = created.json()["session_id"]
+        price = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Mì bò hầm cay giá nhiu vậy ta?"},
+        )
+        assert price.status_code == 200
+        assert "17.000đ" in price.json()["text"]
+        assert price.json()["grounded_product_ids"] == ["NOODLE01"]
+
+        shelf = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "À, món đó ở kệ nào vậy?"},
+        )
+        assert shelf.status_code == 200
+        assert "C1-L3" in shelf.json()["text"]
+        assert shelf.json()["grounded_product_ids"] == ["NOODLE01"]
+
+
+@pytest.mark.asyncio
+async def test_recommendation_followups_keep_product_and_cart_context(
+    client: httpx.AsyncClient,
+) -> None:
+    async with client:
+        created = await client.post("/sessions", json={"kiosk_id": "recommend-followup-v4"})
+        session_id = created.json()["session_id"]
+        recommendation = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session_id,
+                "text": "Mình cần món ăn vặt không cay, dưới 25 nghìn.",
+            },
+        )
+        assert recommendation.status_code == 200
+        assert "Snack khoai tây vị tự nhiên" in recommendation.json()["text"]
+        assert recommendation.json()["grounded_product_ids"] == ["SNACK01"]
+
+        price = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session_id,
+                "text": "Giá tham khảo món vừa gợi ý bao nhiêu?",
+            },
+        )
+        assert "18.000đ" in price.json()["text"]
+        assert price.json()["grounded_product_ids"] == ["SNACK01"]
+
+        add = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session_id,
+                "text": "Cho mình thêm gói snack đó vào giỏ.",
+            },
+        )
+        assert add.json()["state"] == "CART_ACTIVE"
+        assert add.json()["cart"]["items"][0]["product_id"] == "SNACK01"
+
+        view = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Xem lại giỏ hàng giúp mình."},
+        )
+        assert view.json()["cart"]["items"][0]["product_id"] == "SNACK01"
+
+
+@pytest.mark.asyncio
+async def test_deictic_water_add_uses_the_grounded_recommendation(
+    client: httpx.AsyncClient,
+) -> None:
+    async with client:
+        created = await client.post("/sessions", json={"kiosk_id": "recommend-water-deictic-v4"})
+        session_id = created.json()["session_id"]
+        recommendation = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session_id,
+                "text": "Có chai nước suối nào dưới chục ngàn hông?",
+            },
+        )
+        assert recommendation.status_code == 200
+        assert recommendation.json()["grounded_product_ids"] == ["WATER01"]
+
+        add = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Lấy giúp mình chai nước suối đó."},
+        )
+
+        assert add.status_code == 200
+        assert add.json()["state"] == "CART_ACTIVE"
+        assert add.json()["cart"]["items"][0]["product_id"] == "WATER01"
+        assert add.json()["cart"]["items"][0]["quantity"] == 1
 
 
 @pytest.mark.asyncio
