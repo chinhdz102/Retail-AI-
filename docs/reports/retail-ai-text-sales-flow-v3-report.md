@@ -13,6 +13,7 @@ Kết quả kiểm tra ngày 20/10/2026:
 
 - Backend: **675 passed**; frontend: **49 passed**; production build, Ruff và compileall đều thành công.
 - Live Groq dev: **41 phiên / 203 lượt**, HTTP **203/203**, grounding/safety **203/203**, 0 lỗi; median **47 ms**, 3 LLM calls và 1 tool call. Đây là bộ dev đã lộ, không phải held-out mù; số lượt LLM thấp nên không đo đầy đủ chất lượng sinh câu trả lời.
+- Exposed held-out regression: **10 phiên / 50 lượt**, HTTP **50/50**, automated assertions **47/50**, 0 LLM calls. Kiểm tra 3 lượt fail cho thấy assertion chưa khớp câu trả lời; xem mục R, không tính chúng là 50/50 PASS.
 - P0: **40/40**; shopping sandbox: **100/100**, 0 xác nhận thanh toán giả trong 20 lần kiểm tra và 0 rò chéo phiên trong 20 lần kiểm tra.
 - Product retrieval ngoại tuyến: Recall@1/3/5 = **1.0**; gold-set recall@3/@5 = **0.9777/0.9866**; MRR = **1.0**.
 - Kiểm tra credential cho thấy hai giá trị key gửi gần đây trùng với fallback_1 và fallback_2 đã có; hiện có **3 credential duy nhất**, không phải 5. Live Groq đã ghi nhận primary bị 429 và fallback_1 thành công.
@@ -372,19 +373,33 @@ Kết quả hiện tại không chứng minh chất lượng model live dưới 
 | Frontend production build + vue-tsc | Pass; chunk `model-viewer` 1,024 kB vẫn có cảnh báo vượt 500 kB |
 | Ruff / compileall | Pass / Pass |
 | Live Groq development | **41 phiên / 203 lượt; HTTP 203/203; grounding/safety 203/203; 0 lỗi** |
-| Live dev latency / model usage | Median **47 ms**; 3 LLM calls; 1 tool call |
+| Live dev latency / model usage | Median lượt **47 ms**; 3 LLM calls; 1 tool call; **7.409 prompt + 86 completion = 7.495 tokens** |
+| Exposed held-out regression | **10 phiên / 50 lượt; HTTP 50/50; automated assertions 47/50; 0 LLM calls; median 58 ms** |
 | P0 regression | **40/40** trên 8 case × 5 lần, catalog demo |
 | Shopping sandbox | **100/100**; 0/20 false payment; 0/20 cross-session leakage; 0 LLM calls |
 | Offline product retrieval | Recall@1/3/5 = **1.0**; gold-set recall@3/@5 = **0.9777/0.9866**; MRR **1.0** |
 
 Live trace ghi nhận cả ba request LLM bị primary trả 429 rồi fallback_1 thành công; output benchmark chỉ lưu tên slot/model và không chứa secret. Ba credential duy nhất đều xác thực được qua GET `/models`, mỗi slot hiển thị 11 model. Hai giá trị vừa gửi trong chat thực ra trùng fallback_1 và fallback_2, vì vậy cấu hình hiện có ba key khác nhau. Code đã sẵn sàng nhận key mới ở `GROQ_API_KEY_FALLBACK_3` và `_4`; hai slot này hiện chưa có giá trị riêng.
 
-Bộ live 41 phiên/203 lượt là development đã lộ, không phải held-out mới. Benchmark có 3 LLM calls; phần lớn câu được trả bằng deterministic API/catalog routing. `expected_model_tool_selection_count=0`, nên lượt chạy này không đánh giá chất lượng chọn tool của model. Median thấp không phản ánh các fallback chậm: một số lượt có primary quota wait mất nhiều giây. Không có đánh giá người dùng độc lập, PostgreSQL/Redis thật vẫn chưa kết nối, và không chạy STT/TTS trong vòng này.
+Bộ live dev có 3 model calls, dùng **7.409 prompt tokens** và **86 completion tokens**; các output đã xem trực tiếp đều từ chối sửa kho khi bị injection và nói rõ khi catalog không có mặt hàng. Đây chỉ là 3 câu trả lời LLM nên không đủ để kết luận naturalness hay độ chính xác model trên diện rộng. `expected_model_tool_selection_count=0`, vì vậy lượt chạy không đo accuracy chọn tool của model. Median 47 ms cũng không phản ánh trễ ở các turn gặp primary rate-limit.
+
+Tập 10 phiên/50 lượt được chạy lại làm regression sau các sửa đổi; tập này đã lộ trước đó, không phải held-out mù. Kết quả raw là **47/50 automated assertions**. Ba assertion fail đã được xem lại: câu hỏi Coca 600ml được trả lời rõ không có quy cách 600ml nhưng grader cấm cả ID sản phẩm thay thế; câu hỏi sữa hết hạn được trả lời không có hàng bán được nhưng grader cấm ID mặt hàng; câu “Coca Zero lon 330ml đang có” hỏi tồn kho nhưng grader lại bắt buộc có giá. Đây là sai khác giữa expectation và nghĩa câu trả lời; vẫn giữ nguyên số raw 47/50, không sửa grader để nâng điểm. Held-out regression không gọi Groq (`0` LLM calls), nên chỉ đánh giá routing/catalog/policy.
+
+Không có held-out mới chưa lộ, người chấm độc lập, PostgreSQL/Redis thật hoặc STT/TTS trong vòng này.
 
 Artifacts:
 
 - [Live Groq dev, 203/203](../../evaluation/results/goal_postfix_v3_dev_live_20261020.json)
+- [Exposed held-out regression, 47/50 raw assertions](../../evaluation/results/goal_postfix_v5_exposed_heldout_20261020.json)
 - [P0 regression, 40/40](../../evaluation/results/goal_postfix_p0_20261020.json)
 - [Shopping sandbox, 100/100](../../evaluation/results/goal_postfix_shopping_20261020.json)
 - [Offline product retrieval](../../evaluation/results/goal_postfix_product_resolution_20261020.json)
 - [Code regression for cart/context fixes](../../tests/test_shopping_flow.py) và [API follow-up regression](../../tests/test_retail_api.py)
+
+Lệnh tái lập benchmark hội thoại (catalog demo, không tạo thanh toán thật):
+
+```powershell
+$env:CATALOG_REPOSITORY='demo'
+.venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark --case-file evaluation\cases\vietnamese_text_sales_flow_v3_dev.json --pace-seconds 9 --output evaluation\results\goal_postfix_v3_dev_live_20261020.json
+.venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark --case-file evaluation\cases\vietnamese_text_sales_flow_v5_heldout_20261020.json --pace-seconds 9 --output evaluation\results\goal_postfix_v5_exposed_heldout_20261020.json
+```
