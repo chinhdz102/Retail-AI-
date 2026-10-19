@@ -37,9 +37,10 @@ Các thay đổi follow-up trên nhánh `codex/session-isolation-ui-hardening` t
 | Vue TypeScript + production build | **Pass** | Main JS 171,31 kB (gzip 56,23 kB); avatar/model-viewer ở chunk tải riêng 1.024,05 kB (gzip 290,30 kB), Vite vẫn cảnh báo chunk lớn. |
 | Ruff, compileall, `git diff --check` | **Pass** | Có cảnh báo chuẩn hóa LF/CRLF của Git trên Windows. |
 | PostgreSQL product search v2 | **Không đo được** | Chạy read-only benchmark kết thúc bằng `TimeoutError`; không có Recall/latency mới để báo cáo. |
-| P0 regression | **40/40 pass** (8 nhóm × 5 lượt) | Scripted responses; artifact cuối `evaluation/results/p0_regression_20261019T100407Z.json`. |
-| Shopping sandbox | **20/20 pass**, 98 API calls, 0 LLM calls | False-payment 0/4; cross-session leakage 0/4; in-process P50 0,924 ms, P95 8,454 ms. Artifact cuối `evaluation/results/shopping_flow_sandbox_20261019T100256Z.json`. |
-| Deterministic smoke benchmark | **27 PASS / 0 FAIL / 3 UNSUPPORTED / 1 NOT RUN** | Bao gồm hội thoại giỏ, tham chiếu món trước, payment sandbox và so sánh hai sản phẩm cùng lượt hỏi “cái nào rẻ hơn”. Scripted Groq/demo catalog; không đo live tool planning. Artifact mới `evaluation/results/smoke_benchmark_coverage_20261019_final_verified.json`. Ba mục chưa hỗ trợ là FEFO theo lô, knowledge base sản phẩm và RAG; Redis live tách thành NOT RUN. Các artifact trước được giữ nguyên để bảo toàn lịch sử. |
+| P0 regression | **40/40 pass** (8 nhóm × 5 lượt) | Scripted responses; artifact tạo trên commit `d64b751`: `evaluation/results/p0_regression_20261019T100745Z.json`. |
+| Shopping sandbox | **20/20 pass**, 98 API calls, 0 LLM calls | False-payment 0/4; cross-session leakage 0/4; in-process P50 0,937 ms, P95 9,597 ms. Artifact `evaluation/results/shopping_flow_sandbox_20261019T100744Z.json` ghi commit `d64b751`. |
+| Deterministic smoke benchmark | **27 PASS / 0 FAIL / 3 UNSUPPORTED / 1 NOT RUN** | Bao gồm hội thoại giỏ, tham chiếu món trước, payment sandbox và so sánh hai sản phẩm cùng lượt hỏi “cái nào rẻ hơn”. Scripted Groq/demo catalog; không đo live tool planning. Artifact tạo trên commit `d64b751`: `evaluation/results/smoke_benchmark_coverage_20261019_postpush_d64b751.json`. Ba mục chưa hỗ trợ là FEFO theo lô, knowledge base sản phẩm và RAG; Redis live tách thành NOT RUN. Các artifact trước được giữ nguyên để bảo toàn lịch sử. |
+| Live product consultation (18/10) | **6/6 HTTP 200; 6/6 grounding/safety assertions**; median 12.473 ms; 7 LLM calls, 6 tool calls | Qwen `qwen/qwen3.8-27b`, fallback bật; PostgreSQL catalog 3.099 rows, 4 tool turns được gọi. Một lượt mỗi case, không chấm naturalness bởi người. Artifact `evaluation/results/live_vietnamese_product_consultation_final_20261018.json`; là kết quả lịch sử, không phải probe DB hiện tại. |
 | External data stores | PostgreSQL **NOT RUN** (read-only `SELECT 1` timeout, ~2,01 s); Redis **NOT RUN** (`PING` connection error, ~2,03 s) | Không ghi các probe là PASS; không khởi động local services. |
 
 Các kiểm thử phiên bao gồm late response sau đổi khách, không replay audio, single-flight boot, đóng phiên khi unmount và luồng UI từ sản phẩm đến thanh toán mô phỏng. Kiểm thử SSE bao gồm byte UTF-8 chia nhỏ, ráp delta và từ chối stream bị cắt trước event hoàn tất. Chúng chưa thay thế kiểm thử trình duyệt, micro thật hoặc backend đang kết nối PostgreSQL/Redis.
@@ -79,11 +80,11 @@ Nghiên cứu dưới đây định hình test và lựa chọn kiến trúc; k�
 
 | Nghiên cứu | Bài toán, phương pháp và kết quả công bố | Áp dụng và giới hạn |
 |---|---|---|
-| **ProductAgent: Benchmarking Conversational Product Search Agent with Asking Clarification Questions** — Jingheng Ye, Yong Jiang, Xiaobin Wang, Yinghui Li, Yangning Li, Hai-Tao Zheng, Pengjun Xie, Fei Huang (2024). [arXiv:2407.00942](https://arxiv.org/abs/2407.00942) | PROCLARE đánh giá hỏi làm rõ, tóm tắt thuộc tính, query generation và retrieval động. Trong thí nghiệm retrieval, GTE đạt MRR@10 52,29; rerank GTE 63,82. Hiệu quả phụ thuộc dữ liệu và lượt hội thoại. | Ưu tiên lexical/fuzzy baseline và hỏi khi thiếu thuộc tính ảnh hưởng quyết định. Kết quả không chứng minh vector DB tốt hơn trên WinMart; chưa thêm vector DB khi benchmark dự án chưa cho thấy lợi ích. |
-| **ShoppingBench: A Real-World Intent-Grounded Shopping Benchmark for LLM-based Agents** — Jiangyuan Wang et al. (2025). [arXiv:2508.04266](https://arxiv.org/abs/2508.04266) | 3.310 chỉ dẫn mua sắm, sandbox hơn 2,5 triệu sản phẩm; GPT‑4.1 đạt success dưới 50% tổng thể trong thiết lập tác giả. | Dùng để nhấn mạnh chuỗi hành động, budget, coupon và nhiều sản phẩm. Không dùng số paper làm kết quả Retail AI. |
-| **Shopping Reasoning Bench: An Expert-Authored Benchmark for Multi-Turn Conversational Shopping Assistants** — Shuxian Fan, Seonwoo Min, Youna Hu, Botao Xia, Jayakrishnan Unnikrishnan, Rowan Musselmann, Yifan Gao, Qingyu Yin, Priyanka Nigam, Bing Yin (2026). [arXiv:2606.12608](https://arxiv.org/abs/2606.12608) | 525 mission (232 single-turn, 293 multi-turn), 10.863 rubric nhị phân có trọng số. Chín model đạt 57–77% overall; rubric tùy chọn thấp hơn rubric bắt buộc 13–29 điểm ở multi-turn và hiệu quả giảm 4–18 điểm khi hội thoại dài thêm. | Tách rubric yêu cầu bắt buộc khỏi tư vấn thêm; thêm ca sửa constraint, tham chiếu cũ, cart và payment. Bộ v2 có 7 hội thoại, nhỏ hơn nhiều và không phải expert annotation. |
-| **RealWorldShop: Benchmarking and Improving Conversational Shopping Agents in Real-World E-commerce** — Xinwei Yang et al. (2026, arXiv preprint). [arXiv:2609.38974](https://arxiv.org/abs/2609.38974) | Bản v1 công bố ngày 30/09/2026; benchmark có 3,28 triệu sản phẩm, khoảng 1.200 shopping scenarios và hơn 2.000 profile tổng hợp. Tác giả báo cáo full RealShop_Agent đạt success 0,82 so với 0,55 của Qwen3.5-27B base trong thiết lập của paper. | Củng cố session state, flow control, retrieval có grounding và runtime guards; áp dụng bằng kiểm thử cách ly phiên và catalog. Đây là preprint và kết quả simulator của tác giả, không phải bằng chứng hiệu năng hoặc độ chính xác của Retail AI. |
-| **Berkeley Function-Calling Leaderboard V4 (BFCL)** — Berkeley Gorilla Team (methodology V4, 2025). [Leaderboard](https://gorilla.cs.berkeley.edu/leaderboard) · [V4 methodology](https://gorilla.cs.berkeley.edu/blogs/15_bfcl_v4_web_search.html) | Mở rộng function call đơn sang tool choice/arguments, multi-turn, memory, web search và error recovery. | Grader kiểm tra state/cart/order/ticket thay vì chỉ câu chữ. Không chạy BFCL đầy đủ; số pass nội bộ không phải BFCL score. |
+| **ProductAgent: Benchmarking Conversational Product Search Agent with Asking Clarification Questions** — Jingheng Ye, Yong Jiang, Xiaobin Wang, Yinghui Li, Yangning Li, Hai-Tao Zheng, Pengjun Xie, Fei Huang (2024). [arXiv:2407.00942](https://arxiv.org/abs/2407.00942) | PROCLARE đánh giá hỏi làm rõ, tóm tắt thuộc tính, query generation và retrieval động. Ở thiết lập truy vấn truyền thống của Table 4, GTE đạt MRR@10 52,29; rerank GTE 63,82. Hiệu quả phụ thuộc dữ liệu và lượt hội thoại. | Ưu tiên lexical/fuzzy baseline và hỏi khi thiếu thuộc tính ảnh hưởng quyết định. Kết quả không chứng minh vector DB tốt hơn trên WinMart; chưa thêm vector DB khi benchmark dự án chưa cho thấy lợi ích. |
+| **ShoppingBench: A Real-World Intent-Grounded Shopping Benchmark for LLM-based Agents** — Jiangyuan Wang et al. (2025). [arXiv:2508.04266](https://arxiv.org/abs/2508.04266) | 3.310 chỉ dẫn mua sắm, sandbox hơn 2,5 triệu sản phẩm; GPT‑4.1 đạt absolute success rate 48,2% tổng thể trong thiết lập tác giả. | Dùng để nhấn mạnh chuỗi hành động, budget, coupon và nhiều sản phẩm. Không dùng số paper làm kết quả Retail AI. |
+| **Shopping Reasoning Bench: An Expert-Authored Benchmark for Multi-Turn Conversational Shopping Assistants** — Shuxian Fan, Seonwoo Min, Youna Hu, Botao Xia, Jayakrishnan Unnikrishnan, Rowan Musselmann, Yifan Gao, Qingyu Yin, Priyanka Nigam, Bing Yin (2026). [arXiv:2606.12608](https://arxiv.org/abs/2606.12608) | 525 mission (232 single-turn, 293 multi-turn), 10.863 rubric nhị phân có trọng số. Chín model đạt 57–77% overall; ở multi-turn, rubric tùy chọn thấp hơn rubric bắt buộc 13–29 điểm. Chất lượng lượt cuối giảm 4–18 điểm so với lượt đầu tùy model. | Tách rubric yêu cầu bắt buộc khỏi tư vấn thêm; thêm ca sửa constraint, tham chiếu cũ, cart và payment. Bộ v2 có 7 hội thoại, nhỏ hơn nhiều và không phải expert annotation. |
+| **RealWorldShop: Benchmarking and Improving Conversational Shopping Agents in Real-World E-commerce** — Xinwei Yang et al. (2026, arXiv preprint). [arXiv:2609.38974](https://arxiv.org/abs/2609.38974) | Bản v1 ngày 30/09/2026 dùng 3,28 triệu sản phẩm, khoảng 1.200 shopping scenarios và hơn 2.000 profile tổng hợp. Full RealShop_Agent đạt success 0,82; prompt-only Qwen3.5-27B Base đạt 0,55, còn hệ có session control trên backbone gốc đạt 0,71. | Củng cố session state, flow control, retrieval có grounding và runtime guards; áp dụng bằng kiểm thử cách ly phiên và catalog. Đây là preprint và kết quả simulator của tác giả, không phải bằng chứng hiệu năng hoặc độ chính xác của Retail AI. |
+| **Berkeley Function-Calling Leaderboard (BFCL)** — Berkeley Gorilla Team (V3/V4, 2025). [Leaderboard](https://gorilla.cs.berkeley.edu/leaderboard) · [V4 methodology](https://gorilla.cs.berkeley.edu/blogs/15_bfcl_v4_web_search.html) | BFCL V3 bổ sung multi-turn/multi-step calls; V4 agentic bổ sung web search, memory và format sensitivity, với kiểm tra AST/state transition. | Grader kiểm tra state/cart/order/ticket thay vì chỉ câu chữ. Không chạy BFCL đầy đủ; số pass nội bộ không phải BFCL score. |
 | **ViWOZ: A Multi-Domain Task-Oriented Dialogue Systems Dataset For Low-resource Language** — Phi Nguyen Van et al. (2022). [arXiv:2203.07742](https://arxiv.org/abs/2203.07742) | Dataset tiếng Việt gồm 5.000 dialogues và 60.946 annotated utterances. | Gợi ý biến thể tiếng Việt và multi-turn; không phải miền retail nên không suy ra retail accuracy. |
 | **Diable: Efficient Dialogue State Tracking as Operations on Tables** — Pietro Lesci, Yoshinari Fujinuma, Momchil Hardalov, Chao Shang, Yassine Benajiba, Lluis Marquez (Findings ACL 2023). [ACL Anthology](https://aclanthology.org/2023.findings-acl.615/) · DOI 10.18653/v1/2023.findings-acl.615 | Biểu diễn state thành bảng và áp dụng thao tác theo lượt. Trên MultiWOZ, paper báo cáo nhanh hơn 2,4× phương pháp được so sánh, với Joint Goal Accuracy cạnh tranh. | Củng cố SET/REPLACE/REMOVE/KEEP. Đây không phải số latency/accuracy của Retail AI. |
 | **Wizard of Shopping: Target-Oriented E-commerce Dialogue Generation with Decision Tree Branching** — Xiangci Li et al. (ACL 2025). [ACL Anthology](https://aclanthology.org/2025.acl-long.641/) | TRACER dùng decision-tree branching; tác giả cung cấp khoảng 3,6 nghìn hội thoại trên 3 miền cho hội thoại thương mại điện tử hướng mục tiêu. | Áp dụng nguyên tắc hỏi ngắn, có mục tiêu; không ép cây hội thoại cố định vì khách có thể đổi mục tiêu. |
@@ -236,7 +237,7 @@ Yêu cầu hỗ trợ rõ ràng tạo ticket demo có ID, loại vấn đề, m�
 
 ## 8. Experimental Results
 
-### Kết quả cuối trên code commit 1757bbd
+### Baseline trước follow-up trên code commit 1757bbd
 
 | Kiểm tra | Kết quả | Giới hạn |
 |---|---:|---|
@@ -267,9 +268,9 @@ Artifact mới được giữ riêng, không ghi đè lịch sử:
 - evaluation/results/live_text_retail_v2_20261019.json
 - evaluation/results/live_text_retail_default_cases_20261019.json
 - evaluation/results/live_text_retail_default_cases_after_fixes_20261019.json
-- evaluation/results/p0_regression_20261019T100407Z.json
-- evaluation/results/shopping_flow_sandbox_20261019T100256Z.json
-- evaluation/results/smoke_benchmark_coverage_20261019_final_verified.json
+- evaluation/results/p0_regression_20261019T100745Z.json
+- evaluation/results/shopping_flow_sandbox_20261019T100744Z.json
+- evaluation/results/smoke_benchmark_coverage_20261019_postpush_d64b751.json
 - evaluation/results/live_groq_model_after_shopping_20261019.json
 - evaluation/results/smoke_benchmark_followup_20261019.json (runner cũ, diagnostic được giữ nguyên)
 - evaluation/results/smoke_benchmark_followup_20261019_final.json (runner đã sửa)
@@ -288,7 +289,7 @@ Artifact mới được giữ riêng, không ghi đè lịch sử:
 | Payment | Không có bank webhook. | Sandbox giữ PENDING; LLM không đặt PAID. Chưa có payment provider, không gửi QR thật. |
 | Customer support | Ticket simulator không liên hệ nhân viên/CRM. | Response ghi rõ demo; cần queue có ack nếu triển khai handoff thật. |
 | Security | Guard chặn các injection đã nhận diện, gồm bypass verification. | Chưa penetration test, chưa đánh giá injection gián tiếp từ feed/catalog. |
-| UI/voice | Text UI nhận SSE delta sau khi backend hoàn tất kiểm tra; chưa đo browser/mic/TTS/lip-sync thực. | SSE không stream token khi model đang sinh; cần đo latency tới first validated text/audio trên thiết bị thật. |
+| UI/voice | Text UI nhận SSE delta sau khi backend hoàn tất kiểm tra; chưa đo browser/mic/TTS/lip-sync thực. Lượt browser E2E trên `127.0.0.1` bị URL security policy từ chối nên không chạy. | SSE không stream token khi model đang sinh; cần browser E2E, latency tới first validated text/audio trên thiết bị thật. |
 | Latency | Median live thấp do nhiều route local; một query Groq mất khoảng 9,7 giây. | Tách provider/local ASGI; cần benchmark nhiều lượt trên mạng/thiết bị thật. |
 
 ## 10. Limitations and Future Work
@@ -318,7 +319,8 @@ Không có load test production, payment thật, POS, PostgreSQL/Redis live, sta
 
 ### Mã nguồn và cấu hình
 
-- Branch `codex/session-isolation-ui-hardening`; base commit của phần follow-up: `98ee7ef8e416cde3f2afd3bf0cc4845fe78d485f`.
+- Branch `codex/session-isolation-ui-hardening`; code follow-up được benchmark gần nhất là commit `d64b7514b3ee415c3d868085607af651ef571a12`. Các artifact P0, shopping sandbox và smoke nêu ở trên được tạo sau commit này. Artifact shopping ghi `git_worktree_dirty=true` vì báo cáo đang được cập nhật và còn file benchmark/scratch untracked; tracked application/test code không thay đổi tại thời điểm chạy.
+- Base commit của phần follow-up: `98ee7ef8e416cde3f2afd3bf0cc4845fe78d485f`.
 - Báo cáo đánh giá cũ giữ riêng tại `docs/reports/archive/`; follow-up được commit trên nhánh feature này.
 - Runtime test dùng catalog demo với CATALOG_REPOSITORY=demo.
 - Live Groq cần key trong .env; báo cáo và artifact không chứa giá trị key.
@@ -343,10 +345,9 @@ npm run build
 
 ~~~powershell
 $env:CATALOG_REPOSITORY = 'demo'
-$env:CATALOG_REPOSITORY = 'demo'
 .venv\Scripts\python.exe evaluation\run_p0_regressions.py --trials-per-case 5
 .venv\Scripts\python.exe evaluation\run_shopping_flow_benchmark.py --trials 2
-.venv\Scripts\python.exe evaluation\run_smoke_benchmark.py --output evaluation\results\smoke_benchmark_coverage_20261019_final_verified.json
+.venv\Scripts\python.exe evaluation\run_smoke_benchmark.py --output evaluation\results\smoke_benchmark_coverage_20261019_postpush_d64b751.json
 .venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark --case-file evaluation\cases\vietnamese_retail_shopping_v2.json --pace-seconds 9 --output evaluation\results\live_text_retail_v2_reproduced.json
 .venv\Scripts\python.exe -m evaluation.run_product_search_benchmark --cases evaluation\cases\product_resolution_v2.jsonl --output evaluation\results\product_search_benchmark_v2.json
 ~~~
