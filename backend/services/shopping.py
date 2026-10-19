@@ -268,17 +268,46 @@ class ShoppingService:
         *,
         idempotency_key: str,
     ) -> CartSnapshot:
-        if not 1 <= quantity <= MAX_CART_QUANTITY:
-            raise ValueError(f"Quantity must be between 1 and {MAX_CART_QUANTITY}")
+        return self.add_items(
+            session_id,
+            [(product_id, quantity)],
+            idempotency_key=idempotency_key,
+        )
+
+    def add_items(
+        self,
+        session_id: UUID,
+        items: list[tuple[str, int]] | tuple[tuple[str, int], ...],
+        *,
+        idempotency_key: str,
+    ) -> CartSnapshot:
+        if not items:
+            raise ValueError("At least one product is required")
+        requested: dict[str, int] = {}
+        for product_id, quantity in items:
+            normalized_id = product_id.strip()
+            if not normalized_id:
+                raise ValueError("Product ID must not be empty")
+            if not 1 <= quantity <= MAX_CART_QUANTITY:
+                raise ValueError(f"Quantity must be between 1 and {MAX_CART_QUANTITY}")
+            requested[normalized_id] = requested.get(normalized_id, 0) + quantity
+            if requested[normalized_id] > MAX_CART_QUANTITY:
+                raise CartConflictError(
+                    f"A cart line can contain at most {MAX_CART_QUANTITY} products"
+                )
         with self._lock:
             self._repo()
             self._expire_quotes()
             self._expire_orders()
             cart = self._cart(session_id)
-            normalized_id = product_id.strip()
-            digest = hashlib.sha256(
-                f"add|{normalized_id.casefold()}|{quantity}".encode()
-            ).hexdigest()
+            digest_payload = json.dumps(
+                sorted(
+                    (product_id.casefold(), quantity)
+                    for product_id, quantity in requested.items()
+                ),
+                separators=(",", ":"),
+            )
+            digest = hashlib.sha256(f"add|{digest_payload}".encode()).hexdigest()
             cached = self._idempotency.get((session_id, idempotency_key))
             if cached:
                 if cached[0] != digest:
@@ -286,17 +315,25 @@ class ShoppingService:
                         "Idempotency key reused for a different cart update"
                     )
                 return self._snapshot(session_id)
-            product = self._product(normalized_id)
-            current_quantity = cart.quantities.get(product.product_id, 0)
-            if current_quantity + quantity > product.sellable_stock - self._sold.get(
-                product.product_id, 0
-            ):
-                raise StockConflictError("Requested quantity is above the sellable demo stock")
-            if product.product_id not in cart.quantities and len(cart.quantities) >= MAX_CART_LINES:
+            resolved: dict[str, tuple[ProductSnapshot, int]] = {}
+            for requested_id, quantity in requested.items():
+                product = self._product(requested_id)
+                current_quantity = cart.quantities.get(product.product_id, 0)
+                new_quantity = current_quantity + quantity
+                if new_quantity > MAX_CART_QUANTITY:
+                    raise CartConflictError(
+                        f"A cart line can contain at most {MAX_CART_QUANTITY} products"
+                    )
+                if new_quantity > product.sellable_stock - self._sold.get(product.product_id, 0):
+                    raise StockConflictError("Requested quantity is above the sellable demo stock")
+                resolved[product.product_id] = (product, quantity)
+            new_line_count = len(set(cart.quantities) | set(resolved))
+            if new_line_count > MAX_CART_LINES:
                 raise CartConflictError(f"A cart can contain up to {MAX_CART_LINES} products")
             self._invalidate_quote(session_id)
-            cart.quantities[product.product_id] = current_quantity + quantity
-            cart.unit_prices[product.product_id] = product.price_vnd
+            for product_id, (product, quantity) in resolved.items():
+                cart.quantities[product_id] = cart.quantities.get(product_id, 0) + quantity
+                cart.unit_prices[product_id] = product.price_vnd
             cart.version += 1
             self._idempotency[(session_id, idempotency_key)] = (digest, cart.cart_id)
             return self._snapshot(session_id)

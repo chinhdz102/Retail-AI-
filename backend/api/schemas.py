@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
 from backend.products.catalog import ProductSnapshot
-from backend.shared.contracts import SessionState
+from backend.shared.contracts import IssueType, SessionState
 
 LanguageCode = Literal["vi", "en", "zh"]
 
@@ -97,6 +97,23 @@ class SandboxPaymentRequest(BaseModel):
     event_id: str = Field(default_factory=lambda: uuid4().hex, min_length=8, max_length=128)
 
 
+class SupportTicketCreateRequest(BaseModel):
+    issue_type: IssueType = IssueType.OTHER
+    description: str = Field(min_length=1, max_length=500)
+    idempotency_key: str = Field(default_factory=lambda: uuid4().hex, min_length=8, max_length=128)
+
+
+class SupportTicketResponse(BaseModel):
+    ticket_id: UUID
+    session_id: UUID
+    kiosk_id: str
+    issue_type: IssueType
+    description: str
+    status: str
+    created_at: datetime
+    demo: bool = True
+
+
 class ProductCardResponse(BaseModel):
     product_id: str
     name: str
@@ -119,6 +136,7 @@ class AgentRespondResponse(BaseModel):
     cart: CartResponse | None = None
     checkout_quote: CheckoutQuoteResponse | None = None
     order: SandboxOrderResponse | None = None
+    support_ticket: SupportTicketResponse | None = None
 
 
 class ProductSearchResponse(BaseModel):

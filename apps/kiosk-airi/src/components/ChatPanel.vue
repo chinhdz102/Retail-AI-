@@ -68,6 +68,7 @@ const emit = defineEmits<{
   'simulate-payment': [outcome: 'PAID' | 'FAILED']
   'clear-order': []
   'end-session': []
+  'request-support': []
 }>()
 
 const languageOptions: Array<{ code: LanguageCode; short: string; label: string }> = [
@@ -179,6 +180,9 @@ const shoppingText = computed(() => {
       add: 'Add',
       stock: 'available in demo',
       end: 'End session',
+      support: 'Call staff · demo',
+      ticketLabel: 'Demo support request',
+      ticketDemo: 'Demo only · no real staff was contacted',
     }
   }
   if (props.language === 'zh') {
@@ -187,6 +191,8 @@ const shoppingText = computed(() => {
       confirm: '确认演示订单', cancel: '返回购物车', order: '沙盒订单',
       simulatePaid: '模拟支付成功', simulateFailed: '模拟支付失败', add: '添加',
       stock: '演示库存', end: '结束会话',
+      support: '联系店员 · 演示', ticketLabel: '演示服务请求',
+      ticketDemo: '仅供演示 · 尚未联系真实店员',
     }
   }
   return {
@@ -202,6 +208,9 @@ const shoppingText = computed(() => {
     add: 'Thêm',
     stock: 'còn bán trong demo',
     end: 'Kết thúc phiên',
+    support: 'Gọi nhân viên · demo',
+    ticketLabel: 'Yêu cầu hỗ trợ demo',
+    ticketDemo: 'Chỉ là bản demo · chưa liên hệ nhân viên thật',
   }
 })
 
@@ -276,6 +285,9 @@ function onKeydown(event: KeyboardEvent) {
         <button type="button" class="end-session-button" @click="emit('end-session')">
           {{ shoppingText.end }}
         </button>
+        <button type="button" class="support-request-button" @click="emit('request-support')">
+          {{ shoppingText.support }}
+        </button>
       </div>
       <label v-if="microphoneDevices?.length" class="microphone-picker">
         <span>{{ copy.microphone }}</span>
@@ -304,6 +316,11 @@ function onKeydown(event: KeyboardEvent) {
           <span v-if="message.model" class="message-model">{{ message.model }}</span>
         </div>
         <p class="message-bubble">{{ message.text }}</p>
+        <div v-if="message.supportTicket" class="support-ticket-card" role="status">
+          <strong>{{ shoppingText.ticketLabel }}</strong>
+          <span>{{ message.supportTicket.ticket_id }} · {{ message.supportTicket.status }}</span>
+          <small>{{ message.supportTicket.demo ? shoppingText.ticketDemo : '' }}</small>
+        </div>
         <div v-if="message.products?.length" class="message-product-list">
           <article v-for="product in message.products" :key="product.product_id" class="message-product-card">
             <div class="message-product-copy">

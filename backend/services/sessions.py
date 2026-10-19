@@ -52,6 +52,8 @@ class ShoppingSessionState:
     pending_confirmation_id: str | None = None
     pending_order_id: str | None = None
     handoff_status: str | None = None
+    handoff_ticket_id: str | None = None
+    handoff_previous_state: str | None = None
     payment_status: str | None = None
 
     def apply_constraint_updates(self, updates: list[dict[str, Any]]) -> None:
@@ -124,6 +126,9 @@ ALLOWED_TRANSITIONS: dict[SessionState, set[SessionState]] = {
     },
     SessionState.HANDOFF: {
         SessionState.BROWSING,
+        SessionState.CART_ACTIVE,
+        SessionState.CHECKOUT_CONFIRMATION,
+        SessionState.PAYMENT_PENDING,
         SessionState.CLOSED,
         SessionState.EXPIRED,
     },
@@ -169,6 +174,8 @@ class InMemorySessionStore:
             self._clear_private_state(record)
             record.state_version += 1
             raise SessionExpiredError("Session expired")
+        # Session lifetime is idle-based: every active API access starts a new TTL window.
+        record.expires_at = self._now() + self.ttl
         return record
 
     @staticmethod
@@ -352,22 +359,40 @@ class RedisSessionStore:
         raise SessionNotFoundError("Session not found")
 
     def get(self, session_id: UUID) -> SessionRecord:
-        try:
-            raw = self.client.get(self._key(session_id))
-        except redis.RedisError as exc:
-            raise SessionUnavailableError("Shared session store is unavailable") from exc
-        if raw is None:
-            self._missing(session_id)
-        try:
-            record = self._decode(raw)
-        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-            raise SessionUnavailableError("Stored session data is invalid") from exc
-        if record.state == SessionState.CLOSED:
-            raise SessionClosedError("Session is closed")
-        if record.state == SessionState.EXPIRED or record.expires_at <= self._now():
-            self._expire(record)
-            raise SessionExpiredError("Session expired")
-        return record
+        key = self._key(session_id)
+        status_key = self._status_key(session_id)
+        for _ in range(5):
+            try:
+                with self.client.pipeline() as pipe:
+                    pipe.watch(key)
+                    raw = pipe.get(key)
+                    if raw is None:
+                        pipe.unwatch()
+                        self._missing(session_id)
+                    try:
+                        record = self._decode(raw)
+                    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                        pipe.unwatch()
+                        raise SessionUnavailableError("Stored session data is invalid") from exc
+                    if record.state == SessionState.CLOSED:
+                        raise SessionClosedError("Session is closed")
+                    now = self._now()
+                    if record.state == SessionState.EXPIRED or record.expires_at <= now:
+                        pipe.unwatch()
+                        self._expire(record)
+                        raise SessionExpiredError("Session expired")
+                    record.expires_at = now + self.ttl
+                    remaining = max(1, math.ceil(self.ttl.total_seconds()))
+                    pipe.multi()
+                    pipe.set(key, self._encode(record), ex=remaining)
+                    pipe.set(status_key, "ACTIVE", ex=remaining + 60)
+                    pipe.execute()
+                    return copy.deepcopy(record)
+            except redis.WatchError:
+                continue
+            except redis.RedisError as exc:
+                raise SessionUnavailableError("Shared session store is unavailable") from exc
+        raise SessionUnavailableError("Session changed concurrently; retry the request")
 
     def _expire(self, record: SessionRecord) -> None:
         record.state = SessionState.EXPIRED
@@ -407,7 +432,8 @@ class RedisSessionStore:
                         raise SessionExpiredError("Session expired")
                     mutator(record)
                     record.state_version += 1
-                    remaining = max(1, math.ceil((record.expires_at - self._now()).total_seconds()))
+                    record.expires_at = self._now() + self.ttl
+                    remaining = max(1, math.ceil(self.ttl.total_seconds()))
                     pipe.multi()
                     if close:
                         record.state = SessionState.CLOSED

@@ -80,9 +80,27 @@ def test_closed_and_expired_sessions_clear_customer_context() -> None:
     assert expired_record.shopping.active_product_id is None
 
 
+def test_session_ttl_is_refreshed_by_activity_and_expires_after_idle_period() -> None:
+    now = datetime(2026, 10, 19, tzinfo=UTC)
+    current = now
+    store = InMemorySessionStore(ttl_seconds=60)
+    store._now = lambda: current
+    session = store.create("idle-timeout-test")
+    first_expiry = session.expires_at
+
+    current += timedelta(seconds=50)
+    refreshed = store.get(session.session_id)
+    assert refreshed.expires_at > first_expiry
+    assert refreshed.expires_at == current + timedelta(seconds=60)
+
+    current += timedelta(seconds=61)
+    with pytest.raises(SessionExpiredError):
+        store.get(session.session_id)
+
+
 def test_production_uses_redis_and_fails_closed_when_store_is_unavailable() -> None:
     class OfflineRedis:
-        def get(self, key: str) -> None:
+        def pipeline(self):
             raise redis.ConnectionError("offline")
 
     store = build_session_store("production", "redis://localhost:6379/0", 1800)

@@ -53,14 +53,20 @@ from backend.services.retail_tools import ToolObservation
 
 def test_pack_size_in_catalog_name_is_not_an_unverified_stock_claim() -> None:
     product = ProductSnapshot(
-        product_id="PACK_24", name="Thùng 24 lon Coca Zero 330ml", category="Nước Ngọt",
-        price_vnd=254_000, stock=22,
+        product_id="PACK_24",
+        name="Thùng 24 lon Coca Zero 330ml",
+        category="Nước Ngọt",
+        price_vnd=254_000,
+        stock=22,
     )
     observation = ToolObservation(
-        content={"count": 1}, products=(product,), tool_name="search_products",
+        content={"count": 1},
+        products=(product,),
+        tool_name="search_products",
     )
     assert not _unsupported_catalog_fact_claim(
-        f"Mình tìm thấy {product.name}. Bạn muốn hỏi loại nào?", (observation,),
+        f"Mình tìm thấy {product.name}. Bạn muốn hỏi loại nào?",
+        (observation,),
     )
     assert _unsupported_catalog_fact_claim(f"{product.name} còn 24 lon.", (observation,))
     assert _unsupported_catalog_fact_claim(f"{product.name} giá 254.000đ.", (observation,))
@@ -981,9 +987,7 @@ def test_unsupported_catalog_attributes_are_rejected_without_model_claims(text: 
         ),
     ],
 )
-def test_fact_query_extraction_removes_unverified_advice_request(
-    text: str, expected: str
-) -> None:
+def test_fact_query_extraction_removes_unverified_advice_request(text: str, expected: str) -> None:
     assert _fact_product_query(text) == expected
 
 
@@ -1022,9 +1026,7 @@ async def test_unsupported_use_and_health_questions_abstain_without_model_or_too
 async def test_price_and_unsupported_health_question_returns_only_verified_price(
     client: httpx.AsyncClient,
 ) -> None:
-    service = StaticGroqService(
-        "Coca Zero không có calo, hỗ trợ giảm cân và tốt cho tiêu hóa."
-    )
+    service = StaticGroqService("Coca Zero không có calo, hỗ trợ giảm cân và tốt cho tiêu hóa.")
     app.dependency_overrides[get_groq_service] = lambda: service
     created = await client.post("/sessions", json={"kiosk_id": "kiosk-price-and-benefit"})
 
@@ -1032,10 +1034,7 @@ async def test_price_and_unsupported_health_question_returns_only_verified_price
         "/agent/respond",
         json={
             "session_id": created.json()["session_id"],
-            "text": (
-                "Coca Zero giá bao nhiêu "
-                "và có lợi ích gì cho sức khỏe?"
-            ),
+            "text": ("Coca Zero giá bao nhiêu và có lợi ích gì cho sức khỏe?"),
         },
     )
 
@@ -1046,9 +1045,7 @@ async def test_price_and_unsupported_health_question_returns_only_verified_price
     assert "giảm cân" not in response.json()["text"]
     assert response.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
     assert response.json()["tools_used"] == ["search_products", "get_product_snapshot"]
-    assert service.messages[0][-1]["content"] == (
-        "Khách muốn tra cứu giá của sản phẩm coca zero."
-    )
+    assert service.messages[0][-1]["content"] == ("Khách muốn tra cứu giá của sản phẩm coca zero.")
 
 
 @pytest.mark.asyncio
@@ -1130,6 +1127,34 @@ def test_recommendation_constraints_reuse_category_when_user_corrects_budget() -
         "category": "snack",
         "price_constraint": {"operator": "LT", "value_vnd": 10_000},
     }
+
+
+@pytest.mark.asyncio
+async def test_recommendation_session_keeps_category_and_merges_later_hard_constraints(
+    client: httpx.AsyncClient,
+) -> None:
+    created = await client.post("/sessions", json={"kiosk_id": "recommendation-state-test"})
+    session_id = UUID(created.json()["session_id"])
+
+    first = await client.post(
+        "/agent/respond",
+        json={"session_id": str(session_id), "text": "Tìm snack dưới 30 nghìn."},
+    )
+    assert first.status_code == 200
+    saved_first = session_store.get(session_id).shopping.constraints
+    assert saved_first["category"] == "snack"
+    assert saved_first["price_constraint"] == {"operator": "LT", "value_vnd": 30_000}
+
+    second = await client.post(
+        "/agent/respond",
+        json={"session_id": str(session_id), "text": "Không cay, đổi thành dưới 20 nghìn."},
+    )
+    assert second.status_code == 200
+    saved_second = session_store.get(session_id).shopping.constraints
+    assert saved_second["category"] == "snack"
+    assert saved_second["spicy"] is False
+    assert saved_second["price_constraint"] == {"operator": "LT", "value_vnd": 20_000}
+    assert second.json()["grounded_product_ids"] == ["SNACK01"]
 
 
 @pytest.mark.parametrize(
