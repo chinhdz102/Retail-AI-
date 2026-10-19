@@ -211,6 +211,7 @@ class RawChatCompletions:
 
 class RateLimitFailure(RuntimeError):
     def __init__(self) -> None:
+        self.status_code = 429
         self.response = SimpleNamespace(headers={"retry-after": "2"})
 
 
@@ -268,4 +269,176 @@ async def test_chat_provider_error_preserves_rate_limit_headers() -> None:
             "error_type": "RateLimitFailure",
             "rate_limit_headers": {"retry-after": "2"},
         }
+    ]
+
+
+class RotatingKeyCompletions:
+    def __init__(self, failures_before_success: int) -> None:
+        self.calls: list[dict] = []
+        self.failures_before_success = failures_before_success
+
+    async def create(self, **kwargs):
+        self.calls.append(kwargs)
+        if len(self.calls) <= self.failures_before_success:
+            raise RateLimitFailure()
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="Đã dùng key dự phòng."))]
+        )
+
+
+@pytest.mark.asyncio
+async def test_chat_rotates_api_keys_after_quota_error_before_model_fallback() -> None:
+    completions = RotatingKeyCompletions(failures_before_success=1)
+    client = SimpleNamespace(
+        chat=SimpleNamespace(completions=completions),
+        audio=SimpleNamespace(transcriptions=FakeTranscriptions()),
+    )
+    service = GroqService(
+        settings=Settings(
+            groq_api_key="primary-test-key",
+            groq_api_key_fallback_1="fallback-test-key-1",
+            groq_api_key_fallback_2="fallback-test-key-2",
+            groq_model="qwen/primary-model",
+            groq_fallback_model="openai/fallback-model",
+            groq_fallback_model_2="",
+        ),
+        client=client,
+    )
+
+    result = await service.chat([{"role": "user", "content": "hello"}])
+
+    assert result == "Đã dùng key dự phòng."
+    assert result.model == "qwen/primary-model"
+    assert [call["model"] for call in completions.calls] == [
+        "qwen/primary-model",
+        "qwen/primary-model",
+    ]
+    assert result.fallback_trace == [
+        {
+            "model": "qwen/primary-model",
+            "status": "error",
+            "error_type": "RateLimitFailure",
+            "rate_limit_headers": {"retry-after": "2"},
+            "credential_slot": "primary",
+        },
+        {
+            "model": "qwen/primary-model",
+            "status": "success",
+            "credential_slot": "fallback_1",
+        },
+    ]
+    assert "primary-test-key" not in repr(result.fallback_trace)
+    assert "fallback-test-key-1" not in repr(result.fallback_trace)
+
+
+def test_groq_builds_a_separate_client_for_each_configured_key(monkeypatch) -> None:
+    from backend.services import groq as groq_module
+
+    created: list[dict] = []
+
+    class RecordingOpenAI:
+        def __init__(self, **kwargs) -> None:
+            created.append(kwargs)
+
+    monkeypatch.setattr(groq_module, "AsyncOpenAI", RecordingOpenAI)
+    service = GroqService(
+        settings=Settings(
+            groq_api_key="primary-test-key",
+            groq_api_key_fallback_1="fallback-test-key-1",
+        )
+    )
+    primary_slot, primary_key = service.settings.groq_api_credentials[0]
+    fallback_slot, fallback_key = service.settings.groq_api_credentials[1]
+
+    primary_client = service._client_for_credential(primary_slot, primary_key)
+    fallback_client = service._client_for_credential(fallback_slot, fallback_key)
+
+    assert primary_client is not fallback_client
+    assert [kwargs["api_key"] for kwargs in created] == [
+        "primary-test-key",
+        "fallback-test-key-1",
+    ]
+    assert service._client_for_credential(primary_slot, primary_key) is primary_client
+
+
+@pytest.mark.asyncio
+async def test_chat_uses_model_fallback_after_all_configured_keys_are_limited() -> None:
+    completions = RotatingKeyCompletions(failures_before_success=3)
+    client = SimpleNamespace(
+        chat=SimpleNamespace(completions=completions),
+        audio=SimpleNamespace(transcriptions=FakeTranscriptions()),
+    )
+    service = GroqService(
+        settings=Settings(
+            groq_api_key="primary-test-key",
+            groq_api_key_fallback_1="fallback-test-key-1",
+            groq_api_key_fallback_2="fallback-test-key-2",
+            groq_model="qwen/primary-model",
+            groq_fallback_model="openai/fallback-model",
+            groq_fallback_model_2="",
+        ),
+        client=client,
+    )
+
+    result = await service.chat([{"role": "user", "content": "hello"}])
+
+    assert result.model == "openai/fallback-model"
+    assert [call["model"] for call in completions.calls] == [
+        "qwen/primary-model",
+        "qwen/primary-model",
+        "qwen/primary-model",
+        "openai/fallback-model",
+    ]
+    assert [attempt.get("credential_slot") for attempt in result.fallback_trace] == [
+        "primary",
+        "fallback_1",
+        "fallback_2",
+        "primary",
+    ]
+
+
+class RotatingKeyTranscriptions:
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    async def create(self, **kwargs):
+        self.calls.append(kwargs)
+        if len(self.calls) == 1:
+            raise RateLimitFailure()
+        return SimpleNamespace(text="Nước suối còn hàng.")
+
+
+@pytest.mark.asyncio
+async def test_transcribe_rotates_api_key_after_quota_error() -> None:
+    transcriptions = RotatingKeyTranscriptions()
+    client = SimpleNamespace(
+        chat=SimpleNamespace(completions=FakeChatCompletions()),
+        audio=SimpleNamespace(transcriptions=transcriptions),
+    )
+    service = GroqService(
+        settings=Settings(
+            groq_api_key="primary-test-key",
+            groq_api_key_fallback_1="fallback-test-key-1",
+            groq_stt_model="whisper-large-v3-turbo",
+            groq_stt_fallback_model="whisper-large-v3",
+        ),
+        client=client,
+    )
+
+    result = await service.transcribe("voice.webm", b"audio", "audio/webm")
+
+    assert result == "Nước suối còn hàng."
+    assert result.model == "whisper-large-v3-turbo"
+    assert result.fallback_trace == [
+        {
+            "model": "whisper-large-v3-turbo",
+            "status": "error",
+            "error_type": "RateLimitFailure",
+            "credential_slot": "primary",
+        },
+        {
+            "model": "whisper-large-v3-turbo",
+            "status": "success",
+            "credential_slot": "fallback_1",
+        },
     ]

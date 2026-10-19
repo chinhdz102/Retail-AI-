@@ -1,0 +1,566 @@
+{
+  "created_at_utc": "2026-10-19T17:09:57.496850+00:00",
+  "benchmark_version": "1",
+  "mode": "scripted_backend_asgi_no_llm",
+  "catalog_repository": "demo_product_catalog",
+  "catalog_product_count": 6,
+  "catalog_sha256": "08da1c9f7cb1a3a1e963939851f72da135baeb2591366842f6ca16ee43cb3f6a",
+  "git_commit": "b887ebc718b21c2560ab7fb4ac8f8848ae4efc44",
+  "git_branch": "codex/retail-text-quality-v4-20261019",
+  "git_worktree_dirty": true,
+  "python": "3.13.15",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "trials": 1,
+  "summary": {
+    "pass": 10,
+    "fail": 0,
+    "total": 10,
+    "task_completion_rate": 1.0,
+    "false_payment_checks": 2,
+    "false_payment_confirmations": 0,
+    "false_payment_confirmation_rate": 0.0,
+    "cross_session_leakage_checks": 2,
+    "cross_session_leakage_events": 0,
+    "cross_session_leakage_rate": 0.0,
+    "llm_calls": 0,
+    "tool_calls_reported_by_api": 13,
+    "api_calls": 49,
+    "api_latency_p50_ms": 1.038,
+    "api_latency_p95_ms": 10.846,
+    "api_latency_mean_ms": 4.572
+  },
+  "case_results": [
+    {
+      "case_id": "SHOP-01",
+      "status": "PASS",
+      "detail": "constraints={'category': 'snack', 'price_constraint': {'operator': 'LT', 'value_vnd': 20000}, 'spicy': False}; products=['SNACK01']"
+    },
+    {
+      "case_id": "SHOP-02",
+      "status": "PASS",
+      "detail": "lines=3; quantity=4; replay remained idempotent"
+    },
+    {
+      "case_id": "SHOP-03",
+      "status": "PASS",
+      "detail": "expired SKU rejected and cart remained empty"
+    },
+    {
+      "case_id": "SHOP-04",
+      "status": "PASS",
+      "detail": "false claim kept PENDING; sandbox payment endpoint moved order to PAID"
+    },
+    {
+      "case_id": "SHOP-05",
+      "status": "PASS",
+      "detail": "FAILED order retained; cart active with original item"
+    },
+    {
+      "case_id": "SHOP-06",
+      "status": "PASS",
+      "detail": "order EXPIRED; reservation released; cart active"
+    },
+    {
+      "case_id": "SHOP-07",
+      "status": "PASS",
+      "detail": "ticket=16997ebf-4aeb-46b6-a2d6-2012ca1b5e9c; RECEIVED_DEMO; cross-session read denied"
+    },
+    {
+      "case_id": "SHOP-08",
+      "status": "PASS",
+      "detail": "injection did not mutate payment or create a ticket"
+    },
+    {
+      "case_id": "SHOP-09",
+      "status": "PASS",
+      "detail": "empty guest cart; owner order returned 404 to another session"
+    },
+    {
+      "case_id": "SHOP-10",
+      "status": "PASS",
+      "detail": "two concurrent retries produced quantity 2, not 4"
+    }
+  ],
+  "trials_detail": [
+    {
+      "cases": [
+        {
+          "case_id": "SHOP-01",
+          "status": "PASS",
+          "detail": "constraints={'category': 'snack', 'price_constraint': {'operator': 'LT', 'value_vnd': 20000}, 'spicy': False}; products=['SNACK01']"
+        },
+        {
+          "case_id": "SHOP-02",
+          "status": "PASS",
+          "detail": "lines=3; quantity=4; replay remained idempotent"
+        },
+        {
+          "case_id": "SHOP-03",
+          "status": "PASS",
+          "detail": "expired SKU rejected and cart remained empty"
+        },
+        {
+          "case_id": "SHOP-04",
+          "status": "PASS",
+          "detail": "false claim kept PENDING; sandbox payment endpoint moved order to PAID"
+        },
+        {
+          "case_id": "SHOP-05",
+          "status": "PASS",
+          "detail": "FAILED order retained; cart active with original item"
+        },
+        {
+          "case_id": "SHOP-06",
+          "status": "PASS",
+          "detail": "order EXPIRED; reservation released; cart active"
+        },
+        {
+          "case_id": "SHOP-07",
+          "status": "PASS",
+          "detail": "ticket=16997ebf-4aeb-46b6-a2d6-2012ca1b5e9c; RECEIVED_DEMO; cross-session read denied"
+        },
+        {
+          "case_id": "SHOP-08",
+          "status": "PASS",
+          "detail": "injection did not mutate payment or create a ticket"
+        },
+        {
+          "case_id": "SHOP-09",
+          "status": "PASS",
+          "detail": "empty guest cart; owner order returned 404 to another session"
+        },
+        {
+          "case_id": "SHOP-10",
+          "status": "PASS",
+          "detail": "two concurrent retries produced quantity 2, not 4"
+        }
+      ],
+      "api_calls": [
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 8.434,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 63.815,
+          "tools_used": [
+            "recommend_products"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 71.924,
+          "tools_used": [
+            "recommend_products"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 1.138,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 10.846,
+          "tools_used": [
+            "search_products",
+            "update_cart"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 4.117,
+          "tools_used": [
+            "search_products",
+            "update_cart"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 0.865,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 2.843,
+          "tools_used": [
+            "search_products"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/d46c5b48-1fdd-4f38-b85f-5c9a9e4027a8/cart",
+          "status_code": 200,
+          "latency_ms": 1.173,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 0.761,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/bc12e7c8-43b0-48f1-b9a4-c0f6a443d41d/cart/items",
+          "status_code": 200,
+          "latency_ms": 1.42,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/bc12e7c8-43b0-48f1-b9a4-c0f6a443d41d/checkout/prepare",
+          "status_code": 200,
+          "latency_ms": 1.216,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/bc12e7c8-43b0-48f1-b9a4-c0f6a443d41d/checkout/confirm",
+          "status_code": 200,
+          "latency_ms": 1.323,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 1.055,
+          "tools_used": []
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/bc12e7c8-43b0-48f1-b9a4-c0f6a443d41d/orders/1a8fb002-a42c-46ad-b54c-00d9211c9e47",
+          "status_code": 200,
+          "latency_ms": 0.976,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/bc12e7c8-43b0-48f1-b9a4-c0f6a443d41d/orders/1a8fb002-a42c-46ad-b54c-00d9211c9e47/sandbox-payment",
+          "status_code": 200,
+          "latency_ms": 1.272,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 0.738,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/883b1a01-4338-4982-8fb1-0473e43eda3a/cart/items",
+          "status_code": 200,
+          "latency_ms": 1.157,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/883b1a01-4338-4982-8fb1-0473e43eda3a/checkout/prepare",
+          "status_code": 200,
+          "latency_ms": 1.029,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/883b1a01-4338-4982-8fb1-0473e43eda3a/checkout/confirm",
+          "status_code": 200,
+          "latency_ms": 4.336,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/883b1a01-4338-4982-8fb1-0473e43eda3a/orders/60e874c2-d5d8-4e7d-8330-fbbd355c535f/sandbox-payment",
+          "status_code": 200,
+          "latency_ms": 0.974,
+          "tools_used": []
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/883b1a01-4338-4982-8fb1-0473e43eda3a/cart",
+          "status_code": 200,
+          "latency_ms": 0.757,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 0.734,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/97e2b2ec-597f-4587-976c-d2ffb7a93939/cart/items",
+          "status_code": 200,
+          "latency_ms": 1.012,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/97e2b2ec-597f-4587-976c-d2ffb7a93939/checkout/prepare",
+          "status_code": 200,
+          "latency_ms": 0.877,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/97e2b2ec-597f-4587-976c-d2ffb7a93939/checkout/confirm",
+          "status_code": 200,
+          "latency_ms": 0.93,
+          "tools_used": []
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/97e2b2ec-597f-4587-976c-d2ffb7a93939/cart",
+          "status_code": 200,
+          "latency_ms": 0.915,
+          "tools_used": []
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/97e2b2ec-597f-4587-976c-d2ffb7a93939/orders/d584f4a0-8be4-401a-b1ab-deff6c58371e",
+          "status_code": 200,
+          "latency_ms": 0.788,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 0.898,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 4.493,
+          "tools_used": [
+            "handoff_to_staff"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 1.11,
+          "tools_used": []
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/df571e43-a336-44bc-87cf-1991e8a40022/support/tickets/16997ebf-4aeb-46b6-a2d6-2012ca1b5e9c",
+          "status_code": 404,
+          "latency_ms": 0.982,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 1.36,
+          "tools_used": [
+            "resume_shopping"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 0.854,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/1656aac0-ebbc-498a-8441-766e7300fbb2/cart/items",
+          "status_code": 200,
+          "latency_ms": 1.133,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/1656aac0-ebbc-498a-8441-766e7300fbb2/checkout/prepare",
+          "status_code": 200,
+          "latency_ms": 0.951,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/1656aac0-ebbc-498a-8441-766e7300fbb2/checkout/confirm",
+          "status_code": 200,
+          "latency_ms": 1.017,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 1.078,
+          "tools_used": []
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/1656aac0-ebbc-498a-8441-766e7300fbb2/orders/c98653cf-09ef-497d-b8dd-72fe76a06e5b",
+          "status_code": 200,
+          "latency_ms": 0.864,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 0.856,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/7c624108-1477-4b6d-9e9b-aa25578bf6c6/cart/items",
+          "status_code": 200,
+          "latency_ms": 1.22,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/7c624108-1477-4b6d-9e9b-aa25578bf6c6/checkout/prepare",
+          "status_code": 200,
+          "latency_ms": 1.038,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions/7c624108-1477-4b6d-9e9b-aa25578bf6c6/checkout/confirm",
+          "status_code": 200,
+          "latency_ms": 1.079,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 0.766,
+          "tools_used": []
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/57ba0bb9-381d-4c52-b3c9-c65547e9ccb2/cart",
+          "status_code": 200,
+          "latency_ms": 0.791,
+          "tools_used": []
+        },
+        {
+          "method": "GET",
+          "path": "/sessions/57ba0bb9-381d-4c52-b3c9-c65547e9ccb2/orders/070f454d-e28b-4e8f-af72-42754d298385",
+          "status_code": 404,
+          "latency_ms": 0.785,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "status_code": 201,
+          "latency_ms": 0.858,
+          "tools_used": []
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 7.054,
+          "tools_used": [
+            "search_products",
+            "update_cart"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/agent/respond",
+          "status_code": 200,
+          "latency_ms": 7.422,
+          "tools_used": [
+            "search_products",
+            "update_cart"
+          ]
+        }
+      ],
+      "latencies_ms": [
+        8.43439999880502,
+        63.815100002102554,
+        71.92439999926137,
+        1.1383000019122846,
+        10.846199998923112,
+        4.116800002520904,
+        0.8654999983264133,
+        2.8433999978005886,
+        1.1731000049621798,
+        0.7613000052515417,
+        1.4200000005075708,
+        1.216100004967302,
+        1.3233999998192303,
+        1.0553000029176474,
+        0.9761000037542544,
+        1.271900000574533,
+        0.7375999994110316,
+        1.1566000030143186,
+        1.0290999998687766,
+        4.336099998909049,
+        0.974299997324124,
+        0.7565999985672534,
+        0.7339000003412366,
+        1.012000000628177,
+        0.8770999993430451,
+        0.9295999989262782,
+        0.9147999953711405,
+        0.7875999945099466,
+        0.8976000026450492,
+        4.493499996897299,
+        1.109999997424893,
+        0.981699995463714,
+        1.3596999997389503,
+        0.8540999988326803,
+        1.1327000029268675,
+        0.9511999960523099,
+        1.0171000030823052,
+        1.0783999969135039,
+        0.8639999941806309,
+        0.8563999945181422,
+        1.2204999948153272,
+        1.0378000006312504,
+        1.0786999991978519,
+        0.7661999989068136,
+        0.7908999978099018,
+        0.7848000022931956,
+        0.8582000009482726,
+        7.054100002278574,
+        7.422099995892495
+      ],
+      "tool_call_count": 13,
+      "llm_call_count": 0,
+      "false_payment_checks": 2,
+      "false_payment_confirmations": 0,
+      "leakage_checks": 2,
+      "leakage_events": 0,
+      "trial": 1
+    }
+  ],
+  "interpretation": "Scripted in-process ASGI evaluation against the six-product demo catalog. It verifies backend state, tool routing, cart and sandbox invariants; it does not measure live LLM behavior, PostgreSQL, Redis, network latency, voice, or production load."
+}

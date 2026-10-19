@@ -1,0 +1,826 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-19T17:13:29.755550+00:00",
+  "dataset_id": "retail_vietnamese_text_sales_flow_v5_heldout_20261020",
+  "language_scope": "Vietnamese only",
+  "research_informed_by": [
+    "https://arxiv.org/abs/2406.12045",
+    "https://arxiv.org/abs/2408.04682",
+    "https://aclanthology.org/2024.eacl-demo.16/"
+  ],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 9.0,
+  "response_timeout_seconds": 105.0,
+  "catalog_scope": {
+    "runtime_repository": "demo",
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false,
+    "postgres_search_tool_turns": 0
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": false,
+  "results": [
+    {
+      "case_id": "walkup_water_query_and_cart_revision",
+      "turn": 1,
+      "prompt": "Cho tui hỏi chai nước suối nửa lít giá nhiêu, nằm dãy nào vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 1434,
+      "response": {
+        "session_id": "95a3885f-5df5-48cf-92c6-5e1902f9a990",
+        "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "data_timestamp": null,
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "must_contain": [
+          "7.000",
+          "A1-L1"
+        ]
+      },
+      "conversation_tags": [
+        "heldout",
+        "regional_register",
+        "multi_intent",
+        "cart_mutation"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "5530",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "18.525s"
+              }
+            }
+          ],
+          "latency_ms": 1376,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"category\":\"nước uống\",\"limit\":5,\"query\":\"nước suối nửa lít\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 2390,
+            "completion_tokens": 55,
+            "total_tokens": 2445
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "walkup_water_query_and_cart_revision",
+      "turn": 2,
+      "prompt": "Còn bao nhiêu chai?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 20,
+      "response": {
+        "session_id": "95a3885f-5df5-48cf-92c6-5e1902f9a990",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "must_contain": [
+          "40"
+        ]
+      },
+      "conversation_tags": [
+        "heldout",
+        "regional_register",
+        "multi_intent",
+        "cart_mutation"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "walkup_water_query_and_cart_revision",
+      "turn": 3,
+      "prompt": "Lấy giúp tui 2 chai bỏ vô giỏ.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 8418,
+      "response": {
+        "session_id": "95a3885f-5df5-48cf-92c6-5e1902f9a990",
+        "text": "Xin lỗi, mình không thể giữ hàng hoặc tạo giỏ hàng được. Bạn có thể nhờ nhân viên cửa hàng hỗ trợ nhé.",
+        "model": "openai/gpt-oss-120b",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "expected_state": "CART_ACTIVE",
+        "expected_cart_items": {
+          "WATER01": 2
+        }
+      },
+      "conversation_tags": [
+        "heldout",
+        "regional_register",
+        "multi_intent",
+        "cart_mutation"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": false,
+          "expected_cart_items": false,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": [
+        {
+          "model": "openai/gpt-oss-120b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "799",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "6585",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "12.128s"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "856",
+                "x-ratelimit-remaining-tokens": "5832",
+                "x-ratelimit-reset-requests": "3h27m21.599s",
+                "x-ratelimit-reset-tokens": "16.26s"
+              }
+            }
+          ],
+          "latency_ms": 817,
+          "pacing_wait_ms": 7569,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 2088,
+            "completion_tokens": 59,
+            "total_tokens": 2147
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "walkup_water_query_and_cart_revision",
+      "turn": 4,
+      "prompt": "Giảm còn 1 chai thôi.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 23,
+      "response": {
+        "session_id": "95a3885f-5df5-48cf-92c6-5e1902f9a990",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_state": "CART_ACTIVE",
+        "expected_cart_items": {
+          "WATER01": 1
+        }
+      },
+      "conversation_tags": [
+        "heldout",
+        "regional_register",
+        "multi_intent",
+        "cart_mutation"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": false,
+          "expected_cart_items": false,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "walkup_water_query_and_cart_revision",
+      "turn": 5,
+      "prompt": "Tổng giỏ giờ bao nhiêu?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 9338,
+      "response": {
+        "session_id": "95a3885f-5df5-48cf-92c6-5e1902f9a990",
+        "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "model": "openai/gpt-oss-120b",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "data_timestamp": null,
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "must_contain": [
+          "7.000"
+        ],
+        "expected_state": "CART_ACTIVE",
+        "expected_cart_items": {
+          "WATER01": 1
+        }
+      },
+      "conversation_tags": [
+        "heldout",
+        "regional_register",
+        "multi_intent",
+        "cart_mutation"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": false,
+          "expected_cart_items": false,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": [
+        {
+          "model": "openai/gpt-oss-120b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "826",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "7633",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "3.145s"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "855",
+                "x-ratelimit-remaining-tokens": "5751",
+                "x-ratelimit-reset-requests": "3h28m48s",
+                "x-ratelimit-reset-tokens": "16.867s"
+              }
+            }
+          ],
+          "latency_ms": 1164,
+          "pacing_wait_ms": 8119,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 2169,
+            "completion_tokens": 53,
+            "total_tokens": 2222
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "product_correction_preserves_fact_and_reference",
+      "turn": 1,
+      "prompt": "Coca Zero lon 330 giá nhiêu vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 8899,
+      "response": {
+        "session_id": "fc7c4f7e-a29f-460f-9fc2-cbd243ee6224",
+        "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "model": "openai/gpt-oss-120b",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "data_timestamp": null,
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "13.000"
+        ]
+      },
+      "conversation_tags": [
+        "heldout",
+        "correction",
+        "context",
+        "freshness",
+        "stock"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": [
+        {
+          "model": "openai/gpt-oss-120b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "747",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "854",
+                "x-ratelimit-remaining-tokens": "5937",
+                "x-ratelimit-reset-requests": "3h30m14.4s",
+                "x-ratelimit-reset-tokens": "15.472s"
+              }
+            }
+          ],
+          "latency_ms": 1059,
+          "pacing_wait_ms": 7793,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"in_stock\":true,\"limit\":5,\"query\":\"Coca Zero lon 330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 2010,
+            "completion_tokens": 52,
+            "total_tokens": 2062
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "product_correction_preserves_fact_and_reference",
+      "turn": 2,
+      "prompt": "Khoan, ý mình là nước suối chai 500ml ấy.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 9100,
+      "response": {
+        "session_id": "fc7c4f7e-a29f-460f-9fc2-cbd243ee6224",
+        "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "model": "openai/gpt-oss-20b",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "data_timestamp": null,
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "must_contain": [
+          "7.000"
+        ]
+      },
+      "conversation_tags": [
+        "heldout",
+        "correction",
+        "context",
+        "freshness",
+        "stock"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": [
+        {
+          "model": "openai/gpt-oss-20b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "746",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "8000",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "1ms"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-120b",
+              "status": "error",
+              "error_type": "RateLimitError",
+              "rate_limit_headers": {
+                "retry-after": "581",
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "854",
+                "x-ratelimit-remaining-tokens": "7136",
+                "x-ratelimit-reset-requests": "3h30m14.4s",
+                "x-ratelimit-reset-tokens": "6.48s"
+              }
+            },
+            {
+              "model": "openai/gpt-oss-20b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "999",
+                "x-ratelimit-remaining-tokens": "5872",
+                "x-ratelimit-reset-requests": "1m26.4s",
+                "x-ratelimit-reset-tokens": "15.96s"
+              }
+            }
+          ],
+          "latency_ms": 1155,
+          "pacing_wait_ms": 7887,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"in_stock\":true,\"limit\":1,\"query\":\"nước suối chai 500ml\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 2048,
+            "completion_tokens": 45,
+            "total_tokens": 2093
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "product_correction_preserves_fact_and_reference",
+      "turn": 3,
+      "prompt": "Còn bao nhiêu chai đang bán được?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 26,
+      "response": {
+        "session_id": "fc7c4f7e-a29f-460f-9fc2-cbd243ee6224",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "must_contain": [
+          "40"
+        ]
+      },
+      "conversation_tags": [
+        "heldout",
+        "correction",
+        "context",
+        "freshness",
+        "stock"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "product_correction_preserves_fact_and_reference",
+      "turn": 4,
+      "prompt": "Nó ở kệ nào nhỉ?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 6,
+      "response": {
+        "session_id": "fc7c4f7e-a29f-460f-9fc2-cbd243ee6224",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "must_contain": [
+          "A1-L1"
+        ]
+      },
+      "conversation_tags": [
+        "heldout",
+        "correction",
+        "context",
+        "freshness",
+        "stock"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    }
+  ]
+}
