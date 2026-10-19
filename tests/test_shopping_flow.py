@@ -409,3 +409,52 @@ async def test_end_session_cleans_up_without_writing_to_closed_session(
         assert "kết thúc phiên" in ended.json()["text"].casefold()
         closed_session = await client.get(f"/sessions/{session_id}/cart")
         assert closed_session.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_closing_a_kiosk_session_clears_cart_but_keeps_pending_order_private(
+    client: httpx.AsyncClient,
+) -> None:
+    async with client:
+        created = await client.post("/sessions", json={"kiosk_id": "pending-order-close-test"})
+        session_id = created.json()["session_id"]
+        session_uuid = UUID(session_id)
+        added = await client.post(
+            f"/sessions/{session_id}/cart/items",
+            json={
+                "product_id": "COKE_ZERO_330",
+                "quantity": 1,
+                "idempotency_key": str(uuid4()),
+            },
+        )
+        assert added.status_code == 200
+        quote = await client.post(f"/sessions/{session_id}/checkout/prepare")
+        order_response = await client.post(
+            f"/sessions/{session_id}/checkout/confirm",
+            json={
+                "confirmation_token": quote.json()["confirmation_token"],
+                "idempotency_key": str(uuid4()),
+            },
+        )
+        assert order_response.status_code == 200
+        order_id = UUID(order_response.json()["order_id"])
+        assert order_response.json()["payment_status"] == "PENDING"
+
+        closed = await client.post(f"/sessions/{session_id}/close")
+
+        assert closed.status_code == 200
+        assert closed.json()["state"] == "CLOSED"
+        assert session_uuid not in shopping_service._carts
+        retained_order = shopping_service.get_order(session_uuid, order_id)
+        assert retained_order.payment_status == "PENDING"
+
+        next_session = await client.post("/sessions", json={"kiosk_id": "next-customer-test"})
+        next_session_id = next_session.json()["session_id"]
+        cross_session_order = await client.get(
+            f"/sessions/{next_session_id}/orders/{order_id}"
+        )
+        closed_session_order = await client.get(
+            f"/sessions/{session_id}/orders/{order_id}"
+        )
+        assert cross_session_order.status_code == 404
+        assert closed_session_order.status_code == 409

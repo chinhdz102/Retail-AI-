@@ -1,0 +1,23 @@
+{"case_id":"product_id_exact","query":"WIN_10005885","gold_product_ids":["WIN_10005885"],"kind":"identifier"}
+{"case_id":"item_no_exact","query":"10005885","gold_product_ids":["WIN_10005885"],"kind":"identifier"}
+{"case_id":"barcode_exact","query":"8938502525016","gold_product_ids":["WIN_10005885"],"kind":"identifier"}
+{"case_id":"name_accented_exact","query":"Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g","gold_product_ids":["WIN_10005885"],"kind":"exact_name"}
+{"case_id":"name_accentless_exact","query":"banh bao nhan thit heo trung cut tho phat goi 250g","gold_product_ids":["WIN_10005885"],"kind":"accentless_name"}
+{"case_id":"name_prefix","query":"banh bao nhan thit heo","gold_product_ids":["WIN_10005885"],"kind":"prefix_or_partial"}
+{"case_id":"transposed_typo_coca_zero","query":"coca zreo pet 600ml","gold_product_ids":["WIN_10194711"],"kind":"typo"}
+{"case_id":"typo_lays_classic","query":"lays clasic 150g","gold_product_ids":["WIN_10194182"],"kind":"typo"}
+{"case_id":"brand_and_product_cosy_dau","query":"cosy dau 132g","gold_product_ids":["WIN_10013649"],"kind":"brand_and_product"}
+{"case_id":"brand_match_teppy","query":"minute maid teppy","gold_product_ids":["WIN_10011287"],"kind":"brand_and_product"}
+{"case_id":"name_accentless_coffee","query":"ca phe sua birdy 170ml","gold_product_ids":["WIN_10012923"],"kind":"accentless_name"}
+{"case_id":"brand_variant_stax","query":"lays stax vi tu nhien 110g","gold_product_ids":["WIN_10015924"],"kind":"brand_and_product"}
+{"case_id":"retail_slang_bim_bim","query":"bim bim","gold_product_ids":["WIN_10322820"],"kind":"retail_slang"}
+{"case_id":"retail_slang_bimbim_compact","query":"giá bimbim","gold_product_ids":["WIN_10322820"],"kind":"retail_slang"}
+{"case_id":"retail_slang_bim_bim_specific_variant","query":"bim bim poppedcorn 280g","gold_product_ids":["WIN_10322820"],"kind":"retail_slang_variant"}
+{"case_id":"diaper_huggies_accented","query":"tã quần huggies dry pants big jumbo l38","gold_product_ids":["WIN_10161030"],"kind":"category_disambiguation"}
+{"case_id":"diaper_huggies_accentless","query":"ta quan huggies dry pants big jumbo l38","gold_product_ids":["WIN_10161030"],"kind":"accentless_name"}
+{"case_id":"coca_zero_variant","query":"coca cola zero pet 600ml","gold_product_ids":["WIN_10194711"],"kind":"brand_and_variant"}
+{"case_id":"clear_shampoo","query":"dau goi clear 9 thao duoc 630g","gold_product_ids":["WIN_10171159"],"kind":"brand_and_product"}
+{"case_id":"colgate_kids_toothpaste","query":"kem danh rang tre em colgate minions 80g","gold_product_ids":["WIN_10625598"],"kind":"brand_and_product"}
+{"case_id":"hao_hao_instant_noodle","query":"mi an lien hao hao vi ga vang","gold_product_ids":["WIN_10008453"],"kind":"brand_and_product"}
+{"case_id":"omo_front_load_laundry","query":"nuoc giat omo ben dep cua truoc tui 2.9kg","gold_product_ids":["WIN_10161177"],"kind":"brand_and_product"}
+{"case_id":"probi_vinamilk_low_sugar","query":"sua chua uong men song it duong probi vinamilk","gold_product_ids":["WIN_10005469"],"kind":"brand_and_product"}

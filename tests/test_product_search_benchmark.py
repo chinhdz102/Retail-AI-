@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
+from backend.data.catalog_import import analyze_dataset
 from backend.products import postgres_repository
-from evaluation.run_product_search_benchmark import _case_score, _metrics
+from evaluation.run_product_search_benchmark import _case_score, _load_cases, _metrics
 
 
 class _Transaction:
@@ -84,6 +86,56 @@ def test_like_wildcards_are_treated_as_literal_search_text(monkeypatch) -> None:
 
     assert "ESCAPE '!'" in connection.query
     assert "%win!_10005885%" in connection.args
+
+
+def test_bim_bim_slang_searches_the_product_title_and_avoids_diaper_category_collision(
+    monkeypatch,
+) -> None:
+    connection = _Connection()
+
+    async def connect(*args, **kwargs):
+        return connection
+
+    monkeypatch.setattr(postgres_repository.asyncpg, "connect", connect)
+    repository = postgres_repository.PostgresProductRepository("postgresql://unused")
+
+    for query in ("bim bim", "bimbim", "giá bim bim"):
+        assert repository.search(query=query, limit=3) == []
+        assert "p.search_title ILIKE" in connection.query
+        assert "p.search_category ILIKE" not in connection.query
+        assert "%bim bim%" in connection.args
+
+
+def test_diacritic_bim_word_keeps_the_regular_category_search_path(monkeypatch) -> None:
+    connection = _Connection()
+
+    async def connect(*args, **kwargs):
+        return connection
+
+    monkeypatch.setattr(postgres_repository.asyncpg, "connect", connect)
+    repository = postgres_repository.PostgresProductRepository("postgresql://unused")
+
+    assert repository.search(query="bỉm") == []
+
+    assert "p.search_category ILIKE" in connection.query
+    assert "%bim%" in connection.args
+    assert "%bim bim%" not in connection.args
+    assert connection.query.count("p.search_category ILIKE") >= 2
+
+
+def test_expanded_product_resolution_cases_reference_the_checked_in_catalog() -> None:
+    root = Path(__file__).resolve().parents[1]
+    cases = _load_cases(root / "evaluation/cases/product_resolution_v2.jsonl")
+    products, _quarantined, report = analyze_dataset(root / "data/winmart_products.json")
+    accepted_ids = {product.product_id for product in products}
+
+    assert report["rows_total"] == 3_099
+    assert len(cases) >= 20
+    assert all(
+        product_id in accepted_ids
+        for case in cases
+        for product_id in case["gold_product_ids"]
+    )
 
 
 def test_product_search_scores_reciprocal_rank_and_recall_at_three() -> None:

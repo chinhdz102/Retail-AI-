@@ -1,8 +1,9 @@
 # Báo cáo kỹ thuật, nghiên cứu và đánh giá Retail AI
 
 - **Ngày đánh giá:** 19/10/2026 (Asia/Saigon)
-- **Nhánh:** main
-- **Commit code được đánh giá:** 1757bbd988de141ae23a6cf3f475a9c496d0340f
+- **Nhánh follow-up:** `codex/session-isolation-ui-hardening`
+- **Commit gốc trước follow-up:** `ce8d3b51e73110ee437a734b3ff98f95f447bb13`
+- **Mốc của báo cáo đánh giá trước:** `1757bbd988de141ae23a6cf3f475a9c496d0340f`
 - **Baseline:** 2f8b0368cf006286f3188d0f2188ee728fac954d
 - **Môi trường giao dịch:** catalog demo và checkout sandbox; không có giao dịch tiền thật
 - **Báo cáo chăm sóc khách hàng cũ:** được giữ tại [archive/retail-ai-optimization-report-customer-care-2026-10-19.md](archive/retail-ai-optimization-report-customer-care-2026-10-19.md)
@@ -13,9 +14,28 @@ Retail AI đã có thể dẫn dắt phiên mua sắm demo từ tra cứu sản 
 
 Benchmark tiếng Việt phát hiện ba vấn đề: grader tìm tham số recommendation trong trace LLM dù router chạy xác định; câu “chuyển khoản xong rồi” không được nhận diện khi chờ thanh toán; yêu cầu “bỏ qua xác minh” có thể bị hiểu thành gọi nhân viên. Sau sửa, hội thoại live v2 đạt 13/13 assertion; ba ca mặc định về thêm giỏ, checkout giỏ trống và yêu cầu nhân viên demo đạt 3/3.
 
-Kết quả kiểm thử: **490 backend**, **41 frontend**, **40/40 P0 regression**, **20/20 shopping sandbox**; TypeScript, production build, Ruff trên source, compileall và diff check đều qua. Đây là bằng chứng test/sandbox và một mẫu Groq live nhỏ, không phải độ chính xác khách hàng thật hay chứng nhận production.
+Trong báo cáo đánh giá trước, commit `1757bbd` đạt **490 backend**, **41 frontend**, **40/40 P0 regression** và **20/20 shopping sandbox**. Follow-up trên working tree của nhánh nêu trên đạt **494 backend** và **45 frontend**; TypeScript, production build, Ruff, compileall và diff check đều qua. Đây là bằng chứng test/sandbox và một mẫu Groq live nhỏ, không phải độ chính xác khách hàng thật hay chứng nhận production.
 
 Giới hạn chính: PostgreSQL và Redis đã cấu hình nhưng probe kết nối timeout; demo có 6 sản phẩm; kho WinMart 3.099 dòng là snapshot, không phải tồn kho chi nhánh thời gian thực; ticket nhân viên và payment chỉ là simulator; text chat chưa stream token; voice/STT/TTS và kiosk thật không nằm trong benchmark này.
+
+## Follow-up Validation: Session Isolation and Product Disambiguation
+
+Các thay đổi follow-up trên nhánh `codex/session-isolation-ui-hardening` tập trung vào hai lỗi có thể ảnh hưởng trực tiếp đến khách đang dùng chung kiosk:
+
+- Kiosk gắn request đang chờ với generation của phiên; câu trả lời đến muộn sau khi khách A kết thúc không được đưa vào hội thoại khách B. Audio đã thu không bị gửi lại sang phiên mới khi phiên cũ hết hạn. Khởi tạo phiên được single-flight và component đóng phiên đang dùng khi bị tháo.
+- Khi đóng phiên, cart của khách bị xóa; order đang `PENDING` được giữ trong kho order tách biệt và chỉ đọc được bằng session sở hữu nó.
+- Truy vấn tiếng lóng `bim bim`/`bimbim` chỉ match cụm trong tên sản phẩm để tránh va chạm khi bỏ dấu với danh mục tã/bỉm. Truy vấn có dấu `bỉm` thêm điều kiện danh mục tã/bỉm.
+- `evaluation/cases/product_resolution_v2.jsonl` có 23 truy vấn, gồm snack, tã/bỉm, đồ uống, hóa mỹ phẩm, thực phẩm và sữa chua. Test xác nhận mọi gold product ID có trong 3.081 sản phẩm được importer chấp nhận từ snapshot 3.099 dòng. Đây là kiểm tra dữ liệu và SQL dựng ra, chưa phải đo Recall trên PostgreSQL.
+
+| Kiểm tra follow-up | Kết quả | Giới hạn |
+|---|---:|---|
+| Backend pytest | **494 passed** | Catalog demo/in-process; không bao gồm DB production. |
+| Frontend Vitest | **45 passed / 5 files** | Component/JSDOM; không phải browser E2E. JSDOM báo các API media/canvas chưa giả lập. |
+| Vue TypeScript + production build | **Pass** | Vite tiếp tục cảnh báo chunk model-viewer 1.024,05 kB (gzip 290,30 kB); build vẫn thành công. |
+| Ruff, compileall, `git diff --check` | **Pass** | Có cảnh báo chuẩn hóa LF/CRLF của Git trên Windows. |
+| PostgreSQL product search v2 | **Không đo được** | Chạy read-only benchmark kết thúc bằng `TimeoutError`; không có Recall/latency mới để báo cáo. |
+
+Các kiểm thử phiên bao gồm late response sau đổi khách, không replay audio, single-flight boot, đóng phiên khi unmount và luồng UI từ sản phẩm đến thanh toán mô phỏng. Chúng chưa thay thế kiểm thử trình duyệt, micro thật hoặc backend đang kết nối PostgreSQL/Redis.
 
 ## 2. Repository Audit
 
@@ -55,6 +75,7 @@ Nghiên cứu dưới đây định hình test và lựa chọn kiến trúc; k�
 | **ProductAgent: Benchmarking Conversational Product Search Agent with Asking Clarification Questions** — Jingheng Ye, Yong Jiang, Xiaobin Wang, Yinghui Li, Yangning Li, Hai-Tao Zheng, Pengjun Xie, Fei Huang (2024). [arXiv:2407.00942](https://arxiv.org/abs/2407.00942) | PROCLARE đánh giá hỏi làm rõ, tóm tắt thuộc tính, query generation và retrieval động. Trong thí nghiệm retrieval, GTE đạt MRR@10 52,29; rerank GTE 63,82. Hiệu quả phụ thuộc dữ liệu và lượt hội thoại. | Ưu tiên lexical/fuzzy baseline và hỏi khi thiếu thuộc tính ảnh hưởng quyết định. Kết quả không chứng minh vector DB tốt hơn trên WinMart; chưa thêm vector DB khi benchmark dự án chưa cho thấy lợi ích. |
 | **ShoppingBench: A Real-World Intent-Grounded Shopping Benchmark for LLM-based Agents** — Jiangyuan Wang et al. (2025). [arXiv:2508.04266](https://arxiv.org/abs/2508.04266) | 3.310 chỉ dẫn mua sắm, sandbox hơn 2,5 triệu sản phẩm; GPT‑4.1 đạt success dưới 50% tổng thể trong thiết lập tác giả. | Dùng để nhấn mạnh chuỗi hành động, budget, coupon và nhiều sản phẩm. Không dùng số paper làm kết quả Retail AI. |
 | **Shopping Reasoning Bench: An Expert-Authored Benchmark for Multi-Turn Conversational Shopping Assistants** — Shuxian Fan, Seonwoo Min, Youna Hu, Botao Xia, Jayakrishnan Unnikrishnan, Rowan Musselmann, Yifan Gao, Qingyu Yin, Priyanka Nigam, Bing Yin (2026). [arXiv:2606.12608](https://arxiv.org/abs/2606.12608) | 525 mission (232 single-turn, 293 multi-turn), 10.863 rubric nhị phân có trọng số. Chín model đạt 57–77% overall; rubric tùy chọn thấp hơn rubric bắt buộc 13–29 điểm ở multi-turn và hiệu quả giảm 4–18 điểm khi hội thoại dài thêm. | Tách rubric yêu cầu bắt buộc khỏi tư vấn thêm; thêm ca sửa constraint, tham chiếu cũ, cart và payment. Bộ v2 có 7 hội thoại, nhỏ hơn nhiều và không phải expert annotation. |
+| **RealWorldShop: Benchmarking and Improving Conversational Shopping Agents in Real-World E-commerce** — Xinwei Yang et al. (2026, arXiv preprint). [arXiv:2609.38974](https://arxiv.org/abs/2609.38974) | Bản v1 công bố ngày 30/09/2026; benchmark có 3,28 triệu sản phẩm, khoảng 1.200 shopping scenarios và hơn 2.000 profile tổng hợp. Tác giả báo cáo full RealShop_Agent đạt success 0,82 so với 0,55 của Qwen3.5-27B base trong thiết lập của paper. | Củng cố session state, flow control, retrieval có grounding và runtime guards; áp dụng bằng kiểm thử cách ly phiên và catalog. Đây là preprint và kết quả simulator của tác giả, không phải bằng chứng hiệu năng hoặc độ chính xác của Retail AI. |
 | **Berkeley Function-Calling Leaderboard V4 (BFCL)** — Berkeley Gorilla Team (methodology V4, 2025). [Leaderboard](https://gorilla.cs.berkeley.edu/leaderboard) · [V4 methodology](https://gorilla.cs.berkeley.edu/blogs/15_bfcl_v4_web_search.html) | Mở rộng function call đơn sang tool choice/arguments, multi-turn, memory, web search và error recovery. | Grader kiểm tra state/cart/order/ticket thay vì chỉ câu chữ. Không chạy BFCL đầy đủ; số pass nội bộ không phải BFCL score. |
 | **ViWOZ: A Multi-Domain Task-Oriented Dialogue Systems Dataset For Low-resource Language** — Phi Nguyen Van et al. (2022). [arXiv:2203.07742](https://arxiv.org/abs/2203.07742) | Dataset tiếng Việt gồm 5.000 dialogues và 60.946 annotated utterances. | Gợi ý biến thể tiếng Việt và multi-turn; không phải miền retail nên không suy ra retail accuracy. |
 | **Diable: Efficient Dialogue State Tracking as Operations on Tables** — Pietro Lesci, Yoshinari Fujinuma, Momchil Hardalov, Chao Shang, Yassine Benajiba, Lluis Marquez (Findings ACL 2023). [ACL Anthology](https://aclanthology.org/2023.findings-acl.615/) · DOI 10.18653/v1/2023.findings-acl.615 | Biểu diễn state thành bảng và áp dụng thao tác theo lượt. Trên MultiWOZ, paper báo cáo nhanh hơn 2,4× phương pháp được so sánh, với Joint Goal Accuracy cạnh tranh. | Củng cố SET/REPLACE/REMOVE/KEEP. Đây không phải số latency/accuracy của Retail AI. |

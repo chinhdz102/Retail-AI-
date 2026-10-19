@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 import asyncpg
 
-from backend.products.catalog import PriceOperator, ProductSnapshot
+from backend.products.catalog import QUERY_STOP_WORDS, PriceOperator, ProductSnapshot
 from backend.products.planogram import recommended_shelf
 from backend.products.repository import CatalogAdditions
 
@@ -27,6 +27,23 @@ def _escape_like_literal(value: str) -> str:
     return value.replace("!", "!!").replace("%", "!%").replace("_", "!_")
 
 
+def _normalize_product_query(raw_query: str) -> tuple[str, list[str], bool]:
+    normalized = normalize_search_text(raw_query).strip()
+    tokens = [
+        token
+        for token in re.split(r"\W+", normalized)
+        if token and token not in QUERY_STOP_WORDS
+    ]
+    # "bim bim" is common Vietnamese slang for snacks. Accent folding otherwise
+    # makes it collide with "bỉm" (diapers), since both normalize to "bim".
+    is_snack_phrase = "bỉm" not in raw_query.casefold() and (
+        tokens == ["bim", "bim"] or tokens == ["bimbim"]
+    )
+    if is_snack_phrase:
+        tokens = ["bim", "bim"]
+    return " ".join(tokens), tokens, is_snack_phrase
+
+
 class PostgresProductRepository:
     source_name = "winmart_postgres_catalog"
 
@@ -41,7 +58,7 @@ class PostgresProductRepository:
         conn = await asyncpg.connect(self._dsn, timeout=2)
         try:
             raw_query = str(criteria.get("query", "")).strip()
-            query = normalize_search_text(raw_query)
+            query, tokens, is_snack_phrase = _normalize_product_query(raw_query)
             category = normalize_search_text(criteria.get("category"))
             brand = normalize_search_text(criteria.get("brand"))
             where: list[str] = [
@@ -54,7 +71,6 @@ class PostgresProductRepository:
                 args.append(value)
                 return f"${len(args)}"
 
-            tokens = [token for token in re.split(r"\W+", query) if token]
             lexical_tokens: list[str] = []
             exact_identifier = "false"
 
@@ -62,7 +78,29 @@ class PostgresProductRepository:
                 pattern = bind(f"%{_escape_like_literal(token)}%")
                 return f"{column} ILIKE {pattern} ESCAPE '!'"
 
-            if tokens:
+            if is_snack_phrase:
+                raw_exact = bind(raw_query)
+                exact_identifier = (
+                    f"upper(p.product_id) = upper({raw_exact}) OR "
+                    f"upper(p.item_no) = upper({raw_exact}) OR "
+                    f"upper(p.barcode) = upper({raw_exact})"
+                )
+                phrase_index = next(
+                    index
+                    for index in range(len(tokens) - 1)
+                    if tokens[index : index + 2] == ["bim", "bim"]
+                )
+                phrase_match = contains("p.search_title", "bim bim")
+                extra_title_matches = [
+                    contains("p.search_title", token)
+                    for index, token in enumerate(tokens)
+                    if index not in {phrase_index, phrase_index + 1}
+                ]
+                title_phrase_match = " AND ".join([phrase_match, *extra_title_matches])
+                where.append(f"(({exact_identifier}) OR ({title_phrase_match}))")
+                lexical_tokens.append(title_phrase_match)
+                fuzzy_tokens: list[str] = []
+            elif tokens:
                 raw_exact = bind(raw_query)
                 exact_identifier = (
                     f"upper(p.product_id) = upper({raw_exact}) OR "
@@ -98,8 +136,12 @@ class PostgresProductRepository:
                     where.append(f"(({exact_identifier}) OR ({query_match}))")
             else:
                 fuzzy_tokens = []
-                if query:
+                if raw_query:
                     where.append("false")
+            if "bỉm" in raw_query.casefold():
+                # Preserve the explicit diaper meaning after accent folding turns
+                # both "bỉm" and the snack word "bim" into the same token.
+                where.append(contains("p.search_category", "bim"))
             if category:
                 for token in category.split():
                     placeholder = bind(f"%{_escape_like_literal(token)}%")

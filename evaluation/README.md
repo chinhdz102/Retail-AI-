@@ -20,6 +20,16 @@ Chạy từ thư mục gốc repo:
 
 Mốc Recall@1 ≥ 90%, Recall@3 ≥ 97% và median search < 100 ms là mục tiêu của roadmap trên catalog 3.099 SKU; kết quả ở máy local cần điền vào report benchmark để xác nhận.
 
+`product_resolution_v2.jsonl` mở rộng từ 12 lên 23 truy vấn, thêm tiếng lóng “bim bim/bimbim”, phân biệt truy vấn “bỉm” có dấu với snack, và các biến thể đồ uống, hóa mỹ phẩm, thực phẩm, sữa chua. Ca mới được kiểm tra tham chiếu tới product ID trong snapshot đã được chấp nhận. Chạy riêng bộ v2 để đo resolver PostgreSQL hiện tại:
+
+```powershell
+.venv\Scripts\python.exe -m evaluation.run_product_search_benchmark `
+  --cases evaluation/cases/product_resolution_v2.jsonl `
+  --output evaluation/results/product_search_benchmark_v2.json
+```
+
+Kiểm thử SQL giả lập và đối chiếu ID snapshot không thay thế benchmark truy vấn PostgreSQL thật; nếu DB không kết nối được, báo cáo kết quả runtime là chưa đo.
+
 `run_smoke_benchmark.py` dùng phản hồi Groq được lập trình sẵn để kiểm backend, tool, grounding, phân quyền, session và lỗi. Kết quả ở `evaluation/results/smoke_benchmark.json`; exit code 1 nghĩa là có ca FAIL.
 
 `run_p0_regressions.py` chạy 8 regression ưu tiên × 5 lượt. Nó cũng dùng phản hồi giả lập nên cô lập backend và không tiêu quota; nó không đo khả năng model tự chọn tool hoặc `fields`. Kết quả ở `evaluation/results/p0_regression_5x.json`.

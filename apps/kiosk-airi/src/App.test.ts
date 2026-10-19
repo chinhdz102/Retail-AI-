@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from './App.vue'
@@ -20,6 +20,12 @@ const apiMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('./api', () => apiMocks)
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => { resolve = resolvePromise })
+  return { promise, resolve }
+}
 
 describe('kiosk app', () => {
   beforeEach(() => {
@@ -79,6 +85,83 @@ describe('kiosk app', () => {
     await wrapper.get('button[aria-label="Đóng phần chữ"]').trigger('click')
 
     expect(wrapper.find('.text-drawer').exists()).toBe(false)
+  })
+
+  it('closes the backend session when the kiosk component is unloaded', async () => {
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.getCart).toHaveBeenCalledWith('session-test'))
+
+    wrapper.unmount()
+
+    expect(apiMocks.closeSession).toHaveBeenCalledWith('session-test')
+  })
+
+  it('shares the first session boot when a customer sends before startup finishes', async () => {
+    const session = deferred<{
+      session_id: string
+      kiosk_id: string
+      state: string
+      expires_at: string
+    }>()
+    apiMocks.createSession.mockReturnValueOnce(session.promise)
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test', text: 'Mình tìm thấy Coca Zero.', model: 'catalog',
+      grounded_product_ids: [], state: 'BROWSING',
+    })
+
+    const wrapper = mount(App)
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
+
+    expect(apiMocks.createSession).toHaveBeenCalledTimes(1)
+    session.resolve({
+      session_id: 'session-test', kiosk_id: 'kiosk-01', state: 'BROWSING',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledWith(
+      'session-test', 'Giá Coca Zero', 'vi', expect.any(String),
+    ))
+    expect(apiMocks.createSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not render a late customer response after ending and replacing the session', async () => {
+    const oldResponse = deferred<{
+      session_id: string
+      text: string
+      model: string
+      grounded_product_ids: string[]
+      state: string
+    }>()
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+    apiMocks.createSession.mockResolvedValueOnce({
+      session_id: 'customer-a', kiosk_id: 'kiosk-01', state: 'BROWSING', expires_at: expiresAt,
+    }).mockResolvedValueOnce({
+      session_id: 'customer-b', kiosk_id: 'kiosk-01', state: 'BROWSING', expires_at: expiresAt,
+    })
+    apiMocks.respond.mockReturnValueOnce(oldResponse.promise)
+
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(1))
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledTimes(1))
+    expect(wrapper.text()).toContain('Giá Coca Zero')
+
+    await wrapper.get('.end-session-button').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(2))
+    expect(wrapper.findAll('.message-row')).toHaveLength(0)
+
+    oldResponse.resolve({
+      session_id: 'customer-a',
+      text: 'Thông tin riêng của khách A không được hiện cho khách B.',
+      model: 'qwen/qwen3.8-27b', grounded_product_ids: [], state: 'BROWSING',
+    })
+    await flushPromises()
+
+    expect(wrapper.findAll('.message-row')).toHaveLength(0)
+    expect(wrapper.text()).not.toContain('Thông tin riêng của khách A')
+    expect(apiMocks.respond).toHaveBeenCalledTimes(1)
+    expect(apiMocks.createSession).toHaveBeenCalledTimes(2)
   })
 
   it('switches the chat to English and sends the selected language to the API', async () => {
@@ -361,6 +444,79 @@ describe('kiosk app', () => {
     ))
     await vi.waitFor(() => expect(wrapper.text()).toContain('13.000đ'))
     expect(wrapper.text()).toContain('Giỏ hàng demo')
+  })
+
+  it('completes the kiosk product-to-sandbox-payment flow through the rendered controls', async () => {
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+    const product = {
+      product_id: 'COKE_ZERO_330', name: 'Coca-Cola Zero 330ml', category: 'drink',
+      brand: 'Coca-Cola', price_vnd: 13_000, stock: 16, uom: 'lon',
+      data_timestamp: '2026-10-19T00:00:00Z',
+    }
+    const emptyCart = {
+      cart_id: 'cart-test', session_id: 'session-test', items: [], item_count: 0,
+      subtotal_vnd: 0, total_vnd: 0, version: 1, sandbox: true, data_source: 'DEMO_CATALOG',
+    }
+    const filledCart = {
+      ...emptyCart,
+      items: [{
+        product_id: product.product_id, name: product.name, category: product.category,
+        brand: product.brand, unit_price_vnd: product.price_vnd, quantity: 1,
+        line_total_vnd: product.price_vnd, available_stock: 15, uom: product.uom,
+        data_timestamp: product.data_timestamp,
+      }],
+      item_count: 1, subtotal_vnd: 13_000, total_vnd: 13_000, version: 2,
+    }
+    const quote = {
+      confirmation_token: 'quote-token-test', cart: filledCart, expires_at: expiresAt, sandbox: true,
+    }
+    const pendingOrder = {
+      order_id: 'order-test', session_id: 'session-test', cart_id: 'cart-test',
+      items: filledCart.items, amount_vnd: 13_000, order_status: 'AWAITING_PAYMENT',
+      payment_status: 'PENDING', created_at: expiresAt, expires_at: expiresAt,
+      sandbox: true, provider_transaction_id: null,
+    }
+    const paidOrder = {
+      ...pendingOrder, order_status: 'PAID', payment_status: 'PAID',
+      provider_transaction_id: 'SANDBOX-ORDERTEST',
+    }
+    apiMocks.createSession.mockResolvedValueOnce({
+      session_id: 'session-test', kiosk_id: 'kiosk-01', state: 'BROWSING', expires_at: expiresAt,
+    }).mockResolvedValueOnce({
+      session_id: 'session-next', kiosk_id: 'kiosk-01', state: 'BROWSING', expires_at: expiresAt,
+    })
+    apiMocks.getCart.mockResolvedValueOnce(emptyCart)
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test', text: 'Mình tìm thấy Coca-Cola Zero.', model: 'catalog',
+      grounded_product_ids: [product.product_id], state: 'BROWSING', products: [product],
+    })
+    apiMocks.addCartItem.mockResolvedValueOnce(filledCart)
+    apiMocks.prepareCheckout.mockResolvedValueOnce(quote)
+    apiMocks.confirmCheckout.mockResolvedValueOnce(pendingOrder)
+    apiMocks.simulateSandboxPayment.mockResolvedValueOnce(paidOrder)
+
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(1))
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.text()).toContain(product.name))
+    await wrapper.get('.message-product-card .small-action-button').trigger('click')
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Giỏ hàng demo'))
+    await wrapper.get('.shopping-actions .primary').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.prepareCheckout).toHaveBeenCalledWith('session-test'))
+    await wrapper.get('.shopping-actions .primary').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.confirmCheckout).toHaveBeenCalledWith(
+      'session-test', 'quote-token-test', expect.any(String),
+    ))
+    await wrapper.get('.shopping-actions .primary').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.simulateSandboxPayment).toHaveBeenCalledWith(
+      'session-test', 'order-test', 'PAID', expect.any(String),
+    ))
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(2))
+
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Thanh toán mô phỏng hoàn tất'))
+    expect(wrapper.text()).not.toContain('SANDBOX-ORDERTEST')
+    expect(wrapper.findAll('.shopping-cart-line')).toHaveLength(0)
   })
 
   it('shows an inline recovery message when the agent fails', async () => {
