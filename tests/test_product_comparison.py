@@ -1,0 +1,74 @@
+import pytest
+
+from backend.services.product_comparison import (
+    comparison_metric,
+    is_comparison_request,
+    parse_comparison_queries,
+)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "So sánh Coca Zero với nước suối",
+            ("coca zero", "nuoc suoi"),
+        ),
+        (
+            "Compare Coca Zero and water",
+            ("coca zero", "water"),
+        ),
+        (
+            "Coca Zero với nước suối cái nào rẻ hơn?",
+            ("coca zero", "nuoc suoi"),
+        ),
+        (
+            "So sánh giữa Coca Zero và nước suối, giúp mình",
+            ("coca zero", "nuoc suoi"),
+        ),
+    ],
+)
+def test_comparison_parser_extracts_two_product_queries(
+    text: str,
+    expected: tuple[str, str],
+) -> None:
+    assert parse_comparison_queries(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Cái nào rẻ hơn?", "price"),
+        ("Which one is cheaper?", "price"),
+        ("Bên nào còn nhiều hàng hơn?", "stock"),
+        ("Which has more stock?", "stock"),
+        ("So sánh hai món này", None),
+    ],
+)
+def test_comparison_metric_only_recognizes_supported_facts(
+    text: str,
+    expected: str | None,
+) -> None:
+    assert comparison_metric(text) == expected
+
+
+@pytest.mark.parametrize("text", ["So sánh", "Compare Coca with water", "Cái nào rẻ hơn?"])
+def test_comparison_request_detection(text: str) -> None:
+    assert is_comparison_request(text)
+
+
+def test_ordinary_retail_question_is_not_misclassified_as_comparison() -> None:
+    assert not is_comparison_request("Coca Zero giá bao nhiêu?")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Cái nào ngon nhất và bán chạy nhất?",
+        "Món mô ngon nhứt và bán chạy nhứt?",
+        "Cái chi bán đắt hàng nhứt?",
+        "Món quà vặt mô ngon nhứt?",
+    ],
+)
+def test_ranking_questions_are_not_misclassified_as_comparisons(text: str) -> None:
+    assert not is_comparison_request(text)

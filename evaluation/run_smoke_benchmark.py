@@ -19,7 +19,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 
@@ -73,12 +73,15 @@ def record(
     *,
     mode: str = "scripted_groq_real_backend",
     note: str = "",
+    status_override: str | None = None,
 ) -> None:
     RESULTS.append(
         {
             "case_id": case_id,
             "group": group,
-            "status": "UNSUPPORTED" if passed is None else "PASS" if passed else "FAIL",
+            "status": status_override or (
+                "UNSUPPORTED" if passed is None else "PASS" if passed else "FAIL"
+            ),
             "mode": mode,
             "expected": expected,
             "observed": observed,
@@ -271,6 +274,154 @@ async def benchmark() -> None:
             note="Probes backend intent/fallback handling, not live LLM humor quality.",
         )
 
+        # The shopping controller supports cart actions without LLM planning.
+        service = ScriptedGroq()
+        cart_session = await create_session(client, "smoke-cart")
+        added_cart, _ = await respond(
+            client,
+            service,
+            "Thêm 2 lon Coca Zero vào giỏ.",
+            session_id=cart_session,
+        )
+        viewed_cart, _ = await respond(
+            client,
+            service,
+            "Giỏ hàng có gì?",
+            session_id=cart_session,
+        )
+        cart_body = viewed_cart.json() if viewed_cart.status_code == 200 else {}
+        cart_snapshot = cart_body.get("cart") or {}
+        cart_lines = cart_snapshot.get("items", [])
+        record(
+            "D2-cart-conversation",
+            "D",
+            added_cart.status_code == 200
+            and cart_body.get("state") == "CART_ACTIVE"
+            and cart_snapshot.get("item_count") == 2
+            and cart_snapshot.get("total_vnd") == 26_000
+            and len(cart_lines) == 1
+            and cart_lines[0].get("product_id") == "COKE_ZERO_330",
+            {
+                "add_status": added_cart.status_code,
+                "view_status": viewed_cart.status_code,
+                "state": cart_body.get("state"),
+                "item_count": cart_snapshot.get("item_count"),
+                "total_vnd": cart_snapshot.get("total_vnd"),
+                "product_ids": [item.get("product_id") for item in cart_lines],
+                "model_calls": len(service.calls),
+            },
+            (
+                "Natural-language add and view-cart turns return session-owned catalog lines "
+                "and integer VND totals"
+            ),
+            note="Deterministic demo sandbox flow; does not represent POS stock or a live sale.",
+        )
+
+        service = ScriptedGroq()
+        comparison_session = await create_session(client, "smoke-product-comparison")
+        comparison_response, _ = await respond(
+            client,
+            service,
+            "So sánh Coca Zero với nước suối.",
+            session_id=comparison_session,
+        )
+        comparison_followup, _ = await respond(
+            client,
+            service,
+            "Cái nào rẻ hơn?",
+            session_id=comparison_session,
+        )
+        comparison_body = (
+            comparison_response.json() if comparison_response.status_code == 200 else {}
+        )
+        comparison_followup_body = (
+            comparison_followup.json() if comparison_followup.status_code == 200 else {}
+        )
+        comparison_state = session_store.get(UUID(comparison_session)).shopping
+        record(
+            "D3-product-comparison",
+            "D",
+            comparison_response.status_code == 200
+            and comparison_followup.status_code == 200
+            and comparison_body.get("grounded_product_ids") == ["COKE_ZERO_330", "WATER01"]
+            and "13.000đ" in comparison_body.get("text", "")
+            and "7.000đ" in comparison_body.get("text", "")
+            and "Nước suối 500ml rẻ hơn Coca-Cola Zero 330ml" in comparison_followup_body.get(
+                "text", ""
+            )
+            and comparison_state.comparison_product_ids == ["COKE_ZERO_330", "WATER01"]
+            and not service.calls,
+            {
+                "compare_status": comparison_response.status_code,
+                "grounded_product_ids": comparison_body.get("grounded_product_ids"),
+                "followup_status": comparison_followup.status_code,
+                "followup_text": comparison_followup_body.get("text"),
+                "saved_comparison_ids": comparison_state.comparison_product_ids,
+                "model_calls": len(service.calls),
+            },
+            (
+                "Comparison resolves both products, states only catalog price facts, "
+                "and retains the pair for a follow-up"
+            ),
+            note=(
+                "Deterministic demo catalog route; it does not infer taste ratings "
+                "or live store prices."
+            ),
+        )
+
+        # Anaphoric cart edits must resolve only against this session's active cart item.
+        service = ScriptedGroq()
+        reference_session = await create_session(client, "smoke-cart-reference")
+        initial_add, _ = await respond(
+            client,
+            service,
+            "Thêm 2 lon Coca Zero vào giỏ.",
+            session_id=reference_session,
+        )
+        quantity_update, _ = await respond(
+            client,
+            service,
+            "Đổi món này thành 1.",
+            session_id=reference_session,
+        )
+        remove_item, _ = await respond(
+            client,
+            service,
+            "Bỏ món này khỏi giỏ.",
+            session_id=reference_session,
+        )
+        update_body = quantity_update.json() if quantity_update.status_code == 200 else {}
+        remove_body = remove_item.json() if remove_item.status_code == 200 else {}
+        updated_cart = update_body.get("cart") or {}
+        removed_cart = remove_body.get("cart") or {}
+        saved_reference = session_store.get(UUID(reference_session)).shopping
+        record(
+            "G2/G4-cart-reference",
+            "G",
+            initial_add.status_code == 200
+            and updated_cart.get("item_count") == 1
+            and len(updated_cart.get("items", [])) == 1
+            and updated_cart["items"][0].get("product_id") == "COKE_ZERO_330"
+            and removed_cart.get("items") == []
+            and remove_body.get("state") == "BROWSING"
+            and saved_reference.active_product_id == "COKE_ZERO_330",
+            {
+                "add_status": initial_add.status_code,
+                "update_status": quantity_update.status_code,
+                "remove_status": remove_item.status_code,
+                "updated_quantity": updated_cart.get("item_count"),
+                "removed_items": removed_cart.get("items"),
+                "final_state": remove_body.get("state"),
+                "active_product_id": saved_reference.active_product_id,
+                "model_calls": len(service.calls),
+            },
+            (
+                "Follow-up phrases resolve the previously selected cart item and update/remove "
+                "it within the same session"
+            ),
+            note="Checks deterministic discourse reference state, not live LLM coreference.",
+        )
+
         original_price = get_product_snapshot("COKE_ZERO_330").price_vnd
         service = ScriptedGroq(
             answer("", tool("update_price", {"product_id": "COKE_ZERO_330", "price_vnd": 1000})),
@@ -446,6 +597,63 @@ async def benchmark() -> None:
                 ),
             )
 
+        # Payment status is a deterministic sandbox read, while the customer's
+        # assertion alone must not mutate PENDING to PAID.
+        service = ScriptedGroq()
+        payment_session = await create_session(client, "smoke-payment-status")
+        add_payment_item = await client.post(
+            f"/sessions/{payment_session}/cart/items",
+            json={
+                "product_id": "COKE_ZERO_330",
+                "quantity": 1,
+                "idempotency_key": str(uuid4()),
+            },
+        )
+        quote = await client.post(
+            f"/sessions/{payment_session}/checkout/prepare",
+        )
+        order_response = await client.post(
+            f"/sessions/{payment_session}/checkout/confirm",
+            json={
+                "confirmation_token": quote.json().get("confirmation_token"),
+                "idempotency_key": str(uuid4()),
+            },
+        )
+        pending_order = order_response.json() if order_response.status_code == 200 else {}
+        payment_query, _ = await respond(
+            client,
+            service,
+            "Kiểm tra thanh toán chưa?",
+            session_id=payment_session,
+        )
+        payment_body = payment_query.json() if payment_query.status_code == 200 else {}
+        record(
+            "I3-payment-status",
+            "I",
+            add_payment_item.status_code == 200
+            and quote.status_code == 200
+            and order_response.status_code == 200
+            and pending_order.get("payment_status") == "PENDING"
+            and payment_body.get("order", {}).get("payment_status") == "PENDING"
+            and payment_body.get("tools_used") == ["check_payment_status"]
+            and "chưa xác minh giao dịch ngân hàng thật" in payment_body.get("text", "").casefold()
+            and not service.calls,
+            {
+                "add_status": add_payment_item.status_code,
+                "quote_status": quote.status_code,
+                "order_status": pending_order.get("payment_status"),
+                "query_status": payment_query.status_code,
+                "query_payment_status": payment_body.get("order", {}).get("payment_status"),
+                "tools_used": payment_body.get("tools_used"),
+                "model_calls": len(service.calls),
+            },
+            (
+                "Payment-status lookup reports sandbox PENDING and explicitly does not claim "
+                "bank verification"
+            ),
+            note="Sandbox provider events are separately covered by shopping-flow tests.",
+        )
+
         service = ScriptedGroq(GroqProviderError("scripted provider failure"))
         response, _ = await respond(client, service, "Xin chào.")
         record(
@@ -525,19 +733,37 @@ async def benchmark() -> None:
     )
 
     for case_id, group, reason in [
-        ("A4-FEFO", "A", "Catalog has one expiry per product and no batch/FEFO tool."),
-        ("D2-cart", "D", "update_cart is not implemented."),
-        ("D3-knowledge", "D", "get_product_knowledge is not implemented."),
-        (
-            "G2/G4-cart-reference", "G",
-            "Cart actions and structured selection state are not implemented.",
-        ),
-        ("I3-payment-verification", "I", "check_payment_status is not implemented."),
-        ("J2-Redis", "J", "Session store is in-memory; Redis adapter is not implemented."),
+        ("A4-FEFO", "A", "Catalog stores one expiry per SKU and has no lot/batch FEFO data."),
+        ("D4-knowledge", "D", "get_product_knowledge is not implemented."),
         ("J4-RAG", "J", "RAG retrieval and generation are not implemented."),
     ]:
-        record(case_id, group, None, reason, "Plan case supported by production feature",
-               mode="feature_inventory")
+        record(
+            case_id,
+            group,
+            None,
+            reason,
+            "Verify the named capability against its required runtime/data source",
+            mode="feature_inventory",
+        )
+
+    record(
+        "J2-Redis-live",
+        "J",
+        None,
+        {
+            "adapter_implemented": True,
+            "unit_failure_closed_test": "tests/test_sessions.py",
+            "live_integration": "NOT RUN",
+            "reason": "The configured Redis endpoint was unreachable in the read-only probe.",
+        },
+        "Verify Redis session lifecycle against a live shared store",
+        mode="external_dependency",
+        status_override="NOT_RUN",
+        note=(
+            "Read/write integration requires a reachable Redis endpoint; "
+            "no local fallback is treated as a pass."
+        ),
+    )
 
 
 def main() -> int:
@@ -558,7 +784,10 @@ def main() -> int:
         "benchmark": "Retail-AI evaluation plan deterministic smoke subset",
         "provider_mode": "scripted Groq; no live network/provider calls",
         "scope": "Backend/tool behavior only; no live LLM selection accuracy or latency metrics",
-        "summary": {key: counts.get(key, 0) for key in ("PASS", "FAIL", "UNSUPPORTED")},
+        "summary": {
+            key: counts.get(key, 0)
+            for key in ("PASS", "FAIL", "UNSUPPORTED", "NOT_RUN")
+        },
         "cases": RESULTS,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
