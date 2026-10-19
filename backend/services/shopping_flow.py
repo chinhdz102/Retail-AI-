@@ -124,40 +124,81 @@ def _implicit_purchase_action(text: str) -> ShoppingAction | None:
     if "?" in text or "？" in text:
         return None
     normalized = normalize_vietnamese(text)
+    direct_cart_purchase = re.match(
+        r"^(?:(?:minh|toi|em|anh|chi)\s+)?(?:them|bo\s+sung|cho|lay|mua)\s+"
+        r"(.+?)\s+(?:bo\s+)?(?:vao|vo)\s+(?:cai\s+)?gio(?:\s+hang)?\s*[.!?]*$",
+        normalized,
+    )
     match = re.match(
         r"^(?:(?:minh|toi|em|anh|chi)\s+)?(?:lay|mua|them)\s+(.+?)\s*[.!?]*$",
         normalized,
     )
-    if match:
-        payload = match.group(1).strip()
+    if direct_cart_purchase:
+        original_cart_purchase = re.match(
+            r"^(?:(?:mình|minh|tôi|toi|em|anh|chị|chi)\s+)?"
+            r"(?:thêm|them|bổ\s+sung|bo\s+sung|cho|lấy|lay|mua)\s+(.+?)\s+"
+            r"(?:bỏ\s+|bo\s+)?(?:vào|vao|vô|vo)\s+(?:cái\s+|cai\s+)?"
+            r"(?:giỏ|gio)(?:\s+(?:hàng|hang))?\s*[.!?]*$",
+            text,
+            flags=re.IGNORECASE,
+        )
+        payload = (
+            original_cart_purchase.group(1).strip()
+            if original_cart_purchase
+            else direct_cart_purchase.group(1).strip()
+        )
+    elif match:
+        original_purchase = re.match(
+            r"^(?:(?:mình|minh|tôi|toi|em|anh|chị|chi)\s+)?"
+            r"(?:lấy|lay|mua|thêm|them)\s+(.+?)\s*[.!?]*$",
+            text,
+            flags=re.IGNORECASE,
+        )
+        payload = (
+            original_purchase.group(1).strip() if original_purchase else match.group(1).strip()
+        )
     else:
         polite_purchase = re.match(
             r"^cho\s+(?:minh|toi|em|anh|chi)\s+(.+?)\s*[.!?]*$",
             normalized,
         )
-        if polite_purchase is None:
-            return None
-        payload = polite_purchase.group(1).strip()
-        if not re.match(r"^(?:\d+|mot|hai|ba|bon|tu|nam|sau|bay|tam|chin|muoi)\s+\S+", payload):
+        direct_quantity_purchase = re.match(
+            r"^cho\s+((?:\d+|mot|hai|ba|bon|tu|nam|sau|bay|tam|chin|muoi)"
+            r"\s+.+?)\s*[.!?]*$",
+            normalized,
+        )
+        if polite_purchase is not None:
+            payload = polite_purchase.group(1).strip()
+            if not re.match(
+                r"^(?:\d+|mot|hai|ba|bon|tu|nam|sau|bay|tam|chin|muoi)\s+\S+",
+                payload,
+            ):
+                return None
+        elif direct_quantity_purchase is not None:
+            payload = direct_quantity_purchase.group(1).strip()
+        elif direct_cart_purchase is not None:
+            payload = direct_cart_purchase.group(1).strip()
+        else:
             return None
 
+    normalized_payload = normalize_vietnamese(payload)
     if re.search(
         r"\b(?:gia|bao nhieu|nhieu tien|o dau|cho nao|con hang khong|"
         r"con khong|het chua|mua gi|nen mua|co loai nao|co mon nao|"
         r"phai|bi|nham|het han|bao nhan vien|phan anh|khieu nai|doi tra|"
         r"loi|hong|complaint|issue)\b",
-        payload,
+        normalized_payload,
     ):
         return None
 
-    payload = _strip_filler(payload)
     parts = re.split(
-        r"\s*(?:,|;|\bva\b|\bvoi\b|\bcung\b|\band\b|\bplus\b)\s*",
+        r"\s*(?:,|;|\bvà\b|\bva\b|\bvới\b|\bvoi\b|\bcùng\b|\bcung\b|\band\b|\bplus\b)\s*",
         payload,
         flags=re.IGNORECASE,
     )
     parsed_items = []
     for part in parts:
+        part = _strip_filler(part)
         quantity, query = _quantity_and_query(part)
         if not query or not 1 <= quantity <= 20:
             return None
@@ -265,6 +306,10 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
     ):
         return ShoppingAction(ShoppingActionType.VIEW_CART)
 
+    implicit_purchase = _implicit_purchase_action(text)
+    if implicit_purchase is not None:
+        return implicit_purchase
+
     add_match = re.search(
         r"\b(?:them|bo sung|cho|lay|mua)\s+(.+?)\s+"
         r"(?:vao|vo|bo\s+(?:vao|vo))\s+(?:cai\s+)?gio(?:\s+hang)?\b|"
@@ -304,10 +349,6 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
                 return ShoppingAction(ShoppingActionType.ADD_ITEM, line_items=parsed_items)
         quantity, query = _quantity_and_query(cleaned_query)
         return ShoppingAction(ShoppingActionType.ADD_ITEM, query=query, quantity=quantity)
-
-    implicit_purchase = _implicit_purchase_action(text)
-    if implicit_purchase is not None:
-        return implicit_purchase
 
     remove_match = re.search(
         r"\b(?:bo|xoa|lay)\s+(.+?)\s+(?:khoi|ra khoi)\s+(?:cai\s+)?gio(?:\s+hang)?\b|"

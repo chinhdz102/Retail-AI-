@@ -23,7 +23,6 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from openai import AsyncOpenAI
 
 from backend.api.main import app, get_groq_service, session_store
 from backend.config import Settings
@@ -399,6 +398,7 @@ async def run(
     case_ids: list[str] | None = None,
     case_file: Path | None = None,
 ) -> dict[str, Any]:
+    settings = settings.model_copy(update={"groq_timeout_seconds": 12.0})
     case_set: dict[str, Any] = {}
     if case_file is not None:
         case_set = json.loads(case_file.read_text(encoding="utf-8"))
@@ -440,6 +440,9 @@ async def run(
         ),
         "model_primary": settings.groq_model,
         "fallback_enabled": bool(settings.groq_fallback_model or settings.groq_fallback_model_2),
+        "credential_failover_enabled": len(settings.groq_api_credentials) > 1,
+        "credential_slots": [slot for slot, _ in settings.groq_api_credentials],
+        "provider_timeout_seconds": settings.groq_timeout_seconds,
         "minimum_model_request_interval_seconds": pace_seconds,
         "response_timeout_seconds": response_timeout_seconds,
         "catalog_scope": {
@@ -469,18 +472,10 @@ async def run(
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
     pacer = RequestPacer(pace_seconds)
-    async with (
-        httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
-            base_url="http://text-conversation-eval",
-        ) as client,
-        AsyncOpenAI(
-            api_key=settings.groq_api_key.get_secret_value(),
-            base_url=settings.groq_base_url,
-            timeout=12.0,
-            max_retries=0,
-        ) as provider,
-    ):
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
+        base_url="http://text-conversation-eval",
+    ) as client:
         for case in selected_cases:
             session_response = await client.post(
                 "/sessions", json={"kiosk_id": "text-conversation-evaluation"}
@@ -488,7 +483,7 @@ async def run(
             session_id = session_response.json()["session_id"]
             turn_results = []
             for turn_number, turn in enumerate(case["turns"], start=1):
-                service = RecordingGroq(settings, provider, pacer)
+                service = RecordingGroq(settings, pacer)
                 app.dependency_overrides[get_groq_service] = _service_override(service)
                 started = perf_counter()
                 response = None
@@ -518,6 +513,7 @@ async def run(
                     }
                 finally:
                     app.dependency_overrides.pop(get_groq_service, None)
+                    await service.aclose()
 
                 try:
                     session_constraints = session_store.get(UUID(session_id)).shopping.constraints

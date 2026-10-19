@@ -86,6 +86,10 @@ def test_common_vietnamese_and_english_cart_intents(
             "Thêm Coca Zero, nước suối và snack vào giỏ",
             (("coca zero", 1), ("nuoc suoi", 1), ("snack", 1)),
         ),
+        (
+            "Cho 1 snack khoai tây với 1 chai nước suối vào giỏ.",
+            (("snack khoai tay", 1), ("nuoc suoi", 1)),
+        ),
     ],
 )
 def test_multi_item_add_request_is_parsed_without_losing_quantities(
@@ -412,6 +416,56 @@ async def test_multi_item_add_rejects_unavailable_line_without_partial_cart_writ
         assert response.status_code == 200
         assert "giỏ được giữ nguyên" in response.json()["text"].casefold()
         assert cart.json()["items"] == []
+
+
+@pytest.mark.asyncio
+async def test_colloquial_two_item_cart_can_complete_checkout_without_false_payment(
+    client: httpx.AsyncClient,
+) -> None:
+    async with client:
+        created = await client.post("/sessions", json={"kiosk_id": "colloquial-multi-cart"})
+        session_id = created.json()["session_id"]
+        added = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session_id,
+                "text": "Cho 1 snack khoai tây với 1 chai nước suối vào giỏ.",
+            },
+        )
+        view = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Mở giỏ hàng cho mình xem."},
+        )
+        quote = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Chuẩn bị thanh toán giỏ này."},
+        )
+        confirmed = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Xác nhận đặt hàng."},
+        )
+        claimed_paid = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session_id,
+                "text": "Mình chuyển khoản xong rồi, đơn đã thanh toán chưa?",
+            },
+        )
+
+    assert all(
+        response.status_code == 200 for response in (added, view, quote, confirmed, claimed_paid)
+    )
+    assert {line["product_id"]: line["quantity"] for line in added.json()["cart"]["items"]} == {
+        "SNACK01": 1,
+        "WATER01": 1,
+    }
+    assert view.json()["state"] == "CART_ACTIVE"
+    assert quote.json()["state"] == "CHECKOUT_CONFIRMATION"
+    assert confirmed.json()["state"] == "PAYMENT_PENDING"
+    assert confirmed.json()["order"]["payment_status"] == "PENDING"
+    assert claimed_paid.json()["state"] == "PAYMENT_PENDING"
+    assert claimed_paid.json()["order"]["payment_status"] == "PENDING"
+    assert "chưa xác minh" in claimed_paid.json()["text"].casefold()
 
 
 def test_cart_line_limit_applies_across_repeated_add_requests() -> None:

@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr = SecretStr("")
     groq_api_key_fallback_1: SecretStr = SecretStr("")
     groq_api_key_fallback_2: SecretStr = SecretStr("")
+    groq_api_key_fallback_3: SecretStr = SecretStr("")
+    groq_api_key_fallback_4: SecretStr = SecretStr("")
     groq_model: str = "qwen/qwen3.8-27b"
     groq_fallback_model: str = "openai/gpt-oss-120b"
     groq_fallback_model_2: str = "openai/gpt-oss-20b"
@@ -66,6 +68,8 @@ class Settings(BaseSettings):
             ("primary", self.groq_api_key),
             ("fallback_1", self.groq_api_key_fallback_1),
             ("fallback_2", self.groq_api_key_fallback_2),
+            ("fallback_3", self.groq_api_key_fallback_3),
+            ("fallback_4", self.groq_api_key_fallback_4),
         )
         credentials: list[tuple[str, str]] = []
         seen: set[str] = set()

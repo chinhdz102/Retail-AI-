@@ -4803,6 +4803,15 @@ async def agent_respond(
         stored_constraints=record.shopping.constraints,
         active_context=record.shopping.current_intent == IntentType.RECOMMENDATION,
     )
+    contextual_grounded_fact_followup = bool(
+        requested_fields
+        and record.last_grounded_product_id
+        and _contextual_product_reference_requested(request.text)
+        and not recommendation_lookup_request
+        and not ranking_requested
+    )
+    if contextual_grounded_fact_followup:
+        recommendation_arguments = None
     spicy_recommendation_constraint = (
         bool(recommendation_arguments)
         and set(requested_fields) == {"spicy"}
@@ -5250,6 +5259,8 @@ def _contextual_product_reference_requested(text: str) -> bool:
         "do uong do",
         "ca phe do",
         "cafe do",
+        "mi nay",
+        "mi do",
         "cai re hon",
         "chai re hon",
         "mon re hon",
