@@ -55,6 +55,7 @@ def test_closed_and_expired_sessions_clear_customer_context() -> None:
     session = store.create("private-context-test")
     store.add_message(session.session_id, "user", "My last product was Coca Zero")
     store.set_last_grounded_product(session.session_id, "COKE_ZERO_330", "Coca-Cola Zero")
+    store.claim_snapshot_disclosures(session.session_id, ("demo|COKE_ZERO_330|price",))
     store.update_shopping(session.session_id, active_product_id="COKE_ZERO_330")
 
     closed = store.close(session.session_id)
@@ -62,6 +63,7 @@ def test_closed_and_expired_sessions_clear_customer_context() -> None:
     assert closed.messages == []
     assert closed.last_grounded_product_id is None
     assert closed.shopping.active_product_id is None
+    assert closed.snapshot_disclosures == []
     with pytest.raises(SessionClosedError):
         store.get(session.session_id)
 
@@ -78,6 +80,76 @@ def test_closed_and_expired_sessions_clear_customer_context() -> None:
     expired_record = expiring._sessions[expired_session.session_id]
     assert expired_record.messages == []
     assert expired_record.shopping.active_product_id is None
+    assert expired_record.snapshot_disclosures == []
+
+
+def test_snapshot_disclosure_claim_is_once_per_session_and_redis_round_trips() -> None:
+    store = InMemorySessionStore()
+    session = store.create("snapshot-disclosure-test")
+    keys = ("demo|COKE_ZERO_330|price", "demo|COKE_ZERO_330|stock")
+
+    assert store.claim_snapshot_disclosures(session.session_id, keys) == keys
+    assert store.claim_snapshot_disclosures(session.session_id, keys) == ()
+
+    saved = store.get(session.session_id)
+    decoded = RedisSessionStore._decode(RedisSessionStore._encode(saved))
+    assert decoded.snapshot_disclosures == list(keys)
+
+    other = store.create("snapshot-disclosure-isolation")
+    assert store.claim_snapshot_disclosures(other.session_id, keys) == keys
+
+
+def test_redis_snapshot_disclosure_claim_persists_atomically() -> None:
+    class MemoryRedis:
+        def __init__(self) -> None:
+            self.values: dict[str, str] = {}
+
+        def pipeline(self):
+            return MemoryPipeline(self)
+
+    class MemoryPipeline:
+        def __init__(self, client: MemoryRedis) -> None:
+            self.client = client
+            self.pending: list[tuple[str, str, int | None]] = []
+            self.in_transaction = False
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def watch(self, _key: str) -> None:
+            return None
+
+        def get(self, key: str) -> str | None:
+            return self.client.values.get(key)
+
+        def unwatch(self) -> None:
+            return None
+
+        def multi(self) -> None:
+            self.in_transaction = True
+
+        def set(self, key: str, value: str, ex: int | None = None):
+            self.pending.append((key, value, ex))
+            return self
+
+        def execute(self) -> list[bool]:
+            for key, value, _expiry in self.pending:
+                self.client.values[key] = value
+            return [True for _ in self.pending]
+
+    client = MemoryRedis()
+    store = RedisSessionStore("redis://unused", client=client)
+    session = InMemorySessionStore().create("redis-disclosure-test")
+    client.values[store._key(session.session_id)] = store._encode(session)
+    client.values[store._status_key(session.session_id)] = "ACTIVE"
+    keys = ("demo|COKE_ZERO_330|price_vnd",)
+
+    assert store.claim_snapshot_disclosures(session.session_id, keys) == keys
+    assert store.claim_snapshot_disclosures(session.session_id, keys) == ()
+    assert store.get(session.session_id).snapshot_disclosures == list(keys)
 
 
 def test_session_ttl_is_refreshed_by_activity_and_expires_after_idle_period() -> None:

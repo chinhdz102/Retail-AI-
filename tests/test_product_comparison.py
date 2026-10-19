@@ -4,6 +4,7 @@ from backend.services.product_comparison import (
     comparison_metric,
     is_comparison_request,
     parse_comparison_queries,
+    unsupported_comparison_dimension,
 )
 
 
@@ -40,8 +41,11 @@ def test_comparison_parser_extracts_two_product_queries(
     [
         ("Cái nào rẻ hơn?", "price"),
         ("Which one is cheaper?", "price"),
+        ("So sánh giá Coca Zero với nước suối", "price"),
+        ("Compare prices for Coca Zero and water", "price"),
         ("Bên nào còn nhiều hàng hơn?", "stock"),
         ("Which has more stock?", "stock"),
+        ("So sánh lượng tồn kho của hai món", "stock"),
         ("So sánh hai món này", None),
     ],
 )
@@ -72,3 +76,20 @@ def test_ordinary_retail_question_is_not_misclassified_as_comparison() -> None:
 )
 def test_ranking_questions_are_not_misclassified_as_comparisons(text: str) -> None:
     assert not is_comparison_request(text)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Món nào ngon hơn?", "taste"),
+        ("Which one tastes better?", "taste"),
+        ("Cái nào bán chạy hơn?", "popularity"),
+        ("Which one is the bestseller?", "popularity"),
+        ("Cái nào rẻ hơn?", None),
+    ],
+)
+def test_unsupported_comparison_dimension_is_explicit(
+    text: str,
+    expected: str | None,
+) -> None:
+    assert unsupported_comparison_dimension(text) == expected

@@ -54,6 +54,7 @@ from backend.services.product_comparison import (
     comparison_metric,
     is_comparison_request,
     parse_comparison_queries,
+    unsupported_comparison_dimension,
 )
 from backend.services.retail_agent import (
     RetailAgentResult,
@@ -66,6 +67,10 @@ from backend.services.retail_agent import (
     lookup_product_promotions,
     lookup_recommendation_products,
     run_retail_agent,
+)
+from backend.services.retail_response_style import (
+    render_verified_snapshot,
+    snapshot_disclosure_keys,
 )
 from backend.services.retail_tools import ToolObservation
 from backend.services.sessions import (
@@ -186,220 +191,62 @@ def _session_or_http_error(session_id: UUID):
         raise HTTPException(status_code=404, detail="Session not found") from exc
 
 
-def _format_shelf_location(product: ProductSnapshot, language: LanguageCode) -> str:
-    location = product.shelf or ""
-    if product.shelf_source != "RECOMMENDED_PLANOGRAM":
-        return location
-    match = re.fullmatch(r"A(\d{2})-B(\d{2})-L(\d{2})-P(\d{2})", location)
-    if match is None:
-        return location
-    aisle, bay, level, slot = match.groups()
-    if language == "en":
-        return f"{location} (aisle A{aisle}, bay B{bay}, level L{level}, slot P{slot})"
-    if language == "zh":
-        return f"{location}（通道 A{aisle}、货架 B{bay}、层 L{level}、位置 P{slot}）"
-    return f"{location} (dãy A{aisle}, khoang B{bay}, tầng L{level}, ô P{slot})"
-
-
 def _render_verified_snapshot(
     observation: ToolObservation,
     language: LanguageCode,
     fields: tuple[str, ...] | None = None,
+    *,
+    include_price_caveat: bool = True,
+    include_stock_caveat: bool = True,
+    include_promotion_caveat: bool = True,
 ) -> str:
     product = observation.products[0]
-    fields = fields or observation.requested_fields
-    price = f"{product.price_vnd:,}".replace(",", ".")
-    data_date = product.data_timestamp.strftime("%d/%m/%Y")
-    expiry_date = _format_catalog_date(product.expiry_at)
-    has_volatile_facts = bool({"price_vnd", "stock", "promotion"}.intersection(fields))
-
-    if fields == ("data_timestamp",):
-        if language == "en":
-            return (
-                f"This catalog record is dated {data_date}; "
-                "I can't confirm it reflects today's store data."
-            )
-        if language == "zh":
-            return (
-                f"这条商品目录记录的日期是 {data_date}；"
-                "我无法确认它是否反映门店的最新数据。"
-            )
-        return (
-            f"Mục dữ liệu này được ghi nhận ngày {data_date}; "
-            "mình chưa thể xác nhận đây là dữ liệu mới nhất tại cửa hàng."
-        )
-
-    if language == "en":
-        facts = []
-        if "price_vnd" in fields:
-            facts.append(f"reference price {price} VND")
-        if "stock" in fields:
-            facts.append(
-                "the catalog records no sellable units"
-                if product.sellable_stock == 0
-                else f"the catalog records {product.sellable_stock} sellable units"
-            )
-        if "shelf" in fields:
-            shelf_label = (
-                "recommended planogram location "
-                f"{_format_shelf_location(product, language)} (not physically verified)"
-                if product.shelf_source == "RECOMMENDED_PLANOGRAM"
-                else f"shelf {product.shelf}"
-            )
-            facts.append(shelf_label)
-        if "promotion" in fields:
-            facts.append(f"catalog promotion: {product.promotion or 'none listed'}")
-        if "expiry_at" in fields:
-            facts.append(f"expiry date {expiry_date}")
-        if "ingredients" in fields:
-            facts.append(f"ingredients: {product.ingredients}")
-        if "spicy" in fields:
-            facts.append("spicy" if product.spicy else "not spicy")
-        response = f"{product.name}: " + "; ".join(facts) + "."
-        if has_volatile_facts:
-            response += " Store prices and stock may differ from this catalog snapshot."
-        if "promotion" in fields:
-            response += " Offer dates and terms are not verified; please confirm in store."
-        if "data_timestamp" in fields:
-            response += f" This record is dated {data_date}."
-        return response
-
-    if language == "zh":
-        facts = []
-        if "price_vnd" in fields:
-            facts.append(f"参考价格 {price} 越南盾")
-        if "stock" in fields:
-            facts.append(
-                "目录记录中没有可售库存"
-                if product.sellable_stock == 0
-                else f"目录记录有 {product.sellable_stock} 件可售"
-            )
-        if "shelf" in fields:
-            shelf_label = (
-                f"建议货架位置 {_format_shelf_location(product, language)}（尚未核实门店实际摆放）"
-                if product.shelf_source == "RECOMMENDED_PLANOGRAM"
-                else f"货架 {product.shelf}"
-            )
-            facts.append(shelf_label)
-        if "promotion" in fields:
-            facts.append(f"目录促销记录：{product.promotion or '暂无记录'}")
-        if "expiry_at" in fields:
-            facts.append(f"保质期至 {expiry_date}")
-        if "ingredients" in fields:
-            facts.append(f"配料：{product.ingredients}")
-        if "spicy" in fields:
-            facts.append("辣" if product.spicy else "不辣")
-        response = f"{product.name}：" + "；".join(facts) + "。"
-        if has_volatile_facts:
-            response += " 门店实际价格和库存可能与目录记录不同。"
-        if "promotion" in fields:
-            response += " 优惠期限和条件尚未核实，请到店确认。"
-        if "data_timestamp" in fields:
-            response += f" 这条记录日期为 {data_date}。"
-        return response
-
-    facts = []
-    if "price_vnd" in fields:
-        facts.append(f"giá tham khảo {price}đ")
-    if "stock" in fields:
-        facts.append(
-            "catalog chưa ghi nhận hàng bán được"
-            if product.sellable_stock == 0
-            else f"catalog ghi nhận {product.sellable_stock} {product.uom or 'sản phẩm'} có thể bán"
-        )
-    if "shelf" in fields:
-        shelf_label = (
-            "ở vị trí kệ đề xuất "
-            f"{_format_shelf_location(product, language)} "
-            "(chưa xác minh vị trí bày thực tế)"
-            if product.shelf_source == "RECOMMENDED_PLANOGRAM"
-            else f"ở kệ {product.shelf}"
-        )
-        facts.append(shelf_label)
-    if "promotion" in fields:
-        facts.append(
-            f"catalog ghi nhận ưu đãi {product.promotion}"
-            if product.promotion
-            else "catalog chưa có thông tin về khuyến mãi"
-        )
-    if "expiry_at" in fields:
-        facts.append(f"hạn dùng {expiry_date}")
-    if "ingredients" in fields:
-        facts.append(f"thành phần: {product.ingredients}")
-    if "spicy" in fields:
-        facts.append("có vị cay" if product.spicy else "không cay")
-    if fields == ("price_vnd",):
-        return (
-            f"{product.name} có giá tham khảo {price}đ nhé. "
-            "Giá tại cửa hàng có thể khác."
-        )
-    if fields == ("stock",):
-        stock = (
-            "chưa có hàng bán được"
-            if product.sellable_stock == 0
-            else f"còn {product.sellable_stock} {product.uom or 'sản phẩm'} có thể bán được"
-        )
-        return (
-            f"{product.name}: {stock} theo catalog. "
-            "Tồn thực tế tại cửa hàng có thể khác."
-        )
-    if fields == ("shelf",):
-        if product.shelf_source == "RECOMMENDED_PLANOGRAM":
-            return (
-                f"Theo sơ đồ kệ đề xuất, {product.name} ở vị trí "
-                f"{_format_shelf_location(product, language)} nhé. "
-                "Đây là vị trí gợi ý, chưa xác minh cách bày "
-                "thực tế tại cửa hàng."
-            )
-        return f"{product.name} ở kệ {product.shelf} nhé."
-    if fields == ("promotion",):
-        if product.sellable_stock == 0:
-            if language == "en":
-                return (
-                    f"The catalog shows no sellable stock for {product.name}, "
-                    "so I can't confirm that a promotion applies."
-                )
-            if language == "zh":
-                return f"目录记录中 {product.name} 没有可售库存，因此我无法确认优惠是否适用。"
-            return (
-                f"Catalog ghi nhận {product.name} hiện không có hàng bán được, "
-                "nên mình chưa thể xác nhận khuyến mãi có áp dụng."
-            )
-        promotion = (
-            f"catalog ghi nhận ưu đãi {product.promotion}"
-            if product.promotion
-            else "catalog chưa có thông tin về khuyến mãi"
-        )
-        return (
-            f"{product.name}: {promotion}. "
-            "Mình chưa xác minh ưu đãi còn hiệu lực tại cửa hàng."
-        )
-    if fields == ("expiry_at",):
-        return f"Hạn dùng của {product.name} là {expiry_date} nhé."
-    if fields == ("ingredients",):
-        ingredients = (product.ingredients or "").rstrip(".")
-        return f"Thành phần của {product.name} gồm {ingredients} nhé."
-    if fields == ("spicy",):
-        return f"{product.name} {'có vị cay' if product.spicy else 'không cay'} nhé."
-
-    response = f"{product.name}: " + ", ".join(facts) + "."
-    if has_volatile_facts:
-        response += " Giá và tồn thực tế tại cửa hàng có thể khác catalog."
-    if "promotion" in fields:
-        response += " Mình chưa xác minh ưu đãi còn hiệu lực tại cửa hàng."
-    if "data_timestamp" in fields:
-        response += f" Dữ liệu được ghi nhận ngày {data_date}."
-    return response
+    return render_verified_snapshot(
+        product,
+        language,
+        fields or observation.requested_fields,
+        include_price_caveat=include_price_caveat,
+        include_stock_caveat=include_stock_caveat,
+        include_promotion_caveat=include_promotion_caveat,
+    )
 
 
-def _format_catalog_date(value: object) -> str:
-    raw_value = str(value or "").strip()
-    if not raw_value:
-        return "chưa có dữ liệu"
-    try:
-        return datetime.fromisoformat(raw_value.replace("Z", "+00:00")).strftime("%d/%m/%Y")
-    except ValueError:
-        return raw_value
+def _render_snapshot_for_session(
+    observation: ToolObservation,
+    language: LanguageCode,
+    fields: tuple[str, ...],
+    session_id: UUID,
+) -> str:
+    if not observation.products:
+        return _localized_unverified_fact(language)
+    product = observation.products[0]
+    newly_disclosed = set(
+        _claim_product_disclosures((product,), observation.source, fields, session_id)
+    )
+    return _render_verified_snapshot(
+        observation,
+        language,
+        fields,
+        include_price_caveat=any(key.endswith("|price_vnd") for key in newly_disclosed),
+        include_stock_caveat=any(key.endswith("|stock") for key in newly_disclosed),
+        include_promotion_caveat=any(key.endswith("|promotion") for key in newly_disclosed),
+    )
+
+
+def _claim_product_disclosures(
+    products: tuple[ProductSnapshot, ...] | list[ProductSnapshot],
+    source: str,
+    fields: tuple[str, ...],
+    session_id: UUID | None,
+) -> tuple[str, ...]:
+    keys = tuple(
+        key
+        for product in products
+        for key in snapshot_disclosure_keys(product, source, fields)
+    )
+    if session_id is None:
+        return keys
+    return session_store.claim_snapshot_disclosures(session_id, keys)
 
 
 def _latest_snapshot_observation(
@@ -1191,6 +1038,8 @@ def _localized_no_sellable_match(language: LanguageCode) -> str:
 def _localized_recommendation_candidates(
     observation: ToolObservation,
     language: LanguageCode,
+    *,
+    include_price_caveat: bool = True,
 ) -> str:
     products = observation.products[:3]
     items = []
@@ -1203,15 +1052,26 @@ def _localized_recommendation_candidates(
         else:
             items.append(f"{product.name} (giá tham khảo {price}đ)")
     if language == "en":
-        return "You could try " + ", ".join(items) + ". Store prices may differ from the catalog."
+        response = "You could try " + ", ".join(items) + "."
+        if include_price_caveat:
+            response += " Store prices may differ from the catalog."
+        return response
     if language == "zh":
-        return "可以试试" + "、".join(items) + "。门店实际价格可能与目录不同。"
-    return "Mình gợi ý " + ", ".join(items) + " nhé. Giá tại cửa hàng có thể khác catalog."
+        response = "可以试试" + "、".join(items) + "。"
+        if include_price_caveat:
+            response += "门店实际价格可能与目录不同。"
+        return response
+    response = "Mình gợi ý " + ", ".join(items) + " nhé."
+    if include_price_caveat:
+        response += " Giá tại cửa hàng có thể khác catalog."
+    return response
 
 
 def _localized_whole_cart_recommendation(
     observation: ToolObservation,
     language: LanguageCode,
+    *,
+    include_price_caveat: bool = True,
 ) -> str:
     content = observation.content
 
@@ -1283,24 +1143,35 @@ def _localized_whole_cart_recommendation(
 
     rendered_options = "; ".join(render_option(option) for option in options[:2])
     if language == "en":
-        return (
+        response = (
             f"Using catalog prices, here are combos within your {budget:,} VND total budget: "
             f"{rendered_options}. I haven't added anything to your cart."
         )
+        if include_price_caveat:
+            response += " Prices are catalog references, not verified for this branch."
+        return response
     if language == "zh":
-        return (
+        response = (
             f"按目录价格，以下组合不超过总预算{budget:,}越南盾：{rendered_options}。"
             "我还没有把商品加入购物车。"
         )
-    return (
+        if include_price_caveat:
+            response += " 价格来自目录，尚未在此门店核实。"
+        return response
+    response = (
         f"Theo giá catalog, các combo dưới ngân sách tổng {format_vnd(budget)}đ là: "
         f"{rendered_options}. Mình chưa thêm món nào vào giỏ nhé."
     )
+    if include_price_caveat:
+        response += " Giá là tham khảo theo catalog, chưa xác minh tại chi nhánh."
+    return response
 
 
 def _localized_catalog_promotions(
     observation: ToolObservation,
     language: LanguageCode,
+    *,
+    include_validity_caveat: bool = True,
 ) -> str:
     items = observation.content.get("items", [])[:2]
     if not items:
@@ -1325,16 +1196,19 @@ def _localized_catalog_promotions(
         return _localized_tool_failure(language)
     rendered = "; ".join(summaries)
     if language == "en":
-        return (
-            f"The catalog records {rendered}. "
-            "It has no verified offer dates or terms, so please confirm in store."
-        )
+        response = f"The catalog records {rendered}."
+        if include_validity_caveat:
+            response += " Offer dates and terms are not verified; please confirm in store."
+        return response
     if language == "zh":
-        return f"目录记录：{rendered}。有效期限和适用条件尚未核实，请到店确认。"
-    return (
-        f"Catalog ghi nhận {rendered}. "
-        "Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé."
-    )
+        response = f"目录记录：{rendered}。"
+        if include_validity_caveat:
+            response += "优惠期限和适用条件尚未核实，请到店确认。"
+        return response
+    response = f"Catalog ghi nhận {rendered}."
+    if include_validity_caveat:
+        response += " Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé."
+    return response
 
 
 def _catalog_additions_requested(text: str) -> bool:
@@ -2058,6 +1932,7 @@ def _grounded_reply(
     agent_result: RetailAgentResult,
     language: LanguageCode,
     requested_fields: tuple[str, ...] = (),
+    session_id: UUID | None = None,
 ) -> str:
     catalog_additions = next(
         (
@@ -2083,7 +1958,20 @@ def _grounded_reply(
     )
     if promotion_list is not None:
         if promotion_list.status == "SUCCESS":
-            return _localized_catalog_promotions(promotion_list, language)
+            disclosed = _claim_product_disclosures(
+                promotion_list.products,
+                promotion_list.source,
+                ("promotion",),
+                session_id,
+            )
+            include_caveat = session_id is None or any(
+                key.endswith("|promotion") for key in disclosed
+            )
+            return _localized_catalog_promotions(
+                promotion_list,
+                language,
+                include_validity_caveat=include_caveat,
+            )
         if promotion_list.status in {"DATA_UNAVAILABLE", "TEMPORARY_FAILURE"}:
             return _localized_tool_failure(language)
 
@@ -2098,7 +1986,16 @@ def _grounded_reply(
                 if field_name in snapshot.requested_fields
             )
             if verified_fields:
-                reply = _render_verified_snapshot(snapshot, language, verified_fields)
+                reply = (
+                    _render_snapshot_for_session(
+                        snapshot,
+                        language,
+                        verified_fields,
+                        session_id,
+                    )
+                    if session_id is not None
+                    else _render_verified_snapshot(snapshot, language, verified_fields)
+                )
                 missing_fields = set(requested_fields) - set(verified_fields)
                 if missing_fields:
                     return f"{reply} {_localized_unverified_fact(language)}"
@@ -2120,11 +2017,37 @@ def _grounded_reply(
     )
     if last_recommendation and last_recommendation.status == "SUCCESS":
         if last_recommendation.content.get("recommendation_type") == "whole_cart":
-            return _localized_whole_cart_recommendation(last_recommendation, language)
+            disclosed = _claim_product_disclosures(
+                last_recommendation.products,
+                last_recommendation.source,
+                ("price_vnd",),
+                session_id,
+            )
+            include_caveat = session_id is None or any(
+                key.endswith("|price_vnd") for key in disclosed
+            )
+            return _localized_whole_cart_recommendation(
+                last_recommendation,
+                language,
+                include_price_caveat=include_caveat,
+            )
         if last_recommendation.content.get("count") == 0:
             return _localized_no_sellable_match(language)
         if last_recommendation.products:
-            return _localized_recommendation_candidates(last_recommendation, language)
+            disclosed = _claim_product_disclosures(
+                last_recommendation.products[:3],
+                last_recommendation.source,
+                ("price_vnd",),
+                session_id,
+            )
+            include_caveat = session_id is None or any(
+                key.endswith("|price_vnd") for key in disclosed
+            )
+            return _localized_recommendation_candidates(
+                last_recommendation,
+                language,
+                include_price_caveat=include_caveat,
+            )
     if last_recommendation and last_recommendation.status in {
         "TEMPORARY_FAILURE",
         "INVALID_ARGUMENT",
@@ -2975,7 +2898,12 @@ async def _handle_shopping_action(
                 pending_action=None,
                 pending_clarification=None,
             )
-            reply = _render_verified_snapshot(observation, request.language, fields)
+            reply = _render_snapshot_for_session(
+                observation,
+                request.language,
+                fields,
+                request.session_id,
+            )
             if pending_selection.startswith("SELECT_RECOMMENDATION"):
                 next_step = {
                     "vi": " Bạn muốn mình chỉ vị trí kệ hay thêm món này vào giỏ?",
@@ -3544,6 +3472,9 @@ def _comparison_reply(
     language: LanguageCode,
     metric: str | None,
     source: str,
+    *,
+    include_price_caveat: bool = True,
+    include_stock_caveat: bool = True,
 ) -> str:
     first, second = products
     source_label = _comparison_source_label(source, language)
@@ -3655,25 +3586,88 @@ def _comparison_reply(
         result += "\nI don't have verified ratings to say which one tastes better."
     elif language == "zh" and metric is None:
         result += "\n我没有经过核实的评分来判断哪种口味更好。"
+    caveats = []
     if source == "demo_product_catalog":
-        caveat = {
-            "vi": (
-                " Đây là dữ liệu demo, không xác nhận giá hay tồn kho thời gian thực "
-                "tại cửa hàng."
-            ),
-            "en": " This is demo data and does not verify live store prices or inventory.",
-            "zh": " 这是演示数据，不代表门店实时价格或库存。",
-        }[language]
+        if include_price_caveat:
+            caveats.append(
+                {
+                    "vi": "Giá theo catalog demo, chưa xác minh tại chi nhánh.",
+                    "en": "Demo catalog prices are not verified for this branch.",
+                    "zh": "演示目录价格尚未在此门店核实。",
+                }[language]
+            )
+        if include_stock_caveat:
+            caveats.append(
+                {
+                    "vi": "Tồn kho demo có thể khác thực tế tại cửa hàng.",
+                    "en": "Demo stock may differ from actual store inventory.",
+                    "zh": "演示库存可能与门店实际库存不同。",
+                }[language]
+            )
     else:
-        caveat = {
-            "vi": (
-                " Đây là snapshot catalog trực tuyến, không xác nhận giá hoặc tồn kho "
-                "của chi nhánh hiện tại."
-            ),
-            "en": " This is an online catalog snapshot, not verified branch pricing or inventory.",
-            "zh": " 这是在线目录快照，未核实当前门店的价格或库存。",
+        if include_price_caveat:
+            caveats.append(
+                {
+                    "vi": "Giá catalog trực tuyến chưa được xác minh tại chi nhánh.",
+                    "en": "Online catalog prices are not verified for this branch.",
+                    "zh": "在线目录价格尚未在此门店核实。",
+                }[language]
+            )
+        if include_stock_caveat:
+            caveats.append(
+                {
+                    "vi": "Tồn kho catalog trực tuyến có thể khác thực tế tại chi nhánh.",
+                    "en": "Online catalog stock may differ from actual branch inventory.",
+                    "zh": "在线目录库存可能与门店实际库存不同。",
+                }[language]
+            )
+    return result + (" " + " ".join(caveats) if caveats else "")
+
+
+def _comparison_reply_for_session(
+    products: list[ProductSnapshot],
+    language: LanguageCode,
+    metric: str | None,
+    source: str,
+    session_id: UUID | None,
+) -> str:
+    fields = (
+        ("price_vnd", "stock")
+        if metric is None
+        else (("price_vnd",) if metric == "price" else ("stock",))
+    )
+    disclosed = _claim_product_disclosures(products, source, fields, session_id)
+    include_price_caveat = session_id is None or any(
+        key.endswith("|price_vnd") for key in disclosed
+    )
+    include_stock_caveat = session_id is None or any(
+        key.endswith("|stock") for key in disclosed
+    )
+    return _comparison_reply(
+        products,
+        language,
+        metric,
+        source,
+        include_price_caveat=include_price_caveat,
+        include_stock_caveat=include_stock_caveat,
+    )
+
+
+def _localized_comparison_unavailable(
+    dimension: str,
+    language: LanguageCode,
+) -> str:
+    if dimension == "taste":
+        return {
+            "vi": "Mình chưa có đánh giá vị đã xác minh để kết luận món nào ngon hơn.",
+            "en": "I don't have verified taste ratings to say which product tastes better.",
+            "zh": "我没有经过核实的口味评分，无法判断哪种更好吃。",
         }[language]
-    return result + caveat
+    return {
+        "vi": "Catalog không có số liệu bán ra đã xác minh để kết luận món nào bán chạy hơn.",
+        "en": "The catalog has no verified sales data to identify a bestseller.",
+        "zh": "目录没有经过核实的销量数据，无法判断哪种更畅销。",
+    }[language]
 
 
 def _comparison_stock_followup_requested(text: str) -> bool:
@@ -3700,6 +3694,15 @@ async def _handle_product_comparison(
     queries: tuple[str, str] | None,
     metric: str | None,
 ) -> AgentRespondResponse:
+    unsupported_dimension = unsupported_comparison_dimension(request.text)
+    if unsupported_dimension is not None:
+        return _record_shopping_turn(
+            request,
+            _localized_comparison_unavailable(unsupported_dimension, request.language),
+            model="comparison-policy",
+            tools_used=[],
+        )
+
     if queries is None:
         saved_ids = record.shopping.comparison_product_ids
         if len(saved_ids) != 2:
@@ -3718,11 +3721,12 @@ async def _handle_product_comparison(
                 model="comparison-controller",
                 tools_used=["get_product_snapshot"],
             )
-        reply = _comparison_reply(
+        reply = _comparison_reply_for_session(
             products,
             request.language,
             metric,
             get_product_repository().source_name,
+            request.session_id,
         )
         return _record_shopping_turn(
             request,
@@ -3809,11 +3813,12 @@ async def _handle_product_comparison(
     )
     return _record_shopping_turn(
         request,
-        _comparison_reply(
+        _comparison_reply_for_session(
             products,
             request.language,
             metric,
             get_product_repository().source_name,
+            request.session_id,
         ),
         model="comparison-controller",
         tools_used=["search_products", "get_product_snapshot"],
@@ -3859,15 +3864,16 @@ async def agent_respond(
             record.state,
             _localized_action_denial(request.language),
         )
-    if _unverified_followup_acknowledgement_requested(request.text) and any(
-        message.get("role") == "user"
-        and _unsupported_catalog_attribute_requested(message.get("content", ""))
-        for message in record.messages
-    ):
+    if _unverified_followup_acknowledgement_requested(request.text):
+        reply = (
+            _localized_product_clarification(request.language)
+            if _last_assistant_requested_product_clarification(record, request.language)
+            else _localized_unverified_fact(request.language)
+        )
         return _local_policy_response(
             request,
             record.state,
-            _localized_unverified_fact(request.language),
+            reply,
         )
     if _false_staff_acknowledgement_requested(request.text):
         return _local_policy_response(
@@ -4048,6 +4054,15 @@ async def agent_respond(
             record.state,
             _localized_prompt_override_denial(request.language),
         )
+    if unsupported_attribute_requested and _unsupported_attribute_needs_product_clarification(
+        request.text,
+        record,
+    ):
+        return _local_policy_response(
+            request,
+            record.state,
+            _localized_product_clarification(request.language),
+        )
 
     followup_fields = _implicit_followup_fields(request.text)
     promotion_list_arguments = _promotion_list_tool_arguments(request.text)
@@ -4169,10 +4184,11 @@ async def agent_respond(
                         request.session_id,
                         [{"action": "REPLACE", "value": {}}],
                     )
-                    reply = _render_verified_snapshot(
+                    reply = _render_snapshot_for_session(
                         snapshot_observation,
                         request.language,
                         requested_fields,
+                        request.session_id,
                     )
                     if _unsupported_catalog_attribute_requested(request.text):
                         reply = f"{reply} {_localized_unverified_fact(request.language)}"
@@ -4319,7 +4335,11 @@ async def agent_respond(
             state=record.state,
         )
     if unsupported_attribute_requested and not requested_fields:
-        reply = _localized_unverified_fact(request.language)
+        reply = (
+            _localized_product_clarification(request.language)
+            if _unsupported_attribute_needs_product_clarification(request.text, record)
+            else _localized_unverified_fact(request.language)
+        )
         session_store.add_message(request.session_id, "user", request.text)
         session_store.add_message(request.session_id, "assistant", reply)
         return AgentRespondResponse(
@@ -4607,7 +4627,12 @@ async def agent_respond(
                 else _localized_ranking_clarification(request.language)
             )
         else:
-            reply = _grounded_reply(agent_result, request.language, requested_fields)
+            reply = _grounded_reply(
+                agent_result,
+                request.language,
+                requested_fields,
+                request.session_id,
+            )
         if _unsupported_customer_care_action_claim(reply):
             reply = _localized_store_policy_unavailable(
                 request.language,
@@ -4783,6 +4808,9 @@ def _contextual_product_reference_requested(text: str) -> bool:
     """Recognize short deictic references when a session already has a product."""
     normalized = _normalize_request_text(text)
     cues = (
+        "snack nay",
+        "bim bim nay",
+        "do an nay",
         "mon nay",
         "mon do",
         "mon vua goi y",
@@ -6090,6 +6118,76 @@ def _unsupported_catalog_attribute_requested(text: str) -> bool:
     )
 
 
+def _unsupported_attribute_needs_product_clarification(text: str, record) -> bool:
+    if record.last_grounded_product_id:
+        return False
+    normalized = _normalize_request_text(text)
+    token_set = set(normalized.split())
+    allergen_query = (
+        "di ung" in normalized
+        or "dau phong" in normalized
+        or bool(
+            token_set
+            & {
+                "allergen",
+                "allergens",
+                "allergic",
+                "allergy",
+                "peanut",
+                "peanuts",
+                "gluten",
+                "lactose",
+            }
+        )
+    )
+    # Clarify only allergen questions that lack an identifiable product.
+    # Other unsupported health/use questions should retain the normal abstention,
+    # even when they contain a contextual word such as "này".
+    if not allergen_query:
+        return False
+    query = _fact_product_query(text)
+    non_product_attribute_tokens = {
+        "allergy",
+        "allergic",
+        "dau",
+        "doan",
+        "gay",
+        "gluten",
+        "ingredient",
+        "ingredients",
+        "di",
+        "ung",
+        "peanut",
+        "peanuts",
+        "phan",
+        "phong",
+        "thanh",
+    }
+    query_tokens = set(_normalize_request_text(query).split()) - non_product_attribute_tokens
+    if not query_tokens:
+        return True
+    category = _explicit_recommendation_category(text)
+    category_tokens = {
+        "snack": {"snack", "snacks", "bim", "do", "an", "vat", "chips", "crisps"},
+        "drink": {
+            "drink", "drinks", "nuoc", "uong", "beverage", "beverages", "water", "soda"
+        },
+        "dairy": {"sua", "milk", "dairy", "yogurt", "yoghurt"},
+        "meal": {"mi", "noodles", "meal", "meals", "food", "thuc", "an"},
+    }.get(category or "", set())
+    if category_tokens and query_tokens.issubset(category_tokens):
+        return True
+    return not _fact_query_has_product_target(" ".join(sorted(query_tokens)))
+
+
+def _last_assistant_requested_product_clarification(record, language: str) -> bool:
+    expected = _localized_product_clarification(language)
+    for message in reversed(record.messages):
+        if message.get("role") == "assistant":
+            return message.get("content") == expected
+    return False
+
+
 def _unverified_followup_acknowledgement_requested(text: str) -> bool:
     normalized = " ".join(_normalize_request_text(text).split())
     return any(
@@ -6101,6 +6199,7 @@ def _unverified_followup_acknowledgement_requested(text: str) -> bool:
             "if you do not have data say so",
             "if you dont have data say so",
             "say clearly if you do not know",
+            "neu khong chac thi dung doan",
         )
     )
 

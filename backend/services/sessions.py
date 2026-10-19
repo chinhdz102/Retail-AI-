@@ -91,6 +91,7 @@ class SessionRecord:
     last_grounded_product_name: str | None = None
     shopping: ShoppingSessionState = field(default_factory=ShoppingSessionState)
     state_version: int = 1
+    snapshot_disclosures: list[str] = field(default_factory=list)
 
 
 ALLOWED_TRANSITIONS: dict[SessionState, set[SessionState]] = {
@@ -184,6 +185,7 @@ class InMemorySessionStore:
         record.last_grounded_product_id = None
         record.last_grounded_product_name = None
         record.shopping = ShoppingSessionState()
+        record.snapshot_disclosures.clear()
 
     def get(self, session_id: UUID) -> SessionRecord:
         with self._lock:
@@ -249,6 +251,25 @@ class InMemorySessionStore:
             record.last_grounded_product_name = product_name if product_id else None
             record.state_version += 1
 
+    def claim_snapshot_disclosures(
+        self,
+        session_id: UUID,
+        disclosure_keys: tuple[str, ...],
+    ) -> tuple[str, ...]:
+        requested = tuple(dict.fromkeys(key for key in disclosure_keys if key))
+        if not requested:
+            return ()
+        with self._lock:
+            record = self._active_record(session_id)
+            known = set(record.snapshot_disclosures)
+            newly_disclosed = tuple(key for key in requested if key not in known)
+            if newly_disclosed:
+                record.snapshot_disclosures = (record.snapshot_disclosures + list(newly_disclosed))[
+                    -128:
+                ]
+                record.state_version += 1
+            return newly_disclosed
+
 
 class RedisSessionStore:
     """Redis adapter with optimistic writes; it never falls back to local memory."""
@@ -293,6 +314,7 @@ class RedisSessionStore:
                 "messages": record.messages,
                 "last_grounded_product_id": record.last_grounded_product_id,
                 "last_grounded_product_name": record.last_grounded_product_name,
+                "snapshot_disclosures": record.snapshot_disclosures,
                 "shopping": {
                     **record.shopping.__dict__,
                     "current_intent": record.shopping.current_intent.value,
@@ -318,6 +340,7 @@ class RedisSessionStore:
             last_grounded_product_name=value.get("last_grounded_product_name"),
             shopping=ShoppingSessionState(**shopping),
             state_version=value.get("state_version", 1),
+            snapshot_disclosures=value.get("snapshot_disclosures", []),
         )
 
     def create(self, kiosk_id: str) -> SessionRecord:
@@ -504,6 +527,25 @@ class RedisSessionStore:
                 setattr(record, "last_grounded_product_name", product_name if product_id else None),
             ),
         )
+
+    def claim_snapshot_disclosures(
+        self,
+        session_id: UUID,
+        disclosure_keys: tuple[str, ...],
+    ) -> tuple[str, ...]:
+        requested = tuple(dict.fromkeys(key for key in disclosure_keys if key))
+        if not requested:
+            return ()
+        newly_disclosed: list[str] = []
+
+        def apply(record: SessionRecord) -> None:
+            known = set(record.snapshot_disclosures)
+            newly_disclosed[:] = [key for key in requested if key not in known]
+            if newly_disclosed:
+                record.snapshot_disclosures = (record.snapshot_disclosures + newly_disclosed)[-128:]
+
+        self._mutate(session_id, apply)
+        return tuple(newly_disclosed)
 
 
 def build_session_store(app_env: str, redis_url: str, ttl_seconds: int):
