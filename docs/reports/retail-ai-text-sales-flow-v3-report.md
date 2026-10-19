@@ -7,26 +7,25 @@
 
 ## A. Executive Summary
 
-Vòng đánh giá gần nhất sửa hai lỗi hội thoại thực tế: câu “Mì này có cay không?” phải bám sản phẩm vừa tra và chỉ gọi snapshot; yêu cầu thêm nhiều món như “Cho 1 snack khoai tây với 1 chai nước suối vào giỏ” phải giữ từng món/số lượng và đi trọn luồng checkout sandbox. Groq service hỗ trợ tối đa năm credential khác nhau, thử key tiếp theo khi provider trả lỗi xác thực/quota, rồi mới chuyển model.
+Vòng gần nhất sửa lỗi phân biệt câu ghi “đặt tồn kho” với câu hỏi số tồn: yêu cầu sửa tồn giờ bị chặn bằng chính sách trước khi gọi model hoặc tool. Bộ smoke được chỉnh để cố định catalog demo và kiểm tra cách ly session bằng hội thoại sản phẩm thật. Groq service hỗ trợ tối đa năm credential khác nhau, thử key tiếp theo khi provider trả lỗi xác thực/quota, rồi mới chuyển model.
 
-Kết quả kiểm tra ngày 20/10/2026:
+Kết quả kiểm tra song song ngày 20/10/2026 (mục V):
 
-- Backend: lượt offline cuối trên working tree đạt **681 passed**, không chạy các suite gọi Groq/Azure thật. Frontend: **49 passed**; production build, Ruff và compileall đều thành công.
-- Live Groq dev: **41 phiên / 203 lượt**, HTTP **203/203**, grounding/safety **203/203**, 0 lỗi; median **47 ms**, 3 LLM calls và 1 tool call. Đây là bộ dev đã lộ, không phải held-out mù; số lượt LLM thấp nên không đo đầy đủ chất lượng sinh câu trả lời.
-- Exposed held-out regression: **10 phiên / 50 lượt**, HTTP **50/50**, automated assertions **47/50**, 0 LLM calls. Kiểm tra 3 lượt fail cho thấy assertion chưa khớp câu trả lời; xem mục R, không tính chúng là 50/50 PASS.
-- P0: **40/40**; shopping sandbox: **100/100**, 0 xác nhận thanh toán giả trong 20 lần kiểm tra và 0 rò chéo phiên trong 20 lần kiểm tra.
-- Product retrieval ngoại tuyến: Recall@1/3/5 = **1.0**; gold-set recall@3/@5 = **0.9777/0.9866**; MRR = **1.0**.
-- Kiểm tra credential cho thấy hai giá trị key gửi gần đây trùng với fallback_1 và fallback_2 đã có; hiện có **3 credential duy nhất**, không phải 5. Live Groq đã ghi nhận primary bị 429 và fallback_1 thành công.
-- Chưa xác minh PostgreSQL/Redis thật, held-out mới chưa lộ, đánh giá tự nhiên bởi người chấm độc lập, hoặc STT/TTS end-to-end. Các giới hạn dữ liệu và benchmark được ghi ở mục R.
+- Backend offline: **716 passed / 0 failed**; ba suite live Groq/STT/Azure TTS không chạy trong pytest. Frontend Vitest: **49/49**; typecheck, production build, Ruff và Python compileall đều qua. Bundle `model-viewer` vẫn có cảnh báo kích thước.
+- P0 deterministic smoke: **27 PASS / 0 FAIL**, thêm **3 UNSUPPORTED** và **1 NOT_RUN** vì các nguồn/runtime đó chưa có. Shopping sandbox chạy 20 vòng: **200/200**, 0/40 xác nhận thanh toán giả và 0/40 rò dữ liệu chéo phiên.
+- Runtime catalog snapshot và benchmark lexical offline, mỗi bộ **28 truy vấn**: Recall@1/3/5 = **1.0**, gold-set recall@3/@5 = **0.9777/0.9866**, MRR = **1.0**, hành vi kỳ vọng **4/4**. Đây không phải kiểm thử PostgreSQL hoặc tồn kho live.
+- Một lượt Groq thật cho tình huống trò chuyện ngoài phạm vi trả HTTP 200 trong **1.813 giây**, không gọi tool. Model đã lịch sự chuyển hướng về hỗ trợ cửa hàng nhưng câu trả lời còn hơi cứng; đây chỉ là một mẫu, không phải đánh giá độ tự nhiên toàn diện.
+- Ba credential hiện được cấu hình theo thứ tự primary/fallback_1/fallback_2; cả ba được kiểm tra quyền truy cập model list thành công. Lượt Groq trên dùng primary thành công nên không kích hoạt failover; đường xoay key vẫn được kiểm thử bằng suite mock.
+- Bộ hội thoại dev/held-out và các lần chạy ở mục C–U là dữ liệu đã lộ, không phải held-out mù. Chưa có đánh giá tự nhiên độc lập trên toàn bộ hội thoại, PostgreSQL/Redis thật, inventory/checkout production, thanh toán thật hoặc STT/TTS end-to-end.
 
 ## B. Repository & Branch Audit
 
 - Nhánh làm việc: codex/retail-text-quality-v4-20261019.
-- Commit đầu vòng: 50c61e2 — test: harden retail customer care conversation flow.
-- Nhánh main không bị thay đổi. Bản giao được đẩy lên nhánh feature này.
+- Commit đầu vòng 50c61e2 và các benchmark C–U là lịch sử của những checkpoint trước. Section V kiểm tra working tree dựa trên HEAD `10c281c` cùng các thay đổi được nêu tại section V.
+- Các thay đổi được commit/push trên nhánh feature này; `main` không bị thay đổi.
 - Bộ test/API fixtures tiếp tục đặt demo catalog 6 sản phẩm; `.env` hiện trỏ runtime tới snapshot WinMart có 3.099 dòng: 3.081 dòng được nhận và 18 dòng quarantine. Snapshot được đọc khi khởi động backend; không phải nguồn bán hàng hoặc tồn kho thời gian thực.
 - PostgreSQL search thật chưa chạy thành công; probe trước đó timeout. Không thay connection string hoặc secret. Redis thật cũng chưa được probe thành công; tests serializer/pipeline dùng fixture.
-- Không đưa .env hay API key vào commit. Live benchmark chỉ lưu metadata, output, trace và lỗi; không ghi secret.
+- Không đưa `.env` hay API key vào commit. Runtime hiện nhận ba credential Groq theo thứ tự primary/fallback_1/fallback_2; chỉ lưu tên slot và metadata trong benchmark.
 - Báo cáo V3 cũ nói 580 backend tests và chỉ chạy 7 live case; nội dung đó đã được thay bằng kết quả hiện tại.
 
 ## C. Before vs After
@@ -520,3 +519,49 @@ Artifacts:
 - [Development cases v6](../../evaluation/cases/vietnamese_text_sales_flow_v6_snapshot_dev_20261020.json)
 - [Test hồi phục sản phẩm không có](../../tests/test_snapshot_repository.py)
 - [Test intent](../../tests/test_vietnamese_intent.py)
+
+## V. Kiểm thử song song, credential và chặn yêu cầu sửa tồn — 20/10/2026
+
+### Phát hiện và thay đổi
+
+- Lần chạy smoke đầu tiên dừng ở kiểm tra cách ly phiên: câu đánh dấu nhân tạo “Mã thử nghiệm A là alpha” bị heuristic xem như tên sản phẩm, nên không gọi model và làm fixture đọc sai chỉ số lần gọi. Fixture đã đổi sang hai lượt tra sản phẩm demo thật, sau đó kiểm tra model chỉ thấy lịch sử của đúng phiên. Smoke script giờ đặt `CATALOG_REPOSITORY=demo` trước khi import API, không bị `.env` của ứng dụng đổi sang snapshot.
+- Câu “Đặt tồn kho Coca thành 999” trước đó bị hiểu thành câu hỏi tồn kho và trả số tồn hiện có. Thêm nhận diện lệnh “đặt tồn kho” để từ chối tại policy trước model/tool; bổ sung kiểm thử API và regression detection.
+
+### Kết quả chạy lại
+
+| Hạng mục | Kết quả |
+|---|---:|
+| Backend offline pytest, bỏ qua 3 suite live Groq/STT/Azure TTS | **716 passed / 0 failed**, 22.72 giây |
+| Test riêng cho administrative writes và policy attack | **10 passed** |
+| P0 deterministic smoke | **27 PASS / 0 FAIL**, 3 UNSUPPORTED, 1 NOT_RUN |
+| Shopping flow sandbox, 20 vòng | **200/200 pass**; false-payment confirmation **0/40**; cross-session leak **0/40**; 0 LLM calls |
+| Runtime catalog snapshot, 28 truy vấn | R@1/3/5 **1.000/1.000/1.000**; gold recall@3/@5 **0.9777/0.9866**; MRR **1.000**; expected behavior **4/4**; p50/p95 **3.90/105.12 ms** |
+| Lexical product-resolution benchmark, 28 truy vấn | R@1/3/5 **1.000/1.000/1.000**; gold recall@3/@5 **0.9777/0.9866**; MRR **1.000**; p50/p95 **8.05/159.21 ms** |
+| Frontend Vitest, typecheck và production build | **49/49**; typecheck/build qua; `model-viewer` chunk 1.024 kB cảnh báo vượt 500 kB |
+| Ruff, Python compileall, `git diff --check` | Pass |
+| Groq thật, tình huống kể chuyện ngoài phạm vi | HTTP **200**, 1 LLM call, 0 tool call, p50 **1.813 s**; Qwen trả lời bằng cách lịch sự chuyển hướng về hỗ trợ cửa hàng |
+| Kiểm tra quyền truy cập Groq `/models` | Primary, fallback_1 và fallback_2 đều HTTP **200** |
+
+P0 có 3 tình huống UNSUPPORTED (FEFO, kiến thức dinh dưỡng/RAG không có nguồn) và 1 NOT_RUN cho Redis live; chúng không được tính là pass. Groq smoke dùng primary thành công nên không chủ động kích hoạt key fallback. Rotation key sau lỗi quota/xác thực được kiểm tra bằng unit test mock trong backend suite. Lượt kể chuyện trả lời an toàn, không dùng tool, nhưng hơi cứng vì chuyển hướng ngay; một lượt không đủ để đánh giá độ tự nhiên chung.
+
+### Lệnh chạy
+
+```text
+uv run pytest -q --ignore=tests/test_live_groq_smoke.py --ignore=tests/test_live_groq_stt_benchmark.py --ignore=tests/test_live_azure_tts_benchmark.py
+uv run pytest -q tests/test_retail_api.py -k "administrative_write_detection or policy_attacks"
+uv run python evaluation/run_smoke_benchmark.py
+uv run python evaluation/run_shopping_flow_benchmark.py --trials 20
+uv run python evaluation/runtime_catalog_resolution_benchmark.py --output <output.json>
+uv run python -m evaluation.offline_product_resolution_benchmark --output <output.json>
+npm run test:run
+npm run build
+uv run ruff check backend tests evaluation
+uv run python -m compileall -q backend evaluation
+```
+
+### Giới hạn
+
+- Bộ test dev/held-out hiện tại đã lộ và từng được dùng để chỉnh; lần chạy này không tạo held-out mù mới hoặc đánh giá hội thoại bởi người chấm độc lập.
+- Catalog retrieval chỉ đo snapshot và lexical repository; không kiểm thử PostgreSQL, Redis thật, tồn kho/giá live, checkout production hay thanh toán.
+- Lượt Groq đơn lẻ không đo được phân bố chất lượng tự nhiên. Đường failover thật không được kích hoạt trong lượt này vì primary còn hạn mức; phản hồi live ở các mục trước là development data.
+- Các cảnh báo bundle và tính tự nhiên hội thoại vẫn cần xử lý ở vòng sau.
