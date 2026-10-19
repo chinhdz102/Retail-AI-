@@ -27,6 +27,9 @@ _COMPARISON_FOLLOWUP = re.compile(
     r"which is (?:cheaper|better|more available)|what is (?:cheaper|better))\b"
 )
 _POLITE_TAIL = re.compile(r"\s+(?:giup minh|giup toi|please|nhe|nha|thanks|thank you)$")
+_DIFFERENCE_TAIL = re.compile(
+    r"\s+(?:khac gi(?: nhau)?|khac nhau(?: nhu the nao)?)\b.*$"
+)
 
 
 def is_comparison_request(text: str) -> bool:
@@ -35,6 +38,10 @@ def is_comparison_request(text: str) -> bool:
         re.search(r"\bso sanh\b|\bcompare\b|\bversus\b|\bvs\b", normalized)
         or _FOLLOWUP_TAIL.search(normalized)
         or _COMPARISON_FOLLOWUP.search(normalized)
+        or (
+            _CONNECTOR.search(normalized)
+            and re.search(r"\bkhac gi(?: nhau)?\b|\bkhac nhau\b", normalized)
+        )
     )
 
 
@@ -49,18 +56,37 @@ def parse_comparison_queries(text: str) -> tuple[str, str] | None:
         return None
     # Without an explicit compare/versus cue, only parse an utterance that asks
     # which of two named products matches a comparative criterion.
-    if not prefix and connector.group(1) not in {"vs", "versus"} and not has_followup_tail:
+    difference_question = bool(
+        re.search(r"\bkhac gi(?: nhau)?\b|\bkhac nhau\b", normalized)
+    )
+    if (
+        not prefix
+        and connector.group(1) not in {"vs", "versus"}
+        and not has_followup_tail
+        and not difference_question
+    ):
         return None
 
     left = body[: connector.start()].strip()
     right = body[connector.end() :].strip()
     right = _FOLLOWUP_TAIL.sub("", right).strip()
+    right = _DIFFERENCE_TAIL.sub("", right).strip()
     right = _POLITE_TAIL.sub("", right).strip()
     if left.startswith("between "):
         left = left.removeprefix("between ").strip()
     left = _POLITE_TAIL.sub("", left).strip()
     if not left or not right:
         return None
+    if re.match(r"^(?:chai|lon|hop|goi|tui)\b", right):
+        shared_product = re.sub(
+            r"\b\d+(?:[.,]\d+)?(?:\s*(?:ml|l|lit|litro|kg|g))?\b",
+            " ",
+            left,
+        )
+        shared_product = re.sub(r"\b(?:chai|lon|hop|goi|tui)\b", " ", shared_product)
+        shared_product = " ".join(shared_product.split())
+        if shared_product:
+            right = f"{shared_product} {right}"
     return left, right
 
 

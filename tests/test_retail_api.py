@@ -18,6 +18,7 @@ from backend.api.main import (
     _fact_product_query,
     _generic_nearby_places_requested,
     _implicit_followup_fields,
+    _interaction_analytics_requested,
     _localized_catalog_additions,
     _localized_catalog_promotions,
     _new_stock_arrival_requested,
@@ -33,6 +34,7 @@ from backend.api.main import (
     _requested_snapshot_fields,
     _retail_chain_operator_question,
     _sensitive_internal_information_requested,
+    _support_ticket_followup_requested,
     _system_prompt,
     _text_mentions_product,
     _unsupported_catalog_attribute_requested,
@@ -104,6 +106,10 @@ def test_pack_size_in_catalog_name_is_not_an_unverified_stock_claim() -> None:
         ("Coca Zero xem giá cho mình.", "coca zero"),
         ("Trong lúc chờ thì Coca Zero giá bao nhiêu?", "coca zero"),
         ("Hỏi bình thường nhé, Coca Zero giá bao nhiêu?", "coca zero"),
+        ("Coca Zero chai 1,5 lít có khuyến mãi gì?", "coca zero chai 1 5lit"),
+        ("Thôi, cho hỏi giá Coca Zero 600ml bình thường.", "coca zero 600ml"),
+        ("Tồn kho ở cửa hàng đã kiểm tra trực tiếp chưa?", ""),
+        ("Có bim bim vị phô mai không?", "bim bim vi pho mai"),
         ("In giá trong catalog cho mình.", ""),
     ],
 )
@@ -991,6 +997,12 @@ def test_system_prompt_does_not_end_a_conversation_before_the_user_says_goodbye(
     ("text", "expected"),
     [
         ("Giá bao nhiêu vậy?", ("price_vnd",)),
+        ("Vậy giá ở cửa hàng hôm nay đã được xác nhận chưa?", ("price_vnd",)),
+        ("Ưu đãi đó còn hiệu lực hôm nay chứ?", ("promotion",)),
+        (
+            "Tồn kho ở cửa hàng đã kiểm tra trực tiếp chưa?",
+            ("stock", "data_timestamp"),
+        ),
         ("Còn lấy ở kệ nào?", ("shelf",)),
         ("Nó còn hàng không?", ("stock",)),
         ("Dữ liệu ghi còn bán được không?", ("stock",)),
@@ -1685,6 +1697,30 @@ def test_administrative_action_intent_detection(text: str, expected: bool) -> No
 )
 def test_contextual_product_reference_is_explicit_and_bounded(text: str, expected: bool) -> None:
     assert _contextual_product_reference_requested(text) is expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Phiếu đã có nhân viên gọi lại chưa?",
+        "Mã phiếu hỗ trợ của mình là gì?",
+        "Has a real staff member been contacted?",
+    ],
+)
+def test_support_ticket_followup_detects_status_and_callback_questions(text: str) -> None:
+    assert _support_ticket_followup_requested(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Có thống kê món nào được hỏi nhiều không?",
+        "Mặt hàng nào khách hay hỏi nhất?",
+        "Which products are most frequently asked about?",
+    ],
+)
+def test_interaction_analytics_questions_abstain_without_store_metrics(text: str) -> None:
+    assert _interaction_analytics_requested(text)
 
 
 @pytest.mark.parametrize(

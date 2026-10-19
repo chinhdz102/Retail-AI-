@@ -257,6 +257,193 @@ def _latest_snapshot_observation(
     )
 
 
+def _query_has_named_product(query: str) -> bool:
+    normalized = _normalize_request_text(query)
+    normalized = re.sub(
+        r"\b\d+(?:\s+\d+)?\s*(?:ml|l|lit|kg|g|gram)\b",
+        " ",
+        normalized,
+    )
+    generic_words = {
+        "chai", "lon", "hop", "goi", "tui", "thung", "loc", "ly", "cai", "loai",
+        "quy", "cach", "size", "dung", "tich", "con", "co", "chac", "chan", "chu",
+        "thoi", "thi", "sao", "ay", "kia", "uu", "dai", "ap", "dung", "chuong",
+        "trinh", "giam", "gia", "khuyen", "mai", "the", "la", "nao", "hom", "nay",
+        "hien", "tai", "bao", "nhieu", "product", "variant", "that", "one", "this",
+        "today", "current", "please", "with", "and", "or", "about", "what", "how",
+        "much", "price", "cost", "available", "do", "not", "still", "valid", "offer",
+        "offers", "no", "hang", "ban", "duoc", "hieu", "luc", "duoc", "vay",
+    }
+    tokens = re.findall(r"[a-z0-9]+", normalized)
+    return any(
+        len(token) >= 3 and not token.isdigit() and token not in generic_words
+        for token in tokens
+    )
+
+
+def _filter_product_candidates_to_session_context(
+    observation: ToolObservation,
+    record,
+    text: str,
+) -> ToolObservation:
+    if observation.status != "SUCCESS" or not observation.products:
+        return observation
+    normalized = _normalize_request_text(text)
+    has_variant_refinement = bool(
+        re.search(r"\b\d+(?:[.,]\d+)?\s*(?:ml|l|lit|kg|g|gram)\b", normalized)
+    ) and not _query_has_named_product(_fact_product_query(text))
+    if not has_variant_refinement:
+        return observation
+
+    allowed_ids: set[str] = set()
+    if record.shopping.current_intent == IntentType.COMPARISON:
+        allowed_ids = set(record.shopping.comparison_product_ids)
+    elif (
+        record.shopping.current_intent
+        in {IntentType.PRODUCT_LOOKUP, IntentType.RECOMMENDATION}
+        and record.shopping.pending_action == "SELECT_RECOMMENDATION"
+    ):
+        allowed_ids = set(record.shopping.selected_product_ids)
+    elif (
+        record.shopping.current_intent == IntentType.PRODUCT_LOOKUP
+        and record.last_grounded_product_id
+    ):
+        context_product = get_product_repository().get_product_snapshot(
+            record.last_grounded_product_id
+        )
+        if context_product is not None:
+            family_stop_words = {
+                "nuoc", "giai", "khat", "ngot", "giat", "sua", "chai", "lon", "hop",
+                "goi", "tui", "thung", "loc", "pet", "ml", "lit", "kg", "gram",
+                "size", "loai", "quy", "cach", "cua", "truoc", "sau", "ban", "dep",
+                "ben", "mot", "lan", "xa",
+            }
+            brand_tokens = set(
+                _normalize_request_text(context_product.brand or "").split()
+            )
+            family_tokens = {
+                token
+                for token in _normalize_request_text(context_product.name).split()
+                if len(token) >= 3
+                and token not in brand_tokens
+                and token not in family_stop_words
+                and not any(character.isdigit() for character in token)
+            }
+            family_matches = tuple(
+                product
+                for product in observation.products
+                if family_tokens.intersection(
+                    _normalize_request_text(f"{product.brand or ''} {product.name}").split()
+                )
+            )
+            if family_matches:
+                return replace(
+                    observation,
+                    products=family_matches,
+                    content={**observation.content, "count": len(family_matches)},
+                )
+    if not allowed_ids:
+        return observation
+
+    filtered = tuple(item for item in observation.products if item.product_id in allowed_ids)
+    if not filtered:
+        return observation
+    return replace(
+        observation,
+        products=filtered,
+        content={**observation.content, "count": len(filtered)},
+    )
+
+
+def _contextualize_variant_product_query(query: str, text: str, record) -> str:
+    # A named product starts a new lookup; only inherit context for abbreviated
+    # follow-ups such as "chai 600ml" or "loại 1,5 lít".
+    if not query or _query_has_named_product(query):
+        return query
+    normalized = _normalize_request_text(text)
+    has_size = bool(
+        re.search(r"\b\d+(?:\s+\d+)?\s*(?:ml|l|lit|kg|g|gram)\b", normalized)
+    )
+    if not has_size:
+        return query
+
+    if record.shopping.current_intent == IntentType.COMPARISON:
+        context_ids = record.shopping.comparison_product_ids
+    elif record.last_grounded_product_id:
+        context_ids = [record.last_grounded_product_id]
+    elif record.shopping.pending_action == "SELECT_RECOMMENDATION":
+        context_ids = record.shopping.selected_product_ids
+    else:
+        return query
+
+    products = [
+        product
+        for product_id in context_ids
+        if (product := get_product_repository().get_product_snapshot(product_id)) is not None
+    ]
+    if not products:
+        return query
+
+    stop_words = {
+        "nuoc", "giai", "khat", "thung", "lon", "chai", "hop", "goi", "tui", "ly",
+        "loai", "quy", "cach", "size", "pet", "mini", "bao", "bim", "ta", "quan",
+        "giat", "may", "cua", "truoc", "sau", "voi", "cho", "minh", "ban", "la",
+        "mot", "kieu", "dung", "the", "nao", "day", "nay", "gia", "bao", "nhieu",
+    }
+    product_token_sets = []
+    for product in products:
+        tokens = set(
+            _normalize_request_text(f"{product.brand or ''} {product.name}").split()
+        )
+        product_token_sets.append(
+            {
+                token
+                for token in tokens
+                if len(token) >= 3
+                and token not in stop_words
+                and not any(character.isdigit() for character in token)
+            }
+        )
+    context_tokens = (
+        set.intersection(*product_token_sets)
+        if len(products) > 1
+        else product_token_sets[0]
+    )
+    if not context_tokens:
+        return query
+    if set(_normalize_request_text(query).split()).intersection(context_tokens):
+        return query
+    return " ".join((*sorted(context_tokens), query)).strip()
+
+
+def _contextual_variant_price_followup_requested(text: str, record) -> bool:
+    normalized = _normalize_request_text(text)
+    if not re.search(r"\b\d+(?:[.,]\d+)?\s*(?:ml|l|lit|kg|g|gram)\b", normalized):
+        return False
+    if _query_has_named_product(_fact_product_query(text)):
+        return False
+    if record.shopping.current_intent not in {
+        IntentType.COMPARISON,
+        IntentType.PRODUCT_LOOKUP,
+    }:
+        return False
+    if not (
+        record.last_grounded_product_id
+        or record.shopping.comparison_product_ids
+        or record.shopping.selected_product_ids
+    ):
+        return False
+    previous_user_message = next(
+        (
+            item.get("content", "")
+            for item in reversed(record.messages)
+            if item.get("role") == "user"
+        ),
+        "",
+    )
+    return "price_vnd" in _requested_snapshot_fields(previous_user_message)
+
+
 def _latest_single_grounded_product_id(
     observations: tuple[ToolObservation, ...],
 ) -> str | None:
@@ -396,6 +583,12 @@ def _support_ticket_followup_requested(text: str) -> bool:
             "did you contact staff",
             "what is the ticket number",
             "what is my ticket id",
+        )
+    ) or bool(
+        re.search(
+            r"\b(?:phieu|yeu cau ho tro|ticket)\b.{0,80}"
+            r"\b(?:nhan vien|staff|goi lai|lien he|trang thai|status|da nhan)\b",
+            normalized,
         )
     )
 
@@ -927,6 +1120,12 @@ def _interaction_analytics_requested(text: str) -> bool:
         "thong ke tuong tac",
         "cau hoi thuong gap",
         "san pham duoc hoi nhieu",
+        "san pham nao duoc hoi nhieu",
+        "mat hang nao duoc hoi nhieu",
+        "mat hang nao khach hay hoi",
+        "mat hang khach hay hoi nhat",
+        "mon nao duoc hoi nhieu",
+        "loai nao duoc hoi nhieu",
         "hoi nhieu nhat",
         "nhu cau thuong gap",
     )
@@ -1031,6 +1230,23 @@ def _unsupported_catalog_fact_claim(
         for field, patterns in field_patterns.items()
         if any(re.search(pattern, text) for pattern in patterns)
     }
+    normalized_text = _normalize_request_text(reply)
+    unavailable_snapshot_fields = {
+        field
+        for observation in observations
+        if observation.status == "DATA_UNAVAILABLE"
+        and observation.tool_name == "get_product_snapshot"
+        for field in observation.content.get("unavailable_fields", [])
+    }
+    if "spicy" in unavailable_snapshot_fields and re.search(
+        r"\b(?:chua co du lieu|khong co du lieu|couldn't verify|could not verify|"
+        r"dont have verified|do not have verified|not listed)\b.{0,40}"
+        r"\b(?:do cay|spice level|spicy)\b",
+        normalized_text,
+    ):
+        # Explicitly reporting an unavailable catalog attribute is safe; it is
+        # different from asserting a product's spice level.
+        claimed_fields.discard("spicy")
     if not claimed_fields:
         return False
     verified_fields = {
@@ -1579,8 +1795,8 @@ def _localized_store_policy_unavailable(
         },
         "vi": {
             "policy": (
-                "Mình chưa có thông tin đã xác minh về chính sách này. "
-                "Bạn hỏi nhân viên tại quầy để được xác nhận nhé."
+                "Mình chưa có dữ liệu chính sách đã xác minh. "
+                "Bạn hỏi nhân viên tại quầy để xác nhận chính sách này nhé."
             ),
             "report": (
                 "Mình chưa thể ghi nhận phản ánh hay liên hệ nhân viên thay bạn. "
@@ -1983,6 +2199,79 @@ def _localized_candidates(observation: ToolObservation, language: LanguageCode) 
     )
 
 
+def _pending_candidate_code(text: str) -> str | None:
+    match = re.search(r"\b[a-z]?\d{2,3}\b", _normalize_request_text(text))
+    return match.group(0) if match else None
+
+
+def _localized_product_dosage_unavailable(
+    product_name: str,
+    language: LanguageCode,
+) -> str:
+    return {
+        "en": (
+            f"The catalog has no verified dosage for {product_name}. "
+            "Please follow the instructions on the package."
+        ),
+        "zh": f"目录中没有经过核实的{product_name}用量信息，请按照包装说明使用。",
+        "vi": (
+            f"{product_name}: catalog chưa có dữ liệu đã xác minh về liều lượng. "
+            "Bạn xem hướng dẫn trên bao bì nhé."
+        ),
+    }[language]
+
+
+def _promotion_validity_followup_requested(text: str) -> bool:
+    normalized = _normalize_request_text(text)
+    return any(
+        phrase in normalized
+        for phrase in (
+            "con hieu luc",
+            "con ap dung",
+            "ap dung hom nay",
+            "hieu luc hom nay",
+            "still valid",
+            "valid today",
+            "still applies",
+            "still active",
+        )
+    )
+
+
+def _localized_promotion_validity_unconfirmed(language: LanguageCode) -> str:
+    return {
+        "en": (
+            "I can't confirm that offer is still valid today; the catalog does not list "
+            "its validity dates or conditions. Please check with the store."
+        ),
+        "zh": "我无法确认该优惠今天是否仍有效；目录未记录有效期和适用条件，请到店确认。",
+        "vi": (
+            "Mình chưa xác minh ưu đãi này có còn được áp dụng hay không; catalog không ghi "
+            "thời hạn và điều kiện áp dụng. Bạn kiểm tra tại cửa hàng giúp mình nhé."
+        ),
+    }[language]
+
+
+def _price_confirmation_requested(text: str) -> bool:
+    normalized = _normalize_request_text(text)
+    has_price = bool(re.search(r"\b(?:gia|price|cost)\b", normalized))
+    asks_confirmation = any(
+        phrase in normalized
+        for phrase in (
+            "xac nhan",
+            "xac minh",
+            "confirmed",
+            "verify",
+            "verified",
+        )
+    )
+    asks_current = any(
+        phrase in normalized
+        for phrase in ("hom nay", "hien tai", "today", "current", "currently")
+    )
+    return has_price and asks_confirmation and asks_current
+
+
 def _localized_product_variant_clarification(
     observation: ToolObservation,
     language: LanguageCode,
@@ -2116,6 +2405,35 @@ def _grounded_reply(
                     return f"{reply} {_localized_unverified_fact(language)}"
                 return reply
         if snapshot.status == "DATA_UNAVAILABLE":
+            if snapshot.products:
+                unavailable_fields = snapshot.content.get("unavailable_fields", [])
+                field_names = {
+                    "en": {
+                        "spicy": "spice level",
+                        "ingredients": "ingredients",
+                        "expiry_at": "expiry date",
+                    },
+                    "zh": {"spicy": "辣度", "ingredients": "配料", "expiry_at": "有效期"},
+                    "vi": {
+                        "spicy": "độ cay",
+                        "ingredients": "thành phần",
+                        "expiry_at": "hạn sử dụng",
+                    },
+                }[language]
+                field = next(
+                    (field_names[item] for item in unavailable_fields if item in field_names),
+                    None,
+                )
+                if field:
+                    name = snapshot.products[0].name
+                    if language == "en":
+                        return f"I couldn't verify {field} information for {name} in this catalog."
+                    if language == "zh":
+                        return f"我没有经过核实的{name}{field}信息。"
+                    return (
+                        f"{name}: catalog chưa có dữ liệu về {field} nên mình chưa thể "
+                        "xác nhận nhé."
+                    )
             return _localized_unverified_fact(language)
         if snapshot.status in {"TEMPORARY_FAILURE", "INVALID_ARGUMENT"}:
             return _localized_tool_failure(language)
@@ -4193,10 +4511,84 @@ async def agent_respond(
                 ),
             }[request.language]
             return _record_shopping_turn(request, reply, model="catalog")
+    pending_selection = record.shopping.pending_action or ""
+    candidate_code = _pending_candidate_code(request.text)
+    if (
+        candidate_code
+        and pending_selection.startswith(("LOOKUP_PRODUCT:", "SELECT_RECOMMENDATION"))
+        and record.shopping.selected_product_ids
+    ):
+        matching_products = [
+            product
+            for product_id in record.shopping.selected_product_ids
+            if (product := get_product_repository().get_product_snapshot(product_id)) is not None
+            and re.search(
+                rf"(?<!\w){re.escape(candidate_code)}(?!\w)",
+                _normalize_request_text(product.name),
+            )
+        ]
+        if len(matching_products) == 1:
+            selected_product = matching_products[0]
+            fields = (
+                tuple(
+                    field_name
+                    for field_name in pending_selection.removeprefix("LOOKUP_PRODUCT:").split(",")
+                    if field_name
+                    in {
+                        "price_vnd",
+                        "stock",
+                        "shelf",
+                        "promotion",
+                        "expiry_at",
+                        "ingredients",
+                        "spicy",
+                        "data_timestamp",
+                    }
+                )
+                if pending_selection.startswith("LOOKUP_PRODUCT:")
+                else ("price_vnd",)
+            )
+            if not fields:
+                fields = ("price_vnd",)
+            observation = await lookup_followup_snapshot(
+                selected_product.product_id,
+                fields,
+            )
+            if observation.status == "SUCCESS" and observation.products:
+                product = observation.products[0]
+                session_store.set_last_grounded_product(
+                    request.session_id,
+                    product.product_id,
+                    product.name,
+                )
+                session_store.update_shopping(
+                    request.session_id,
+                    current_intent=(
+                        IntentType.RECOMMENDATION
+                        if pending_selection.startswith("SELECT_RECOMMENDATION")
+                        else IntentType.PRODUCT_LOOKUP
+                    ),
+                    active_product_id=product.product_id,
+                    selected_product_ids=[product.product_id],
+                    pending_action=None,
+                    pending_clarification=None,
+                )
+                reply = _render_snapshot_for_session(
+                    observation,
+                    request.language,
+                    fields,
+                    request.session_id,
+                )
+                return _record_shopping_turn(
+                    request,
+                    reply,
+                    model="catalog",
+                    tools_used=["get_product_snapshot"],
+                    products=[product],
+                )
     if (
         record.shopping.current_intent == IntentType.RECOMMENDATION
-        and "xem truoc" in _normalize_request_text(request.text)
-        and "chua them" in _normalize_request_text(request.text)
+        and _recommendation_preview_requested(request.text)
     ):
         reply = {
             "vi": (
@@ -4217,6 +4609,30 @@ async def agent_respond(
     shopping_response = await _handle_shopping_action(request, record)
     if shopping_response is not None:
         return shopping_response
+    normalized_request = _normalize_request_text(request.text)
+    if (
+        record.shopping.current_intent == IntentType.RECOMMENDATION
+        and not getattr(get_product_repository(), "supports_current_stock", False)
+        and re.search(r"\b(?:them|cho vao gio|add to cart)\b", normalized_request)
+        and re.search(r"\b(?:phuong an|combo|lua chon|re nhat|cheapest)\b", normalized_request)
+    ):
+        reply = {
+            "vi": (
+                "Catalog chỉ có tồn kho snapshot cũ nên mình chưa xác minh được hàng còn; "
+                "mình chưa thêm món nào vào giỏ nhé."
+            ),
+            "en": (
+                "The catalog only has dated stock records, so I can't verify availability. "
+                "I haven't added anything to your cart."
+            ),
+            "zh": "目录只有较早的库存快照，我无法确认商品是否有货，因此没有加入购物车。",
+        }[request.language]
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="shopping-controller",
+            tools_used=["shopping_policy"],
+        )
     if _simple_customer_acknowledgement_requested(request.text):
         reply = {
             "vi": "Không có gì, bạn cứ hỏi mình khi cần nhé.",
@@ -4412,6 +4828,12 @@ async def agent_respond(
         requested_fields = tuple(
             field_name for field_name in requested_fields if field_name != "price_vnd"
         )
+    if (
+        not requested_fields
+        and whole_cart_arguments is None
+        and _contextual_variant_price_followup_requested(request.text, record)
+    ):
+        requested_fields = ("price_vnd",)
     prompt_override = _prompt_override_requested(request.text)
     unsupported_attribute_requested = _unsupported_catalog_attribute_requested(
         request.text
@@ -4457,6 +4879,47 @@ async def agent_respond(
 
     followup_fields = _implicit_followup_fields(request.text)
     promotion_list_arguments = _promotion_list_tool_arguments(request.text)
+    promotion_product_followup = False
+    promotion_validity_followup = _promotion_validity_followup_requested(request.text)
+    has_named_promotion_target = _query_has_named_product(_fact_product_query(request.text))
+    if promotion_validity_followup and not has_named_promotion_target:
+        if record.last_grounded_product_id:
+            promotion_observation = await lookup_followup_snapshot(
+                record.last_grounded_product_id,
+                ("promotion",),
+            )
+            if promotion_observation.status == "SUCCESS" and promotion_observation.products:
+                reply = _render_verified_snapshot(
+                    promotion_observation,
+                    request.language,
+                    ("promotion",),
+                    include_promotion_caveat=True,
+                )
+                return _deterministic_tool_response(
+                    request,
+                    record.state,
+                    promotion_observation,
+                    reply,
+                    model="catalog",
+                    tools_used=["get_product_snapshot"],
+                )
+            return _local_policy_response(
+                request,
+                record.state,
+                _localized_promotion_validity_unconfirmed(request.language),
+            )
+        return _local_policy_response(
+            request,
+            record.state,
+            _localized_promotion_validity_unconfirmed(request.language),
+        )
+    elif (
+        promotion_list_arguments is not None
+        and record.last_grounded_product_id
+        and not has_named_promotion_target
+    ):
+        promotion_product_followup = True
+        promotion_list_arguments = None
     catalog_additions_arguments = _catalog_additions_tool_arguments(request.text)
     if promotion_list_arguments is not None:
         campaign_observation = await lookup_branch_information(
@@ -4475,7 +4938,11 @@ async def agent_respond(
                 campaign_observation,
                 reply,
             )
-    explicit_fact_query = _fact_product_query(request.text)
+    explicit_fact_query = _contextualize_variant_product_query(
+        _fact_product_query(request.text),
+        request.text,
+        record,
+    )
     freshness_followup = bool(
         "data_timestamp" in requested_fields
         and record.last_grounded_product_id
@@ -4490,6 +4957,7 @@ async def agent_respond(
         and (
             _text_mentions_product(request.text, record.last_grounded_product_name)
             or freshness_followup
+            or promotion_product_followup
             or (
                 _contextual_product_reference_requested(request.text)
                 and not _fact_query_has_product_target(explicit_fact_query)
@@ -4541,6 +5009,11 @@ async def agent_respond(
         and not _administrative_action_requested(request.text)
     ):
         candidate_observation = await lookup_product_candidates(explicit_fact_query)
+        candidate_observation = _filter_product_candidates_to_session_context(
+            candidate_observation,
+            record,
+            request.text,
+        )
         if candidate_observation.status == "SUCCESS" and candidate_observation.products:
             candidates = tuple(candidate_observation.products)
             reported_count = candidate_observation.content.get("count")
@@ -4600,11 +5073,41 @@ async def agent_respond(
                         model="catalog",
                         tools_used=["search_products", "get_product_snapshot"],
                     )
-                reply = (
-                    _localized_unverified_fact(request.language)
-                    if snapshot_observation.status == "DATA_UNAVAILABLE"
-                    else _localized_tool_failure(request.language)
-                )
+                if snapshot_observation.status == "DATA_UNAVAILABLE":
+                    product = (
+                        snapshot_observation.products[0]
+                        if snapshot_observation.products
+                        else get_product_repository().get_product_snapshot(
+                            matched_product.product_id
+                        )
+                    )
+                    if product is not None:
+                        session_store.set_last_grounded_product(
+                            request.session_id,
+                            product.product_id,
+                            product.name,
+                        )
+                        session_store.update_shopping(
+                            request.session_id,
+                            current_intent=IntentType.PRODUCT_LOOKUP,
+                            active_product_id=product.product_id,
+                            active_category=None,
+                            selected_product_ids=[product.product_id],
+                            pending_action=None,
+                            pending_clarification=None,
+                        )
+                    reply = (
+                        _render_snapshot_for_session(
+                            replace(snapshot_observation, products=(product,)),
+                            request.language,
+                            requested_fields,
+                            request.session_id,
+                        )
+                        if product is not None and requested_fields == ("spicy",)
+                        else _localized_unverified_fact(request.language)
+                    )
+                else:
+                    reply = _localized_tool_failure(request.language)
                 return _deterministic_tool_response(
                     request,
                     record.state,
@@ -4709,6 +5212,79 @@ async def agent_respond(
         )
 
     if (
+        not requested_fields
+        and explicit_fact_query
+        and _fact_query_has_product_target(explicit_fact_query)
+        and whole_cart_arguments is None
+        and not is_recommendation_request(request.text)
+        and not recommendation_lookup_request
+        and not prompt_override
+        and not unsupported_attribute_requested
+        and not _administrative_action_requested(request.text)
+    ):
+        candidate_observation = await lookup_product_candidates(explicit_fact_query)
+        if candidate_observation.status == "SUCCESS" and candidate_observation.products:
+            candidates = tuple(candidate_observation.products)
+            exact_id = _unique_product_match_id(explicit_fact_query, candidates)
+            if (
+                exact_id is None
+                and len(candidates) == 1
+                and candidate_observation.content.get("count", 1) == 1
+            ):
+                exact_id = candidates[0].product_id
+            selected = (
+                tuple(product for product in candidates if product.product_id == exact_id)
+                if exact_id
+                else candidates
+            )
+            if exact_id:
+                product = selected[0]
+                session_store.set_last_grounded_product(
+                    request.session_id,
+                    product.product_id,
+                    product.name,
+                )
+            else:
+                session_store.set_last_grounded_product(request.session_id, None)
+            is_candidate_list = len(selected) > 1
+            session_store.update_shopping(
+                request.session_id,
+                current_intent=IntentType.PRODUCT_LOOKUP,
+                active_product_id=selected[0].product_id if len(selected) == 1 else None,
+                selected_product_ids=[product.product_id for product in selected],
+                pending_action="SELECT_RECOMMENDATION" if is_candidate_list else None,
+                pending_clarification=(
+                    "Select a product by name or number before reading its details."
+                    if is_candidate_list
+                    else None
+                ),
+            )
+            reply = (
+                _localized_candidates(
+                    replace(
+                        candidate_observation,
+                        products=selected,
+                        content={**candidate_observation.content, "count": len(selected)},
+                    ),
+                    request.language,
+                )
+                if is_candidate_list
+                else _localized_product_interest(selected, request.language)
+            )
+            return _deterministic_tool_response(
+                request,
+                record.state,
+                replace(
+                    candidate_observation,
+                    products=selected,
+                    content={**candidate_observation.content, "count": len(selected)},
+                ),
+                reply,
+                model="catalog",
+                tools_used=["search_products"],
+            )
+
+    if (
         requested_fields
         and not record.last_grounded_product_id
         and _contextual_product_reference_requested(request.text)
@@ -4790,6 +5366,31 @@ async def agent_respond(
         normalized_unsupported = _normalize_request_text(request.text)
         if re.search(r"\b(?:caffeine|cafein)\b", normalized_unsupported):
             return await _handle_unverified_caffeine_question(request, record)
+        if (
+            _usage_dosage_question_requested(request.text)
+            and record.last_grounded_product_id
+            and record.last_grounded_product_name
+        ):
+            reply = _localized_product_dosage_unavailable(
+                record.last_grounded_product_name,
+                request.language,
+            )
+            session_store.update_shopping(
+                request.session_id,
+                current_intent=IntentType.PRODUCT_LOOKUP,
+                active_product_id=record.last_grounded_product_id,
+                selected_product_ids=[record.last_grounded_product_id],
+            )
+            session_store.add_message(request.session_id, "user", request.text)
+            session_store.add_message(request.session_id, "assistant", reply)
+            return AgentRespondResponse(
+                session_id=request.session_id,
+                text=reply,
+                model="local-policy",
+                grounded_product_ids=[record.last_grounded_product_id],
+                tools_used=[],
+                state=record.state,
+            )
         if (
             _unsupported_sensory_attribute_requested(request.text)
             and record.last_grounded_product_id
@@ -5088,7 +5689,8 @@ async def agent_respond(
                     ),
                     None,
                 )
-                if verified_snapshot and verified_snapshot.status == "SUCCESS"
+                if verified_snapshot
+                and verified_snapshot.status in {"SUCCESS", "DATA_UNAVAILABLE"}
                 else None
             )
             agent_result = replace(
@@ -5116,6 +5718,27 @@ async def agent_respond(
                 requested_fields,
                 request.session_id,
             )
+        if (
+            "price_vnd" in requested_fields
+            and _price_confirmation_requested(request.text)
+            and any(
+                observation.tool_name == "get_product_snapshot"
+                and observation.status == "SUCCESS"
+                and "price_vnd" in observation.requested_fields
+                and observation.products
+                for observation in agent_result.observations
+            )
+        ):
+            reply += {
+                "en": (
+                    " I can't confirm this is today's in-store price; the actual price may differ."
+                ),
+                "zh": "我无法确认这是门店今天的价格；实际价格可能有所不同。",
+                "vi": (
+                    " Mình chưa thể xác nhận đây là giá tại cửa hàng hôm nay; "
+                    "giá thực tế có thể khác."
+                ),
+            }[request.language]
         if _unsupported_customer_care_action_claim(reply):
             reply = _localized_store_policy_unavailable(
                 request.language,
@@ -5167,14 +5790,21 @@ async def agent_respond(
         None,
     )
     if latest_catalog_observation is not None:
+        preserves_grounded_identity = (
+            latest_catalog_observation.status == "SUCCESS"
+            or (
+                latest_catalog_observation.status == "DATA_UNAVAILABLE"
+                and latest_catalog_observation.tool_name == "get_product_snapshot"
+            )
+        )
         candidate_ids = (
             [product.product_id for product in latest_catalog_observation.products]
-            if latest_catalog_observation.status == "SUCCESS"
+            if preserves_grounded_identity
             else []
         )
         remembered_product = (
             latest_catalog_observation.products[0]
-            if latest_catalog_observation.status == "SUCCESS"
+            if preserves_grounded_identity
             and len(latest_catalog_observation.products) == 1
             and latest_catalog_observation.tool_name
             not in {"list_product_promotions", "list_new_catalog_products"}
@@ -5324,6 +5954,7 @@ def _contextual_product_reference_requested(text: str) -> bool:
         "goi nay",
         "ly nay",
         "loai nay",
+        "loai goi",
         "cai nay",
         "cai do",
         "con nay",
@@ -5345,6 +5976,36 @@ def _contextual_product_reference_requested(text: str) -> bool:
         "那个",
     )
     return any(re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized) for cue in cues)
+
+
+def _recommendation_preview_requested(text: str) -> bool:
+    normalized = " ".join(_normalize_request_text(text).split())
+    preview = any(
+        phrase in normalized
+        for phrase in (
+            "xem truoc",
+            "chi xem",
+            "xem lua chon",
+            "cho minh xem",
+            "chi tu van",
+            "just show",
+            "only show",
+            "preview",
+        )
+    )
+    no_write = any(
+        phrase in normalized
+        for phrase in (
+            "chua them",
+            "chua cho vao gio",
+            "khong them",
+            "chua mua",
+            "not add",
+            "do not add",
+            "haven't added",
+        )
+    )
+    return preview and no_write
 
 
 def _requested_snapshot_fields(text: str) -> tuple[str, ...]:
@@ -5431,6 +6092,8 @@ _FACT_QUERY_STOP_WORDS = {
     "khao",
     "giup",
     "hang",
+    "chac",
+    "chan",
     "how",
     "in",
     "is",
@@ -5483,7 +6146,6 @@ _FACT_QUERY_STOP_WORDS = {
     "trong",
     "giam",
     "khuyen",
-    "mai",
     "uu",
     "dai",
     "discount",
@@ -5704,6 +6366,22 @@ def _unsupported_sensory_attribute_requested(text: str) -> bool:
     return any(phrase in normalized for phrase in _UNSUPPORTED_SENSORY_ATTRIBUTE_PHRASES)
 
 
+def _usage_dosage_question_requested(text: str) -> bool:
+    normalized = " ".join(_normalize_request_text(text).split())
+    return any(
+        phrase in normalized
+        for phrase in (
+            "lieu luong",
+            "lieu dung",
+            "dosing",
+            "dosage",
+            "dose",
+            "how much to use",
+            "how much should i use",
+        )
+    )
+
+
 _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
     sorted(
         (
@@ -5726,6 +6404,12 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
             "su dung nhu the nao",
             "de lam gi",
             "cach su dung",
+            "lieu luong",
+            "lieu dung",
+            "dosage",
+            "dosing",
+            "how much to use",
+            "how much should i use",
             "dung de lam gi",
             "cach dung",
             "cach pha",
@@ -5820,14 +6504,27 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
 def _fact_product_query(text: str) -> str:
     normalized = _normalize_request_text(text)
     normalized = " ".join(normalized.split())
+    normalized = re.sub(
+        r"\b(\d+)\s+(\d+)\s+(ml|lit|l|kg|g|gram)\b",
+        r"\1 \2\3",
+        normalized,
+    )
     normalized = re.sub(r"^(?:xin chao|chao(?: ban|anh|chi|em)?|hello|hi)\b", " ", normalized)
     normalized = re.sub(
         r"\b(?:cho (?:minh|toi|em|anh|chi) hoi|(?:minh|toi|em|anh|chi) (?:muon )?hoi)\b",
         " ",
         normalized,
     )
-    normalized = re.sub(r"\bhoi binh thuong\b", " ", normalized)
+    normalized = re.sub(r"\b(?:hoi )?binh thuong\b", " ", normalized)
     normalized = re.sub(r"\bben minh\b", " ", normalized)
+    normalized = re.sub(
+        r"\b(?:tai |o )?cua hang\b|\b(?:hom nay|today|hien tai|luc nay)\b|"
+        r"\b(?:con )?hieu luc\b|\bda (?:duoc )?(?:xac nhan|xac minh|kiem tra|cap nhat)\b|"
+        r"\btruc tiep\b|\bton kho\b|\b(?:may giat|washing machine)\b|"
+        r"\b(?:chuyen sang|doi sang|quay sang|khuyen mai)\b",
+        " ",
+        normalized,
+    )
     normalized = re.sub(
         r"\b(?:trong luc cho|trong khi cho|while waiting|in the meantime)\b",
         " ",
@@ -5870,13 +6567,29 @@ def _fact_product_query(text: str) -> str:
     )
     for phrase in _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES:
         normalized = re.sub(rf"\b{re.escape(phrase)}\b", " ", normalized)
-    return " ".join(
+    measure_terms: set[str] = set()
+    for match in re.finditer(
+        r"(?<!\w)(\d+)(?:[.,](\d+))?\s*(ml|lít|lit|l|kg|g|gram)\b",
+        text,
+        re.IGNORECASE,
+    ):
+        whole, fraction, unit = match.groups()
+        normalized_unit = _normalize_request_text(unit).strip()
+        if fraction:
+            measure_terms.update((whole, f"{fraction}{normalized_unit}"))
+        else:
+            measure_terms.add(f"{whole}{normalized_unit}")
+    has_front_loader_hint = bool(re.search(r"\bcua truoc\b", normalized))
+    query_words = [
         word
         for word in normalized.split()
         if word not in _FACT_QUERY_STOP_WORDS
-        and not word.isdigit()
+        and (not word.isdigit() or word in measure_terms)
         and not re.fullmatch(r"\d+(?:k|d|dong|vnd)", word)
-    )
+    ]
+    if has_front_loader_hint:
+        query_words.extend(word for word in ("cua", "truoc") if word not in query_words)
+    return " ".join(query_words)
 
 
 def _fact_query_has_product_target(query: str) -> bool:
@@ -5888,6 +6601,19 @@ def _fact_query_has_product_target(query: str) -> bool:
         "san",
         "pham",
         "hang",
+    "hom",
+    "hien",
+    "tai",
+    "chua",
+    "duoc",
+    "xac",
+    "nhan",
+    "truc",
+    "tiep",
+    "kho",
+    "theo",
+    "mieng",
+    "hay",
         "ban",
         "duoc",
         "doi",
@@ -6062,11 +6788,41 @@ async def _handle_product_correction(
                 model="catalog",
                 tools_used=["search_products", "get_product_snapshot"],
             )
-        reply = (
-            _localized_unverified_fact(request.language)
-            if snapshot_observation.status == "DATA_UNAVAILABLE"
-            else _localized_tool_failure(request.language)
-        )
+        if snapshot_observation.status == "DATA_UNAVAILABLE":
+            product = (
+                snapshot_observation.products[0]
+                if snapshot_observation.products
+                else get_product_repository().get_product_snapshot(
+                    matched_product.product_id
+                )
+            )
+            if product is not None:
+                session_store.set_last_grounded_product(
+                    request.session_id,
+                    product.product_id,
+                    product.name,
+                )
+                session_store.update_shopping(
+                    request.session_id,
+                    current_intent=IntentType.PRODUCT_LOOKUP,
+                    active_product_id=product.product_id,
+                    active_category=None,
+                    selected_product_ids=[product.product_id],
+                    pending_action=None,
+                    pending_clarification=None,
+                )
+            reply = (
+                _render_snapshot_for_session(
+                    replace(snapshot_observation, products=(product,)),
+                    request.language,
+                    fields,
+                    request.session_id,
+                )
+                if product is not None and fields == ("spicy",)
+                else _localized_unverified_fact(request.language)
+            )
+        else:
+            reply = _localized_tool_failure(request.language)
         return _deterministic_tool_response(
             request,
             record.state,
@@ -6515,6 +7271,16 @@ def _whole_cart_recommendation_arguments(
         or bool(re.search(r"\b(?:combo|ket hop|mua|tim giup|goi y|tu van)\b", normalized))
         or (
             active_context
+            and bool(
+                re.search(
+                    r"\b(?:doi|thay|giu|keep|replace)\b.{0,80}"
+                    r"\b(?:do uong|nuoc uong|snack|do an vat|drink|beverage)\b",
+                    normalized,
+                )
+            )
+        )
+        or (
+            active_context
             and (
                 _explicit_budget_amount_vnd(text) is not None
                 or _basket_quantity_is_explicit(text)
@@ -6861,6 +7627,26 @@ def _implicit_followup_fields(text: str) -> tuple[str, ...]:
         "hang",
         "ton",
         "stock",
+        "hom",
+        "hien",
+        "tai",
+        "chua",
+        "da",
+        "duoc",
+        "xac",
+        "nhan",
+        "truc",
+        "tiep",
+        "kho",
+        "theo",
+        "mieng",
+        "hay",
+        "uu",
+        "dai",
+        "hieu",
+        "luc",
+        "kiem",
+        "tra",
         "available",
         "co",
         "khong",

@@ -202,7 +202,7 @@ def _score(
         preferred_measure = _measure(candidate.title)
         if preferred_measure is not None:
             amount, _dimension = preferred_measure
-            score += max(-2.0, min(2.0, (1000.0 - amount) / 1000.0))
+            score += max(-3.0, min(3.0, 3.0 * (1000.0 - amount) / 1000.0))
             if (candidate.title_words | candidate.uom_words).intersection(
                 {"thung", "loc", "combo"}
             ):
