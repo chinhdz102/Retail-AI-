@@ -76,7 +76,8 @@ _UNIT_WORDS = {
 
 def _strip_filler(value: str) -> str:
     value = re.sub(
-        r"\b(?:cho|minh|toi|em|anh|chi|nhe|nha|voi|giup|giup minh|giup toi|vao|vo|gio|hang|"
+        r"\b(?:cho|minh|mình|toi|tôi|tui|em|anh|chi|chị|nhe|nhé|nha|voi|với|giup|giúp|"
+        r"giup minh|giup toi|vao|vào|vo|vô|gio|giỏ|hang|hàng|"
         r"cart|please|the|a|an|of|my)\b",
         " ",
         value,
@@ -231,6 +232,12 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
     ):
         return ShoppingAction(ShoppingActionType.CHECK_PAYMENT_STATUS)
 
+    # A customer may be setting a recommendation constraint and explicitly say
+    # they are only browsing. Do not mistake "giỏ" in that sentence for a
+    # request to open or mutate the cart.
+    if "xem truoc" in compact and "chua them" in compact:
+        return None
+
     if state == SessionState.CHECKOUT_CONFIRMATION and any(
         phrase in compact
         for phrase in ("huy checkout", "huy thanh toan", "quay lai gio hang", "cancel checkout")
@@ -254,20 +261,22 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
             r"\b(?:xem|mo|show|open|view|check)\b.{0,32}\b(?:gio(?:\s+hang)?|cart)\b",
             compact,
         )
-        or (state == SessionState.CART_ACTIVE and "tong tien" in compact)
+        or (state == SessionState.CART_ACTIVE and re.search(r"\btong\s+(?:tien|gio)\b", compact))
     ):
         return ShoppingAction(ShoppingActionType.VIEW_CART)
 
     add_match = re.search(
-        r"\b(?:them|bo sung|cho)\s+(.+?)\s+(?:vao|vo)\s+(?:cai\s+)?gio(?:\s+hang)?\b|"
+        r"\b(?:them|bo sung|cho|lay|mua)\s+(.+?)\s+"
+        r"(?:vao|vo|bo\s+(?:vao|vo))\s+(?:cai\s+)?gio(?:\s+hang)?\b|"
         r"\badd\s+(.+?)\s+to\s+(?:my\s+)?cart\b",
         normalized,
         flags=re.IGNORECASE,
     )
     if add_match:
         original_add_match = re.search(
-            r"\b(?:thêm|them|bổ sung|bo sung|cho|add)\s+(.+?)\s+"
-            r"(?:vào|vao|vo)\s+(?:cái\s+)?(?:giỏ|gio)(?:\s+(?:hàng|hang))?\b|"
+            r"\b(?:thêm|them|bổ sung|bo sung|cho|lấy|lay|mua)\s+(.+?)\s+"
+            r"(?:vào|vao|vô|vo|bỏ\s+(?:vào|vô)|bo\s+(?:vao|vo))\s+"
+            r"(?:cái\s+)?(?:giỏ|gio)(?:\s+(?:hàng|hang))?\b|"
             r"\badd\s+(.+?)\s+to\s+(?:my\s+)?cart\b",
             text,
             flags=re.IGNORECASE,
@@ -278,6 +287,7 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
             else next((part for part in add_match.groups() if part), "")
         )
         cleaned_query = _strip_filler(raw_query)
+        cleaned_query = re.sub(r"\bbo\s*$", "", cleaned_query).strip()
         parts = re.split(
             r"\s*(?:,|;|\bvà\b|\bva\b|\bvới\b|\bvoi\b|\bcùng\b|\bcung\b|\band\b|\bplus\b)\s*",
             cleaned_query,
@@ -325,6 +335,23 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
             query=query,
             quantity=quantity if has_quantity else None,
         )
+
+    if state == SessionState.CART_ACTIVE:
+        set_to_match = re.search(
+            r"\b(?:giam|bot|tang|doi|dat|cap nhat|set|reduce|increase|change)\s+"
+            r"(?:con|ve|thanh|len|xuong|to|down to|up to)?\s*"
+            r"(\d+|mot|hai|ba|bon|tu|nam|sau|bay|tam|chin|muoi)"
+            r"(?:\s+(?:chai|lon|hop|goi|ly|cai|bottle|box|pack|can))?"
+            r"(?:\s+thoi)?\s*[.!?]*$",
+            compact,
+        )
+        if set_to_match:
+            amount = set_to_match.group(1)
+            return ShoppingAction(
+                ShoppingActionType.SET_QUANTITY,
+                query="cai nay",
+                quantity=int(amount) if amount.isdigit() else _NUMBER_WORDS[amount],
+            )
 
     update_match = re.search(
         r"\b(?:doi|dat|cap nhat|tang|giam|set|increase|decrease)\s+(.+?)\s+"

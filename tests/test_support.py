@@ -189,3 +189,60 @@ async def test_bypass_verification_request_cannot_trigger_staff_ticket(monkeypat
         assert payload["support_ticket"] is None
         assert payload["tools_used"] == []
         assert "không thể làm theo" in payload["text"].casefold()
+
+
+@pytest.mark.asyncio
+async def test_ticket_status_and_thanks_followups_are_truthful_and_session_scoped(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(api_main, "support_ticket_store", SupportTicketStore())
+    transport = httpx.ASGITransport(app=api_main.app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://support-followup-test"
+    ) as client:
+        created = await client.post("/sessions", json={"kiosk_id": "support-followup-test"})
+        session_id = created.json()["session_id"]
+        opened = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Mình muốn gặp nhân viên."},
+        )
+        ticket_id = opened.json()["support_ticket"]["ticket_id"]
+        status = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Bạn đã gọi được nhân viên thật chưa?"},
+        )
+        ticket_number = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Mã tiếp nhận lúc nãy là gì?"},
+        )
+        product_while_waiting = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Trong lúc chờ thì Coca Zero giá bao nhiêu?"},
+        )
+        thanks = await client.post(
+            "/agent/respond",
+            json={"session_id": session_id, "text": "Cảm ơn bạn nhé."},
+        )
+        other_session = await client.post("/sessions", json={"kiosk_id": "other-support-session"})
+        foreign_status = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": other_session.json()["session_id"],
+                "text": "Mã tiếp nhận lúc nãy là gì?",
+            },
+        )
+
+        assert opened.status_code == status.status_code == ticket_number.status_code == 200
+        assert ticket_id in status.json()["text"]
+        assert "RECEIVED_DEMO" in status.json()["text"]
+        assert "chưa liên hệ nhân viên thật" in status.json()["text"]
+        assert ticket_id in ticket_number.json()["text"]
+        assert status.json()["support_ticket"]["ticket_id"] == ticket_id
+        assert ticket_number.json()["support_ticket"]["ticket_id"] == ticket_id
+        assert product_while_waiting.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
+        assert "13.000" in product_while_waiting.json()["text"]
+        assert product_while_waiting.json()["state"] == SessionState.HANDOFF
+        assert thanks.json()["model"] == "local-smalltalk"
+        assert thanks.json()["state"] == SessionState.HANDOFF
+        assert ticket_id not in foreign_status.json()["text"]
+        assert "chưa thấy phiếu hỗ trợ" in foreign_status.json()["text"].casefold()

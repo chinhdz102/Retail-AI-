@@ -241,9 +241,7 @@ def _claim_product_disclosures(
     session_id: UUID | None,
 ) -> tuple[str, ...]:
     keys = tuple(
-        key
-        for product in products
-        for key in snapshot_disclosure_keys(product, source, fields)
+        key for product in products for key in snapshot_disclosure_keys(product, source, fields)
     )
     if session_id is None:
         return keys
@@ -363,9 +361,7 @@ def _unsupported_customer_care_action_claim(reply: str) -> bool:
 def _false_staff_acknowledgement_requested(text: str) -> bool:
     """Detect requests to claim staff received a request without evidence."""
     normalized = _normalize_request_text(text)
-    asks_to_claim = bool(
-        re.search(r"\b(?:noi|bao|xac nhan|pretend|say|tell|claim)\b", normalized)
-    )
+    asks_to_claim = bool(re.search(r"\b(?:noi|bao|xac nhan|pretend|say|tell|claim)\b", normalized))
     staff_receipt_claim = bool(
         re.search(
             r"\b(?:nhan vien|staff|employee|store associate)\b.{0,60}\b"
@@ -381,6 +377,39 @@ def _false_staff_acknowledgement_requested(text: str) -> bool:
         )
     )
     return asks_to_claim and staff_receipt_claim and admits_no_contact
+
+
+def _support_ticket_followup_requested(text: str) -> bool:
+    normalized = _normalize_request_text(text)
+    return any(
+        phrase in normalized
+        for phrase in (
+            "ma tiep nhan",
+            "ma ticket",
+            "ma phieu ho tro",
+            "ma yeu cau ho tro",
+            "goi duoc nhan vien that chua",
+            "lien he duoc nhan vien that chua",
+            "nhan vien that nhan duoc chua",
+            "da co nhan vien nao nhan chua",
+            "has a real staff member been contacted",
+            "did you contact staff",
+            "what is the ticket number",
+            "what is my ticket id",
+        )
+    )
+
+
+def _simple_customer_acknowledgement_requested(text: str) -> bool:
+    normalized = " ".join(_normalize_request_text(text).split()).strip(" .!?,-")
+    return bool(
+        re.fullmatch(
+            r"(?:cam on(?: ban| minh| nhe| nha| ban nhe| ban nha)*|"
+            r"thank you(?: so much)?|thanks(?: a lot)?|"
+            r"ok(?:e|ay)?|da hieu|hieu roi|duoc roi|vay nhe)",
+            normalized,
+        )
+    )
 
 
 def _localized_false_staff_acknowledgement_denial(language: LanguageCode) -> str:
@@ -411,6 +440,8 @@ def _administrative_action_requested(text: str) -> bool:
         r"\b(?:doi|cap nhat|dieu chinh|thay doi|set|update|modify|change|"
         r"increase|decrease|raise|lower|add|remove|tang|giam)\b"
         r".{0,35}\b(?:ton kho|hang ton|inventory|stock)\b",
+        r"\b(?:tang|giam|cap nhat|doi|set|update|modify|change|increase|decrease)\b"
+        r".{0,35}\bton\b.{0,60}\b\d+(?:\s+\d+)*\b",
     )
     # Accent stripping makes "sữa" (milk) and "sửa" (edit) identical. Only
     # treat unaccented "sua" as a write when the rest of the request has an
@@ -1155,20 +1186,28 @@ def _localized_whole_cart_recommendation(
 
     options = content.get("options") or []
     budget = int(content.get("total_budget_vnd") or 0)
+    budget_is_exclusive = bool(content.get("total_budget_exclusive"))
+    budget_limit_en = f"below {budget:,} VND" if budget_is_exclusive else f"at most {budget:,} VND"
+    budget_limit_vi = (
+        f"dưới {format_vnd(budget)}đ"
+        if budget_is_exclusive
+        else f"không vượt quá {format_vnd(budget)}đ"
+    )
+    budget_limit_zh = f"低于{budget:,}越南盾" if budget_is_exclusive else f"不超过{budget:,}越南盾"
     if not options:
         if language == "en":
             return (
-                f"I couldn't make a combo within {budget:,} VND using every requested category. "
+                f"I couldn't make a combo {budget_limit_en} using every requested category. "
                 "Would you like to raise the total budget or reduce the quantities?"
             )
         if language == "zh":
             return (
-                f"按当前类别和数量，目录中没有总价不超过{budget:,}越南盾的组合。"
+                f"按当前类别和数量，目录中没有总价{budget_limit_zh}的组合。"
                 "您想提高总预算还是减少数量？"
             )
         return (
-            "Mình chưa ghép được combo đủ các nhóm hàng mà không vượt ngân sách "
-            f"{format_vnd(budget)}đ. Bạn muốn tăng tổng ngân sách hay giảm số lượng?"
+            f"Mình chưa ghép được combo đủ các nhóm hàng với tổng giá {budget_limit_vi}. "
+            "Bạn muốn tăng ngân sách hay giảm số lượng?"
         )
 
     def render_option(option: dict[str, object]) -> str:
@@ -1177,17 +1216,11 @@ def _localized_whole_cart_recommendation(
             quantity = int(item["quantity"])
             line_total = int(item["line_total_vnd"])
             if language == "en":
-                rendered_items.append(
-                    f"{item['name']} ×{quantity} ({line_total:,} VND)"
-                )
+                rendered_items.append(f"{item['name']} ×{quantity} ({line_total:,} VND)")
             elif language == "zh":
-                rendered_items.append(
-                    f"{item['name']} ×{quantity}（{line_total:,}越南盾）"
-                )
+                rendered_items.append(f"{item['name']} ×{quantity}（{line_total:,}越南盾）")
             else:
-                rendered_items.append(
-                    f"{item['name']} ×{quantity} ({format_vnd(line_total)}đ)"
-                )
+                rendered_items.append(f"{item['name']} ×{quantity} ({format_vnd(line_total)}đ)")
         total = int(option["total_vnd"])
         label = str(option.get("label") or "Phương án")
         joined = " + ".join(rendered_items)
@@ -1200,7 +1233,7 @@ def _localized_whole_cart_recommendation(
     rendered_options = "; ".join(render_option(option) for option in options[:2])
     if language == "en":
         response = (
-            f"Using catalog prices, here are combos within your {budget:,} VND total budget: "
+            f"Using catalog prices, here are combos with a total {budget_limit_en}: "
             f"{rendered_options}. I haven't added anything to your cart."
         )
         if include_price_caveat:
@@ -1208,14 +1241,14 @@ def _localized_whole_cart_recommendation(
         return response
     if language == "zh":
         response = (
-            f"按目录价格，以下组合不超过总预算{budget:,}越南盾：{rendered_options}。"
+            f"按目录价格，以下组合总价{budget_limit_zh}：{rendered_options}。"
             "我还没有把商品加入购物车。"
         )
         if include_price_caveat:
             response += " 价格来自目录，尚未在此门店核实。"
         return response
     response = (
-        f"Theo giá catalog, các combo dưới ngân sách tổng {format_vnd(budget)}đ là: "
+        f"Theo giá catalog, các combo có tổng giá {budget_limit_vi} gồm: "
         f"{rendered_options}. Mình chưa thêm món nào vào giỏ nhé."
     )
     if include_price_caveat:
@@ -1426,11 +1459,7 @@ def _localized_ranking_clarification(
         ),
         "zh": (
             "目录没有经过核实的销量或口味评分，所以我无法确认畅销款或口味排名。"
-            + (
-                "如果您愿意，我可以按口味或预算推荐。"
-                if category_known
-                else "您想问哪个商品类别？"
-            )
+            + ("如果您愿意，我可以按口味或预算推荐。" if category_known else "您想问哪个商品类别？")
         ),
         "vi": (
             "Catalog chưa có dữ liệu đã xác minh về số lượt bán hay đánh giá vị, nên mình "
@@ -1459,6 +1488,17 @@ def _localized_unverified_fact(language: LanguageCode) -> str:
         "vi": (
             "Mình chưa có dữ liệu đã xác minh cho thông tin đó. "
             "Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé."
+        ),
+    }[language]
+
+
+def _localized_unverified_sensory_fact(language: LanguageCode, product_name: str) -> str:
+    return {
+        "en": (f"The catalog doesn't record the taste of {product_name}, so I won't guess."),
+        "zh": f"目录没有记录{product_name}的口味信息，所以我不会猜测。",
+        "vi": (
+            f"Catalog chưa ghi nhận độ đắng hay hương vị của {product_name}, "
+            "nên mình không đoán nhé."
         ),
     }[language]
 
@@ -1971,8 +2011,7 @@ def _localized_product_selection_clarification(language: LanguageCode) -> str:
         ),
         "zh": "我找到几种匹配商品。您指哪一种？可以说商品名称或序号。",
         "vi": (
-            "Mình thấy vài sản phẩm phù hợp. Bạn nói tên món hoặc số thứ tự "
-            "để mình tra đúng nhé."
+            "Mình thấy vài sản phẩm phù hợp. Bạn nói tên món hoặc số thứ tự để mình tra đúng nhé."
         ),
     }[language]
 
@@ -3180,8 +3219,7 @@ async def _handle_shopping_action(
                         query = contextual_product.name
                 if not query:
                     contextual_product_id = (
-                        record.shopping.active_product_id
-                        or record.last_grounded_product_id
+                        record.shopping.active_product_id or record.last_grounded_product_id
                     )
                     contextual_product = (
                         get_product_repository().get_product_snapshot(contextual_product_id)
@@ -3568,8 +3606,7 @@ def _comparison_reply(
             difference = _comparison_price(dearer.price_vnd - cheaper.price_vnd, language)
             if language == "vi":
                 result = (
-                    f"{cheaper.name} rẻ hơn {dearer.name} {difference} "
-                    f"theo giá {source_label}."
+                    f"{cheaper.name} rẻ hơn {dearer.name} {difference} theo giá {source_label}."
                 )
             elif language == "en":
                 result = (
@@ -3716,9 +3753,7 @@ def _comparison_reply_for_session(
     include_price_caveat = session_id is None or any(
         key.endswith("|price_vnd") for key in disclosed
     )
-    include_stock_caveat = session_id is None or any(
-        key.endswith("|stock") for key in disclosed
-    )
+    include_stock_caveat = session_id is None or any(key.endswith("|stock") for key in disclosed)
     return _comparison_reply(
         products,
         language,
@@ -3748,9 +3783,8 @@ def _localized_comparison_unavailable(
 
 def _comparison_stock_followup_requested(text: str) -> bool:
     normalized = _normalize_request_text(text)
-    return (
-        "ban duoc" in normalized
-        and any(phrase in normalized for phrase in ("nhieu hon", "con nhieu", "san pham nao"))
+    return "ban duoc" in normalized and any(
+        phrase in normalized for phrase in ("nhieu hon", "con nhieu", "san pham nao")
     )
 
 
@@ -3762,6 +3796,71 @@ async def _comparison_snapshots_by_ids(product_ids: list[str]) -> list[ProductSn
             return None
         snapshots.append(observation.products[0])
     return snapshots if len(snapshots) == 2 else None
+
+
+async def _handle_unverified_caffeine_question(
+    request: AgentRespondRequest,
+    record,
+) -> AgentRespondResponse:
+    query = _fact_product_query(request.text)
+    if not query or not _fact_query_has_product_target(query):
+        return _record_shopping_turn(
+            request,
+            _localized_product_clarification(request.language),
+            model="local-clarification",
+        )
+
+    observation = await lookup_product_candidates(query)
+    if observation.status != "SUCCESS":
+        return _record_shopping_turn(
+            request,
+            _localized_tool_failure(request.language),
+            model="catalog",
+            tools_used=["search_products"],
+        )
+
+    candidates = tuple(observation.products)
+    exact_id = _unique_product_match_id(query, candidates)
+    if exact_id is None and len(candidates) == 1 and observation.content.get("count") == 1:
+        exact_id = candidates[0].product_id
+    product = next((item for item in candidates if item.product_id == exact_id), None)
+    if product is None:
+        reply = (
+            _localized_not_found(request.language)
+            if not candidates
+            else _localized_product_variant_clarification(observation, request.language)
+        )
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="catalog",
+            tools_used=["search_products"],
+            products=list(candidates[:4]),
+        )
+
+    session_store.set_last_grounded_product(request.session_id, product.product_id, product.name)
+    reply = {
+        "vi": (
+            f"Catalog chưa ghi nhận lượng caffeine hay độ an toàn khi mang thai của "
+            f"{product.name}, "
+            "nên mình chưa thể xác nhận. Bạn xem nhãn và hỏi bác sĩ hoặc dược sĩ nhé."
+        ),
+        "en": (
+            f"The catalog does not include caffeine content or pregnancy-safety information for "
+            f"{product.name}, so I can't verify either. Please check the label and ask a clinician."
+        ),
+        "zh": (
+            f"目录没有记录{product.name}的咖啡因含量或孕期安全信息，因此我无法确认。"
+            "请查看包装标签并咨询医生。"
+        ),
+    }[request.language]
+    return _record_shopping_turn(
+        request,
+        reply,
+        model="catalog",
+        tools_used=["search_products"],
+        products=[product],
+    )
 
 
 async def _handle_product_comparison(
@@ -3864,8 +3963,7 @@ async def _handle_product_comparison(
             "Hai tên bạn nêu đang khớp cùng một sản phẩm. Bạn cho mình tên món thứ hai nhé."
             if request.language == "vi"
             else (
-                "Both names resolve to the same product. "
-                "Please provide a different second product."
+                "Both names resolve to the same product. Please provide a different second product."
             ),
             model="comparison-clarification",
             tools_used=["search_products"],
@@ -3887,6 +3985,14 @@ async def _handle_product_comparison(
         current_intent=IntentType.COMPARISON,
         comparison_product_ids=[item.product_id for item in products],
     )
+    if metric in {None, "price"} and len(products) == 2:
+        cheaper = min(products, key=lambda item: item.price_vnd)
+        if products[0].price_vnd != products[1].price_vnd:
+            session_store.set_last_grounded_product(
+                request.session_id,
+                cheaper.product_id,
+                cheaper.name,
+            )
     return _record_shopping_turn(
         request,
         _comparison_reply_for_session(
@@ -3919,9 +4025,7 @@ async def agent_respond(
             record.state,
             _localized_internal_information_denial(request.language),
         )
-    if _prompt_override_requested(request.text) and not _requested_snapshot_fields(
-        request.text
-    ):
+    if _prompt_override_requested(request.text) and not _requested_snapshot_fields(request.text):
         return _local_policy_response(
             request,
             record.state,
@@ -3961,9 +4065,121 @@ async def agent_respond(
             record.state,
             _localized_false_staff_acknowledgement_denial(request.language),
         )
+    if _support_ticket_followup_requested(request.text):
+        ticket = None
+        if record.shopping.handoff_ticket_id:
+            try:
+                ticket = support_ticket_store.get(
+                    request.session_id,
+                    UUID(record.shopping.handoff_ticket_id),
+                )
+            except (ValueError, LookupError):
+                ticket = None
+        if ticket is None:
+            reply = {
+                "vi": (
+                    "Mình chưa thấy phiếu hỗ trợ nào được tạo trong phiên này. "
+                    "Nếu cần, bạn có thể yêu cầu mình ghi nhận để chuyển cho nhân viên."
+                ),
+                "en": (
+                    "I don't see a support ticket in this session. "
+                    "You can ask me to create a demo request."
+                ),
+                "zh": "本会话中还没有支持工单；如需要，您可以让我创建演示请求。",
+            }[request.language]
+            return _record_shopping_turn(
+                request,
+                reply,
+                model="support-simulator",
+            )
+        reply = {
+            "vi": (
+                f"Phiếu hỗ trợ demo {ticket.ticket_id} đang ở trạng thái {ticket.status}; "
+                "hệ thống chưa liên hệ nhân viên thật."
+            ),
+            "en": (
+                f"Demo support ticket {ticket.ticket_id} is {ticket.status}; "
+                "the system has not contacted a real staff member."
+            ),
+            "zh": (
+                f"演示支持工单 {ticket.ticket_id} 的状态为 {ticket.status}；系统尚未联系真实店员。"
+            ),
+        }[request.language]
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="support-simulator",
+            tools_used=["get_support_ticket"],
+            support_ticket=_support_ticket_response(ticket),
+        )
+    pending_action = record.shopping.pending_action or ""
+    if pending_action.startswith("UNAVAILABLE_SIZE:"):
+        unavailable_size = pending_action.partition(":")[2].casefold().replace(" ", "")
+        requested_size = re.search(
+            r"\b\d+(?:[.,]\d+)?\s?(?:ml|l|g|kg)\b",
+            request.text,
+            re.IGNORECASE,
+        )
+        normalized_size_confirmation = _normalize_request_text(request.text)
+        confirms_size = any(
+            cue in normalized_size_confirmation
+            for cue in ("dung tich", "quy cach", "size", "chinh xac")
+        )
+        if (
+            requested_size
+            and requested_size.group(0).casefold().replace(" ", "") == unavailable_size
+            and confirms_size
+        ):
+            reply = {
+                "vi": (
+                    f"Mình vẫn chưa thấy quy cách {unavailable_size} trong catalog. "
+                    "Các lựa chọn gần tên ở lượt trước khác dung tích, nên mình không gộp chúng."
+                ),
+                "en": (
+                    f"I still can't find the {unavailable_size} size in the catalog. "
+                    "The similar options from the previous turn have different sizes."
+                ),
+                "zh": (
+                    f"目录中仍未找到{unavailable_size}规格。上一轮的相似商品规格不同，"
+                    "我不会把它们合并为同一商品。"
+                ),
+            }[request.language]
+            return _record_shopping_turn(request, reply, model="catalog")
+    if (
+        record.shopping.current_intent == IntentType.RECOMMENDATION
+        and "xem truoc" in _normalize_request_text(request.text)
+        and "chua them" in _normalize_request_text(request.text)
+    ):
+        reply = {
+            "vi": (
+                "Được, mình chỉ tư vấn trước; chưa thêm món nào vào giỏ. "
+                "Mình giữ nguyên các điều kiện đã nêu."
+            ),
+            "en": (
+                "Sure, we can just review the suggestions. I have not added anything to the cart, "
+                "and your filters stay the same."
+            ),
+            "zh": "好的，我们先看看建议；我没有把商品加入购物车，筛选条件保持不变。",
+        }[request.language]
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="recommendation-controller",
+        )
     shopping_response = await _handle_shopping_action(request, record)
     if shopping_response is not None:
         return shopping_response
+    if _simple_customer_acknowledgement_requested(request.text):
+        reply = {
+            "vi": "Không có gì, bạn cứ hỏi mình khi cần nhé.",
+            "en": "You're welcome. Just ask if you need anything else.",
+            "zh": "不客气，有需要随时问我。",
+        }[request.language]
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="local-smalltalk",
+        )
     support_intent = classify_support_intent(request.text)
     if support_intent is not None:
         ticket = support_ticket_store.create(
@@ -4100,9 +4316,8 @@ async def agent_respond(
             comparison_metric(request.text),
         )
 
-    if (
-        len(record.shopping.comparison_product_ids) == 2
-        and _comparison_stock_followup_requested(request.text)
+    if len(record.shopping.comparison_product_ids) == 2 and _comparison_stock_followup_requested(
+        request.text
     ):
         return await _handle_product_comparison(request, record, None, "stock")
 
@@ -4131,12 +4346,18 @@ async def agent_respond(
         )
 
     whole_cart_budget_followup = _whole_cart_budget_only_followup(request.text)
+    whole_cart_arguments = _whole_cart_recommendation_arguments(
+        request.text,
+        stored_constraints=record.shopping.constraints,
+        active_context=record.shopping.current_intent == IntentType.RECOMMENDATION,
+    )
     requested_fields = _requested_snapshot_fields(request.text)
-    if (
-        "price_vnd" in requested_fields
-        and record.shopping.current_intent == IntentType.RECOMMENDATION
-        and isinstance(record.shopping.constraints.get("categories"), list)
-        and whole_cart_budget_followup
+    if whole_cart_arguments is not None:
+        # Budget and spice words in a basket request are recommendation filters,
+        # not standalone product-fact questions.
+        requested_fields = ()
+    elif "price_vnd" in requested_fields and (
+        whole_cart_budget_followup or whole_cart_arguments is not None
     ):
         # A VND amount in an active multi-category basket is a cart cap unless
         # the user explicitly names a product whose price they want to check.
@@ -4144,13 +4365,12 @@ async def agent_respond(
             field_name for field_name in requested_fields if field_name != "price_vnd"
         )
     prompt_override = _prompt_override_requested(request.text)
-    unsupported_attribute_requested = (
-        _unsupported_catalog_attribute_requested(request.text)
-        and not (
-            whole_cart_budget_followup
-            and record.shopping.current_intent == IntentType.RECOMMENDATION
-            and isinstance(record.shopping.constraints.get("categories"), list)
-        )
+    unsupported_attribute_requested = _unsupported_catalog_attribute_requested(
+        request.text
+    ) and not (
+        whole_cart_budget_followup
+        and record.shopping.current_intent == IntentType.RECOMMENDATION
+        and isinstance(record.shopping.constraints.get("categories"), list)
     )
     if prompt_override and not requested_fields:
         return _local_policy_response(
@@ -4162,9 +4382,7 @@ async def agent_respond(
         request.text,
         record,
     ):
-        already_asked = (
-            record.shopping.pending_clarification == _ALLERGEN_PRODUCT_CLARIFICATION
-        )
+        already_asked = record.shopping.pending_clarification == _ALLERGEN_PRODUCT_CLARIFICATION
         if not already_asked:
             session_store.update_shopping(
                 request.session_id,
@@ -4209,10 +4427,11 @@ async def agent_respond(
                 campaign_observation,
                 reply,
             )
+    explicit_fact_query = _fact_product_query(request.text)
     freshness_followup = bool(
         "data_timestamp" in requested_fields
         and record.last_grounded_product_id
-        and not _fact_query_has_product_target(_fact_product_query(request.text))
+        and not _fact_query_has_product_target(explicit_fact_query)
     )
     explicit_grounded_reference = (
         record.last_grounded_product_id
@@ -4223,18 +4442,19 @@ async def agent_respond(
         and (
             _text_mentions_product(request.text, record.last_grounded_product_name)
             or freshness_followup
-            or _contextual_product_reference_requested(request.text)
+            or (
+                _contextual_product_reference_requested(request.text)
+                and not _fact_query_has_product_target(explicit_fact_query)
+            )
         )
         else None
     )
-    explicit_fact_query = _fact_product_query(request.text)
-    recommendation_lookup_request = (
-        _explicit_recommendation_category(request.text) is not None
-        and (
-            _price_constraint_from_text(request.text) is not None
-            or _unparsed_recommendation_budget_requested(request.text)
-            or is_recommendation_request(request.text)
-        )
+    recommendation_lookup_request = _explicit_recommendation_category(
+        request.text
+    ) is not None and (
+        _price_constraint_from_text(request.text) is not None
+        or _unparsed_recommendation_budget_requested(request.text)
+        or is_recommendation_request(request.text)
     )
     recommendation_updates = _recommendation_constraint_updates(
         request.text,
@@ -4266,7 +4486,10 @@ async def agent_respond(
         and not recommendation_lookup_request
         and not recommendation_constraint_followup
         and not prompt_override
-        and not _contextual_product_reference_requested(request.text)
+        and (
+            not _contextual_product_reference_requested(request.text)
+            or _fact_query_has_product_target(explicit_fact_query)
+        )
         and not _administrative_action_requested(request.text)
     ):
         candidate_observation = await lookup_product_candidates(explicit_fact_query)
@@ -4365,6 +4588,61 @@ async def agent_respond(
             )
 
         if candidate_observation.status == "SUCCESS":
+            requested_size = re.search(
+                r"\b\d+(?:[.,]\d+)?\s?(?:ml|l|g|kg)\b",
+                request.text,
+                re.IGNORECASE,
+            )
+            if requested_size and "stock" in requested_fields:
+                base_query = re.sub(
+                    r"\b\d+(?:[.,]\d+)?\s?(?:ml|l|g|kg)\b|\b(?:chai|lon|hop|goi|ly|cai)\b",
+                    " ",
+                    explicit_fact_query,
+                )
+                base_observation = (
+                    await lookup_product_candidates(base_query)
+                    if base_query and _fact_query_has_product_target(base_query)
+                    else None
+                )
+                alternatives = list(base_observation.products) if base_observation else []
+                if base_observation and base_observation.status == "SUCCESS" and alternatives:
+                    names = ", ".join(product.name for product in alternatives[:3])
+                    requested_label = requested_size.group(0).replace(" ", "")
+                    reply = {
+                        "vi": (
+                            f"Mình không thấy quy cách {requested_label} trong catalog. "
+                            f"Catalog có các lựa chọn gần tên là: {names}; mình chưa coi chúng "
+                            "là cùng quy cách."
+                        ),
+                        "en": (
+                            f"I couldn't find the {requested_label} size in the catalog. "
+                            f"Nearby listed options are: {names}; I haven't treated them "
+                            "as the same size."
+                        ),
+                        "zh": (
+                            f"目录中没有{requested_label}规格。名称相近的商品有：{names}；"
+                            "我不会把它们当作相同规格。"
+                        ),
+                    }[request.language]
+                    session_store.set_last_grounded_product(request.session_id, None)
+                    session_store.update_shopping(
+                        request.session_id,
+                        current_intent=IntentType.PRODUCT_LOOKUP,
+                        active_product_id=None,
+                        selected_product_ids=[item.product_id for item in alternatives[:3]],
+                        pending_action=f"UNAVAILABLE_SIZE:{requested_label}",
+                        pending_clarification=(
+                            "The requested package size was not found; "
+                            "alternatives have a different size."
+                        ),
+                    )
+                    return _record_shopping_turn(
+                        request,
+                        reply,
+                        model="catalog",
+                        tools_used=["search_products"],
+                        products=alternatives[:3],
+                    )
             return _deterministic_tool_response(
                 request,
                 record.state,
@@ -4408,6 +4686,7 @@ async def agent_respond(
     if (
         requested_fields
         and explicit_fact_query
+        and not followup_fields
         and not _fact_query_has_product_target(explicit_fact_query)
         and not _contextual_product_reference_requested(request.text)
         and not recommendation_constraint_followup
@@ -4460,6 +4739,28 @@ async def agent_respond(
             state=record.state,
         )
     if unsupported_attribute_requested and not requested_fields:
+        normalized_unsupported = _normalize_request_text(request.text)
+        if re.search(r"\b(?:caffeine|cafein)\b", normalized_unsupported):
+            return await _handle_unverified_caffeine_question(request, record)
+        if (
+            _unsupported_sensory_attribute_requested(request.text)
+            and record.last_grounded_product_id
+            and record.last_grounded_product_name
+        ):
+            reply = _localized_unverified_sensory_fact(
+                request.language,
+                record.last_grounded_product_name,
+            )
+            session_store.add_message(request.session_id, "user", request.text)
+            session_store.add_message(request.session_id, "assistant", reply)
+            return AgentRespondResponse(
+                session_id=request.session_id,
+                text=reply,
+                model="local-policy",
+                grounded_product_ids=[record.last_grounded_product_id],
+                tools_used=[],
+                state=record.state,
+            )
         reply = (
             _localized_product_clarification(request.language)
             if _unsupported_attribute_needs_product_clarification(request.text, record)
@@ -4773,12 +5074,9 @@ async def agent_respond(
         ):
             unverified = _localized_unverified_fact(request.language)
             reply = f"{reply} {unverified}" if requested_fields else unverified
-        elif (
-            _unsupported_catalog_fact_claim(reply, agent_result.observations)
-            and not any(
-                observation.content.get("recommendation_type") == "whole_cart"
-                for observation in agent_result.observations
-            )
+        elif _unsupported_catalog_fact_claim(reply, agent_result.observations) and not any(
+            observation.content.get("recommendation_type") == "whole_cart"
+            for observation in agent_result.observations
         ):
             reply = _localized_unverified_fact(request.language)
         if _reservation_requested(request.text) and not _reply_already_refuses_reservation(
@@ -4863,9 +5161,7 @@ async def agent_respond(
             else None
         ),
         data_source=(
-            latest_catalog_observation.source
-            if latest_catalog_observation is not None
-            else None
+            latest_catalog_observation.source if latest_catalog_observation is not None else None
         ),
         state=record.state,
     )
@@ -4954,6 +5250,9 @@ def _contextual_product_reference_requested(text: str) -> bool:
         "do uong do",
         "ca phe do",
         "cafe do",
+        "cai re hon",
+        "chai re hon",
+        "mon re hon",
         "san pham nay",
         "san pham do",
         "nuoc nay",
@@ -4962,6 +5261,7 @@ def _contextual_product_reference_requested(text: str) -> bool:
         "chai do",
         "lon nay",
         "hop nay",
+        "goi do",
         "goi nay",
         "ly nay",
         "loai nay",
@@ -4985,10 +5285,7 @@ def _contextual_product_reference_requested(text: str) -> bool:
         "这个",
         "那个",
     )
-    return any(
-        re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized)
-        for cue in cues
-    )
+    return any(re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized) for cue in cues)
 
 
 def _requested_snapshot_fields(text: str) -> tuple[str, ...]:
@@ -5061,11 +5358,18 @@ _FACT_QUERY_STOP_WORDS = {
     "cost",
     "cua",
     "dau",
+    "den",
     "dat",
     "data",
     "de",
     "gi",
+    "ghi",
+    "lam",
+    "lieu",
+    "loai",
     "gia",
+    "tham",
+    "khao",
     "giup",
     "hang",
     "how",
@@ -5076,6 +5380,7 @@ _FACT_QUERY_STOP_WORDS = {
     "la",
     "me",
     "much",
+    "mau",
     "nao",
     "nam",
     "nhe",
@@ -5090,6 +5395,7 @@ _FACT_QUERY_STOP_WORDS = {
     "stock",
     "the",
     "them",
+    "thi",
     "toi",
     "ton",
     "tra",
@@ -5107,6 +5413,8 @@ _FACT_QUERY_STOP_WORDS = {
     "xin",
     "z",
     "t",
+    "tui",
+    "luc",
     "do",
     "ay",
     "nhung",
@@ -5293,8 +5601,49 @@ _FACT_QUERY_STOP_WORDS = {
     "today",
     "current",
     "currently",
+    "tui",
+    "hoi",
+    "nhiu",
+    "day",
+    "vay",
+    "kiem",
+    "tra",
+    "truc",
+    "tiep",
+    "hom",
+    "nay",
+    "ngay",
+    "a",
+    "duoc",
+    "re",
+    "hon",
     "please",
 }
+
+_UNSUPPORTED_SENSORY_ATTRIBUTE_PHRASES = (
+    "vi no dang nhieu khong",
+    "vi dang nhieu khong",
+    "vi dang the nao",
+    "vi no nhu the nao",
+    "huong vi",
+    "how does it taste",
+    "flavor profile",
+    "flavour profile",
+    "does it taste bitter",
+    "is it bitter",
+    "taste",
+    "bitter",
+    "sweetness",
+    "vi ngot",
+    "ngot khong",
+    "ngot nhieu",
+)
+
+
+def _unsupported_sensory_attribute_requested(text: str) -> bool:
+    normalized = " ".join(_normalize_request_text(text).split())
+    return any(phrase in normalized for phrase in _UNSUPPORTED_SENSORY_ATTRIBUTE_PHRASES)
+
 
 _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
     sorted(
@@ -5351,6 +5700,17 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
             "health benefits",
             "nutrition facts",
             "nutritional value",
+            "caffeine",
+            "cafein",
+            "caffeine content",
+            "cafein bao nhieu",
+            "co caffeine khong",
+            "co cafein khong",
+            "me bau uong co an toan",
+            "me bau",
+            "co an toan khong",
+            "an toan khi mang thai",
+            "safe during pregnancy",
             "allergens",
             "allergen",
             "allergic to",
@@ -5390,6 +5750,7 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
             "chua benh",
             "good for",
             "health",
+            *_UNSUPPORTED_SENSORY_ATTRIBUTE_PHRASES,
         ),
         key=len,
         reverse=True,
@@ -5409,6 +5770,16 @@ def _fact_product_query(text: str) -> str:
     normalized = re.sub(r"\bhoi binh thuong\b", " ", normalized)
     normalized = re.sub(r"\bben minh\b", " ", normalized)
     normalized = re.sub(
+        r"\b(?:trong luc cho|trong khi cho|while waiting|in the meantime)\b",
+        " ",
+        normalized,
+    )
+    normalized = re.sub(
+        r"\b(?:ghi tren mau du lieu|tren mau du lieu|mau du lieu)\b",
+        " ",
+        normalized,
+    )
+    normalized = re.sub(
         r"\b(?:duoc )?cap nhat(?: vao)?(?: (?:ngay|hom))?(?: (?:nao|gi))?\b",
         " ",
         normalized,
@@ -5416,6 +5787,7 @@ def _fact_product_query(text: str) -> str:
     normalized = re.sub(r"\b(?:du lieu|muc du lieu)\b", " ", normalized)
     normalized = re.sub(r"\b(?:lay\s+)?tu\s+(?:ngay|luc)\b", " ", normalized)
     normalized = re.sub(r"\bquay lai\b", " ", normalized)
+    normalized = re.sub(r"\b(?:lam tu gi|made of what)\b", " ", normalized)
     normalized = re.sub(
         r"\b(?:con )?may\s+(?:chai|lon|goi|hop|ly|cai)\b",
         " ",
@@ -5430,7 +5802,10 @@ def _fact_product_query(text: str) -> str:
         normalized,
     )
     normalized = re.sub(
-        r"\b(?:san pham nay|mat hang nay|mon nay|mon do|cai nay|loai nay)\b",
+        r"\b(?:san pham nay|mat hang nay|mon nay|mon do|cai nay|loai nay|"
+        r"chai nay|chai do|cai re hon|chai re hon|mon re hon|nuoc nay|nuoc do|"
+        r"sua nay|mi nay|do uong nay|snack nay|bim bim nay|mon vua goi y|"
+        r"mon ban vua goi y|loai vua goi y|cai vua roi|san pham vua roi|vua goi y)\b",
         " ",
         normalized,
     )
@@ -5462,6 +5837,39 @@ def _fact_query_has_product_target(query: str) -> bool:
         "kiem",
         "tu",
         "van",
+        "kiem",
+        "tra",
+        "truc",
+        "tiep",
+        "hom",
+        "nay",
+        "ngay",
+        "chai",
+        "lon",
+        "hop",
+        "goi",
+        "ly",
+        "cai",
+        "may",
+        "re",
+        "do",
+        "ay",
+        "a",
+        "ha",
+        "thoi",
+        "tui",
+        "duong",
+        "mau",
+        "den",
+        "ghi",
+        "tren",
+        "lieu",
+        "thi",
+        "luc",
+        "hoi",
+        "day",
+        "vay",
+        "nhiu",
     }
     return any(token not in generic_terms for token in _normalize_request_text(query).split())
 
@@ -5539,8 +5947,7 @@ async def _handle_product_correction(
             active_category=None,
             selected_product_ids=[product.product_id for product in candidates],
             pending_action=(
-                "SELECT_CORRECTED_PRODUCT:"
-                + ",".join(product.product_id for product in candidates)
+                "SELECT_CORRECTED_PRODUCT:" + ",".join(product.product_id for product in candidates)
                 if candidates
                 else None
             ),
@@ -5882,11 +6289,16 @@ def _explicit_budget_amount_vnd(text: str) -> int | None:
 
 _PEOPLE_COUNTS = {
     "mot": 1,
+    "one": 1,
     "hai": 2,
+    "two": 2,
     "ba": 3,
+    "three": 3,
     "bon": 4,
+    "four": 4,
     "tu": 4,
     "nam": 5,
+    "five": 5,
     "sau": 6,
     "bay": 7,
     "tam": 8,
@@ -5895,17 +6307,38 @@ _PEOPLE_COUNTS = {
 }
 
 
+def _basket_quantity_is_explicit(text: str) -> bool:
+    normalized = _normalize_request_text(text)
+    number = r"(?:\d+|mot|hai|ba|bon|tu|nam|sau|bay|tam|chin|muoi|one|two|three|four|five)"
+    return bool(
+        re.search(rf"\b{number}\s+(?:nguoi|ban|dua|people|persons?)\b", normalized)
+        or re.search(rf"\b(?:moi nguoi|per person)\s+{number}\b", normalized)
+        or re.search(r"\b(?:moi loai|moi mon|each category|each item)\b", normalized)
+    )
+
+
 def _basket_quantity_per_category(text: str) -> int:
     normalized = _normalize_request_text(text)
-    match = re.search(
-        r"\b(?:cho|danh cho|for)\s+(\d+|mot|hai|ba|bon|tu|nam|sau|bay|tam|chin|muoi)\s+"
-        r"(?:nguoi|ban|dua|people|persons?)\b",
+    number = r"(\d+|mot|hai|ba|bon|tu|nam|sau|bay|tam|chin|muoi|one|two|three|four|five)"
+    people_match = re.search(rf"\b{number}\s+(?:nguoi|ban|dua|people|persons?)\b", normalized)
+    people = 1
+    if people_match:
+        raw_people = people_match.group(1)
+        people = int(raw_people) if raw_people.isdigit() else _PEOPLE_COUNTS[raw_people]
+
+    per_person = re.search(rf"\b(?:moi nguoi|per person)\s+{number}\b", normalized)
+    per_category = re.search(
+        rf"\b(?:moi loai|moi mon|each category|each item)(?:\s+(?:lay|mua|take))?\s+{number}\b",
         normalized,
     )
-    if match is None:
-        return 1
-    count = int(match.group(1)) if match.group(1).isdigit() else _PEOPLE_COUNTS[match.group(1)]
-    return max(1, min(count, 10))
+    explicit_units = per_person or per_category
+    if explicit_units:
+        raw_units = explicit_units.group(1)
+        units = int(raw_units) if raw_units.isdigit() else _PEOPLE_COUNTS[raw_units]
+        quantity = units * people if per_person else units
+    else:
+        quantity = people
+    return max(1, min(quantity, 10))
 
 
 def _whole_cart_budget_only_followup(text: str) -> bool:
@@ -5955,6 +6388,40 @@ def _whole_cart_budget_only_followup(text: str) -> bool:
     return not remainder.strip()
 
 
+def _whole_cart_budget_is_exclusive(text: str) -> bool:
+    normalized = _normalize_request_text(text)
+    return bool(re.search(r"\b(?:duoi|it hon|thap hon|under|below|less than)\b", normalized))
+
+
+def _whole_cart_budget_is_per_item(text: str) -> bool:
+    normalized = _normalize_request_text(text)
+    budget = r"\d+(?:[.,]\d+)?\s*(?:k|nghin|ngan|trieu|million|vnd|dong|d)\b"
+    return bool(
+        re.search(
+            rf"\b(?:moi mon|moi loai|tung mon|per item|each item)\s+"
+            rf"(?:duoi|it hon|thap hon|under|below|less than)\s*{budget}",
+            normalized,
+        )
+        or re.search(
+            rf"\b(?:duoi|it hon|thap hon|under|below|less than)\s*{budget}"
+            r"\s+(?:moi mon|moi loai|per item|each item)\b",
+            normalized,
+        )
+    )
+
+
+def _basket_spice_constraint_requested(text: str) -> bool:
+    normalized = _normalize_request_text(text)
+    return bool(
+        re.search(
+            r"\b(?:khong cay|not spicy|mild|non spicy|bo (?:mon )?cay|"
+            r"loai (?:mon )?cay|khong lay (?:mon )?cay|"
+            r"co cay|vi cay|spicy|hot)\b",
+            normalized,
+        )
+    )
+
+
 def _whole_cart_recommendation_arguments(
     text: str,
     *,
@@ -5962,7 +6429,7 @@ def _whole_cart_recommendation_arguments(
     active_context: bool = False,
 ) -> dict[str, object] | None:
     normalized = _normalize_request_text(text)
-    if re.search(r"\b(?:moi mon|moi loai|tung mon|per item|each item)\b", normalized):
+    if _whole_cart_budget_is_per_item(text):
         return None
     stored = stored_constraints or {}
     categories = _explicit_recommendation_categories(text)
@@ -5975,27 +6442,53 @@ def _whole_cart_recommendation_arguments(
             if active_context and isinstance(saved_categories, list)
             else []
         )
-    budget = _explicit_budget_amount_vnd(text) or stored.get("total_budget_vnd")
+    explicit_budget = _explicit_budget_amount_vnd(text)
+    budget = explicit_budget or stored.get("total_budget_vnd")
     if not 2 <= len(categories) <= 4 or not isinstance(budget, int):
         return None
+    budget_is_exclusive = (
+        _whole_cart_budget_is_exclusive(text)
+        if explicit_budget is not None
+        else bool(stored.get("total_budget_exclusive"))
+    )
     has_recommendation_signal = (
         is_recommendation_request(text)
         or bool(re.search(r"\b(?:combo|ket hop|mua|tim giup|goi y|tu van)\b", normalized))
-        or (active_context and _explicit_budget_amount_vnd(text) is not None)
+        or (
+            active_context
+            and (
+                _explicit_budget_amount_vnd(text) is not None
+                or _basket_quantity_is_explicit(text)
+                or _basket_spice_constraint_requested(text)
+            )
+        )
     )
     if not has_recommendation_signal:
         return None
     quantity = _basket_quantity_per_category(text)
-    if quantity == 1 and active_context:
+    if quantity == 1 and active_context and not _basket_quantity_is_explicit(text):
         stored_quantity = stored.get("quantity_per_category")
         if isinstance(stored_quantity, int):
             quantity = max(1, min(stored_quantity, 10))
-    return {
+    arguments: dict[str, object] = {
         "categories": categories,
         "total_budget_vnd": budget,
         "quantity_per_category": quantity,
         "limit": 3,
     }
+    if budget_is_exclusive:
+        arguments["total_budget_exclusive"] = True
+    if _basket_spice_constraint_requested(text):
+        arguments["spicy"] = not bool(
+            re.search(
+                r"\b(?:khong cay|not spicy|mild|non spicy|bo (?:mon )?cay|"
+                r"loai (?:mon )?cay|khong lay (?:mon )?cay)\b",
+                normalized,
+            )
+        )
+    elif isinstance(stored.get("spicy"), bool):
+        arguments["spicy"] = stored["spicy"]
+    return arguments
 
 
 def _recommendation_tool_arguments(
@@ -6016,6 +6509,7 @@ def _recommendation_tool_arguments(
         re.search(
             r"\bkhong cay\b|\bnot spicy\b|\bmild\b|\bnon spicy\b|"
             r"\b(?:co cay|vi cay)\b|\bspicy\b|\bhot\b|"
+            r"bo (?:mon )?cay|loai (?:mon )?cay|khong lay (?:mon )?cay|"
             r"cay cung duoc|khong can loc do cay|any spice level",
             normalized,
         )
@@ -6085,7 +6579,11 @@ def _recommendation_tool_arguments(
         query_value = str(arguments.get("query", "")).strip()
         if size.casefold() not in query_value.casefold():
             arguments["query"] = " ".join(part for part in (query_value, size) if part)
-    if re.search(r"\bkhong cay\b|\bnot spicy\b|\bmild\b|\bnon spicy\b", normalized):
+    if re.search(
+        r"\bkhong cay\b|\bnot spicy\b|\bmild\b|\bnon spicy\b|"
+        r"\bbo (?:mon )?cay\b|\bloai (?:mon )?cay\b|\bkhong lay (?:mon )?cay\b",
+        normalized,
+    ):
         arguments["spicy"] = False
     elif re.search(r"\b(?:co cay|vi cay)\b|\bspicy\b|\bhot\b", normalized):
         arguments["spicy"] = True
@@ -6163,7 +6661,27 @@ def _recommendation_constraint_updates(
         if category:
             updates.append({"action": "SET", "key": "category", "value": category})
     query = _explicit_recommendation_query(text)
-    if not query and not category and not current.get("category"):
+    current_categories = current.get("categories")
+    has_current_multi_category_basket = (
+        isinstance(current_categories, list) and len(current_categories) >= 2
+    )
+    has_new_multi_category_basket = 2 <= len(categories) <= 4
+    is_constraint_only_followup = (
+        _whole_cart_budget_only_followup(text)
+        or _basket_spice_constraint_requested(text)
+        or (
+            _basket_quantity_is_explicit(text)
+            and (has_current_multi_category_basket or has_new_multi_category_basket)
+        )
+    )
+    if (
+        not query
+        and not category
+        and not current.get("category")
+        and not has_current_multi_category_basket
+        and not has_new_multi_category_basket
+        and not is_constraint_only_followup
+    ):
         query = _consultation_product_query(text)
     if query:
         updates.append({"action": "SET", "key": "query", "value": query})
@@ -6171,32 +6689,37 @@ def _recommendation_constraint_updates(
     if brand:
         updates.append({"action": "SET", "key": "brand", "value": brand})
     elif any(
-        cue in normalized
-        for cue in ("hang nao cung duoc", "any brand", "no brand preference")
+        cue in normalized for cue in ("hang nao cung duoc", "any brand", "no brand preference")
     ):
         updates.append({"action": "REMOVE", "key": "brand"})
     price_constraint = _price_constraint_from_text(text)
     if price_constraint:
         updates.append({"action": "SET", "key": "price_constraint", "value": price_constraint})
     elif any(
-        cue in normalized
-        for cue in ("khong gioi han gia", "bo gioi han gia", "no budget limit")
+        cue in normalized for cue in ("khong gioi han gia", "bo gioi han gia", "no budget limit")
     ):
         updates.append({"action": "REMOVE", "key": "price_constraint"})
     total_budget = _explicit_budget_amount_vnd(text)
     if total_budget is not None and (len(categories) >= 2 or current.get("categories")):
         updates.append({"action": "SET", "key": "total_budget_vnd", "value": total_budget})
         updates.append({"action": "REMOVE", "key": "price_constraint"})
+        if _whole_cart_budget_is_exclusive(text):
+            updates.append({"action": "SET", "key": "total_budget_exclusive", "value": True})
+        elif current.get("total_budget_exclusive"):
+            updates.append({"action": "REMOVE", "key": "total_budget_exclusive"})
     quantity = _basket_quantity_per_category(text)
-    if quantity > 1 and (len(categories) >= 2 or current.get("categories")):
+    if _basket_quantity_is_explicit(text) and (len(categories) >= 2 or current.get("categories")):
         updates.append({"action": "SET", "key": "quantity_per_category", "value": quantity})
-    if re.search(r"\bkhong cay\b|\bnot spicy\b|\bmild\b|\bnon spicy\b", normalized):
+    if re.search(
+        r"\bkhong cay\b|\bnot spicy\b|\bmild\b|\bnon spicy\b|"
+        r"\bbo (?:mon )?cay\b|\bloai (?:mon )?cay\b|\bkhong lay (?:mon )?cay\b",
+        normalized,
+    ):
         updates.append({"action": "SET", "key": "spicy", "value": False})
     elif re.search(r"\b(?:co cay|vi cay)\b|\bspicy\b|\bhot\b", normalized):
         updates.append({"action": "SET", "key": "spicy", "value": True})
     elif any(
-        cue in normalized
-        for cue in ("cay cung duoc", "khong can loc do cay", "any spice level")
+        cue in normalized for cue in ("cay cung duoc", "khong can loc do cay", "any spice level")
     ):
         updates.append({"action": "REMOVE", "key": "spicy"})
     size = re.search(r"\b\d+(?:[.,]\d+)?\s?(?:ml|l|g|kg|gram|grams)\b", text, re.IGNORECASE)
@@ -6212,8 +6735,7 @@ def _recommendation_constraint_updates(
             if updated_query:
                 updates.append({"action": "SET", "key": "query", "value": updated_query})
     elif any(
-        cue in normalized
-        for cue in ("co nao cung duoc", "any size", "khong quan trong dung tich")
+        cue in normalized for cue in ("co nao cung duoc", "any size", "khong quan trong dung tich")
     ):
         updates.append({"action": "REMOVE", "key": "size"})
         old_size = current.get("size")
@@ -6293,6 +6815,8 @@ def _implicit_followup_fields(text: str) -> tuple[str, ...]:
         "mai",
         "han",
         "dung",
+        "mau",
+        "duong",
         "su",
         "het",
         "thanh",
@@ -6427,11 +6951,22 @@ def _implicit_followup_fields(text: str) -> tuple[str, ...]:
 def _unsupported_catalog_attribute_requested(text: str) -> bool:
     normalized = _normalize_request_text(text)
     normalized = " ".join(normalized.split())
+    if re.search(
+        r"\b(?:co duong khong|co duong|has sugar|does (?:it|this) have sugar|"
+        r"does (?:it|this) contain sugar)\b",
+        normalized,
+    ):
+        # Presence of sugar can be checked from a verified ingredients label;
+        # quantity or nutrition claims remain unsupported unless explicitly stored.
+        return False
     token_set = set(normalized.split())
     return (
         _parse_unsupported_attribute(text)
         or any(phrase in normalized for phrase in _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES)
-        or bool(token_set & {"calo", "kcal", "calorie", "calories", "protein", "sugar"})
+        or bool(
+            token_set
+            & {"calo", "kcal", "calorie", "calories", "protein", "sugar", "caffeine", "cafein"}
+        )
         or "dinh duong" in normalized
         or "bao nhieu duong" in normalized
         or "luong duong" in normalized
@@ -6532,9 +7067,7 @@ def _unsupported_attribute_needs_product_clarification(text: str, record) -> boo
     category = _explicit_recommendation_category(text)
     category_tokens = {
         "snack": {"snack", "snacks", "bim", "do", "an", "vat", "chips", "crisps"},
-        "drink": {
-            "drink", "drinks", "nuoc", "uong", "beverage", "beverages", "water", "soda"
-        },
+        "drink": {"drink", "drinks", "nuoc", "uong", "beverage", "beverages", "water", "soda"},
         "dairy": {"sua", "milk", "dairy", "yogurt", "yoghurt"},
         "meal": {"mi", "noodles", "meal", "meals", "food", "thuc", "an"},
     }.get(category or "", set())

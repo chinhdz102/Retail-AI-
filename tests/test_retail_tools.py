@@ -341,6 +341,23 @@ def test_whole_cart_recommendation_calculates_sellable_combos_under_total_budget
         assert all(item["quantity"] == 2 for item in option["items"])
         assert sum(item["line_total_vnd"] for item in option["items"]) == option["total_vnd"]
 
+    strict_budget = execute_catalog_tool(
+        "recommend_products",
+        json.dumps(
+            {
+                "categories": ["drink", "snack"],
+                "total_budget_vnd": 50_000,
+                "total_budget_exclusive": True,
+                "quantity_per_category": 2,
+                "limit": 3,
+            }
+        ),
+        repository=DemoProductRepository(),
+    )
+    assert strict_budget.status == "SUCCESS"
+    assert strict_budget.content["options"] == []
+    assert strict_budget.content["total_budget_exclusive"] is True
+
 
 def test_whole_cart_recommendation_fails_closed_when_requested_group_has_no_sellable_item() -> None:
     observation = execute_catalog_tool(
@@ -516,8 +533,7 @@ def test_bim_bim_lookup_cannot_return_diapers_from_a_confusable_category() -> No
                 product
                 for product in products
                 if all(
-                    token
-                    in normalize_vietnamese(f"{product.name} {product.category}")
+                    token in normalize_vietnamese(f"{product.name} {product.category}")
                     for token in query_tokens
                 )
                 and category in normalize_vietnamese(product.category)

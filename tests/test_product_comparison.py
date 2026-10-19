@@ -24,6 +24,10 @@ from backend.services.product_comparison import (
             ("coca zero", "nuoc suoi"),
         ),
         (
+            "So Coca Zero với nước suối xem chai nào rẻ hơn.",
+            ("coca zero", "nuoc suoi"),
+        ),
+        (
             "So sánh giữa Coca Zero và nước suối, giúp mình",
             ("coca zero", "nuoc suoi"),
         ),
@@ -42,6 +46,7 @@ def test_comparison_parser_extracts_two_product_queries(
         ("Cái nào rẻ hơn?", "price"),
         ("Which one is cheaper?", "price"),
         ("So sánh giá Coca Zero với nước suối", "price"),
+        ("Chênh nhau đúng 6 nghìn hả?", "price"),
         ("Compare prices for Coca Zero and water", "price"),
         ("Bên nào còn nhiều hàng hơn?", "stock"),
         ("Which has more stock?", "stock"),

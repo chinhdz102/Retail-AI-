@@ -148,16 +148,15 @@ DEMO_PRODUCTS: tuple[ProductSnapshot, ...] = (
 PRODUCT_ALIASES = {
     "COKE_ZERO_330": "coca zero coca-cola 可口可乐 可口可乐零度",
     "MILK01": "milk 牛奶",
-    "SNACK01": "snack bim bim chips crisps 零食",
+    "SNACK01": "snack bim bim bimbim khoai tay vi tu nhien chips crisps 零食",
     "NOODLE01": "noodles 面条 泡面",
-    "WATER01": "water 水 矿泉水",
+    "WATER01": "water nua lit half liter half litre 0.5l 500ml 水 矿泉水",
     "COFFEE01": "coffee 咖啡",
 }
 
 DEMO_CATEGORY_ALIASES = {
     "drink": (
-        "đồ uống nước uống thức uống nước giải khát "
-        "drink drinks beverage beverages water soda"
+        "đồ uống nước uống thức uống nước giải khát drink drinks beverage beverages water soda"
     ),
     "dairy": "sữa chế phẩm từ sữa dairy milk yogurt yoghurt cheese",
     "snack": "đồ ăn vặt thức ăn nhẹ snack snacks crisps chips candy",
@@ -190,6 +189,11 @@ QUERY_STOP_WORDS = frozenset(
         "nhieu",
         "nhe",
         "nhi",
+        "nhiu",
+        "tui",
+        "hoi",
+        "day",
+        "vay",
         "o",
         "pham",
         "price",
@@ -323,9 +327,7 @@ def _one_edit_apart(left: str, right: str) -> bool:
     if len(left) == len(right):
         mismatches = [
             index
-            for index, (left_char, right_char) in enumerate(
-                zip(left, right, strict=True)
-            )
+            for index, (left_char, right_char) in enumerate(zip(left, right, strict=True))
             if left_char != right_char
         ]
         if len(mismatches) == 1:
@@ -370,10 +372,7 @@ def _query_matches_product(needle_tokens: list[str], haystack: str) -> bool:
         return False
 
     product_terms = re.findall(r"[a-z0-9]+", haystack)
-    return any(
-        len(term) >= 4 and _one_edit_apart(missing[0], term)
-        for term in product_terms
-    )
+    return any(len(term) >= 4 and _one_edit_apart(missing[0], term) for term in product_terms)
 
 
 def search_products(
