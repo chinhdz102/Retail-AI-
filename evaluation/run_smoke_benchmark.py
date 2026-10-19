@@ -13,6 +13,7 @@ import argparse
 import asyncio
 import copy
 import json
+import os
 import sys
 from collections import Counter
 from datetime import UTC, date, datetime
@@ -26,6 +27,11 @@ import httpx
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+# This deterministic suite is authored against the six-product demo catalog.
+# Set this before importing the API, whose settings are cached at module load.
+os.environ["APP_ENV"] = "development"
+os.environ["CATALOG_REPOSITORY"] = "demo"
 
 from backend.api.main import app, get_groq_service, session_store  # noqa: E402
 from backend.products.catalog import DEMO_PRODUCTS, get_product_snapshot  # noqa: E402
@@ -446,26 +452,54 @@ async def benchmark() -> None:
             ),
         )
 
-        # G: verify per-session raw history and constraint propagation only.
-        service = ScriptedGroq(*(answer("Đã ghi nhận.") for _ in range(4)))
+        # G: seed two different product conversations, then verify that each
+        # model request sees only its own session's prior turns.
+        service = ScriptedGroq(
+            answer("Mình kể chuyện vui cho bạn."),
+            answer("Mình kể chuyện vui cho bạn."),
+        )
         sid_a = await create_session(client, "kiosk-a")
         sid_b = await create_session(client, "kiosk-b")
-        await respond(client, service, "Mã thử nghiệm A là alpha.", session_id=sid_a)
-        await respond(client, service, "Mã thử nghiệm B là beta.", session_id=sid_b)
-        await respond(client, service, "Tôi vừa nói gì?", session_id=sid_b)
-        await respond(client, service, "Tôi vừa nói gì?", session_id=sid_a)
-        b_history = json.dumps(service.calls[2]["messages"], ensure_ascii=False)
-        a_history = json.dumps(service.calls[3]["messages"], ensure_ascii=False)
+        a_seed, _ = await respond(client, service, "Coca Zero giá bao nhiêu?", session_id=sid_a)
+        b_seed, _ = await respond(
+            client, service, "Nước suối 500ml giá bao nhiêu?", session_id=sid_b
+        )
+        b_followup, _ = await respond(client, service, "Kể chuyện vui đi.", session_id=sid_b)
+        a_followup, _ = await respond(client, service, "Kể chuyện vui đi.", session_id=sid_a)
+        b_history = json.dumps(service.calls[0]["messages"], ensure_ascii=False)
+        a_history = json.dumps(service.calls[1]["messages"], ensure_ascii=False)
+        a_seed_body = a_seed.json() if a_seed.status_code == 200 else {}
+        b_seed_body = b_seed.json() if b_seed.status_code == 200 else {}
+        a_followup_body = a_followup.json() if a_followup.status_code == 200 else {}
+        b_followup_body = b_followup.json() if b_followup.status_code == 200 else {}
         record(
             "G-session-isolation", "G",
-            "beta" in b_history and "alpha" not in b_history
-            and "alpha" in a_history and "beta" not in a_history,
-            {"a_sees_own_marker": "alpha" in a_history,
-             "a_sees_other_marker": "beta" in a_history,
-             "b_sees_own_marker": "beta" in b_history,
-             "b_sees_other_marker": "alpha" in b_history},
-            "Each model request carries only its own session history",
-            note="Does not measure real LLM reference resolution or cart state.",
+            a_seed.status_code == 200
+            and b_seed.status_code == 200
+            and a_seed_body.get("grounded_product_ids") == ["COKE_ZERO_330"]
+            and b_seed_body.get("grounded_product_ids") == ["WATER01"]
+            and a_followup.status_code == 200
+            and b_followup.status_code == 200
+            and "Coca Zero" in a_history
+            and "Nước suối" not in a_history
+            and "Nước suối" in b_history
+            and "Coca Zero" not in b_history
+            and "chuyện vui" in a_followup_body.get("text", "").casefold()
+            and "chuyện vui" in b_followup_body.get("text", "").casefold()
+            and len(service.calls) == 2,
+            {
+                "a_seed_status": a_seed.status_code,
+                "b_seed_status": b_seed.status_code,
+                "a_seed_product_ids": a_seed_body.get("grounded_product_ids"),
+                "b_seed_product_ids": b_seed_body.get("grounded_product_ids"),
+                "a_sees_own_product": "Coca Zero" in a_history,
+                "a_sees_other_product": "Nước suối" in a_history,
+                "b_sees_own_product": "Nước suối" in b_history,
+                "b_sees_other_product": "Coca Zero" in b_history,
+                "model_calls": len(service.calls),
+            },
+            "Each model request carries only its own real catalog conversation",
+            note="Checks stored history isolation using the demo catalog and scripted answers.",
         )
 
         service = ScriptedGroq()
@@ -565,10 +599,15 @@ async def benchmark() -> None:
                 )
                 expected = "Price mutation is blocked by local policy before model/tool execution"
             else:
-                rejected = any(
-                    "not available" in item.get("error", "") for item in observations
+                rejected = (
+                    body.get("tools_used") == []
+                    and "không thể sửa giá, tồn kho" in body.get("text", "").casefold()
+                    and not service.calls
+                    and not observations
                 )
-                expected = f"Unauthorized {name} call is rejected by backend"
+                expected = (
+                    "Inventory mutation is blocked by local policy before model/tool execution"
+                )
             record(
                 case_id, "I",
                 response.status_code == 200 and rejected,

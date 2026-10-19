@@ -648,6 +648,7 @@ def _administrative_action_requested(text: str) -> bool:
     unambiguous_write_patterns = (
         r"\b(?:doi|cap nhat|dieu chinh|thay doi|set|update|modify|change)\b"
         r".{0,35}\b(?:gia|price)\b",
+        r"\b(?:dat|set)\s+(?:muc\s+)?(?:ton kho|hang ton|inventory|stock)\b",
         r"\b(?:doi|cap nhat|dieu chinh|thay doi|set|update|modify|change|"
         r"increase|decrease|raise|lower|add|remove|tang|giam)\b"
         r".{0,35}\b(?:ton kho|hang ton|inventory|stock)\b",
