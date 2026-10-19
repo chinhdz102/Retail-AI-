@@ -6,11 +6,11 @@
 
 ## A. Tóm tắt
 
-Vòng này làm gọn câu trả lời giá/tồn/khuyến mãi, loại hàng hết hạn khỏi danh sách ưu đãi có thể bán, giữ nguồn và timestamp trong API, hiển thị nguồn/ngày trên product card, bổ sung hỏi ngày cập nhật và sửa cách giữ ngữ cảnh cho các câu hỏi nối tiếp. Tool snapshot chuyển `data_timestamp` sang ISO string trước khi gửi lại cho LLM. Lỗi serialize datetime từng làm endpoint trả HTTP 500 đã được tái hiện, sửa và có regression test.
+Vòng này làm gọn câu trả lời giá/tồn/khuyến mãi, loại hàng hết hạn khỏi danh sách ưu đãi có thể bán, giữ nguồn và timestamp trong API, hiển thị nguồn/ngày trên product card, bổ sung hỏi ngày cập nhật và sửa cách giữ ngữ cảnh cho các câu hỏi nối tiếp. Tool snapshot chuyển `data_timestamp` sang ISO string trước khi gửi lại cho LLM. Lỗi serialize datetime từng làm endpoint trả HTTP 500 đã được tái hiện, sửa và có regression test. Follow-up bổ sung tư vấn combo nhiều nhóm hàng với ngân sách toàn giỏ; backend lấy hàng còn bán từ catalog, tính tổng và không tự sửa giỏ.
 
 Kết quả kiểm tra tại thời điểm chốt:
 
-- Backend: **536 passed**.
+- Backend: **557 passed** trong lần chạy mới nhất với `CATALOG_REPOSITORY=demo`.
 - Frontend: **49 passed**; `vue-tsc -b` và production build thành công.
 - Ruff, `compileall`, `git diff --check`: thành công.
 - P0: **40/40** qua 8 nhóm, mỗi nhóm 5 lượt.
@@ -45,7 +45,7 @@ Artefact: [baseline probe](../../evaluation/results/text_sales_flow_v3_baseline_
 
 ## D. Đánh giá hội thoại text
 
-Bộ test mới có **50 shopping sessions / 249 turns**: 40 development sessions / 200 turns và 10 held-out sessions / 49 turns. Dev có hội thoại nhiều lượt, catalog grounding, slang/không dấu, tư vấn/ngân sách, giỏ hàng, checkout, prompt injection và hành động vượt quyền. Held-out có context switch, sửa nhu cầu, multi-item, giọng địa phương, typo, freshness, khuyến mãi và customer support.
+Bộ test có **51 shopping sessions / 252 turns**: 41 development sessions / 203 turns và 10 held-out sessions / 49 turns. Dev có hội thoại nhiều lượt, catalog grounding, slang/không dấu, tư vấn/ngân sách, giỏ hàng, checkout, prompt injection và hành động vượt quyền. Case mới kiểm tra combo nước + snack cho hai người, sửa tổng ngân sách giữa hội thoại, và tình huống không tồn tại combo dưới mức trần. Held-out có context switch, sửa nhu cầu, multi-item, giọng địa phương, typo, freshness, khuyến mãi và customer support.
 
 Live Groq chỉ chạy case `dev_fact_coca` gồm 5 lượt. Bốn câu đầu khớp nguyên văn với baseline. Kết quả 5/5 assertion và 5/5 HTTP 200; không chạy live toàn bộ 50 sessions. Held-out chưa chạy, do đó không báo điểm held-out.
 
@@ -68,6 +68,12 @@ Assertion tự động kiểm ID sản phẩm, cụm từ cần có/không đư�
 | 11 | Shopping sandbox | Tra sản phẩm đã hết hạn | SKU không được tính là hàng bán được; giỏ không nhận hàng hết hạn. |
 
 Các luồng #6–#9 và #11 kiểm API/state machine trong sandbox, **không phải** lời thoại do live LLM sinh. P0 có 8 case × 5 trials; shopping sandbox có 10 case.
+
+### Combo nhiều nhóm hàng và ngân sách toàn giỏ
+
+Với câu “Mình có 100k, muốn mua nước với snack cho hai người”, intent parser nhận ra cả hai nhóm, tổng ngân sách và số người. Mỗi phương án lấy đúng một mặt hàng còn bán cho mỗi nhóm, nhân số lượng theo số người, rồi tính tổng bằng backend. Nếu không thể đủ nhóm hoặc không có combo dưới trần giá, trả lời rõ ràng thay vì tự bỏ điều kiện. Câu trả lời nêu các giá theo catalog và khẳng định chưa thêm hàng vào giỏ.
+
+Kiểm thử mới gồm sửa ngân sách giữa các lượt và xác nhận 40.000đ không đủ để lấy 2 món mỗi nhóm; API integration kiểm tra giỏ vẫn rỗng. Bộ backend đầy đủ hiện **557 passed**; 21 assertion tập trung cho parser, tool và API đã qua trước lần chạy đầy đủ. Đây là kiểm tra deterministic trên demo catalog, chưa đo độ tự nhiên của live Groq hay dữ liệu PostgreSQL. Số lượng cho câu “cho hai người” được diễn giải là hai đơn vị mỗi nhóm; nếu cửa hàng muốn quy tắc khẩu phần khác, cần xác định lại với người dùng.
 
 ## F. Tìm kiếm sản phẩm và tư vấn
 
@@ -112,9 +118,10 @@ P0/shopping đo API sandbox cục bộ. Chưa đo SSE time-to-first-visible-text
 1. **Đã sửa — HTTP 500 khi tool trả timestamp.** `data_timestamp` được đưa vào tool result dưới dạng `datetime`; `json.dumps` trong tool round-trip ném `TypeError`. Đổi sang ISO string và thêm test ở tool + agent. Live probe dùng đúng luồng Groq → search → snapshot để bắt lỗi.
 2. **Đã sửa — freshness bị hiểu thành yêu cầu sửa giá.** “Giá này được cập nhật ngày nào?” đi vào policy từ chối hành động. Intent giờ chỉ lấy `data_timestamp`, dùng sản phẩm đang nằm trong context và trả lời deterministic. Live final probe pass.
 3. **Đã sửa — câu tồn có phần dẫn “Dữ liệu ghi”.** Parser trước đây giữ từ “ghi” như tên sản phẩm, mất context. Câu này giờ được nhận diện là elliptical stock follow-up; có test API đảm bảo không gọi LLM thêm.
-4. **Còn — product resolution mơ hồ/Recall@1 82,14%.** Các ca nêu tại mục F cần normalization có trọng số, ràng buộc variant rõ ràng và chủ động hỏi quy cách khi thiếu.
-5. **Chưa chạy — live benchmark đầy đủ.** Các lần chạy dev nhiều lượt trước đó gặp Groq `RateLimitError` và bị ngắt; lần này chỉ chạy một paired 5-turn probe. Không suy ra hallucination rate tổng quát từ 5 câu.
-6. **Chưa xác minh — PostgreSQL.** Search benchmark kết thúc bằng `TimeoutError`; không đổi URL/secrets và không đánh dấu DB pass.
+4. **Đã bổ sung deterministic — combo nhiều nhóm hàng / ngân sách toàn giỏ.** Giá, số lượng, tồn sellable và tổng tiền được tính bằng backend. Naturalness với live Groq và tích hợp PostgreSQL vẫn chưa xác minh.
+5. **Còn — product resolution mơ hồ/Recall@1 82,14%.** Các ca nêu tại mục F cần normalization có trọng số, ràng buộc variant rõ ràng và chủ động hỏi quy cách khi thiếu.
+6. **Chưa chạy — live benchmark đầy đủ.** Các lần chạy dev nhiều lượt trước đó gặp Groq `RateLimitError` và bị ngắt; lần này chỉ chạy một paired 5-turn probe. Không suy ra hallucination rate tổng quát từ 5 câu.
+7. **Chưa xác minh — PostgreSQL.** Search benchmark kết thúc bằng `TimeoutError`; không đổi URL/secrets và không đánh dấu DB pass.
 
 ## J. Cơ sở nghiên cứu
 
@@ -127,7 +134,7 @@ P0/shopping đo API sandbox cục bộ. Chưa đo SSE time-to-first-visible-text
 - Khôi phục PostgreSQL rồi chạy benchmark SQL trên catalog đã import; xác minh import, index, fuzzy matching, p50/p95 và inventory thật.
 - Chạy live Groq trên toàn dev, sau đó chạy held-out một lần với cùng model/catalog/grader; lưu token/tool trace và có đánh giá thủ công tiếng Việt vùng miền.
 - Tăng product resolution cho các biến thể Coca, bim bim, Huggies và Omo; đo clarification necessity/resolution và hỏi tối đa một câu khi thiếu quy cách.
-- Đánh giá đề xuất ngân sách toàn giỏ với nhiều mặt hàng trên live LLM; sandbox hiện mới xác minh logic tool/state, không chấm chất lượng tư vấn tự nhiên.
+- Đánh giá tư vấn combo và chuyển ý về ngân sách trên live LLM, cùng người chấm tiếng Việt; hiện mới xác minh logic deterministic/state trên demo catalog.
 - Đo riêng SSE first-visible-text và latency provider; luồng hiện vẫn chia nhỏ câu trả lời đã hoàn tất.
 - Chạy lại kiểm tra tích hợp Redis; vòng này chưa probe Redis.
 - STT/TTS không được kiểm thử lại trong vòng text này.

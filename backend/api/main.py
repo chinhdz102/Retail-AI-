@@ -101,6 +101,9 @@ from backend.services.vietnamese_intent import (
     consultation_product_query as _consultation_product_query,
 )
 from backend.services.vietnamese_intent import (
+    explicit_recommendation_categories as _explicit_recommendation_categories,
+)
+from backend.services.vietnamese_intent import (
     explicit_recommendation_query as _explicit_recommendation_query,
 )
 from backend.services.vietnamese_intent import (
@@ -1130,6 +1133,95 @@ def _localized_recommendation_candidates(
     return "Mình gợi ý " + ", ".join(items) + " nhé. Giá tại cửa hàng có thể khác catalog."
 
 
+def _localized_whole_cart_recommendation(
+    observation: ToolObservation,
+    language: LanguageCode,
+) -> str:
+    content = observation.content
+
+    def format_vnd(value: int) -> str:
+        return f"{value:,}".replace(",", ".")
+
+    categories = content.get("missing_categories") or []
+    if categories:
+        labels = content.get("missing_category_labels") or categories
+        rendered = ", ".join(str(label) for label in labels)
+        if language == "en":
+            return (
+                f"I couldn't find sellable items for {rendered}, so I can't build the combo. "
+                "Which category should I replace?"
+            )
+        if language == "zh":
+            return (
+                f"目录里没有找到{rendered}的可售商品，因此暂时无法组成已验证的套餐。"
+                "您想换哪个类别？"
+            )
+        return (
+            f"Mình chưa tìm thấy mặt hàng còn bán ở nhóm {rendered} nên chưa ghép được combo "
+            "có căn cứ. Bạn muốn đổi nhóm nào?"
+        )
+
+    options = content.get("options") or []
+    budget = int(content.get("total_budget_vnd") or 0)
+    if not options:
+        if language == "en":
+            return (
+                f"I couldn't make a combo within {budget:,} VND using every requested category. "
+                "Would you like to raise the total budget or reduce the quantities?"
+            )
+        if language == "zh":
+            return (
+                f"按当前类别和数量，目录中没有总价不超过{budget:,}越南盾的组合。"
+                "您想提高总预算还是减少数量？"
+            )
+        return (
+            "Mình chưa ghép được combo đủ các nhóm hàng mà không vượt ngân sách "
+            f"{format_vnd(budget)}đ. Bạn muốn tăng tổng ngân sách hay giảm số lượng?"
+        )
+
+    def render_option(option: dict[str, object]) -> str:
+        rendered_items = []
+        for item in option.get("items", []):
+            quantity = int(item["quantity"])
+            line_total = int(item["line_total_vnd"])
+            if language == "en":
+                rendered_items.append(
+                    f"{item['name']} ×{quantity} ({line_total:,} VND)"
+                )
+            elif language == "zh":
+                rendered_items.append(
+                    f"{item['name']} ×{quantity}（{line_total:,}越南盾）"
+                )
+            else:
+                rendered_items.append(
+                    f"{item['name']} ×{quantity} ({format_vnd(line_total)}đ)"
+                )
+        total = int(option["total_vnd"])
+        label = str(option.get("label") or "Phương án")
+        joined = " + ".join(rendered_items)
+        if language == "en":
+            return f"{label}: {joined}, total {total:,} VND"
+        if language == "zh":
+            return f"{label}：{joined}，合计{total:,}越南盾"
+        return f"{label}: {joined}, tổng {format_vnd(total)}đ"
+
+    rendered_options = "; ".join(render_option(option) for option in options[:2])
+    if language == "en":
+        return (
+            f"Using catalog prices, here are combos within your {budget:,} VND total budget: "
+            f"{rendered_options}. I haven't added anything to your cart."
+        )
+    if language == "zh":
+        return (
+            f"按目录价格，以下组合不超过总预算{budget:,}越南盾：{rendered_options}。"
+            "我还没有把商品加入购物车。"
+        )
+    return (
+        f"Theo giá catalog, các combo dưới ngân sách tổng {format_vnd(budget)}đ là: "
+        f"{rendered_options}. Mình chưa thêm món nào vào giỏ nhé."
+    )
+
+
 def _localized_catalog_promotions(
     observation: ToolObservation,
     language: LanguageCode,
@@ -1936,6 +2028,8 @@ def _grounded_reply(
         None,
     )
     if last_recommendation and last_recommendation.status == "SUCCESS":
+        if last_recommendation.content.get("recommendation_type") == "whole_cart":
+            return _localized_whole_cart_recommendation(last_recommendation, language)
         if last_recommendation.content.get("count") == 0:
             return _localized_no_sellable_match(language)
         if last_recommendation.products:
@@ -3622,9 +3716,28 @@ async def agent_respond(
             comparison_metric(request.text),
         )
 
+    whole_cart_budget_followup = _whole_cart_budget_only_followup(request.text)
     requested_fields = _requested_snapshot_fields(request.text)
+    if (
+        "price_vnd" in requested_fields
+        and record.shopping.current_intent == IntentType.RECOMMENDATION
+        and isinstance(record.shopping.constraints.get("categories"), list)
+        and whole_cart_budget_followup
+    ):
+        # A VND amount in an active multi-category basket is a cart cap unless
+        # the user explicitly names a product whose price they want to check.
+        requested_fields = tuple(
+            field_name for field_name in requested_fields if field_name != "price_vnd"
+        )
     prompt_override = _prompt_override_requested(request.text)
-    unsupported_attribute_requested = _unsupported_catalog_attribute_requested(request.text)
+    unsupported_attribute_requested = (
+        _unsupported_catalog_attribute_requested(request.text)
+        and not (
+            whole_cart_budget_followup
+            and record.shopping.current_intent == IntentType.RECOMMENDATION
+            and isinstance(record.shopping.constraints.get("categories"), list)
+        )
+    )
     if prompt_override and not requested_fields:
         return _local_policy_response(
             request,
@@ -3731,7 +3844,12 @@ async def agent_respond(
         None,
     )
     ranking_requested = _product_ranking_requested(request.text)
-    recommendation_arguments = _recommendation_tool_arguments(
+    basket_arguments = _whole_cart_recommendation_arguments(
+        request.text,
+        stored_constraints=record.shopping.constraints,
+        active_context=record.shopping.current_intent == IntentType.RECOMMENDATION,
+    )
+    recommendation_arguments = basket_arguments or _recommendation_tool_arguments(
         request.text,
         previous_user_text,
         stored_constraints=record.shopping.constraints,
@@ -3773,7 +3891,12 @@ async def agent_respond(
             active_category=saved_constraints.get("category"),
             pending_clarification=None,
         )
-        recommendation_arguments = _recommendation_tool_arguments(
+        saved_basket_arguments = _whole_cart_recommendation_arguments(
+            request.text,
+            stored_constraints=saved_constraints,
+            active_context=True,
+        )
+        recommendation_arguments = saved_basket_arguments or _recommendation_tool_arguments(
             request.text,
             previous_user_text,
             stored_constraints=saved_constraints,
@@ -3992,10 +4115,19 @@ async def agent_respond(
             reply, agent_result.observations
         ):
             reply = _localized_action_denial(request.language)
-        elif _unsupported_catalog_attribute_requested(request.text):
+        elif (
+            _unsupported_catalog_attribute_requested(request.text)
+            and not whole_cart_budget_followup
+        ):
             unverified = _localized_unverified_fact(request.language)
             reply = f"{reply} {unverified}" if requested_fields else unverified
-        elif _unsupported_catalog_fact_claim(reply, agent_result.observations):
+        elif (
+            _unsupported_catalog_fact_claim(reply, agent_result.observations)
+            and not any(
+                observation.content.get("recommendation_type") == "whole_cart"
+                for observation in agent_result.observations
+            )
+        ):
             reply = _localized_unverified_fact(request.language)
         if _reservation_requested(request.text) and not _reply_already_refuses_reservation(
             reply, request.language
@@ -4728,6 +4860,172 @@ def _unparsed_recommendation_budget_requested(text: str) -> bool:
     )
 
 
+def _explicit_budget_amount_vnd(text: str) -> int | None:
+    match = re.search(
+        r"(?<!\w)(?P<amount>\d+(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*"
+        r"(?P<unit>nghìn|ngàn|nghin|ngan|triệu|trieu|million|thousand|k|vnd|"
+        r"đồng|dong|đ|d)(?!\w)",
+        text,
+        re.IGNORECASE,
+    )
+    if match is not None:
+        raw_amount = match.group("amount").replace(" ", "")
+        unit = _normalize_request_text(match.group("unit"))
+        if unit in {"nghin", "ngan", "thousand", "k", "trieu", "million"} and (
+            raw_amount.count(".") + raw_amount.count(",") == 1
+        ):
+            separator_index = max(raw_amount.find("."), raw_amount.find(","))
+            fraction = raw_amount[separator_index + 1 :]
+            if len(fraction) != 3:
+                number = float(raw_amount.replace(",", "."))
+            else:
+                number = float(raw_amount.replace(".", "").replace(",", ""))
+        else:
+            number = float(raw_amount.replace(".", "").replace(",", ""))
+    else:
+        normalized = _normalize_request_text(text)
+        number_words = sorted(
+            (*_VIETNAMESE_BUDGET_WORDS, *_ENGLISH_BUDGET_WORDS),
+            key=lambda value: (-len(value.split()), -len(value)),
+        )
+        unit_words = "nghin|ngan|thousand|k|trieu|million|vnd|dong|d"
+        word_match = re.search(
+            rf"(?<!\w)(?P<amount>{'|'.join(map(re.escape, number_words))})\s+"
+            rf"(?P<unit>{unit_words})(?!\w)",
+            normalized,
+        )
+        if word_match is None:
+            return None
+        number = float(
+            _VIETNAMESE_BUDGET_WORDS.get(
+                word_match.group("amount"), _ENGLISH_BUDGET_WORDS.get(word_match.group("amount"), 0)
+            )
+        )
+        unit = word_match.group("unit")
+    scaled = unit in {"nghin", "ngan", "thousand", "k", "trieu", "million"}
+    multiplier = 1_000_000 if unit in {"trieu", "million"} else 1_000 if scaled else 1
+    amount = int(number * multiplier)
+    return amount if 0 < amount <= 100_000_000 else None
+
+
+_PEOPLE_COUNTS = {
+    "mot": 1,
+    "hai": 2,
+    "ba": 3,
+    "bon": 4,
+    "tu": 4,
+    "nam": 5,
+    "sau": 6,
+    "bay": 7,
+    "tam": 8,
+    "chin": 9,
+    "muoi": 10,
+}
+
+
+def _basket_quantity_per_category(text: str) -> int:
+    normalized = _normalize_request_text(text)
+    match = re.search(
+        r"\b(?:cho|danh cho|for)\s+(\d+|mot|hai|ba|bon|tu|nam|sau|bay|tam|chin|muoi)\s+"
+        r"(?:nguoi|ban|dua|people|persons?)\b",
+        normalized,
+    )
+    if match is None:
+        return 1
+    count = int(match.group(1)) if match.group(1).isdigit() else _PEOPLE_COUNTS[match.group(1)]
+    return max(1, min(count, 10))
+
+
+def _whole_cart_budget_only_followup(text: str) -> bool:
+    if _explicit_budget_amount_vnd(text) is None:
+        return False
+    normalized = _normalize_request_text(text)
+    has_total_scope = bool(
+        re.search(r"\b(?:tong|ngan sach|budget|total|whole cart|ca gio|ca don)\b", normalized)
+    )
+    if not has_total_scope:
+        return False
+    remainder = re.sub(
+        r"\b\d+(?:\s+\d{3})*\s*(?:k|nghin|ngan|trieu|million|vnd|dong|d)\b",
+        " ",
+        normalized,
+    )
+    for phrase in (
+        "ngan sach",
+        "whole cart",
+        "ca gio",
+        "ca don",
+        "total",
+        "tong",
+        "budget",
+        "doi",
+        "thanh",
+        "ha",
+        "xuong",
+        "tang",
+        "giam",
+        "con",
+        "thoi",
+        "nhe",
+        "nha",
+        "minh",
+        "la",
+        "cho",
+    ):
+        remainder = re.sub(rf"(?<!\w){re.escape(phrase)}(?!\w)", " ", remainder)
+    for phrase in sorted(
+        (*_VIETNAMESE_BUDGET_WORDS, *_ENGLISH_BUDGET_WORDS),
+        key=len,
+        reverse=True,
+    ):
+        remainder = re.sub(rf"(?<!\w){re.escape(phrase)}(?!\w)", " ", remainder)
+    remainder = re.sub(r"\b(?:nghin|ngan|thousand|trieu|million|dong|vnd|k|d)\b", " ", remainder)
+    return not remainder.strip()
+
+
+def _whole_cart_recommendation_arguments(
+    text: str,
+    *,
+    stored_constraints: dict[str, object] | None = None,
+    active_context: bool = False,
+) -> dict[str, object] | None:
+    normalized = _normalize_request_text(text)
+    if re.search(r"\b(?:moi mon|moi loai|tung mon|per item|each item)\b", normalized):
+        return None
+    stored = stored_constraints or {}
+    categories = _explicit_recommendation_categories(text)
+    if len(categories) > 4:
+        return None
+    if len(categories) < 2:
+        saved_categories = stored.get("categories")
+        categories = (
+            [str(category) for category in saved_categories]
+            if active_context and isinstance(saved_categories, list)
+            else []
+        )
+    budget = _explicit_budget_amount_vnd(text) or stored.get("total_budget_vnd")
+    if not 2 <= len(categories) <= 4 or not isinstance(budget, int):
+        return None
+    has_recommendation_signal = (
+        is_recommendation_request(text)
+        or bool(re.search(r"\b(?:combo|ket hop|mua|tim giup|goi y|tu van)\b", normalized))
+        or (active_context and _explicit_budget_amount_vnd(text) is not None)
+    )
+    if not has_recommendation_signal:
+        return None
+    quantity = _basket_quantity_per_category(text)
+    if quantity == 1 and active_context:
+        stored_quantity = stored.get("quantity_per_category")
+        if isinstance(stored_quantity, int):
+            quantity = max(1, min(stored_quantity, 10))
+    return {
+        "categories": categories,
+        "total_budget_vnd": budget,
+        "quantity_per_category": quantity,
+        "limit": 3,
+    }
+
+
 def _recommendation_tool_arguments(
     text: str,
     previous_user_text: str | None = None,
@@ -4884,9 +5182,14 @@ def _recommendation_constraint_updates(
     updates: list[dict[str, object]] = []
     if any(cue in normalized for cue in ("tim lai tu dau", "bo het yeu cau cu", "start over")):
         updates.append({"action": "REPLACE", "value": {}})
-    category = _explicit_recommendation_category(text)
-    if category:
-        updates.append({"action": "SET", "key": "category", "value": category})
+    categories = _explicit_recommendation_categories(text)
+    if 2 <= len(categories) <= 4:
+        updates.append({"action": "SET", "key": "categories", "value": categories})
+        category = None
+    else:
+        category = _explicit_recommendation_category(text)
+        if category:
+            updates.append({"action": "SET", "key": "category", "value": category})
     query = _explicit_recommendation_query(text)
     if not query and not category and not current.get("category"):
         query = _consultation_product_query(text)
@@ -4908,6 +5211,13 @@ def _recommendation_constraint_updates(
         for cue in ("khong gioi han gia", "bo gioi han gia", "no budget limit")
     ):
         updates.append({"action": "REMOVE", "key": "price_constraint"})
+    total_budget = _explicit_budget_amount_vnd(text)
+    if total_budget is not None and (len(categories) >= 2 or current.get("categories")):
+        updates.append({"action": "SET", "key": "total_budget_vnd", "value": total_budget})
+        updates.append({"action": "REMOVE", "key": "price_constraint"})
+    quantity = _basket_quantity_per_category(text)
+    if quantity > 1 and (len(categories) >= 2 or current.get("categories")):
+        updates.append({"action": "SET", "key": "quantity_per_category", "value": quantity})
     if re.search(r"\bkhong cay\b|\bnot spicy\b|\bmild\b|\bnon spicy\b", normalized):
         updates.append({"action": "SET", "key": "spicy", "value": False})
     elif re.search(r"\b(?:co cay|vi cay)\b|\bspicy\b|\bhot\b", normalized):

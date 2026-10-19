@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 import pytest
 
 from backend.products.catalog import ProductSnapshot
+from backend.products.repository import DemoProductRepository
 from backend.services.retail_tools import execute_catalog_tool
 from backend.services.vietnamese_intent import normalize_vietnamese
 
@@ -272,6 +273,67 @@ def test_recommendation_uses_explicit_price_operator_boundaries() -> None:
 
     assert below.content["count"] == 0
     assert [product.product_id for product in at_most.products] == ["WATER01"]
+
+
+def test_whole_cart_recommendation_calculates_sellable_combos_under_total_budget() -> None:
+    observation = execute_catalog_tool(
+        "recommend_products",
+        json.dumps(
+            {
+                "categories": ["drink", "snack"],
+                "total_budget_vnd": 70_000,
+                "quantity_per_category": 2,
+                "limit": 3,
+            }
+        ),
+        repository=DemoProductRepository(),
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.content["recommendation_type"] == "whole_cart"
+    assert observation.content["cart_mutated"] is False
+    assert observation.content["missing_categories"] == []
+    assert [option["total_vnd"] for option in observation.content["options"]] == [
+        50_000,
+        68_000,
+        62_000,
+    ]
+    for option in observation.content["options"]:
+        assert option["total_vnd"] <= observation.content["total_budget_vnd"]
+        assert {item["category_label"] for item in option["items"]} == {
+            "đồ uống",
+            "đồ ăn vặt",
+        }
+        assert all(item["quantity"] == 2 for item in option["items"])
+        assert sum(item["line_total_vnd"] for item in option["items"]) == option["total_vnd"]
+
+
+def test_whole_cart_recommendation_fails_closed_when_requested_group_has_no_sellable_item() -> None:
+    observation = execute_catalog_tool(
+        "recommend_products",
+        json.dumps(
+            {
+                "categories": ["dairy", "snack"],
+                "total_budget_vnd": 100_000,
+            }
+        ),
+        repository=DemoProductRepository(),
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.content["missing_categories"] == ["dairy"]
+    assert observation.content["options"] == []
+    assert observation.products == ()
+
+
+def test_whole_cart_recommendation_requires_multiple_categories_and_total_budget() -> None:
+    observation = execute_catalog_tool(
+        "recommend_products",
+        json.dumps({"categories": ["drink", "snack"]}),
+        repository=DemoProductRepository(),
+    )
+
+    assert observation.status == "INVALID_ARGUMENT"
 
 
 def test_recommendation_resolves_vietnamese_demo_category() -> None:
