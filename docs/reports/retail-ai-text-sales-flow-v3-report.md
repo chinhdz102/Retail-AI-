@@ -11,7 +11,7 @@ Vòng đánh giá gần nhất sửa hai lỗi hội thoại thực tế: câu �
 
 Kết quả kiểm tra ngày 20/10/2026:
 
-- Backend: **675 passed**; frontend: **49 passed**; production build, Ruff và compileall đều thành công.
+- Backend: full pytest run trước đó đạt **675 passed**; lượt chạy song song offline mới nhất đạt **667 passed** (487 + 97 + 83), không chạy các suite gọi nhà cung cấp thật. Frontend: **49 passed**; production build, Ruff và compileall đều thành công.
 - Live Groq dev: **41 phiên / 203 lượt**, HTTP **203/203**, grounding/safety **203/203**, 0 lỗi; median **47 ms**, 3 LLM calls và 1 tool call. Đây là bộ dev đã lộ, không phải held-out mù; số lượt LLM thấp nên không đo đầy đủ chất lượng sinh câu trả lời.
 - Exposed held-out regression: **10 phiên / 50 lượt**, HTTP **50/50**, automated assertions **47/50**, 0 LLM calls. Kiểm tra 3 lượt fail cho thấy assertion chưa khớp câu trả lời; xem mục R, không tính chúng là 50/50 PASS.
 - P0: **40/40**; shopping sandbox: **100/100**, 0 xác nhận thanh toán giả trong 20 lần kiểm tra và 0 rò chéo phiên trong 20 lần kiểm tra.
@@ -31,25 +31,25 @@ Kết quả kiểm tra ngày 20/10/2026:
 
 ## C. Before vs After
 
-Các lần live dùng cùng model chính qwen/qwen3.8-27b, demo catalog, bộ dev 41 phiên, pace 9 giây và timeout 105 giây. Số latency là thời gian request của từng lượt, không gồm thời gian chờ giữa các lượt. Kết quả phụ thuộc tình trạng rate limit tại thời điểm chạy.
+Mục C–H giữ kết quả checkpoint V4: cùng model chính qwen/qwen3.8-27b, demo catalog, bộ dev 41 phiên / 203 lượt, pace 9 giây và timeout 105 giây. Held-out V4 riêng có 10 phiên / 49 lượt. Mục R ghi lần chạy sau: dev cùng 203 lượt nhưng đã rerun trên code mới hơn; exposed regression là một bộ riêng 10 phiên / 50 lượt, không phải held-out 49 lượt ở đây. Số dev mới ở R thay thế số dev cũ trong bảng H. Số latency là thời gian request từng lượt, không gồm pacing; kết quả phụ thuộc rate limit.
 
 | Benchmark | HTTP 200 | Assertion grounding/safety | LLM calls | Tool calls | Median lượt |
 |---|---:|---:|---:|---:|---:|
 | Dev baseline V4 | 201/203 | 121/203 | 121 | 86 | 42 ms |
-| V4 response-style trước refactor hiện tại | 203/203 | 203/203 | 6 | 3 | 76 ms |
-| Mã hiện tại, dev rerun | 203/203 | 203/203 | 4 | 2 | 67 ms |
+| V4 response-style trước refactor | 203/203 | 203/203 | 6 | 3 | 76 ms |
+| V4 checkpoint, dev rerun (lịch sử) | 203/203 | 203/203 | 4 | 2 | 67 ms |
 | Held-out baseline V4 | 49/49 | 22/49 | 49 | 43 | 8.938 ms |
-| Mã hiện tại, held-out cuối | 47/49 | 23/49 | 8 | 5 | 65 ms |
+| V4 checkpoint, held-out cuối (10 phiên / 49 lượt) | 47/49 | 23/49 | 8 | 5 | 65 ms |
 
-Dev giữ 203/203 assertion trong hai lần tối ưu gần nhất; lượt hiện tại ghi ít hơn 2 LLM calls và 1 tool call so với lần response-style trước. Đây là một lần chạy đơn, không đủ để kết luận cải thiện thống kê về tốc độ hoặc chi phí. Held-out chỉ tăng 1 assertion so với baseline nhưng phát sinh 2 lỗi 502; không thể kết luận chất lượng held-out đã cải thiện.
+Trong checkpoint V4, dev giữ 203/203 assertion qua hai lần tối ưu; lần rerun đó ghi ít hơn 2 LLM calls và 1 tool call so với bản response-style trước. Đây là một lần chạy đơn, không đủ để kết luận cải thiện thống kê về tốc độ hoặc chi phí. Held-out chỉ tăng 1 assertion so với baseline nhưng phát sinh 2 lỗi 502; không thể kết luận chất lượng held-out đã cải thiện.
 
 Trong lượt dev đầu, 4 điểm fail đều do grader yêu cầu từ “rating” trong khi câu trả lời tiếng Việt chính xác là “đánh giá vị”. Chỉ tiêu grader trong dev được sửa theo tiếng Việt rồi chạy lại toàn bộ dev. Không sửa nội dung held-out sau khi xem kết quả.
 
 ## D. Text Conversation Evaluation
 
-Bộ hiện tại có **51 shopping sessions / 252 turns**: dev 41 phiên / 203 lượt và held-out 10 phiên / 49 lượt. Live runtime dùng Groq thật, API local và demo catalog; không dùng mock LLM để tính điểm live.
+Bộ V4 trong mục này có **51 shopping sessions / 252 turns**: dev 41 phiên / 203 lượt và held-out V4 10 phiên / 49 lượt. Đây là tập lịch sử riêng với exposed regression 50 lượt được báo ở mục R. Live runtime dùng Groq thật, API local và demo catalog; không dùng mock LLM để tính điểm live.
 
-### Development
+### Development (41 phiên / 203 lượt; V4)
 
 | Nhóm | Assertion đạt |
 |---|---:|
@@ -63,7 +63,7 @@ Bộ hiện tại có **51 shopping sessions / 252 turns**: dev 41 phiên / 203 
 | Prompt injection / hành động vượt quyền | 20/20 |
 | Combo nhiều nhóm và ngân sách toàn giỏ | 3/3 |
 
-### Held-out cuối
+### Held-out cuối (10 phiên / 49 lượt; V4)
 
 Chỉ **23/49** lượt đạt assertion. Các nhóm yếu: multi-intent 0/6; tham chiếu ngữ cảnh 1/11; context switch 1/6; sửa ý định 1/6; slang vùng miền 1/5; typo 1/5; freshness/provenance 1/5. Cart multi-item đạt 4/6; recommendation, sửa ngân sách và customer support có kết quả tốt hơn. Xem trace để biết prompt, output và grader của từng lượt.
 
@@ -122,10 +122,10 @@ Giới hạn: held-out slang/typo và đổi sản phẩm “Coca → nước su
 
 | Chế độ | Lượt thành công / HTTP | Model calls | Tool calls | Tokens được provider trả |
 |---|---:|---:|---:|---:|
-| Live dev hiện tại | 203/203 | 4 lượt LLM thành công | 2 | 8.234 |
-| Live held-out | 47/49 | 8 lượt LLM thành công | 5 | 12.934 |
+| V4 checkpoint — dev (lịch sử) | 203/203 | 4 lượt LLM thành công | 2 | 8.234 |
+| V4 checkpoint — held-out (10 phiên / 49 lượt) | 47/49 | 8 lượt LLM thành công | 5 | 12.934 |
 
-P50 request latency là 67 ms ở dev và 65 ms ở held-out; phần lớn lượt được xử lý deterministic/local. Khi provider rate limit, một số request chờ fallback khoảng 8–10 giây và held-out có 2 HTTP 502. Dev ghi 8 lỗi thử fallback trước khi model sau trong cấu hình thành công; held-out ghi 18 lỗi thử fallback. Qwen qwen/qwen3.8-27b và OSS120B bị rate limit; OSS20B đã được gọi và có lúc thành công, nhưng có lúc cả chuỗi fallback cạn.
+Đây là số ở checkpoint V4. P50 request latency khi đó là 67 ms ở dev và 65 ms ở held-out; phần lớn lượt được xử lý deterministic/local. Khi provider rate limit, một số request chờ fallback khoảng 8–10 giây và held-out có 2 HTTP 502. Dev ghi 8 lỗi thử fallback trước khi model sau trong cấu hình thành công; held-out ghi 18 lỗi thử fallback. Qwen qwen/qwen3.8-27b và OSS120B bị rate limit; OSS20B đã được gọi và có lúc thành công, nhưng có lúc cả chuỗi fallback cạn. Mục R là lần dev mới nhất (47 ms, 3 LLM calls, 1 tool call, 7.495 tokens); exposed regression 50 lượt ở R là tập khác, không so trực tiếp với held-out V4 49 lượt.
 
 Pacing giữa các request là 9 giây để giảm rate limit và không nằm trong median request latency. Vì vậy median này không phải thời gian mà người dùng luôn chờ thấy phản hồi. Tổng token chỉ cộng usage trả về từ các lượt thành công. Không quy đổi ra USD vì không lưu chi phí provider cho từng lần gọi. Các chỉ số mới nhất về provider, tool và SSE in-process được đo bổ sung ở mục R; chúng không gồm production network latency hoặc thời gian trình duyệt vẽ. SSE vẫn chia nhỏ câu trả lời sau khi đã tạo xong; không gọi đó là token streaming.
 
@@ -368,7 +368,7 @@ Kết quả hiện tại không chứng minh chất lượng model live dưới 
 
 | Kiểm tra | Kết quả |
 |---|---:|
-| Backend pytest | **675 passed** |
+| Backend pytest, lượt chạy song song offline mới nhất | **667 passed** (487 + 97 + 83), 0 failed; bỏ qua các suite gọi Groq/Azure thật |
 | Frontend Vitest | **49 passed / 6 files** |
 | Frontend production build + vue-tsc | Pass; chunk `model-viewer` 1,024 kB vẫn có cảnh báo vượt 500 kB |
 | Ruff / compileall | Pass / Pass |
@@ -379,7 +379,7 @@ Kết quả hiện tại không chứng minh chất lượng model live dưới 
 | SSE in-process | 10 lượt: validated response p50/p95 **54,16/59,73 ms**; first body delta **54,23/59,81 ms**; toàn stream **123,97/126,85 ms** |
 | Exposed held-out regression | **10 phiên / 50 lượt; HTTP 50/50; automated assertions 47/50; 0 LLM calls; median 58 ms** |
 | P0 regression | **40/40** trên 8 case × 5 lần, catalog demo |
-| Shopping sandbox | **100/100**; 0/20 false payment; 0/20 cross-session leakage; 0 LLM calls |
+| Shopping sandbox | **100/100**; 0/20 false payment; 0/20 cross-session leakage; 0 LLM calls; artifact ghi base `7e61661`, `git_worktree_dirty=true` |
 | Offline product retrieval | Recall@1/3/5 = **1.0**; gold-set recall@3/@5 = **0.9777/0.9866**; MRR **1.0** |
 
 Live trace ghi nhận cả ba request LLM bị primary trả 429 rồi fallback_1 thành công; output benchmark chỉ lưu tên slot/model và không chứa secret. Ba credential duy nhất đều xác thực được qua GET `/models`, mỗi slot hiển thị 11 model. Hai giá trị vừa gửi trong chat thực ra trùng fallback_1 và fallback_2, vì vậy cấu hình hiện có ba key khác nhau. Code đã sẵn sàng nhận key mới ở `GROQ_API_KEY_FALLBACK_3` và `_4`; hai slot này hiện chưa có giá trị riêng.
@@ -391,6 +391,8 @@ SSE được đo trên 10 request lặp lại “Coca Zero giá bao nhiêu?” b
 Tập 10 phiên/50 lượt được chạy lại làm regression sau các sửa đổi; tập này đã lộ trước đó, không phải held-out mù. Kết quả raw là **47/50 automated assertions**. Ba assertion fail đã được xem lại: câu hỏi Coca 600ml được trả lời rõ không có quy cách 600ml nhưng grader cấm cả ID sản phẩm thay thế; câu hỏi sữa hết hạn được trả lời không có hàng bán được nhưng grader cấm ID mặt hàng; câu “Coca Zero lon 330ml đang có” hỏi tồn kho nhưng grader lại bắt buộc có giá. Đây là sai khác giữa expectation và nghĩa câu trả lời; vẫn giữ nguyên số raw 47/50, không sửa grader để nâng điểm. Held-out regression không gọi Groq (`0` LLM calls), nên chỉ đánh giá routing/catalog/policy.
 
 Không có held-out mới chưa lộ, người chấm độc lập, PostgreSQL/Redis thật hoặc STT/TTS trong vòng này.
+
+Shopping sandbox này được chạy trên working tree có thay đổi, không phải checkout sạch tại commit ghi trong artifact; chỉ số 100/100 không thể tái lập bằng cách checkout riêng commit `7e61661`.
 
 Artifacts:
 
