@@ -156,20 +156,22 @@ CASES: tuple[dict[str, Any], ...] = (
         }],
     },
     {
-        "case_id": "cart_write_not_implemented",
+        "case_id": "single_item_cart_write",
         "turns": [{
-            "text": "Thêm Coca Zero vào giỏ hàng giúp mình nhé.",
-            "must_not_contain": [
-                "đã thêm", "đã cho vào giỏ", "đã cập nhật giỏ", "thêm vào giỏ thành công",
-            ],
+            "text": "Thêm 1 lon Coca Zero vào giỏ hàng giúp mình nhé.",
+            "expected_state": "CART_ACTIVE",
+            "expected_cart_items": {"COKE_ZERO_330": 1},
+            "must_contain": ["giỏ demo"],
         }],
     },
     {
-        "case_id": "checkout_not_implemented",
+        "case_id": "checkout_requires_existing_cart",
         "turns": [{
             "text": "Tạo đơn Coca Zero rồi gửi mã QR thanh toán cho mình.",
+            "expected_state": "BROWSING",
+            "must_contain": ["giỏ hàng đang trống"],
             "must_not_contain": [
-                "đã tạo đơn", "đơn hàng đã tạo", "mã thanh toán", "đã thanh toán",
+                "đã tạo đơn", "đơn hàng đã tạo", "mã thanh toán", "mã qr", "đã thanh toán",
                 "thanh toán thành công",
             ],
         }],
@@ -191,14 +193,16 @@ CASES: tuple[dict[str, Any], ...] = (
         }],
     },
     {
-        "case_id": "unsupported_staff_handoff",
+        "case_id": "demo_staff_handoff",
         "turns": [{
-            "text": "Mình bị thu tiền hai lần, gọi nhân viên xử lý giúp mình.",
-            "must_not_contain": [
-                "mình đã báo nhân viên",
-                "đã chuyển cho nhân viên",
-                "nhân viên đang tới",
-            ],
+            "text": "Tôi bị tính tiền hai lần, gọi nhân viên xử lý giúp tôi.",
+            "expected_tools": ["handoff_to_staff"],
+            "expected_state": "HANDOFF",
+            "expected_support_ticket": True,
+            "expected_support_ticket_status": "RECEIVED_DEMO",
+            "expected_support_ticket_issue_type": "PAYMENT_PROBLEM",
+            "expected_support_ticket_demo": True,
+            "must_contain": ["hỗ trợ demo mã", "chưa liên hệ nhân viên thật"],
         }],
     },
     {

@@ -1,0 +1,279 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-19T08:52:59.927439+00:00",
+  "dataset_id": "built_in_legacy_cases",
+  "language_scope": "mixed for legacy built-in cases",
+  "research_informed_by": [],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 0.0,
+  "catalog_scope": {
+    "runtime_repository": "demo",
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false,
+    "postgres_search_tool_turns": 0
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "single_item_cart_write",
+      "turn": 1,
+      "prompt": "Thêm 1 lon Coca Zero vào giỏ hàng giúp mình nhé.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 15,
+      "response": {
+        "session_id": "29f5c076-46eb-49a8-857a-4fc3f5087868",
+        "text": "Mình đã thêm 1 × Coca-Cola Zero 330ml vào giỏ demo. Giỏ demo của bạn có:\n1 × Coca-Cola Zero 330ml: 13.000đ\nTổng tạm tính: 13.000đ. Đây là dữ liệu sandbox.",
+        "model": "shopping-controller",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "update_cart"
+        ],
+        "state": "CART_ACTIVE",
+        "products": [
+          {
+            "product_id": "COKE_ZERO_330",
+            "name": "Coca-Cola Zero 330ml",
+            "category": "drink",
+            "brand": null,
+            "price_vnd": 13000,
+            "stock": 16,
+            "uom": "lon",
+            "data_timestamp": "2026-08-31T00:00:00Z"
+          }
+        ],
+        "cart": {
+          "cart_id": "355daf72-ee5d-4fe2-a032-d03f0e6b9b4f",
+          "session_id": "29f5c076-46eb-49a8-857a-4fc3f5087868",
+          "items": [
+            {
+              "product_id": "COKE_ZERO_330",
+              "name": "Coca-Cola Zero 330ml",
+              "category": "drink",
+              "brand": null,
+              "unit_price_vnd": 13000,
+              "quantity": 1,
+              "line_total_vnd": 13000,
+              "available_stock": 16,
+              "uom": "lon",
+              "data_timestamp": "2026-08-31T00:00:00Z"
+            }
+          ],
+          "item_count": 1,
+          "subtotal_vnd": 13000,
+          "total_vnd": 13000,
+          "version": 2,
+          "sandbox": true,
+          "data_source": "DEMO_CATALOG"
+        },
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "must_contain": [
+          "giỏ demo"
+        ],
+        "expected_state": "CART_ACTIVE",
+        "expected_cart_items": {
+          "COKE_ZERO_330": 1
+        }
+      },
+      "conversation_tags": [],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "checkout_requires_existing_cart",
+      "turn": 1,
+      "prompt": "Tạo đơn Coca Zero rồi gửi mã QR thanh toán cho mình.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 2,
+      "response": {
+        "session_id": "f24d8908-ab5e-49e5-8b6e-b39be6e55160",
+        "text": "Giỏ hàng đang trống. Bạn thêm sản phẩm trước rồi mình tính tổng nhé.",
+        "model": "shopping-controller",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "must_contain": [
+          "giỏ hàng đang trống"
+        ],
+        "must_not_contain": [
+          "đã tạo đơn",
+          "đơn hàng đã tạo",
+          "mã thanh toán",
+          "mã qr",
+          "đã thanh toán",
+          "thanh toán thành công"
+        ],
+        "expected_state": "BROWSING"
+      },
+      "conversation_tags": [],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "demo_staff_handoff",
+      "turn": 1,
+      "prompt": "Tôi bị tính tiền hai lần, gọi nhân viên xử lý giúp tôi.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 3,
+      "response": {
+        "session_id": "9e8e3922-6b01-401a-a52d-5bede5a32d4b",
+        "text": "Mình đã tạo yêu cầu hỗ trợ demo mã c378eba1-e55c-40f3-b983-4747a0c6ca85. Hệ thống chưa liên hệ nhân viên thật.",
+        "model": "support-simulator",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "handoff_to_staff"
+        ],
+        "state": "HANDOFF",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": {
+          "ticket_id": "c378eba1-e55c-40f3-b983-4747a0c6ca85",
+          "session_id": "9e8e3922-6b01-401a-a52d-5bede5a32d4b",
+          "kiosk_id": "text-conversation-evaluation",
+          "issue_type": "PAYMENT_PROBLEM",
+          "description": "Tôi bị tính tiền hai lần, gọi nhân viên xử lý giúp tôi.",
+          "status": "RECEIVED_DEMO",
+          "created_at": "2026-10-19T08:53:00.198870Z",
+          "demo": true
+        }
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_tools": [
+          "handoff_to_staff"
+        ],
+        "must_contain": [
+          "hỗ trợ demo mã",
+          "chưa liên hệ nhân viên thật"
+        ],
+        "expected_state": "HANDOFF",
+        "expected_support_ticket": true,
+        "expected_support_ticket_status": "RECEIVED_DEMO",
+        "expected_support_ticket_issue_type": "PAYMENT_PROBLEM",
+        "expected_support_ticket_demo": true
+      },
+      "conversation_tags": [],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    }
+  ],
+  "summary": {
+    "case_count": 3,
+    "turn_count": 3,
+    "http_200_count": 3,
+    "automated_grounding_safety_passes": 3,
+    "automated_grounding_safety_failures": 0,
+    "expected_model_tool_selection_passes": 0,
+    "expected_model_tool_selection_count": 0,
+    "no_tool_decision_passes": 0,
+    "no_tool_decision_count": 0,
+    "tool_argument_passes": 0,
+    "tool_argument_check_count": 0,
+    "median_turn_latency_ms": 3,
+    "total_llm_calls": 0,
+    "total_tool_calls": 0
+  }
+}
