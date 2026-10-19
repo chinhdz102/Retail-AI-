@@ -421,6 +421,10 @@ async def run(
     selected_ids = {case["case_id"] for case in selected_cases}
     if not selected_cases or (case_ids and selected_ids != set(case_ids)):
         raise ValueError("case_ids must contain known case IDs")
+    # A single user turn may need several paced LLM/tool rounds. Keep the
+    # HTTP deadline above that bounded worst case so the benchmark measures
+    # the agent rather than cancelling valid replies at one fixed 50s mark.
+    response_timeout_seconds = max(50.0, pace_seconds * 5 + 60.0)
     dataset_path = ROOT / "data" / "winmart_products.json"
     _, quarantined, dataset_report = analyze_dataset(dataset_path)
     report: dict[str, Any] = {
@@ -437,6 +441,7 @@ async def run(
         "model_primary": settings.groq_model,
         "fallback_enabled": bool(settings.groq_fallback_model or settings.groq_fallback_model_2),
         "minimum_model_request_interval_seconds": pace_seconds,
+        "response_timeout_seconds": response_timeout_seconds,
         "catalog_scope": {
             "runtime_repository": settings.catalog_repository,
             "runtime_demo_products": len(DEMO_PRODUCTS),
@@ -497,7 +502,7 @@ async def run(
                             "language": turn.get("language", "vi"),
                             },
                         ),
-                        timeout=50,
+                        timeout=response_timeout_seconds,
                     )
                     status_code = response.status_code
                     body = response.json()

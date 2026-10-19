@@ -147,7 +147,7 @@ DEMO_PRODUCTS: tuple[ProductSnapshot, ...] = (
 PRODUCT_ALIASES = {
     "COKE_ZERO_330": "coca zero coca-cola 可口可乐 可口可乐零度",
     "MILK01": "milk 牛奶",
-    "SNACK01": "snack 零食",
+    "SNACK01": "snack bim bim chips crisps 零食",
     "NOODLE01": "noodles 面条 泡面",
     "WATER01": "water 水 矿泉水",
     "COFFEE01": "coffee 咖啡",

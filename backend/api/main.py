@@ -210,6 +210,7 @@ def _render_verified_snapshot(
     fields = fields or observation.requested_fields
     price = f"{product.price_vnd:,}".replace(",", ".")
     data_date = product.data_timestamp.strftime("%d/%m/%Y")
+    expiry_date = _format_catalog_date(product.expiry_at)
     has_volatile_facts = bool({"price_vnd", "stock", "promotion"}.intersection(fields))
 
     if fields == ("data_timestamp",):
@@ -249,7 +250,7 @@ def _render_verified_snapshot(
         if "promotion" in fields:
             facts.append(f"catalog promotion: {product.promotion or 'none listed'}")
         if "expiry_at" in fields:
-            facts.append(f"expiry date {product.expiry_at}")
+            facts.append(f"expiry date {expiry_date}")
         if "ingredients" in fields:
             facts.append(f"ingredients: {product.ingredients}")
         if "spicy" in fields:
@@ -283,7 +284,7 @@ def _render_verified_snapshot(
         if "promotion" in fields:
             facts.append(f"目录促销记录：{product.promotion or '暂无记录'}")
         if "expiry_at" in fields:
-            facts.append(f"保质期至 {product.expiry_at}")
+            facts.append(f"保质期至 {expiry_date}")
         if "ingredients" in fields:
             facts.append(f"配料：{product.ingredients}")
         if "spicy" in fields:
@@ -322,7 +323,7 @@ def _render_verified_snapshot(
             else "catalog chưa có thông tin về khuyến mãi"
         )
     if "expiry_at" in fields:
-        facts.append(f"hạn dùng {product.expiry_at}")
+        facts.append(f"hạn dùng {expiry_date}")
     if "ingredients" in fields:
         facts.append(f"thành phần: {product.ingredients}")
     if "spicy" in fields:
@@ -374,7 +375,7 @@ def _render_verified_snapshot(
             "Mình chưa xác minh ưu đãi còn hiệu lực tại cửa hàng."
         )
     if fields == ("expiry_at",):
-        return f"Hạn dùng của {product.name} là {product.expiry_at} nhé."
+        return f"Hạn dùng của {product.name} là {expiry_date} nhé."
     if fields == ("ingredients",):
         ingredients = (product.ingredients or "").rstrip(".")
         return f"Thành phần của {product.name} gồm {ingredients} nhé."
@@ -389,6 +390,16 @@ def _render_verified_snapshot(
     if "data_timestamp" in fields:
         response += f" Dữ liệu được ghi nhận ngày {data_date}."
     return response
+
+
+def _format_catalog_date(value: object) -> str:
+    raw_value = str(value or "").strip()
+    if not raw_value:
+        return "chưa có dữ liệu"
+    try:
+        return datetime.fromisoformat(raw_value.replace("Z", "+00:00")).strftime("%d/%m/%Y")
+    except ValueError:
+        return raw_value
 
 
 def _latest_snapshot_observation(
@@ -502,21 +513,49 @@ def _unsupported_customer_care_action_claim(reply: str) -> bool:
 
 
 def _administrative_action_requested(text: str) -> bool:
+    raw = " ".join(text.casefold().split())
     normalized = _normalize_request_text(text)
-    patterns = (
-        r"\b(?:sua|doi|cap nhat|dieu chinh|change|update|modify|set)\b"
-        r".{0,80}\b(?:gia|price)\b",
-        r"\b(?:sua|doi|cap nhat|dieu chinh|thay doi|set|update|modify|change|"
+    accented_write = re.search(
+        r"\b(?:sửa|đổi|cập nhật|điều chỉnh|thay đổi)(?:\s+lại)?\s+"
+        r"(?:giá|tồn kho|hàng tồn)\b",
+        raw,
+    )
+    unambiguous_write_patterns = (
+        r"\b(?:doi|cap nhat|dieu chinh|thay doi|set|update|modify|change)\b"
+        r".{0,35}\b(?:gia|price)\b",
+        r"\b(?:doi|cap nhat|dieu chinh|thay doi|set|update|modify|change|"
         r"increase|decrease|raise|lower|add|remove|tang|giam)\b"
-        r".{0,80}\b(?:ton kho|hang ton|inventory|stock)\b",
+        r".{0,35}\b(?:ton kho|hang ton|inventory|stock)\b",
+    )
+    # Accent stripping makes "sữa" (milk) and "sửa" (edit) identical. Only
+    # treat unaccented "sua" as a write when the rest of the request has an
+    # explicit change command/value, while preserving accent-aware detection.
+    unaccented_sua_write = re.search(
+        r"\bsua(?:\s+lai)?\s+(?:gia|ton kho|hang ton)\b",
+        normalized,
+    )
+    unaccented_sua_has_command = bool(
+        unaccented_sua_write
+        and re.search(
+            r"\b(?:xuong|len|thanh|ve|tang|giam|lower|raise|increase|decrease)\b|"
+            r"\b\d+(?:\s+\d+)*\b",
+            normalized[unaccented_sua_write.end() :],
+        )
+    )
+    patterns = (
         r"\b(?:ha|giam|tang|lower|raise|increase|decrease)\b"
-        r".{0,80}\b(?:gia|price)\b.{0,80}\b\d+(?:\s+\d+)*\b",
+        r".{0,35}\b(?:gia|price)\b.{0,45}\b\d+(?:\s+\d+)*\b",
         r"\b(?:ha|giam|tang|lower|raise|increase|decrease)\b"
         r".{0,80}\b\d+(?:\s+\d+)*\s*(?:d|dong|vnd)\b",
         r"\b(?:danh dau|xac nhan|mark|confirm)\b.{0,80}\b(?:paid|thanh toan|payment)\b",
         r"\bpaid\b",
     )
-    return any(re.search(pattern, normalized) for pattern in patterns)
+    return bool(
+        accented_write
+        or unaccented_sua_has_command
+        or any(re.search(pattern, normalized) for pattern in unambiguous_write_patterns)
+        or any(re.search(pattern, normalized) for pattern in patterns)
+    )
 
 
 def _store_service_policy_requested(text: str) -> bool:
@@ -3779,6 +3818,7 @@ async def agent_respond(
         and (
             _text_mentions_product(request.text, record.last_grounded_product_name)
             or freshness_followup
+            or _contextual_product_reference_requested(request.text)
         )
         else None
     )
@@ -3800,8 +3840,8 @@ async def agent_respond(
         )
     if (
         requested_fields
-        and followup_fields
         and not record.last_grounded_product_id
+        and (followup_fields or not _fact_product_query(request.text))
         and promotion_list_arguments is None
         and catalog_additions_arguments is None
     ):
@@ -4256,6 +4296,46 @@ def _text_mentions_product(text: str, product_name: str) -> bool:
     )
 
 
+def _contextual_product_reference_requested(text: str) -> bool:
+    """Recognize short deictic references when a session already has a product."""
+    normalized = _normalize_request_text(text)
+    cues = (
+        "mon nay",
+        "mon do",
+        "san pham nay",
+        "san pham do",
+        "nuoc nay",
+        "nuoc do",
+        "chai nay",
+        "chai do",
+        "lon nay",
+        "hop nay",
+        "goi nay",
+        "ly nay",
+        "loai nay",
+        "cai nay",
+        "cai do",
+        "con nay",
+        "this product",
+        "that product",
+        "this item",
+        "that item",
+        "this drink",
+        "that drink",
+        "this one",
+        "that one",
+        "it",
+        "这个产品",
+        "那个产品",
+        "这个",
+        "那个",
+    )
+    return any(
+        re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized)
+        for cue in cues
+    )
+
+
 def _requested_snapshot_fields(text: str) -> tuple[str, ...]:
     return _parse_snapshot_fields(text)
 
@@ -4319,6 +4399,7 @@ _FACT_QUERY_STOP_WORDS = {
     "biet",
     "cai",
     "cap",
+    "catalog",
     "cho",
     "co",
     "con",
@@ -4385,6 +4466,7 @@ _FACT_QUERY_STOP_WORDS = {
     "dai",
     "discount",
     "sale",
+    "sao",
     "deal",
     "off",
     "promotion",
@@ -4644,6 +4726,7 @@ def _fact_product_query(text: str) -> str:
         " ",
         normalized,
     )
+    normalized = re.sub(r"\bhoi binh thuong\b", " ", normalized)
     normalized = re.sub(r"\bben minh\b", " ", normalized)
     requested_fields = _requested_snapshot_fields(text)
     if "stock" in requested_fields and "price_vnd" not in requested_fields:
@@ -5397,6 +5480,7 @@ def _implicit_followup_fields(text: str) -> tuple[str, ...]:
         "nhan",
         "han",
         "toi",
+        "den",
         "ngay",
         "tren",
         "ma",

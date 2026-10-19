@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
-from backend.products.catalog import ProductSnapshot
+from backend.products.catalog import PRODUCT_ALIASES, ProductSnapshot
 from backend.services.groq import GroqProviderError, GroqService
 from backend.services.retail_tools import (
     ToolObservation,
@@ -381,19 +381,22 @@ def _unique_product_match_id(
         for token in re.findall(r"\w+", _normalize_vietnamese(query))
         if len(token) > 1
     ]
-    query_counts = Counter(query_tokens)
-    repeated_bim_bim_phrase = query_tokens == ["bim", "bim"]
+    repeated_bim_bim_phrase = query_tokens.count("bim") >= 2
     if len(set(query_tokens)) < 2 and not repeated_bim_bim_phrase:
         return None
     matches = []
     for product in candidates:
         product_tokens = re.findall(
-            r"\w+", _normalize_vietnamese(f"{product.name} {product.uom or ''}")
+            r"\w+",
+            _normalize_vietnamese(
+                f"{product.name} {product.uom or ''} "
+                f"{PRODUCT_ALIASES.get(product.product_id, '')}"
+            ),
         )
-        if repeated_bim_bim_phrase:
-            is_match = not (query_counts - Counter(product_tokens))
-        else:
-            is_match = set(query_tokens).issubset(set(product_tokens))
+        product_counts = Counter(product_tokens)
+        is_match = set(query_tokens).issubset(product_counts) and (
+            not repeated_bim_bim_phrase or product_counts["bim"] >= 2
+        )
         if is_match:
             matches.append(product)
     if len(matches) != 1:

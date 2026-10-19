@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from backend.products.catalog import ProductSnapshot
+from backend.products.catalog import ProductSnapshot, get_product_snapshot
 from backend.services.groq import GroqChatResult
 from backend.services.retail_agent import (
     _unique_product_match_id,
@@ -168,6 +168,13 @@ def test_repeated_bim_bim_phrase_can_match_a_single_verified_snack() -> None:
     )
 
     assert _unique_product_match_id("bim bim", candidates) == "BIMBIM_280"
+
+
+def test_product_match_uses_product_alias_with_a_flavor_modifier() -> None:
+    snack = get_product_snapshot("SNACK01")
+
+    assert snack is not None
+    assert _unique_product_match_id("bim bim vi tu nhien", (snack,)) == "SNACK01"
 
 
 @pytest.mark.asyncio
