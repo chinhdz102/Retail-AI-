@@ -7,12 +7,13 @@
 
 ## A. Executive Summary
 
-Vòng gần nhất sửa lỗi phân biệt câu ghi “đặt tồn kho” với câu hỏi số tồn: yêu cầu sửa tồn giờ bị chặn bằng chính sách trước khi gọi model hoặc tool. Bộ smoke được chỉnh để cố định catalog demo và kiểm tra cách ly session bằng hội thoại sản phẩm thật. Groq service hỗ trợ tối đa năm credential khác nhau, thử key tiếp theo khi provider trả lỗi xác thực/quota, rồi mới chuyển model.
+Vòng gần nhất sửa lỗi phân biệt câu ghi “đặt tồn kho” với câu hỏi số tồn, cố định catalog demo cho smoke benchmark, và ràng buộc phản hồi text với đúng session. SSE nay gửi metadata phiên trước delta đầu tiên; UI hủy request đang chờ khi reset/unmount. Groq service hỗ trợ tối đa năm credential khác nhau, thử key tiếp theo khi provider trả lỗi xác thực/quota, rồi mới chuyển model.
 
-Kết quả kiểm tra song song ngày 20/10/2026 (mục V):
+Kết quả kiểm tra song song ngày 20/10/2026 (mục W):
 
-- Backend offline: **716 passed / 0 failed**; ba suite live Groq/STT/Azure TTS không chạy trong pytest. Frontend Vitest: **49/49**; typecheck, production build, Ruff và Python compileall đều qua. Bundle `model-viewer` vẫn có cảnh báo kích thước.
-- P0 deterministic smoke: **27 PASS / 0 FAIL**, thêm **3 UNSUPPORTED** và **1 NOT_RUN** vì các nguồn/runtime đó chưa có. Shopping sandbox chạy 20 vòng: **200/200**, 0/40 xác nhận thanh toán giả và 0/40 rò dữ liệu chéo phiên.
+- Backend offline: **716 passed / 0 failed**; ba suite live Groq/STT/Azure TTS không chạy trong pytest. Frontend Vitest: **55/55**; typecheck, production build, Ruff và Python compileall đều qua. Bundle `model-viewer` vẫn có cảnh báo kích thước.
+- Kiểm thử session binding mới xác nhận response JSON/SSE và các cart/order/support payload lồng nhau phải thuộc đúng phiên; reset/unmount hủy fetch đang chờ. P0: **40/40**; smoke: **27 PASS / 0 FAIL**, thêm **3 UNSUPPORTED** và **1 NOT_RUN**.
+- Shopping sandbox chạy 20 vòng: **200/200**, 0/40 xác nhận thanh toán giả và 0/40 rò dữ liệu chéo phiên; 980 API calls, p50/p95 **1,751/19,741 ms**, không gọi LLM.
 - Runtime catalog snapshot và benchmark lexical offline, mỗi bộ **28 truy vấn**: Recall@1/3/5 = **1.0**, gold-set recall@3/@5 = **0.9777/0.9866**, MRR = **1.0**, hành vi kỳ vọng **4/4**. Đây không phải kiểm thử PostgreSQL hoặc tồn kho live.
 - Một lượt Groq thật cho tình huống trò chuyện ngoài phạm vi trả HTTP 200 trong **1.813 giây**, không gọi tool. Model đã lịch sự chuyển hướng về hỗ trợ cửa hàng nhưng câu trả lời còn hơi cứng; đây chỉ là một mẫu, không phải đánh giá độ tự nhiên toàn diện.
 - Ba credential hiện được cấu hình theo thứ tự primary/fallback_1/fallback_2; cả ba được kiểm tra quyền truy cập model list thành công. Lượt Groq trên dùng primary thành công nên không kích hoạt failover; đường xoay key vẫn được kiểm thử bằng suite mock.
@@ -20,8 +21,9 @@ Kết quả kiểm tra song song ngày 20/10/2026 (mục V):
 
 ## B. Repository & Branch Audit
 
-- Nhánh làm việc: codex/retail-text-quality-v4-20261019.
-- Commit đầu vòng 50c61e2 và các benchmark C–U là lịch sử của những checkpoint trước. Section V kiểm tra working tree dựa trên HEAD `10c281c` cùng các thay đổi được nêu tại section V.
+- Nhánh làm việc: codex/retail-text-quality-v4-20261019; thay đổi session binding ở commit `12858a6` (cha `a83b9d1`).
+- Đã fetch và đối chiếu các refs: `main` (`ce8d3b5`), `codex/text-sales-flow-v3` (`a7b79ef`), `codex/session-isolation-ui-hardening` (`138a27c`) và nhánh hiện tại. Không merge/push `main`.
+- Commit đầu vòng 50c61e2 và các benchmark C–V là lịch sử của những checkpoint trước. Section V ghi kết quả trên checkpoint `10c281c` cùng các thay đổi tại section V; mục W ghi lượt xác minh mới nhất.
 - Các thay đổi được commit/push trên nhánh feature này; `main` không bị thay đổi.
 - Bộ test/API fixtures tiếp tục đặt demo catalog 6 sản phẩm; `.env` hiện trỏ runtime tới snapshot WinMart có 3.099 dòng: 3.081 dòng được nhận và 18 dòng quarantine. Snapshot được đọc khi khởi động backend; không phải nguồn bán hàng hoặc tồn kho thời gian thực.
 - PostgreSQL search thật chưa chạy thành công; probe trước đó timeout. Không thay connection string hoặc secret. Redis thật cũng chưa được probe thành công; tests serializer/pipeline dùng fixture.
@@ -154,7 +156,7 @@ Không có P0 security regression trong run P0/shopping sandbox hiện tại. K�
 4. Chạy PostgreSQL product benchmark trên catalog đã import; hiện chỉ có offline snapshot/demo.
 5. Probe Redis thật và chạy kiểm thử tích hợp.
 6. Mời người dùng tiếng Việt vùng miền chấm toàn bộ held-out mới; tiếp tục dùng deterministic checks cho grounding/safety.
-7. Đo SSE first-visible-text và kiểm UI pending-response/session binding trên trình duyệt thật.
+7. Đã kiểm session binding và hủy pending text request bằng unit/integration tests. Còn đo SSE first-visible-text trên trình duyệt thật; endpoint vẫn tạo câu trả lời hoàn chỉnh trước khi phát delta.
 8. STT/TTS không được benchmark lại; giữ ngoài phạm vi vòng text.
 9. Production build báo chunk model-viewer khoảng 1.024 kB; build thành công nhưng cần cân nhắc code splitting.
 
@@ -565,3 +567,47 @@ uv run python -m compileall -q backend evaluation
 - Catalog retrieval chỉ đo snapshot và lexical repository; không kiểm thử PostgreSQL, Redis thật, tồn kho/giá live, checkout production hay thanh toán.
 - Lượt Groq đơn lẻ không đo được phân bố chất lượng tự nhiên. Đường failover thật không được kích hoạt trong lượt này vì primary còn hạn mức; phản hồi live ở các mục trước là development data.
 - Các cảnh báo bundle và tính tự nhiên hội thoại vẫn cần xử lý ở vòng sau.
+
+## W. Session binding, hủy request và kiểm thử toàn bộ — 20/10/2026
+
+### Sửa lỗi phiên và streaming
+
+- SSE gửi event `start` với `session_id` và metadata trước event `delta`. Frontend xác minh session trước khi đưa chữ lên chat, rồi kiểm tra lại metadata ở event `complete`.
+- JSON response được ràng buộc với session id yêu cầu. Nếu có cart, checkout quote, order hoặc support ticket, session id lồng bên trong cũng phải khớp.
+- Khi kết thúc/reset phiên hoặc unmount kiosk, frontend abort request text đang chờ. Generation/session guards vẫn chặn response đến muộn trước khi cập nhật message, giỏ hoặc đơn.
+- Thêm regression tests cho session mismatch ở stream/JSON/cart, delta đến trước khi metadata hợp lệ, request bị cắt giữa chừng, và abort khi reset/unmount.
+
+### Kết quả xác minh sau sửa
+
+| Hạng mục | Kết quả |
+|---|---:|
+| Backend pytest offline (bỏ qua Groq/STT/Azure TTS live suites) | **716 passed / 0 failed** |
+| Frontend Vitest | **55/55**, 6 files |
+| TypeScript và production build | Pass; `model-viewer` chunk **1,024 kB** vẫn vượt ngưỡng cảnh báo 500 kB |
+| P0 regression, 8 ca × 5 lượt | **40/40 pass** |
+| Backend smoke | **27 PASS / 0 FAIL**, **3 UNSUPPORTED**, **1 NOT_RUN** |
+| Shopping sandbox, 20 vòng | **200/200 pass**; false-payment **0/40**; cross-session leakage **0/40**; 0 LLM calls |
+| Ruff, Python compileall và `git diff --check` | Pass |
+
+Ba smoke ca UNSUPPORTED là FEFO, kiến thức/RAG không có nguồn; Redis live là NOT_RUN vì không có Redis endpoint truy cập được. Không tính các ca đó là pass. P0 chạy trên catalog demo được cố định trong script, không lấy repository từ `.env`.
+
+### Phạm vi chưa xác minh
+
+- Không gọi Groq thật trong lượt sửa session binding; bộ v6 live gần nhất có 10 phiên/50 lượt nhưng chỉ 2 LLM calls, vì phần lớn đường đi là deterministic. Điều đó xác nhận system behavior, chưa đủ để kết luận chất lượng hội thoại LLM rộng.
+- Bộ V3 có tổng 51 phiên/252 lượt (41 dev + 10 held-out), nhưng các tập đã được chạy lặp qua nhiều lần chỉnh sửa; v5/v6 exposed regression không phải held-out mù. Kết quả held-out V4 trước đây thấp và không đạt để tuyên bố chất lượng hội thoại đã hoàn thiện.
+- Chưa có human panel độc lập chấm toàn bộ hội thoại. PostgreSQL/Redis live, trình duyệt production, microphone/STT/TTS và thanh toán thật không thuộc lượt xác minh này.
+
+### Artifacts và tái lập
+
+Code commit: `12858a6` trên `codex/retail-text-quality-v4-20261019`.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q --ignore=tests\test_live_groq_smoke.py --ignore=tests\test_live_groq_stt_benchmark.py --ignore=tests\test_live_azure_tts_benchmark.py
+npm --prefix apps/kiosk-airi run test:run
+npm --prefix apps/kiosk-airi run build
+.\.venv\Scripts\python.exe evaluation\run_p0_regressions.py --output <output.json>
+.\.venv\Scripts\python.exe evaluation\run_smoke_benchmark.py --output <output.json>
+.\.venv\Scripts\python.exe evaluation\run_shopping_flow_benchmark.py --trials 20 --output <output.json>
+.\.venv\Scripts\ruff.exe check backend tests evaluation
+.\.venv\Scripts\python.exe -m compileall -q backend tests evaluation
+```
