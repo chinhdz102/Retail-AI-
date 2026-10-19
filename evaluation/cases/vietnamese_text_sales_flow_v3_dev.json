@@ -1,7 +1,7 @@
 {
   "dataset_id": "retail_vietnamese_text_sales_flow_v3_dev",
   "language_scope": "Vietnamese only",
-  "description": "40 development sessions / 200 turns. Use for iteration, deterministic grounding and live Groq probes.",
+  "description": "41 development sessions / 203 turns. Use for iteration, deterministic grounding and live Groq probes.",
   "research_informed_by": [
     "https://arxiv.org/abs/2406.12045 — τ-bench: multi-turn tool-agent-user interaction, task-state correctness, and policy adherence.",
     "https://arxiv.org/abs/2408.04682 — ToolSandbox: stateful multi-turn tool execution, implicit dependencies, and trajectory-level evaluation.",
@@ -2305,6 +2305,62 @@
           "must_contain": [
             "13.000"
           ]
+        }
+      ]
+    },
+    {
+      "case_id": "dev_whole_cart_combo_budget",
+      "tags": [
+        "dev",
+        "recommendation",
+        "multi_item",
+        "whole_cart_budget",
+        "multi_turn"
+      ],
+      "turns": [
+        {
+          "text": "Mình có 100k, muốn mua nước với snack cho hai người.",
+          "expected_product_ids": [
+            "WATER01",
+            "SNACK01"
+          ],
+          "expected_tools": [
+            "recommend_products"
+          ],
+          "must_contain": [
+            "100.000đ",
+            "50.000đ",
+            "68.000đ",
+            "chưa thêm món nào vào giỏ"
+          ]
+        },
+        {
+          "text": "Hạ ngân sách tổng xuống 60k nhé.",
+          "expected_product_ids": [
+            "WATER01",
+            "SNACK01"
+          ],
+          "expected_tools": [
+            "recommend_products"
+          ],
+          "must_contain": [
+            "60.000đ",
+            "50.000đ"
+          ],
+          "must_not_contain": [
+            "68.000đ"
+          ]
+        },
+        {
+          "text": "Đổi thành tổng 40k.",
+          "expected_tools": [
+            "recommend_products"
+          ],
+          "must_contain": [
+            "40.000đ",
+            "giảm số lượng"
+          ],
+          "must_not_have_product_ids": true
         }
       ]
     }

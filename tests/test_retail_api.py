@@ -9,8 +9,10 @@ import pytest
 
 from backend.api.main import (
     _administrative_action_requested,
+    _basket_quantity_per_category,
     _catalog_additions_requested,
     _catalog_additions_tool_arguments,
+    _explicit_budget_amount_vnd,
     _fact_product_query,
     _generic_nearby_places_requested,
     _implicit_followup_fields,
@@ -32,6 +34,8 @@ from backend.api.main import (
     _unsupported_catalog_attribute_requested,
     _unsupported_catalog_fact_claim,
     _unverified_retail_information_kind,
+    _whole_cart_budget_only_followup,
+    _whole_cart_recommendation_arguments,
     app,
     get_azure_speech_service,
     get_elevenlabs_service,
@@ -1177,6 +1181,61 @@ def test_vietnamese_budget_constraints_parse_to_integer_vnd(
     assert _price_constraint_from_text(text) == expected
 
 
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Mình có 100k.", 100_000),
+        ("Tổng cộng 100 nghìn đồng.", 100_000),
+        ("Mình có một trăm nghìn.", 100_000),
+        ("Ngân sách 20.000đ.", 20_000),
+        ("Mình có 1,5 triệu.", 1_500_000),
+    ],
+)
+def test_explicit_total_budget_amount_parses_vnd(text: str, expected: int) -> None:
+    assert _explicit_budget_amount_vnd(text) == expected
+
+
+def test_whole_cart_recommendation_parses_categories_budget_and_people() -> None:
+    text = "Mình có 100k, muốn mua nước với snack cho hai người."
+
+    assert _basket_quantity_per_category(text) == 2
+    assert _whole_cart_recommendation_arguments(text) == {
+        "categories": ["drink", "snack"],
+        "total_budget_vnd": 100_000,
+        "quantity_per_category": 2,
+        "limit": 3,
+    }
+
+
+def test_whole_cart_recommendation_does_not_treat_per_item_budget_as_total() -> None:
+    assert _whole_cart_recommendation_arguments(
+        "Mua nước với snack, mỗi món dưới 100k."
+    ) is None
+
+
+def test_whole_cart_budget_followup_is_not_mistaken_for_a_product_price_question() -> None:
+    assert _whole_cart_budget_only_followup("Đổi thành tổng 40k.")
+    assert _whole_cart_budget_only_followup("Hạ ngân sách tổng xuống 60k nhé.")
+    assert not _whole_cart_budget_only_followup("Coca Zero giá 40k à?")
+
+
+def test_whole_cart_followup_reuses_categories_and_updates_total_budget() -> None:
+    assert _whole_cart_recommendation_arguments(
+        "À ngân sách tổng 70k thôi.",
+        stored_constraints={
+            "categories": ["drink", "snack"],
+            "total_budget_vnd": 100_000,
+            "quantity_per_category": 2,
+        },
+        active_context=True,
+    ) == {
+        "categories": ["drink", "snack"],
+        "total_budget_vnd": 70_000,
+        "quantity_per_category": 2,
+        "limit": 3,
+    }
+
+
 def test_recommendation_constraints_reuse_category_when_user_corrects_budget() -> None:
     assert _recommendation_tool_arguments(
         "À không, mình nói dưới 10 nghìn thôi.",
@@ -1974,6 +2033,72 @@ async def test_natural_vietnamese_recommendation_calls_catalog_tool(
     assert response.json()["grounded_product_ids"] == ["SNACK01"]
     assert response.json()["tools_used"] == ["recommend_products"]
     assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_whole_cart_recommendation_uses_catalog_totals_without_cart_mutation(
+    client: httpx.AsyncClient,
+    monkeypatch,
+) -> None:
+    service = StaticGroqService("This should not be used for deterministic basket math.")
+    app.dependency_overrides[get_groq_service] = lambda: service
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda: DemoProductRepository(),
+    )
+    monkeypatch.setattr(
+        "backend.services.shopping.get_product_repository",
+        lambda: DemoProductRepository(),
+    )
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-whole-cart-test"})
+    session_id = created.json()["session_id"]
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Mình có 100k, muốn mua nước với snack cho hai người.",
+        },
+    )
+    assert service.calls == 0
+    lower_budget = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Hạ ngân sách tổng xuống 60k nhé."},
+    )
+    assert service.calls == 0
+    saved_basket = session_store.get(UUID(session_id)).shopping
+    assert saved_basket.current_intent.value == "RECOMMENDATION"
+    assert saved_basket.constraints["categories"] == ["drink", "snack"]
+    assert saved_basket.constraints["total_budget_vnd"] == 60_000
+    assert saved_basket.constraints["quantity_per_category"] == 2
+    insufficient_budget = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Đổi thành tổng 40k."},
+    )
+    cart = await client.get(f"/sessions/{session_id}/cart")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "50.000đ" in payload["text"]
+    assert "68.000đ" in payload["text"]
+    assert "chưa thêm món nào vào giỏ" in payload["text"]
+    assert payload["grounded_product_ids"]
+    assert payload["tools_used"] == ["recommend_products"]
+    lower_budget_payload = lower_budget.json()
+    assert lower_budget.status_code == 200
+    assert "60.000đ" in lower_budget_payload["text"]
+    assert "50.000đ" in lower_budget_payload["text"]
+    assert "68.000đ" not in lower_budget_payload["text"]
+    assert lower_budget_payload["tools_used"] == ["recommend_products"]
+    insufficient_budget_payload = insufficient_budget.json()
+    assert insufficient_budget.status_code == 200
+    assert "40.000đ" in insufficient_budget_payload["text"]
+    assert "giảm số lượng" in insufficient_budget_payload["text"]
+    assert insufficient_budget_payload["grounded_product_ids"] == []
+    assert insufficient_budget_payload["tools_used"] == ["recommend_products"]
+    assert service.calls == 0
+    assert cart.status_code == 200
+    assert cart.json()["items"] == []
 
 
 @pytest.mark.asyncio

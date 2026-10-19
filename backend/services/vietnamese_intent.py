@@ -514,6 +514,78 @@ def explicit_recommendation_category(text: str) -> str | None:
     return next(iter(categories)) if len(categories) == 1 else None
 
 
+def explicit_recommendation_categories(text: str) -> list[str]:
+    """Return explicitly named recommendation categories in the user's order."""
+    normalized = " ".join(normalize_vietnamese(text).split())
+    matches: list[tuple[int, int, str, str]] = []
+    negated_matches: list[tuple[int, str]] = []
+
+    def is_negated(start: int) -> bool:
+        prefix = normalized[max(0, start - 48) : start]
+        return bool(
+            re.search(
+                r"(?:\b(?:khong|dung|bo|tranh|without|except|no)\b"
+                r"(?:\s+\w+){0,2}|\bdon\s+t\s+(?:want|need)\b)\s*$",
+                prefix,
+            )
+        )
+
+    for category, cues in _CATEGORY_CUES.items():
+        for cue in cues:
+            for match in re.finditer(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized):
+                if is_negated(match.start()):
+                    negated_matches.append((match.start(), category))
+                else:
+                    matches.append((match.start(), match.end(), category, cue))
+
+    # "nước" by itself is often part of a product name. Treat it as a drink
+    # category only when the same request explicitly names another category.
+    other_category_found = any(category != "drink" for _, _, category, _ in matches)
+    if other_category_found:
+        for match in re.finditer(r"(?<!\w)nuoc(?!\w)", normalized):
+            if is_negated(match.start()):
+                negated_matches.append((match.start(), "drink"))
+            else:
+                matches.append((match.start(), match.end(), "drink", "nuoc"))
+
+    latest_positive = {
+        category: max(item[0] for item in matches if item[2] == category)
+        for category in {item[2] for item in matches}
+    }
+    latest_negative = {
+        category: max(
+            position
+            for position, item_category in negated_matches
+            if item_category == category
+        )
+        for category in {item_category for _, item_category in negated_matches}
+    }
+    matches = [
+        item
+        for item in matches
+        if latest_negative.get(item[2], -1) <= latest_positive.get(item[2], -1)
+    ]
+
+    # Drop broad matches contained by a more specific phrase ("đồ ăn" inside
+    # "đồ ăn vặt") and keep the most specific cue for each category/location.
+    filtered = [
+        item
+        for item in matches
+        if not any(
+            other[0] <= item[0]
+            and other[1] >= item[1]
+            and (item[0], item[1]) != (other[0], other[1])
+            and len(other[3].split()) > len(item[3].split())
+            for other in matches
+        )
+    ]
+    categories: list[str] = []
+    for _, _, category, _ in sorted(filtered):
+        if category not in categories:
+            categories.append(category)
+    return categories
+
+
 _RECOMMENDATION_QUERY_CUES = (
     "nuoc suoi",
     "nuoc loc",

@@ -4,10 +4,11 @@ import json
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from itertools import product as cart_product
 from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from backend.products.catalog import PriceOperator, ProductSnapshot
 from backend.products.repository import ProductRepository, get_product_repository
@@ -24,6 +25,7 @@ from backend.services.vietnamese_intent import (
 from backend.shared.contracts import SessionState
 
 MAX_PRODUCT_RESULTS = 10
+MAX_RECOMMENDATION_CATEGORIES = 4
 FactField = Literal[
     "price_vnd",
     "stock",
@@ -91,6 +93,8 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "Return product suggestions for an explicit recommendation request. "
                 "The backend always filters to products with positive stock. Apply every "
                 "stated category, brand, spice, and structured price constraint as a hard filter. "
+                "For a whole-cart request spanning multiple categories, pass categories and "
+                "total_budget_vnd; the backend computes combinations that never exceed that cap. "
                 "For 'under' use LT; for 'at most/up to' use LTE."
             ),
             "parameters": {
@@ -98,6 +102,28 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "properties": {
                     "query": {"type": "string"},
                     "category": {"type": "string"},
+                    "categories": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": 2,
+                        "maxItems": MAX_RECOMMENDATION_CATEGORIES,
+                        "uniqueItems": True,
+                        "description": (
+                            "Use for a combo that must include every requested category."
+                        ),
+                    },
+                    "total_budget_vnd": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000000,
+                        "description": "Whole-cart cap; the backend computes each combo total.",
+                    },
+                    "quantity_per_category": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10,
+                        "description": "Units of each category per proposed combo.",
+                    },
                     "brand": {"type": "string"},
                     "price_constraint": {
                         "type": "object",
@@ -231,10 +257,29 @@ class RecommendProductsArguments(BaseModel):
 
     query: str = Field(default="", max_length=160)
     category: str | None = Field(default=None, max_length=160)
+    categories: list[str] | None = Field(
+        default=None, min_length=2, max_length=MAX_RECOMMENDATION_CATEGORIES
+    )
+    total_budget_vnd: int | None = Field(default=None, ge=1, le=100_000_000)
+    quantity_per_category: int = Field(default=1, ge=1, le=10)
     brand: str | None = Field(default=None, max_length=120)
     price_constraint: PriceConstraint | None = None
     spicy: bool | None = None
     limit: int = Field(default=3, ge=1, le=3)
+
+    @model_validator(mode="after")
+    def require_budget_for_multi_category(self) -> RecommendProductsArguments:
+        if self.categories is not None and self.total_budget_vnd is None:
+            raise ValueError("categories requires a whole-cart budget")
+        if self.total_budget_vnd is not None and self.categories is None:
+            raise ValueError("a whole-cart budget requires multiple categories")
+        if self.categories is not None:
+            normalized = [category.strip().casefold() for category in self.categories]
+            if any(not category for category in normalized) or len(set(normalized)) != len(
+                normalized
+            ):
+                raise ValueError("categories must be unique and non-empty")
+        return self
 
 
 class GetProductSnapshotArguments(BaseModel):
@@ -333,6 +378,123 @@ def _candidate_content(products: tuple[ProductSnapshot, ...], matched: list[str]
             (item.data_timestamp for item in products), default=datetime.now(UTC)
         ).isoformat(),
     }
+
+
+def _whole_cart_recommendation(
+    repo: ProductRepository,
+    parsed: RecommendProductsArguments,
+) -> ToolObservation:
+    categories = parsed.categories or []
+    labels = {
+        "drink": "đồ uống",
+        "snack": "đồ ăn vặt",
+        "dairy": "sữa",
+        "meal": "đồ ăn chính",
+    }
+    candidate_groups: list[list[ProductSnapshot]] = []
+    missing_categories: list[str] = []
+    for category in categories:
+        repository_category = _category_for_repository(category, repo)
+        candidates = [
+            item
+            for item in repo.search(
+                category=repository_category,
+                in_stock=True,
+                limit=MAX_PRODUCT_RESULTS,
+            )
+            if item.sellable_stock >= parsed.quantity_per_category
+        ]
+        candidates.sort(key=lambda item: (item.price_vnd, item.product_id))
+        if not candidates:
+            missing_categories.append(category)
+        candidate_groups.append(candidates)
+
+    options: list[dict[str, Any]] = []
+    if not missing_categories:
+        valid_combos = []
+        for combo in cart_product(*candidate_groups):
+            total = sum(
+                item.price_vnd * parsed.quantity_per_category for item in combo
+            )
+            if total <= parsed.total_budget_vnd:
+                valid_combos.append((total, combo))
+        valid_combos.sort(
+            key=lambda row: (row[0], tuple(item.product_id for item in row[1]))
+        )
+        chosen: list[tuple[int, tuple[ProductSnapshot, ...]]] = []
+        if valid_combos:
+            chosen.append(valid_combos[0])
+            if valid_combos[-1] != valid_combos[0]:
+                chosen.append(valid_combos[-1])
+            if len(chosen) < parsed.limit:
+                middle = sorted(
+                    valid_combos[1:-1],
+                    key=lambda row: (
+                        abs(row[0] - parsed.total_budget_vnd * 0.75),
+                        tuple(item.product_id for item in row[1]),
+                    ),
+                )
+                chosen.extend(middle[: parsed.limit - len(chosen)])
+        for index, (total, combo) in enumerate(chosen):
+            options.append(
+                {
+                    "label": "Tiết kiệm" if index == 0 else "Phương án khác",
+                    "items": [
+                        {
+                            "product_id": item.product_id,
+                            "name": item.name,
+                            "category": item.category,
+                            "category_label": labels.get(category, category),
+                            "quantity": parsed.quantity_per_category,
+                            "unit_price_vnd": item.price_vnd,
+                            "line_total_vnd": item.price_vnd * parsed.quantity_per_category,
+                        }
+                        for category, item in zip(categories, combo, strict=True)
+                    ],
+                    "total_vnd": total,
+                    "remaining_budget_vnd": parsed.total_budget_vnd - total,
+                }
+            )
+
+    selected_products: dict[str, ProductSnapshot] = {}
+    for option in options:
+        for item in option["items"]:
+            product_id = item["product_id"]
+            for group in candidate_groups:
+                match = next(
+                    (candidate for candidate in group if candidate.product_id == product_id),
+                    None,
+                )
+                if match is not None:
+                    selected_products[product_id] = match
+                    break
+    timestamp = max(
+        (item.data_timestamp for item in selected_products.values()),
+        default=datetime.now(UTC),
+    )
+    content = {
+        "recommendation_type": "whole_cart",
+        "categories": categories,
+        "category_labels": [labels.get(category, category) for category in categories],
+        "missing_category_labels": [
+            labels.get(category, category) for category in missing_categories
+        ],
+        "total_budget_vnd": parsed.total_budget_vnd,
+        "quantity_per_category": parsed.quantity_per_category,
+        "options": options,
+        "missing_categories": missing_categories,
+        "count": len(options),
+        "data_timestamp": timestamp.isoformat(),
+        "cart_mutated": False,
+    }
+    return ToolObservation(
+        content=content,
+        products=tuple(selected_products.values()),
+        tool_name="recommend_products",
+        source=repo.source_name,
+        response_mode="DETERMINISTIC_RECOMMENDATION",
+        terminal=True,
+    )
 
 
 def _category_for_repository(category: str | None, repository: ProductRepository) -> str | None:
@@ -648,6 +810,8 @@ def execute_catalog_tool(
 
         if name == "recommend_products":
             parsed = RecommendProductsArguments.model_validate(arguments)
+            if parsed.categories is not None:
+                return _whole_cart_recommendation(repo, parsed)
             price = parsed.price_constraint
             query_category, category_only_query = _query_category_hint(parsed.query)
             category = _category_for_repository(query_category or parsed.category, repo)

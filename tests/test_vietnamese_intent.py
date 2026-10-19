@@ -9,6 +9,7 @@ from backend.api.main import (
 from backend.services.retail_agent import _explicit_recommendation_category
 from backend.services.vietnamese_intent import (
     consultation_product_query,
+    explicit_recommendation_categories,
     explicit_recommendation_query,
     has_specific_product_reference,
     is_recommendation_request,
@@ -142,6 +143,25 @@ def test_recommendation_category_handles_natural_vietnamese_paraphrases(
     text: str, expected: str
 ) -> None:
     assert _explicit_recommendation_category(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Mình muốn mua nước với snack.", ["drink", "snack"]),
+        ("Đồ ăn vặt kèm nước cho cả nhóm.", ["snack", "drink"]),
+        ("Đồ uống và mì ly.", ["drink", "meal"]),
+        ("Nước suối cho mình.", ["drink"]),
+        ("Mua sữa chua với đồ ăn vặt.", ["dairy", "snack"]),
+        ("Mua nước, snack, sữa chua và mì ly.", ["drink", "snack", "dairy", "meal"]),
+        ("Nước với snack, nhưng đừng lấy snack.", ["drink"]),
+        ("Đồ ăn vặt, đừng lấy bữa chính.", ["snack"]),
+    ],
+)
+def test_recommendation_categories_preserve_multiple_explicit_groups(
+    text: str, expected: list[str]
+) -> None:
+    assert explicit_recommendation_categories(text) == expected
 
 
 def test_explicit_recommendation_language_forces_tool_even_without_extra_filters() -> None:
