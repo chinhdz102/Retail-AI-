@@ -99,6 +99,19 @@ def test_snapshot_disclosure_claim_is_once_per_session_and_redis_round_trips() -
     assert store.claim_snapshot_disclosures(other.session_id, keys) == keys
 
 
+def test_unresolved_product_category_round_trips_through_redis_encoding() -> None:
+    store = InMemorySessionStore()
+    session = store.create("alternative-recovery")
+    store.update_shopping(
+        session.session_id,
+        unresolved_product_category="drink",
+    )
+
+    decoded = RedisSessionStore._decode(RedisSessionStore._encode(store.get(session.session_id)))
+
+    assert decoded.shopping.unresolved_product_category == "drink"
+
+
 def test_redis_snapshot_disclosure_claim_persists_atomically() -> None:
     class MemoryRedis:
         def __init__(self) -> None:

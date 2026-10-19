@@ -12,6 +12,7 @@ from backend.services.vietnamese_intent import (
     explicit_recommendation_categories,
     explicit_recommendation_query,
     has_specific_product_reference,
+    is_alternative_product_request,
     is_recommendation_request,
 )
 
@@ -257,6 +258,36 @@ def test_contextual_consultation_reuses_category_only_from_a_prior_recommendatio
 
 def test_consultation_negation_does_not_trigger_product_recommendation() -> None:
     assert _recommendation_tool_arguments("Mình không cần tư vấn đồ uống nữa.") is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Nếu chưa có thì có nước nào khác không?",
+        "Có loại nào tương tự không?",
+        "Có nước yến vị đào nào khác không?",
+        "If that is unavailable, can I get another option?",
+    ],
+)
+def test_alternative_product_requests_route_to_recommendations(text: str) -> None:
+    assert is_alternative_product_request(text)
+    assert is_recommendation_request(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Coca Zero với Pepsi khác gì nhau?",
+        "Không cần gợi ý nước khác.",
+    ],
+)
+def test_comparison_and_negated_alternative_are_not_recommendation_requests(text: str) -> None:
+    assert not is_alternative_product_request(text)
+    assert not is_recommendation_request(text)
+
+
+def test_product_name_carries_broad_category_for_unavailable_recovery() -> None:
+    assert _explicit_recommendation_category("Nước yến vị đào") == "drink"
 
 
 @pytest.mark.parametrize(

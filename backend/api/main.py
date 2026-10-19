@@ -115,6 +115,7 @@ from backend.services.vietnamese_intent import (
     has_specific_product_reference as _has_specific_product_reference,
 )
 from backend.services.vietnamese_intent import (
+    is_alternative_product_request,
     is_recommendation_negated,
     is_recommendation_request,
 )
@@ -246,6 +247,23 @@ def _claim_product_disclosures(
     if session_id is None:
         return keys
     return session_store.claim_snapshot_disclosures(session_id, keys)
+
+
+def _remember_unresolved_product_lookup(request: AgentRespondRequest) -> None:
+    """Save only the broad category for an explicit alternative follow-up."""
+    session_store.set_last_grounded_product(request.session_id, None)
+    session_store.update_constraints(request.session_id, [{"action": "REPLACE", "value": {}}])
+    session_store.update_shopping(
+        request.session_id,
+        current_intent=IntentType.PRODUCT_LOOKUP,
+        active_product_id=None,
+        active_category=None,
+        unresolved_product_category=_explicit_recommendation_category(request.text),
+        selected_product_ids=[],
+        comparison_product_ids=[],
+        pending_action=None,
+        pending_clarification=None,
+    )
 
 
 def _latest_snapshot_observation(
@@ -1303,6 +1321,7 @@ def _localized_recommendation_candidates(
     language: LanguageCode,
     *,
     include_price_caveat: bool = True,
+    include_stock_caveat: bool = True,
 ) -> str:
     products = observation.products[:3]
     items = []
@@ -1358,15 +1377,21 @@ def _localized_recommendation_candidates(
         response = "You could try " + ", ".join(items) + "."
         if include_price_caveat:
             response += " Store prices may differ from the catalog."
+        if include_stock_caveat and any(not product.stock_is_current for product in products):
+            response += " Current availability has not been verified."
         return response
     if language == "zh":
         response = "可以试试" + "、".join(items) + "。"
         if include_price_caveat:
             response += "门店实际价格可能与目录不同。"
+        if include_stock_caveat and any(not product.stock_is_current for product in products):
+            response += "当前库存尚未核实。"
         return response
     response = "Mình gợi ý " + ", ".join(items) + " nhé."
     if include_price_caveat:
         response += " Giá tại cửa hàng có thể khác catalog."
+    if include_stock_caveat and any(not product.stock_is_current for product in products):
+        response += " Tồn hiện tại chưa được xác minh."
     return response
 
 
@@ -1375,6 +1400,7 @@ def _localized_whole_cart_recommendation(
     language: LanguageCode,
     *,
     include_price_caveat: bool = True,
+    include_stock_caveat: bool = True,
 ) -> str:
     content = observation.content
 
@@ -1454,6 +1480,10 @@ def _localized_whole_cart_recommendation(
         )
         if include_price_caveat:
             response += " Prices are catalog references, not verified for this branch."
+        if include_stock_caveat and any(
+            not product.stock_is_current for product in observation.products
+        ):
+            response += " Current availability has not been verified."
         return response
     if language == "zh":
         response = (
@@ -1462,6 +1492,10 @@ def _localized_whole_cart_recommendation(
         )
         if include_price_caveat:
             response += " 价格来自目录，尚未在此门店核实。"
+        if include_stock_caveat and any(
+            not product.stock_is_current for product in observation.products
+        ):
+            response += "当前库存尚未核实。"
         return response
     response = (
         f"Theo giá catalog, các combo có tổng giá {budget_limit_vi} gồm: "
@@ -1469,6 +1503,10 @@ def _localized_whole_cart_recommendation(
     )
     if include_price_caveat:
         response += " Giá là tham khảo theo catalog, chưa xác minh tại chi nhánh."
+    if include_stock_caveat and any(
+        not product.stock_is_current for product in observation.products
+    ):
+        response += " Tồn hiện tại chưa được xác minh."
     return response
 
 
@@ -2453,16 +2491,20 @@ def _grounded_reply(
             disclosed = _claim_product_disclosures(
                 last_recommendation.products,
                 last_recommendation.source,
-                ("price_vnd",),
+                ("price_vnd", "stock"),
                 session_id,
             )
-            include_caveat = session_id is None or any(
+            include_price_caveat = session_id is None or any(
                 key.endswith("|price_vnd") for key in disclosed
+            )
+            include_stock_caveat = session_id is None or any(
+                key.endswith("|stock") for key in disclosed
             )
             return _localized_whole_cart_recommendation(
                 last_recommendation,
                 language,
-                include_price_caveat=include_caveat,
+                include_price_caveat=include_price_caveat,
+                include_stock_caveat=include_stock_caveat,
             )
         if last_recommendation.content.get("count") == 0:
             return _localized_no_sellable_match(language)
@@ -2470,16 +2512,20 @@ def _grounded_reply(
             disclosed = _claim_product_disclosures(
                 last_recommendation.products[:3],
                 last_recommendation.source,
-                ("price_vnd",),
+                ("price_vnd", "stock"),
                 session_id,
             )
-            include_caveat = session_id is None or any(
+            include_price_caveat = session_id is None or any(
                 key.endswith("|price_vnd") for key in disclosed
+            )
+            include_stock_caveat = session_id is None or any(
+                key.endswith("|stock") for key in disclosed
             )
             return _localized_recommendation_candidates(
                 last_recommendation,
                 language,
-                include_price_caveat=include_caveat,
+                include_price_caveat=include_price_caveat,
+                include_stock_caveat=include_stock_caveat,
             )
     if last_recommendation and last_recommendation.status in {
         "TEMPORARY_FAILURE",
@@ -4385,6 +4431,15 @@ async def agent_respond(
     if record.state in {SessionState.CLOSED, SessionState.EXPIRED}:
         raise HTTPException(status_code=409, detail="Session is closed")
 
+    if (
+        record.shopping.unresolved_product_category
+        and not is_alternative_product_request(request.text)
+    ):
+        record = session_store.update_shopping(
+            request.session_id,
+            unresolved_product_category=None,
+        )
+
     if _sensitive_internal_information_requested(request.text):
         return _local_policy_response(
             request,
@@ -4943,6 +4998,22 @@ async def agent_respond(
         request.text,
         record,
     )
+    if (
+        is_alternative_product_request(request.text)
+        and record.shopping.unresolved_product_category
+        and _explicit_recommendation_category(request.text) is None
+    ):
+        fallback_category = record.shopping.unresolved_product_category
+        session_store.update_constraints(
+            request.session_id,
+            [{"action": "SET", "key": "category", "value": fallback_category}],
+        )
+        record = session_store.update_shopping(
+            request.session_id,
+            current_intent=IntentType.RECOMMENDATION,
+            active_category=fallback_category,
+            unresolved_product_category=None,
+        )
     freshness_followup = bool(
         "data_timestamp" in requested_fields
         and record.last_grounded_product_id
@@ -5194,6 +5265,7 @@ async def agent_respond(
                         tools_used=["search_products"],
                         products=alternatives[:3],
                     )
+            _remember_unresolved_product_lookup(request)
             return _deterministic_tool_response(
                 request,
                 record.state,
@@ -5280,6 +5352,16 @@ async def agent_respond(
                     content={**candidate_observation.content, "count": len(selected)},
                 ),
                 reply,
+                model="catalog",
+                tools_used=["search_products"],
+            )
+        if candidate_observation.status == "SUCCESS" and not candidate_observation.products:
+            _remember_unresolved_product_lookup(request)
+            return _deterministic_tool_response(
+                request,
+                record.state,
+                candidate_observation,
+                _localized_not_found(request.language),
                 model="catalog",
                 tools_used=["search_products"],
             )
@@ -5495,6 +5577,7 @@ async def agent_respond(
             request.session_id,
             current_intent=IntentType.RECOMMENDATION,
             active_category=saved_constraints.get("category"),
+            unresolved_product_category=None,
             pending_clarification=None,
         )
         saved_basket_arguments = _whole_cart_recommendation_arguments(
@@ -6655,6 +6738,16 @@ def _fact_query_has_product_target(query: str) -> bool:
         "day",
         "vay",
         "nhiu",
+        "ke",
+        "chuyen",
+        "vui",
+        "di",
+        "mot",
+        "cau",
+        "tell",
+        "story",
+        "joke",
+        "funny",
     }
     return any(token not in generic_terms for token in _normalize_request_text(query).split())
 
