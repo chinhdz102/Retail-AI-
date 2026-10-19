@@ -481,3 +481,42 @@ Shopping sandbox ghi nhận p50/p95 **1.74/23.86 ms** trên 490 API calls. Runti
 - [P0 regression benchmark](../../evaluation/results/v6_verified_p0_demo_20261020.json)
 - [Shopping sandbox benchmark](../../evaluation/results/v6_verified_shopping_20261020.json)
 - [Runtime catalog benchmark](../../evaluation/results/v6_verified_runtime_catalog_20261020.json)
+
+## U. Xử lý mặt hàng không tìm thấy và kiểm thử song song — 20/10/2026
+
+### Thay đổi
+
+- Khi khách hỏi một mặt hàng không có trong snapshot, agent trả lời rõ là chưa tìm thấy và dừng tra cứu ở catalog; không chuyển câu hỏi mặt hàng cụ thể cho LLM tự đoán.
+- Agent lưu nhóm hàng tổng quát của mặt hàng vừa hỏi trong phiên. Câu tiếp theo như “Nếu chưa có thì có nước nào khác không?” hoặc “Có loại nào tương tự không?” gọi `recommend_products` theo đúng nhóm đã lưu, không sửa giỏ.
+- Câu gợi ý hiển thị giá tham khảo và nói rõ tồn hiện tại chưa được xác minh. Không diễn giải tồn kho snapshot cũ thành tình trạng hàng hiện tại.
+- Đã điều chỉnh phân biệt truy vấn sản phẩm với trò chuyện thường ngày; câu kể chuyện vui vẫn đi theo luồng hội thoại, không bị nhánh catalog chặn.
+
+### Kiểm thử cuối, chạy song song
+
+| Kiểm tra | Kết quả |
+|---|---:|
+| Backend offline pytest (bỏ qua 3 suite live Groq/STT/Azure TTS) | **714 passed / 0 failed** |
+| Bộ test trọng tâm intent, session, snapshot API | **169 passed** |
+| P0, catalog demo, 8 ca × 5 lượt | **40/40 pass** |
+| Frontend Vitest | **49/49 pass, 6 files** |
+| TypeScript và production build | Pass; cảnh báo chunk `model-viewer` 1.024 kB vẫn còn |
+| Ruff, compileall, kiểm tra JSON v6, `git diff --check` | Pass |
+| Hội thoại snapshot vừa sửa | **5/5 lượt pass**, HTTP 200; 0 LLM calls; median **138 ms** |
+
+Trong hội thoại 5 lượt, sản phẩm không có được trả lời là chưa tìm thấy; lượt kế tiếp trả về ba đồ uống có thật trong snapshot, kèm giá tham khảo và cảnh báo tồn kho chưa xác minh. Các lượt chuyển sang Coca Zero, hỏi giá và hỏi tồn tiếp tục đúng theo ngữ cảnh. Đây là kiểm tra hội thoại text với catalog snapshot; lượt fallback được xử lý deterministic nên không đánh giá độ tự nhiên của LLM.
+
+Một vòng backend đầu tiên bắt được ba hồi quy small talk do truy vấn như “Kể chuyện vui đi” bị xem là tên sản phẩm. Bộ lọc product-target được chỉnh để các từ hội thoại phổ biến không khởi chạy tra cứu catalog; sau sửa, cả ba hồi quy qua và P0 small-talk đạt 5/5.
+
+### Giới hạn
+
+- Dataset v6 là development data đã lộ, không phải held-out mù; lần chạy năm lượt chỉ kiểm tra case khôi phục mặt hàng và không phải ước lượng tỷ lệ hallucination.
+- Catalog vẫn là snapshot WinMart ngày **15/09/2026**. Không xác minh tồn kho, giá hiện hành, khuyến mãi đang áp dụng hoặc vị trí hàng ngoài cửa hàng.
+- Backend batch loại ba suite yêu cầu dịch vụ Groq/STT/Azure TTS. Không có PostgreSQL, Redis server, microphone, thanh toán hoặc giao dịch cửa hàng thật trong lần chạy này.
+
+Artifacts:
+
+- [Hội thoại snapshot 5/5](../../evaluation/results/goal_postfix_snapshot_alternative_live_20261020.json)
+- [P0 sau khi sửa intent, 40/40](../../evaluation/results/v6_quality_after_intent_fix_p0_demo_20261020.json)
+- [Development cases v6](../../evaluation/cases/vietnamese_text_sales_flow_v6_snapshot_dev_20261020.json)
+- [Test hồi phục sản phẩm không có](../../tests/test_snapshot_repository.py)
+- [Test intent](../../tests/test_vietnamese_intent.py)

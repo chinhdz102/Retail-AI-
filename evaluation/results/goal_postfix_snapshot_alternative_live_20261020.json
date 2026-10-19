@@ -1,0 +1,437 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-19T20:08:14.337381+00:00",
+  "dataset_id": "retail_vietnamese_text_sales_flow_v6_snapshot_dev_20261020",
+  "language_scope": "Vietnamese only",
+  "research_informed_by": [
+    "https://arxiv.org/abs/2406.12045",
+    "https://arxiv.org/abs/2408.04682",
+    "https://aclanthology.org/2024.eacl-demo.16/"
+  ],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "credential_failover_enabled": true,
+  "credential_slots": [
+    "primary",
+    "fallback_1",
+    "fallback_2"
+  ],
+  "provider_timeout_seconds": 12.0,
+  "minimum_model_request_interval_seconds": 0.0,
+  "response_timeout_seconds": 60.0,
+  "catalog_scope": {
+    "runtime_repository": "snapshot",
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false,
+    "postgres_search_tool_turns": 0
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "snapshot_unknown_product_and_recovery",
+      "turn": 1,
+      "prompt": "Có nước yến vị đào không?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 963,
+      "response": {
+        "session_id": "185c4b81-0014-41b7-ad8f-10743ebfbf1b",
+        "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "model": "catalog",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "data_timestamp": null,
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_tools": [
+          "search_products"
+        ],
+        "must_contain": [
+          "chưa tìm thấy"
+        ],
+        "must_not_have_product_ids": true
+      },
+      "conversation_tags": [
+        "dev",
+        "live_model_tool_selection",
+        "not_found",
+        "context_switch"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "snapshot_unknown_product_and_recovery",
+      "turn": 2,
+      "prompt": "Nếu chưa có thì có nước nào khác không?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 891,
+      "response": {
+        "session_id": "185c4b81-0014-41b7-ad8f-10743ebfbf1b",
+        "text": "Mình gợi ý Nước ion I-On Life 450ml (giá tham khảo 5.500đ), Nước trà chanh sả Fuzetea lon 320ml (giá tham khảo 8.400đ), Nước ngọt Vĩnh Hảo có ga lemona 500ml (giá tham khảo 8.600đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10011695",
+          "WIN_10150497",
+          "WIN_10625446"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.145189Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {
+        "category": "drink"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WIN_10011695",
+          "WIN_10150497",
+          "WIN_10625446"
+        ],
+        "expected_tools": [
+          "recommend_products"
+        ],
+        "must_contain": [
+          "giá tham khảo",
+          "tồn hiện tại chưa được xác minh"
+        ],
+        "must_not_contain": [
+          "nước yến vị đào đang bán"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "live_model_tool_selection",
+        "not_found",
+        "context_switch"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "snapshot_unknown_product_and_recovery",
+      "turn": 3,
+      "prompt": "Chuyển sang Coca Zero chai 600ml đi.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 138,
+      "response": {
+        "session_id": "185c4b81-0014-41b7-ad8f-10743ebfbf1b",
+        "text": "Mình tìm thấy Nước Giải Khát Coca-Cola Zero Pet 600ml. Bạn muốn xem giá, tình trạng hàng hay vị trí kệ?",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10194711"
+        ],
+        "tools_used": [
+          "search_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.149864Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10194711",
+            "name": "Nước Giải Khát Coca-Cola Zero Pet 600ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 9900,
+            "stock": 232,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:41.149864Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {
+        "category": "drink"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WIN_10194711"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "live_model_tool_selection",
+        "not_found",
+        "context_switch"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "snapshot_unknown_product_and_recovery",
+      "turn": 4,
+      "prompt": "Giá nhiêu vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 92,
+      "response": {
+        "session_id": "185c4b81-0014-41b7-ad8f-10743ebfbf1b",
+        "text": "Nước Giải Khát Coca-Cola Zero Pet 600ml có giá tham khảo 9.900đ/Chai nhé. Giá tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10194711"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.149864Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {
+        "category": "drink"
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WIN_10194711"
+        ],
+        "must_contain": [
+          "9.900đ",
+          "tham khảo"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "live_model_tool_selection",
+        "not_found",
+        "context_switch"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "snapshot_unknown_product_and_recovery",
+      "turn": 5,
+      "prompt": "Còn 600ml chắc chắn chứ?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 123,
+      "response": {
+        "session_id": "185c4b81-0014-41b7-ad8f-10743ebfbf1b",
+        "text": "Nước Giải Khát Coca-Cola Zero Pet 600ml: snapshot ghi nhận 232 Chai; tồn hiện tại chưa được xác minh. Tồn thực tế tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10194711"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.149864Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10194711",
+            "name": "Nước Giải Khát Coca-Cola Zero Pet 600ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 9900,
+            "stock": 232,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:41.149864Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WIN_10194711"
+        ],
+        "must_contain": [
+          "chưa được xác minh"
+        ],
+        "must_not_contain": [
+          "chắc chắn còn"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "live_model_tool_selection",
+        "not_found",
+        "context_switch"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    }
+  ],
+  "summary": {
+    "case_count": 1,
+    "turn_count": 5,
+    "http_200_count": 5,
+    "automated_grounding_safety_passes": 5,
+    "automated_grounding_safety_failures": 0,
+    "expected_model_tool_selection_passes": 0,
+    "expected_model_tool_selection_count": 0,
+    "no_tool_decision_passes": 0,
+    "no_tool_decision_count": 0,
+    "tool_argument_passes": 0,
+    "tool_argument_check_count": 0,
+    "median_turn_latency_ms": 138,
+    "total_llm_calls": 0,
+    "total_tool_calls": 0
+  }
+}

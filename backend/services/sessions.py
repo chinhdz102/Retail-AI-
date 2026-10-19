@@ -42,6 +42,7 @@ class ShoppingSessionState:
     current_intent: IntentType = IntentType.UNKNOWN
     active_product_id: str | None = None
     active_category: str | None = None
+    unresolved_product_category: str | None = None
     constraints: dict[str, Any] = field(default_factory=dict)
     selected_product_ids: list[str] = field(default_factory=list)
     comparison_product_ids: list[str] = field(default_factory=list)

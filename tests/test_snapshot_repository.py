@@ -274,6 +274,63 @@ async def test_snapshot_api_keeps_price_freshness_shelf_and_stock_claims_grounde
 
 
 @pytest.mark.asyncio
+async def test_unavailable_product_alternatives_use_catalog_and_retain_category(
+    snapshot_repo: SnapshotProductRepository,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(api_main, "get_product_repository", lambda: snapshot_repo)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda: snapshot_repo)
+
+    async def unexpected_llm_call(*_args, **_kwargs):
+        raise AssertionError("Grounded unavailable-product recovery should not call the LLM")
+
+    monkeypatch.setattr(api_main, "run_retail_agent", unexpected_llm_call)
+    transport = httpx.ASGITransport(app=app)
+    expected_ids = {"WIN_10011695", "WIN_10150497", "WIN_10625446"}
+
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        for follow_up in (
+            "Nếu chưa có thì có nước nào khác không?",
+            "Có loại nào tương tự không?",
+        ):
+            created = await client.post("/sessions", json={"kiosk_id": "snapshot-alternatives"})
+            session_id = created.json()["session_id"]
+            missing = await client.post(
+                "/agent/respond",
+                json={"session_id": session_id, "text": "Có nước yến vị đào không?"},
+            )
+            alternatives = await client.post(
+                "/agent/respond",
+                json={"session_id": session_id, "text": follow_up},
+            )
+
+            assert missing.status_code == alternatives.status_code == 200
+            assert missing.json()["tools_used"] == ["search_products"]
+            assert missing.json()["grounded_product_ids"] == []
+            alternative_body = alternatives.json()
+            assert "recommend_products" in alternative_body["tools_used"]
+            assert expected_ids.issubset(set(alternative_body["grounded_product_ids"]))
+            assert "giá tham khảo" in alternative_body["text"].casefold()
+            assert "tồn hiện tại chưa được xác minh" in alternative_body["text"].casefold()
+            assert alternative_body.get("cart") is None
+
+        created = await client.post("/sessions", json={"kiosk_id": "snapshot-whole-cart"})
+        combo = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": created.json()["session_id"],
+                "text": "Mình có 30k, muốn mua nước với đồ ăn vặt.",
+            },
+        )
+
+    combo_body = combo.json()
+    assert combo.status_code == 200
+    assert "recommend_products" in combo_body["tools_used"]
+    assert "tồn hiện tại chưa được xác minh" in combo_body["text"].casefold()
+    assert combo_body.get("cart") is None
+
+
+@pytest.mark.asyncio
 async def test_snapshot_api_refuses_to_add_unverified_inventory_to_demo_cart(
     snapshot_repo: SnapshotProductRepository,
     monkeypatch: pytest.MonkeyPatch,

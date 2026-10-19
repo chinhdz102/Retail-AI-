@@ -535,6 +535,7 @@ _CATEGORY_CUES: dict[str, tuple[str, ...]] = {
         "nuoc uong",
         "chai nuoc",
         "nuoc nao",
+        "nuoc yen",
         "nuoc mat",
         "giai khat",
         "nuoc suoi",
@@ -1071,12 +1072,46 @@ def is_recommendation_negated(text: str) -> bool:
     )
 
 
+def is_alternative_product_request(text: str) -> bool:
+    """Recognize a request for substitutes after an item is unavailable."""
+    normalized = " ".join(normalize_vietnamese(text).split())
+    if is_recommendation_negated(text):
+        return False
+    cues = (
+        "neu chua co",
+        "neu khong co",
+        "neu het hang",
+        "neu het",
+        "neu khong tim thay",
+        "nuoc nao khac",
+        "mon nao khac",
+        "loai nao khac",
+        "san pham nao khac",
+        "loai khac",
+        "mon khac",
+        "nao khac",
+        "thay the",
+        "tuong tu",
+        "another option",
+        "another one",
+        "any other",
+        "something else",
+        "alternative",
+        "if unavailable",
+        "if out of stock",
+        "similar product",
+    )
+    return _has_phrase(normalized, cues)
+
+
 def is_recommendation_request(text: str) -> bool:
     normalized = " ".join(normalize_vietnamese(text).split())
     if is_recommendation_negated(text):
         return False
-    return _has_phrase(normalized, _RECOMMENDATION_CUES) or bool(
-        re.search(r"(?<!giai )\bkhat(?:\s+nuoc)?\b", normalized)
+    return (
+        is_alternative_product_request(text)
+        or _has_phrase(normalized, _RECOMMENDATION_CUES)
+        or bool(re.search(r"(?<!giai )\bkhat(?:\s+nuoc)?\b", normalized))
     )
 
 
