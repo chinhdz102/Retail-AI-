@@ -14,13 +14,15 @@ _COMPARATIVE_CUE = (
     r"con nhieu hang hon|nhieu hang hon|co nhieu hang hon|ban chay hon|"
     r"cheaper|better|more available|more stock|lower price|cost less|less expensive)"
 )
+_COMPARATIVE_SUBJECT = r"(?:cai nao|ben nao|mon nao|chai nao|loai nao|hang nao)"
 _FOLLOWUP_TAIL = re.compile(
-    rf"\s+(?:(?:cai nao|ben nao|mon nao)\s+(?:(?:la|thi)\s+)?{_COMPARATIVE_CUE}\b.*|"
+    rf"\s+(?:(?:xem\s+)?{_COMPARATIVE_SUBJECT}\s+(?:(?:la|thi)\s+)?{_COMPARATIVE_CUE}\b.*|"
     r"which one (?:is )?(?:cheaper|better|more available|has more stock)|"
     r"which is (?:cheaper|better|more available)|what is (?:cheaper|better))\b.*$"
 )
 _COMPARISON_FOLLOWUP = re.compile(
-    rf"^(?:(?:cai nao|ben nao|mon nao)\s+(?:(?:la|thi)\s+)?{_COMPARATIVE_CUE}|"
+    rf"^(?:(?:xem\s+)?{_COMPARATIVE_SUBJECT}\s+(?:(?:la|thi)\s+)?{_COMPARATIVE_CUE}|"
+    r"chenh nhau(?:\s+dung)?(?:\s+\d[\d.,\s]*(?:k|nghin|ngan|dong|d)?)?(?:\s+ha)?|"
     r"which one (?:is )?(?:cheaper|better|more available|has more stock)|"
     r"which is (?:cheaper|better|more available)|what is (?:cheaper|better))\b"
 )
@@ -39,9 +41,9 @@ def is_comparison_request(text: str) -> bool:
 def parse_comparison_queries(text: str) -> tuple[str, str] | None:
     """Extract two explicitly named products from Vietnamese or English comparison text."""
     normalized = " ".join(normalize_vietnamese(text).split())
-    prefix = re.match(r"^(?:so sanh(?: giua)?|compare(?: between)?)\s+", normalized)
+    prefix = re.match(r"^(?:so(?: sanh(?: giua)?)?|compare(?: between)?)\s+", normalized)
     has_followup_tail = bool(_FOLLOWUP_TAIL.search(normalized))
-    body = normalized[prefix.end():] if prefix else normalized
+    body = normalized[prefix.end() :] if prefix else normalized
     connector = _CONNECTOR.search(body)
     if connector is None:
         return None
@@ -50,8 +52,8 @@ def parse_comparison_queries(text: str) -> tuple[str, str] | None:
     if not prefix and connector.group(1) not in {"vs", "versus"} and not has_followup_tail:
         return None
 
-    left = body[:connector.start()].strip()
-    right = body[connector.end():].strip()
+    left = body[: connector.start()].strip()
+    right = body[connector.end() :].strip()
     right = _FOLLOWUP_TAIL.sub("", right).strip()
     right = _POLITE_TAIL.sub("", right).strip()
     if left.startswith("between "):
@@ -66,7 +68,8 @@ def comparison_metric(text: str) -> ComparisonMetric | None:
     normalized = " ".join(normalize_vietnamese(text).split())
     if re.search(
         r"\b(?:so sanh (?:theo )?gia|compare (?:by )?price|compare prices?|"
-        r"re hon|it tien hon|gia thap hon|cheaper|cheapest|lower price|"
+        r"re hon|it tien hon|gia thap hon|chenh nhau|price difference|difference between|"
+        r"cheaper|cheapest|lower price|"
         r"cost less|less expensive)\b",
         normalized,
     ):

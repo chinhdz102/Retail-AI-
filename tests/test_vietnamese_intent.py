@@ -29,6 +29,7 @@ from backend.services.vietnamese_intent import (
         ("Nước suối 500ml, dữ liệu giá ghi nhận ngày nào?", ("data_timestamp",)),
         ("Coca Zero còn hàng chứ?", ("stock",)),
         ("Coca Zero còn bán được không?", ("stock",)),
+        ("Coca Zero lon 330ml đang có.", ("stock",)),
         ("Ở đây còn bán loại này không?", ("stock",)),
         ("Món này hết chưa vậy?", ("stock",)),
         ("Còn chai Coca nào không?", ("stock",)),
@@ -46,6 +47,7 @@ from backend.services.vietnamese_intent import (
         ("Hạn trên sản phẩm còn tới ngày nào?", ("expiry_at",)),
         ("Bên trong món này gồm những gì?", ("ingredients",)),
         ("Coca Zero có những gì?", ("ingredients",)),
+        ("Có đường không vậy?", ("ingredients",)),
         ("Coca Zero có gì bên trong?", ("ingredients",)),
         ("Cái này làm từ nguyên liệu gì?", ("ingredients",)),
         ("Nhân bánh có những gì?", ("ingredients",)),
@@ -268,18 +270,14 @@ def test_specific_subcategory_is_preserved_without_overfiltering(
 
 
 def test_regional_snack_recommendation_keeps_category_and_budget() -> None:
-    assert _recommendation_tool_arguments(
-        "Tư vấn đồ lai rai dưới hai chục nghìn nghen."
-    ) == {
+    assert _recommendation_tool_arguments("Tư vấn đồ lai rai dưới hai chục nghìn nghen.") == {
         "category": "snack",
         "price_constraint": {"operator": "LT", "value_vnd": 20_000},
     }
 
 
 def test_regional_ranking_recognizes_snack_alias_and_avoids_non_food_gift() -> None:
-    assert _recommendation_tool_arguments("Món quà vặt mô ngon nhứt?") == {
-        "category": "snack"
-    }
+    assert _recommendation_tool_arguments("Món quà vặt mô ngon nhứt?") == {"category": "snack"}
     assert _explicit_recommendation_category("Gợi ý quà vật chất cho giáo viên.") is None
 
 

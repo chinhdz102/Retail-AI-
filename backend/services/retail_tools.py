@@ -94,8 +94,9 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "The backend always filters to products with positive stock. Apply every "
                 "stated category, brand, spice, and structured price constraint as a hard filter. "
                 "For a whole-cart request spanning multiple categories, pass categories and "
-                "total_budget_vnd; the backend computes combinations that never exceed that cap. "
-                "For 'under' use LT; for 'at most/up to' use LTE."
+                "total_budget_vnd; set total_budget_exclusive=true for 'under/less than' and "
+                "false for 'at most/up to'. The backend computes each combo total exactly. "
+                "For a single-item price filter, use LT for 'under' and LTE for 'at most/up to'."
             ),
             "parameters": {
                 "type": "object",
@@ -117,6 +118,13 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
                         "minimum": 1,
                         "maximum": 100000000,
                         "description": "Whole-cart cap; the backend computes each combo total.",
+                    },
+                    "total_budget_exclusive": {
+                        "type": "boolean",
+                        "description": (
+                            "True means the full cart total must be strictly less than "
+                            "total_budget_vnd; false means it may equal the cap."
+                        ),
                     },
                     "quantity_per_category": {
                         "type": "integer",
@@ -261,6 +269,7 @@ class RecommendProductsArguments(BaseModel):
         default=None, min_length=2, max_length=MAX_RECOMMENDATION_CATEGORIES
     )
     total_budget_vnd: int | None = Field(default=None, ge=1, le=100_000_000)
+    total_budget_exclusive: bool = False
     quantity_per_category: int = Field(default=1, ge=1, le=10)
     brand: str | None = Field(default=None, max_length=120)
     price_constraint: PriceConstraint | None = None
@@ -413,14 +422,15 @@ def _whole_cart_recommendation(
     if not missing_categories:
         valid_combos = []
         for combo in cart_product(*candidate_groups):
-            total = sum(
-                item.price_vnd * parsed.quantity_per_category for item in combo
+            total = sum(item.price_vnd * parsed.quantity_per_category for item in combo)
+            within_budget = (
+                total < parsed.total_budget_vnd
+                if parsed.total_budget_exclusive
+                else total <= parsed.total_budget_vnd
             )
-            if total <= parsed.total_budget_vnd:
+            if within_budget:
                 valid_combos.append((total, combo))
-        valid_combos.sort(
-            key=lambda row: (row[0], tuple(item.product_id for item in row[1]))
-        )
+        valid_combos.sort(key=lambda row: (row[0], tuple(item.product_id for item in row[1])))
         chosen: list[tuple[int, tuple[ProductSnapshot, ...]]] = []
         if valid_combos:
             chosen.append(valid_combos[0])
@@ -480,6 +490,7 @@ def _whole_cart_recommendation(
             labels.get(category, category) for category in missing_categories
         ],
         "total_budget_vnd": parsed.total_budget_vnd,
+        "total_budget_exclusive": parsed.total_budget_exclusive,
         "quantity_per_category": parsed.quantity_per_category,
         "options": options,
         "missing_categories": missing_categories,
@@ -602,15 +613,83 @@ _ENGLISH_CATALOG_TERMS = (
 )
 _ENGLISH_CATALOG_STOP_WORDS = frozenset(
     {
-        "a", "an", "and", "are", "at", "can", "could", "do", "does", "for",
-        "have", "has", "how", "i", "in", "is", "it", "me", "my", "of", "on",
-        "please", "the", "this", "that", "to", "we", "what", "where", "which",
-        "who", "with", "you", "your", "find", "get", "looking", "recommend",
-        "suggest", "under", "below", "up", "less", "than", "no", "more", "most",
-        "price", "cost", "shelf", "aisle", "stock", "available", "deal", "deals",
-        "promotion", "promotions", "offer", "offers", "discount", "sale", "expiry",
-        "expiration", "ingredients", "contains", "inside", "mild", "spicy", "not",
-        "non", "budget", "left", "in", "many", "much", "today", "current",
+        "a",
+        "an",
+        "and",
+        "are",
+        "at",
+        "can",
+        "could",
+        "do",
+        "does",
+        "for",
+        "have",
+        "has",
+        "how",
+        "i",
+        "in",
+        "is",
+        "it",
+        "me",
+        "my",
+        "of",
+        "on",
+        "please",
+        "the",
+        "this",
+        "that",
+        "to",
+        "we",
+        "what",
+        "where",
+        "which",
+        "who",
+        "with",
+        "you",
+        "your",
+        "find",
+        "get",
+        "looking",
+        "recommend",
+        "suggest",
+        "under",
+        "below",
+        "up",
+        "less",
+        "than",
+        "no",
+        "more",
+        "most",
+        "price",
+        "cost",
+        "shelf",
+        "aisle",
+        "stock",
+        "available",
+        "deal",
+        "deals",
+        "promotion",
+        "promotions",
+        "offer",
+        "offers",
+        "discount",
+        "sale",
+        "expiry",
+        "expiration",
+        "ingredients",
+        "contains",
+        "inside",
+        "mild",
+        "spicy",
+        "not",
+        "non",
+        "budget",
+        "left",
+        "in",
+        "many",
+        "much",
+        "today",
+        "current",
     }
 )
 
@@ -619,17 +698,59 @@ def _normalize_catalog_query(query: str) -> str:
     """Translate common English catalog terms and remove question filler before lookup."""
     normalized = " ".join(_normalize_vietnamese(query).split())
     english_signals = (
-        "where", "what", "which", "who", "can", "could", "does", "have", "find",
-        "please", "recommend", "suggest", "looking for", "under", "below", "less than",
-        "up to", "at most", "price", "cost", "in stock", "available", "promotion",
-        "deal", "offer", "discount", "expiry", "expiration", "ingredients", "shelf",
-        "aisle", "milk", "coffee", "water", "beverage", "drink", "dairy", "yogurt",
-        "yoghurt", "cheese", "crisps", "chips", "noodles", "breakfast", "lunch",
-        "dinner", "food", "meal", "soda", "tea",
+        "where",
+        "what",
+        "which",
+        "who",
+        "can",
+        "could",
+        "does",
+        "have",
+        "find",
+        "please",
+        "recommend",
+        "suggest",
+        "looking for",
+        "under",
+        "below",
+        "less than",
+        "up to",
+        "at most",
+        "price",
+        "cost",
+        "in stock",
+        "available",
+        "promotion",
+        "deal",
+        "offer",
+        "discount",
+        "expiry",
+        "expiration",
+        "ingredients",
+        "shelf",
+        "aisle",
+        "milk",
+        "coffee",
+        "water",
+        "beverage",
+        "drink",
+        "dairy",
+        "yogurt",
+        "yoghurt",
+        "cheese",
+        "crisps",
+        "chips",
+        "noodles",
+        "breakfast",
+        "lunch",
+        "dinner",
+        "food",
+        "meal",
+        "soda",
+        "tea",
     )
     has_english_signal = any(
-        re.search(rf"(?<!\w){re.escape(signal)}(?!\w)", normalized)
-        for signal in english_signals
+        re.search(rf"(?<!\w){re.escape(signal)}(?!\w)", normalized) for signal in english_signals
     )
     if not has_english_signal:
         return query.strip()
@@ -640,9 +761,7 @@ def _normalize_catalog_query(query: str) -> str:
         normalized,
     )
     for english, vietnamese in _ENGLISH_CATALOG_TERMS:
-        normalized = re.sub(
-            rf"(?<!\w){re.escape(english)}(?!\w)", vietnamese, normalized
-        )
+        normalized = re.sub(rf"(?<!\w){re.escape(english)}(?!\w)", vietnamese, normalized)
     return " ".join(
         token for token in normalized.split() if token not in _ENGLISH_CATALOG_STOP_WORDS
     )

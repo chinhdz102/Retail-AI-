@@ -56,7 +56,17 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
     tokens = set(normalized.split())
 
     nutrition = bool(
-        tokens & {"calo", "kcal", "calorie", "calories", "protein", "sugar"}
+        tokens
+        & {
+            "calo",
+            "kcal",
+            "calorie",
+            "calories",
+            "protein",
+            "sugar",
+            "caffeine",
+            "cafein",
+        }
     ) or _has_phrase(
         normalized,
         (
@@ -69,6 +79,10 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "nutrition information",
             "nutritional information",
             "chat beo",
+            "luong caffeine",
+            "luong cafein",
+            "caffeine content",
+            "cafein bao nhieu",
         ),
     )
     promotion = _has_phrase(
@@ -176,6 +190,8 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "co san",
             "con ban",
             "co ban khong",
+            "dang ban",
+            "van ban",
             "con ban duoc khong",
             "ban duoc khong",
             "con khong",
@@ -210,17 +226,22 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
         or re.search(r"\bco ban\b.{0,40}\bkhong\b", normalized)
         or re.search(r"\bco san\b.{0,40}\bkhong\b", normalized)
         or re.search(r"\bcon\s+\d+\s+(?:chai|lon|hop|goi|ly|cai)\b", normalized)
+        or re.search(
+            r"\b\d+(?:[.,]\d+)?\s*(?:ml|l|g|kg)\b.{0,30}\b(?:co|ban|ton)\b.{0,15}\bkhong\b",
+            normalized,
+        )
     )
+    # In a promotion query, "đang có" describes the offer rather than stock.
+    stock = stock or (_has_phrase(normalized, ("dang co",)) and not promotion)
     remaining_quantity_question = _has_phrase(normalized, ("con bao nhieu",)) or bool(
         re.search(r"\bcon\s+may\s+(?:chai|lon|hop|goi|ly|cai)\b", normalized)
     )
-    remaining_amount_is_price = (
-        _has_phrase(normalized, ("con bao nhieu tien", "con bao nhieu dong"))
-        or bool(
-            re.search(
-                r"\b(?:gia|price|cost)\b.{0,60}\bcon bao nhieu\b",
-                normalized,
-            )
+    remaining_amount_is_price = _has_phrase(
+        normalized, ("con bao nhieu tien", "con bao nhieu dong")
+    ) or bool(
+        re.search(
+            r"\b(?:gia|price|cost)\b.{0,60}\bcon bao nhieu\b",
+            normalized,
         )
     )
     if remaining_quantity_question and not remaining_amount_is_price:
@@ -236,6 +257,8 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "ke nao",
             "ke may",
             "de cho nao",
+            "day nao",
+            "day nao vay",
             "de dau",
             "dat o dau",
             "nam o dau",
@@ -302,6 +325,13 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "nhan gom gi",
             "nhan co gi",
             "trong nay co gi",
+            "co duong khong",
+            "co duong",
+            "has sugar",
+            "does it have sugar",
+            "does this have sugar",
+            "does it contain sugar",
+            "does this contain sugar",
         ),
     ) or bool(
         re.search(
@@ -311,9 +341,24 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
         )
     )
     if tokens & {
-        "allergy", "allergic", "allergen", "allergens", "peanut", "peanuts",
-        "gluten", "lactose", "diabetic", "diabetes", "pregnant", "vegan",
-        "vegetarian", "sugar", "calorie", "calories", "protein", "kcal",
+        "allergy",
+        "allergic",
+        "allergen",
+        "allergens",
+        "peanut",
+        "peanuts",
+        "gluten",
+        "lactose",
+        "diabetic",
+        "diabetes",
+        "pregnant",
+        "vegan",
+        "vegetarian",
+        "sugar",
+        "calorie",
+        "calories",
+        "protein",
+        "kcal",
     }:
         ingredients = False
     spicy = _has_phrase(
@@ -359,6 +404,10 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "cap nhat truc tiep",
             "cap nhat truc tiep khong",
             "co cap nhat truc tiep khong",
+            "kiem tra truc tiep",
+            "duoc kiem tra truc tiep",
+            "kiem tra truc tiep hom nay",
+            "duoc kiem tra truc tiep hom nay",
             "du lieu truc tiep",
             "real time",
             "real-time",
@@ -386,6 +435,8 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "when was",
             "updated when",
             "cap nhat truc tiep",
+            "kiem tra truc tiep",
+            "duoc kiem tra truc tiep",
             "real time",
             "real-time",
             "up to date",
@@ -486,8 +537,16 @@ _CATEGORY_CUES: dict[str, tuple[str, ...]] = {
         "thirsty",
     ),
     "dairy": (
-        "sua chua", "sua tuoi", "sua", "yogurt", "yaourt", "pho mai", "dairy",
-        "milk", "yoghurt", "cheese",
+        "sua chua",
+        "sua tuoi",
+        "sua",
+        "yogurt",
+        "yaourt",
+        "pho mai",
+        "dairy",
+        "milk",
+        "yoghurt",
+        "cheese",
     ),
     "meal": (
         "bua an",
@@ -538,9 +597,7 @@ def explicit_recommendation_category(text: str) -> str | None:
         for cue in cues
         if _has_phrase(normalized, (cue,))
         and not (
-            category == "snack"
-            and cue == "qua vat"
-            and _has_phrase(normalized, ("qua vat chat",))
+            category == "snack" and cue == "qua vat" and _has_phrase(normalized, ("qua vat chat",))
         )
     ]
     if not matches:
@@ -599,9 +656,7 @@ def explicit_recommendation_categories(text: str) -> list[str]:
     }
     latest_negative = {
         category: max(
-            position
-            for position, item_category in negated_matches
-            if item_category == category
+            position for position, item_category in negated_matches if item_category == category
         )
         for category in {item_category for _, item_category in negated_matches}
     }
@@ -757,25 +812,180 @@ _RECOMMENDATION_CUES = (
 
 _CONSULTATION_FILLER_TOKENS = frozenset(
     {
-        "a", "an", "bao", "ban", "be", "biet", "cai", "can", "cho", "chay", "co", "dang",
-        "de", "di", "do", "duoi", "em", "gi", "gia", "giup", "hai", "ho", "hop",
-        "khong", "la", "loai", "ma", "minh", "mon", "mot", "muon", "mua", "nao", "nam",
-        "nha", "nhe", "nhat", "nhieu", "o", "phan", "phu", "pho", "qua", "re", "sau", "sang",
-        "the", "toi", "tot", "trua", "tui", "tuoi", "van", "voi", "y", "xem", "ngon",
-        "nhu", "ba", "bon", "nam", "bay", "tam", "chin", "muoi", "chuc", "nghin",
-        "ngan", "dong", "vnd", "k", "d", "gio", "luc", "nay", "kien", "xin", "hang",
-        "dat", "duoc", "san", "pham", "ten", "ma", "id", "hot", "best", "seller",
-        "popular", "ua", "chuong", "pho bien",
-        "a", "an", "are", "any", "anything", "buy", "can", "could", "do", "does",
-        "for", "get", "good", "help", "i", "is", "it", "me", "my", "need", "of",
-        "or", "please", "recommend", "some", "something", "suggest", "the", "to",
-        "want", "we", "what", "which", "with", "would", "you", "your",
-        "under", "below", "up", "at", "most", "less", "more", "than", "budget",
-        "price", "non", "spicy", "mild", "hot", "not", "no",
-        "m", "am", "drink", "drinks", "beverage", "beverages", "water", "soda",
-        "coffee", "tea", "dairy", "milk", "yogurt", "yoghurt", "cheese", "meal",
-        "meals", "food", "breakfast", "lunch", "dinner", "snack", "snacks", "crisps",
-        "chips", "candy", "noodles", "thirsty", "hungry",
+        "a",
+        "an",
+        "bao",
+        "ban",
+        "be",
+        "biet",
+        "cai",
+        "can",
+        "cho",
+        "chay",
+        "co",
+        "dang",
+        "de",
+        "di",
+        "do",
+        "duoi",
+        "em",
+        "gi",
+        "gia",
+        "giup",
+        "hai",
+        "ho",
+        "hop",
+        "khong",
+        "la",
+        "loai",
+        "ma",
+        "minh",
+        "mon",
+        "mot",
+        "muon",
+        "mua",
+        "nao",
+        "nam",
+        "nha",
+        "nhe",
+        "nhat",
+        "nhieu",
+        "o",
+        "phan",
+        "phu",
+        "pho",
+        "qua",
+        "re",
+        "sau",
+        "sang",
+        "the",
+        "toi",
+        "tot",
+        "trua",
+        "tui",
+        "tuoi",
+        "van",
+        "voi",
+        "y",
+        "xem",
+        "ngon",
+        "nhu",
+        "ba",
+        "bon",
+        "nam",
+        "bay",
+        "tam",
+        "chin",
+        "muoi",
+        "chuc",
+        "nghin",
+        "ngan",
+        "dong",
+        "vnd",
+        "k",
+        "d",
+        "gio",
+        "luc",
+        "nay",
+        "kien",
+        "xin",
+        "hang",
+        "dat",
+        "duoc",
+        "san",
+        "pham",
+        "ten",
+        "ma",
+        "id",
+        "hot",
+        "best",
+        "seller",
+        "popular",
+        "ua",
+        "chuong",
+        "pho bien",
+        "a",
+        "an",
+        "are",
+        "any",
+        "anything",
+        "buy",
+        "can",
+        "could",
+        "do",
+        "does",
+        "for",
+        "get",
+        "good",
+        "help",
+        "i",
+        "is",
+        "it",
+        "me",
+        "my",
+        "need",
+        "of",
+        "or",
+        "please",
+        "recommend",
+        "some",
+        "something",
+        "suggest",
+        "the",
+        "to",
+        "want",
+        "we",
+        "what",
+        "which",
+        "with",
+        "would",
+        "you",
+        "your",
+        "under",
+        "below",
+        "up",
+        "at",
+        "most",
+        "less",
+        "more",
+        "than",
+        "budget",
+        "price",
+        "non",
+        "spicy",
+        "mild",
+        "hot",
+        "not",
+        "no",
+        "m",
+        "am",
+        "drink",
+        "drinks",
+        "beverage",
+        "beverages",
+        "water",
+        "soda",
+        "coffee",
+        "tea",
+        "dairy",
+        "milk",
+        "yogurt",
+        "yoghurt",
+        "cheese",
+        "meal",
+        "meals",
+        "food",
+        "breakfast",
+        "lunch",
+        "dinner",
+        "snack",
+        "snacks",
+        "crisps",
+        "chips",
+        "candy",
+        "noodles",
+        "thirsty",
+        "hungry",
     }
 )
 
@@ -869,8 +1079,8 @@ def unsupported_catalog_attribute_requested(text: str) -> bool:
         "calo",
         "lượng calo",
         "luong duong",
-        "it duong",
         "co it duong",
+        "it duong khong",
         "chat beo",
         "co chat beo",
         "an chay duoc khong",
@@ -957,5 +1167,18 @@ def unsupported_catalog_attribute_requested(text: str) -> bool:
     return (
         contextual_use_or_safety
         or _has_phrase(normalized, unsupported_phrases)
-        or bool(tokens & {"kcal", "calorie", "calories", "protein", "sugar", "allergy", "allergic"})
+        or bool(
+            tokens
+            & {
+                "kcal",
+                "calorie",
+                "calories",
+                "protein",
+                "sugar",
+                "caffeine",
+                "cafein",
+                "allergy",
+                "allergic",
+            }
+        )
     )

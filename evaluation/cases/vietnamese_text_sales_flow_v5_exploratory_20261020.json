@@ -168,7 +168,8 @@
       "turns": [
         {
           "text": "Coca Zero chai 600ml có không?",
-          "must_not_have_product_ids": true,
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["không thấy quy cách 600ml", "chưa coi chúng là cùng quy cách"],
           "must_not_contain": ["Coca-Cola Zero 330ml còn hàng"]
         },
         {
@@ -179,7 +180,7 @@
         {
           "text": "Vậy cho mình hỏi loại Coca Zero lon 330ml đang có.",
           "expected_product_ids": ["COKE_ZERO_330"],
-          "must_contain": ["13.000"]
+          "must_contain": ["16"]
         },
         {
           "text": "Còn mấy lon bán được?",
@@ -199,8 +200,9 @@
       "turns": [
         {
           "text": "Sữa tươi ít đường 180ml còn hộp nào bán được không?",
-          "must_not_contain": ["còn 24 hộp", "24 hộp còn bán", "còn hàng nhé"],
-          "must_not_have_product_ids": true
+          "expected_product_ids": ["MILK01"],
+          "must_contain": ["chưa có hàng bán được"],
+          "must_not_contain": ["còn 24 hộp", "24 hộp còn bán", "còn hàng nhé"]
         },
         {
           "text": "Hạn dùng ghi trên mẫu dữ liệu đến ngày nào?",

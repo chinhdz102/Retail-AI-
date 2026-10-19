@@ -320,3 +320,39 @@ Artifacts:
 - [Offline product retrieval](../../evaluation/results/goal_v5_product_resolution_20261020.json)
 
 Phần cần tiếp tục trước khi tuyên bố full-flow đạt: sửa các lỗi định tuyến/context ở trên, chạy một bộ unseen mới sau khi khóa case, thử failover live khi quota/API sẵn sàng, kết nối PostgreSQL/Redis và kiểm tra tay tính tự nhiên của toàn bộ hội thoại. STT/TTS không được benchmark lại trong vòng text này.
+
+## Q. Final customer-care regression and Groq fallback update — 20/10/2026
+
+### Sửa lỗi và kiểm tra cuối
+
+Đã sửa câu hỏi nối tiếp về vị giác để bám sản phẩm vừa tra cứu. Ví dụ “Vị nó đắng nhiều không?” giờ nêu rõ catalog chưa ghi nhận độ đắng của sản phẩm và không đoán; phản hồi giữ `COFFEE01` làm nguồn dẫn, không gọi model/tool. Bổ sung regression API cho đúng chuỗi hỏi này.
+
+| Kiểm tra cuối | Kết quả |
+|---|---:|
+| Full text conversation exploratory | 50/50 lượt HTTP 200; 50/50 assertion |
+| Số phiên / lượt | 10 / 50 |
+| Groq/model tool calls trong exploratory run | 0 / 0 |
+| Median API latency trong exploratory run | 54 ms |
+| P0 backend regressions, catalog demo được đặt rõ ràng | 40/40 |
+| Shopping-flow sandbox | 10/10; không xác nhận thanh toán giả, không rò rỉ session |
+| Offline retrieval trên snapshot JSON 3.099 dòng | Recall@1/3/5 = 1,0; MRR = 1,0; gold-set recall@3/@5 = 0,9777/0,9866 |
+| Pytest | 670 passed |
+| Ruff / compileall | Pass / Pass |
+
+Bộ 50 lượt là **exploratory/dev đã lộ**, không phải kiểm tra mù hoặc bộ unseen. Không có lượt gọi Groq trong lần cuối: điểm số xác nhận API routing, session context, catalog grounding, giỏ hàng, policy và handoff demo; nó không đo chất lượng sinh câu trả lời của Qwen/OSS. Độ tự nhiên vẫn cần người đọc review. Benchmark shopping cũng là sandbox nội bộ.
+
+Tất cả benchmark P0 và 50 lượt hội thoại trên dùng catalog demo sáu mặt hàng theo cấu hình tường minh. Một lượt P0 khi vô tình chạy theo `.env` mặc định (repository PostgreSQL, nhưng DB không sẵn sàng) chỉ đạt 25/40; ba nhóm kiểm tra cần catalog thất bại. Sau khi đặt rõ `CATALOG_REPOSITORY=demo`, P0 đạt 40/40. Đây là giới hạn runtime cần xử lý trước khi xem dữ liệu DB thật trong demo. Chỉ benchmark truy hồi ngoại tuyến chạy trên snapshot WinMart; nó không kiểm tra truy vấn PostgreSQL, tồn kho thời gian thực hoặc Redis.
+
+### Hai key fallback mới
+
+Đã đặt hai credential người dùng cung cấp vào `.env` dưới hai slot fallback. `.env` vẫn bị Git ignore; thay đổi được push chỉ gồm tên cấu hình/logic failover, không gồm giá trị secret. Cả ba slot được chọn để xác minh đã cấu hình. Các GET `/models` trước đó trả HTTP 200 cho từng slot, nhưng yêu cầu generation từ cả ba slot/model đều gặp HTTP 429 trong cùng đợt quota. Vì vậy chưa có bằng chứng các key có quota độc lập; fallback giữ nguyên thứ tự và sẽ thử credential kế tiếp khi quota/provider cho phép.
+
+### Artifacts cuối
+
+- [Exploratory text flow v5, 50/50](../../evaluation/results/v5_final_live_20261020_r5.json)
+- [P0 với catalog demo, 40/40](../../evaluation/results/v5_final_p0_20261020_r6.json)
+- [Shopping sandbox, 10/10](../../evaluation/results/v5_final_shopping_20261020_r5.json)
+- [Offline product retrieval](../../evaluation/results/v5_final_product_resolution_20261020_r5.json)
+- [Exploratory/dev cases](../../evaluation/cases/vietnamese_text_sales_flow_v5_exploratory_20261020.json)
+
+Kết quả hiện tại không chứng minh chất lượng model live dưới quota, độ tự nhiên bằng đánh giá người dùng, hoặc tích hợp PostgreSQL/Redis. Chưa chạy lại STT/TTS trong lần kiểm tra text này.

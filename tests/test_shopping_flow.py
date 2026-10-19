@@ -52,6 +52,7 @@ def test_product_advice_phrasing_does_not_trigger_cart_actions(text: str) -> Non
     ("text", "expected", "query", "quantity"),
     [
         ("Thêm 2 lon Coca Zero vào giỏ nhé", ShoppingActionType.ADD_ITEM, "coca zero", 2),
+        ("Lấy giúp tui 2 chai bỏ vô giỏ", ShoppingActionType.ADD_ITEM, "", 2),
         ("Add three cans of Coca Zero to my cart", ShoppingActionType.ADD_ITEM, "coca zero", 3),
         ("Xem giỏ hàng giúp mình", ShoppingActionType.VIEW_CART, "", None),
         ("Mở giỏ hàng cho mình xem", ShoppingActionType.VIEW_CART, "", None),
@@ -155,6 +156,47 @@ def test_cart_removal_quantity_and_payment_status_intents_are_readable() -> None
     assert quantity.quantity == 2
     assert payment is not None and payment.action == ShoppingActionType.CHECK_PAYMENT_STATUS
     assert total is not None and total.action == ShoppingActionType.VIEW_CART
+
+    reduced = classify_shopping_action("Giảm còn 1 chai thôi.", SessionState.CART_ACTIVE)
+    assert reduced is not None and reduced.action == ShoppingActionType.SET_QUANTITY
+    assert reduced.query == "cai nay"
+    assert reduced.quantity == 1
+    assert (
+        classify_shopping_action(
+            "Mình chỉ xem trước thôi, chưa thêm vào giỏ đâu.", SessionState.CART_ACTIVE
+        )
+        is None
+    )
+
+
+@pytest.mark.asyncio
+async def test_colloquial_add_reduce_and_total_flow_uses_active_product(
+    client: httpx.AsyncClient,
+) -> None:
+    created = await client.post("/sessions", json={"kiosk_id": "colloquial-cart-followup"})
+    session_id = created.json()["session_id"]
+    lookup = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Nước suối 500ml giá bao nhiêu?"},
+    )
+    added = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Lấy giúp tui 2 chai bỏ vô giỏ."},
+    )
+    reduced = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Giảm còn 1 chai thôi."},
+    )
+    total = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Tổng giỏ giờ bao nhiêu?"},
+    )
+
+    assert all(response.status_code == 200 for response in (lookup, added, reduced, total))
+    assert added.json()["cart"]["items"][0]["product_id"] == "WATER01"
+    assert added.json()["cart"]["items"][0]["quantity"] == 2
+    assert reduced.json()["cart"]["items"][0]["quantity"] == 1
+    assert total.json()["cart"]["total_vnd"] == 7_000
 
 
 @pytest.mark.asyncio
@@ -680,11 +722,7 @@ async def test_closing_a_kiosk_session_clears_cart_but_keeps_pending_order_priva
 
         next_session = await client.post("/sessions", json={"kiosk_id": "next-customer-test"})
         next_session_id = next_session.json()["session_id"]
-        cross_session_order = await client.get(
-            f"/sessions/{next_session_id}/orders/{order_id}"
-        )
-        closed_session_order = await client.get(
-            f"/sessions/{session_id}/orders/{order_id}"
-        )
+        cross_session_order = await client.get(f"/sessions/{next_session_id}/orders/{order_id}")
+        closed_session_order = await client.get(f"/sessions/{session_id}/orders/{order_id}")
         assert cross_session_order.status_code == 404
         assert closed_session_order.status_code == 409
