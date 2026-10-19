@@ -1,0 +1,1201 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-19T16:33:43.913474+00:00",
+  "dataset_id": "retail_vietnamese_text_sales_recovery_dev_v1",
+  "language_scope": "Vietnamese only",
+  "research_informed_by": [],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 9.0,
+  "response_timeout_seconds": 105.0,
+  "catalog_scope": {
+    "runtime_repository": "demo",
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false,
+    "postgres_search_tool_turns": 0
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "recovery_allergen_once",
+      "turn": 1,
+      "prompt": "Mình dị ứng hạt, trong snack có thành phần nào cần tránh?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 36,
+      "response": {
+        "session_id": "1781e7b0-d6d6-43f8-bd30-880f3d4ac128",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-policy",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "must_contain": [
+          "sản phẩm nào"
+        ],
+        "must_not_contain": [
+          "không gây dị ứng",
+          "an toàn tuyệt đối"
+        ],
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "dev",
+        "clarification",
+        "allergen",
+        "context_recovery"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "recovery_allergen_once",
+      "turn": 2,
+      "prompt": "Mình chưa nhớ tên, bạn đừng đoán nhé.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 3,
+      "response": {
+        "session_id": "1781e7b0-d6d6-43f8-bd30-880f3d4ac128",
+        "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+        "model": "local-policy",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "must_contain": [
+          "chưa có dữ liệu đã xác minh"
+        ],
+        "must_not_contain": [
+          "sản phẩm nào",
+          "không gây dị ứng",
+          "an toàn tuyệt đối"
+        ],
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "dev",
+        "clarification",
+        "allergen",
+        "context_recovery"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "recovery_allergen_once",
+      "turn": 3,
+      "prompt": "Coca Zero giá sao?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 51,
+      "response": {
+        "session_id": "1781e7b0-d6d6-43f8-bd30-880f3d4ac128",
+        "text": "Coca-Cola Zero 330ml có giá tham khảo 13.000đ nhé. Giá tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "COKE_ZERO_330",
+            "name": "Coca-Cola Zero 330ml",
+            "category": "drink",
+            "brand": null,
+            "price_vnd": 13000,
+            "stock": 16,
+            "uom": "lon",
+            "data_timestamp": "2026-08-31T00:00:00Z",
+            "data_source": "demo_product_catalog"
+          }
+        ],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "13.000"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "clarification",
+        "allergen",
+        "context_recovery"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "recovery_allergen_once",
+      "turn": 4,
+      "prompt": "Kệ nào vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 47,
+      "response": {
+        "session_id": "1781e7b0-d6d6-43f8-bd30-880f3d4ac128",
+        "text": "Coca-Cola Zero 330ml ở kệ A2-L2 nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "A2-L2"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "clarification",
+        "allergen",
+        "context_recovery"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "compound_price_shelf_freshness",
+      "turn": 1,
+      "prompt": "Cà phê sữa pha sẵn 235ml giá bao nhiêu và nằm ở kệ nào?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 45,
+      "response": {
+        "session_id": "7704fe30-0138-45b2-83a2-986d98981962",
+        "text": "Cà phê sữa pha sẵn 235ml: giá tham khảo 16.000đ, ở kệ A3-L2. Giá tại cửa hàng có thể khác catalog.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COFFEE01"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "COFFEE01",
+            "name": "Cà phê sữa pha sẵn 235ml",
+            "category": "drink",
+            "brand": null,
+            "price_vnd": 16000,
+            "stock": 18,
+            "uom": "chai",
+            "data_timestamp": "2026-08-31T00:00:00Z",
+            "data_source": "demo_product_catalog"
+          }
+        ],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COFFEE01"
+        ],
+        "must_contain": [
+          "16.000",
+          "A3-L2"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "multi_intent",
+        "catalog_grounding",
+        "context"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "compound_price_shelf_freshness",
+      "turn": 2,
+      "prompt": "Dữ liệu này được cập nhật hôm nào?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 51,
+      "response": {
+        "session_id": "7704fe30-0138-45b2-83a2-986d98981962",
+        "text": "Mục dữ liệu này được ghi nhận ngày 31/08/2026; mình chưa thể xác nhận đây là dữ liệu mới nhất tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COFFEE01"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COFFEE01"
+        ],
+        "must_contain": [
+          "31/08/2026"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "multi_intent",
+        "catalog_grounding",
+        "context"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "compound_price_shelf_freshness",
+      "turn": 3,
+      "prompt": "Còn mấy chai vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 47,
+      "response": {
+        "session_id": "7704fe30-0138-45b2-83a2-986d98981962",
+        "text": "Cà phê sữa pha sẵn 235ml: còn 18 chai có thể bán được theo catalog. Tồn thực tế tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COFFEE01"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COFFEE01"
+        ],
+        "must_contain": [
+          "18",
+          "bán được"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "multi_intent",
+        "catalog_grounding",
+        "context"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "compound_price_shelf_freshness",
+      "turn": 4,
+      "prompt": "Thành phần của chai đó là gì?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 48,
+      "response": {
+        "session_id": "7704fe30-0138-45b2-83a2-986d98981962",
+        "text": "Thành phần của Cà phê sữa pha sẵn 235ml gồm Nước, cà phê, sữa, đường nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COFFEE01"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COFFEE01"
+        ],
+        "must_contain": [
+          "cà phê",
+          "sữa"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "multi_intent",
+        "catalog_grounding",
+        "context"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "correction_retains_product_question",
+      "turn": 1,
+      "prompt": "Coca Zero giá bao nhiêu?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 43,
+      "response": {
+        "session_id": "899bb95b-b9b5-4c6a-9ae5-db70433b024f",
+        "text": "Coca-Cola Zero 330ml có giá tham khảo 13.000đ nhé. Giá tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "COKE_ZERO_330",
+            "name": "Coca-Cola Zero 330ml",
+            "category": "drink",
+            "brand": null,
+            "price_vnd": 13000,
+            "stock": 16,
+            "uom": "lon",
+            "data_timestamp": "2026-08-31T00:00:00Z",
+            "data_source": "demo_product_catalog"
+          }
+        ],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "13.000"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "product_correction",
+        "multi_turn",
+        "context"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "correction_retains_product_question",
+      "turn": 2,
+      "prompt": "À nhầm, mình đang hỏi nước suối 500ml.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 30,
+      "response": {
+        "session_id": "899bb95b-b9b5-4c6a-9ae5-db70433b024f",
+        "text": "Nước suối 500ml có giá tham khảo 7.000đ nhé. Giá tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WATER01"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WATER01",
+            "name": "Nước suối 500ml",
+            "category": "drink",
+            "brand": null,
+            "price_vnd": 7000,
+            "stock": 40,
+            "uom": "chai",
+            "data_timestamp": "2026-08-31T00:00:00Z",
+            "data_source": "demo_product_catalog"
+          }
+        ],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "must_contain": [
+          "7.000"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "product_correction",
+        "multi_turn",
+        "context"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "correction_retains_product_question",
+      "turn": 3,
+      "prompt": "Còn mấy chai có thể bán?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 48,
+      "response": {
+        "session_id": "899bb95b-b9b5-4c6a-9ae5-db70433b024f",
+        "text": "Nước suối 500ml: còn 40 chai có thể bán được theo catalog. Tồn thực tế tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WATER01"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "must_contain": [
+          "40",
+          "bán được"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "product_correction",
+        "multi_turn",
+        "context"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "correction_retains_product_question",
+      "turn": 4,
+      "prompt": "Nó nằm ở kệ nào?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 48,
+      "response": {
+        "session_id": "899bb95b-b9b5-4c6a-9ae5-db70433b024f",
+        "text": "Nước suối 500ml ở kệ A1-L1 nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WATER01"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WATER01"
+        ],
+        "must_contain": [
+          "A1-L1"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "product_correction",
+        "multi_turn",
+        "context"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "switch_product_and_return_to_previous",
+      "turn": 1,
+      "prompt": "Coca Zero giá sao?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 44,
+      "response": {
+        "session_id": "ee612d45-836a-4ae0-9f2d-d2d829194e93",
+        "text": "Coca-Cola Zero 330ml có giá tham khảo 13.000đ nhé. Giá tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "COKE_ZERO_330",
+            "name": "Coca-Cola Zero 330ml",
+            "category": "drink",
+            "brand": null,
+            "price_vnd": 13000,
+            "stock": 16,
+            "uom": "lon",
+            "data_timestamp": "2026-08-31T00:00:00Z",
+            "data_source": "demo_product_catalog"
+          }
+        ],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "13.000"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "context_switch",
+        "multi_turn",
+        "grounding"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "switch_product_and_return_to_previous",
+      "turn": 2,
+      "prompt": "Cà phê sữa pha sẵn 235ml ở vị trí nào?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 57,
+      "response": {
+        "session_id": "ee612d45-836a-4ae0-9f2d-d2d829194e93",
+        "text": "Cà phê sữa pha sẵn 235ml ở kệ A3-L2 nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COFFEE01"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "COFFEE01",
+            "name": "Cà phê sữa pha sẵn 235ml",
+            "category": "drink",
+            "brand": null,
+            "price_vnd": 16000,
+            "stock": 18,
+            "uom": "chai",
+            "data_timestamp": "2026-08-31T00:00:00Z",
+            "data_source": "demo_product_catalog"
+          }
+        ],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COFFEE01"
+        ],
+        "must_contain": [
+          "A3-L2"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "context_switch",
+        "multi_turn",
+        "grounding"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "switch_product_and_return_to_previous",
+      "turn": 3,
+      "prompt": "Giá của nó là bao nhiêu?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 53,
+      "response": {
+        "session_id": "ee612d45-836a-4ae0-9f2d-d2d829194e93",
+        "text": "Cà phê sữa pha sẵn 235ml có giá tham khảo 16.000đ nhé. Giá tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COFFEE01"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COFFEE01"
+        ],
+        "must_contain": [
+          "16.000"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "context_switch",
+        "multi_turn",
+        "grounding"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "switch_product_and_return_to_previous",
+      "turn": 4,
+      "prompt": "Quay lại Coca Zero nhé, còn bán được mấy lon?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 47,
+      "response": {
+        "session_id": "ee612d45-836a-4ae0-9f2d-d2d829194e93",
+        "text": "Coca-Cola Zero 330ml: còn 16 lon có thể bán được theo catalog. Tồn thực tế tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-08-31T00:00:00Z",
+        "data_source": "demo_product_catalog",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "COKE_ZERO_330",
+            "name": "Coca-Cola Zero 330ml",
+            "category": "drink",
+            "brand": null,
+            "price_vnd": 13000,
+            "stock": 16,
+            "uom": "lon",
+            "data_timestamp": "2026-08-31T00:00:00Z",
+            "data_source": "demo_product_catalog"
+          }
+        ],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "16",
+          "lon"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "context_switch",
+        "multi_turn",
+        "grounding"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    }
+  ],
+  "summary": {
+    "case_count": 4,
+    "turn_count": 16,
+    "http_200_count": 16,
+    "automated_grounding_safety_passes": 16,
+    "automated_grounding_safety_failures": 0,
+    "expected_model_tool_selection_passes": 0,
+    "expected_model_tool_selection_count": 0,
+    "no_tool_decision_passes": 2,
+    "no_tool_decision_count": 2,
+    "tool_argument_passes": 0,
+    "tool_argument_check_count": 0,
+    "median_turn_latency_ms": 47,
+    "total_llm_calls": 0,
+    "total_tool_calls": 0
+  }
+}

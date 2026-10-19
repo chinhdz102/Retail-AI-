@@ -141,6 +141,7 @@ shopping_service = ShoppingService(
 support_ticket_store = SupportTicketStore()
 speech_ticket_store = SpeechTicketStore()
 logger = logging.getLogger(__name__)
+_ALLERGEN_PRODUCT_CLARIFICATION = "ALLERGEN_PRODUCT_NAME"
 _groq_service: GroqService | None = None
 _azure_speech_service: AzureSpeechService | None = None
 _elevenlabs_service: ElevenLabsService | None = None
@@ -3865,16 +3866,20 @@ async def agent_respond(
             _localized_action_denial(request.language),
         )
     if _unverified_followup_acknowledgement_requested(request.text):
-        reply = (
-            _localized_product_clarification(request.language)
-            if _last_assistant_requested_product_clarification(record, request.language)
-            else _localized_unverified_fact(request.language)
-        )
         return _local_policy_response(
             request,
             record.state,
-            reply,
+            _localized_unverified_fact(request.language),
         )
+    if (
+        record.shopping.pending_clarification == _ALLERGEN_PRODUCT_CLARIFICATION
+        and not _unsupported_catalog_attribute_requested(request.text)
+    ):
+        session_store.update_shopping(
+            request.session_id,
+            pending_clarification=None,
+        )
+        record = session_store.get(request.session_id)
     if _false_staff_acknowledgement_requested(request.text):
         return _local_policy_response(
             request,
@@ -4026,6 +4031,14 @@ async def agent_respond(
     ):
         return await _handle_product_comparison(request, record, None, "stock")
 
+    product_correction_query = _product_correction_query(request.text)
+    if product_correction_query:
+        return await _handle_product_correction(
+            request,
+            record,
+            product_correction_query,
+        )
+
     whole_cart_budget_followup = _whole_cart_budget_only_followup(request.text)
     requested_fields = _requested_snapshot_fields(request.text)
     if (
@@ -4058,11 +4071,32 @@ async def agent_respond(
         request.text,
         record,
     ):
+        already_asked = (
+            record.shopping.pending_clarification == _ALLERGEN_PRODUCT_CLARIFICATION
+        )
+        if not already_asked:
+            session_store.update_shopping(
+                request.session_id,
+                pending_clarification=_ALLERGEN_PRODUCT_CLARIFICATION,
+            )
         return _local_policy_response(
             request,
             record.state,
-            _localized_product_clarification(request.language),
+            (
+                _localized_unverified_fact(request.language)
+                if already_asked
+                else _localized_product_clarification(request.language)
+            ),
         )
+    if (
+        unsupported_attribute_requested
+        and record.shopping.pending_clarification == _ALLERGEN_PRODUCT_CLARIFICATION
+    ):
+        session_store.update_shopping(
+            request.session_id,
+            pending_clarification=None,
+        )
+        record = session_store.get(request.session_id)
 
     followup_fields = _implicit_followup_fields(request.text)
     promotion_list_arguments = _promotion_list_tool_arguments(request.text)
@@ -4086,8 +4120,8 @@ async def agent_respond(
             )
     freshness_followup = bool(
         "data_timestamp" in requested_fields
-        and not _fact_product_query(request.text)
         and record.last_grounded_product_id
+        and not _fact_query_has_product_target(_fact_product_query(request.text))
     )
     explicit_grounded_reference = (
         record.last_grounded_product_id
@@ -4843,6 +4877,9 @@ def _contextual_product_reference_requested(text: str) -> bool:
         "cai nay",
         "cai do",
         "con nay",
+        "no",
+        "no do",
+        "nhung no",
         "this product",
         "that product",
         "this item",
@@ -5015,6 +5052,7 @@ _FACT_QUERY_STOP_WORDS = {
     "nay",
     "tren",
     "ngay",
+    "hom",
     "ta",
     "han",
     "nhat",
@@ -5255,6 +5293,18 @@ def _fact_product_query(text: str) -> str:
     )
     normalized = re.sub(r"\bhoi binh thuong\b", " ", normalized)
     normalized = re.sub(r"\bben minh\b", " ", normalized)
+    normalized = re.sub(
+        r"\b(?:duoc )?cap nhat(?: vao)?(?: (?:ngay|hom))?(?: (?:nao|gi))?\b",
+        " ",
+        normalized,
+    )
+    normalized = re.sub(r"\b(?:du lieu|muc du lieu)\b", " ", normalized)
+    normalized = re.sub(r"\bquay lai\b", " ", normalized)
+    normalized = re.sub(
+        r"\b(?:con )?may\s+(?:chai|lon|goi|hop|ly|cai)\b",
+        " ",
+        normalized,
+    )
     requested_fields = _requested_snapshot_fields(text)
     if "stock" in requested_fields and "price_vnd" not in requested_fields:
         normalized = re.sub(r"\b(?:chai|lon|hop|goi)\b", " ", normalized)
@@ -5298,6 +5348,165 @@ def _fact_query_has_product_target(query: str) -> bool:
         "van",
     }
     return any(token not in generic_terms for token in _normalize_request_text(query).split())
+
+
+def _product_correction_query(text: str) -> str:
+    normalized = " ".join(_normalize_request_text(text).split())
+    correction_patterns = (
+        r"^(?:a )?nham(?: roi)?\s+",
+        r"\b(?:y minh|y toi|y em|y anh|y chi)\s+(?:hoi\s+)?la\s+",
+        r"\b(?:i meant|i mean|i was asking for)\s+",
+        r"\bkhong phai\b.+?\b(?:ma la|la)\s+",
+    )
+    for pattern in correction_patterns:
+        match = re.search(pattern, normalized)
+        if match is None:
+            continue
+        candidate = normalized[match.end() :]
+        candidate = re.sub(
+            r"^(?:(?:minh|toi|em|anh|chi)\s+)?"
+            r"(?:(?:dang\s+)?(?:hoi|muon|can|tim)\s+)?(?:la\s+)?",
+            "",
+            candidate,
+        )
+        query = _fact_product_query(candidate)
+        if query in {"lan", "loi", "mat", "roi"} or query.startswith("lan "):
+            continue
+        if _fact_query_has_product_target(query):
+            return query
+    return ""
+
+
+def _previous_snapshot_fields(record) -> tuple[str, ...]:
+    previous_user_text = next(
+        (
+            message.get("content", "")
+            for message in reversed(record.messages)
+            if message.get("role") == "user"
+        ),
+        "",
+    )
+    return _requested_snapshot_fields(previous_user_text)
+
+
+async def _handle_product_correction(
+    request: AgentRespondRequest,
+    record,
+    product_query: str,
+) -> AgentRespondResponse:
+    candidate_observation = await lookup_product_candidates(product_query)
+    if candidate_observation.status != "SUCCESS":
+        return _deterministic_tool_response(
+            request,
+            record.state,
+            candidate_observation,
+            _localized_tool_failure(request.language),
+            model="catalog",
+            tools_used=["search_products"],
+        )
+
+    candidates = tuple(candidate_observation.products)
+    exact_id = _unique_product_match_id(product_query, candidates)
+    reported_count = candidate_observation.content.get("count")
+    if exact_id is None and len(candidates) == 1 and reported_count == 1:
+        exact_id = candidates[0].product_id
+    matched_product = next(
+        (product for product in candidates if product.product_id == exact_id),
+        None,
+    )
+    if matched_product is None:
+        session_store.set_last_grounded_product(request.session_id, None)
+        session_store.update_shopping(
+            request.session_id,
+            current_intent=IntentType.PRODUCT_LOOKUP,
+            active_product_id=None,
+            active_category=None,
+            selected_product_ids=[product.product_id for product in candidates],
+            pending_action=(
+                "SELECT_CORRECTED_PRODUCT:"
+                + ",".join(product.product_id for product in candidates)
+                if candidates
+                else None
+            ),
+            pending_clarification="Select the corrected product." if candidates else None,
+        )
+        reply = (
+            _localized_product_variant_clarification(candidate_observation, request.language)
+            if candidates
+            else _localized_not_found(request.language)
+        )
+        return _deterministic_tool_response(
+            request,
+            record.state,
+            candidate_observation,
+            reply,
+            model="catalog",
+            tools_used=["search_products"],
+        )
+
+    fields = _requested_snapshot_fields(request.text) or _previous_snapshot_fields(record)
+    session_store.set_last_grounded_product(
+        request.session_id,
+        matched_product.product_id,
+        matched_product.name,
+    )
+    session_store.update_shopping(
+        request.session_id,
+        current_intent=IntentType.PRODUCT_LOOKUP,
+        active_product_id=matched_product.product_id,
+        active_category=matched_product.category,
+        selected_product_ids=[matched_product.product_id],
+        pending_action=None,
+        pending_clarification=None,
+    )
+
+    if fields:
+        snapshot_observation = await lookup_followup_snapshot(
+            matched_product.product_id,
+            fields,
+        )
+        if snapshot_observation.status == "SUCCESS" and snapshot_observation.products:
+            reply = _render_snapshot_for_session(
+                snapshot_observation,
+                request.language,
+                fields,
+                request.session_id,
+            )
+            return _deterministic_tool_response(
+                request,
+                record.state,
+                snapshot_observation,
+                reply,
+                model="catalog",
+                tools_used=["search_products", "get_product_snapshot"],
+            )
+        reply = (
+            _localized_unverified_fact(request.language)
+            if snapshot_observation.status == "DATA_UNAVAILABLE"
+            else _localized_tool_failure(request.language)
+        )
+        return _deterministic_tool_response(
+            request,
+            record.state,
+            snapshot_observation,
+            reply,
+            model="catalog",
+            tools_used=["search_products", "get_product_snapshot"],
+        )
+
+    reply = {
+        "en": f"Got it, {matched_product.name}.",
+        "zh": f"明白了，是{matched_product.name}。",
+        "vi": f"À, {matched_product.name} nhé.",
+    }[request.language]
+    return _deterministic_tool_response(
+        request,
+        record.state,
+        candidate_observation,
+        reply,
+        model="catalog",
+        tools_used=["search_products"],
+    )
 
 
 def _localized_safe_lookup_prompt(
@@ -5951,6 +6160,7 @@ def _implicit_followup_fields(text: str) -> tuple[str, ...]:
         "how",
         "much",
         "con",
+        "may",
         "hang",
         "ton",
         "stock",
@@ -6147,12 +6357,14 @@ def _unsupported_attribute_needs_product_clarification(text: str, record) -> boo
         return False
     query = _fact_product_query(text)
     non_product_attribute_tokens = {
+        "can",
         "allergy",
         "allergic",
         "dau",
         "doan",
         "gay",
         "gluten",
+        "hat",
         "ingredient",
         "ingredients",
         "di",
@@ -6161,6 +6373,8 @@ def _unsupported_attribute_needs_product_clarification(text: str, record) -> boo
         "peanuts",
         "phan",
         "phong",
+        "tranh",
+        "trong",
         "thanh",
     }
     query_tokens = set(_normalize_request_text(query).split()) - non_product_attribute_tokens
@@ -6180,14 +6394,6 @@ def _unsupported_attribute_needs_product_clarification(text: str, record) -> boo
     return not _fact_query_has_product_target(" ".join(sorted(query_tokens)))
 
 
-def _last_assistant_requested_product_clarification(record, language: str) -> bool:
-    expected = _localized_product_clarification(language)
-    for message in reversed(record.messages):
-        if message.get("role") == "assistant":
-            return message.get("content") == expected
-    return False
-
-
 def _unverified_followup_acknowledgement_requested(text: str) -> bool:
     normalized = " ".join(_normalize_request_text(text).split())
     return any(
@@ -6200,6 +6406,13 @@ def _unverified_followup_acknowledgement_requested(text: str) -> bool:
             "if you dont have data say so",
             "say clearly if you do not know",
             "neu khong chac thi dung doan",
+            "chua nho ten",
+            "minh chua nho ten",
+            "khong nho ten",
+            "khong biet ten",
+            "dung doan",
+            "dont guess",
+            "dont make it up",
         )
     )
 
