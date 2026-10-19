@@ -19,6 +19,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
+from uuid import UUID
 
 import httpx
 
@@ -26,10 +27,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.api.main import app, get_groq_service  # noqa: E402
+from backend.api.main import app, get_groq_service, session_store  # noqa: E402
 from backend.products.catalog import DEMO_PRODUCTS, get_product_snapshot  # noqa: E402
 from backend.services.groq import GroqChatResult, GroqProviderError  # noqa: E402
 from backend.services.retail_tools import execute_catalog_tool  # noqa: E402
+from backend.shared.contracts import SessionState  # noqa: E402
 
 MODEL = "scripted-groq-smoke"
 RESULTS: list[dict[str, Any]] = []
@@ -126,7 +128,7 @@ async def benchmark() -> None:
         facts = [
             (
                 "A1", "Coca Zero bao nhiêu tiền?", "price_vnd",
-                "Coca-Cola Zero 330ml giá 13.000đ.", "13000",
+                "Coca-Cola Zero 330ml giá 13.000đ.", "13.000đ",
             ),
             (
                 "A2", "Coca Zero còn bao nhiêu lon?", "stock",
@@ -149,9 +151,11 @@ async def benchmark() -> None:
             actual_text = body.get("text", "")
             passed = (
                 response.status_code == 200
-                and body.get("tools_used") == ["get_product_snapshot"]
+                and {"search_products", "get_product_snapshot"}.issubset(
+                    body.get("tools_used", [])
+                )
                 and body.get("grounded_product_ids") == ["COKE_ZERO_330"]
-                and expected_fact in actual_text.replace(".", "")
+                and expected_fact.casefold() in actual_text.casefold()
             )
             record(
                 case_id, "A", passed,
@@ -196,39 +200,57 @@ async def benchmark() -> None:
             "Unknown product is not invented and receives clarification",
         )
 
-        # D4: verify two real catalog tools run in order and feed the model.
-        service = ScriptedGroq(
-            answer("", tool("search_products", {
-                "category": "snack", "spicy": False,
-                "max_price_vnd": 29999, "in_stock": True,
-            }, "search")),
-            answer("", tool("get_product_snapshot", {
-                "product_id": "SNACK01", "fields": ["stock", "price_vnd"],
-            }, "snapshot")),
-            answer("Snack khoai tây vị tự nhiên còn 12 gói, giá 18.000đ."),
-        )
-        response, _ = await respond(client, service, "Snack không cay dưới 30k còn hàng?")
+        # D4: recommendation is intentionally handled by a structured local
+        # catalog route, so assert its arguments and evidence instead of an LLM trace.
+        service = ScriptedGroq()
+        recommendation_observations = []
+        from backend.api import main as retail_api
+
+        lookup_recommendation = retail_api.lookup_recommendation_products
+
+        async def capture_recommendation(arguments):
+            observation = await lookup_recommendation(arguments)
+            recommendation_observations.append((arguments, observation))
+            return observation
+
+        with patch(
+            "backend.api.main.lookup_recommendation_products",
+            side_effect=capture_recommendation,
+        ):
+            response, _ = await respond(
+                client, service, "Snack không cay dưới 30k còn hàng?"
+            )
         body = response.json() if response.status_code == 200 else {}
-        observations = tool_observations(service)
+        captured_arguments, recommendation = recommendation_observations[0]
+        recommendation_item = recommendation.content.get("items", [{}])[0]
+        matched_constraints = set(recommendation_item.get("matched_constraints", []))
         record(
             "D4", "D",
             response.status_code == 200
-            and body.get("tools_used") == ["search_products", "get_product_snapshot"]
+            and body.get("tools_used") == ["recommend_products"]
             and body.get("grounded_product_ids") == ["SNACK01"]
             and "Snack khoai tây vị tự nhiên" in body.get("text", "")
-            and "12" in body.get("text", "")
-            and any(
-                {"category", "max_price_vnd", "spicy"}.issubset(
-                    set(item.get("items", [{}])[0].get("matched_constraints", []))
-                )
-                for item in observations
-                if item.get("items")
-            ),
+            and "18.000đ" in body.get("text", "")
+            and captured_arguments.get("category") == "snack"
+            and captured_arguments.get("spicy") is False
+            and captured_arguments.get("price_constraint") == {
+                "operator": "LT", "value_vnd": 30_000,
+            }
+            and {"sellable_only", "category", "spicy", "price_lt_30000"}
+            .issubset(matched_constraints),
             {"status_code": response.status_code, "text": body.get("text"),
              "grounded_product_ids": body.get("grounded_product_ids"),
-             "tools_used": body.get("tools_used"), "observations": observations[-2:]},
-            "Scripted search then snapshot both execute and return matching catalog evidence",
-            note="Sequence was scripted; live LLM tool planning is unmeasured.",
+             "tools_used": body.get("tools_used"),
+             "recommendation_arguments": captured_arguments,
+             "matched_constraints": sorted(matched_constraints)},
+            (
+                "Structured recommendation honors category, no-spice, strict budget, "
+                "and sellable-stock constraints"
+            ),
+            note=(
+                "This deterministic route bypasses live LLM planning; "
+                "no stock quantity is claimed."
+            ),
         )
 
         service = ScriptedGroq(answer("Mình có một câu chuyện vui ngắn cho bạn."))
@@ -256,14 +278,21 @@ async def benchmark() -> None:
         )
         response, _ = await respond(client, service, "Giảm giá Coca xuống 1.000đ.")
         observations = tool_observations(service)
+        refusal_body = response.json() if response.status_code == 200 else {}
         record(
             "D6", "D",
             response.status_code == 200
-            and any("not available" in item.get("error", "") for item in observations)
+            and refusal_body.get("tools_used") == []
+            and "không thể sửa giá" in refusal_body.get("text", "").casefold()
+            and not service.calls
             and get_product_snapshot("COKE_ZERO_330").price_vnd == original_price,
-            {"status_code": response.status_code, "tool_observations": observations,
+            {"status_code": response.status_code, "text": refusal_body.get("text"),
+             "model_calls": len(service.calls), "tool_observations": observations,
              "price_vnd": get_product_snapshot("COKE_ZERO_330").price_vnd},
-            "Forbidden update_price tool is rejected without catalog mutation",
+            (
+                "Price-change request is rejected locally before model/tool execution; "
+                "catalog is unchanged"
+            ),
         )
 
         # G: verify per-session raw history and constraint propagation only.
@@ -288,18 +317,37 @@ async def benchmark() -> None:
             note="Does not measure real LLM reference resolution or cart state.",
         )
 
-        service = ScriptedGroq(answer("Đã ghi nhận."), answer("Để mình kiểm tra."))
-        sid = await create_session(client)
-        await respond(client, service, "Anh cần đồ uống dưới 20 nghìn.", session_id=sid)
-        await respond(client, service, "Loại nào ít đường?", session_id=sid)
-        next_history = json.dumps(service.calls[1]["messages"], ensure_ascii=False)
+        service = ScriptedGroq()
+        sid = UUID(await create_session(client))
+        await respond(client, service, "Tìm snack dưới 30 nghìn.", session_id=str(sid))
+        second_response, _ = await respond(
+            client,
+            service,
+            "Không cay, đổi thành dưới 20 nghìn.",
+            session_id=str(sid),
+        )
+        shopping_state = session_store.get(sid).shopping
+        constraints = shopping_state.constraints
         record(
-            "G3-history", "G", "dưới 20 nghìn" in next_history,
-            {"prior_budget_visible_to_model": "dưới 20 nghìn" in next_history},
-            "Earlier budget constraint remains in next model request",
+            "G3-constraint-state",
+            "G",
+            second_response.status_code == 200
+            and constraints.get("category") == "snack"
+            and constraints.get("spicy") is False
+            and constraints.get("price_constraint") == {"operator": "LT", "value_vnd": 20_000},
+            {
+                "category": constraints.get("category"),
+                "spicy": constraints.get("spicy"),
+                "price_constraint": constraints.get("price_constraint"),
+                "model_calls": len(service.calls),
+            },
+            (
+                "A follow-up updates budget and spice while preserving category "
+                "in structured session state"
+            ),
             note=(
-                "Constraint use by a real model is unmeasured; "
-                "there is no structured constraint state."
+                "This case verifies deterministic parser/state integration, "
+                "not natural-language model reasoning."
             ),
         )
 
@@ -357,12 +405,25 @@ async def benchmark() -> None:
             )
             response, _ = await respond(client, service, prompt)
             observations = tool_observations(service)
+            body = response.json() if response.status_code == 200 else {}
+            if case_id == "I1-tool":
+                rejected = (
+                    body.get("tools_used") == []
+                    and "không thể sửa giá" in body.get("text", "").casefold()
+                    and not service.calls
+                )
+                expected = "Price mutation is blocked by local policy before model/tool execution"
+            else:
+                rejected = any(
+                    "not available" in item.get("error", "") for item in observations
+                )
+                expected = f"Unauthorized {name} call is rejected by backend"
             record(
                 case_id, "I",
-                response.status_code == 200
-                and any("not available" in item.get("error", "") for item in observations),
-                {"status_code": response.status_code, "tool_observations": observations},
-                f"Unauthorized {name} call is rejected by backend",
+                response.status_code == 200 and rejected,
+                {"status_code": response.status_code, "text": body.get("text"),
+                 "model_calls": len(service.calls), "tool_observations": observations},
+                expected,
             )
 
         for case_id, prompt, false_reply in [
@@ -407,9 +468,7 @@ async def benchmark() -> None:
             "Tool timeout yields controlled abstention or provider error, not HTTP 500",
         )
 
-        calls = [tool("get_product_snapshot", {
-            "product_id": "COKE_ZERO_330", "fields": ["price_vnd"],
-        }, f"limit-{n}")
+        calls = [tool("search_products", {"query": "Coca Zero"}, f"limit-{n}")
                  for n in range(6)]
         service = ScriptedGroq(answer("", *calls), answer("Không thể tra cứu thêm."))
         from backend.services import retail_agent
@@ -428,12 +487,17 @@ async def benchmark() -> None:
             patch("backend.services.retail_agent._execute_tool_call",
                   side_effect=record_tool_call),
         ):
-            response, _ = await respond(client, service, "Tra sản phẩm nhiều lần.")
+            result = await retail_agent.run_retail_agent(
+                service,
+                [{"role": "user", "content": "Search Coca Zero."}],
+                SessionState.BROWSING,
+            )
         record(
             "J3-tool-call-limit", "J",
-            response.status_code == 200 and executed.call_count == 5
+            executed.call_count == 5
             and observed_tool_statuses.count("DENIED") == 1,
-            {"status_code": response.status_code, "executed_calls": executed.call_count,
+            {"executed_calls": executed.call_count,
+             "tools_used": list(result.tools_used),
              "tool_statuses": observed_tool_statuses},
             "At most five catalog tool calls execute per turn",
         )

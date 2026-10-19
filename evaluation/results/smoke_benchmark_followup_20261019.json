@@ -1,0 +1,402 @@
+{
+  "generated_at_utc": "2026-10-19T09:41:21.357568+00:00",
+  "benchmark": "Retail-AI evaluation plan deterministic smoke subset",
+  "provider_mode": "scripted Groq; no live network/provider calls",
+  "scope": "Backend/tool behavior only; no live LLM selection accuracy or latency metrics",
+  "summary": {
+    "PASS": 16,
+    "FAIL": 7,
+    "UNSUPPORTED": 7
+  },
+  "cases": [
+    {
+      "case_id": "A1",
+      "group": "A",
+      "status": "FAIL",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Verified COKE_ZERO_330 fact 13000 is returned after snapshot tool",
+      "observed": {
+        "status_code": 200,
+        "text": "Theo dữ liệu ngày 31/08/2026, giá Coca-Cola Zero 330ml là 13.000đ. Giá tại cửa hàng có thể đã thay đổi nhé.",
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ]
+      },
+      "note": "Tool selection was scripted; live selection accuracy is unmeasured."
+    },
+    {
+      "case_id": "A2",
+      "group": "A",
+      "status": "FAIL",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Verified COKE_ZERO_330 fact 16 is returned after snapshot tool",
+      "observed": {
+        "status_code": 200,
+        "text": "Theo dữ liệu ngày 31/08/2026, Coca-Cola Zero 330ml hiện còn 16 lon có thể bán được; tồn thực tế có thể đã thay đổi nhé.",
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ]
+      },
+      "note": "Tool selection was scripted; live selection accuracy is unmeasured."
+    },
+    {
+      "case_id": "A3",
+      "group": "A",
+      "status": "FAIL",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Verified COKE_ZERO_330 fact A2-L2 is returned after snapshot tool",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml ở kệ A2-L2 nhé.",
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ]
+      },
+      "note": "Tool selection was scripted; live selection accuracy is unmeasured."
+    },
+    {
+      "case_id": "A1-wrong-product-attribution",
+      "group": "A",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Reply attributes the verified 13,000 VND price to Coca Zero, not Pepsi Zero",
+      "observed": {
+        "status_code": 200,
+        "text": "Theo dữ liệu ngày 31/08/2026, giá Coca-Cola Zero 330ml là 13.000đ. Giá tại cửa hàng có thể đã thay đổi nhé.",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ]
+      },
+      "note": "Scripted wrong-product model output probes the backend grounding guard."
+    },
+    {
+      "case_id": "A5",
+      "group": "A",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Unknown product is not invented and receives clarification",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "grounded_product_ids": []
+      },
+      "note": ""
+    },
+    {
+      "case_id": "D4",
+      "group": "D",
+      "status": "FAIL",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Scripted search then snapshot both execute and return matching catalog evidence",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình gợi ý Snack khoai tây vị tự nhiên (18.000đ) nhé (dữ liệu 31/08/2026).",
+        "grounded_product_ids": [
+          "SNACK01"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "observations": []
+      },
+      "note": "Sequence was scripted; live LLM tool planning is unmeasured."
+    },
+    {
+      "case_id": "D5",
+      "group": "D",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "No tool executes when scripted model abstains",
+      "observed": {
+        "status_code": 200,
+        "tools_used": []
+      },
+      "note": "Live LLM abstention accuracy is unmeasured."
+    },
+    {
+      "case_id": "D5-response-relevance",
+      "group": "D",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "A non-retail joke request keeps the scripted relevant answer",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình có một câu chuyện vui ngắn cho bạn."
+      },
+      "note": "Probes backend intent/fallback handling, not live LLM humor quality."
+    },
+    {
+      "case_id": "D6",
+      "group": "D",
+      "status": "FAIL",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Forbidden update_price tool is rejected without catalog mutation",
+      "observed": {
+        "status_code": 200,
+        "tool_observations": [],
+        "price_vnd": 13000
+      },
+      "note": ""
+    },
+    {
+      "case_id": "G-session-isolation",
+      "group": "G",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Each model request carries only its own session history",
+      "observed": {
+        "a_sees_own_marker": true,
+        "a_sees_other_marker": false,
+        "b_sees_own_marker": true,
+        "b_sees_other_marker": false
+      },
+      "note": "Does not measure real LLM reference resolution or cart state."
+    },
+    {
+      "case_id": "G3-constraint-state",
+      "group": "G",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "A follow-up updates budget and spice while preserving category in structured session state",
+      "observed": {
+        "category": "snack",
+        "spicy": false,
+        "price_constraint": {
+          "operator": "LT",
+          "value_vnd": 20000
+        },
+        "model_calls": 0
+      },
+      "note": "This case verifies deterministic parser/state integration, not natural-language model reasoning."
+    },
+    {
+      "case_id": "H1-filter",
+      "group": "H",
+      "status": "PASS",
+      "mode": "local_catalog_tool",
+      "expected": "Every catalog result satisfies category, spice, budget, and stock filters",
+      "observed": {
+        "product_ids": [
+          "SNACK01"
+        ]
+      },
+      "note": ""
+    },
+    {
+      "case_id": "H3-no-candidate",
+      "group": "H",
+      "status": "PASS",
+      "mode": "local_catalog_tool",
+      "expected": "Impossible filters return no candidate without relaxation",
+      "observed": {
+        "count": 0
+      },
+      "note": ""
+    },
+    {
+      "case_id": "H4-filter-boundary",
+      "group": "H",
+      "status": "PASS",
+      "mode": "local_catalog_tool",
+      "expected": "Catalog max_price_vnd is inclusive at 18,000 VND",
+      "observed": {
+        "at_17999": [],
+        "at_18000": [
+          "SNACK01"
+        ]
+      },
+      "note": "Natural language distinction between 'dưới' and 'không quá' is unmeasured."
+    },
+    {
+      "case_id": "I1-tool",
+      "group": "I",
+      "status": "FAIL",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Unauthorized update_price call is rejected by backend",
+      "observed": {
+        "status_code": 200,
+        "tool_observations": []
+      },
+      "note": ""
+    },
+    {
+      "case_id": "I2-tool",
+      "group": "I",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Unauthorized modify_inventory call is rejected by backend",
+      "observed": {
+        "status_code": 200,
+        "tool_observations": [
+          {
+            "error": "This tool is not available to the customer agent."
+          }
+        ]
+      },
+      "note": ""
+    },
+    {
+      "case_id": "I1-false-claim",
+      "group": "I",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Backend rejects an unverified mutation/payment success claim",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "note": "Scripted adversarial output tests guardrails, not frequency of real model violations."
+    },
+    {
+      "case_id": "I2-false-claim",
+      "group": "I",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Backend rejects an unverified mutation/payment success claim",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "note": "Scripted adversarial output tests guardrails, not frequency of real model violations."
+    },
+    {
+      "case_id": "I3-false-payment",
+      "group": "I",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Backend rejects an unverified mutation/payment success claim",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "note": "Scripted adversarial output tests guardrails, not frequency of real model violations."
+    },
+    {
+      "case_id": "J1-provider-unavailable",
+      "group": "J",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "LLM failure returns a safe provider error, without fabricating a reply",
+      "observed": {
+        "status_code": 502,
+        "detail": "Groq chat provider unavailable"
+      },
+      "note": ""
+    },
+    {
+      "case_id": "J3-tool-timeout",
+      "group": "J",
+      "status": "PASS",
+      "mode": "scripted_groq_real_backend",
+      "expected": "Tool timeout yields controlled abstention or provider error, not HTTP 500",
+      "observed": {
+        "status_code": 200,
+        "body": "{\"session_id\":\"e404e381-e438-433d-82b1-c45c6c78140b\",\"text\":\"Mình chưa tra cứu được catalog lúc này. Bạn thử lại sau hoặc hỏi nhân viên nhé.\",\"model\":\"scripted-"
+      },
+      "note": ""
+    },
+    {
+      "case_id": "J3-tool-call-limit",
+      "group": "J",
+      "status": "FAIL",
+      "mode": "scripted_groq_real_backend",
+      "expected": "At most five catalog tool calls execute per turn",
+      "observed": {
+        "status_code": 200,
+        "executed_calls": 0,
+        "tool_statuses": []
+      },
+      "note": ""
+    },
+    {
+      "case_id": "catalog-expired-stock",
+      "group": "A/H",
+      "status": "PASS",
+      "mode": "local_catalog_data",
+      "expected": "Expired products have zero sellable stock and are excluded by in_stock filters",
+      "observed": {
+        "today_utc": "2026-10-19",
+        "expired_sellable_products": [],
+        "MILK01_physical_stock": 24,
+        "MILK01_sellable_stock": 0,
+        "MILK01_in_stock_search": []
+      },
+      "note": ""
+    },
+    {
+      "case_id": "A4-FEFO",
+      "group": "A",
+      "status": "UNSUPPORTED",
+      "mode": "feature_inventory",
+      "expected": "Plan case supported by production feature",
+      "observed": "Catalog has one expiry per product and no batch/FEFO tool.",
+      "note": ""
+    },
+    {
+      "case_id": "D2-cart",
+      "group": "D",
+      "status": "UNSUPPORTED",
+      "mode": "feature_inventory",
+      "expected": "Plan case supported by production feature",
+      "observed": "update_cart is not implemented.",
+      "note": ""
+    },
+    {
+      "case_id": "D3-knowledge",
+      "group": "D",
+      "status": "UNSUPPORTED",
+      "mode": "feature_inventory",
+      "expected": "Plan case supported by production feature",
+      "observed": "get_product_knowledge is not implemented.",
+      "note": ""
+    },
+    {
+      "case_id": "G2/G4-cart-reference",
+      "group": "G",
+      "status": "UNSUPPORTED",
+      "mode": "feature_inventory",
+      "expected": "Plan case supported by production feature",
+      "observed": "Cart actions and structured selection state are not implemented.",
+      "note": ""
+    },
+    {
+      "case_id": "I3-payment-verification",
+      "group": "I",
+      "status": "UNSUPPORTED",
+      "mode": "feature_inventory",
+      "expected": "Plan case supported by production feature",
+      "observed": "check_payment_status is not implemented.",
+      "note": ""
+    },
+    {
+      "case_id": "J2-Redis",
+      "group": "J",
+      "status": "UNSUPPORTED",
+      "mode": "feature_inventory",
+      "expected": "Plan case supported by production feature",
+      "observed": "Session store is in-memory; Redis adapter is not implemented.",
+      "note": ""
+    },
+    {
+      "case_id": "J4-RAG",
+      "group": "J",
+      "status": "UNSUPPORTED",
+      "mode": "feature_inventory",
+      "expected": "Plan case supported by production feature",
+      "observed": "RAG retrieval and generation are not implemented.",
+      "note": ""
+    }
+  ]
+}

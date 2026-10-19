@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import re
 from dataclasses import replace
@@ -3679,6 +3681,52 @@ async def agent_respond(
         grounded_product_ids=[product.product_id for product in products],
         tools_used=tools_used,
         state=record.state,
+    )
+
+
+def _validated_text_chunks(text: str, target_chars: int = 28) -> list[str]:
+    """Split a fully validated answer on word boundaries for progressive delivery."""
+    words = re.findall(r"\S+\s*", text)
+    chunks: list[str] = []
+    pending = ""
+    for word in words:
+        if pending and len(pending) + len(word) > target_chars:
+            chunks.append(pending)
+            pending = ""
+        pending += word
+    if pending:
+        chunks.append(pending)
+    return chunks
+
+
+@app.post("/agent/respond/stream")
+async def agent_respond_stream(
+    request: AgentRespondRequest,
+    groq: GroqService = Depends(get_groq_service),
+    settings: Settings = Depends(get_settings),
+) -> StreamingResponse:
+    # Run the complete policy, tool, grounding, and transaction flow first. Only
+    # its final response is exposed as text deltas, so no unverified claim streams.
+    response = await agent_respond(request, groq, settings)
+
+    async def response_events():
+        chunks = _validated_text_chunks(response.text)
+        for index, chunk in enumerate(chunks):
+            payload = json.dumps({"text": chunk}, ensure_ascii=False, separators=(",", ":"))
+            yield f"event: delta\ndata: {payload}\n\n"
+            if index + 1 < len(chunks):
+                await asyncio.sleep(0.025)
+        metadata = response.model_dump(mode="json", exclude={"text"})
+        payload = json.dumps({"response": metadata}, ensure_ascii=False, separators=(",", ":"))
+        yield f"event: complete\ndata: {payload}\n\n"
+
+    return StreamingResponse(
+        response_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

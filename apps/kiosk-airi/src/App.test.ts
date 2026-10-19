@@ -119,7 +119,7 @@ describe('kiosk app', () => {
       expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
     await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledWith(
-      'session-test', 'Giá Coca Zero', 'vi', expect.any(String),
+      'session-test', 'Giá Coca Zero', 'vi', expect.any(String), expect.any(Function),
     ))
     expect(apiMocks.createSession).toHaveBeenCalledTimes(1)
   })
@@ -182,6 +182,7 @@ describe('kiosk app', () => {
         'How much is Coca-Cola Zero?',
         'en',
         expect.any(String),
+        expect.any(Function),
       ),
     )
   })
@@ -227,6 +228,7 @@ describe('kiosk app', () => {
       'Mình muốn gặp nhân viên.',
       'vi',
       expect.any(String),
+      expect.any(Function),
     ))
     await vi.waitFor(() => expect(wrapper.find('.support-ticket-card').exists()).toBe(true))
     expect(wrapper.get('.support-ticket-card').text()).toContain('ticket-demo-1')
@@ -354,10 +356,78 @@ describe('kiosk app', () => {
     await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]')?.trigger('click')
 
     expect(apiMocks.respond).toHaveBeenCalledWith(
-      'session-test', 'Giá Coca Zero', 'vi', expect.any(String),
+      'session-test', 'Giá Coca Zero', 'vi', expect.any(String), expect.any(Function),
     )
     await vi.waitFor(() => expect(wrapper.text()).toContain('Coca-Cola Zero hiện có giá'))
     expect(apiMocks.createSynthesisTicket).not.toHaveBeenCalled()
+  })
+
+  it('renders response deltas progressively after the backend response is validated', async () => {
+    const pendingResponse = deferred<{
+      session_id: string
+      text: string
+      model: string
+      grounded_product_ids: string[]
+      state: string
+    }>()
+    let emitTextDelta: ((text: string) => void) | undefined
+    apiMocks.respond.mockImplementationOnce((...args: unknown[]) => {
+      const callback = args[4]
+      if (typeof callback !== 'function') throw new Error('Missing response delta callback')
+      emitTextDelta = callback as (text: string) => void
+      return pendingResponse.promise
+    })
+
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
+    await vi.waitFor(() => expect(emitTextDelta).toBeDefined())
+
+    expect(wrapper.find('.message-assistant .message-bubble').text()).toContain('Mình đang tìm câu trả lời')
+    emitTextDelta?.('Coca-Cola Zero ')
+    await flushPromises()
+    expect(wrapper.find('.message-assistant .message-bubble').text()).toBe('Coca-Cola Zero')
+    expect(wrapper.find('.message-model').exists()).toBe(false)
+
+    emitTextDelta?.('có giá 13.000đ.')
+    await flushPromises()
+    expect(wrapper.find('.message-assistant .message-bubble').text()).toBe(
+      'Coca-Cola Zero có giá 13.000đ.',
+    )
+    pendingResponse.resolve({
+      session_id: 'session-test',
+      text: 'Coca-Cola Zero có giá 13.000đ.',
+      model: 'catalog',
+      grounded_product_ids: ['COKE_ZERO_330'],
+      state: 'BROWSING',
+    })
+    await vi.waitFor(() => expect(wrapper.find('.message-model').text()).toBe('catalog'))
+  })
+
+  it('reuses the same client turn id on retry and does not duplicate the customer message', async () => {
+    apiMocks.respond.mockRejectedValueOnce(new Error('network down')).mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Coca-Cola Zero hiện có giá 13.000đ.',
+      model: 'catalog',
+      grounded_product_ids: ['COKE_ZERO_330'],
+      state: 'BROWSING',
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('textarea').setValue('Giá Coca Zero')
+    await wrapper.get('.composer').trigger('submit')
+    await vi.waitFor(() => expect(wrapper.text()).toContain('network down'))
+    const firstTurnId = apiMocks.respond.mock.calls[0][3]
+
+    await wrapper.get('.error-retry').trigger('click')
+
+    await vi.waitFor(() => expect(wrapper.find('.message-model').text()).toBe('catalog'))
+    expect(apiMocks.respond).toHaveBeenCalledTimes(2)
+    expect(apiMocks.respond.mock.calls[1][3]).toBe(firstTurnId)
+    expect(wrapper.findAll('.message-user')).toHaveLength(1)
+    expect(wrapper.findAll('.message-assistant')).toHaveLength(1)
   })
 
   it('shows the safe customer-care response in the chat after a typed request', async () => {
@@ -380,6 +450,7 @@ describe('kiosk app', () => {
       'Tôi muốn phàn nàn về thái độ nhân viên.',
       'vi',
       expect.any(String),
+      expect.any(Function),
     )
     await vi.waitFor(() =>
       expect(wrapper.text()).toContain('Mình chưa thể ghi nhận phản ánh'),
@@ -402,6 +473,7 @@ describe('kiosk app', () => {
       'Gợi ý snack không cay',
       'vi',
       expect.any(String),
+      expect.any(Function),
     )
   })
 
