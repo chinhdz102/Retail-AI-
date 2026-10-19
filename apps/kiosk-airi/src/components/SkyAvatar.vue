@@ -34,7 +34,10 @@ function syncAnimation() {
 }
 
 watch(animationName, syncAnimation)
-onMounted(syncAnimation)
+onMounted(async () => {
+  await import('@google/model-viewer')
+  syncAnimation()
+})
 </script>
 
 <template>

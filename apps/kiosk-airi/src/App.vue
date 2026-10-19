@@ -7,11 +7,26 @@ import {
   PhStop as Stop,
   PhX as X,
 } from '@phosphor-icons/vue'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 
-import { createSession, createSynthesisTicket, respond, transcribe } from './api'
+import {
+  addCartItem,
+  cancelCheckout,
+  closeSession,
+  confirmCheckout,
+  createRequestId,
+  createSession,
+  createSynthesisTicket,
+  getCart,
+  prepareCheckout,
+  respond,
+  setCartItemQuantity,
+  simulateSandboxPayment,
+  transcribe,
+} from './api'
 import ChatPanel from './components/ChatPanel.vue'
-import SkyAvatar from './components/SkyAvatar.vue'
+import type { CheckoutQuote, SandboxOrder, ShoppingCart } from './types'
+const SkyAvatar = defineAsyncComponent(() => import('./components/SkyAvatar.vue'))
 import { listMicrophoneOptions, preferredMicrophoneId } from './microphone-devices'
 import type { AssistantStatus, ChatMessage, LanguageCode } from './types'
 import {
@@ -24,6 +39,9 @@ const SILENT_AUDIO_DATA_URI =
   'data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA=='
 const sessionId = ref<string | null>(null)
 const messages = ref<ChatMessage[]>([])
+const cart = ref<ShoppingCart | null>(null)
+const checkoutQuote = ref<CheckoutQuote | null>(null)
+const sandboxOrder = ref<SandboxOrder | null>(null)
 const draft = ref('')
 const status = ref<AssistantStatus>('idle')
 const errorMessage = ref<string | null>(null)
@@ -50,6 +68,7 @@ let audioUnlockPromise: Promise<boolean> | null = null
 let speechRequestId = 0
 let voiceController: VoiceConversationController | null = null
 let listeningStartedAt = 0
+let sessionExpiryTimer: ReturnType<typeof setTimeout> | undefined
 
 const languageSettings: Record<LanguageCode, {
   label: string
@@ -196,7 +215,10 @@ async function handleVoiceAudio(audio: Blob) {
   status.value = 'transcribing'
   voiceHint.value = languageSettings[language.value].transcribing
   try {
-    const result = await withSessionRecovery((id) => transcribe(id, audio, language.value))
+    const result = await withSessionRecovery(
+      (id) => transcribe(id, audio, language.value),
+      true,
+    )
     if (!result.text.trim()) throw new Error(
       language.value === 'vi'
         ? 'Không nghe rõ câu nói, bạn thử lại nhé'
@@ -505,6 +527,13 @@ async function bootKiosk() {
   try {
     const session = await createSession('kiosk-01')
     sessionId.value = session.session_id
+    scheduleSessionExpiry(session.expires_at)
+    try {
+      cart.value = await getCart(session.session_id)
+    } catch {
+      // Catalog configuration can disable sandbox carts while text lookup is still available.
+      cart.value = null
+    }
     voiceHint.value = languageSettings[language.value].ready
   } catch (error) {
     errorMessage.value = toErrorMessage(error, 'Không mở được phiên kiosk')
@@ -515,16 +544,64 @@ async function bootKiosk() {
   }
 }
 
-async function withSessionRecovery<T>(action: (id: string) => Promise<T>): Promise<T> {
+function scheduleSessionExpiry(expiresAt: string) {
+  if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
+  const expiryTimestamp = new Date(expiresAt).getTime()
+  if (!Number.isFinite(expiryTimestamp)) return
+  const delay = Math.max(0, expiryTimestamp - Date.now())
+  sessionExpiryTimer = setTimeout(() => {
+    void resetKioskSession('Phiên mua sắm đã hết hạn. Mình đã xóa nội dung và mở phiên mới.')
+  }, delay)
+}
+
+async function resetKioskSession(notice?: string) {
+  const oldSessionId = sessionId.value
+  if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
+  sessionExpiryTimer = undefined
+  speechRequestId += 1
+  pendingSpeechText.value = null
+  pauseVoice()
+  releaseAudioPlayback()
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  sessionId.value = null
+  messages.value = []
+  draft.value = ''
+  cart.value = null
+  checkoutQuote.value = null
+  sandboxOrder.value = null
+  lastPrompt.value = ''
+  errorMessage.value = null
+  isHandsFree.value = false
+  isRecording.value = false
+  isVoiceActive.value = false
+  status.value = 'idle'
+  if (oldSessionId) {
+    try {
+      await closeSession(oldSessionId)
+    } catch {
+      // The server may already have expired or closed this session.
+    }
+  }
+  await bootKiosk()
+  if (notice) voiceHint.value = notice
+}
+
+async function withSessionRecovery<T>(
+  action: (id: string) => Promise<T>,
+  retryAfterSessionLoss = false,
+): Promise<T> {
   if (!sessionId.value) throw new Error('Chưa kết nối được phiên trò chuyện.')
   try {
     return await action(sessionId.value)
   } catch (error) {
     const failure = error as { status?: number; message?: string }
-    if (![404, 410].includes(failure?.status ?? 0) || !/session/i.test(failure?.message ?? '')) throw error
-    const session = await createSession('kiosk-01')
-    sessionId.value = session.session_id
-    return action(session.session_id)
+    const sessionGone = /session (?:is )?(?:closed|expired|not found)/i.test(failure?.message ?? '')
+    if (![404, 409, 410].includes(failure?.status ?? 0) || !sessionGone) throw error
+    await resetKioskSession(
+      'Phiên trước đã kết thúc. Mình đã xóa hội thoại; bạn nói lại yêu cầu trong phiên mới nhé.',
+    )
+    if (retryAfterSessionLoss && sessionId.value) return action(sessionId.value)
+    throw new Error('Phiên trước đã kết thúc. Hội thoại cũ đã được xóa; vui lòng nói lại yêu cầu.')
   }
 }
 
@@ -544,11 +621,20 @@ async function sendMessage(value = draft.value, fromVoice = false) {
   voiceHint.value = languageSettings[language.value].thinking
 
   try {
-    const response = await withSessionRecovery((id) => respond(id, text, language.value))
+    const clientTurnId = createRequestId()
+    const response = await withSessionRecovery((id) => respond(id, text, language.value, clientTurnId))
+    if (response.state === 'CLOSED') {
+      await resetKioskSession('Phiên đã kết thúc. Nội dung cũ đã được xóa khỏi kiosk.')
+      return
+    }
     pushMessage('assistant', response.text, {
       model: response.model,
       groundedProductIds: response.grounded_product_ids,
+      products: response.products,
     })
+    if (response.cart) cart.value = response.cart
+    if (response.checkout_quote) checkoutQuote.value = response.checkout_quote
+    if (response.order) sandboxOrder.value = response.order
     if (fromVoice) {
       void speak(response.text, resumeHandsFree)
     } else {
@@ -576,6 +662,93 @@ async function sendMessage(value = draft.value, fromVoice = false) {
 
 function handleQuickPrompt(value: string) {
   void sendMessage(value)
+}
+
+function showShoppingError(error: unknown) {
+  errorMessage.value = toErrorMessage(error, 'Chưa cập nhật được giỏ demo. Bạn thử lại nhé.')
+  status.value = 'error'
+}
+
+async function handleAddProduct(productId: string) {
+  if (!sessionId.value) return
+  try {
+    cart.value = await withSessionRecovery((id) => addCartItem(id, productId, 1, createRequestId()))
+    checkoutQuote.value = null
+    sandboxOrder.value = null
+    status.value = 'idle'
+    pushMessage('assistant', 'Mình đã thêm sản phẩm vào giỏ demo. Bạn có thể xem lại số lượng hoặc bắt đầu checkout.')
+  } catch (error) {
+    showShoppingError(error)
+  }
+}
+
+async function handleSetCartQuantity(productId: string, quantity: number) {
+  if (!sessionId.value) return
+  try {
+    cart.value = await withSessionRecovery((id) => setCartItemQuantity(id, productId, quantity, createRequestId()))
+    checkoutQuote.value = null
+    sandboxOrder.value = null
+  } catch (error) {
+    showShoppingError(error)
+  }
+}
+
+async function handlePrepareCheckout() {
+  if (!sessionId.value) return
+  try {
+    checkoutQuote.value = await withSessionRecovery((id) => prepareCheckout(id))
+    cart.value = checkoutQuote.value.cart
+    sandboxOrder.value = null
+  } catch (error) {
+    showShoppingError(error)
+  }
+}
+
+async function handleConfirmCheckout() {
+  if (!sessionId.value || !checkoutQuote.value) return
+  try {
+    const quote = checkoutQuote.value
+    sandboxOrder.value = await withSessionRecovery((id) =>
+      confirmCheckout(id, quote.confirmation_token, createRequestId()),
+    )
+    checkoutQuote.value = null
+  } catch (error) {
+    showShoppingError(error)
+  }
+}
+
+async function handleCancelCheckout() {
+  if (!sessionId.value) return
+  try {
+    cart.value = await withSessionRecovery((id) => cancelCheckout(id))
+    checkoutQuote.value = null
+  } catch (error) {
+    showShoppingError(error)
+  }
+}
+
+async function handleSandboxPayment(outcome: 'PAID' | 'FAILED') {
+  if (!sessionId.value || !sandboxOrder.value) return
+  try {
+    const session = sessionId.value
+    const order = await simulateSandboxPayment(session, sandboxOrder.value.order_id, outcome, createRequestId())
+    if (order.payment_status === 'PAID') {
+      await resetKioskSession('Thanh toán mô phỏng hoàn tất; không phát sinh giao dịch thật. Kiosk đã mở phiên mới.')
+      return
+    }
+    sandboxOrder.value = order
+    cart.value = await getCart(session)
+  } catch (error) {
+    showShoppingError(error)
+  }
+}
+
+function clearSandboxOrder() {
+  sandboxOrder.value = null
+}
+
+function handleEndSession() {
+  void resetKioskSession('Phiên đã kết thúc. Nội dung cũ đã được xóa khỏi kiosk.')
 }
 
 function toggleTextPanel() {
@@ -639,6 +812,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   isUnmounted = true
+  if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   navigator.mediaDevices?.removeEventListener?.('devicechange', refreshMicrophones)
   voiceController?.stop()
   speechRequestId += 1
@@ -715,6 +889,9 @@ onUnmounted(() => {
         </button>
         <ChatPanel
           :messages="messages"
+          :cart="cart"
+          :checkout-quote="checkoutQuote"
+          :order="sandboxOrder"
           :status="status"
           :draft="draft"
           :is-recording="isRecording"
@@ -735,6 +912,14 @@ onUnmounted(() => {
           @change-language="handleLanguageChange"
           @change-microphone="changeMicrophone"
           @retry="retryLastPrompt"
+          @add-product="handleAddProduct"
+          @set-cart-quantity="handleSetCartQuantity"
+          @prepare-checkout="handlePrepareCheckout"
+          @confirm-checkout="handleConfirmCheckout"
+          @cancel-checkout="handleCancelCheckout"
+          @simulate-payment="handleSandboxPayment"
+          @clear-order="clearSandboxOrder"
+          @end-session="handleEndSession"
         />
       </aside>
     </Transition>

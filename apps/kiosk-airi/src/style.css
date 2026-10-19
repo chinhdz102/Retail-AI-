@@ -529,7 +529,7 @@ h2 {
   min-height: 560px;
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto auto auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: linear-gradient(160deg, var(--surface-raised), var(--surface));
@@ -648,6 +648,221 @@ h2 {
   background: rgb(103 232 249 / 0.08);
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+.end-session-button {
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--text-muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.67rem;
+  font-weight: 750;
+}
+
+.end-session-button:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.message-product-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 3px;
+}
+
+.message-product-card {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgb(15 23 35 / 0.84);
+}
+
+.message-product-copy,
+.shopping-cart-line-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.message-product-copy strong,
+.shopping-cart-line-copy strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-product-copy span,
+.shopping-cart-line-copy span {
+  color: var(--text-muted);
+  font-size: 0.67rem;
+  line-height: 1.35;
+}
+
+.small-action-button {
+  min-height: 36px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
+  color: var(--text-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.035);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.small-action-button:hover {
+  border-color: rgb(103 232 249 / 0.5);
+  background: rgb(103 232 249 / 0.08);
+}
+
+.small-action-button.primary {
+  color: var(--accent-ink);
+  border-color: transparent;
+  background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+}
+
+.shopping-panel {
+  min-width: 0;
+  max-height: min(34vh, 260px);
+  overflow: auto;
+  padding: 10px 14px 11px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgb(8 13 20 / 0.86);
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-width: thin;
+}
+
+.shopping-panel-header,
+.shopping-panel-title,
+.shopping-total,
+.shopping-cart-line,
+.sandbox-order-status,
+.shopping-actions {
+  display: flex;
+  align-items: center;
+}
+
+.shopping-panel-header,
+.shopping-total {
+  justify-content: space-between;
+}
+
+.shopping-panel-title {
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.75rem;
+}
+
+.shopping-panel-title svg {
+  color: var(--accent);
+}
+
+.sandbox-chip {
+  padding: 3px 7px;
+  color: #a5f3fc;
+  border: 1px solid rgb(103 232 249 / 0.25);
+  border-radius: 999px;
+  background: rgb(103 232 249 / 0.07);
+  font-size: 0.55rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+}
+
+.shopping-cart-lines {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.shopping-cart-line {
+  min-width: 0;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.quantity-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
+.quantity-actions button {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+}
+
+.quantity-actions button:hover {
+  color: var(--accent);
+  border-color: rgb(103 232 249 / 0.35);
+}
+
+.shopping-total {
+  padding-top: 7px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--line);
+  font-size: 0.7rem;
+}
+
+.shopping-total strong {
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.sandbox-order-status {
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 9px;
+  color: var(--text-muted);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.025);
+  font-size: 0.63rem;
+}
+
+.sandbox-order-status > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sandbox-order-status strong {
+  color: var(--accent);
+  font-size: 0.66rem;
+}
+
+.shopping-actions {
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.sandbox-note {
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  line-height: 1.3;
 }
 
 .conversation {

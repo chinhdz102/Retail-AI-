@@ -1,4 +1,3 @@
-import '@google/model-viewer'
 import '@fontsource-variable/nunito-sans/wght.css'
 import '@fontsource-variable/rubik/wght.css'
 

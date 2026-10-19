@@ -5,9 +5,18 @@ import App from './App.vue'
 
 const apiMocks = vi.hoisted(() => ({
   createSession: vi.fn(),
+  createRequestId: vi.fn(() => 'request-test-id'),
+  closeSession: vi.fn().mockResolvedValue({}),
   respond: vi.fn(),
   transcribe: vi.fn(),
   createSynthesisTicket: vi.fn(),
+  getCart: vi.fn().mockResolvedValue(null),
+  addCartItem: vi.fn(),
+  setCartItemQuantity: vi.fn(),
+  prepareCheckout: vi.fn(),
+  confirmCheckout: vi.fn(),
+  cancelCheckout: vi.fn(),
+  simulateSandboxPayment: vi.fn(),
 }))
 
 vi.mock('./api', () => apiMocks)
@@ -21,7 +30,7 @@ describe('kiosk app', () => {
       session_id: 'session-test',
       kiosk_id: 'kiosk-01',
       state: 'BROWSING',
-      expires_at: '2026-08-31T13:00:00Z',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
     apiMocks.respond.mockResolvedValue({
       session_id: 'session-test',
@@ -89,6 +98,7 @@ describe('kiosk app', () => {
         'session-test',
         'How much is Coca-Cola Zero?',
         'en',
+        expect.any(String),
       ),
     )
   })
@@ -224,7 +234,9 @@ describe('kiosk app', () => {
 
     await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]')?.trigger('click')
 
-    expect(apiMocks.respond).toHaveBeenCalledWith('session-test', 'Giá Coca Zero', 'vi')
+    expect(apiMocks.respond).toHaveBeenCalledWith(
+      'session-test', 'Giá Coca Zero', 'vi', expect.any(String),
+    )
     await vi.waitFor(() => expect(wrapper.text()).toContain('Coca-Cola Zero hiện có giá'))
     expect(apiMocks.createSynthesisTicket).not.toHaveBeenCalled()
   })
@@ -248,6 +260,7 @@ describe('kiosk app', () => {
       'session-test',
       'Tôi muốn phàn nàn về thái độ nhân viên.',
       'vi',
+      expect.any(String),
     )
     await vi.waitFor(() =>
       expect(wrapper.text()).toContain('Mình chưa thể ghi nhận phản ánh'),
@@ -269,7 +282,49 @@ describe('kiosk app', () => {
       'session-test',
       'Gợi ý snack không cay',
       'vi',
+      expect.any(String),
     )
+  })
+
+  it('adds a catalog-backed product to the demo cart from its product card', async () => {
+    const emptyCart = {
+      cart_id: 'cart-test', session_id: 'session-test', items: [], item_count: 0,
+      subtotal_vnd: 0, total_vnd: 0, version: 1, sandbox: true, data_source: 'DEMO_CATALOG',
+    }
+    const product = {
+      product_id: 'COKE_ZERO_330', name: 'Coca-Cola Zero 330ml', category: 'drink',
+      brand: 'Coca-Cola', price_vnd: 13_000, stock: 16, uom: 'lon',
+      data_timestamp: '2026-10-19T00:00:00Z',
+    }
+    const cart = {
+      ...emptyCart,
+      items: [{
+        product_id: product.product_id, name: product.name, category: product.category,
+        brand: product.brand, unit_price_vnd: product.price_vnd, quantity: 1,
+        line_total_vnd: product.price_vnd, available_stock: 15, uom: product.uom,
+        data_timestamp: product.data_timestamp,
+      }],
+      item_count: 1, subtotal_vnd: 13_000, total_vnd: 13_000, version: 2,
+    }
+    apiMocks.getCart.mockResolvedValueOnce(emptyCart)
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test', text: 'Mình tìm thấy Coca-Cola Zero.', model: 'catalog',
+      grounded_product_ids: [product.product_id], state: 'BROWSING', products: [product],
+    })
+    apiMocks.addCartItem.mockResolvedValueOnce(cart)
+
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Coca-Cola Zero 330ml'))
+
+    await wrapper.get('.message-product-card .small-action-button').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.addCartItem).toHaveBeenCalledWith(
+      'session-test', product.product_id, 1, expect.any(String),
+    ))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('13.000đ'))
+    expect(wrapper.text()).toContain('Giỏ hàng demo')
   })
 
   it('shows an inline recovery message when the agent fails', async () => {

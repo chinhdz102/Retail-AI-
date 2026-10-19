@@ -15,8 +15,16 @@ from fastapi.responses import Response, StreamingResponse
 from backend.api.schemas import (
     AgentRespondRequest,
     AgentRespondResponse,
+    CartAddRequest,
+    CartQuantityRequest,
+    CartResponse,
+    CheckoutConfirmRequest,
+    CheckoutQuoteResponse,
     LanguageCode,
+    ProductCardResponse,
     ProductSearchResponse,
+    SandboxOrderResponse,
+    SandboxPaymentRequest,
     SessionCreateRequest,
     SessionResponse,
     SynthesizeRequest,
@@ -51,7 +59,28 @@ from backend.services.retail_agent import (
     run_retail_agent,
 )
 from backend.services.retail_tools import ToolObservation
-from backend.services.sessions import InMemorySessionStore, SessionError, SessionExpiredError
+from backend.services.sessions import (
+    SessionClosedError,
+    SessionError,
+    SessionExpiredError,
+    SessionUnavailableError,
+    build_session_store,
+)
+from backend.services.shopping import (
+    CartConflictError,
+    CartNotFoundError,
+    CheckoutConfirmationError,
+    IdempotencyConflictError,
+    OrderNotFoundError,
+    ShoppingError,
+    ShoppingService,
+    ShoppingUnavailableError,
+    StockConflictError,
+)
+from backend.services.shopping_flow import (
+    ShoppingActionType,
+    classify_shopping_action,
+)
 from backend.services.speech_tickets import SpeechTicketStore
 from backend.services.vietnamese_intent import (
     consultation_product_query as _consultation_product_query,
@@ -75,10 +104,17 @@ from backend.services.vietnamese_intent import (
 from backend.services.vietnamese_intent import (
     unsupported_catalog_attribute_requested as _parse_unsupported_attribute,
 )
-from backend.shared.contracts import HealthResponse, SessionState
+from backend.shared.contracts import HealthResponse, IntentType, SessionState
 
 settings = get_settings()
-session_store = InMemorySessionStore(ttl_seconds=settings.session_ttl_seconds)
+session_store = build_session_store(
+    settings.app_env,
+    settings.redis_url,
+    settings.session_ttl_seconds,
+)
+shopping_service = ShoppingService(
+    sandbox_enabled=settings.app_env.casefold() not in {"production", "prod"},
+)
 speech_ticket_store = SpeechTicketStore()
 logger = logging.getLogger(__name__)
 _groq_service: GroqService | None = None
@@ -121,6 +157,12 @@ def _session_or_http_error(session_id: UUID):
         return session_store.get(session_id)
     except SessionExpiredError as exc:
         raise HTTPException(status_code=410, detail="Session expired") from exc
+    except SessionClosedError as exc:
+        raise HTTPException(status_code=409, detail="Session is closed") from exc
+    except SessionUnavailableError as exc:
+        raise HTTPException(
+            status_code=503, detail="Session store is temporarily unavailable"
+        ) from exc
     except SessionError as exc:
         raise HTTPException(status_code=404, detail="Session not found") from exc
 
@@ -194,8 +236,7 @@ def _render_verified_snapshot(
             )
         if "shelf" in fields:
             shelf_label = (
-                "建议货架位置 "
-                f"{_format_shelf_location(product, language)}（尚未核实门店实际摆放）"
+                f"建议货架位置 {_format_shelf_location(product, language)}（尚未核实门店实际摆放）"
                 if product.shelf_source == "RECOMMENDED_PLANOGRAM"
                 else f"货架 {product.shelf}"
             )
@@ -280,8 +321,7 @@ def _render_verified_snapshot(
     response = f"Mình kiểm tra rồi, {product.name} " + ", ".join(facts) + " nhé."
     if has_volatile_facts:
         response += (
-            f" Dữ liệu được ghi nhận ngày {data_date}; "
-            "thông tin tại quầy có thể đã thay đổi."
+            f" Dữ liệu được ghi nhận ngày {data_date}; thông tin tại quầy có thể đã thay đổi."
         )
     return response
 
@@ -567,8 +607,7 @@ def _store_service_policy_requested(text: str) -> bool:
         "bao nhan vien",
     )
     phrase_match = any(
-        re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized)
-        for phrase in phrases
+        re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized) for phrase in phrases
     )
     contextual_patterns = (
         r"\b(?:bi\s+)?(?:tinh|tru|charge)\s+(?:tien\s+)?(?:hai|2|two)\s+lan\b",
@@ -586,9 +625,7 @@ def _store_service_policy_requested(text: str) -> bool:
         r"(?:bi hong|bi hu|hang loi|damaged|broken|spoiled|defective)\b",
         r"\b(?:can|could|may) i (?:speak|talk) to (?:the |a )?manager\b",
     )
-    return phrase_match or any(
-        re.search(pattern, normalized) for pattern in contextual_patterns
-    )
+    return phrase_match or any(re.search(pattern, normalized) for pattern in contextual_patterns)
 
 
 def _customer_report_or_escalation_requested(text: str) -> bool:
@@ -626,8 +663,7 @@ def _customer_report_or_escalation_requested(text: str) -> bool:
         "get me a manager",
     )
     phrase_match = any(
-        re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized)
-        for phrase in phrases
+        re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized) for phrase in phrases
     )
     report_patterns = (
         r"\b(?:bi\s+)?(?:tinh|tru|charge)\s+(?:tien\s+)?(?:hai|2|two)\s+lan\b",
@@ -942,9 +978,7 @@ def _unsupported_catalog_fact_claim(
             r"货架\s*[a-z]\d(?:-[a-z0-9]+)?",
         ),
         "expiry_at": (r"\b20\d{2}-\d{2}-\d{2}\b",),
-        "spicy": (
-            r"\b(?:không cay|co cay|có cay|vị cay|độ cay|spicy|not spicy)\b",
-        ),
+        "spicy": (r"\b(?:không cay|co cay|có cay|vị cay|độ cay|spicy|not spicy)\b",),
     }
     text = reply.casefold()
     # Package sizes in catalog names (e.g. "Thùng 24 lon") are labels,
@@ -1073,9 +1107,7 @@ def _localized_catalog_promotions(
             "It has no verified offer dates or terms, so please confirm in store."
         )
     if language == "zh":
-        return (
-            f"目录快照{dated}记录：{rendered}。" "有效期限和适用条件尚未核实，请到店确认。"
-        )
+        return f"目录快照{dated}记录：{rendered}。有效期限和适用条件尚未核实，请到店确认。"
     return (
         f"Catalog{dated} ghi nhận {rendered}. "
         "Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé."
@@ -1182,8 +1214,7 @@ def _localized_catalog_additions(
         )
     if language == "zh":
         return (
-            f"目录对比{date_range}显示{rendered}是新加入目录的商品；"
-            "我无法确认它们的市场上市日期。"
+            f"目录对比{date_range}显示{rendered}是新加入目录的商品；我无法确认它们的市场上市日期。"
         )
     return (
         f"Đối chiếu catalog{date_range} cho thấy {rendered} mới xuất hiện trong danh mục. "
@@ -1298,8 +1329,7 @@ def _localized_action_denial(language: LanguageCode) -> str:
 def _localized_internal_information_denial(language: LanguageCode) -> str:
     return {
         "en": (
-            "I can't provide internal instructions, API credentials, "
-            "or another session's messages."
+            "I can't provide internal instructions, API credentials, or another session's messages."
         ),
         "zh": "我无法提供内部指令、API 凭据或其他会话的消息。",
         "vi": "Mình không thể cung cấp chỉ dẫn nội bộ, khóa API hoặc tin nhắn của phiên khác.",
@@ -1358,12 +1388,8 @@ def _localized_retail_information_unavailable(
             "en": (
                 "Do you mean the WinMart operator, FPT Corporation, or the ChatVRM/FPT project?"
             ),
-            "zh": (
-                "您想了解 WinCommerce/WinMart、FPT Corporation，还是 ChatVRM 零售 AI 项目？"
-            ),
-            "vi": (
-                "Bạn muốn hỏi đơn vị vận hành WinMart, công ty FPT hay đồ án ChatVRM/FPT?"
-            ),
+            "zh": ("您想了解 WinCommerce/WinMart、FPT Corporation，还是 ChatVRM 零售 AI 项目？"),
+            "vi": ("Bạn muốn hỏi đơn vị vận hành WinMart, công ty FPT hay đồ án ChatVRM/FPT?"),
         },
         "store": {
             "en": (
@@ -1436,8 +1462,7 @@ def _localized_stock_arrival_unavailable(language: LanguageCode) -> str:
         ),
         "zh": "我没有经过核实的收货记录，因此无法确认哪些商品刚刚到货。",
         "vi": (
-            "Mình chưa có phiếu nhận hàng đã xác minh nên chưa thể xác nhận "
-            "món nào vừa nhập kho."
+            "Mình chưa có phiếu nhận hàng đã xác minh nên chưa thể xác nhận món nào vừa nhập kho."
         ),
     }[language]
 
@@ -1515,10 +1540,7 @@ def _localized_retail_information_observation(
                     f"{checked_en}; it lists no active campaigns."
                 )
             if language == "zh":
-                return (
-                    f"已检查 {store_name} 的当前促销数据{checked_zh}，"
-                    "没有记录正在进行的活动。"
-                )
+                return f"已检查 {store_name} 的当前促销数据{checked_zh}，没有记录正在进行的活动。"
             return (
                 f"Nguồn khuyến mãi hiện hành của {store_name} đã được kiểm tra"
                 f"{checked_vi}; hiện không ghi nhận chương trình đang áp dụng."
@@ -1569,31 +1591,25 @@ def _localized_retail_information_observation(
                     f"in its covered period{checked_en}."
                 )
             if language == "zh":
-                return (
-                    f"{store_name} 的已验证收货数据在覆盖时段内没有记录新到货"
-                    f"{checked_zh}。"
-                )
+                return f"{store_name} 的已验证收货数据在覆盖时段内没有记录新到货{checked_zh}。"
             return (
                 f"Nguồn phiếu nhận hàng đã xác minh của {store_name} không ghi nhận "
                 f"hàng mới trong khoảng dữ liệu được phủ{checked_vi}."
             )
         if language == "en":
             summaries = [
-                f"{item.get('product_name')} "
-                f"(received {date_text(item.get('received_at'), True)})"
+                f"{item.get('product_name')} (received {date_text(item.get('received_at'), True)})"
                 for item in items[:5]
             ]
             return f"Recent verified arrivals at {store_name}: " + "; ".join(summaries)
         if language == "zh":
             summaries = [
-                f"{item.get('product_name')}（到货时间 "
-                f"{date_text(item.get('received_at'), True)}）"
+                f"{item.get('product_name')}（到货时间 {date_text(item.get('received_at'), True)}）"
                 for item in items[:5]
             ]
             return f"{store_name} 最近确认到货：" + "；".join(summaries)
         summaries = [
-            f"{item.get('product_name')} (nhận lúc "
-            f"{date_text(item.get('received_at'), True)})"
+            f"{item.get('product_name')} (nhận lúc {date_text(item.get('received_at'), True)})"
             for item in items[:5]
         ]
         return f"Các phiếu nhận hàng gần đây đã xác minh tại {store_name}: " + "; ".join(summaries)
@@ -1654,8 +1670,7 @@ def _localized_vnd_budget_clarification(language: LanguageCode) -> str:
 def _localized_interaction_analytics_unavailable(language: LanguageCode) -> str:
     return {
         "en": (
-            "I don't have verified customer-question or interaction statistics "
-            "for this store yet."
+            "I don't have verified customer-question or interaction statistics for this store yet."
         ),
         "zh": "我目前没有经过核实的门店顾客问题或互动统计数据。",
         "vi": (
@@ -1791,9 +1806,7 @@ def _localized_product_interest(products, language: LanguageCode) -> str:
     if language == "zh":
         return "我找到了" + "、".join(names) + "。您想了解价格、库存还是货架位置？"
     return (
-        "Mình tìm thấy "
-        + ", ".join(names)
-        + ". Bạn muốn xem giá, tình trạng hàng hay vị trí kệ?"
+        "Mình tìm thấy " + ", ".join(names) + ". Bạn muốn xem giá, tình trạng hàng hay vị trí kệ?"
     )
 
 
@@ -2006,7 +2019,12 @@ def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
 
 @app.post("/sessions", response_model=SessionResponse, status_code=201)
 def create_session(request: SessionCreateRequest) -> SessionResponse:
-    record = session_store.create(request.kiosk_id)
+    try:
+        record = session_store.create(request.kiosk_id)
+    except SessionUnavailableError as exc:
+        raise HTTPException(
+            status_code=503, detail="Session store is temporarily unavailable"
+        ) from exc
     return SessionResponse(
         session_id=record.session_id,
         kiosk_id=record.kiosk_id,
@@ -2018,6 +2036,7 @@ def create_session(request: SessionCreateRequest) -> SessionResponse:
 @app.post("/sessions/{session_id}/close", response_model=SessionResponse)
 def close_session(session_id: UUID) -> SessionResponse:
     _session_or_http_error(session_id)
+    shopping_service.close_session(session_id)
     record = session_store.close(session_id)
     return SessionResponse(
         session_id=record.session_id,
@@ -2025,6 +2044,253 @@ def close_session(session_id: UUID) -> SessionResponse:
         state=record.state,
         expires_at=record.expires_at,
     )
+
+
+def _cart_response(cart) -> CartResponse:
+    return CartResponse(
+        cart_id=cart.cart_id,
+        session_id=cart.session_id,
+        items=[line.__dict__ for line in cart.items],
+        item_count=cart.item_count,
+        subtotal_vnd=cart.subtotal_vnd,
+        total_vnd=cart.total_vnd,
+        version=cart.version,
+        sandbox=cart.sandbox,
+        data_source=cart.data_source,
+    )
+
+
+def _quote_response(quote) -> CheckoutQuoteResponse:
+    return CheckoutQuoteResponse(
+        confirmation_token=quote.confirmation_token,
+        cart=_cart_response(quote.cart),
+        expires_at=quote.expires_at,
+        sandbox=quote.sandbox,
+    )
+
+
+def _order_response(order) -> SandboxOrderResponse:
+    return SandboxOrderResponse(
+        order_id=order.order_id,
+        session_id=order.session_id,
+        cart_id=order.cart_id,
+        items=[line.__dict__ for line in order.items],
+        amount_vnd=order.amount_vnd,
+        order_status=order.order_status,
+        payment_status=order.payment_status,
+        created_at=order.created_at,
+        expires_at=order.expires_at,
+        sandbox=order.sandbox,
+        provider_transaction_id=order.provider_transaction_id,
+    )
+
+
+def _shopping_http_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, ShoppingUnavailableError):
+        return HTTPException(status_code=503, detail=str(exc))
+    if isinstance(exc, CartNotFoundError | OrderNotFoundError):
+        return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, (CartConflictError, CheckoutConfirmationError, IdempotencyConflictError)):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, ValueError):
+        return HTTPException(status_code=422, detail=str(exc))
+    if isinstance(exc, ShoppingError):
+        return HTTPException(status_code=409, detail=str(exc))
+    return HTTPException(status_code=503, detail="Shopping service is temporarily unavailable")
+
+
+@app.get("/sessions/{session_id}/cart", response_model=CartResponse)
+def get_session_cart(session_id: UUID) -> CartResponse:
+    _session_or_http_error(session_id)
+    try:
+        return _cart_response(shopping_service.get_cart(session_id))
+    except Exception as exc:
+        raise _shopping_http_error(exc) from exc
+
+
+@app.post("/sessions/{session_id}/cart/items", response_model=CartResponse)
+def add_cart_item(session_id: UUID, request: CartAddRequest) -> CartResponse:
+    record = _session_or_http_error(session_id)
+    if record.state not in {
+        SessionState.BROWSING,
+        SessionState.CART_ACTIVE,
+        SessionState.CHECKOUT_CONFIRMATION,
+    }:
+        raise HTTPException(
+            status_code=409, detail="Cart cannot be changed in the current session state"
+        )
+    try:
+        cart = shopping_service.add_item(
+            session_id,
+            request.product_id,
+            request.quantity,
+            idempotency_key=request.idempotency_key,
+        )
+        if record.state in {SessionState.BROWSING, SessionState.CHECKOUT_CONFIRMATION}:
+            session_store.transition(session_id, SessionState.CART_ACTIVE)
+        session_store.update_shopping(
+            session_id,
+            current_intent=IntentType.CART_UPDATE,
+            active_product_id=request.product_id,
+            selected_product_ids=[request.product_id],
+            cart_reference=str(cart.cart_id),
+            pending_confirmation_id=None,
+        )
+        return _cart_response(cart)
+    except Exception as exc:
+        raise _shopping_http_error(exc) from exc
+
+
+@app.patch("/sessions/{session_id}/cart/items/{product_id}", response_model=CartResponse)
+def set_cart_item_quantity(
+    session_id: UUID,
+    product_id: str,
+    request: CartQuantityRequest,
+) -> CartResponse:
+    record = _session_or_http_error(session_id)
+    if record.state not in {
+        SessionState.BROWSING,
+        SessionState.CART_ACTIVE,
+        SessionState.CHECKOUT_CONFIRMATION,
+    }:
+        raise HTTPException(
+            status_code=409, detail="Cart cannot be changed in the current session state"
+        )
+    try:
+        cart = shopping_service.set_quantity(
+            session_id,
+            product_id,
+            request.quantity,
+            idempotency_key=request.idempotency_key,
+        )
+        next_state = SessionState.CART_ACTIVE if cart.items else SessionState.BROWSING
+        if record.state != next_state:
+            session_store.transition(session_id, next_state)
+        session_store.update_shopping(
+            session_id,
+            current_intent=IntentType.CART_UPDATE,
+            active_product_id=product_id,
+            selected_product_ids=[product_id],
+            cart_reference=str(cart.cart_id) if cart.items else None,
+            pending_confirmation_id=None,
+        )
+        return _cart_response(cart)
+    except Exception as exc:
+        raise _shopping_http_error(exc) from exc
+
+
+@app.post("/sessions/{session_id}/checkout/prepare", response_model=CheckoutQuoteResponse)
+def prepare_session_checkout(session_id: UUID) -> CheckoutQuoteResponse:
+    record = _session_or_http_error(session_id)
+    if record.state not in {SessionState.CART_ACTIVE, SessionState.CHECKOUT_CONFIRMATION}:
+        raise HTTPException(status_code=409, detail="Add an item to the cart before checkout")
+    try:
+        quote = shopping_service.prepare_checkout(session_id)
+        if record.state != SessionState.CHECKOUT_CONFIRMATION:
+            session_store.transition(session_id, SessionState.CHECKOUT_CONFIRMATION)
+        session_store.update_shopping(
+            session_id,
+            current_intent=IntentType.CHECKOUT,
+            cart_reference=str(quote.cart.cart_id),
+            pending_confirmation_id=quote.confirmation_token,
+        )
+        return _quote_response(quote)
+    except Exception as exc:
+        raise _shopping_http_error(exc) from exc
+
+
+@app.post("/sessions/{session_id}/checkout/cancel", response_model=CartResponse)
+def cancel_session_checkout(session_id: UUID) -> CartResponse:
+    record = _session_or_http_error(session_id)
+    if record.state != SessionState.CHECKOUT_CONFIRMATION:
+        raise HTTPException(
+            status_code=409, detail="No checkout summary is waiting to be cancelled"
+        )
+    try:
+        cart = _cart_response(shopping_service.cancel_checkout(session_id))
+        session_store.transition(session_id, SessionState.CART_ACTIVE)
+        session_store.update_shopping(
+            session_id,
+            current_intent=IntentType.CART_VIEW,
+            pending_confirmation_id=None,
+        )
+        return cart
+    except Exception as exc:
+        raise _shopping_http_error(exc) from exc
+
+
+@app.post("/sessions/{session_id}/checkout/confirm", response_model=SandboxOrderResponse)
+def confirm_session_checkout(
+    session_id: UUID,
+    request: CheckoutConfirmRequest,
+) -> SandboxOrderResponse:
+    record = _session_or_http_error(session_id)
+    if record.state not in {SessionState.CHECKOUT_CONFIRMATION, SessionState.PAYMENT_PENDING}:
+        raise HTTPException(
+            status_code=409, detail="No checkout summary is waiting for confirmation"
+        )
+    try:
+        order = shopping_service.confirm_checkout(
+            session_id,
+            request.confirmation_token,
+            request.idempotency_key,
+        )
+        if record.state == SessionState.CHECKOUT_CONFIRMATION:
+            session_store.transition(session_id, SessionState.PAYMENT_PENDING)
+        session_store.update_shopping(
+            session_id,
+            current_intent=IntentType.PAYMENT_STATUS,
+            pending_confirmation_id=None,
+            pending_order_id=str(order.order_id),
+            payment_status=order.payment_status,
+        )
+        return _order_response(order)
+    except Exception as exc:
+        raise _shopping_http_error(exc) from exc
+
+
+@app.get("/sessions/{session_id}/orders/{order_id}", response_model=SandboxOrderResponse)
+def get_session_order(session_id: UUID, order_id: UUID) -> SandboxOrderResponse:
+    try:
+        return _order_response(shopping_service.get_order(session_id, order_id))
+    except Exception as exc:
+        raise _shopping_http_error(exc) from exc
+
+
+@app.post(
+    "/sessions/{session_id}/orders/{order_id}/sandbox-payment",
+    response_model=SandboxOrderResponse,
+)
+def sandbox_payment(
+    session_id: UUID,
+    order_id: UUID,
+    request: SandboxPaymentRequest,
+) -> SandboxOrderResponse:
+    try:
+        order = shopping_service.simulate_payment(
+            session_id,
+            order_id,
+            request.outcome,
+            request.event_id,
+        )
+        try:
+            record = session_store.get(session_id)
+            if record.state == SessionState.PAYMENT_PENDING:
+                if order.payment_status == "PAID":
+                    session_store.close(session_id)
+                elif order.payment_status in {"FAILED", "CANCELLED", "EXPIRED"}:
+                    session_store.transition(session_id, SessionState.CART_ACTIVE)
+                    session_store.update_shopping(
+                        session_id,
+                        current_intent=IntentType.CART_VIEW,
+                        payment_status=order.payment_status,
+                    )
+        except (SessionClosedError, SessionExpiredError):
+            # The sandbox order remains authoritative if the anonymous kiosk session ended.
+            pass
+        return _order_response(order)
+    except Exception as exc:
+        raise _shopping_http_error(exc) from exc
 
 
 @app.get("/products/search", response_model=ProductSearchResponse)
@@ -2082,6 +2348,480 @@ def product_snapshot(product_id: str):
     return product
 
 
+def _product_card(product: ProductSnapshot) -> ProductCardResponse:
+    return ProductCardResponse(
+        product_id=product.product_id,
+        name=product.name,
+        category=product.category,
+        brand=product.brand,
+        price_vnd=product.price_vnd,
+        stock=product.sellable_stock,
+        uom=product.uom,
+        data_timestamp=product.data_timestamp,
+    )
+
+
+def _shopping_reply_for_cart(cart: CartResponse, language: LanguageCode) -> str:
+    if language == "en":
+        if not cart.items:
+            return "Your demo cart is empty. Tell me which product you would like to add."
+        rows = [
+            f"{item.quantity} × {item.name}: {item.line_total_vnd:,} VND".replace(",", ".")
+            for item in cart.items
+        ]
+        return (
+            "Your demo cart contains:\n"
+            + "\n".join(rows)
+            + f"\nTotal: {cart.total_vnd:,} VND. This is a sandbox cart.".replace(",", ".")
+        )
+    if language == "zh":
+        if not cart.items:
+            return "你的演示购物车还是空的。告诉我你想添加什么商品。"
+        rows = [
+            f"{item.quantity} × {item.name}: {item.line_total_vnd:,} 越南盾".replace(",", ".")
+            for item in cart.items
+        ]
+        return (
+            "你的演示购物车里有：\n"
+            + "\n".join(rows)
+            + f"\n合计：{cart.total_vnd:,} 越南盾。这是沙盒金额。".replace(",", ".")
+        )
+    if not cart.items:
+        return "Giỏ hàng demo đang trống. Bạn nói tên món muốn thêm nhé."
+    rows = [
+        f"{item.quantity} × {item.name}: {item.line_total_vnd:,}đ".replace(",", ".")
+        for item in cart.items
+    ]
+    return (
+        "Giỏ demo của bạn có:\n"
+        + "\n".join(rows)
+        + f"\nTổng tạm tính: {cart.total_vnd:,}đ. Đây là dữ liệu sandbox.".replace(",", ".")
+    )
+
+
+def _cart_product_match(
+    query: str, cart: CartResponse, active_product_id: str | None
+) -> str | None:
+    normalized = _normalize_request_text(query)
+    if normalized in {"cai nay", "mon nay", "no", "san pham do", "that one", "this one"}:
+        return (
+            active_product_id
+            if any(item.product_id == active_product_id for item in cart.items)
+            else None
+        )
+    tokens = [token for token in normalized.split() if len(token) > 1]
+    if not tokens:
+        return None
+    matches = []
+    for item in cart.items:
+        haystack = _normalize_request_text(f"{item.product_id} {item.name} {item.brand or ''}")
+        if all(token in haystack for token in tokens):
+            matches.append(item.product_id)
+    return matches[0] if len(matches) == 1 else None
+
+
+def _record_shopping_turn(
+    request: AgentRespondRequest,
+    text: str,
+    *,
+    model: str,
+    tools_used: list[str] | None = None,
+    products: list[ProductSnapshot] | None = None,
+    cart: CartResponse | None = None,
+    checkout_quote: CheckoutQuoteResponse | None = None,
+    order: SandboxOrderResponse | None = None,
+    state: SessionState | None = None,
+) -> AgentRespondResponse:
+    if state != SessionState.CLOSED:
+        session_store.add_message(request.session_id, "user", request.text)
+        session_store.add_message(request.session_id, "assistant", text)
+        current = session_store.get(request.session_id)
+        state = current.state
+    return AgentRespondResponse(
+        session_id=request.session_id,
+        text=text,
+        model=model,
+        grounded_product_ids=[product.product_id for product in products or []],
+        tools_used=tools_used or [],
+        state=state or SessionState.CLOSED,
+        products=[_product_card(product) for product in products or []],
+        cart=cart,
+        checkout_quote=checkout_quote,
+        order=order,
+    )
+
+
+def _localized_shopping_error(exc: Exception, language: LanguageCode) -> str:
+    if isinstance(exc, StockConflictError):
+        return (
+            "That quantity is not available in the demo stock. I have not changed the cart."
+            if language == "en"
+            else "Số lượng đó không còn đủ trong tồn demo; mình chưa đổi giỏ hàng."
+        )
+    if isinstance(exc, CartNotFoundError):
+        return (
+            "I could not match that product to an item in this cart."
+            if language == "en"
+            else "Mình chưa khớp được sản phẩm đó với món trong giỏ."
+        )
+    if isinstance(exc, ShoppingUnavailableError):
+        return (
+            "The current catalog is not approved for sandbox checkout, "
+            "so I cannot change or charge a cart."
+            if language == "en"
+            else (
+                "Catalog hiện tại chưa phải dữ liệu chi nhánh được xác minh, "
+                "nên mình chưa thể tạo giỏ hoặc checkout."
+            )
+        )
+    if isinstance(exc, CartConflictError):
+        return (
+            "The cart changed or is no longer available. Please review it and try again."
+            if language == "en"
+            else "Giỏ hàng vừa thay đổi hoặc không còn khả dụng. Bạn xem lại giỏ rồi thử lại nhé."
+        )
+    return (
+        "I could not complete that cart action. Please try again."
+        if language == "en"
+        else "Mình chưa thực hiện được thao tác với giỏ. Bạn thử lại giúp mình nhé."
+    )
+
+
+async def _handle_shopping_action(
+    request: AgentRespondRequest,
+    record,
+) -> AgentRespondResponse | None:
+    action = classify_shopping_action(request.text, record.state)
+    if action is None:
+        return None
+    current_state = record.state
+    idempotency_key = str(request.client_turn_id)
+    try:
+        if action.action == ShoppingActionType.END_SESSION:
+            shopping_service.close_session(request.session_id)
+            session_store.close(request.session_id)
+            reply = (
+                "This shopping session has ended. Start a new session before the next customer."
+                if request.language == "en"
+                else (
+                    "Mình đã kết thúc phiên trên kiosk này. Khách tiếp theo hãy "
+                    "bắt đầu phiên mới nhé."
+                )
+            )
+            return _record_shopping_turn(
+                request,
+                reply,
+                model="shopping-controller",
+                tools_used=["end_session"],
+                state=SessionState.CLOSED,
+            )
+
+        if action.action == ShoppingActionType.VIEW_CART:
+            cart = _cart_response(shopping_service.get_cart(request.session_id))
+            session_store.update_shopping(
+                request.session_id,
+                current_intent=IntentType.CART_VIEW,
+                cart_reference=str(cart.cart_id),
+            )
+            return _record_shopping_turn(
+                request,
+                _shopping_reply_for_cart(cart, request.language),
+                model="shopping-controller",
+                tools_used=["get_cart"],
+                cart=cart,
+            )
+
+        if action.action in {
+            ShoppingActionType.ADD_ITEM,
+            ShoppingActionType.REMOVE_ITEM,
+            ShoppingActionType.SET_QUANTITY,
+        }:
+            quantity = action.quantity if action.quantity is not None else 1
+            if action.action == ShoppingActionType.ADD_ITEM and not 1 <= quantity <= 20:
+                reply = "Mỗi lần mình có thể thêm tối đa 20 sản phẩm cùng mã vào giỏ."
+                return _record_shopping_turn(request, reply, model="shopping-controller")
+
+            query = action.query
+            selected_products: list[ProductSnapshot] = []
+            if action.candidate_index is not None:
+                pending = record.shopping.pending_action or ""
+                candidate_ids = record.shopping.selected_product_ids
+                index = action.candidate_index
+                if not pending.startswith("ADD_ITEM:") or index >= len(candidate_ids):
+                    reply = "Mình chưa có danh sách lựa chọn đang chờ. Bạn nói rõ tên sản phẩm nhé."
+                    return _record_shopping_turn(request, reply, model="shopping-controller")
+                product_id = candidate_ids[index]
+                quantity = record.shopping.pending_quantity or 1
+                observation = await lookup_product_candidates(product_id)
+                selected_products = [
+                    product for product in observation.products if product.sellable_stock > 0
+                ]
+                if not selected_products:
+                    reply = "Món đó vừa hết hàng hoặc không còn bán được. Bạn chọn món khác nhé."
+                    return _record_shopping_turn(
+                        request,
+                        reply,
+                        model="shopping-controller",
+                        tools_used=["search_products"],
+                    )
+                product_id = next(
+                    (
+                        product.product_id
+                        for product in selected_products
+                        if product.product_id == product_id
+                    ),
+                    product_id,
+                )
+            elif action.action == ShoppingActionType.ADD_ITEM:
+                if not query:
+                    reply = "Bạn muốn thêm sản phẩm nào vào giỏ?"
+                    return _record_shopping_turn(request, reply, model="shopping-controller")
+                observation = await lookup_product_candidates(query)
+                candidates = list(observation.products)
+                sellable_candidates = [
+                    product for product in candidates if product.sellable_stock > 0
+                ]
+                if not sellable_candidates:
+                    reply = (
+                        "I could not find a matching sellable product in the active catalog."
+                        if request.language == "en"
+                        else (
+                            "Mình chưa tìm thấy sản phẩm khớp và còn bán được "
+                            "trong catalog hiện tại."
+                        )
+                    )
+                    return _record_shopping_turn(
+                        request, reply, model="shopping-controller", tools_used=["search_products"]
+                    )
+                if len(sellable_candidates) > 1:
+                    session_store.update_shopping(
+                        request.session_id,
+                        current_intent=IntentType.CART_UPDATE,
+                        selected_product_ids=[
+                            product.product_id for product in sellable_candidates
+                        ],
+                        pending_action=f"ADD_ITEM:{query}",
+                        pending_quantity=quantity,
+                        pending_clarification=(
+                            "Choose one catalog product before adding it to the cart."
+                        ),
+                    )
+                    names = "; ".join(
+                        f"{index + 1}. {product.name} — {product.price_vnd:,}đ".replace(",", ".")
+                        for index, product in enumerate(sellable_candidates)
+                    )
+                    reply = (
+                        "Mình thấy vài sản phẩm phù hợp. Bạn chọn số nào để mình "
+                        f"thêm vào giỏ? {names}"
+                    )
+                    return _record_shopping_turn(
+                        request,
+                        reply,
+                        model="shopping-controller",
+                        tools_used=["search_products"],
+                        products=sellable_candidates,
+                    )
+                selected_products = sellable_candidates
+                product_id = selected_products[0].product_id
+            else:
+                cart = _cart_response(shopping_service.get_cart(request.session_id))
+                product_id = _cart_product_match(
+                    query,
+                    cart,
+                    record.shopping.active_product_id,
+                )
+                if product_id is None:
+                    reply = "Bạn nói rõ tên món trong giỏ giúp mình nhé."
+                    return _record_shopping_turn(
+                        request,
+                        reply,
+                        model="shopping-controller",
+                        tools_used=["get_cart"],
+                        cart=cart,
+                    )
+                product = get_product_repository().get_product_snapshot(product_id)
+                selected_products = [product] if product else []
+
+            if action.action == ShoppingActionType.ADD_ITEM:
+                cart_snapshot = shopping_service.add_item(
+                    request.session_id,
+                    product_id,
+                    quantity,
+                    idempotency_key=idempotency_key,
+                )
+                next_state = SessionState.CART_ACTIVE
+                if current_state != next_state:
+                    session_store.transition(request.session_id, next_state)
+                cart = _cart_response(cart_snapshot)
+                reply = (
+                    f"Added {quantity} × {selected_products[0].name} to the demo cart. "
+                    if request.language == "en"
+                    else f"Mình đã thêm {quantity} × {selected_products[0].name} vào giỏ demo. "
+                ) + _shopping_reply_for_cart(cart, request.language)
+                session_store.update_shopping(
+                    request.session_id,
+                    current_intent=IntentType.CART_UPDATE,
+                    active_product_id=product_id,
+                    selected_product_ids=[product_id],
+                    cart_reference=str(cart.cart_id),
+                    pending_action=None,
+                    pending_quantity=None,
+                    pending_clarification=None,
+                )
+                return _record_shopping_turn(
+                    request,
+                    reply,
+                    model="shopping-controller",
+                    tools_used=["search_products", "update_cart"],
+                    products=selected_products,
+                    cart=cart,
+                )
+
+            requested_quantity = 0 if action.action == ShoppingActionType.REMOVE_ITEM else quantity
+            cart_snapshot = shopping_service.set_quantity(
+                request.session_id,
+                product_id,
+                requested_quantity,
+                idempotency_key=idempotency_key,
+            )
+            cart = _cart_response(cart_snapshot)
+            next_state = SessionState.CART_ACTIVE if cart.items else SessionState.BROWSING
+            if current_state != next_state:
+                session_store.transition(request.session_id, next_state)
+            session_store.update_shopping(
+                request.session_id,
+                current_intent=IntentType.CART_UPDATE,
+                active_product_id=product_id,
+                selected_product_ids=[product_id],
+                cart_reference=str(cart.cart_id) if cart.items else None,
+                pending_confirmation_id=None,
+            )
+            reply = "Mình đã cập nhật giỏ demo. " + _shopping_reply_for_cart(cart, request.language)
+            return _record_shopping_turn(
+                request,
+                reply,
+                model="shopping-controller",
+                tools_used=["get_cart", "update_cart"],
+                products=selected_products,
+                cart=cart,
+            )
+
+        if action.action == ShoppingActionType.PREPARE_CHECKOUT:
+            if current_state not in {SessionState.CART_ACTIVE, SessionState.CHECKOUT_CONFIRMATION}:
+                reply = "Giỏ hàng đang trống. Bạn thêm sản phẩm trước rồi mình tính tổng nhé."
+                return _record_shopping_turn(request, reply, model="shopping-controller")
+            quote_domain = shopping_service.prepare_checkout(request.session_id)
+            if current_state != SessionState.CHECKOUT_CONFIRMATION:
+                session_store.transition(request.session_id, SessionState.CHECKOUT_CONFIRMATION)
+            session_store.update_shopping(
+                request.session_id,
+                current_intent=IntentType.CHECKOUT,
+                cart_reference=str(quote_domain.cart.cart_id),
+                pending_confirmation_id=quote_domain.confirmation_token,
+            )
+            quote = _quote_response(quote_domain)
+            reply = (
+                f"Checkout sandbox: {quote.cart.item_count} sản phẩm, "
+                f"tổng {quote.cart.total_vnd:,}đ. "
+                "Bạn kiểm tra danh sách rồi xác nhận để tạo đơn mô phỏng. "
+                "Bản tóm tắt có hiệu lực 2 phút."
+            ).replace(",", ".")
+            return _record_shopping_turn(
+                request,
+                reply,
+                model="shopping-controller",
+                tools_used=["get_cart", "create_checkout"],
+                cart=quote.cart,
+                checkout_quote=quote,
+            )
+
+        if action.action == ShoppingActionType.CONFIRM_CHECKOUT:
+            token = record.shopping.pending_confirmation_id
+            if current_state != SessionState.CHECKOUT_CONFIRMATION or not token:
+                reply = (
+                    "Chưa có bản tóm tắt checkout đang chờ xác nhận. Bạn xem giỏ "
+                    "và yêu cầu thanh toán lại nhé."
+                )
+                return _record_shopping_turn(request, reply, model="shopping-controller")
+            order_domain = shopping_service.confirm_checkout(
+                request.session_id,
+                token,
+                idempotency_key,
+            )
+            session_store.transition(request.session_id, SessionState.PAYMENT_PENDING)
+            session_store.update_shopping(
+                request.session_id,
+                current_intent=IntentType.PAYMENT_STATUS,
+                pending_confirmation_id=None,
+                pending_order_id=str(order_domain.order_id),
+                payment_status=order_domain.payment_status,
+            )
+            order = _order_response(order_domain)
+            reply = (
+                f"Đơn sandbox {order.order_id} đã tạo, số tiền {order.amount_vnd:,}đ. "
+                "Đây chưa phải giao dịch thật; bạn có thể kiểm tra trạng thái "
+                "hoặc dùng nút mô phỏng thanh toán."
+            ).replace(",", ".")
+            return _record_shopping_turn(
+                request,
+                reply,
+                model="shopping-controller",
+                tools_used=["create_checkout"],
+                cart=_cart_response(shopping_service.get_cart(request.session_id)),
+                order=order,
+            )
+
+        if action.action == ShoppingActionType.CHECK_PAYMENT_STATUS:
+            order_id = record.shopping.pending_order_id
+            if not order_id:
+                reply = "Phiên này chưa có đơn sandbox để kiểm tra."
+                return _record_shopping_turn(request, reply, model="shopping-controller")
+            order_domain = shopping_service.get_order(request.session_id, UUID(order_id))
+            order = _order_response(order_domain)
+            reply = (
+                f"Sandbox order status: {order.payment_status}. "
+                "This does not verify a real bank transfer."
+                if request.language == "en"
+                else (
+                    f"Trạng thái thanh toán sandbox của đơn là {order.payment_status}. "
+                    "Mình chưa xác minh giao dịch ngân hàng thật."
+                )
+            )
+            return _record_shopping_turn(
+                request,
+                reply,
+                model="shopping-controller",
+                tools_used=["check_payment_status"],
+                order=order,
+            )
+
+        if action.action == ShoppingActionType.CANCEL_CHECKOUT:
+            cart = _cart_response(shopping_service.cancel_checkout(request.session_id))
+            if current_state == SessionState.CHECKOUT_CONFIRMATION:
+                session_store.transition(request.session_id, SessionState.CART_ACTIVE)
+            session_store.update_shopping(
+                request.session_id,
+                current_intent=IntentType.CART_VIEW,
+                pending_confirmation_id=None,
+            )
+            reply = "Mình đã hủy bước checkout; giỏ hàng vẫn được giữ trong phiên này."
+            return _record_shopping_turn(
+                request,
+                reply,
+                model="shopping-controller",
+                tools_used=["get_cart"],
+                cart=cart,
+            )
+    except (ShoppingError, ValueError) as exc:
+        return _record_shopping_turn(
+            request,
+            _localized_shopping_error(exc, request.language),
+            model="shopping-controller",
+            tools_used=["shopping_policy"],
+        )
+    return None
+
+
 @app.post("/agent/respond", response_model=AgentRespondResponse)
 async def agent_respond(
     request: AgentRespondRequest,
@@ -2098,21 +2838,29 @@ async def agent_respond(
             record.state,
             _localized_internal_information_denial(request.language),
         )
-    if _administrative_action_requested(request.text):
+    safe_checkout_confirmation = (
+        record.state == SessionState.CHECKOUT_CONFIRMATION
+        and bool(record.shopping.pending_confirmation_id)
+        and classify_shopping_action(request.text, record.state) is not None
+        and classify_shopping_action(request.text, record.state).action
+        == ShoppingActionType.CONFIRM_CHECKOUT
+    )
+    if _administrative_action_requested(request.text) and not safe_checkout_confirmation:
         return _local_policy_response(
             request,
             record.state,
             _localized_action_denial(request.language),
         )
+    shopping_response = await _handle_shopping_action(request, record)
+    if shopping_response is not None:
+        return shopping_response
     if _store_service_policy_requested(request.text):
         return _local_policy_response(
             request,
             record.state,
             _localized_store_policy_unavailable(
                 request.language,
-                report_or_escalation=_customer_report_or_escalation_requested(
-                    request.text
-                ),
+                report_or_escalation=_customer_report_or_escalation_requested(request.text),
             ),
         )
     if _new_stock_arrival_requested(request.text):
@@ -2123,16 +2871,12 @@ async def agent_respond(
         reply = _localized_retail_information_observation(
             receipt_observation, "receipts", request.language
         )
-        return _deterministic_tool_response(
-            request, record.state, receipt_observation, reply
-        )
+        return _deterministic_tool_response(request, record.state, receipt_observation, reply)
     retail_information_kind = _unverified_retail_information_kind(request.text)
     if retail_information_kind is not None:
         if retail_information_kind == "company":
             organization_query = (
-                "WinCommerce"
-                if _retail_chain_operator_question(request.text)
-                else request.text
+                "WinCommerce" if _retail_chain_operator_question(request.text) else request.text
             )
             organization_answer = get_organization_answer(
                 organization_query,
@@ -2168,9 +2912,7 @@ async def agent_respond(
                 retail_information_kind,
                 request.language,
             )
-            return _deterministic_tool_response(
-                request, record.state, observation, reply
-            )
+            return _deterministic_tool_response(request, record.state, observation, reply)
         return _local_policy_response(
             request,
             record.state,
@@ -2191,10 +2933,9 @@ async def agent_respond(
             record.state,
             _localized_interaction_analytics_unavailable(request.language),
         )
-    if (
-        _foreign_currency_budget_requested(request.text)
-        or _unparsed_recommendation_budget_requested(request.text)
-    ):
+    if _foreign_currency_budget_requested(
+        request.text
+    ) or _unparsed_recommendation_budget_requested(request.text):
         return _local_policy_response(
             request,
             record.state,
@@ -2338,9 +3079,7 @@ async def agent_respond(
         )
     try:
         if catalog_additions_arguments is not None:
-            additions_observation = await lookup_catalog_additions(
-                catalog_additions_arguments
-            )
+            additions_observation = await lookup_catalog_additions(catalog_additions_arguments)
             agent_result = RetailAgentResult(
                 text="",
                 model="catalog",
@@ -2349,9 +3088,7 @@ async def agent_respond(
                 observations=(additions_observation,),
             )
         elif promotion_list_arguments is not None:
-            promotion_observation = await lookup_product_promotions(
-                promotion_list_arguments
-            )
+            promotion_observation = await lookup_product_promotions(promotion_list_arguments)
             agent_result = RetailAgentResult(
                 text="",
                 model="catalog",
@@ -2402,9 +3139,7 @@ async def agent_respond(
                 recommended_products[product.product_id] = product
             agent_result = replace(
                 agent_result,
-                tools_used=tuple(
-                    dict.fromkeys((*agent_result.tools_used, "recommend_products"))
-                ),
+                tools_used=tuple(dict.fromkeys((*agent_result.tools_used, "recommend_products"))),
                 products=tuple(recommended_products.values()),
                 observations=(*agent_result.observations, recommendation_observation),
             )
@@ -2427,9 +3162,7 @@ async def agent_respond(
                     searched_products[product.product_id] = product
                 agent_result = replace(
                     agent_result,
-                    tools_used=tuple(
-                        dict.fromkeys((*agent_result.tools_used, "search_products"))
-                    ),
+                    tools_used=tuple(dict.fromkeys((*agent_result.tools_used, "search_products"))),
                     products=tuple(searched_products.values()),
                     observations=(*agent_result.observations, search_observation),
                 )
@@ -2438,8 +3171,10 @@ async def agent_respond(
             if followup_fields or explicit_grounded_reference
             else None
         )
-        if requested_fields and target_product_id is None and not (
-            followup_fields or explicit_grounded_reference
+        if (
+            requested_fields
+            and target_product_id is None
+            and not (followup_fields or explicit_grounded_reference)
         ):
             candidate_observation = next(
                 (
@@ -2549,7 +3284,8 @@ async def agent_respond(
         (
             observation
             for observation in reversed(agent_result.observations)
-            if observation.tool_name in {
+            if observation.tool_name
+            in {
                 "search_products",
                 "recommend_products",
                 "get_product_snapshot",
@@ -2612,8 +3348,19 @@ def _promotion_list_tool_arguments(text: str) -> dict[str, object] | None:
     category_terms = {
         "snack": {"snack", "snacks", "bim", "banh", "keo", "chips", "crisps"},
         "drink": {
-            "nuoc", "uong", "do", "giai", "khat", "soda", "water", "drink",
-            "drinks", "beverage", "beverages", "coffee", "tea",
+            "nuoc",
+            "uong",
+            "do",
+            "giai",
+            "khat",
+            "soda",
+            "water",
+            "drink",
+            "drinks",
+            "beverage",
+            "beverages",
+            "coffee",
+            "tea",
         },
         "dairy": {"sua", "milk", "dairy", "yogurt", "yoghurt", "cheese"},
         "meal": {"mi", "noodles", "meal", "meals", "food", "thuc", "an"},
@@ -2639,31 +3386,234 @@ def _catalog_additions_tool_arguments(text: str) -> dict[str, object] | None:
 
 
 _FACT_QUERY_STOP_WORDS = {
-    "a", "an", "are", "at", "available", "bao", "ben", "biet", "cai",
-    "cho", "co", "con", "cost", "cua", "dau", "dat", "de", "gi", "gia", "giup",
-    "hang", "how", "in", "is", "ke", "khong", "la", "me", "much", "nao",
-    "nam", "nhe", "nhi", "nhieu", "o", "please", "price", "product", "products",
-    "shelf", "stock", "the", "them", "toi", "ton", "tra", "vay", "where",
-    "what", "which", "with", "minh", "ban", "muon", "tim", "xin", "z", "t",
-    "do", "ay", "nhung", "thanh", "phan", "gom", "trong", "giam", "khuyen", "mai", "uu",
-    "dai", "discount", "sale", "deal", "off", "promotion", "promo", "chuong", "trinh",
-    "tang", "on", "bo", "qua", "moi", "huong", "dan", "truoc",
-    "tien", "ma", "mua", "duoc", "day", "nay", "tren", "ngay", "han", "nhan",
-    "san", "pham", "nghin", "ngan", "thoi", "duoi", "den", "gio", "quay", "khu", "tri",
-    "dung", "chu", "hoi", "em", "anh", "chi", "nha", "nhe", "ha", "ne", "giai", "khat",
+    "a",
+    "an",
+    "are",
+    "at",
+    "available",
+    "bao",
+    "ben",
+    "biet",
+    "cai",
+    "cho",
+    "co",
+    "con",
+    "cost",
+    "cua",
+    "dau",
+    "dat",
+    "de",
+    "gi",
+    "gia",
+    "giup",
+    "hang",
+    "how",
+    "in",
+    "is",
+    "ke",
+    "khong",
+    "la",
+    "me",
+    "much",
+    "nao",
+    "nam",
+    "nhe",
+    "nhi",
+    "nhieu",
+    "o",
+    "please",
+    "price",
+    "product",
+    "products",
+    "shelf",
+    "stock",
+    "the",
+    "them",
+    "toi",
+    "ton",
+    "tra",
+    "vay",
+    "where",
+    "what",
+    "which",
+    "with",
+    "minh",
+    "ban",
+    "muon",
+    "tim",
+    "xin",
+    "z",
+    "t",
+    "do",
+    "ay",
+    "nhung",
+    "thanh",
+    "phan",
+    "gom",
+    "trong",
+    "giam",
+    "khuyen",
+    "mai",
+    "uu",
+    "dai",
+    "discount",
+    "sale",
+    "deal",
+    "off",
+    "promotion",
+    "promo",
+    "chuong",
+    "trinh",
+    "tang",
+    "on",
+    "bo",
+    "qua",
+    "moi",
+    "huong",
+    "dan",
+    "truoc",
+    "tien",
+    "ma",
+    "mua",
+    "duoc",
+    "day",
+    "nay",
+    "tren",
+    "ngay",
+    "han",
+    "nhan",
+    "san",
+    "pham",
+    "nghin",
+    "ngan",
+    "thoi",
+    "duoi",
+    "den",
+    "gio",
+    "quay",
+    "khu",
+    "tri",
+    "dung",
+    "chu",
+    "hoi",
+    "em",
+    "anh",
+    "chi",
+    "nha",
+    "nhe",
+    "ha",
+    "ne",
+    "giai",
+    "khat",
     "dang",
-    "that", "du", "lieu", "hay", "noi", "nhu", "the", "xac", "minh", "ignore", "all",
-    "previous", "instructions", "system", "override", "message", "developer", "tool",
-    "update", "set", "admin", "quan", "tri", "vien", "xuong", "len", "dong", "d",
-    "gi", "va", "tot", "cho", "suc", "khoe", "nguoi", "benh", "diabetes", "diabetic",
-    "can", "could", "do", "does", "have", "has", "find", "get", "i", "you", "your",
-    "my", "this", "that", "some", "any", "please", "recommend", "suggest",
-    "looking", "for", "under", "below", "less", "than", "up", "to", "most", "no",
-    "more", "with", "without", "deal", "deals", "promotion", "promotions", "offer",
-    "offers", "discount", "sale", "expiry", "expiration", "ingredients", "contains",
-    "inside", "made", "before", "by", "left", "in", "is", "are", "do", "the",
-    "about", "what", "which", "where", "aisle", "shelf", "available", "stock",
-    "much", "how", "price", "cost", "today", "current", "currently", "please",
+    "that",
+    "du",
+    "lieu",
+    "hay",
+    "noi",
+    "nhu",
+    "the",
+    "xac",
+    "minh",
+    "ignore",
+    "all",
+    "previous",
+    "instructions",
+    "system",
+    "override",
+    "message",
+    "developer",
+    "tool",
+    "update",
+    "set",
+    "admin",
+    "quan",
+    "tri",
+    "vien",
+    "xuong",
+    "len",
+    "dong",
+    "d",
+    "gi",
+    "va",
+    "tot",
+    "cho",
+    "suc",
+    "khoe",
+    "nguoi",
+    "benh",
+    "diabetes",
+    "diabetic",
+    "can",
+    "could",
+    "do",
+    "does",
+    "have",
+    "has",
+    "find",
+    "get",
+    "i",
+    "you",
+    "your",
+    "my",
+    "this",
+    "that",
+    "some",
+    "any",
+    "please",
+    "recommend",
+    "suggest",
+    "looking",
+    "for",
+    "under",
+    "below",
+    "less",
+    "than",
+    "up",
+    "to",
+    "most",
+    "no",
+    "more",
+    "with",
+    "without",
+    "deal",
+    "deals",
+    "promotion",
+    "promotions",
+    "offer",
+    "offers",
+    "discount",
+    "sale",
+    "expiry",
+    "expiration",
+    "ingredients",
+    "contains",
+    "inside",
+    "made",
+    "before",
+    "by",
+    "left",
+    "in",
+    "is",
+    "are",
+    "do",
+    "the",
+    "about",
+    "what",
+    "which",
+    "where",
+    "aisle",
+    "shelf",
+    "available",
+    "stock",
+    "much",
+    "how",
+    "price",
+    "cost",
+    "today",
+    "current",
+    "currently",
+    "please",
 }
 
 _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
@@ -2892,9 +3842,7 @@ def _price_constraint_from_text(text: str) -> dict[str, int | str] | None:
         normalized[operator_match.end() :],
     )
     if unit_match is None:
-        amount_match = re.match(
-            r"\s*(\d[\d\s]*)(?=\s|$)", normalized[operator_match.end() :]
-        )
+        amount_match = re.match(r"\s*(\d[\d\s]*)(?=\s|$)", normalized[operator_match.end() :])
         if not amount_match:
             return None
         amount = int(amount_match.group(1).replace(" ", ""))
@@ -2957,9 +3905,7 @@ def _foreign_currency_budget_requested(text: str) -> bool:
         or re.search(r"\b(?:usd|eur|gbp|dollars?|euros?|pounds?)\b", text, re.IGNORECASE)
     )
     normalized = _normalize_request_text(text)
-    has_amount = bool(
-        re.search(r"\d|\b(?:one|two|three|four|five|ten|twenty)\b", normalized)
-    )
+    has_amount = bool(re.search(r"\d|\b(?:one|two|three|four|five|ten|twenty)\b", normalized))
     return has_limit and has_foreign_currency and has_amount
 
 
@@ -2996,8 +3942,16 @@ def _recommendation_tool_arguments(
     has_correction_cue = any(
         cue in normalized
         for cue in (
-            "a khong", "khoan", "y minh", "minh noi", "minh muon", "thoi",
-            "actually", "instead", "i mean", "wait",
+            "a khong",
+            "khoan",
+            "y minh",
+            "minh noi",
+            "minh muon",
+            "thoi",
+            "actually",
+            "instead",
+            "i mean",
+            "wait",
         )
     )
     if category is None and has_correction_cue and previous_user_text:
@@ -3088,20 +4042,152 @@ def _implicit_followup_fields(text: str) -> tuple[str, ...]:
     tokens = normalized.split()
 
     followup_only_words = {
-        "gia", "bao", "nhieu", "price", "cost", "how", "much", "con", "hang", "ton",
-        "stock", "available", "co", "khong", "o", "ke", "shelf", "dau", "where", "aisle",
-        "khuyen", "mai", "han", "dung", "su", "het", "thanh", "phan", "ingredients",
-        "expiry", "expiration", "cay", "vi", "spicy", "not", "vay", "nhe", "nhi", "a",
-        "nha", "nhe", "ban", "minh", "toi", "anh", "chi", "em", "no", "cai", "do",
-        "mon", "nay", "the", "kia", "lay", "giup", "cho", "bao", "voi", "muon",
-        "nao", "nam", "cua", "gi", "la", "lau", "ay", "nhung", "trong", "lon", "nhieu",
-        "z", "bn", "ko", "khum", "hong", "hem", "chu", "sao", "loai", "chai", "lon",
-        "hop", "goi", "vi", "san", "ban", "mua", "duoc", "sau", "khi", "nua",
-        "de", "gom", "nay", "nhan", "han", "toi", "ngay", "tren", "ma", "day",
-        "ho", "hien", "tai", "dang", "that", "ha", "nhen", "di", "ne", "as", "it",
-        "its", "that", "this", "and", "what", "on", "at", "the", "is", "there", "any",
-        "are", "i", "me", "my", "you", "your", "please", "then", "so", "about", "ya", "ma",
-        "多少钱", "在哪", "哪里", "货架", "库存", "有货", "价格", "保质期", "配料", "辣",
+        "gia",
+        "bao",
+        "nhieu",
+        "price",
+        "cost",
+        "how",
+        "much",
+        "con",
+        "hang",
+        "ton",
+        "stock",
+        "available",
+        "co",
+        "khong",
+        "o",
+        "ke",
+        "shelf",
+        "dau",
+        "where",
+        "aisle",
+        "khuyen",
+        "mai",
+        "han",
+        "dung",
+        "su",
+        "het",
+        "thanh",
+        "phan",
+        "ingredients",
+        "expiry",
+        "expiration",
+        "cay",
+        "vi",
+        "spicy",
+        "not",
+        "vay",
+        "nhe",
+        "nhi",
+        "a",
+        "nha",
+        "nhe",
+        "ban",
+        "minh",
+        "toi",
+        "anh",
+        "chi",
+        "em",
+        "no",
+        "cai",
+        "do",
+        "mon",
+        "nay",
+        "the",
+        "kia",
+        "lay",
+        "giup",
+        "cho",
+        "bao",
+        "voi",
+        "muon",
+        "nao",
+        "nam",
+        "cua",
+        "gi",
+        "la",
+        "lau",
+        "ay",
+        "nhung",
+        "trong",
+        "lon",
+        "nhieu",
+        "z",
+        "bn",
+        "ko",
+        "khum",
+        "hong",
+        "hem",
+        "chu",
+        "sao",
+        "loai",
+        "chai",
+        "lon",
+        "hop",
+        "goi",
+        "vi",
+        "san",
+        "ban",
+        "mua",
+        "duoc",
+        "sau",
+        "khi",
+        "nua",
+        "de",
+        "gom",
+        "nay",
+        "nhan",
+        "han",
+        "toi",
+        "ngay",
+        "tren",
+        "ma",
+        "day",
+        "ho",
+        "hien",
+        "tai",
+        "dang",
+        "that",
+        "ha",
+        "nhen",
+        "di",
+        "ne",
+        "as",
+        "it",
+        "its",
+        "that",
+        "this",
+        "and",
+        "what",
+        "on",
+        "at",
+        "the",
+        "is",
+        "there",
+        "any",
+        "are",
+        "i",
+        "me",
+        "my",
+        "you",
+        "your",
+        "please",
+        "then",
+        "so",
+        "about",
+        "ya",
+        "ma",
+        "多少钱",
+        "在哪",
+        "哪里",
+        "货架",
+        "库存",
+        "有货",
+        "价格",
+        "保质期",
+        "配料",
+        "辣",
     }
     has_entity_or_topic = any(token not in followup_only_words for token in tokens)
     return () if has_entity_or_topic else fields
@@ -3273,9 +4359,7 @@ async def stream_synthesis_ticket(
             provider,
             type(exc).__name__,
         )
-        raise HTTPException(
-            status_code=502, detail="Text-to-speech provider unavailable"
-        ) from exc
+        raise HTTPException(status_code=502, detail="Text-to-speech provider unavailable") from exc
 
     async def audio_body():
         completed = False

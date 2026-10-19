@@ -98,9 +98,12 @@ Then open `http://127.0.0.1:8000/health` or `http://127.0.0.1:8000/docs`.
 - [Implementation plan](docs/superpowers/plans/2026-08-31-architecture-contract-and-bootstrap.md)
 - [Groq + Vietnamese kiosk plan](docs/superpowers/plans/2026-08-31-groq-vietnamese-kiosk.md)
 
-The architecture document defines the target system. The agent can use either the
-in-memory demo catalog or the imported WinMart catalog in PostgreSQL. RAG,
-provider-backed payment verification and Redis sessions remain roadmap items.
+The architecture document defines the target system. Current runtime status and its
+limits are recorded in [`docs/reports/retail-ai-optimization-report.md`](docs/reports/retail-ai-optimization-report.md).
+The WinMart PostgreSQL catalog is read-only for customer lookups. Development sessions use
+isolated in-memory state; production selects the Redis session adapter and fails closed if
+Redis is unavailable. Cart and checkout are explicitly sandbox-only, use the demo catalog,
+and are not connected to a POS, persistent order database or payment provider.
 
 ## Agent tool loop
 
@@ -130,8 +133,9 @@ uv run python scripts/import_winmart.py --apply
 The importer hashes the source file for dataset versioning, validates identifiers and
 prices, and quarantines rows whose sale price exceeds their regular price. The dataset's
 shelf locations are crawler-generated placeholders; PostgreSQL preserves them with
-`shelf_source=SIMULATED`, while customer snapshots omit shelf values. Cart writes,
-checkout and Redis-backed sessions remain separate roadmap items.
+`shelf_source=SIMULATED`, while customer snapshots omit shelf values. Demo shopping actions
+are available only with `CATALOG_REPOSITORY=demo`; the service rejects transaction writes
+against the imported WinMart snapshot because it is not branch-authoritative inventory.
 
 Branch profiles, active promotion campaigns, receiving events, and nearby-place snapshots
 use separate source tables and freshness checks. The WinMart catalog importer does not populate

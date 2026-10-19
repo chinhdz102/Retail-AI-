@@ -34,6 +34,67 @@ export interface AgentResponse {
   grounded_product_ids: string[]
   tools_used?: string[]
   state: string
+  products?: ProductCard[]
+  cart?: ShoppingCart | null
+  checkout_quote?: CheckoutQuote | null
+  order?: SandboxOrder | null
+}
+
+export interface ProductCard {
+  product_id: string
+  name: string
+  category: string
+  brand: string | null
+  price_vnd: number
+  stock: number
+  uom: string | null
+  data_timestamp: string
+}
+
+export interface CartLine {
+  product_id: string
+  name: string
+  category: string
+  brand: string | null
+  unit_price_vnd: number
+  quantity: number
+  line_total_vnd: number
+  available_stock: number
+  uom: string | null
+  data_timestamp: string
+}
+
+export interface ShoppingCart {
+  cart_id: string
+  session_id: string
+  items: CartLine[]
+  item_count: number
+  subtotal_vnd: number
+  total_vnd: number
+  version: number
+  sandbox: boolean
+  data_source: string
+}
+
+export interface CheckoutQuote {
+  confirmation_token: string
+  cart: ShoppingCart
+  expires_at: string
+  sandbox: boolean
+}
+
+export interface SandboxOrder {
+  order_id: string
+  session_id: string
+  cart_id: string
+  items: CartLine[]
+  amount_vnd: number
+  order_status: string
+  payment_status: string
+  created_at: string
+  expires_at: string
+  sandbox: boolean
+  provider_transaction_id: string | null
 }
 
 export interface TranscriptionResponse {
@@ -49,4 +110,5 @@ export interface ChatMessage {
   text: string
   model?: string
   groundedProductIds?: string[]
+  products?: ProductCard[]
 }
