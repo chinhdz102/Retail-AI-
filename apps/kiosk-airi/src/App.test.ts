@@ -229,6 +229,33 @@ describe('kiosk app', () => {
     expect(apiMocks.createSynthesisTicket).not.toHaveBeenCalled()
   })
 
+  it('shows the safe customer-care response in the chat after a typed request', async () => {
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Mình chưa thể ghi nhận phản ánh hay liên hệ nhân viên thay bạn. Bạn báo trực tiếp với nhân viên tại quầy nhé.',
+      model: 'local-policy',
+      grounded_product_ids: [],
+      state: 'BROWSING',
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+
+    await wrapper.get('textarea').setValue('Tôi muốn phàn nàn về thái độ nhân viên.')
+    await wrapper.get('.composer').trigger('submit')
+
+    expect(apiMocks.respond).toHaveBeenCalledWith(
+      'session-test',
+      'Tôi muốn phàn nàn về thái độ nhân viên.',
+      'vi',
+    )
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain('Mình chưa thể ghi nhận phản ánh'),
+    )
+    expect(wrapper.text()).toContain('Tôi muốn phàn nàn về thái độ nhân viên.')
+    expect(apiMocks.createSynthesisTicket).not.toHaveBeenCalled()
+  })
+
   it('frames the snack quick prompt as a catalog-backed recommendation', async () => {
     const wrapper = mount(App)
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
