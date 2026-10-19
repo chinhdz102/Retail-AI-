@@ -14,9 +14,9 @@ Retail AI đã có thể dẫn dắt phiên mua sắm demo từ tra cứu sản 
 
 Benchmark tiếng Việt phát hiện ba vấn đề: grader tìm tham số recommendation trong trace LLM dù router chạy xác định; câu “chuyển khoản xong rồi” không được nhận diện khi chờ thanh toán; yêu cầu “bỏ qua xác minh” có thể bị hiểu thành gọi nhân viên. Sau sửa, hội thoại live v2 đạt 13/13 assertion; ba ca mặc định về thêm giỏ, checkout giỏ trống và yêu cầu nhân viên demo đạt 3/3.
 
-Trong báo cáo đánh giá trước, commit `1757bbd` đạt **490 backend**, **41 frontend**, **40/40 P0 regression** và **20/20 shopping sandbox**. Follow-up trên nhánh nêu trên hiện đạt **514 backend**, **49 frontend**, **40/40 P0 regression**, **20/20 shopping sandbox** và smoke backend **27 PASS / 0 FAIL / 3 UNSUPPORTED / 1 NOT RUN**; TypeScript, production build, Ruff, compileall và diff check đều qua. Đây là bằng chứng test/sandbox và một mẫu Groq live nhỏ, không phải độ chính xác khách hàng thật hay chứng nhận production.
+Trong báo cáo đánh giá trước, commit `1757bbd` đạt **490 backend**, **41 frontend**, **40/40 P0 regression** và **20/20 shopping sandbox**. Follow-up trên nhánh nêu trên hiện đạt **519 backend**, **49 frontend**, **40/40 P0 regression**, **20/20 shopping sandbox** và smoke backend **27 PASS / 0 FAIL / 3 UNSUPPORTED / 1 NOT RUN**; TypeScript, production build, Ruff, compileall và diff check đều qua. Groq STT và Azure TTS đã được gọi trực tiếp; các probe này không phải đánh giá độ chính xác tiếng nói trên tập có transcript chuẩn hoặc chứng nhận production.
 
-Giới hạn chính: probe PostgreSQL `SELECT 1` timeout sau khoảng 2 giây và Redis `PING` không kết nối được; demo có 6 sản phẩm; kho WinMart 3.099 dòng là snapshot, không phải tồn kho chi nhánh thời gian thực; ticket nhân viên và payment chỉ là simulator; chat gửi SSE delta sau khi model và backend hoàn tất kiểm tra, chưa stream token trong lúc model đang sinh; voice/STT/TTS và kiosk thật không nằm trong benchmark này.
+Giới hạn chính: probe PostgreSQL `SELECT 1` và Redis `PING` đều timeout sau 2,5 giây; demo có 6 sản phẩm; kho WinMart 3.099 dòng là snapshot, không phải tồn kho chi nhánh thời gian thực; ticket nhân viên và payment chỉ là simulator; chat gửi SSE delta sau khi model và backend hoàn tất kiểm tra, chưa stream token trong lúc model đang sinh. STT/TTS chỉ được đo ở tầng provider; chưa kiểm tra micro thật, phát tiếng trong browser, lip-sync hay E2E kiosk.
 
 ## Follow-up Validation: Session Isolation and Product Disambiguation
 
@@ -32,16 +32,18 @@ Các thay đổi follow-up trên nhánh `codex/session-isolation-ui-hardening` t
 
 | Kiểm tra follow-up | Kết quả | Giới hạn |
 |---|---:|---|
-| Backend pytest | **514 passed** | Catalog demo/in-process; không bao gồm DB production. |
+| Backend pytest | **519 passed** | Catalog demo/in-process; không bao gồm DB production. Có thêm test cho M4A duration và harness TTS. |
 | Frontend Vitest | **49 passed / 6 files** | Component/JSDOM; không phải browser E2E. JSDOM báo các API media/canvas chưa giả lập. |
 | Vue TypeScript + production build | **Pass** | Main JS 171,31 kB (gzip 56,23 kB); avatar/model-viewer ở chunk tải riêng 1.024,05 kB (gzip 290,30 kB), Vite vẫn cảnh báo chunk lớn. |
 | Ruff, compileall, `git diff --check` | **Pass** | Có cảnh báo chuẩn hóa LF/CRLF của Git trên Windows. |
 | PostgreSQL product search v2 | **Không đo được** | Chạy read-only benchmark kết thúc bằng `TimeoutError`; không có Recall/latency mới để báo cáo. |
-| P0 regression | **40/40 pass** (8 nhóm × 5 lượt) | Scripted responses; artifact tạo trên commit `d64b751`: `evaluation/results/p0_regression_20261019T100745Z.json`. |
-| Shopping sandbox | **20/20 pass**, 98 API calls, 0 LLM calls | False-payment 0/4; cross-session leakage 0/4; in-process P50 0,937 ms, P95 9,597 ms. Artifact `evaluation/results/shopping_flow_sandbox_20261019T100744Z.json` ghi commit `d64b751`. |
-| Deterministic smoke benchmark | **27 PASS / 0 FAIL / 3 UNSUPPORTED / 1 NOT RUN** | Bao gồm hội thoại giỏ, tham chiếu món trước, payment sandbox và so sánh hai sản phẩm cùng lượt hỏi “cái nào rẻ hơn”. Scripted Groq/demo catalog; không đo live tool planning. Artifact tạo trên commit `d64b751`: `evaluation/results/smoke_benchmark_coverage_20261019_postpush_d64b751.json`. Ba mục chưa hỗ trợ là FEFO theo lô, knowledge base sản phẩm và RAG; Redis live tách thành NOT RUN. Các artifact trước được giữ nguyên để bảo toàn lịch sử. |
+| P0 regression | **40/40 pass** (8 nhóm × 5 lượt) | Scripted responses; artifact tạo trên commit `4824e63`: `evaluation/results/p0_regression_goal_20261019T102807Z.json`. |
+| Shopping sandbox | **20/20 pass**, 98 API calls, 0 LLM calls | False-payment 0/4; cross-session leakage 0/4; in-process P50 1,146 ms, P95 14,303 ms. Artifact `evaluation/results/shopping_sandbox_goal_20261019T102807Z.json` records `git_worktree_dirty=true` because untracked scratch and historical results were preserved; tracked app/test sources were at `4824e63`. |
+| Deterministic smoke benchmark | **27 PASS / 0 FAIL / 3 UNSUPPORTED / 1 NOT RUN** | Bao gồm hội thoại giỏ, tham chiếu món trước, payment sandbox và so sánh hai sản phẩm cùng lượt hỏi “cái nào rẻ hơn”. Scripted Groq/demo catalog; không đo live tool planning. Artifact tạo trên commit `4824e63`: `evaluation/results/smoke_goal_20261019T102807Z.json`. Ba mục chưa hỗ trợ là FEFO theo lô, knowledge base sản phẩm và RAG; Redis live tách thành NOT RUN. Các artifact cũ được giữ nguyên. |
 | Live product consultation (18/10) | **6/6 HTTP 200; 6/6 grounding/safety assertions**; median 12.473 ms; 7 LLM calls, 6 tool calls | Qwen `qwen/qwen3.8-27b`, fallback bật; PostgreSQL catalog 3.099 rows, 4 tool turns được gọi. Một lượt mỗi case, không chấm naturalness bởi người. Artifact `evaluation/results/live_vietnamese_product_consultation_final_20261018.json`; là kết quả lịch sử, không phải probe DB hiện tại. |
-| External data stores | PostgreSQL **NOT RUN** (read-only `SELECT 1` timeout, ~2,01 s); Redis **NOT RUN** (`PING` connection error, ~2,03 s) | Không ghi các probe là PASS; không khởi động local services. |
+| Live Groq STT | **3/3 request thành công**, `whisper-large-v3-turbo`; median 837 ms, P95 1.965 ms | Audio M4A 47,694 giây; fallback không kích hoạt. 6/6 chủ đề trong phần transcript người dùng gửi được nhận ra khi đối chiếu thủ công, nhưng WER/CER **không được tính là accuracy**: tham chiếu chỉ tới 00:32 và không phải transcript đầy đủ từng từ. Thử so khớp sơ bộ cho WER 0,982/CER 0,865 nhưng không hợp lệ do tham chiếu thiếu; artifact latency-only `evaluation/results/live_groq_stt_service_probe_20261019T102343Z.json` không lưu transcript. |
+| Live Azure TTS | **2/2 lượt tổng hợp và 2/2 stream thành công**; voice `vi-VN-HoaiMyNeural` | Median synth 582 ms, P95 900 ms; first chunk median 152 ms, P95 164 ms; stream hoàn tất median 282 ms, P95 315 ms. Mỗi stream trả 23.184 byte MP3. Chỉ 2 lượt; không đo phát âm/micro/browser. Artifact `evaluation/results/live_azure_tts_benchmark_20261019T102721Z.json` không lưu nội dung câu đọc. |
+| External data stores | PostgreSQL **NOT RUN** (`SELECT 1` hết timeout 2,5 giây); Redis **NOT RUN** (`PING` hết timeout 2,5 giây) | Không ghi các probe là PASS; không khởi động local services. |
 
 Các kiểm thử phiên bao gồm late response sau đổi khách, không replay audio, single-flight boot, đóng phiên khi unmount và luồng UI từ sản phẩm đến thanh toán mô phỏng. Kiểm thử SSE bao gồm byte UTF-8 chia nhỏ, ráp delta và từ chối stream bị cắt trước event hoàn tất. Chúng chưa thay thế kiểm thử trình duyệt, micro thật hoặc backend đang kết nối PostgreSQL/Redis.
 
@@ -212,6 +214,8 @@ Yêu cầu hỗ trợ rõ ràng tạo ticket demo có ID, loại vấn đề, m�
 | Giỏ/hỗ trợ bị hiểu như thật | ShoppingService, SupportTicketStore đánh dấu sandbox/demo; commerce write chỉ dùng demo catalog. | Sandbox 0 false-paid; cross-session checks không leakage. |
 | Snapshot bị hiểu nhầm là store feed | Importer quarantine dữ liệu lỗi, tools gắn source/freshness; campaign/receipt/POI cần feed riêng. | 3.099 rows, 3.081 accepted, 18 quarantine; không dùng promotion text cũ để báo campaign active. |
 | Planogram bị hiểu là vị trí vật lý | Phân biệt RECOMMENDED_PLANOGRAM và SIMULATED; ảnh theo dữ liệu gán SKU/aisle. | Vị trí là đề xuất, chưa xác minh tại cửa hàng. |
+| Benchmark STT không đọc duration của M4A và có thể chấm transcript thiếu | `live_groq_stt_benchmark.py` đọc duration MP4/M4A và ghi rõ WER/CER chỉ hợp lệ khi có transcript nguyên văn đầy đủ. | Unit test hai phiên bản `mvhd`; clip thực được đo 47,694 giây. WER tham chiếu thiếu được đánh dấu không hợp lệ. |
+| Chưa có phép đo tái lập cho TTS streaming | Thêm `evaluation/live_azure_tts_benchmark.py` để đo synth latency, thời gian tới chunk đầu và thời gian stream hoàn tất; artifact không lưu câu đọc. | Hai lượt Azure thật qua; unit test harness xác nhận metric và không lưu text. |
 
 ## 7. Evaluation Methodology
 
@@ -221,7 +225,7 @@ Yêu cầu hỗ trợ rõ ràng tạo ticket demo có ID, loại vấn đề, m�
 - Frontend dùng Vite 8.2.2 và Vitest 4.1.11.
 - API test chạy CATALOG_REPOSITORY=demo với 6 SKU.
 - data/winmart_products.json: 3.099 rows, 3.081 accepted, 18 quarantined; SHA-256 a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6.
-- Live v2 chỉ text tiếng Việt; không mở mic, gọi STT/TTS hoặc đo browser streaming.
+- Live v2 chỉ text tiếng Việt. STT Groq và TTS Azure có probe service-level riêng; không mở mic, đo phát lại trong browser, lip-sync hoặc kiosk E2E.
 - Model-only smoke dùng Qwen qwen/qwen3.8-27b, fallback tắt. Live v2 gọi Groq thật qua API local ASGI; local intent/catalog xử lý phần deterministic.
 
 ### Phân biệt kết quả
@@ -271,7 +275,12 @@ Artifact mới được giữ riêng, không ghi đè lịch sử:
 - evaluation/results/p0_regression_20261019T100745Z.json
 - evaluation/results/shopping_flow_sandbox_20261019T100744Z.json
 - evaluation/results/smoke_benchmark_coverage_20261019_postpush_d64b751.json
+- evaluation/results/p0_regression_goal_20261019T102807Z.json
+- evaluation/results/shopping_sandbox_goal_20261019T102807Z.json
+- evaluation/results/smoke_goal_20261019T102807Z.json
 - evaluation/results/live_groq_model_after_shopping_20261019.json
+- evaluation/results/live_groq_stt_service_probe_20261019T102343Z.json (latency only; transcript not stored)
+- evaluation/results/live_azure_tts_benchmark_20261019T102721Z.json (synthesis and first-chunk timing; text not stored)
 - evaluation/results/smoke_benchmark_followup_20261019.json (runner cũ, diagnostic được giữ nguyên)
 - evaluation/results/smoke_benchmark_followup_20261019_final.json (runner đã sửa)
 - evaluation/results/smoke_benchmark_coverage_20261019.json (coverage đã đối chiếu lại với runtime)
@@ -289,7 +298,7 @@ Artifact mới được giữ riêng, không ghi đè lịch sử:
 | Payment | Không có bank webhook. | Sandbox giữ PENDING; LLM không đặt PAID. Chưa có payment provider, không gửi QR thật. |
 | Customer support | Ticket simulator không liên hệ nhân viên/CRM. | Response ghi rõ demo; cần queue có ack nếu triển khai handoff thật. |
 | Security | Guard chặn các injection đã nhận diện, gồm bypass verification. | Chưa penetration test, chưa đánh giá injection gián tiếp từ feed/catalog. |
-| UI/voice | Text UI nhận SSE delta sau khi backend hoàn tất kiểm tra; chưa đo browser/mic/TTS/lip-sync thực. Lượt browser E2E trên `127.0.0.1` bị URL security policy từ chối nên không chạy. | SSE không stream token khi model đang sinh; cần browser E2E, latency tới first validated text/audio trên thiết bị thật. |
+| UI/voice | Text UI nhận SSE delta sau khi backend hoàn tất kiểm tra. STT/TTS được probe trực tiếp ở tầng provider; browser E2E với `127.0.0.1` bị URL security policy từ chối. Tham chiếu STT chỉ là excerpt, nên không có điểm WER/CER hợp lệ. | SSE không stream token khi model đang sinh; cần browser E2E, transcript chuẩn toàn clip, micro thật, phát audio và lip-sync trên thiết bị thật. |
 | Latency | Median live thấp do nhiều route local; một query Groq mất khoảng 9,7 giây. | Tách provider/local ASGI; cần benchmark nhiều lượt trên mạng/thiết bị thật. |
 
 ## 10. Limitations and Future Work
@@ -313,17 +322,17 @@ Artifact mới được giữ riêng, không ghi đè lịch sử:
 
 ### Chưa xác minh
 
-Không có load test production, payment thật, POS, PostgreSQL/Redis live, staff CRM, microphone/TTS, network latency, user study hay full BFCL/ShoppingBench/Shopping Reasoning Bench. Không tuyên bố production-ready.
+Không có load test production, payment thật, POS, PostgreSQL/Redis live, staff CRM, transcript STT chuẩn đầy đủ, microphone/browser voice E2E, lip-sync, user study hay full BFCL/ShoppingBench/Shopping Reasoning Bench. Không tuyên bố production-ready.
 
 ## 11. Reproducibility
 
 ### Mã nguồn và cấu hình
 
-- Branch `codex/session-isolation-ui-hardening`; code follow-up được benchmark gần nhất là commit `d64b7514b3ee415c3d868085607af651ef571a12`. Các artifact P0, shopping sandbox và smoke nêu ở trên được tạo sau commit này. Artifact shopping ghi `git_worktree_dirty=true` vì báo cáo đang được cập nhật và còn file benchmark/scratch untracked; tracked application/test code không thay đổi tại thời điểm chạy.
+- Branch `codex/session-isolation-ui-hardening`; implementation đánh giá được benchmark ở commit `4824e630e973983fd2f4ec31618c68f8423a3eed`. Các artifact P0, shopping sandbox và smoke ở mục 8 được chạy sau commit này. Shopping artifact ghi `git_worktree_dirty=true` vì các file scratch/kết quả cũ chưa track được giữ nguyên; không có thay đổi tracked ở app/test code tại lúc benchmark. Commit báo cáo cuối chỉ bổ sung tài liệu/kết quả.
 - Base commit của phần follow-up: `98ee7ef8e416cde3f2afd3bf0cc4845fe78d485f`.
 - Báo cáo đánh giá cũ giữ riêng tại `docs/reports/archive/`; follow-up được commit trên nhánh feature này.
 - Runtime test dùng catalog demo với CATALOG_REPOSITORY=demo.
-- Live Groq cần key trong .env; báo cáo và artifact không chứa giá trị key.
+- Live Groq và Azure Speech cần key trong `.env`; báo cáo và artifact không chứa giá trị key.
 - PostgreSQL/Redis live probe không khả dụng; không dùng chúng để tạo kết quả pass giả.
 - Python 3.13.15, Node 24.21.0, npm 11.19.0.
 
@@ -347,14 +356,16 @@ npm run build
 $env:CATALOG_REPOSITORY = 'demo'
 .venv\Scripts\python.exe evaluation\run_p0_regressions.py --trials-per-case 5
 .venv\Scripts\python.exe evaluation\run_shopping_flow_benchmark.py --trials 2
-.venv\Scripts\python.exe evaluation\run_smoke_benchmark.py --output evaluation\results\smoke_benchmark_coverage_20261019_postpush_d64b751.json
+.venv\Scripts\python.exe evaluation\run_smoke_benchmark.py --output evaluation\results\smoke_benchmark_coverage_reproduced.json
 .venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark --case-file evaluation\cases\vietnamese_retail_shopping_v2.json --pace-seconds 9 --output evaluation\results\live_text_retail_v2_reproduced.json
 .venv\Scripts\python.exe -m evaluation.run_product_search_benchmark --cases evaluation\cases\product_resolution_v2.jsonl --output evaluation\results\product_search_benchmark_v2.json
+.venv\Scripts\python.exe evaluation\live_groq_stt_benchmark.py --audio <audio.m4a> --language vi --trials 3 --omit-transcription
+.venv\Scripts\python.exe evaluation\live_azure_tts_benchmark.py --language vi --trials 2
 ~~~
 
 Demo: terminal backend đặt CATALOG_REPOSITORY=demo rồi chạy uvicorn backend.api.main:app --reload; terminal frontend chạy npm run dev trong apps/kiosk-airi. Demo không thay database URL hay bật giao dịch thật.
 
-Artifact tái lập nằm trong evaluation/results với timestamp ở mục 8. Dùng tên output mới, không ghi đè lịch sử. Báo cáo customer-care cũ được giữ tại docs/reports/archive/.
+Artifact tái lập nằm trong `evaluation/results` với timestamp ở mục 8. STT accuracy chỉ chấm khi `--reference-file` là transcript nguyên văn đầy đủ của đúng audio; nếu không thì giữ latency-only. Dùng tên output mới, không ghi đè lịch sử. Báo cáo customer-care cũ được giữ tại `docs/reports/archive/`.
 
 ## 12. References
 
