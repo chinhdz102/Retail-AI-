@@ -181,6 +181,12 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "con chua",
             "con may",
             "con nhieu",
+            "con may chai",
+            "con may lon",
+            "con may hop",
+            "con may goi",
+            "con may ly",
+            "con may cai",
             "ton kho",
             "ton bao nhieu",
             "so luong ton",
@@ -203,7 +209,9 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
         or re.search(r"\bco san\b.{0,40}\bkhong\b", normalized)
         or re.search(r"\bcon\s+\d+\s+(?:chai|lon|hop|goi|ly|cai)\b", normalized)
     )
-    remaining_quantity_question = _has_phrase(normalized, ("con bao nhieu",))
+    remaining_quantity_question = _has_phrase(normalized, ("con bao nhieu",)) or bool(
+        re.search(r"\bcon\s+may\s+(?:chai|lon|hop|goi|ly|cai)\b", normalized)
+    )
     remaining_amount_is_price = (
         _has_phrase(normalized, ("con bao nhieu tien", "con bao nhieu dong"))
         or bool(

@@ -9,15 +9,15 @@
 
 Vòng này tách renderer câu trả lời catalog sang module riêng; làm cho cảnh báo giá/tồn/khuyến mãi chỉ xuất hiện một lần cho cùng snapshot trong một session; giữ lại caveat khi đổi sản phẩm, dữ liệu hoặc session; và lưu trạng thái disclosure qua Redis serializer. So sánh giá/tồn được nhận diện tường minh. Khi hỏi cảm nhận vị hoặc món bán chạy mà không có số liệu, Sky từ chối kết luận thay vì suy đoán. Câu hỏi dị ứng không nêu rõ mặt hàng được hỏi tên sản phẩm trước; câu hỏi sức khỏe và công dụng không có dữ liệu tiếp tục được trả lời bằng cách nói rõ chưa xác minh.
 
-Kết quả trên mã hiện tại:
+Kết quả kiểm tra mã sau follow-up:
 
-- Backend: **619 passed** với CATALOG_REPOSITORY=demo.
+- Backend: **628 passed** với CATALOG_REPOSITORY=demo.
 - Frontend: **49 passed**; vue-tsc và production build thành công.
 - Ruff và compileall: thành công.
 - P0: **40/40**; shopping sandbox: **10/10**, không xác nhận thanh toán giả và không rò dữ liệu session trong các assertion đã chạy.
 - Offline product retrieval trên snapshot: Recall@1/3/5 đều **28/28**, MRR **1.0**.
-- Live Groq development: **41 phiên, 203 lượt; 203/203 HTTP 200 và 203/203 assertion** sau khi sửa tiêu chí tiếng Anh “rating” thành tiếng Việt “đánh giá vị”.
-- Live Groq held-out: **10 phiên, 49 lượt; 47/49 HTTP 200 và chỉ 23/49 assertion đạt**. Có 2 lượt HTTP 502 khi cả các model được cấu hình đều bị rate limit. Kết quả này cho thấy khả năng tổng quát hóa còn yếu; không được xem là hoàn thành chất lượng hội thoại.
+- Live Groq development trước follow-up: **41 phiên, 203 lượt; 203/203 HTTP 200 và 203/203 assertion** sau khi sửa tiêu chí tiếng Anh “rating” thành tiếng Việt “đánh giá vị”. Bộ dev bổ sung sau follow-up đạt **16/16 assertion** trên 4 phiên mới; chi tiết ở mục M.
+- Live held-out trước follow-up: **10 phiên, 49 lượt; 47/49 HTTP 200 và 23/49 assertion đạt**. Có 2 lượt HTTP 502 khi các model được cấu hình đều bị rate limit. Held-out không được chạy lại cho code mới; kết quả này không đại diện cho code sau follow-up.
 - Không có giao dịch thanh toán thật. PostgreSQL/Redis thật, streaming token thật, STT/TTS end-to-end và review thủ công độc lập chưa được xác minh ở vòng này.
 
 ## B. Repository & Branch Audit
@@ -136,7 +136,7 @@ Pacing giữa các request là 9 giây để giảm rate limit và không nằm 
 |---|---|---|
 | P1 | Held-out intent/context resolution | 26/49 assertion fail; gồm 6/6 multi-intent, 5/6 product correction, 4/5 dialect/typo, 4/5 freshness, 4/6 multi-item checkout. Mất đối tượng khiến các lượt sau trả sai sản phẩm hoặc dừng luồng. |
 | P1 | Rate limit/fallback | 2 lượt held-out trả 502; 18 fallback attempt lỗi. Hiện chưa đảm bảo phục vụ khi Qwen, OSS120B và OSS20B cùng bị giới hạn. |
-| P2 | Lặp câu hỏi làm rõ dị ứng | Dev đã kiểm tra: sau khi hỏi tên món, các lượt tiếp tục vẫn hỏi tên món thay vì nói chưa xác minh và hướng dẫn xem nhãn. |
+| P2 | Làm rõ dị ứng | Baseline của bộ dev bổ sung lặp câu hỏi; follow-up đã sửa để hỏi tên món một lần rồi abstain. Kịch bản đó đạt assertion, nhưng cần thêm biến thể dị ứng và chấm người dùng trước khi khái quát rộng. |
 | P2 | Manual quality coverage | Mới spot-review 10 dev sessions và các held-out failure; chưa có người chấm độc lập toàn bộ 252 lượt. |
 | P2 | Runtime data integration | PostgreSQL/Redis thật chưa kết nối được; số offline không đại diện DB production. |
 
@@ -150,8 +150,8 @@ Không có P0 security regression trong run P0/shopping sandbox hiện tại. K�
 
 ## K. Remaining Work
 
-1. Sửa general intent/entity binding cho câu nhiều ý, deictic follow-up, correction và slang/typo; phát triển trên dev hoặc tập mới, không chỉnh rule theo held-out hiện tại.
-2. Làm rõ dị ứng một lần; nếu người dùng vẫn chưa nêu mặt hàng thì nói chưa có dữ liệu xác minh và gợi ý xem nhãn, không hỏi lặp.
+1. Đã sửa các trường hợp mới cho multi-intent/freshness, sửa product, đổi context và “còn mấy chai/lon”; đánh giá tiếp trên bộ held-out mới với typo/slang vùng miền và câu tương tự nhưng không dùng lại held-out cũ để tune.
+2. Đã sửa kịch bản dị ứng chưa nêu sản phẩm: hỏi tên một lần, rồi abstain nếu chưa rõ; cần mở rộng thêm mặt hàng, cách gọi dị ứng và kiểm tra người dùng.
 3. Xác minh retry/backoff, quota và lỗi 502 khi tất cả model fallback bị rate limit.
 4. Chạy PostgreSQL product benchmark trên catalog đã import; hiện chỉ có offline snapshot/demo.
 5. Probe Redis thật và chạy kiểm thử tích hợp.
@@ -190,3 +190,26 @@ Artifacts:
 - [Held-out cases](../../evaluation/cases/vietnamese_text_sales_flow_v3_heldout.json)
 
 Dev grader chỉ đổi yêu cầu cụm “rating” sang “đánh giá vị” để khớp ngôn ngữ được hỗ trợ; held-out không bị chỉnh. Live trace không gồm secret. Benchmark local dùng demo catalog; PostgreSQL/Redis production, token-streaming TTFT, STT/TTS và human panel chưa chạy.
+
+## M. Follow-up development evaluation — 19/10/2026
+
+Sau revision `c9cd1ad`, tạo một bộ phát triển mới gồm **4 phiên / 16 lượt** để xử lý các lỗi context đã phát hiện mà không sửa hoặc chạy lại held-out. Thay đổi gồm: hỏi tên mặt hàng dị ứng một lần rồi abstain nếu người dùng chưa nêu tên; nhận câu tồn kho dạng “còn mấy chai/lon”; giữ trường thông tin đang hỏi khi người dùng sửa tên sản phẩm; giữ mục tiêu của câu hỏi giá+kệ khi hỏi ngày cập nhật; và quay lại một sản phẩm đã nêu trước đó sau khi đổi chủ đề.
+
+| Chạy trên bộ mới | HTTP 200 | Assertion grounding/safety | Median request | LLM calls |
+|---|---:|---:|---:|---:|
+| Baseline `c9cd1ad` | 16/16 | 8/16 | 46 ms | 3 |
+| Sau sửa | 16/16 | 16/16 | 47 ms | 0 |
+
+Lượt sau vẫn đi qua API, session state và demo catalog. Toàn bộ các yêu cầu trong bộ này được trả lời bằng nhánh deterministic/catalog; benchmark không gọi model Groq trong lượt sau, vì vậy kết quả này đo việc định tuyến và giữ ngữ cảnh của backend, không đo chất lượng suy luận live của LLM. Median là thời gian xử lý request trong local process, không bao gồm thời gian người dùng nói hoặc mạng production.
+
+Kiểm tra bổ sung trên mã sau sửa: **628 backend tests passed**; Ruff và `compileall` thành công; P0 regression **40/40** (8 kịch bản × 5 lượt); shopping sandbox **10/10**, 49 API requests, không gọi LLM, 2/2 kiểm tra payment và 2/2 kiểm tra session isolation đạt.
+
+Held-out **không được chạy lại hoặc dùng để chỉnh rule** trong follow-up này. Điểm 23/49 và 47/49 HTTP của held-out ở các phần trên thuộc lần chạy revision trước `c9cd1ad`; không nên diễn giải đó là điểm số held-out của code sau follow-up. Cần đánh giá trên một bộ held-out mới trước khi kết luận khả năng tổng quát hóa đã cải thiện.
+
+Artifacts mới:
+
+- [Development cases, 4 phiên / 16 lượt](../../evaluation/cases/vietnamese_text_sales_recovery_dev_v1.json)
+- [Baseline live API trace, 8/16](../../evaluation/results/recovery_dev_v1_baseline_live_20261019.json)
+- [Sau sửa live API trace, 16/16](../../evaluation/results/recovery_dev_v1_after_live_20261019.json)
+- [P0 regression sau sửa](../../evaluation/results/recovery_dev_v1_p0_20261019.json)
+- [Shopping sandbox sau sửa](../../evaluation/results/recovery_dev_v1_shopping_20261019.json)

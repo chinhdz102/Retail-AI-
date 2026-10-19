@@ -1,0 +1,114 @@
+{
+  "dataset_id": "retail_vietnamese_text_sales_recovery_dev_v1",
+  "language_scope": "Vietnamese only",
+  "description": "Four new development sessions for clarification recovery, compound product questions, target correction, and context switching. Not part of held-out evaluation.",
+  "catalog_scope": "backend/products/catalog.py demo catalog; no live PostgreSQL claims",
+  "cases": [
+    {
+      "case_id": "recovery_allergen_once",
+      "tags": ["dev", "clarification", "allergen", "context_recovery"],
+      "turns": [
+        {
+          "text": "Mình dị ứng hạt, trong snack có thành phần nào cần tránh?",
+          "must_contain": ["sản phẩm nào"],
+          "must_not_contain": ["không gây dị ứng", "an toàn tuyệt đối"],
+          "no_tools_expected": true
+        },
+        {
+          "text": "Mình chưa nhớ tên, bạn đừng đoán nhé.",
+          "must_contain": ["chưa có dữ liệu đã xác minh"],
+          "must_not_contain": ["sản phẩm nào", "không gây dị ứng", "an toàn tuyệt đối"],
+          "no_tools_expected": true
+        },
+        {
+          "text": "Coca Zero giá sao?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["13.000"]
+        },
+        {
+          "text": "Kệ nào vậy?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["A2-L2"]
+        }
+      ]
+    },
+    {
+      "case_id": "compound_price_shelf_freshness",
+      "tags": ["dev", "multi_intent", "catalog_grounding", "context"],
+      "turns": [
+        {
+          "text": "Cà phê sữa pha sẵn 235ml giá bao nhiêu và nằm ở kệ nào?",
+          "expected_product_ids": ["COFFEE01"],
+          "must_contain": ["16.000", "A3-L2"]
+        },
+        {
+          "text": "Dữ liệu này được cập nhật hôm nào?",
+          "expected_product_ids": ["COFFEE01"],
+          "must_contain": ["31/08/2026"]
+        },
+        {
+          "text": "Còn mấy chai vậy?",
+          "expected_product_ids": ["COFFEE01"],
+          "must_contain": ["18", "bán được"]
+        },
+        {
+          "text": "Thành phần của chai đó là gì?",
+          "expected_product_ids": ["COFFEE01"],
+          "must_contain": ["cà phê", "sữa"]
+        }
+      ]
+    },
+    {
+      "case_id": "correction_retains_product_question",
+      "tags": ["dev", "product_correction", "multi_turn", "context"],
+      "turns": [
+        {
+          "text": "Coca Zero giá bao nhiêu?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["13.000"]
+        },
+        {
+          "text": "À nhầm, mình đang hỏi nước suối 500ml.",
+          "expected_product_ids": ["WATER01"],
+          "must_contain": ["7.000"]
+        },
+        {
+          "text": "Còn mấy chai có thể bán?",
+          "expected_product_ids": ["WATER01"],
+          "must_contain": ["40", "bán được"]
+        },
+        {
+          "text": "Nó nằm ở kệ nào?",
+          "expected_product_ids": ["WATER01"],
+          "must_contain": ["A1-L1"]
+        }
+      ]
+    },
+    {
+      "case_id": "switch_product_and_return_to_previous",
+      "tags": ["dev", "context_switch", "multi_turn", "grounding"],
+      "turns": [
+        {
+          "text": "Coca Zero giá sao?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["13.000"]
+        },
+        {
+          "text": "Cà phê sữa pha sẵn 235ml ở vị trí nào?",
+          "expected_product_ids": ["COFFEE01"],
+          "must_contain": ["A3-L2"]
+        },
+        {
+          "text": "Giá của nó là bao nhiêu?",
+          "expected_product_ids": ["COFFEE01"],
+          "must_contain": ["16.000"]
+        },
+        {
+          "text": "Quay lại Coca Zero nhé, còn bán được mấy lon?",
+          "expected_product_ids": ["COKE_ZERO_330"],
+          "must_contain": ["16", "lon"]
+        }
+      ]
+    }
+  ]
+}
