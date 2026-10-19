@@ -26,6 +26,7 @@ from backend.services.vietnamese_intent import (
         ("Coca Zero nhiu z?", ("price_vnd",)),
         ("Coca Zero bn vậy?", ("price_vnd",)),
         ("Coca Zero 13k à?", ("price_vnd",)),
+        ("Nước suối 500ml, dữ liệu giá ghi nhận ngày nào?", ("data_timestamp",)),
         ("Coca Zero còn hàng chứ?", ("stock",)),
         ("Coca Zero còn bán được không?", ("stock",)),
         ("Ở đây còn bán loại này không?", ("stock",)),
@@ -189,6 +190,14 @@ def test_explicit_recommendation_language_forces_tool_even_without_extra_filters
         ),
         (
             "Tui phân vân cà phê dưới hai chục, chọn dùm với.",
+            {
+                "category": "drink",
+                "query": "ca phe",
+                "price_constraint": {"operator": "LT", "value_vnd": 20_000},
+            },
+        ),
+        (
+            "Tư vấn cà phê sữa chai nào dưới 20 nghìn.",
             {
                 "category": "drink",
                 "query": "ca phe",

@@ -108,6 +108,68 @@ def _quantity_and_query(value: str) -> tuple[int, str]:
     return quantity, query
 
 
+def _explicit_quantity(value: str) -> bool:
+    tokens = normalize_vietnamese(value).split()
+    return bool(tokens and (tokens[0].isdigit() or tokens[0] in _NUMBER_WORDS))
+
+
+def _implicit_purchase_action(text: str) -> ShoppingAction | None:
+    """Parse clear "I'll take/buy …" requests as cart additions.
+
+    The parser deliberately requires an explicit purchase verb and a named
+    product. Questions about price, availability, or where to buy remain
+    lookups, even when they contain the word "mua".
+    """
+    if "?" in text or "？" in text:
+        return None
+    normalized = normalize_vietnamese(text)
+    match = re.match(
+        r"^(?:(?:minh|toi|em|anh|chi)\s+)?(?:lay|mua|them)\s+(.+?)\s*[.!?]*$",
+        normalized,
+    )
+    if match:
+        payload = match.group(1).strip()
+    else:
+        polite_purchase = re.match(
+            r"^cho\s+(?:minh|toi|em|anh|chi)\s+(.+?)\s*[.!?]*$",
+            normalized,
+        )
+        if polite_purchase is None:
+            return None
+        payload = polite_purchase.group(1).strip()
+        if not re.match(r"^(?:\d+|mot|hai|ba|bon|tu|nam|sau|bay|tam|chin|muoi)\s+\S+", payload):
+            return None
+
+    if re.search(
+        r"\b(?:gia|bao nhieu|nhieu tien|o dau|cho nao|con hang khong|"
+        r"con khong|het chua|mua gi|nen mua|co loai nao|co mon nao|"
+        r"phai|bi|nham|het han|bao nhan vien|phan anh|khieu nai|doi tra|"
+        r"loi|hong|complaint|issue)\b",
+        payload,
+    ):
+        return None
+
+    payload = _strip_filler(payload)
+    parts = re.split(
+        r"\s*(?:,|;|\bva\b|\bvoi\b|\bcung\b|\band\b|\bplus\b)\s*",
+        payload,
+        flags=re.IGNORECASE,
+    )
+    parsed_items = []
+    for part in parts:
+        quantity, query = _quantity_and_query(part)
+        if not query or not 1 <= quantity <= 20:
+            return None
+        if query in {"hang", "mon", "san pham", "do"}:
+            return None
+        parsed_items.append((query, quantity))
+
+    if len(parsed_items) > 1:
+        return ShoppingAction(ShoppingActionType.ADD_ITEM, line_items=tuple(parsed_items))
+    query, quantity = parsed_items[0]
+    return ShoppingAction(ShoppingActionType.ADD_ITEM, query=query, quantity=quantity)
+
+
 def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction | None:
     normalized = normalize_vietnamese(text)
     compact = " ".join(normalized.split())
@@ -149,7 +211,7 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
     }:
         return ShoppingAction(ShoppingActionType.CONFIRM_CHECKOUT)
 
-    if state == SessionState.PAYMENT_PENDING and any(
+    if any(
         phrase in compact
         for phrase in (
             "kiem tra thanh toan",
@@ -175,18 +237,24 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
     ):
         return ShoppingAction(ShoppingActionType.CANCEL_CHECKOUT)
 
-    if any(
-        phrase in compact
-        for phrase in (
-            "xem gio",
-            "gio hang co gi",
-            "trong gio co gi",
-            "gio hang cua toi",
-            "gio hang cua minh",
-            "cart summary",
-            "show my cart",
-            "view cart",
+    if (
+        any(
+            phrase in compact
+            for phrase in (
+                "gio hang co gi",
+                "trong gio co gi",
+                "gio hang cua toi",
+                "gio hang cua minh",
+                "cart summary",
+                "show my cart",
+                "view cart",
+            )
         )
+        or re.search(
+            r"\b(?:xem|mo|show|open|view|check)\b.{0,32}\b(?:gio(?:\s+hang)?|cart)\b",
+            compact,
+        )
+        or (state == SessionState.CART_ACTIVE and "tong tien" in compact)
     ):
         return ShoppingAction(ShoppingActionType.VIEW_CART)
 
@@ -227,6 +295,10 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
         quantity, query = _quantity_and_query(cleaned_query)
         return ShoppingAction(ShoppingActionType.ADD_ITEM, query=query, quantity=quantity)
 
+    implicit_purchase = _implicit_purchase_action(text)
+    if implicit_purchase is not None:
+        return implicit_purchase
+
     remove_match = re.search(
         r"\b(?:bo|xoa|lay)\s+(.+?)\s+(?:khoi|ra khoi)\s+(?:cai\s+)?gio(?:\s+hang)?\b|"
         r"\bremove\s+(.+?)\s+from\s+(?:my\s+)?cart\b",
@@ -234,21 +306,41 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
         flags=re.IGNORECASE,
     )
     if remove_match:
-        query = _strip_filler(next((part for part in remove_match.groups() if part), ""))
-        return ShoppingAction(ShoppingActionType.REMOVE_ITEM, query=query)
+        raw_query = _strip_filler(next((part for part in remove_match.groups() if part), ""))
+        has_quantity = _explicit_quantity(raw_query)
+        quantity, query = _quantity_and_query(raw_query)
+        return ShoppingAction(
+            ShoppingActionType.REMOVE_ITEM,
+            query=query,
+            quantity=quantity if has_quantity else None,
+        )
+
+    implicit_remove_match = re.search(r"\b(?:bo|xoa|lay)\s+(.+?)\s+(?:ra|di)\b", normalized)
+    if state == SessionState.CART_ACTIVE and implicit_remove_match:
+        raw_query = _strip_filler(implicit_remove_match.group(1))
+        has_quantity = _explicit_quantity(raw_query)
+        quantity, query = _quantity_and_query(raw_query)
+        return ShoppingAction(
+            ShoppingActionType.REMOVE_ITEM,
+            query=query,
+            quantity=quantity if has_quantity else None,
+        )
 
     update_match = re.search(
-        r"\b(?:doi|dat|cap nhat)\s+(.+?)\s+(?:thanh|len|ve)\s+(\d+)\b",
+        r"\b(?:doi|dat|cap nhat|tang|giam|set|increase|decrease)\s+(.+?)\s+"
+        r"(?:thanh|len|ve|to)\s+(\d+|mot|hai|ba|bon|tu|nam|sau|bay|tam|chin|muoi)\b"
+        r"(?:\s+(?:chai|lon|hop|goi|ly|cai|bottle|box|pack|can))?",
         normalized,
     )
     if update_match and (
         "gio" in compact or "cart" in compact or state == SessionState.CART_ACTIVE
     ):
         query = _strip_filler(update_match.group(1))
+        amount = update_match.group(2)
         return ShoppingAction(
             ShoppingActionType.SET_QUANTITY,
             query=query,
-            quantity=int(update_match.group(2)),
+            quantity=int(amount) if amount.isdigit() else _NUMBER_WORDS[amount],
         )
 
     if any(
