@@ -449,3 +449,35 @@ Artifacts:
 - [Snapshot data](../../data/winmart_products.json)
 - [Snapshot repository implementation](../../backend/products/snapshot_repository.py)
 - [Frontend freshness labels](../../apps/kiosk-airi/src/components/ChatPanel.vue)
+
+## T. Kết quả kiểm thử song song cuối — 20/10/2026
+
+### Kết quả
+
+| Hạng mục | Kết quả |
+|---|---:|
+| Backend offline pytest (loại các suite live Groq/Azure) | **705 passed / 0 failed** |
+| Frontend Vitest | **49 passed / 6 files** |
+| Frontend typecheck và production build | Pass; còn cảnh báo chunk `model-viewer` 1.024 kB vượt ngưỡng 500 kB |
+| Ruff, Python compileall, `git diff --check` | Pass |
+| P0 regressions | **40/40 pass**, 8 ca × 5 lượt |
+| Shopping flow sandbox | **100/100 pass**; false payment 0/20, rò rỉ chéo phiên 0/20, không gọi LLM |
+| Runtime catalog retrieval | R@1/R@3/R@5 **1.000/1.000/1.000**; gold-set recall@3/@5 **0.9777/0.9866**; expected behavior **4/4** |
+| Hội thoại Groq tiếng Việt | **50/50 lượt** HTTP 200 và qua assertion grounding/safety; 10 phiên, 2 lượt gọi LLM |
+
+Shopping sandbox ghi nhận p50/p95 **1.74/23.86 ms** trên 490 API calls. Runtime catalog benchmark ghi median/p95 **9.77/242.07 ms**. Hội thoại live có p50 **74 ms**; các lượt cần LLM chậm hơn đáng kể và lượt chạy gặp primary rate limit, sau đó credential fallback xử lý thành công.
+
+### Diễn giải và giới hạn
+
+- Live suite kiểm tra tìm sản phẩm/biến thể, giá, kệ đề xuất, tồn kho cũ, khuyến mãi, tư vấn, chọn quy cách, câu hỏi sản phẩm không có, prompt injection và chuyển tiếp chăm sóc khách hàng. Đây là development set đã dùng để chỉnh sửa, không phải held-out mù; 50/50 không phải ước lượng tỷ lệ hallucination ngoài thực tế.
+- Hai trong 50 lượt gọi LLM; phần lớn kết quả đến từ tra cứu và xử lý deterministic. Bộ này có kiểm tra model chọn tool và đối số ở một tình huống, nhưng chưa đủ để kết luận khả năng chọn tool tổng quát hoặc độ tự nhiên trên nhiều giọng địa phương. Cần thêm tập held-out và người đánh giá hội thoại.
+- Catalog là snapshot WinMart ngày **15/09/2026**. Giá là tham khảo; tồn kho, giá hiện tại, khuyến mãi còn hiệu lực và vị trí kệ vật lý không được xác nhận nếu thiếu nguồn live.
+- Test shopping là sandbox, không thực hiện thanh toán thật. PostgreSQL/live inventory, hiệu năng qua mạng, microphone/STT/TTS và triển khai production không thuộc lần xác minh này.
+
+### Artifacts lần chạy cuối
+
+- [Live conversation benchmark](../../evaluation/results/v6_final_snapshot_dev_live_20261020.json)
+- [Development conversation cases](../../evaluation/cases/vietnamese_text_sales_flow_v6_snapshot_dev_20261020.json)
+- [P0 regression benchmark](../../evaluation/results/v6_verified_p0_demo_20261020.json)
+- [Shopping sandbox benchmark](../../evaluation/results/v6_verified_shopping_20261020.json)
+- [Runtime catalog benchmark](../../evaluation/results/v6_verified_runtime_catalog_20261020.json)

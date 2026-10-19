@@ -1,0 +1,931 @@
+{
+  "kind": "runtime_catalog_resolution_benchmark",
+  "generated_at_utc": "2026-10-19T19:52:00.656018+00:00",
+  "mode": "offline_configured_snapshot_repository",
+  "postgresql_integration": "NOT_RUN",
+  "source_file": "C:\\Users\\Chinhdz\\Desktop\\retail\\Retail-AI--main\\Retail-AI--main\\data\\winmart_products.json",
+  "source_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "case_file": "C:\\Users\\Chinhdz\\Desktop\\retail\\Retail-AI--main\\Retail-AI--main\\evaluation\\cases\\product_resolution_v3_offline.jsonl",
+  "case_count": 28,
+  "top_k": 5,
+  "catalog": {
+    "repository": "winmart_json_snapshot",
+    "accepted_products": 3081,
+    "quarantined_rows": 18,
+    "current_stock_supported": false,
+    "spice_filter_supported": false
+  },
+  "metrics": {
+    "recall_at_1": 1.0,
+    "recall_at_3": 1.0,
+    "recall_at_5": 1.0,
+    "gold_set_recall_at_3": 0.9777,
+    "gold_set_recall_at_5": 0.9866,
+    "mrr": 1.0,
+    "ambiguity_rate": 0.1786,
+    "expected_behavior_passes": 4,
+    "expected_behavior_cases": 4,
+    "median_latency_ms": 9.7735,
+    "p95_latency_ms": 242.069
+  },
+  "failures": [],
+  "cases": [
+    {
+      "case_id": "product_id_exact",
+      "query": "WIN_10005885",
+      "kind": "identifier",
+      "gold_product_ids": [
+        "WIN_10005885"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10005885",
+          "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+          "uom": "Gói",
+          "score": 1000.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 1.0308
+    },
+    {
+      "case_id": "item_no_exact",
+      "query": "10005885",
+      "kind": "identifier",
+      "gold_product_ids": [
+        "WIN_10005885"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10005885",
+          "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+          "uom": "Gói",
+          "score": 1000.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 0.0781
+    },
+    {
+      "case_id": "barcode_exact",
+      "query": "8938502525016",
+      "kind": "identifier",
+      "gold_product_ids": [
+        "WIN_10005885"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10005885",
+          "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+          "uom": "Gói",
+          "score": 1000.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 0.0685
+    },
+    {
+      "case_id": "name_accented_exact",
+      "query": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+      "kind": "exact_name",
+      "gold_product_ids": [
+        "WIN_10005885"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10005885",
+          "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+          "uom": "Gói",
+          "score": 900.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 0.2174
+    },
+    {
+      "case_id": "name_accentless_exact",
+      "query": "banh bao nhan thit heo trung cut tho phat goi 250g",
+      "kind": "accentless_name",
+      "gold_product_ids": [
+        "WIN_10005885"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10005885",
+          "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+          "uom": "Gói",
+          "score": 900.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 0.1636
+    },
+    {
+      "case_id": "name_prefix",
+      "query": "banh bao nhan thit heo",
+      "kind": "prefix_or_partial",
+      "gold_product_ids": [
+        "WIN_10005885"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10005885",
+          "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+          "uom": "Gói",
+          "score": 800.0
+        },
+        {
+          "product_id": "WIN_10007184",
+          "name": "Bánh bao Malai nhân xíu mại thịt heo 300g",
+          "uom": "Gói",
+          "score": 14.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 147.8745
+    },
+    {
+      "case_id": "transposed_typo_coca_zero",
+      "query": "coca zreo pet 600ml",
+      "kind": "typo",
+      "gold_product_ids": [
+        "WIN_10194711"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10194711",
+          "name": "Nước Giải Khát Coca-Cola Zero Pet 600ml",
+          "uom": "Chai",
+          "score": 13.25
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 10.9292
+    },
+    {
+      "case_id": "typo_lays_classic",
+      "query": "lays clasic 150g",
+      "kind": "typo",
+      "gold_product_ids": [
+        "WIN_10194182"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10194182",
+          "name": "Khoai tây LAY'S vị tự nhiên classic 150g",
+          "uom": "Gói",
+          "score": 10.7692
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 9.9137
+    },
+    {
+      "case_id": "brand_and_product_cosy_dau",
+      "query": "cosy dau 132g",
+      "kind": "brand_and_product",
+      "gold_product_ids": [
+        "WIN_10013649"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10013649",
+          "name": "Bánh quế vị kem dâu Cosy gói 132g",
+          "uom": "Gói",
+          "score": 8.0
+        },
+        {
+          "product_id": "WIN_10013650",
+          "name": "Bánh quế vị kem lá dứa Cosy gói 132g",
+          "uom": "Gói",
+          "score": 8.0
+        },
+        {
+          "product_id": "WIN_10013652",
+          "name": "Bánh quế vị kem socola Cosy Kinh Đô gói 132g",
+          "uom": "Gói",
+          "score": 8.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": true,
+      "expected_behavior_pass": null,
+      "latency_ms": 0.8556
+    },
+    {
+      "case_id": "brand_match_teppy",
+      "query": "minute maid teppy",
+      "kind": "brand_and_product",
+      "gold_product_ids": [
+        "WIN_10011287"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10011287",
+          "name": "Nước cam có tép Teppy Minute Maid chai  1 lít",
+          "uom": "Chai",
+          "score": 11.0
+        },
+        {
+          "product_id": "WIN_10011288",
+          "name": "Lốc 6 chai nước cam có tép Teppy 327ml",
+          "uom": "Gói 6",
+          "score": 7.8
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 0.4216
+    },
+    {
+      "case_id": "name_accentless_coffee",
+      "query": "ca phe sua birdy 170ml",
+      "kind": "accentless_name",
+      "gold_product_ids": [
+        "WIN_10012923"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10012923",
+          "name": "Cà phê sữa  Birdy lon 170ml",
+          "uom": "Lon",
+          "score": 17.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 140.7738
+    },
+    {
+      "case_id": "brand_variant_stax",
+      "query": "lays stax vi tu nhien 110g",
+      "kind": "brand_and_product",
+      "gold_product_ids": [
+        "WIN_10015924"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10015924",
+          "name": "Snack khoai tây Lay's Stax vị tự nhiên lon 110g",
+          "uom": "Lon",
+          "score": 17.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 17.7608
+    },
+    {
+      "case_id": "retail_slang_bim_bim",
+      "query": "bim bim",
+      "kind": "retail_slang",
+      "gold_product_ids": [
+        "WIN_10322820"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10322820",
+          "name": "Bim bim Poppedcorn quẩy soắn 280g",
+          "uom": "Gói",
+          "score": 800.0
+        },
+        {
+          "product_id": "WIN_10016331",
+          "name": "Bánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g",
+          "uom": "Lon",
+          "score": 8.0
+        },
+        {
+          "product_id": "WIN_10013935",
+          "name": "Bánh snack khoai tây tươi vị tảo biển O'Star gói 90g",
+          "uom": "Gói",
+          "score": 8.0
+        },
+        {
+          "product_id": "WIN_10303866",
+          "name": "Bánh snack Swing vị gà Teriyali Osaka Orion gói 90g",
+          "uom": "Gói",
+          "score": 8.0
+        },
+        {
+          "product_id": "WIN_10015741",
+          "name": "Bánh snack vị bít tết kiểu New York Swing gói 90g",
+          "uom": "Gói",
+          "score": 8.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 9.1437
+    },
+    {
+      "case_id": "retail_slang_bimbim_compact",
+      "query": "giá bimbim",
+      "kind": "retail_slang",
+      "gold_product_ids": [
+        "WIN_10322820"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10322820",
+          "name": "Bim bim Poppedcorn quẩy soắn 280g",
+          "uom": "Gói",
+          "score": 8.3
+        },
+        {
+          "product_id": "WIN_10016331",
+          "name": "Bánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g",
+          "uom": "Lon",
+          "score": 8.0
+        },
+        {
+          "product_id": "WIN_10013935",
+          "name": "Bánh snack khoai tây tươi vị tảo biển O'Star gói 90g",
+          "uom": "Gói",
+          "score": 8.0
+        },
+        {
+          "product_id": "WIN_10303866",
+          "name": "Bánh snack Swing vị gà Teriyali Osaka Orion gói 90g",
+          "uom": "Gói",
+          "score": 8.0
+        },
+        {
+          "product_id": "WIN_10015741",
+          "name": "Bánh snack vị bít tết kiểu New York Swing gói 90g",
+          "uom": "Gói",
+          "score": 8.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": true,
+      "expected_behavior_pass": null,
+      "latency_ms": 10.244
+    },
+    {
+      "case_id": "retail_slang_bim_bim_specific_variant",
+      "query": "bim bim poppedcorn 280g",
+      "kind": "retail_slang_variant",
+      "gold_product_ids": [
+        "WIN_10322820"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10322820",
+          "name": "Bim bim Poppedcorn quẩy soắn 280g",
+          "uom": "Gói",
+          "score": 16.3
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 9.6332
+    },
+    {
+      "case_id": "diaper_huggies_accented",
+      "query": "tã quần huggies dry pants big jumbo l38",
+      "kind": "category_disambiguation",
+      "gold_product_ids": [
+        "WIN_10161030"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10161030",
+          "name": "Tã quần Huggies dry pants big jumbo  L38",
+          "uom": "Gói",
+          "score": 900.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 0.2361
+    },
+    {
+      "case_id": "diaper_huggies_accentless",
+      "query": "ta quan huggies dry pants big jumbo l38",
+      "kind": "accentless_name",
+      "gold_product_ids": [
+        "WIN_10161030"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10161030",
+          "name": "Tã quần Huggies dry pants big jumbo  L38",
+          "uom": "Gói",
+          "score": 900.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 0.1186
+    },
+    {
+      "case_id": "coca_zero_variant",
+      "query": "coca cola zero pet 600ml",
+      "kind": "brand_and_variant",
+      "gold_product_ids": [
+        "WIN_10194711"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10194711",
+          "name": "Nước Giải Khát Coca-Cola Zero Pet 600ml",
+          "uom": "Chai",
+          "score": 17.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 4.6573
+    },
+    {
+      "case_id": "clear_shampoo",
+      "query": "dau goi clear 9 thao duoc 630g",
+      "kind": "brand_and_product",
+      "gold_product_ids": [
+        "WIN_10171159"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10171159",
+          "name": "Dầu gội Clear 9 thảo dược cổ truyền 630g",
+          "uom": "Chai",
+          "score": 20.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 242.0688
+    },
+    {
+      "case_id": "colgate_kids_toothpaste",
+      "query": "kem danh rang tre em colgate minions 80g",
+      "kind": "brand_and_product",
+      "gold_product_ids": [
+        "WIN_10625598"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10625598",
+          "name": "Kem đánh răng trẻ em Colgate Minions 80g",
+          "uom": "Tuýp",
+          "score": 900.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 0.1436
+    },
+    {
+      "case_id": "hao_hao_instant_noodle",
+      "query": "mi an lien hao hao vi ga vang",
+      "kind": "brand_and_product",
+      "gold_product_ids": [
+        "WIN_10008453"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10008453",
+          "name": "Thùng 30 gói mì ăn liền vị gà vàng Hảo Hảo 74g",
+          "uom": "Thùng",
+          "score": 15.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 94.4954
+    },
+    {
+      "case_id": "omo_front_load_laundry",
+      "query": "nuoc giat omo ben dep cua truoc tui 2.9kg",
+      "kind": "brand_and_product",
+      "gold_product_ids": [
+        "WIN_10161177"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10161177",
+          "name": "Nước giặt Omo bền đẹp cửa trước túi 2,9kg",
+          "uom": "Gói",
+          "score": 26.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 130.2472
+    },
+    {
+      "case_id": "probi_vinamilk_low_sugar",
+      "query": "sua chua uong men song it duong probi vinamilk",
+      "kind": "brand_and_product",
+      "gold_product_ids": [
+        "WIN_10005469"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10005469",
+          "name": "Sữa chua uống men sống ít đường Probi Vinamilk lốc 5 chai x 65ml",
+          "uom": "Gói 5",
+          "score": 800.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": null,
+      "latency_ms": 262.4512
+    },
+    {
+      "case_id": "coca_zero_can_330_vs_pet_600",
+      "query": "Coca Zero 330 với chai 600 khác gì nhau?",
+      "kind": "variant_ambiguity",
+      "gold_product_ids": [
+        "WIN_10011651",
+        "WIN_10194711"
+      ],
+      "expected_resolution_behavior": "compare_variants",
+      "results": [
+        {
+          "product_id": "WIN_10194711",
+          "name": "Nước Giải Khát Coca-Cola Zero Pet 600ml",
+          "uom": "Chai",
+          "score": 11.3
+        },
+        {
+          "product_id": "WIN_10011651",
+          "name": "Thùng 24 lon nước giải khát Zero Coca Cola không đường 330ml",
+          "uom": "Thùng",
+          "score": 3.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": true,
+      "latency_ms": 120.2928
+    },
+    {
+      "case_id": "coca_sugar_free_small_container",
+      "query": "Cho loại Coca không đường chai nhỏ.",
+      "kind": "underspecified_variant",
+      "gold_product_ids": [
+        "WIN_10194711"
+      ],
+      "expected_resolution_behavior": "select_small_bottle",
+      "results": [
+        {
+          "product_id": "WIN_10194711",
+          "name": "Nước Giải Khát Coca-Cola Zero Pet 600ml",
+          "uom": "Chai",
+          "score": 9.5
+        },
+        {
+          "product_id": "WIN_10307381",
+          "name": "Nước giải khát Coca-Cola Zero chai nhựa 1,5lít",
+          "uom": "Chai",
+          "score": 8.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": false,
+      "expected_behavior_pass": true,
+      "latency_ms": 100.9481
+    },
+    {
+      "case_id": "cheese_flavor_bim_bim",
+      "query": "Bim bim vị phô mai có không?",
+      "kind": "flavor_and_category",
+      "gold_product_ids": [
+        "WIN_10015708",
+        "WIN_10015713",
+        "WIN_10015828",
+        "WIN_10195895",
+        "WIN_10197481",
+        "WIN_10320541",
+        "WIN_10623327",
+        "WIN_10639588"
+      ],
+      "expected_resolution_behavior": "single_or_browse",
+      "results": [
+        {
+          "product_id": "WIN_10015828",
+          "name": "Snack khoai tây Pringles vị phô mai 110g",
+          "uom": "Hộp",
+          "score": 16.0
+        },
+        {
+          "product_id": "WIN_10015708",
+          "name": "Snack khoai tây vị phô mai Slide lon 75g",
+          "uom": "Lon",
+          "score": 16.0
+        },
+        {
+          "product_id": "WIN_10623327",
+          "name": "Snack Lay's wavy vị phô mai cheddar 95g",
+          "uom": "Gói",
+          "score": 16.0
+        },
+        {
+          "product_id": "WIN_10320541",
+          "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+          "uom": "Gói",
+          "score": 16.0
+        },
+        {
+          "product_id": "WIN_10197481",
+          "name": "Snack vị phô mai bùng nổ  Toonies 60g",
+          "uom": "Gói",
+          "score": 16.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 0.375,
+      "gold_set_recall_at_5": 0.625,
+      "ambiguous_top_result": true,
+      "expected_behavior_pass": null,
+      "latency_ms": 38.4078
+    },
+    {
+      "case_id": "huggies_diaper_size_l",
+      "query": "Cho bỉm Huggies size L.",
+      "kind": "brand_variant_size",
+      "gold_product_ids": [
+        "WIN_10020234",
+        "WIN_10161030"
+      ],
+      "expected_resolution_behavior": "clarify_pack_size",
+      "results": [
+        {
+          "product_id": "WIN_10020234",
+          "name": "Tã quần Huggies Dry L68",
+          "uom": "Gói",
+          "score": 11.0
+        },
+        {
+          "product_id": "WIN_10161030",
+          "name": "Tã quần Huggies dry pants big jumbo  L38",
+          "uom": "Gói",
+          "score": 11.0
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": true,
+      "expected_behavior_pass": true,
+      "latency_ms": 2.7376
+    },
+    {
+      "case_id": "omo_front_load_short",
+      "query": "Tìm Omo cho máy giặt cửa trước.",
+      "kind": "use_case_brand",
+      "gold_product_ids": [
+        "WIN_10161177",
+        "WIN_10161777"
+      ],
+      "expected_resolution_behavior": "clarify_pack_size",
+      "results": [
+        {
+          "product_id": "WIN_10161777",
+          "name": "Nước giặt Omo bền đẹp cửa trước túi 2,8kg",
+          "uom": "Gói",
+          "score": 11.0
+        },
+        {
+          "product_id": "WIN_10161177",
+          "name": "Nước giặt Omo bền đẹp cửa trước túi 2,9kg",
+          "uom": "Gói",
+          "score": 11.0
+        },
+        {
+          "product_id": "WIN_10275943",
+          "name": "OMO NG Cửa trước Khử mùi ẩm mốc 3.8kg",
+          "uom": "Gói",
+          "score": 9.3
+        }
+      ],
+      "recall_at_1": true,
+      "recall_at_3": true,
+      "recall_at_5": true,
+      "mrr": 1.0,
+      "first_relevant_rank": 1,
+      "gold_set_recall_at_3": 1.0,
+      "gold_set_recall_at_5": 1.0,
+      "ambiguous_top_result": true,
+      "expected_behavior_pass": true,
+      "latency_ms": 17.2162
+    }
+  ],
+  "limitations": [
+    "This measures the repository used by the current snapshot runtime, not PostgreSQL.",
+    "Ambiguity is a score-tie proxy and does not replace end-to-end clarification grading.",
+    "Snapshot prices and recorded stock are stale; no transaction or current-availability claim is valid."
+  ]
+}

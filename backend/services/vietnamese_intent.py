@@ -168,6 +168,20 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             and not _has_phrase(normalized, ("duoi", "toi da", "khong qua", "budget", "ngan sach"))
         )
     )
+    dosage_question = _has_phrase(
+        normalized,
+        (
+            "lieu luong",
+            "lieu dung",
+            "dose",
+            "dosage",
+            "dosing instructions",
+            "how much to use",
+        ),
+    )
+    if dosage_question:
+        # "Bao nhiêu" in a dosage question is not a request for price.
+        price = False
     # A discount question is not a price lookup unless the customer also asks
     # for the actual price (e.g. "giá sau giảm còn bao nhiêu?").
     promotion = promotion or bool(re.search(r"\bmua\s+\w+\s+tang\s+\w+\b", normalized))
@@ -207,6 +221,7 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "con may cai",
             "ton kho",
             "ton bao nhieu",
+            "ton ghi trong du lieu",
             "so luong ton",
             "available",
             "in stock",
@@ -219,6 +234,8 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "有货",
         ),
     ) or bool(
+        re.search(r"\bton\b.{0,40}\b(?:bao nhieu|how many)\b", normalized)
+        or
         re.search(r"\b(?:con|co)\s+(?:chai|lon|hop|goi|ly|cai)\b.{0,40}\bkhong\b", normalized)
         or re.search(r"\bcon\s+(?:chai|lon|hop|goi|ly|cai)\b.{0,20}\bnao\b", normalized)
         or re.search(r"\bcon\b.{0,30}\bban duoc\b.{0,15}\bkhong\b", normalized)
@@ -226,6 +243,10 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
         or re.search(r"\bco ban\b.{0,40}\bkhong\b", normalized)
         or re.search(r"\bco san\b.{0,40}\bkhong\b", normalized)
         or re.search(r"\bcon\s+\d+\s+(?:chai|lon|hop|goi|ly|cai)\b", normalized)
+        or re.search(
+            r"\b(?:con|co)\s+\d+(?:(?:[.,]|\s)\d+)?\s*(?:ml|l|lit|g|kg)\b",
+            normalized,
+        )
         or re.search(
             r"\b\d+(?:[.,]\d+)?\s*(?:ml|l|g|kg)\b.{0,30}\b(?:co|ban|ton)\b.{0,15}\bkhong\b",
             normalized,
@@ -246,6 +267,9 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
     )
     if remaining_quantity_question and not remaining_amount_is_price:
         stock = True
+    if re.search(r"\bton\b.{0,40}\b(?:bao nhieu|how many)\b", normalized):
+        stock = True
+        price = False
     if nutrition:
         stock = False
 

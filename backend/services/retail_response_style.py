@@ -89,6 +89,7 @@ def render_verified_snapshot(
     """
     fields = tuple(fields)
     price = f"{product.price_vnd:,}".replace(",", ".")
+    price_unit = f"/{product.uom}" if product.uom else ""
     data_date = product.data_timestamp.strftime("%d/%m/%Y")
     expiry_date = _format_catalog_date(product.expiry_at)
 
@@ -112,7 +113,8 @@ def render_verified_snapshot(
     if language == "en":
         facts: list[str] = []
         if "price_vnd" in fields:
-            facts.append(f"reference price {price} VND")
+            unit = f" per {product.uom}" if product.uom else ""
+            facts.append(f"reference price {price} VND{unit}")
         if "stock" in fields:
             facts.append(_stock_fact(product, language))
         if "shelf" in fields:
@@ -139,7 +141,7 @@ def render_verified_snapshot(
     if language == "zh":
         facts = []
         if "price_vnd" in fields:
-            facts.append(f"参考价格 {price} 越南盾")
+            facts.append(f"参考价格 {price} 越南盾{price_unit}")
         if "stock" in fields:
             facts.append(_stock_fact(product, language))
         if "shelf" in fields:
@@ -165,7 +167,7 @@ def render_verified_snapshot(
 
     facts = []
     if "price_vnd" in fields:
-        facts.append(f"giá tham khảo {price}đ")
+        facts.append(f"giá tham khảo {price}đ{price_unit}")
     if "stock" in fields:
         facts.append(_stock_fact(product, language))
     if "shelf" in fields:
@@ -184,7 +186,7 @@ def render_verified_snapshot(
         facts.append(_spicy_fact(product, language))
 
     if fields == ("price_vnd",):
-        response = f"{product.name} có giá tham khảo {price}đ nhé."
+        response = f"{product.name} có giá tham khảo {price}đ{price_unit} nhé."
         if include_price_caveat:
             response += " Giá tại cửa hàng có thể khác."
         return response

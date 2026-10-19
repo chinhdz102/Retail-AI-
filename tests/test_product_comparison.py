@@ -40,6 +40,13 @@ def test_comparison_parser_extracts_two_product_queries(
     assert parse_comparison_queries(text) == expected
 
 
+def test_comparison_parser_inherits_product_name_for_variant_followup() -> None:
+    text = "Coca Zero 330 với chai 600 khác gì nhau?"
+
+    assert is_comparison_request(text)
+    assert parse_comparison_queries(text) == ("coca zero 330", "coca zero chai 600")
+
+
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
