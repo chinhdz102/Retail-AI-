@@ -5964,13 +5964,15 @@ async def agent_respond_stream(
     response = await agent_respond(request, groq, settings)
 
     async def response_events():
+        metadata = response.model_dump(mode="json", exclude={"text"})
+        payload = json.dumps({"response": metadata}, ensure_ascii=False, separators=(",", ":"))
+        yield f"event: start\ndata: {payload}\n\n"
         chunks = _validated_text_chunks(response.text)
         for index, chunk in enumerate(chunks):
             payload = json.dumps({"text": chunk}, ensure_ascii=False, separators=(",", ":"))
             yield f"event: delta\ndata: {payload}\n\n"
             if index + 1 < len(chunks):
                 await asyncio.sleep(0.025)
-        metadata = response.model_dump(mode="json", exclude={"text"})
         payload = json.dumps({"response": metadata}, ensure_ascii=False, separators=(",", ":"))
         yield f"event: complete\ndata: {payload}\n\n"
 
