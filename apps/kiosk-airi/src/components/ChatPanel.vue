@@ -7,13 +7,24 @@ import {
   PhCaretRight as CaretRight,
   PhMicrophone as Microphone,
   PhPause as Pause,
+  PhPlus as Plus,
+  PhMinus as Minus,
+  PhShoppingCart as ShoppingCartIcon,
   PhSparkle as Sparkle,
   PhStop as Stop,
+  PhTrash as Trash,
   PhTranslate as Translate,
   PhWaveform as Waveform,
 } from '@phosphor-icons/vue'
 
-import type { AssistantStatus, ChatMessage, LanguageCode } from '../types'
+import type {
+  AssistantStatus,
+  ChatMessage,
+  CheckoutQuote,
+  LanguageCode,
+  SandboxOrder,
+  ShoppingCart,
+} from '../types'
 
 const props = defineProps<{
   messages: ChatMessage[]
@@ -25,6 +36,9 @@ const props = defineProps<{
   voiceHint: string
   language: LanguageCode
   errorMessage: string | null
+  cart?: ShoppingCart | null
+  checkoutQuote?: CheckoutQuote | null
+  order?: SandboxOrder | null
   microphoneLevel?: number
   microphoneDevices?: Array<{ id: string; label: string }>
   selectedMicrophone?: string
@@ -46,6 +60,14 @@ const emit = defineEmits<{
   'change-language': [value: LanguageCode]
   'change-microphone': [deviceId: string]
   retry: []
+  'add-product': [productId: string]
+  'set-cart-quantity': [productId: string, quantity: number]
+  'prepare-checkout': []
+  'confirm-checkout': []
+  'cancel-checkout': []
+  'simulate-payment': [outcome: 'PAID' | 'FAILED']
+  'clear-order': []
+  'end-session': []
 }>()
 
 const languageOptions: Array<{ code: LanguageCode; short: string; label: string }> = [
@@ -142,6 +164,56 @@ const copy = computed(() => {
   }
 })
 
+const shoppingText = computed(() => {
+  if (props.language === 'en') {
+    return {
+      cart: 'Demo cart',
+      sandbox: 'SANDBOX',
+      total: 'Total',
+      checkout: 'Review checkout',
+      confirm: 'Confirm demo order',
+      cancel: 'Back to cart',
+      order: 'Sandbox order',
+      simulatePaid: 'Simulate payment success',
+      simulateFailed: 'Simulate failure',
+      add: 'Add',
+      stock: 'available in demo',
+      end: 'End session',
+    }
+  }
+  if (props.language === 'zh') {
+    return {
+      cart: '演示购物车', sandbox: '沙盒', total: '合计', checkout: '查看结账摘要',
+      confirm: '确认演示订单', cancel: '返回购物车', order: '沙盒订单',
+      simulatePaid: '模拟支付成功', simulateFailed: '模拟支付失败', add: '添加',
+      stock: '演示库存', end: '结束会话',
+    }
+  }
+  return {
+    cart: 'Giỏ hàng demo',
+    sandbox: 'SANDBOX',
+    total: 'Tổng',
+    checkout: 'Xem lại checkout',
+    confirm: 'Xác nhận đơn demo',
+    cancel: 'Quay lại giỏ',
+    order: 'Đơn sandbox',
+    simulatePaid: 'Mô phỏng thanh toán thành công',
+    simulateFailed: 'Mô phỏng thất bại',
+    add: 'Thêm',
+    stock: 'còn bán trong demo',
+    end: 'Kết thúc phiên',
+  }
+})
+
+const visibleCart = computed(() => props.checkoutQuote?.cart ?? props.cart ?? null)
+const visibleOrder = computed(() => props.order ?? null)
+
+function formatVnd(amount: number) {
+  return new Intl.NumberFormat(props.language === 'en' ? 'en-US' : 'vi-VN', {
+    maximumFractionDigits: 0,
+  }).format(amount) + (props.language === 'en' ? ' VND' : 'đ')
+}
+
 const quickPrompts = computed(() => {
   if (props.language === 'en') {
     return [
@@ -201,6 +273,9 @@ function onKeydown(event: KeyboardEvent) {
             {{ option.short }}
           </button>
         </div>
+        <button type="button" class="end-session-button" @click="emit('end-session')">
+          {{ shoppingText.end }}
+        </button>
       </div>
       <label v-if="microphoneDevices?.length" class="microphone-picker">
         <span>{{ copy.microphone }}</span>
@@ -229,6 +304,18 @@ function onKeydown(event: KeyboardEvent) {
           <span v-if="message.model" class="message-model">{{ message.model }}</span>
         </div>
         <p class="message-bubble">{{ message.text }}</p>
+        <div v-if="message.products?.length" class="message-product-list">
+          <article v-for="product in message.products" :key="product.product_id" class="message-product-card">
+            <div class="message-product-copy">
+              <strong>{{ product.name }}</strong>
+              <span>{{ formatVnd(product.price_vnd) }} · {{ product.stock }} {{ shoppingText.stock }}</span>
+            </div>
+            <button type="button" class="small-action-button" @click="emit('add-product', product.product_id)">
+              <ShoppingCartIcon :size="16" weight="duotone" aria-hidden="true" />
+              {{ shoppingText.add }}
+            </button>
+          </article>
+        </div>
       </article>
 
       <div v-if="status === 'thinking' || status === 'transcribing'" class="message-row message-assistant">
@@ -239,6 +326,86 @@ function onKeydown(event: KeyboardEvent) {
         </div>
       </div>
     </div>
+
+    <section
+      v-if="(visibleCart?.items.length ?? 0) > 0 || visibleOrder || checkoutQuote"
+      class="shopping-panel"
+      aria-live="polite"
+    >
+      <header class="shopping-panel-header">
+        <div class="shopping-panel-title">
+          <ShoppingCartIcon :size="17" weight="duotone" aria-hidden="true" />
+          <strong>{{ visibleOrder ? shoppingText.order : shoppingText.cart }}</strong>
+        </div>
+        <span class="sandbox-chip">{{ shoppingText.sandbox }}</span>
+      </header>
+
+      <div v-if="visibleCart && !visibleOrder" class="shopping-cart-lines">
+        <div v-for="item in visibleCart.items" :key="item.product_id" class="shopping-cart-line">
+          <div class="shopping-cart-line-copy">
+            <strong>{{ item.name }}</strong>
+            <span>{{ formatVnd(item.unit_price_vnd) }} × {{ item.quantity }} = {{ formatVnd(item.line_total_vnd) }}</span>
+          </div>
+          <div v-if="!checkoutQuote" class="quantity-actions">
+            <button type="button" :aria-label="`Reduce ${item.name}`" @click="emit('set-cart-quantity', item.product_id, Math.max(0, item.quantity - 1))">
+              <Minus :size="15" aria-hidden="true" />
+            </button>
+            <button type="button" :aria-label="`Add one ${item.name}`" @click="emit('set-cart-quantity', item.product_id, item.quantity + 1)">
+              <Plus :size="15" aria-hidden="true" />
+            </button>
+            <button type="button" :aria-label="`Remove ${item.name}`" @click="emit('set-cart-quantity', item.product_id, 0)">
+              <Trash :size="15" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+        <div class="shopping-total">
+          <span>{{ shoppingText.total }}</span>
+          <strong>{{ formatVnd(visibleCart.total_vnd) }}</strong>
+        </div>
+      </div>
+
+      <div v-if="visibleOrder" class="sandbox-order-status">
+        <span>{{ visibleOrder.order_id }}</span>
+        <strong>{{ visibleOrder.payment_status }}</strong>
+        <span>{{ formatVnd(visibleOrder.amount_vnd) }}</span>
+      </div>
+
+      <div class="shopping-actions">
+        <template v-if="checkoutQuote">
+          <button type="button" class="small-action-button primary" @click="emit('confirm-checkout')">
+            {{ shoppingText.confirm }}
+          </button>
+          <button type="button" class="small-action-button" @click="emit('cancel-checkout')">
+            {{ shoppingText.cancel }}
+          </button>
+        </template>
+        <button
+          v-else-if="visibleCart && !visibleOrder && visibleCart.items.length"
+          type="button"
+          class="small-action-button primary"
+          @click="emit('prepare-checkout')"
+        >
+          {{ shoppingText.checkout }}
+        </button>
+        <template v-if="visibleOrder?.payment_status === 'PENDING'">
+          <button type="button" class="small-action-button primary" @click="emit('simulate-payment', 'PAID')">
+            {{ shoppingText.simulatePaid }}
+          </button>
+          <button type="button" class="small-action-button" @click="emit('simulate-payment', 'FAILED')">
+            {{ shoppingText.simulateFailed }}
+          </button>
+        </template>
+        <button
+          v-else-if="visibleOrder && visibleOrder.payment_status !== 'PAID'"
+          type="button"
+          class="small-action-button"
+          @click="emit('clear-order')"
+        >
+          {{ shoppingText.cancel }}
+        </button>
+      </div>
+      <p class="sandbox-note">{{ language === 'en' ? 'Demo only. No real payment is made.' : language === 'zh' ? '仅供演示，不会进行真实付款。' : 'Chỉ dùng để demo, không phát sinh thanh toán thật.' }}</p>
+    </section>
 
     <div v-if="errorMessage" class="chat-error" role="alert">
       <div>

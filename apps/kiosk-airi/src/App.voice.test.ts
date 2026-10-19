@@ -1,14 +1,23 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-  const apiMocks = vi.hoisted(() => ({
+const apiMocks = vi.hoisted(() => ({
   createSession: vi.fn(),
+  createRequestId: vi.fn(() => 'request-test-id'),
+  closeSession: vi.fn().mockResolvedValue({}),
   respond: vi.fn(),
   transcribe: vi.fn(),
   createSynthesisTicket: vi.fn(),
+  getCart: vi.fn().mockResolvedValue(null),
+  addCartItem: vi.fn(),
+  setCartItemQuantity: vi.fn(),
+  prepareCheckout: vi.fn(),
+  confirmCheckout: vi.fn(),
+  cancelCheckout: vi.fn(),
+  simulateSandboxPayment: vi.fn(),
 }))
 
-  const controllerStore = vi.hoisted(() => ({ current: null as any }))
+const controllerStore = vi.hoisted(() => ({ current: null as any }))
 
 vi.mock('./api', () => apiMocks)
 vi.mock('./voice-controller', () => ({
@@ -65,7 +74,9 @@ describe('voice transcript integration', () => {
     expect(apiMocks.createSession).toHaveBeenCalledTimes(2)
     expect(apiMocks.transcribe).toHaveBeenNthCalledWith(1, 'old-session', audio, 'vi')
     expect(apiMocks.transcribe).toHaveBeenNthCalledWith(2, 'recovered-session', audio, 'vi')
-    expect(apiMocks.respond).toHaveBeenCalledWith('recovered-session', 'Coca Zero giá bao nhiêu?', 'vi')
+    expect(apiMocks.respond).toHaveBeenCalledWith(
+      'recovered-session', 'Coca Zero giá bao nhiêu?', 'vi', expect.any(String),
+    )
   })
 
   it('keeps transcription errors visible when hands-free listening resumes', async () => {
@@ -91,7 +102,7 @@ describe('voice transcript integration', () => {
       session_id: 'session-test',
       kiosk_id: 'kiosk-01',
       state: 'BROWSING',
-      expires_at: '2026-08-31T13:00:00Z',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
     apiMocks.transcribe.mockResolvedValue({
       session_id: 'session-test',
@@ -125,6 +136,7 @@ describe('voice transcript integration', () => {
       'session-test',
       'Cho tôi biết giá Coca Zero.',
       'vi',
+      expect.any(String),
     ))
     await vi.waitFor(() => expect(wrapper.get('.message-user .message-bubble').text()).toBe('Cho tôi biết giá Coca Zero.'))
     await vi.waitFor(() => expect(wrapper.text()).toContain('Coca Zero giá 13.000đ.'))
@@ -145,7 +157,7 @@ describe('voice transcript integration', () => {
       session_id: 'session-test',
       kiosk_id: 'kiosk-01',
       state: 'BROWSING',
-      expires_at: '2026-08-31T13:00:00Z',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
     apiMocks.respond.mockResolvedValue({
       session_id: 'session-test',
@@ -212,7 +224,7 @@ describe('voice transcript integration', () => {
       session_id: 'session-test',
       kiosk_id: 'kiosk-01',
       state: 'BROWSING',
-      expires_at: '2026-08-31T13:00:00Z',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
     apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
 
@@ -240,7 +252,7 @@ describe('voice transcript integration', () => {
       session_id: 'session-test',
       kiosk_id: 'kiosk-01',
       state: 'BROWSING',
-      expires_at: '2026-08-31T13:00:00Z',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
     apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
 
@@ -288,7 +300,7 @@ describe('voice transcript integration', () => {
       session_id: 'session-test',
       kiosk_id: 'kiosk-01',
       state: 'BROWSING',
-      expires_at: '2026-08-31T13:00:00Z',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
     apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
     apiMocks.respond.mockResolvedValue({
