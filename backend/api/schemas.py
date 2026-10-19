@@ -121,6 +121,7 @@ class ProductCardResponse(BaseModel):
     brand: str | None = None
     price_vnd: int
     stock: int
+    stock_is_current: bool = True
     uom: str | None = None
     data_timestamp: datetime
     data_source: str = "unknown"

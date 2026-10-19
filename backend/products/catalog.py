@@ -37,7 +37,8 @@ class ProductSnapshot(BaseModel):
     stock: int = Field(ge=0)
     shelf: str | None = None
     promotion: str | None = None
-    spicy: bool | None = False
+    spicy: bool | None = None
+    stock_is_current: bool = True
     ingredients: str | None = None
     expiry_at: str | None = None
     data_timestamp: datetime = DATA_TIMESTAMP
@@ -61,6 +62,8 @@ class ProductSnapshot(BaseModel):
     @property
     def sellable_stock(self) -> int:
         """Stock customers can buy, excluding products past their expiry date."""
+        if not self.stock_is_current:
+            return 0
         if self.stock <= 0:
             return 0
         if self.expiry_at is None:
@@ -80,6 +83,7 @@ DEMO_PRODUCTS: tuple[ProductSnapshot, ...] = (
         category="drink",
         price_vnd=13000,
         stock=16,
+        spicy=False,
         uom="lon",
         shelf="A2-L2",
         ingredients="Nước có ga, chất tạo ngọt, hương cola.",
@@ -91,6 +95,7 @@ DEMO_PRODUCTS: tuple[ProductSnapshot, ...] = (
         category="dairy",
         price_vnd=9000,
         stock=24,
+        spicy=False,
         uom="hộp",
         shelf="B1-L1",
         promotion="Mua 2 hộp giảm 1.000đ",
@@ -127,6 +132,7 @@ DEMO_PRODUCTS: tuple[ProductSnapshot, ...] = (
         category="drink",
         price_vnd=7000,
         stock=40,
+        spicy=False,
         uom="chai",
         shelf="A1-L1",
         ingredients="Nước tinh khiết.",
@@ -138,6 +144,7 @@ DEMO_PRODUCTS: tuple[ProductSnapshot, ...] = (
         category="drink",
         price_vnd=16000,
         stock=18,
+        spicy=False,
         uom="chai",
         shelf="A3-L2",
         ingredients="Nước, cà phê, sữa, đường.",

@@ -91,7 +91,8 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "name": "recommend_products",
             "description": (
                 "Return product suggestions for an explicit recommendation request. "
-                "The backend always filters to products with positive stock. Apply every "
+                "For a live-stock source, the backend filters to positive stock. For a dated "
+                "snapshot source, availability is unverified and must be disclosed. Apply every "
                 "stated category, brand, spice, and structured price constraint as a hard filter. "
                 "For a whole-cart request spanning multiple categories, pass categories and "
                 "total_budget_vnd; set total_budget_exclusive=true for 'under/less than' and "
@@ -159,7 +160,9 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "description": (
                 "Read verified facts for one product ID returned by search_products. "
                 "Set fields to exactly those requested: price_vnd, stock, shelf, "
-                "promotion, expiry_at, ingredients, spicy, data_timestamp. For shelf, preserve "
+                "promotion, expiry_at, ingredients, spicy, data_timestamp. Treat stock as "
+                "unverified when stock_is_current is false; treat null spicy/ingredients as "
+                "unknown. For shelf, preserve "
                 "shelf_source: RECOMMENDED_PLANOGRAM means this is a proposed locator, "
                 "not a verified physical store location."
             ),
@@ -371,17 +374,26 @@ def _tool_error(
 
 
 def _candidate_content(products: tuple[ProductSnapshot, ...], matched: list[str]) -> dict[str, Any]:
+    items = []
+    for product in products:
+        item = {
+            "product_id": product.product_id,
+            "name": product.name,
+            "category": product.category,
+            "brand": product.brand,
+            "matched_constraints": matched,
+        }
+        if not product.stock_is_current:
+            item.update(
+                {
+                    "reference_price_vnd": product.price_vnd,
+                    "stock_is_current": False,
+                    "data_timestamp": product.data_timestamp.isoformat(),
+                }
+            )
+        items.append(item)
     return {
-        "items": [
-            {
-                "product_id": product.product_id,
-                "name": product.name,
-                "category": product.category,
-                "brand": product.brand,
-                "matched_constraints": matched,
-            }
-            for product in products
-        ],
+        "items": items,
         "count": len(products),
         "data_timestamp": max(
             (item.data_timestamp for item in products), default=datetime.now(UTC)
@@ -402,16 +414,19 @@ def _whole_cart_recommendation(
     }
     candidate_groups: list[list[ProductSnapshot]] = []
     missing_categories: list[str] = []
+    current_stock = bool(getattr(repo, "supports_current_stock", False))
     for category in categories:
         repository_category = _category_for_repository(category, repo)
         candidates = [
             item
             for item in repo.search(
                 category=repository_category,
-                in_stock=True,
+                brand=parsed.brand,
+                spicy=parsed.spicy,
+                in_stock=current_stock,
                 limit=MAX_PRODUCT_RESULTS,
             )
-            if item.sellable_stock >= parsed.quantity_per_category
+            if not current_stock or item.sellable_stock >= parsed.quantity_per_category
         ]
         candidates.sort(key=lambda item: (item.price_vnd, item.product_id))
         if not candidates:
@@ -459,6 +474,14 @@ def _whole_cart_recommendation(
                             "unit_price_vnd": item.price_vnd,
                             "line_total_vnd": item.price_vnd * parsed.quantity_per_category,
                         }
+                        | (
+                            {
+                                "stock_is_current": False,
+                                "data_timestamp": item.data_timestamp.isoformat(),
+                            }
+                            if not item.stock_is_current
+                            else {}
+                        )
                         for category, item in zip(categories, combo, strict=True)
                     ],
                     "total_vnd": total,
@@ -498,6 +521,8 @@ def _whole_cart_recommendation(
         "data_timestamp": timestamp.isoformat(),
         "cart_mutated": False,
     }
+    if not current_stock:
+        content["inventory_verified"] = False
     return ToolObservation(
         content=content,
         products=tuple(selected_products.values()),
@@ -808,7 +833,8 @@ def execute_catalog_tool(
             products = tuple(
                 product
                 for product in list_promotions(category=category, limit=parsed.limit)
-                if product.sellable_stock > 0
+                if not getattr(repo, "supports_current_stock", False)
+                or product.sellable_stock > 0
             )
             latest_timestamp = max(
                 (product.data_timestamp for product in products),
@@ -823,6 +849,11 @@ def execute_catalog_tool(
                             "promotion": product.promotion,
                             "data_timestamp": product.data_timestamp.isoformat(),
                         }
+                        | (
+                            {"stock_is_current": False}
+                            if not product.stock_is_current
+                            else {}
+                        )
                         for product in products
                     ],
                     "count": len(products),
@@ -895,6 +926,26 @@ def execute_catalog_tool(
             )
         if name == "search_products":
             parsed = SearchProductsArguments.model_validate(arguments)
+            if parsed.spicy is not None and not getattr(repo, "supports_spicy_filter", True):
+                return _tool_error(
+                    name,
+                    "DATA_UNAVAILABLE",
+                    "The active catalog does not contain verified spice data.",
+                    source=repo.source_name,
+                    extra={"unavailable_fields": ["spicy"]},
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
+            if parsed.in_stock and not getattr(repo, "supports_current_stock", False):
+                return _tool_error(
+                    name,
+                    "DATA_UNAVAILABLE",
+                    "Current store availability is not present in the dated catalog snapshot.",
+                    source=repo.source_name,
+                    extra={"unavailable_fields": ["current_stock"]},
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
             query_category, category_only_query = _query_category_hint(parsed.query)
             category = _category_for_repository(query_category or parsed.category, repo)
             search_criteria = {
@@ -929,6 +980,16 @@ def execute_catalog_tool(
 
         if name == "recommend_products":
             parsed = RecommendProductsArguments.model_validate(arguments)
+            if parsed.spicy is not None and not getattr(repo, "supports_spicy_filter", True):
+                return _tool_error(
+                    name,
+                    "DATA_UNAVAILABLE",
+                    "The active catalog does not contain verified spice data.",
+                    source=repo.source_name,
+                    extra={"unavailable_fields": ["spicy"]},
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
             if parsed.categories is not None:
                 return _whole_cart_recommendation(repo, parsed)
             price = parsed.price_constraint
@@ -939,7 +1000,7 @@ def execute_catalog_tool(
                 "category": category,
                 "brand": parsed.brand,
                 "spicy": parsed.spicy,
-                "in_stock": True,
+                "in_stock": bool(getattr(repo, "supports_current_stock", False)),
                 "limit": parsed.limit,
                 "price_operator": price.operator if price else None,
                 "price_value_vnd": price.value_vnd if price else None,
@@ -948,7 +1009,11 @@ def execute_catalog_tool(
             if not products and category_only_query:
                 search_criteria["query"] = ""
                 products = tuple(repo.search(**search_criteria))
-            matched = ["sellable_only"]
+            matched = [
+                "sellable_only"
+                if getattr(repo, "supports_current_stock", False)
+                else "current_availability_unverified"
+            ]
             matched.extend(
                 key for key in ("category", "brand", "spicy") if key in parsed.model_fields_set
             )
@@ -1017,8 +1082,13 @@ def execute_catalog_tool(
     data: dict[str, Any] = {"product_id": product.product_id, "name": product.name}
     for field_name in available_fields:
         if field_name == "stock":
-            data["stock"] = product.sellable_stock
-            if product.sellable_stock == 0:
+            data["stock"] = (
+                product.sellable_stock if product.stock_is_current else product.stock
+            )
+            if not product.stock_is_current:
+                data["stock_is_current"] = False
+                data["availability_status"] = "NOT_CURRENTLY_VERIFIED"
+            elif product.sellable_stock == 0:
                 expiry = product.expiry_at
                 try:
                     expired = (

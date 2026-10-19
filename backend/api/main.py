@@ -2223,8 +2223,10 @@ Use the product already identified in the conversation for a clear follow-up suc
 the price?” If more than one product could be meant, ask which one.
 For an explicit recommendation or preference, use `recommend_products`. Keep the requested
 category, product type, brand, budget, and spice preference as hard filters. The tool returns
-currently sellable items. If the request is vague, ask one short question instead of choosing
-randomly.
+currently sellable items only when its source supports live stock. If results identify a dated
+snapshot or `stock_is_current` is false, describe them as catalog suggestions and say current
+availability is unverified. Use any returned prices only as dated reference prices. If the
+request is vague, ask one short question instead of choosing randomly.
 When suggesting items, include their verified VND prices. The catalog has no sales counts, taste
 ratings, or customer-question analytics. Never claim something is a bestseller, popular, most
 requested, or the best tasting.
@@ -2272,7 +2274,11 @@ Trong câu hỏi nối tiếp như “giá bao nhiêu?” hoặc “ở kệ nà
 Khi khách nói rõ muốn gợi ý/tư vấn/chọn hộ, đang phân vân, hoặc nêu tiêu chí để tìm món
 phù hợp (ví dụ “snack không cay”, “nước dưới 10.000đ”), hãy gọi `recommend_products`.
 Giữ đúng nhóm hàng và mặt hàng con khách nêu, cùng mọi giới hạn giá/độ cay/nhãn hàng.
-Backend luôn lọc sản phẩm còn hàng và áp dụng các bộ lọc catalog như điều kiện cứng.
+Backend lọc hàng còn bán nếu nguồn có tồn kho hiện hành. Nếu kết quả đến từ snapshot cũ hoặc
+`stock_is_current` là false, chỉ gọi đó là gợi ý trong catalog; nói rõ chưa xác minh được hàng
+còn tại cửa hàng. Giá trong snapshot chỉ là giá tham khảo theo ngày dữ liệu, không khẳng định
+là giá hôm nay. Nếu catalog không có thuộc tính được hỏi như độ cay, nói chưa có dữ liệu thay
+vì tự đoán.
 Nếu chưa rõ khách muốn nhóm hàng nào hoặc ưu tiên gì, hỏi một câu ngắn để làm rõ;
 không tự chọn đại một nhóm hàng. Khi đưa gợi ý, nêu giá và ngày dữ liệu từ catalog.
 Catalog hiện không có lượt bán hay đánh giá vị; đừng gọi món nào là bán chạy nhất/ngon nhất.
@@ -2670,7 +2676,7 @@ def product_search(
     category: str | None = None,
     max_price_vnd: int | None = None,
     spicy: bool | None = None,
-    in_stock: bool = True,
+    in_stock: bool | None = None,
     limit: int = 10,
     brand: str | None = None,
     price_operator: str | None = None,
@@ -2684,13 +2690,21 @@ def product_search(
         raise HTTPException(status_code=422, detail="Unsupported price_operator")
     if price_value_vnd is not None and price_value_vnd < 0:
         raise HTTPException(status_code=422, detail="price_value_vnd must be non-negative")
+    repository = get_product_repository()
+    current_stock_supported = bool(getattr(repository, "supports_current_stock", False))
+    if in_stock is True and not current_stock_supported:
+        raise HTTPException(
+            status_code=409,
+            detail="Current store availability is not available from this catalog source",
+        )
+    filter_in_stock = current_stock_supported if in_stock is None else in_stock
     try:
-        items = get_product_repository().search(
+        items = repository.search(
             query=q,
             category=category,
             max_price_vnd=max_price_vnd,
             spicy=spicy,
-            in_stock=in_stock,
+            in_stock=filter_in_stock,
             limit=limit,
             brand=brand,
             price_operator=price_operator,
@@ -2727,7 +2741,8 @@ def _product_card(product: ProductSnapshot) -> ProductCardResponse:
         category=product.category,
         brand=product.brand,
         price_vnd=product.price_vnd,
-        stock=product.sellable_stock,
+        stock=product.sellable_stock if product.stock_is_current else product.stock,
+        stock_is_current=product.stock_is_current,
         uom=product.uom,
         data_timestamp=product.data_timestamp,
         data_source=source,
@@ -3082,14 +3097,27 @@ async def _handle_shopping_action(
                         product for product in observation.products if product.sellable_stock > 0
                     ]
                     if not candidates:
-                        reply = (
-                            f"I could not find a sellable match for {item_query} in the active "
-                            "catalog. "
-                            "I left the cart unchanged."
-                            if request.language == "en"
-                            else f"Mình chưa tìm thấy {item_query} đang bán được trong catalog; "
-                            "giỏ được giữ nguyên nhé."
-                        )
+                        if observation.products and all(
+                            not product.stock_is_current for product in observation.products
+                        ):
+                            reply = (
+                                "The catalog only has dated stock records, so I can't verify "
+                                "whether that item is available. I left the cart unchanged."
+                                if request.language == "en"
+                                else "Catalog chỉ có tồn kho snapshot cũ nên mình chưa xác minh "
+                                "được mặt hàng đó còn không; giỏ hàng chưa thay đổi nhé."
+                            )
+                        else:
+                            reply = (
+                                f"I could not find a sellable match for {item_query} in the active "
+                                "catalog. "
+                                "I left the cart unchanged."
+                                if request.language == "en"
+                                else (
+                                    f"Mình chưa tìm thấy {item_query} đang bán được "
+                                    "trong catalog; giỏ được giữ nguyên nhé."
+                                )
+                            )
                         return _record_shopping_turn(
                             request,
                             reply,
@@ -3184,7 +3212,18 @@ async def _handle_shopping_action(
                     product for product in observation.products if product.sellable_stock > 0
                 ]
                 if not selected_products:
-                    reply = "Món đó vừa hết hàng hoặc không còn bán được. Bạn chọn món khác nhé."
+                    if observation.products and all(
+                        not product.stock_is_current for product in observation.products
+                    ):
+                        reply = (
+                            "Catalog chỉ có tồn kho snapshot cũ nên mình chưa xác minh được món "
+                            "đó còn hàng; mình chưa thêm vào giỏ nhé."
+                        )
+                    else:
+                        reply = (
+                            "Món đó vừa hết hàng hoặc không còn bán được. "
+                            "Bạn chọn món khác nhé."
+                        )
                     return _record_shopping_turn(
                         request,
                         reply,
@@ -3271,14 +3310,23 @@ async def _handle_shopping_action(
                     product for product in candidates if product.sellable_stock > 0
                 ]
                 if not sellable_candidates:
-                    reply = (
-                        "I could not find a matching sellable product in the active catalog."
-                        if request.language == "en"
-                        else (
-                            "Mình chưa tìm thấy sản phẩm khớp và còn bán được "
-                            "trong catalog hiện tại."
+                    if candidates and all(not product.stock_is_current for product in candidates):
+                        reply = (
+                            "Current availability is unverified because the catalog only has "
+                            "dated stock records; I left the cart unchanged."
+                            if request.language == "en"
+                            else "Catalog chỉ có tồn kho snapshot cũ nên mình chưa xác minh được "
+                            "mặt hàng còn không; giỏ hàng chưa thay đổi nhé."
                         )
-                    )
+                    else:
+                        reply = (
+                            "I could not find a matching sellable product in the active catalog."
+                            if request.language == "en"
+                            else (
+                                "Mình chưa tìm thấy sản phẩm khớp và còn bán được "
+                                "trong catalog hiện tại."
+                            )
+                        )
                     return _record_shopping_turn(
                         request, reply, model="shopping-controller", tools_used=["search_products"]
                     )
