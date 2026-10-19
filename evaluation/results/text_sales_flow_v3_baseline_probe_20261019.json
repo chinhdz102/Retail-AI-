@@ -1,0 +1,397 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-19T12:15:40.326928+00:00",
+  "dataset_id": "retail_vietnamese_text_sales_flow_v3_dev",
+  "language_scope": "Vietnamese only",
+  "research_informed_by": [
+    "https://arxiv.org/abs/2406.12045 — τ-bench: multi-turn tool-agent-user interaction, task-state correctness, and policy adherence.",
+    "https://arxiv.org/abs/2408.04682 — ToolSandbox: stateful multi-turn tool execution, implicit dependencies, and trajectory-level evaluation.",
+    "https://aclanthology.org/2024.eacl-demo.16/ — RAGAs: separate retrieval relevance, generation faithfulness, and answer quality; judge metrics are not ground truth."
+  ],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 9.0,
+  "catalog_scope": {
+    "runtime_repository": "demo",
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false,
+    "postgres_search_tool_turns": 0
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "dev_fact_coca",
+      "turn": 1,
+      "prompt": "Ê Coca Zero giá bao nhiêu vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 9891,
+      "response": {
+        "session_id": "bfdb87ec-3737-443a-9ac2-1bfe6b052668",
+        "text": "Theo dữ liệu ngày 31/08/2026, giá Coca-Cola Zero 330ml là 13.000đ. Giá tại cửa hàng có thể đã thay đổi nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "13.000đ"
+        ],
+        "must_not_contain": [
+          "Theo dữ liệu ngày",
+          "31/08/2026"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "catalog_grounding",
+        "multi_turn",
+        "vietnamese_paraphrase"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": false,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "997",
+                "x-ratelimit-remaining-tokens": "5749",
+                "x-ratelimit-reset-requests": "4m19.2s",
+                "x-ratelimit-reset-tokens": "16.882s"
+              }
+            }
+          ],
+          "latency_ms": 1852,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"Coca Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 2199,
+            "completion_tokens": 27,
+            "total_tokens": 2226
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "996",
+                "x-ratelimit-remaining-tokens": "4325",
+                "x-ratelimit-reset-requests": "5m45.6s",
+                "x-ratelimit-reset-tokens": "31.268s"
+              }
+            }
+          ],
+          "latency_ms": 836,
+          "pacing_wait_ms": 7152,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 2444,
+            "completion_tokens": 52,
+            "total_tokens": 2496
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "dev_fact_coca",
+      "turn": 2,
+      "prompt": "À, món đó ở kệ nào vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 34,
+      "response": {
+        "session_id": "bfdb87ec-3737-443a-9ac2-1bfe6b052668",
+        "text": "Coca-Cola Zero 330ml ở kệ A2-L2 nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "A2-L2"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "catalog_grounding",
+        "multi_turn",
+        "vietnamese_paraphrase"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "dev_fact_coca",
+      "turn": 3,
+      "prompt": "Dữ liệu ghi còn bán được không?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 8630,
+      "response": {
+        "session_id": "bfdb87ec-3737-443a-9ac2-1bfe6b052668",
+        "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "16"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "catalog_grounding",
+        "multi_turn",
+        "vietnamese_paraphrase"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "995",
+                "x-ratelimit-remaining-tokens": "3049",
+                "x-ratelimit-reset-requests": "7m12s",
+                "x-ratelimit-reset-tokens": "42.248s"
+              }
+            }
+          ],
+          "latency_ms": 499,
+          "pacing_wait_ms": 8086,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 2308,
+            "completion_tokens": 22,
+            "total_tokens": 2330
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "dev_fact_coca",
+      "turn": 4,
+      "prompt": "Trong lon có thành phần gì?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 17,
+      "response": {
+        "session_id": "bfdb87ec-3737-443a-9ac2-1bfe6b052668",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "chất tạo ngọt"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "catalog_grounding",
+        "multi_turn",
+        "vietnamese_paraphrase"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    }
+  ],
+  "summary": {
+    "case_count": 1,
+    "turn_count": 4,
+    "http_200_count": 4,
+    "automated_grounding_safety_passes": 1,
+    "automated_grounding_safety_failures": 3,
+    "expected_model_tool_selection_passes": 0,
+    "expected_model_tool_selection_count": 0,
+    "no_tool_decision_passes": 0,
+    "no_tool_decision_count": 0,
+    "tool_argument_passes": 0,
+    "tool_argument_check_count": 0,
+    "median_turn_latency_ms": 4332,
+    "total_llm_calls": 3,
+    "total_tool_calls": 2
+  }
+}

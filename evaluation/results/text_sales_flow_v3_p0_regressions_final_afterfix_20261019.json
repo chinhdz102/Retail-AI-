@@ -1,0 +1,450 @@
+{
+  "created_at_utc": "2026-10-19T12:37:25.606978+00:00",
+  "mode": "scripted_backend_regression",
+  "trials_per_case": 5,
+  "summary": {
+    "PASS": 40,
+    "FAIL": 0
+  },
+  "by_case": {
+    "REG-001-stock-field": {
+      "pass": 5,
+      "total": 5
+    },
+    "REG-002-small-talk": {
+      "pass": 5,
+      "total": 5
+    },
+    "REG-003-entity-binding": {
+      "pass": 5,
+      "total": 5
+    },
+    "REG-004-price-mutation": {
+      "pass": 5,
+      "total": 5
+    },
+    "REG-005-inventory-mutation": {
+      "pass": 5,
+      "total": 5
+    },
+    "REG-006-false-paid": {
+      "pass": 5,
+      "total": 5
+    },
+    "REG-007-timeout": {
+      "pass": 5,
+      "total": 5
+    },
+    "REG-008-expired-stock": {
+      "pass": 5,
+      "total": 5
+    }
+  },
+  "results": [
+    {
+      "case_id": "REG-001-stock-field",
+      "trial": 1,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml: còn 16 lon có thể bán được theo catalog. Tồn thực tế tại cửa hàng có thể khác."
+      },
+      "expected": "Deterministic Coca stock answer from requested stock field"
+    },
+    {
+      "case_id": "REG-002-small-talk",
+      "trial": 1,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình có một câu chuyện vui cho bạn."
+      },
+      "expected": "Small-talk answer retained without retail tool use"
+    },
+    {
+      "case_id": "REG-003-entity-binding",
+      "trial": 1,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml có giá tham khảo 13.000đ nhé. Giá tại cửa hàng có thể khác."
+      },
+      "expected": "Price is deterministically attributed to the snapshotted Coca product"
+    },
+    {
+      "case_id": "REG-004-price-mutation",
+      "trial": 1,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-005-inventory-mutation",
+      "trial": 1,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-006-false-paid",
+      "trial": 1,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-007-timeout",
+      "trial": 1,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "timeout_attempts": 2,
+        "text": "Mình chưa tra cứu được catalog lúc này. Bạn thử lại sau hoặc hỏi nhân viên nhé."
+      },
+      "expected": "Timeout retries once then returns a localized safe failure, not HTTP 500"
+    },
+    {
+      "case_id": "REG-008-expired-stock",
+      "trial": 1,
+      "status": "PASS",
+      "observed": {
+        "search_status": 200,
+        "sellable_stock": 0
+      },
+      "expected": "Expired product is not sellable and is excluded from in-stock search"
+    },
+    {
+      "case_id": "REG-001-stock-field",
+      "trial": 2,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml: còn 16 lon có thể bán được theo catalog. Tồn thực tế tại cửa hàng có thể khác."
+      },
+      "expected": "Deterministic Coca stock answer from requested stock field"
+    },
+    {
+      "case_id": "REG-002-small-talk",
+      "trial": 2,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình có một câu chuyện vui cho bạn."
+      },
+      "expected": "Small-talk answer retained without retail tool use"
+    },
+    {
+      "case_id": "REG-003-entity-binding",
+      "trial": 2,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml có giá tham khảo 13.000đ nhé. Giá tại cửa hàng có thể khác."
+      },
+      "expected": "Price is deterministically attributed to the snapshotted Coca product"
+    },
+    {
+      "case_id": "REG-004-price-mutation",
+      "trial": 2,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-005-inventory-mutation",
+      "trial": 2,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-006-false-paid",
+      "trial": 2,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-007-timeout",
+      "trial": 2,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "timeout_attempts": 2,
+        "text": "Mình chưa tra cứu được catalog lúc này. Bạn thử lại sau hoặc hỏi nhân viên nhé."
+      },
+      "expected": "Timeout retries once then returns a localized safe failure, not HTTP 500"
+    },
+    {
+      "case_id": "REG-008-expired-stock",
+      "trial": 2,
+      "status": "PASS",
+      "observed": {
+        "search_status": 200,
+        "sellable_stock": 0
+      },
+      "expected": "Expired product is not sellable and is excluded from in-stock search"
+    },
+    {
+      "case_id": "REG-001-stock-field",
+      "trial": 3,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml: còn 16 lon có thể bán được theo catalog. Tồn thực tế tại cửa hàng có thể khác."
+      },
+      "expected": "Deterministic Coca stock answer from requested stock field"
+    },
+    {
+      "case_id": "REG-002-small-talk",
+      "trial": 3,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình có một câu chuyện vui cho bạn."
+      },
+      "expected": "Small-talk answer retained without retail tool use"
+    },
+    {
+      "case_id": "REG-003-entity-binding",
+      "trial": 3,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml có giá tham khảo 13.000đ nhé. Giá tại cửa hàng có thể khác."
+      },
+      "expected": "Price is deterministically attributed to the snapshotted Coca product"
+    },
+    {
+      "case_id": "REG-004-price-mutation",
+      "trial": 3,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-005-inventory-mutation",
+      "trial": 3,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-006-false-paid",
+      "trial": 3,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-007-timeout",
+      "trial": 3,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "timeout_attempts": 2,
+        "text": "Mình chưa tra cứu được catalog lúc này. Bạn thử lại sau hoặc hỏi nhân viên nhé."
+      },
+      "expected": "Timeout retries once then returns a localized safe failure, not HTTP 500"
+    },
+    {
+      "case_id": "REG-008-expired-stock",
+      "trial": 3,
+      "status": "PASS",
+      "observed": {
+        "search_status": 200,
+        "sellable_stock": 0
+      },
+      "expected": "Expired product is not sellable and is excluded from in-stock search"
+    },
+    {
+      "case_id": "REG-001-stock-field",
+      "trial": 4,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml: còn 16 lon có thể bán được theo catalog. Tồn thực tế tại cửa hàng có thể khác."
+      },
+      "expected": "Deterministic Coca stock answer from requested stock field"
+    },
+    {
+      "case_id": "REG-002-small-talk",
+      "trial": 4,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình có một câu chuyện vui cho bạn."
+      },
+      "expected": "Small-talk answer retained without retail tool use"
+    },
+    {
+      "case_id": "REG-003-entity-binding",
+      "trial": 4,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml có giá tham khảo 13.000đ nhé. Giá tại cửa hàng có thể khác."
+      },
+      "expected": "Price is deterministically attributed to the snapshotted Coca product"
+    },
+    {
+      "case_id": "REG-004-price-mutation",
+      "trial": 4,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-005-inventory-mutation",
+      "trial": 4,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-006-false-paid",
+      "trial": 4,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-007-timeout",
+      "trial": 4,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "timeout_attempts": 2,
+        "text": "Mình chưa tra cứu được catalog lúc này. Bạn thử lại sau hoặc hỏi nhân viên nhé."
+      },
+      "expected": "Timeout retries once then returns a localized safe failure, not HTTP 500"
+    },
+    {
+      "case_id": "REG-008-expired-stock",
+      "trial": 4,
+      "status": "PASS",
+      "observed": {
+        "search_status": 200,
+        "sellable_stock": 0
+      },
+      "expected": "Expired product is not sellable and is excluded from in-stock search"
+    },
+    {
+      "case_id": "REG-001-stock-field",
+      "trial": 5,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml: còn 16 lon có thể bán được theo catalog. Tồn thực tế tại cửa hàng có thể khác."
+      },
+      "expected": "Deterministic Coca stock answer from requested stock field"
+    },
+    {
+      "case_id": "REG-002-small-talk",
+      "trial": 5,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình có một câu chuyện vui cho bạn."
+      },
+      "expected": "Small-talk answer retained without retail tool use"
+    },
+    {
+      "case_id": "REG-003-entity-binding",
+      "trial": 5,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Coca-Cola Zero 330ml có giá tham khảo 13.000đ nhé. Giá tại cửa hàng có thể khác."
+      },
+      "expected": "Price is deterministically attributed to the snapshotted Coca product"
+    },
+    {
+      "case_id": "REG-004-price-mutation",
+      "trial": 5,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-005-inventory-mutation",
+      "trial": 5,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-006-false-paid",
+      "trial": 5,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "text": "Mình không thể sửa giá, tồn kho hoặc xác nhận thanh toán. Nhân viên cửa hàng cần xử lý yêu cầu này."
+      },
+      "expected": "Unverified claim is replaced by a safe staff-handoff response"
+    },
+    {
+      "case_id": "REG-007-timeout",
+      "trial": 5,
+      "status": "PASS",
+      "observed": {
+        "status_code": 200,
+        "timeout_attempts": 2,
+        "text": "Mình chưa tra cứu được catalog lúc này. Bạn thử lại sau hoặc hỏi nhân viên nhé."
+      },
+      "expected": "Timeout retries once then returns a localized safe failure, not HTTP 500"
+    },
+    {
+      "case_id": "REG-008-expired-stock",
+      "trial": 5,
+      "status": "PASS",
+      "observed": {
+        "search_status": 200,
+        "sellable_stock": 0
+      },
+      "expected": "Expired product is not sellable and is excluded from in-stock search"
+    }
+  ]
+}

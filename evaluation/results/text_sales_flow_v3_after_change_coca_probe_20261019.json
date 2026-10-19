@@ -1,0 +1,447 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-19T12:29:05.914512+00:00",
+  "dataset_id": "retail_vietnamese_text_sales_flow_v3_dev",
+  "language_scope": "Vietnamese only",
+  "research_informed_by": [
+    "https://arxiv.org/abs/2406.12045 — τ-bench: multi-turn tool-agent-user interaction, task-state correctness, and policy adherence.",
+    "https://arxiv.org/abs/2408.04682 — ToolSandbox: stateful multi-turn tool execution, implicit dependencies, and trajectory-level evaluation.",
+    "https://aclanthology.org/2024.eacl-demo.16/ — RAGAs: separate retrieval relevance, generation faithfulness, and answer quality; judge metrics are not ground truth."
+  ],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "minimum_model_request_interval_seconds": 9.0,
+  "catalog_scope": {
+    "runtime_repository": "demo",
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false,
+    "postgres_search_tool_turns": 0
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "dev_fact_coca",
+      "turn": 1,
+      "prompt": "Ê Coca Zero giá bao nhiêu vậy?",
+      "language": "vi",
+      "status_code": 500,
+      "latency_ms": 9741,
+      "response": {
+        "error_type": "JSONDecodeError",
+        "response_status": 500,
+        "response_content_type": "text/plain; charset=utf-8",
+        "response_body_bytes": 21
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "13.000đ"
+        ],
+        "must_not_contain": [
+          "Theo dữ liệu ngày",
+          "31/08/2026"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "catalog_grounding",
+        "multi_turn",
+        "vietnamese_paraphrase"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": false,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "994",
+                "x-ratelimit-remaining-tokens": "5714",
+                "x-ratelimit-reset-requests": "8m38.4s",
+                "x-ratelimit-reset-tokens": "17.145s"
+              }
+            }
+          ],
+          "latency_ms": 1557,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "search_products",
+              "arguments": "{\"query\":\"Coca Zero\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 2206,
+            "completion_tokens": 27,
+            "total_tokens": 2233
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "993",
+                "x-ratelimit-remaining-tokens": "4283",
+                "x-ratelimit-reset-requests": "10m4.8s",
+                "x-ratelimit-reset-tokens": "31.628s"
+              }
+            }
+          ],
+          "latency_ms": 690,
+          "pacing_wait_ms": 7449,
+          "tool_calls": [
+            {
+              "name": "get_product_snapshot",
+              "arguments": "{\"fields\":[\"price_vnd\",\"data_timestamp\"],\"product_id\":\"COKE_ZERO_330\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 2449,
+            "completion_tokens": 56,
+            "total_tokens": 2505
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "dev_fact_coca",
+      "turn": 2,
+      "prompt": "À, món đó ở kệ nào vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 24,
+      "response": {
+        "session_id": "fccb662c-ce9e-4e45-b70b-aafd0c6b5f1b",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "A2-L2"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "catalog_grounding",
+        "multi_turn",
+        "vietnamese_paraphrase"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "dev_fact_coca",
+      "turn": 3,
+      "prompt": "Còn bán được không?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 5,
+      "response": {
+        "session_id": "fccb662c-ce9e-4e45-b70b-aafd0c6b5f1b",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "16"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "catalog_grounding",
+        "multi_turn",
+        "vietnamese_paraphrase"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "dev_fact_coca",
+      "turn": 4,
+      "prompt": "Trong lon có thành phần gì?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 4,
+      "response": {
+        "session_id": "fccb662c-ce9e-4e45-b70b-aafd0c6b5f1b",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "chất tạo ngọt"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "catalog_grounding",
+        "multi_turn",
+        "vietnamese_paraphrase"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "dev_fact_coca",
+      "turn": 5,
+      "prompt": "Giá này được cập nhật ngày nào?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 8899,
+      "response": {
+        "session_id": "fccb662c-ce9e-4e45-b70b-aafd0c6b5f1b",
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "COKE_ZERO_330"
+        ],
+        "must_contain": [
+          "31/08/2026"
+        ]
+      },
+      "conversation_tags": [
+        "dev",
+        "catalog_grounding",
+        "multi_turn",
+        "vietnamese_paraphrase"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": false,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": false,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": false
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "992",
+                "x-ratelimit-remaining-tokens": "2967",
+                "x-ratelimit-reset-requests": "11m31.2s",
+                "x-ratelimit-reset-tokens": "42.454s"
+              }
+            }
+          ],
+          "latency_ms": 615,
+          "pacing_wait_ms": 8255,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 2315,
+            "completion_tokens": 16,
+            "total_tokens": 2331
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "case_count": 1,
+    "turn_count": 5,
+    "http_200_count": 4,
+    "automated_grounding_safety_passes": 0,
+    "automated_grounding_safety_failures": 5,
+    "expected_model_tool_selection_passes": 0,
+    "expected_model_tool_selection_count": 0,
+    "no_tool_decision_passes": 0,
+    "no_tool_decision_count": 0,
+    "tool_argument_passes": 0,
+    "tool_argument_check_count": 0,
+    "median_turn_latency_ms": 24,
+    "total_llm_calls": 3,
+    "total_tool_calls": 2
+  }
+}

@@ -24,7 +24,16 @@ from backend.services.vietnamese_intent import (
 from backend.shared.contracts import SessionState
 
 MAX_PRODUCT_RESULTS = 10
-FactField = Literal["price_vnd", "stock", "shelf", "promotion", "expiry_at", "ingredients", "spicy"]
+FactField = Literal[
+    "price_vnd",
+    "stock",
+    "shelf",
+    "promotion",
+    "expiry_at",
+    "ingredients",
+    "spicy",
+    "data_timestamp",
+]
 ToolStatus = Literal[
     "SUCCESS", "NOT_FOUND", "INVALID_ARGUMENT", "DENIED", "TEMPORARY_FAILURE", "DATA_UNAVAILABLE"
 ]
@@ -116,7 +125,7 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "description": (
                 "Read verified facts for one product ID returned by search_products. "
                 "Set fields to exactly those requested: price_vnd, stock, shelf, "
-                "promotion, expiry_at, ingredients, spicy. For shelf, preserve "
+                "promotion, expiry_at, ingredients, spicy, data_timestamp. For shelf, preserve "
                 "shelf_source: RECOMMENDED_PLANOGRAM means this is a proposed locator, "
                 "not a verified physical store location."
             ),
@@ -136,10 +145,11 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
                                 "expiry_at",
                                 "ingredients",
                                 "spicy",
+                                "data_timestamp",
                             ],
                         },
                         "minItems": 1,
-                        "maxItems": 7,
+                        "maxItems": 8,
                         "uniqueItems": True,
                     },
                 },
@@ -231,7 +241,7 @@ class GetProductSnapshotArguments(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     product_id: str = Field(min_length=1, max_length=64)
-    fields: list[FactField] = Field(min_length=1, max_length=7)
+    fields: list[FactField] = Field(min_length=1, max_length=8)
 
 
 class ListProductPromotionsArguments(BaseModel):
@@ -514,7 +524,11 @@ def execute_catalog_tool(
                     terminal=True,
                 )
             category = _category_for_repository(parsed.category, repo)
-            products = tuple(list_promotions(category=category, limit=parsed.limit))
+            products = tuple(
+                product
+                for product in list_promotions(category=category, limit=parsed.limit)
+                if product.sellable_stock > 0
+            )
             latest_timestamp = max(
                 (product.data_timestamp for product in products),
                 default=None,
@@ -725,6 +739,8 @@ def execute_catalog_tool(
                 data["availability_status"] = "EXPIRED" if expired else "OUT_OF_STOCK"
                 if expired:
                     data["expiry_at"] = expiry
+        elif field_name == "data_timestamp":
+            data[field_name] = product.data_timestamp.isoformat()
         else:
             data[field_name] = getattr(product, field_name)
             if field_name == "shelf":

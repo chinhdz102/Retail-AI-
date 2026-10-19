@@ -486,6 +486,7 @@ describe('kiosk app', () => {
       product_id: 'COKE_ZERO_330', name: 'Coca-Cola Zero 330ml', category: 'drink',
       brand: 'Coca-Cola', price_vnd: 13_000, stock: 16, uom: 'lon',
       data_timestamp: '2026-10-19T00:00:00Z',
+      data_source: 'demo_product_catalog',
     }
     const cart = {
       ...emptyCart,
@@ -515,6 +516,7 @@ describe('kiosk app', () => {
       'session-test', product.product_id, 1, expect.any(String),
     ))
     await vi.waitFor(() => expect(wrapper.text()).toContain('13.000đ'))
+    expect(wrapper.text()).toContain('Catalog demo · 19/10/2026')
     expect(wrapper.text()).toContain('Giỏ hàng demo')
   })
 
@@ -524,6 +526,7 @@ describe('kiosk app', () => {
       product_id: 'COKE_ZERO_330', name: 'Coca-Cola Zero 330ml', category: 'drink',
       brand: 'Coca-Cola', price_vnd: 13_000, stock: 16, uom: 'lon',
       data_timestamp: '2026-10-19T00:00:00Z',
+      data_source: 'demo_product_catalog',
     }
     const emptyCart = {
       cart_id: 'cart-test', session_id: 'session-test', items: [], item_count: 0,

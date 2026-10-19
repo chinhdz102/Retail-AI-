@@ -209,15 +209,31 @@ def _render_verified_snapshot(
     data_date = product.data_timestamp.strftime("%d/%m/%Y")
     has_volatile_facts = bool({"price_vnd", "stock", "promotion"}.intersection(fields))
 
+    if fields == ("data_timestamp",):
+        if language == "en":
+            return (
+                f"This catalog record is dated {data_date}; "
+                "I can't confirm it reflects today's store data."
+            )
+        if language == "zh":
+            return (
+                f"这条商品目录记录的日期是 {data_date}；"
+                "我无法确认它是否反映门店的最新数据。"
+            )
+        return (
+            f"Mục dữ liệu này được ghi nhận ngày {data_date}; "
+            "mình chưa thể xác nhận đây là dữ liệu mới nhất tại cửa hàng."
+        )
+
     if language == "en":
         facts = []
         if "price_vnd" in fields:
-            facts.append(f"price {price} VND")
+            facts.append(f"reference price {price} VND")
         if "stock" in fields:
             facts.append(
-                "no units are currently sellable"
+                "the catalog records no sellable units"
                 if product.sellable_stock == 0
-                else f"{product.sellable_stock} units are currently sellable"
+                else f"the catalog records {product.sellable_stock} sellable units"
             )
         if "shelf" in fields:
             shelf_label = (
@@ -228,27 +244,31 @@ def _render_verified_snapshot(
             )
             facts.append(shelf_label)
         if "promotion" in fields:
-            facts.append(f"promotion: {product.promotion or 'none listed'}")
+            facts.append(f"catalog promotion: {product.promotion or 'none listed'}")
         if "expiry_at" in fields:
             facts.append(f"expiry date {product.expiry_at}")
         if "ingredients" in fields:
             facts.append(f"ingredients: {product.ingredients}")
         if "spicy" in fields:
             facts.append("spicy" if product.spicy else "not spicy")
-        response = f"I checked: {product.name} " + "; ".join(facts) + "."
+        response = f"{product.name}: " + "; ".join(facts) + "."
         if has_volatile_facts:
-            response += f" Data recorded on {data_date}; store prices and stock may have changed."
+            response += " Store prices and stock may differ from this catalog snapshot."
+        if "promotion" in fields:
+            response += " Offer dates and terms are not verified; please confirm in store."
+        if "data_timestamp" in fields:
+            response += f" This record is dated {data_date}."
         return response
 
     if language == "zh":
         facts = []
         if "price_vnd" in fields:
-            facts.append(f"价格 {price} 越南盾")
+            facts.append(f"参考价格 {price} 越南盾")
         if "stock" in fields:
             facts.append(
-                "目前没有可售库存"
+                "目录记录中没有可售库存"
                 if product.sellable_stock == 0
-                else f"目前有 {product.sellable_stock} 件可售库存"
+                else f"目录记录有 {product.sellable_stock} 件可售"
             )
         if "shelf" in fields:
             shelf_label = (
@@ -258,26 +278,30 @@ def _render_verified_snapshot(
             )
             facts.append(shelf_label)
         if "promotion" in fields:
-            facts.append(f"促销：{product.promotion or '暂无记录'}")
+            facts.append(f"目录促销记录：{product.promotion or '暂无记录'}")
         if "expiry_at" in fields:
             facts.append(f"保质期至 {product.expiry_at}")
         if "ingredients" in fields:
             facts.append(f"配料：{product.ingredients}")
         if "spicy" in fields:
             facts.append("辣" if product.spicy else "不辣")
-        response = f"我查了一下，{product.name}" + "；".join(facts) + "。"
+        response = f"{product.name}：" + "；".join(facts) + "。"
         if has_volatile_facts:
-            response += f" 数据记录日期为 {data_date}，门店价格和库存可能已变化。"
+            response += " 门店实际价格和库存可能与目录记录不同。"
+        if "promotion" in fields:
+            response += " 优惠期限和条件尚未核实，请到店确认。"
+        if "data_timestamp" in fields:
+            response += f" 这条记录日期为 {data_date}。"
         return response
 
     facts = []
     if "price_vnd" in fields:
-        facts.append(f"giá {price}đ")
+        facts.append(f"giá tham khảo {price}đ")
     if "stock" in fields:
         facts.append(
-            "hiện chưa có hàng bán được"
+            "catalog chưa ghi nhận hàng bán được"
             if product.sellable_stock == 0
-            else f"hiện còn {product.sellable_stock} {product.uom or 'sản phẩm'}"
+            else f"catalog ghi nhận {product.sellable_stock} {product.uom or 'sản phẩm'} có thể bán"
         )
     if "shelf" in fields:
         shelf_label = (
@@ -289,7 +313,11 @@ def _render_verified_snapshot(
         )
         facts.append(shelf_label)
     if "promotion" in fields:
-        facts.append(f"khuyến mãi {product.promotion or 'chưa có thông tin'}")
+        facts.append(
+            f"catalog ghi nhận ưu đãi {product.promotion}"
+            if product.promotion
+            else "catalog chưa có thông tin về khuyến mãi"
+        )
     if "expiry_at" in fields:
         facts.append(f"hạn dùng {product.expiry_at}")
     if "ingredients" in fields:
@@ -298,8 +326,8 @@ def _render_verified_snapshot(
         facts.append("có vị cay" if product.spicy else "không cay")
     if fields == ("price_vnd",):
         return (
-            f"Theo dữ liệu ngày {data_date}, giá {product.name} là {price}đ. "
-            "Giá tại cửa hàng có thể đã thay đổi nhé."
+            f"{product.name} có giá tham khảo {price}đ nhé. "
+            "Giá tại cửa hàng có thể khác."
         )
     if fields == ("stock",):
         stock = (
@@ -308,8 +336,8 @@ def _render_verified_snapshot(
             else f"còn {product.sellable_stock} {product.uom or 'sản phẩm'} có thể bán được"
         )
         return (
-            f"Theo dữ liệu ngày {data_date}, {product.name} hiện {stock}; "
-            "tồn thực tế có thể đã thay đổi nhé."
+            f"{product.name}: {stock} theo catalog. "
+            "Tồn thực tế tại cửa hàng có thể khác."
         )
     if fields == ("shelf",):
         if product.shelf_source == "RECOMMENDED_PLANOGRAM":
@@ -321,10 +349,26 @@ def _render_verified_snapshot(
             )
         return f"{product.name} ở kệ {product.shelf} nhé."
     if fields == ("promotion",):
-        promotion = product.promotion or "chưa có thông tin về khuyến mãi"
+        if product.sellable_stock == 0:
+            if language == "en":
+                return (
+                    f"The catalog shows no sellable stock for {product.name}, "
+                    "so I can't confirm that a promotion applies."
+                )
+            if language == "zh":
+                return f"目录记录中 {product.name} 没有可售库存，因此我无法确认优惠是否适用。"
+            return (
+                f"Catalog ghi nhận {product.name} hiện không có hàng bán được, "
+                "nên mình chưa thể xác nhận khuyến mãi có áp dụng."
+            )
+        promotion = (
+            f"catalog ghi nhận ưu đãi {product.promotion}"
+            if product.promotion
+            else "catalog chưa có thông tin về khuyến mãi"
+        )
         return (
-            f"Theo dữ liệu ngày {data_date}, {product.name}: {promotion}. "
-            "Khuyến mãi tại cửa hàng có thể đã thay đổi nhé."
+            f"{product.name}: {promotion}. "
+            "Mình chưa xác minh ưu đãi còn hiệu lực tại cửa hàng."
         )
     if fields == ("expiry_at",):
         return f"Hạn dùng của {product.name} là {product.expiry_at} nhé."
@@ -334,11 +378,13 @@ def _render_verified_snapshot(
     if fields == ("spicy",):
         return f"{product.name} {'có vị cay' if product.spicy else 'không cay'} nhé."
 
-    response = f"Mình kiểm tra rồi, {product.name} " + ", ".join(facts) + " nhé."
+    response = f"{product.name}: " + ", ".join(facts) + "."
     if has_volatile_facts:
-        response += (
-            f" Dữ liệu được ghi nhận ngày {data_date}; thông tin tại quầy có thể đã thay đổi."
-        )
+        response += " Giá và tồn thực tế tại cửa hàng có thể khác catalog."
+    if "promotion" in fields:
+        response += " Mình chưa xác minh ưu đãi còn hiệu lực tại cửa hàng."
+    if "data_timestamp" in fields:
+        response += f" Dữ liệu được ghi nhận ngày {data_date}."
     return response
 
 
@@ -1068,25 +1114,20 @@ def _localized_recommendation_candidates(
     language: LanguageCode,
 ) -> str:
     products = observation.products[:3]
-    latest_timestamp = max(
-        (product.data_timestamp for product in products),
-        default=DATA_TIMESTAMP,
-    )
-    data_date = latest_timestamp.strftime("%d/%m/%Y")
     items = []
     for product in products:
         price = f"{product.price_vnd:,}".replace(",", ".")
         if language == "en":
-            items.append(f"{product.name} ({price} VND)")
+            items.append(f"{product.name} (reference price {price} VND)")
         elif language == "zh":
-            items.append(f"{product.name}（{price}越南盾）")
+            items.append(f"{product.name}（参考价 {price} 越南盾）")
         else:
-            items.append(f"{product.name} ({price}đ)")
+            items.append(f"{product.name} (giá tham khảo {price}đ)")
     if language == "en":
-        return "You could try " + ", ".join(items) + f" (catalog data {data_date})."
+        return "You could try " + ", ".join(items) + ". Store prices may differ from the catalog."
     if language == "zh":
-        return "可以试试" + "、".join(items) + f"（目录数据日期：{data_date}）。"
-    return "Mình gợi ý " + ", ".join(items) + f" nhé (dữ liệu {data_date})."
+        return "可以试试" + "、".join(items) + "。门店实际价格可能与目录不同。"
+    return "Mình gợi ý " + ", ".join(items) + " nhé. Giá tại cửa hàng có thể khác catalog."
 
 
 def _localized_catalog_promotions(
@@ -1094,11 +1135,6 @@ def _localized_catalog_promotions(
     language: LanguageCode,
 ) -> str:
     items = observation.content.get("items", [])[:2]
-    raw_timestamp = observation.content.get("latest_snapshot_at")
-    try:
-        data_date = datetime.fromisoformat(str(raw_timestamp)).strftime("%d/%m/%Y")
-    except ValueError:
-        data_date = ""
     if not items:
         if language == "en":
             return (
@@ -1119,17 +1155,16 @@ def _localized_catalog_promotions(
     ]
     if not summaries:
         return _localized_tool_failure(language)
-    dated = f" ({data_date})" if data_date else ""
     rendered = "; ".join(summaries)
     if language == "en":
         return (
-            f"The catalog snapshot{dated} records {rendered}. "
+            f"The catalog records {rendered}. "
             "It has no verified offer dates or terms, so please confirm in store."
         )
     if language == "zh":
-        return f"目录快照{dated}记录：{rendered}。有效期限和适用条件尚未核实，请到店确认。"
+        return f"目录记录：{rendered}。有效期限和适用条件尚未核实，请到店确认。"
     return (
-        f"Catalog{dated} ghi nhận {rendered}. "
+        f"Catalog ghi nhận {rendered}. "
         "Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé."
     )
 
@@ -1732,8 +1767,14 @@ def _deterministic_tool_response(
         session_id=request.session_id,
         text=reply,
         model=model,
-        grounded_product_ids=[],
+        grounded_product_ids=[product.product_id for product in observation.products],
         tools_used=[observation.tool_name],
+        data_timestamp=max(
+            (product.data_timestamp for product in observation.products),
+            default=None,
+        ),
+        data_source=observation.source,
+        products=[_product_card(product) for product in observation.products],
         state=state,
     )
 
@@ -2456,6 +2497,7 @@ def product_snapshot(product_id: str):
 
 
 def _product_card(product: ProductSnapshot) -> ProductCardResponse:
+    source = get_product_repository().source_name
     return ProductCardResponse(
         product_id=product.product_id,
         name=product.name,
@@ -2465,6 +2507,7 @@ def _product_card(product: ProductSnapshot) -> ProductCardResponse:
         stock=product.sellable_stock,
         uom=product.uom,
         data_timestamp=product.data_timestamp,
+        data_source=source,
     )
 
 
@@ -2551,6 +2594,11 @@ def _record_shopping_turn(
         model=model,
         grounded_product_ids=[product.product_id for product in products or []],
         tools_used=tools_used or [],
+        data_timestamp=max(
+            (product.data_timestamp for product in products or []),
+            default=None,
+        ),
+        data_source=get_product_repository().source_name if products else None,
         state=state or SessionState.CLOSED,
         products=[_product_card(product) for product in products or []],
         cart=cart,
@@ -3204,17 +3252,13 @@ def _comparison_reply(
             else:
                 result = f"按{source_label}，{more.name}比{fewer.name}多{difference}件可售商品。"
     else:
-        day = max(item.data_timestamp for item in products).strftime("%d/%m/%Y")
         if language == "vi":
             lines = [
                 f"{item.name}: {_comparison_price(item.price_vnd, language)}; "
                 f"còn bán được {item.sellable_stock} {item.uom or 'đơn vị'}"
                 for item in products
             ]
-            result = (
-                f"Mình so sánh theo {source_label} ngày {day}:\n- "
-                + "\n- ".join(lines)
-            )
+            result = f"Mình so sánh theo {source_label}:\n- " + "\n- ".join(lines)
             if first.price_vnd != second.price_vnd:
                 cheaper = min(products, key=lambda item: item.price_vnd)
                 difference = _comparison_price(abs(first.price_vnd - second.price_vnd), language)
@@ -3225,7 +3269,7 @@ def _comparison_reply(
                 f"{item.sellable_stock} {item.uom or 'units'} sellable"
                 for item in products
             ]
-            result = f"{source_label.title()} comparison dated {day}:\n- " + "\n- ".join(lines)
+            result = f"{source_label.title()} comparison:\n- " + "\n- ".join(lines)
             if first.price_vnd != second.price_vnd:
                 cheaper = min(products, key=lambda item: item.price_vnd)
                 difference = _comparison_price(abs(first.price_vnd - second.price_vnd), language)
@@ -3236,7 +3280,7 @@ def _comparison_reply(
                 f"{item.sellable_stock} {item.uom or '件'}"
                 for item in products
             ]
-            result = f"{source_label}（{day}）比较：\n- " + "\n- ".join(lines)
+            result = f"{source_label}比较：\n- " + "\n- ".join(lines)
     if language == "vi" and metric is None:
         result += "\nMình chưa có rating đã xác minh để kết luận món nào ngon hơn."
     elif language == "en" and metric is None:
@@ -3608,13 +3652,21 @@ async def agent_respond(
                 campaign_observation,
                 reply,
             )
+    freshness_followup = bool(
+        "data_timestamp" in requested_fields
+        and not _fact_product_query(request.text)
+        and record.last_grounded_product_id
+    )
     explicit_grounded_reference = (
         record.last_grounded_product_id
         if requested_fields
         and not followup_fields
         and record.last_grounded_product_id
         and record.last_grounded_product_name
-        and _text_mentions_product(request.text, record.last_grounded_product_name)
+        and (
+            _text_mentions_product(request.text, record.last_grounded_product_name)
+            or freshness_followup
+        )
         else None
     )
     model_request_text = request.text
@@ -3997,6 +4049,19 @@ async def agent_respond(
         model=model,
         grounded_product_ids=[product.product_id for product in products],
         tools_used=tools_used,
+        data_timestamp=(
+            max(
+                (product.data_timestamp for product in latest_catalog_observation.products),
+                default=None,
+            )
+            if latest_catalog_observation is not None
+            else None
+        ),
+        data_source=(
+            latest_catalog_observation.source
+            if latest_catalog_observation is not None
+            else None
+        ),
         state=record.state,
     )
 
@@ -4121,6 +4186,7 @@ _FACT_QUERY_STOP_WORDS = {
     "ben",
     "biet",
     "cai",
+    "cap",
     "cho",
     "co",
     "con",
@@ -4128,6 +4194,7 @@ _FACT_QUERY_STOP_WORDS = {
     "cua",
     "dau",
     "dat",
+    "data",
     "de",
     "gi",
     "gia",
@@ -4159,6 +4226,8 @@ _FACT_QUERY_STOP_WORDS = {
     "ton",
     "tra",
     "vay",
+    "updated",
+    "last",
     "where",
     "what",
     "which",
@@ -4207,6 +4276,7 @@ _FACT_QUERY_STOP_WORDS = {
     "tren",
     "ngay",
     "han",
+    "nhat",
     "nhan",
     "san",
     "pham",
@@ -4235,6 +4305,7 @@ _FACT_QUERY_STOP_WORDS = {
     "that",
     "du",
     "lieu",
+    "ghi",
     "hay",
     "noi",
     "nhu",
@@ -4973,6 +5044,9 @@ def _implicit_followup_fields(text: str) -> tuple[str, ...]:
         "giup",
         "cho",
         "bao",
+        "du",
+        "lieu",
+        "ghi",
         "voi",
         "muon",
         "nao",

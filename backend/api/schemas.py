@@ -123,6 +123,7 @@ class ProductCardResponse(BaseModel):
     stock: int
     uom: str | None = None
     data_timestamp: datetime
+    data_source: str = "unknown"
 
 
 class AgentRespondResponse(BaseModel):
@@ -131,6 +132,8 @@ class AgentRespondResponse(BaseModel):
     model: str
     grounded_product_ids: list[str] = Field(default_factory=list)
     tools_used: list[str] = Field(default_factory=list)
+    data_timestamp: datetime | None = None
+    data_source: str | None = None
     state: SessionState
     products: list[ProductCardResponse] = Field(default_factory=list)
     cart: CartResponse | None = None

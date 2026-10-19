@@ -1,0 +1,528 @@
+{
+  "dataset_id": "retail_vietnamese_text_sales_flow_v3_heldout",
+  "language_scope": "Vietnamese only",
+  "description": "10 held-out sessions / 49 turns. Keep sealed during rule tuning; run once for final evaluation.",
+  "research_informed_by": [
+    "https://arxiv.org/abs/2406.12045 — τ-bench: multi-turn tool-agent-user interaction, task-state correctness, and policy adherence.",
+    "https://arxiv.org/abs/2408.04682 — ToolSandbox: stateful multi-turn tool execution, implicit dependencies, and trajectory-level evaluation.",
+    "https://aclanthology.org/2024.eacl-demo.16/ — RAGAs: separate retrieval relevance, generation faithfulness, and answer quality; judge metrics are not ground truth."
+  ],
+  "catalog_scope": "backend/products/catalog.py demo catalog; current snapshot only, no live PostgreSQL claims",
+  "cases": [
+    {
+      "case_id": "heldout_combo_price_shelf_stock",
+      "tags": [
+        "heldout",
+        "multi_intent",
+        "coreference"
+      ],
+      "turns": [
+        {
+          "text": "Coca Zero giá bao nhiêu, rồi chỉ mình chỗ lấy với?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "13.000",
+            "A2-L2"
+          ],
+          "must_not_contain": [
+            "Theo dữ liệu ngày"
+          ]
+        },
+        {
+          "text": "Tồn của lon này dữ liệu ghi thế nào?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "16"
+          ]
+        },
+        {
+          "text": "Hạn dùng còn tới bao giờ?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "20/01/2027"
+          ]
+        },
+        {
+          "text": "Thêm một lon vào giỏ.",
+          "expected_state": "CART_ACTIVE",
+          "expected_cart_items": {
+            "COKE_ZERO_330": 1
+          }
+        },
+        {
+          "text": "Mở lại giỏ.",
+          "expected_state": "CART_ACTIVE",
+          "expected_cart_items": {
+            "COKE_ZERO_330": 1
+          }
+        },
+        {
+          "text": "Chuẩn bị thanh toán giúp mình.",
+          "expected_state": "CHECKOUT_CONFIRMATION",
+          "expected_cart_items": {
+            "COKE_ZERO_330": 1
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "heldout_product_correction",
+      "tags": [
+        "heldout",
+        "context_switch",
+        "correction"
+      ],
+      "turns": [
+        {
+          "text": "Coca Zero giá sao?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "13.000"
+          ]
+        },
+        {
+          "text": "Không, ý mình là nước suối cơ.",
+          "expected_product_ids": [
+            "WATER01"
+          ],
+          "must_contain": [
+            "Nước suối 500ml"
+          ]
+        },
+        {
+          "text": "Chai đó còn mấy chai?",
+          "expected_product_ids": [
+            "WATER01"
+          ],
+          "must_contain": [
+            "40"
+          ]
+        },
+        {
+          "text": "Giá bao nhiêu?",
+          "expected_product_ids": [
+            "WATER01"
+          ],
+          "must_contain": [
+            "7.000"
+          ]
+        },
+        {
+          "text": "Nằm ở dãy nào?",
+          "expected_product_ids": [
+            "WATER01"
+          ],
+          "must_contain": [
+            "A1-L1"
+          ]
+        },
+        {
+          "text": "Giá đó có phải giá realtime không?",
+          "expected_product_ids": [
+            "WATER01"
+          ],
+          "must_contain": [
+            "có thể khác"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "heldout_multi_item_cart",
+      "tags": [
+        "heldout",
+        "multi_item",
+        "cart_atomicity"
+      ],
+      "turns": [
+        {
+          "text": "Thêm 2 Coca Zero và 1 nước suối vào giỏ.",
+          "expected_state": "CART_ACTIVE",
+          "expected_cart_items": {
+            "COKE_ZERO_330": 2,
+            "WATER01": 1
+          }
+        },
+        {
+          "text": "Bỏ một lon Coca ra.",
+          "expected_state": "CART_ACTIVE",
+          "expected_cart_items": {
+            "COKE_ZERO_330": 1,
+            "WATER01": 1
+          }
+        },
+        {
+          "text": "Tăng nước suối thành hai chai.",
+          "expected_state": "CART_ACTIVE",
+          "expected_cart_items": {
+            "COKE_ZERO_330": 1,
+            "WATER01": 2
+          }
+        },
+        {
+          "text": "Xem tổng tiền giúp mình.",
+          "expected_state": "CART_ACTIVE",
+          "expected_cart_items": {
+            "COKE_ZERO_330": 1,
+            "WATER01": 2
+          }
+        },
+        {
+          "text": "Chuẩn bị thanh toán thôi.",
+          "expected_state": "CHECKOUT_CONFIRMATION",
+          "expected_cart_items": {
+            "COKE_ZERO_330": 1,
+            "WATER01": 2
+          }
+        },
+        {
+          "text": "Xác nhận đặt hàng nhé.",
+          "expected_state": "PAYMENT_PENDING",
+          "expected_order_payment_status": "PENDING",
+          "must_contain": [
+            "sandbox"
+          ],
+          "must_not_contain": [
+            "thanh toán thành công"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "heldout_dialogue_region_and_typo",
+      "tags": [
+        "heldout",
+        "regional_slang",
+        "typo",
+        "coreference"
+      ],
+      "turns": [
+        {
+          "text": "Ê, coca zerro nhiu z?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "13.000"
+          ]
+        },
+        {
+          "text": "Cái chi ở kệ mô rứa?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "A2-L2"
+          ]
+        },
+        {
+          "text": "Còn bán được mấy lon?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "16"
+          ]
+        },
+        {
+          "text": "Coi thành phần giùm tui.",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "chất tạo ngọt"
+          ]
+        },
+        {
+          "text": "Dữ liệu Coca được ghi nhận ngày nào?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "31/08/2026"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "heldout_rank_without_sales_data",
+      "tags": [
+        "heldout",
+        "unsupported_ranking",
+        "grounded_recommendation"
+      ],
+      "turns": [
+        {
+          "text": "Bim bim nào đang bán chạy nhất?",
+          "must_not_contain": [
+            "bán chạy nhất là"
+          ]
+        },
+        {
+          "text": "Vậy có snack nào không cay không?",
+          "expected_product_ids": [
+            "SNACK01"
+          ],
+          "must_contain": [
+            "Snack khoai tây vị tự nhiên"
+          ]
+        },
+        {
+          "text": "Giá nó dưới hai chục chứ?",
+          "expected_product_ids": [
+            "SNACK01"
+          ],
+          "must_contain": [
+            "18.000"
+          ]
+        },
+        {
+          "text": "Ngon nhất thật không?",
+          "must_not_contain": [
+            "ngon nhất là",
+            "được yêu thích nhất"
+          ]
+        },
+        {
+          "text": "Snack khoai tây ở kệ nào?",
+          "expected_product_ids": [
+            "SNACK01"
+          ],
+          "must_contain": [
+            "C3-L2"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "heldout_expired_milk",
+      "tags": [
+        "heldout",
+        "expiry",
+        "sellable_stock"
+      ],
+      "turns": [
+        {
+          "text": "Sữa ít đường 180ml còn bán được không?",
+          "expected_product_ids": [
+            "MILK01"
+          ],
+          "must_contain": [
+            "chưa có hàng bán được"
+          ]
+        },
+        {
+          "text": "Sao vậy, hạn đến ngày nào?",
+          "expected_product_ids": [
+            "MILK01"
+          ],
+          "must_contain": [
+            "15/09/2026"
+          ]
+        },
+        {
+          "text": "Nó có khuyến mãi mua hai giảm một nghìn à?",
+          "expected_product_ids": [
+            "MILK01"
+          ],
+          "must_contain": [
+            "chưa thể xác nhận khuyến mãi có áp dụng"
+          ]
+        },
+        {
+          "text": "Có nên lấy loại đó không?",
+          "must_not_contain": [
+            "nên mua",
+            "đang giảm giá"
+          ]
+        },
+        {
+          "text": "Hạn trên hộp sữa ghi ngày nào?",
+          "expected_product_ids": [
+            "MILK01"
+          ],
+          "must_contain": [
+            "15/09/2026"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "heldout_freshness_question",
+      "tags": [
+        "heldout",
+        "provenance",
+        "freshness"
+      ],
+      "turns": [
+        {
+          "text": "Coca Zero giá bao nhiêu?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "13.000"
+          ]
+        },
+        {
+          "text": "Số giá này cập nhật ngày nào?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "31/08/2026"
+          ]
+        },
+        {
+          "text": "Vậy có chắc cửa hàng hôm nay còn bán không?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "có thể khác"
+          ]
+        },
+        {
+          "text": "Chỉ mình vị trí trên sơ đồ nhé.",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "A2-L2"
+          ]
+        },
+        {
+          "text": "Vậy đây có phải giá cửa hàng lúc này không?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "có thể khác"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "heldout_promotion_and_no_new_arrival_claim",
+      "tags": [
+        "heldout",
+        "promotion",
+        "new_catalog"
+      ],
+      "turns": [
+        {
+          "text": "Coca Zero có deal nào không?",
+          "expected_product_ids": [
+            "COKE_ZERO_330"
+          ],
+          "must_contain": [
+            "chưa có thông tin về khuyến mãi"
+          ]
+        },
+        {
+          "text": "Có hàng mới nhập hôm nay chưa?",
+          "must_not_contain": [
+            "vừa nhập",
+            "mới về"
+          ]
+        },
+        {
+          "text": "Hôm nay có sản phẩm mới nào không?",
+          "must_not_contain": [
+            "vừa nhập hôm nay"
+          ]
+        },
+        {
+          "text": "Thế có chương trình giảm giá nào đang chạy chắc chắn không?",
+          "must_not_contain": [
+            "chắc chắn đang giảm"
+          ]
+        },
+        {
+          "text": "Nước suối hiện có còn bán được không?",
+          "expected_product_ids": [
+            "WATER01"
+          ],
+          "must_contain": [
+            "40"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "heldout_customer_correction_and_budget",
+      "tags": [
+        "heldout",
+        "recommendation",
+        "constraint_revision"
+      ],
+      "turns": [
+        {
+          "text": "Tìm đồ ăn vặt dưới 30 nghìn giúp mình.",
+          "expected_product_ids": [
+            "SNACK01"
+          ]
+        },
+        {
+          "text": "Không cay nhé.",
+          "expected_product_ids": [
+            "SNACK01"
+          ]
+        },
+        {
+          "text": "À thôi tối đa 10 nghìn.",
+          "must_not_contain": [
+            "18.000đ",
+            "Snack khoai tây vị tự nhiên"
+          ]
+        },
+        {
+          "text": "Vậy quay lại dưới 20 nghìn, có món nào?",
+          "expected_product_ids": [
+            "SNACK01"
+          ]
+        },
+        {
+          "text": "Thêm một gói snack đó vào giỏ.",
+          "expected_state": "CART_ACTIVE",
+          "expected_cart_items": {
+            "SNACK01": 1
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "heldout_support_ticket",
+      "tags": [
+        "heldout",
+        "customer_support",
+        "handoff"
+      ],
+      "turns": [
+        {
+          "text": "Tôi bị tính tiền hai lần, nhờ gọi nhân viên hỗ trợ giúp.",
+          "expected_tools": [
+            "handoff_to_staff"
+          ],
+          "expected_state": "HANDOFF",
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": "RECEIVED_DEMO",
+          "expected_support_ticket_issue_type": "PAYMENT_PROBLEM",
+          "expected_support_ticket_demo": true,
+          "must_contain": [
+            "hỗ trợ demo mã",
+            "chưa liên hệ nhân viên thật"
+          ]
+        }
+      ]
+    }
+  ]
+}

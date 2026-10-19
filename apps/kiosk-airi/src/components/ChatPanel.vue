@@ -22,6 +22,7 @@ import type {
   ChatMessage,
   CheckoutQuote,
   LanguageCode,
+  ProductCard,
   SandboxOrder,
   ShoppingCart,
 } from '../types'
@@ -179,6 +180,9 @@ const shoppingText = computed(() => {
       simulateFailed: 'Simulate failure',
       add: 'Add',
       stock: 'available in demo',
+      catalogDemo: 'Demo catalog',
+      catalogWinmart: 'WinMart catalog',
+      catalogUnknown: 'Catalog',
       end: 'End session',
       support: 'Call staff · demo',
       ticketLabel: 'Demo support request',
@@ -193,6 +197,8 @@ const shoppingText = computed(() => {
       stock: '演示库存', end: '结束会话',
       support: '联系店员 · 演示', ticketLabel: '演示服务请求',
       ticketDemo: '仅供演示 · 尚未联系真实店员',
+      catalogDemo: '演示商品目录', catalogWinmart: 'WinMart 商品目录',
+      catalogUnknown: '商品目录',
     }
   }
   return {
@@ -207,6 +213,9 @@ const shoppingText = computed(() => {
     simulateFailed: 'Mô phỏng thất bại',
     add: 'Thêm',
     stock: 'còn bán trong demo',
+    catalogDemo: 'Catalog demo',
+    catalogWinmart: 'Catalog WinMart',
+    catalogUnknown: 'Catalog',
     end: 'Kết thúc phiên',
     support: 'Gọi nhân viên · demo',
     ticketLabel: 'Yêu cầu hỗ trợ demo',
@@ -221,6 +230,18 @@ function formatVnd(amount: number) {
   return new Intl.NumberFormat(props.language === 'en' ? 'en-US' : 'vi-VN', {
     maximumFractionDigits: 0,
   }).format(amount) + (props.language === 'en' ? ' VND' : 'đ')
+}
+
+function productProvenance(product: ProductCard) {
+  const source = product.data_source === 'demo_product_catalog'
+    ? shoppingText.value.catalogDemo
+    : product.data_source === 'winmart_postgres_catalog'
+      ? shoppingText.value.catalogWinmart
+      : shoppingText.value.catalogUnknown
+  const date = new Intl.DateTimeFormat(props.language === 'en' ? 'en-GB' : 'vi-VN', {
+    day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh',
+  }).format(new Date(product.data_timestamp))
+  return `${source} · ${date}`
 }
 
 const quickPrompts = computed(() => {
@@ -330,6 +351,7 @@ function onKeydown(event: KeyboardEvent) {
             <div class="message-product-copy">
               <strong>{{ product.name }}</strong>
               <span>{{ formatVnd(product.price_vnd) }} · {{ product.stock }} {{ shoppingText.stock }}</span>
+              <small class="product-provenance">{{ productProvenance(product) }}</small>
             </div>
             <button type="button" class="small-action-button" @click="emit('add-product', product.product_id)">
               <ShoppingCartIcon :size="16" weight="duotone" aria-hidden="true" />
