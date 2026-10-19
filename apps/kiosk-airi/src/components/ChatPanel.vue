@@ -315,7 +315,11 @@ function onKeydown(event: KeyboardEvent) {
           <span class="message-author">{{ message.role === 'assistant' ? 'Sky' : copy.user }}</span>
           <span v-if="message.model" class="message-model">{{ message.model }}</span>
         </div>
-        <p class="message-bubble">{{ message.text }}</p>
+        <p v-if="message.text" class="message-bubble">{{ message.text }}</p>
+        <div v-else-if="message.role === 'assistant' && status === 'thinking'" class="message-bubble typing-bubble" role="status">
+          <span>{{ copy.thinking }}</span>
+          <span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        </div>
         <div v-if="message.supportTicket" class="support-ticket-card" role="status">
           <strong>{{ shoppingText.ticketLabel }}</strong>
           <span>{{ message.supportTicket.ticket_id }} · {{ message.supportTicket.status }}</span>
@@ -335,7 +339,7 @@ function onKeydown(event: KeyboardEvent) {
         </div>
       </article>
 
-      <div v-if="status === 'thinking' || status === 'transcribing'" class="message-row message-assistant">
+      <div v-if="status === 'transcribing' || (status === 'thinking' && messages[messages.length - 1]?.role !== 'assistant')" class="message-row message-assistant">
         <div class="message-meta"><span class="message-author">Sky</span></div>
         <div class="message-bubble typing-bubble" role="status">
           <span>{{ status === 'transcribing' ? copy.transcribing : copy.thinking }}</span>

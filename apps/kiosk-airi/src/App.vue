@@ -73,6 +73,7 @@ let sessionIdleTimeoutMs = 30 * 60 * 1000
 let sessionGeneration = 0
 let bootInFlight: { generation: number; promise: Promise<void> } | null = null
 let resetInFlight: Promise<void> | null = null
+let pendingTurn: { text: string; generation: number; id: string } | null = null
 
 const languageSettings: Record<LanguageCode, {
   label: string
@@ -180,6 +181,7 @@ function pushMessage(role: ChatMessage['role'], text: string, metadata?: Partial
     text,
     ...metadata,
   })
+  return messages.value[messages.value.length - 1]
 }
 
 function handleVoiceState(state: VoiceState) {
@@ -609,6 +611,7 @@ async function resetKioskSession(notice?: string) {
   if ('speechSynthesis' in window) window.speechSynthesis.cancel()
   sessionId.value = null
   messages.value = []
+  pendingTurn = null
   draft.value = ''
   cart.value = null
   checkoutQuote.value = null
@@ -667,7 +670,7 @@ async function withSessionRecovery<T>(
   }
 }
 
-async function sendMessage(value = draft.value, fromVoice = false) {
+async function sendMessage(value = draft.value, fromVoice = false, isRetry = false) {
   const text = value.trim()
   if (!text || status.value === 'thinking' || (status.value === 'transcribing' && !fromVoice)) return
   const callGeneration = sessionGeneration
@@ -681,24 +684,40 @@ async function sendMessage(value = draft.value, fromVoice = false) {
   draft.value = ''
   lastPrompt.value = text
   errorMessage.value = null
-  pushMessage('user', text)
+  if (!isRetry) pushMessage('user', text)
+  const clientTurnId = isRetry
+    && pendingTurn?.text === text
+    && pendingTurn.generation === generation
+    ? pendingTurn.id
+    : createRequestId()
+  pendingTurn = { text, generation, id: clientTurnId }
+  const assistantMessage = pushMessage('assistant', '')
   status.value = 'thinking'
   voiceHint.value = languageSettings[language.value].thinking
 
   try {
-    const clientTurnId = createRequestId()
-    const response = await withSessionRecovery((id) => respond(id, text, language.value, clientTurnId))
+    const response = await withSessionRecovery((id) => respond(
+      id,
+      text,
+      language.value,
+      clientTurnId,
+      (delta) => {
+        if (generation === sessionGeneration && !isUnmounted) {
+          assistantMessage.text += delta
+        }
+      },
+    ))
     if (generation !== sessionGeneration || isUnmounted) return
     if (response.state === 'CLOSED') {
       await resetKioskSession('Phiên đã kết thúc. Nội dung cũ đã được xóa khỏi kiosk.')
       return
     }
-    pushMessage('assistant', response.text, {
-      model: response.model,
-      groundedProductIds: response.grounded_product_ids,
-      products: response.products,
-      supportTicket: response.support_ticket ?? undefined,
-    })
+    assistantMessage.text = response.text
+    assistantMessage.model = response.model
+    assistantMessage.groundedProductIds = response.grounded_product_ids
+    assistantMessage.products = response.products
+    assistantMessage.supportTicket = response.support_ticket ?? undefined
+    pendingTurn = null
     if (response.cart) cart.value = response.cart
     if (response.checkout_quote) checkoutQuote.value = response.checkout_quote
     if (response.order) sandboxOrder.value = response.order
@@ -711,6 +730,8 @@ async function sendMessage(value = draft.value, fromVoice = false) {
     }
   } catch (error) {
     if (generation !== sessionGeneration || isUnmounted) return
+    const assistantIndex = messages.value.findIndex((message) => message.id === assistantMessage.id)
+    if (assistantIndex >= 0) messages.value.splice(assistantIndex, 1)
     errorMessage.value = toErrorMessage(
       error,
       language.value === 'vi'
@@ -891,7 +912,7 @@ function retryLastPrompt() {
   const prompt = lastPrompt.value
   errorMessage.value = null
   status.value = 'idle'
-  if (prompt) void sendMessage(prompt)
+  if (prompt) void sendMessage(prompt, false, true)
   else void startHandsFree()
 }
 

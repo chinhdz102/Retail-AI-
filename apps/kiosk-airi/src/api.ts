@@ -62,6 +62,95 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000):
   }
 }
 
+async function requestAgentStream(
+  sessionId: string,
+  text: string,
+  language: LanguageCode,
+  clientTurnId: string,
+  onTextDelta: (text: string) => void,
+  timeoutMs = 45_000,
+): Promise<AgentResponse> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+  try {
+    const response = await fetch(`${API_BASE_URL}/agent/respond/stream`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        Accept: 'text/event-stream',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        session_id: sessionId,
+        text,
+        language,
+        client_turn_id: clientTurnId,
+      }),
+    })
+
+    if (!response.ok) {
+      let detail = `Request failed (${response.status})`
+      try {
+        const body = await response.json() as { detail?: string }
+        detail = body.detail ?? detail
+      } catch {
+        // Keep the status-based message when the server returns no JSON.
+      }
+      throw new ApiError(detail, response.status)
+    }
+    if (!response.body) throw new Error('The response stream is not available.')
+
+    reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let accumulatedText = ''
+    const state: { metadata: Omit<AgentResponse, 'text'> | null } = { metadata: null }
+
+    const consumeFrame = (frame: string) => {
+      let eventName = 'message'
+      const data: string[] = []
+      for (const line of frame.split(/\r?\n/)) {
+        if (line.startsWith('event:')) eventName = line.slice(6).trim()
+        else if (line.startsWith('data:')) data.push(line.slice(5).trimStart())
+      }
+      if (!data.length) return
+      const payload = JSON.parse(data.join('\n')) as {
+        text?: string
+        response?: Omit<AgentResponse, 'text'>
+      }
+      if (eventName === 'delta') {
+        if (typeof payload.text !== 'string') throw new Error('Invalid response stream delta.')
+        accumulatedText += payload.text
+        onTextDelta(payload.text)
+      } else if (eventName === 'complete') {
+        if (!payload.response) throw new Error('Invalid final response stream event.')
+        state.metadata = payload.response
+      }
+    }
+
+    while (true) {
+      const { value, done } = await reader.read()
+      buffer += decoder.decode(value, { stream: !done })
+      const frames = buffer.split(/\r?\n\r?\n/)
+      buffer = frames.pop() ?? ''
+      for (const frame of frames) consumeFrame(frame)
+      if (done) break
+    }
+    if (buffer.trim()) consumeFrame(buffer)
+    if (!state.metadata) throw new Error('The response stream ended before completion.')
+    return { ...state.metadata, text: accumulatedText }
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error('Kết nối phản hồi quá lâu. Bạn thử lại giúp mình nhé.')
+    }
+    throw error
+  } finally {
+    if (reader) void reader.cancel().catch(() => undefined)
+    clearTimeout(timer)
+  }
+}
+
 export function createSession(kioskId = 'kiosk-01'): Promise<SessionResponse> {
   return request<SessionResponse>('/sessions', {
     method: 'POST',
@@ -81,7 +170,11 @@ export function respond(
   text: string,
   language: LanguageCode = 'vi',
   clientTurnId = createRequestId(),
+  onTextDelta?: (text: string) => void,
 ): Promise<AgentResponse> {
+  if (onTextDelta) {
+    return requestAgentStream(sessionId, text, language, clientTurnId, onTextDelta)
+  }
   return request<AgentResponse>('/agent/respond', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -135,6 +135,7 @@ describe('voice transcript integration', () => {
       'Cho tôi biết giá Coca Zero.',
       'vi',
       expect.any(String),
+      expect.any(Function),
     ))
     await vi.waitFor(() => expect(wrapper.get('.message-user .message-bubble').text()).toBe('Cho tôi biết giá Coca Zero.'))
     await vi.waitFor(() => expect(wrapper.text()).toContain('Coca Zero giá 13.000đ.'))

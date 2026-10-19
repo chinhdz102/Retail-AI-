@@ -14,28 +14,33 @@ Retail AI đã có thể dẫn dắt phiên mua sắm demo từ tra cứu sản 
 
 Benchmark tiếng Việt phát hiện ba vấn đề: grader tìm tham số recommendation trong trace LLM dù router chạy xác định; câu “chuyển khoản xong rồi” không được nhận diện khi chờ thanh toán; yêu cầu “bỏ qua xác minh” có thể bị hiểu thành gọi nhân viên. Sau sửa, hội thoại live v2 đạt 13/13 assertion; ba ca mặc định về thêm giỏ, checkout giỏ trống và yêu cầu nhân viên demo đạt 3/3.
 
-Trong báo cáo đánh giá trước, commit `1757bbd` đạt **490 backend**, **41 frontend**, **40/40 P0 regression** và **20/20 shopping sandbox**. Follow-up trên working tree của nhánh nêu trên đạt **494 backend** và **45 frontend**; TypeScript, production build, Ruff, compileall và diff check đều qua. Đây là bằng chứng test/sandbox và một mẫu Groq live nhỏ, không phải độ chính xác khách hàng thật hay chứng nhận production.
+Trong báo cáo đánh giá trước, commit `1757bbd` đạt **490 backend**, **41 frontend**, **40/40 P0 regression** và **20/20 shopping sandbox**. Follow-up trên nhánh nêu trên đạt **495 backend**, **49 frontend**, **40/40 P0 regression**, **20/20 shopping sandbox** và smoke backend **23 PASS / 0 FAIL / 7 UNSUPPORTED**; TypeScript, production build, Ruff, compileall và diff check đều qua. Đây là bằng chứng test/sandbox và một mẫu Groq live nhỏ, không phải độ chính xác khách hàng thật hay chứng nhận production.
 
-Giới hạn chính: PostgreSQL và Redis đã cấu hình nhưng probe kết nối timeout; demo có 6 sản phẩm; kho WinMart 3.099 dòng là snapshot, không phải tồn kho chi nhánh thời gian thực; ticket nhân viên và payment chỉ là simulator; text chat chưa stream token; voice/STT/TTS và kiosk thật không nằm trong benchmark này.
+Giới hạn chính: PostgreSQL và Redis đã cấu hình nhưng probe kết nối timeout; demo có 6 sản phẩm; kho WinMart 3.099 dòng là snapshot, không phải tồn kho chi nhánh thời gian thực; ticket nhân viên và payment chỉ là simulator; chat gửi SSE delta sau khi model và backend hoàn tất kiểm tra, chưa stream token trong lúc model đang sinh; voice/STT/TTS và kiosk thật không nằm trong benchmark này.
 
 ## Follow-up Validation: Session Isolation and Product Disambiguation
 
-Các thay đổi follow-up trên nhánh `codex/session-isolation-ui-hardening` tập trung vào hai lỗi có thể ảnh hưởng trực tiếp đến khách đang dùng chung kiosk:
+Các thay đổi follow-up trên nhánh `codex/session-isolation-ui-hardening` tập trung vào riêng tư phiên, phân biệt sản phẩm và phản hồi dần trong kiosk:
 
 - Kiosk gắn request đang chờ với generation của phiên; câu trả lời đến muộn sau khi khách A kết thúc không được đưa vào hội thoại khách B. Audio đã thu không bị gửi lại sang phiên mới khi phiên cũ hết hạn. Khởi tạo phiên được single-flight và component đóng phiên đang dùng khi bị tháo.
 - Khi đóng phiên, cart của khách bị xóa; order đang `PENDING` được giữ trong kho order tách biệt và chỉ đọc được bằng session sở hữu nó.
 - Truy vấn tiếng lóng `bim bim`/`bimbim` chỉ match cụm trong tên sản phẩm để tránh va chạm khi bỏ dấu với danh mục tã/bỉm. Truy vấn có dấu `bỉm` thêm điều kiện danh mục tã/bỉm.
 - `evaluation/cases/product_resolution_v2.jsonl` có 23 truy vấn, gồm snack, tã/bỉm, đồ uống, hóa mỹ phẩm, thực phẩm và sữa chua. Test xác nhận mọi gold product ID có trong 3.081 sản phẩm được importer chấp nhận từ snapshot 3.099 dòng. Đây là kiểm tra dữ liệu và SQL dựng ra, chưa phải đo Recall trên PostgreSQL.
+- Chat kiosk dùng SSE để cập nhật câu trả lời theo từng cụm từ. Endpoint chạy xong policy, tools, grounding và xử lý giao dịch trước khi phát delta; việc này làm nội dung hiển thị dần nhưng không giảm thời gian chờ model tạo câu trả lời.
+- Khi yêu cầu gặp lỗi mạng, nút thử lại dùng lại `client_turn_id` của lượt đó và không thêm dòng câu hỏi trùng trong UI.
 
 | Kiểm tra follow-up | Kết quả | Giới hạn |
 |---|---:|---|
-| Backend pytest | **494 passed** | Catalog demo/in-process; không bao gồm DB production. |
-| Frontend Vitest | **45 passed / 5 files** | Component/JSDOM; không phải browser E2E. JSDOM báo các API media/canvas chưa giả lập. |
-| Vue TypeScript + production build | **Pass** | Vite tiếp tục cảnh báo chunk model-viewer 1.024,05 kB (gzip 290,30 kB); build vẫn thành công. |
+| Backend pytest | **495 passed** | Catalog demo/in-process; không bao gồm DB production. |
+| Frontend Vitest | **49 passed / 6 files** | Component/JSDOM; không phải browser E2E. JSDOM báo các API media/canvas chưa giả lập. |
+| Vue TypeScript + production build | **Pass** | Main JS 171,31 kB (gzip 56,23 kB); avatar/model-viewer ở chunk tải riêng 1.024,05 kB (gzip 290,30 kB), Vite vẫn cảnh báo chunk lớn. |
 | Ruff, compileall, `git diff --check` | **Pass** | Có cảnh báo chuẩn hóa LF/CRLF của Git trên Windows. |
 | PostgreSQL product search v2 | **Không đo được** | Chạy read-only benchmark kết thúc bằng `TimeoutError`; không có Recall/latency mới để báo cáo. |
+| P0 regression | **40/40 pass** (8 nhóm × 5 lượt) | Scripted responses; artifact cuối `evaluation/results/p0_regression_20261019T094550Z.json`. |
+| Shopping sandbox | **20/20 pass**, 98 API calls, 0 LLM calls | False-payment 0/4; cross-session leakage 0/4; in-process P50 1,41 ms, P95 14,226 ms. Artifact cuối `evaluation/results/shopping_flow_sandbox_20261019T094549Z.json`. |
+| Deterministic smoke benchmark | **23 PASS / 0 FAIL / 7 UNSUPPORTED** | Kiểm API/tool/grounding/policy bằng scripted Groq và demo catalog; không đo live tool planning. Artifact cuối `evaluation/results/smoke_benchmark_followup_20261019_final.json`. Bản runner cũ được giữ tại `evaluation/results/smoke_benchmark_followup_20261019.json`; 7 FAIL của bản đó là assertion lỗi thời về tool trace/format và được triage, không phải regression của backend. |
 
-Các kiểm thử phiên bao gồm late response sau đổi khách, không replay audio, single-flight boot, đóng phiên khi unmount và luồng UI từ sản phẩm đến thanh toán mô phỏng. Chúng chưa thay thế kiểm thử trình duyệt, micro thật hoặc backend đang kết nối PostgreSQL/Redis.
+Các kiểm thử phiên bao gồm late response sau đổi khách, không replay audio, single-flight boot, đóng phiên khi unmount và luồng UI từ sản phẩm đến thanh toán mô phỏng. Kiểm thử SSE bao gồm byte UTF-8 chia nhỏ, ráp delta và từ chối stream bị cắt trước event hoàn tất. Chúng chưa thay thế kiểm thử trình duyệt, micro thật hoặc backend đang kết nối PostgreSQL/Redis.
 
 ## 2. Repository Audit
 
@@ -249,6 +254,7 @@ Yêu cầu hỗ trợ rõ ràng tạo ticket demo có ID, loại vấn đề, m�
 - Baseline commit 2f8b036 có 487 backend pass và 41 frontend pass. Sau regression injection và checkout, code cuối có 490 backend pass.
 - Lần v2 đầu đạt 10/13 theo grader cũ. Một assertion là false negative: grader yêu cầu arguments trong LLM trace trong khi recommendation chạy deterministic và session constraints đúng. Hai lỗi thật là phrase “chuyển khoản xong” và injection “bỏ qua xác minh”. Sau sửa parser, policy gate và state-aware grader, đạt 13/13.
 - Lần đầu chạy 3 default cases đạt 2/3; “Tạo đơn … QR” không được route sang checkout. Thêm “tạo đơn/create order”; chạy lại đạt 3/3, không phát QR hay claim thanh toán.
+- Smoke benchmark follow-up đầu tiên báo 16 PASS / 7 FAIL / 7 UNSUPPORTED vì grader còn đòi trace tool cũ, format giá không dấu chấm và tool observation dù policy chặn trước model. Harness được sửa để kiểm tra route recommendation xác định, dữ kiện trả ra, constraint đã áp dụng và chặn local; lần cuối đạt 23 PASS / 0 FAIL / 7 UNSUPPORTED. Bảy UNSUPPORTED là giới hạn tính năng/adapter được liệt kê trong artifact, không được tính là pass.
 - Sandbox benchmark cũ cũng 20/20. Chênh lệch timing in-process giữa lần chạy không đại diện hiệu năng production.
 - 13/13 là assertion định trước (ID, phrase, state, cart, order, ticket), không phải chấm thủ công naturalness và không có nghĩa hallucination rate bằng 0.
 
@@ -259,9 +265,11 @@ Artifact mới được giữ riêng, không ghi đè lịch sử:
 - evaluation/results/live_text_retail_v2_20261019.json
 - evaluation/results/live_text_retail_default_cases_20261019.json
 - evaluation/results/live_text_retail_default_cases_after_fixes_20261019.json
-- evaluation/results/p0_regression_20261019T085321Z.json
-- evaluation/results/shopping_flow_sandbox_20261019T085320Z.json
+- evaluation/results/p0_regression_20261019T094550Z.json
+- evaluation/results/shopping_flow_sandbox_20261019T094549Z.json
 - evaluation/results/live_groq_model_after_shopping_20261019.json
+- evaluation/results/smoke_benchmark_followup_20261019.json (runner cũ, diagnostic được giữ nguyên)
+- evaluation/results/smoke_benchmark_followup_20261019_final.json (runner đã sửa)
 
 ## 9. Error Analysis
 
@@ -276,7 +284,7 @@ Artifact mới được giữ riêng, không ghi đè lịch sử:
 | Payment | Không có bank webhook. | Sandbox giữ PENDING; LLM không đặt PAID. Chưa có payment provider, không gửi QR thật. |
 | Customer support | Ticket simulator không liên hệ nhân viên/CRM. | Response ghi rõ demo; cần queue có ack nếu triển khai handoff thật. |
 | Security | Guard chặn các injection đã nhận diện, gồm bypass verification. | Chưa penetration test, chưa đánh giá injection gián tiếp từ feed/catalog. |
-| UI/voice | Test/build pass nhưng text chờ JSON hoàn tất; chưa đo streaming, mic, TTS, lip-sync. | Cần browser e2e và latency tới first visible/audio token trên thiết bị thật. |
+| UI/voice | Text UI nhận SSE delta sau khi backend hoàn tất kiểm tra; chưa đo browser/mic/TTS/lip-sync thực. | SSE không stream token khi model đang sinh; cần đo latency tới first validated text/audio trên thiết bị thật. |
 | Latency | Median live thấp do nhiều route local; một query Groq mất khoảng 9,7 giây. | Tách provider/local ASGI; cần benchmark nhiều lượt trên mạng/thiết bị thật. |
 
 ## 10. Limitations and Future Work
@@ -306,7 +314,8 @@ Không có load test production, payment thật, POS, PostgreSQL/Redis live, sta
 
 ### Mã nguồn và cấu hình
 
-- Branch main; code commit được đánh giá: 1757bbd988de141ae23a6cf3f475a9c496d0340f.
+- Branch `codex/session-isolation-ui-hardening`; base commit của phần follow-up: `98ee7ef8e416cde3f2afd3bf0cc4845fe78d485f`.
+- Báo cáo đánh giá cũ giữ riêng tại `docs/reports/archive/`; follow-up được commit trên nhánh feature này.
 - Runtime test dùng catalog demo với CATALOG_REPOSITORY=demo.
 - Live Groq cần key trong .env; báo cáo và artifact không chứa giá trị key.
 - PostgreSQL/Redis probe timeout; không dùng chúng để tạo kết quả pass giả.
@@ -322,7 +331,7 @@ $env:CATALOG_REPOSITORY = 'demo'
 git diff --check
 
 cd apps\kiosk-airi
-npm run test:run -- --maxWorkers=2
+npm run test:run
 npm run build
 ~~~
 
@@ -332,7 +341,9 @@ npm run build
 $env:CATALOG_REPOSITORY = 'demo'
 .venv\Scripts\python.exe evaluation\run_p0_regressions.py --trials-per-case 5
 .venv\Scripts\python.exe evaluation\run_shopping_flow_benchmark.py --trials 2
+.venv\Scripts\python.exe evaluation\run_smoke_benchmark.py --output evaluation\results\smoke_benchmark_followup_20261019_final.json
 .venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark --case-file evaluation\cases\vietnamese_retail_shopping_v2.json --pace-seconds 9 --output evaluation\results\live_text_retail_v2_reproduced.json
+.venv\Scripts\python.exe -m evaluation.run_product_search_benchmark --cases evaluation\cases\product_resolution_v2.jsonl --output evaluation\results\product_search_benchmark_v2.json
 ~~~
 
 Demo: terminal backend đặt CATALOG_REPOSITORY=demo rồi chạy uvicorn backend.api.main:app --reload; terminal frontend chạy npm run dev trong apps/kiosk-airi. Demo không thay database URL hay bật giao dịch thật.
@@ -351,3 +362,4 @@ Artifact tái lập nằm trong evaluation/results với timestamp ở mục 8. 
 8. Si, Shuzheng et al. 2023. **SpokenWOZ: A Large-Scale Speech-Text Benchmark for Spoken Task-Oriented Dialogue Agents.** NeurIPS Datasets and Benchmarks 2023. https://papers.nips.cc/paper_files/paper/2023/hash/7b16688a2b053a1b01474ab5c78ce662-Abstract-Datasets_and_Benchmarks.html
 9. W3C. **Web Content Accessibility Guidelines (WCAG) 2.2, Target Size (Minimum), Success Criterion 2.5.8.** https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum
 10. W3C. **Web Content Accessibility Guidelines (WCAG) 2.2, Target Size (Enhanced), Success Criterion 2.5.5.** https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced
+11. Yang, Xinwei et al. 2026. **RealWorldShop: Benchmarking and Improving Conversational Shopping Agents in Real-World E-commerce.** arXiv:2609.38974v1, preprint submitted 2026-09-30. https://arxiv.org/abs/2609.38974
