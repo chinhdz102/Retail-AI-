@@ -835,8 +835,16 @@ def execute_catalog_tool(
             )
             if price:
                 matched.append(f"price_{price.operator.lower()}_{price.value_vnd}")
+            content = _candidate_content(products, matched)
+            content["constraints"] = {
+                "category": category,
+                "brand": parsed.brand,
+                "spicy": parsed.spicy,
+                "price_operator": price.operator if price else None,
+                "price_value_vnd": price.value_vnd if price else None,
+            }
             return ToolObservation(
-                content=_candidate_content(products, matched),
+                content=content,
                 products=products,
                 tool_name=name,
                 source=repo.source_name,

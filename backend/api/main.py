@@ -1017,6 +1017,21 @@ def _unsupported_catalog_fact_claim(
         # Recommendation candidates carry their catalog price snapshots. This
         # lets the deterministic candidate renderer include the verified price.
         verified_fields.add("price_vnd")
+    if any(
+        observation.status == "SUCCESS"
+        and observation.tool_name == "recommend_products"
+        and observation.products
+        and isinstance(observation.content.get("constraints"), dict)
+        and isinstance(observation.content["constraints"].get("spicy"), bool)
+        and all(
+            product.spicy is observation.content["constraints"]["spicy"]
+            for product in observation.products
+        )
+        for observation in observations
+    ):
+        # A recommendation tool can substantiate the requested spice filter
+        # when every returned candidate's structured snapshot matches it.
+        verified_fields.add("spicy")
     return not claimed_fields.issubset(verified_fields)
 
 
@@ -1044,14 +1059,54 @@ def _localized_recommendation_candidates(
 ) -> str:
     products = observation.products[:3]
     items = []
+    constraints = observation.content.get("constraints")
+    spicy_constraint = (
+        constraints.get("spicy")
+        if isinstance(constraints, dict) and isinstance(constraints.get("spicy"), bool)
+        else None
+    )
     for product in products:
         price = f"{product.price_vnd:,}".replace(",", ".")
+        spice_note = ""
+        if spicy_constraint is not None and product.spicy is spicy_constraint:
+            if language == "en":
+                spice_note = (
+                    ", catalog-listed as not spicy"
+                    if not spicy_constraint
+                    else ", catalog-listed as spicy"
+                )
+            elif language == "zh":
+                spice_note = "，目录标注为不辣" if not spicy_constraint else "，目录标注为辣"
+            else:
+                spice_note = (
+                    ", catalog ghi nhận không cay"
+                    if not spicy_constraint
+                    else ", catalog ghi nhận có cay"
+                )
         if language == "en":
-            items.append(f"{product.name} (reference price {price} VND)")
+            details = spice_note.lstrip(", ")
+            price_label = f"reference price {price} VND"
+            items.append(
+                f"{product.name} ({details}; {price_label})"
+                if details
+                else f"{product.name} ({price_label})"
+            )
         elif language == "zh":
-            items.append(f"{product.name}（参考价 {price} 越南盾）")
+            details = spice_note.lstrip("，")
+            price_label = f"参考价 {price} 越南盾"
+            items.append(
+                f"{product.name}（{details}；{price_label}）"
+                if details
+                else f"{product.name}（{price_label}）"
+            )
         else:
-            items.append(f"{product.name} (giá tham khảo {price}đ)")
+            details = spice_note.lstrip(", ")
+            price_label = f"giá tham khảo {price}đ"
+            items.append(
+                f"{product.name} ({details}; {price_label})"
+                if details
+                else f"{product.name} ({price_label})"
+            )
     if language == "en":
         response = "You could try " + ", ".join(items) + "."
         if include_price_caveat:
@@ -1354,17 +1409,37 @@ def _localized_unranked_candidates(
     )
 
 
-def _localized_ranking_clarification(language: LanguageCode) -> str:
+def _localized_ranking_clarification(
+    language: LanguageCode,
+    *,
+    category_known: bool = False,
+) -> str:
     return {
         "en": (
-            "The catalog has no sales counts or taste ratings, so I can't verify a bestseller "
-            "or rank taste. Which product category should I look at?"
+            "I don't have verified sales counts or taste ratings, so I can't confirm a bestseller "
+            "or rank taste."
+            + (
+                " I can suggest options by preference or budget if you'd like."
+                if category_known
+                else " Which product category should I look at?"
+            )
         ),
-        "zh": "目录没有销量或口味评分，所以我无法确认畅销款或口味排名。您想问哪个商品类别？",
+        "zh": (
+            "目录没有经过核实的销量或口味评分，所以我无法确认畅销款或口味排名。"
+            + (
+                "如果您愿意，我可以按口味或预算推荐。"
+                if category_known
+                else "您想问哪个商品类别？"
+            )
+        ),
         "vi": (
-            "Catalog chưa có số lượt bán hay đánh giá vị, nên mình chưa thể xác nhận "
-            "món bán chạy nhất hoặc ngon nhất. Bạn đang hỏi nhóm hàng nào để mình tìm "
-            "sản phẩm phù hợp?"
+            "Catalog chưa có dữ liệu đã xác minh về số lượt bán hay đánh giá vị, nên mình "
+            "chưa thể xác nhận món bán chạy nhất hoặc ngon nhất."
+            + (
+                " Nếu muốn, mình có thể gợi ý theo khẩu vị hoặc ngân sách."
+                if category_known
+                else " Bạn muốn mình xem nhóm hàng nào?"
+            )
         ),
     }[language]
 
@@ -4031,6 +4106,22 @@ async def agent_respond(
     ):
         return await _handle_product_comparison(request, record, None, "stock")
 
+    if _product_ranking_requested(request.text):
+        reply = _localized_ranking_clarification(
+            request.language,
+            category_known=_explicit_recommendation_category(request.text) is not None,
+        )
+        session_store.add_message(request.session_id, "user", request.text)
+        session_store.add_message(request.session_id, "assistant", reply)
+        return AgentRespondResponse(
+            session_id=request.session_id,
+            text=reply,
+            model="local-clarification",
+            grounded_product_ids=[],
+            tools_used=[],
+            state=record.state,
+        )
+
     product_correction_query = _product_correction_query(request.text)
     if product_correction_query:
         return await _handle_product_correction(
@@ -5091,6 +5182,19 @@ _FACT_QUERY_STOP_WORDS = {
     "the",
     "xac",
     "minh",
+    "xem",
+    "tham",
+    "khao",
+    "voi",
+    "roi",
+    "lay",
+    "muc",
+    "truc",
+    "tiep",
+    "chua",
+    "noi",
+    "ten",
+    "y",
     "ignore",
     "all",
     "previous",
@@ -5250,6 +5354,17 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
             "allergens",
             "allergen",
             "allergic to",
+            "tranh hat",
+            "khong chua hat",
+            "khong co hat",
+            "tranh cac loai hat",
+            "avoid nuts",
+            "avoid peanuts",
+            "nut free",
+            "nut-free",
+            "free from nuts",
+            "peanut free",
+            "peanut-free",
             "safe for",
             "suitable for",
             "dietary needs",
@@ -5299,6 +5414,7 @@ def _fact_product_query(text: str) -> str:
         normalized,
     )
     normalized = re.sub(r"\b(?:du lieu|muc du lieu)\b", " ", normalized)
+    normalized = re.sub(r"\b(?:lay\s+)?tu\s+(?:ngay|luc)\b", " ", normalized)
     normalized = re.sub(r"\bquay lai\b", " ", normalized)
     normalized = re.sub(
         r"\b(?:con )?may\s+(?:chai|lon|goi|hop|ly|cai)\b",
@@ -6323,6 +6439,20 @@ def _unsupported_catalog_attribute_requested(text: str) -> bool:
         or "co duong khong" in normalized
         or "chất béo" in text.casefold()
         or "di ung" in normalized
+        or any(
+            phrase in normalized
+            for phrase in (
+                "tranh hat",
+                "khong chua hat",
+                "khong co hat",
+                "tranh cac loai hat",
+                "avoid nuts",
+                "avoid peanuts",
+                "nut free",
+                "free from nuts",
+                "peanut free",
+            )
+        )
         or bool(token_set & {"allergy", "allergic", "peanut", "peanuts", "gluten", "lactose"})
         or ("dau phong" in normalized and bool(token_set & {"co", "chua", "thanh", "phan"}))
     )
@@ -6336,6 +6466,20 @@ def _unsupported_attribute_needs_product_clarification(text: str, record) -> boo
     allergen_query = (
         "di ung" in normalized
         or "dau phong" in normalized
+        or any(
+            phrase in normalized
+            for phrase in (
+                "tranh hat",
+                "khong chua hat",
+                "khong co hat",
+                "tranh cac loai hat",
+                "avoid nuts",
+                "avoid peanuts",
+                "nut free",
+                "free from nuts",
+                "peanut free",
+            )
+        )
         or bool(
             token_set
             & {
@@ -6360,6 +6504,11 @@ def _unsupported_attribute_needs_product_clarification(text: str, record) -> boo
         "can",
         "allergy",
         "allergic",
+        "muon",
+        "minh",
+        "chua",
+        "noi",
+        "ten",
         "dau",
         "doan",
         "gay",

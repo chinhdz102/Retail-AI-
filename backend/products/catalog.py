@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unicodedata
 from datetime import UTC, date, datetime
 from typing import Literal
@@ -315,6 +316,66 @@ def _normalize(value: str) -> str:
     return unaccented.replace("đ", "d")
 
 
+def _one_edit_apart(left: str, right: str) -> bool:
+    """Return whether two terms differ by one insertion, deletion, or substitution."""
+    if abs(len(left) - len(right)) > 1 or left == right:
+        return False
+    if len(left) == len(right):
+        mismatches = [
+            index
+            for index, (left_char, right_char) in enumerate(
+                zip(left, right, strict=True)
+            )
+            if left_char != right_char
+        ]
+        if len(mismatches) == 1:
+            return True
+        return (
+            len(mismatches) == 2
+            and mismatches[1] == mismatches[0] + 1
+            and left[mismatches[0]] == right[mismatches[1]]
+            and left[mismatches[1]] == right[mismatches[0]]
+        )
+
+    shorter, longer = sorted((left, right), key=len)
+    short_index = long_index = edits = 0
+    while short_index < len(shorter) and long_index < len(longer):
+        if shorter[short_index] == longer[long_index]:
+            short_index += 1
+            long_index += 1
+            continue
+        edits += 1
+        long_index += 1
+        if edits > 1:
+            return False
+    return True
+
+
+def _query_matches_product(needle_tokens: list[str], haystack: str) -> bool:
+    if not needle_tokens or all(token in haystack for token in needle_tokens):
+        return True
+
+    missing = [token for token in needle_tokens if token not in haystack]
+    if len(missing) != 1 or len(missing[0]) < 4:
+        return False
+
+    exact_identity_anchor = any(
+        token in haystack
+        and len(token) >= 3
+        and not token.isdigit()
+        and not re.fullmatch(r"\d+(?:ml|g|kg)", token)
+        for token in needle_tokens
+    )
+    if not exact_identity_anchor:
+        return False
+
+    product_terms = re.findall(r"[a-z0-9]+", haystack)
+    return any(
+        len(term) >= 4 and _one_edit_apart(missing[0], term)
+        for term in product_terms
+    )
+
+
 def search_products(
     query: str = "",
     category: str | None = None,
@@ -352,10 +413,12 @@ def search_products(
             f"{product.product_id} {product.item_no or ''} {product.barcode or ''} "
             f"{product.name} {product.category} {product.category_hierarchy or ''} "
             f"{DEMO_CATEGORY_ALIASES.get(product.category, '')} "
+            f"{product.uom or ''} "
             f"{product.brand or ''} {product.description or ''} {product.ingredients or ''} "
             f"{PRODUCT_ALIASES.get(product.product_id, '')}"
         )
-        if needle and not all(token in haystack for token in needle.split()):
+        needle_tokens = needle.split() if needle else []
+        if needle and not _query_matches_product(needle_tokens, haystack):
             continue
         if normalized_category:
             category_text = _normalize(

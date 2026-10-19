@@ -236,4 +236,36 @@ Artifacts:
 - [Recovery dev v2 live baseline, 6/18](../../evaluation/results/recovery_dev_v2_baseline_live_614c635_20261019.json)
 - [Offline catalog revalidation, 28 queries](../../evaluation/results/retail_quality_goal_revalidation_20261019.json)
 
-Next work remains: fix the dev v2 failures using only that development set, add a distinct unseen evaluation set, and rerun API, security, frontend and full-flow checks. PostgreSQL-backed catalog behavior still needs a live integration test.
+At this checkpoint, the next work was to fix the dev v2 failures on that development set, add a distinct unseen evaluation set, and rerun API, security, frontend and full-flow checks. PostgreSQL-backed catalog behavior still needs a live integration test.
+
+## O. Recovery v2 fixes and regression results — 19/10/2026
+
+Implemented from the recovery v2 development failures:
+
+- Clean conversational filler from fact queries without stripping meaningful product wording such as “tự nhiên”; include package units in demo catalog search.
+- Allow at most one edit or adjacent transposition for a misspelled query term, and only when another exact product identity term anchors the match. A typo by itself does not resolve a product.
+- Recognize compound price+shelf requests, freshness dates and “cập nhật trực tiếp” questions, and the Central Vietnamese follow-up “ở mô rứa?”.
+- Clarify an ungrounded allergen request such as “tránh hạt” once, then abstain until a product is identified.
+- Abstain on unsupported bestseller/taste ranking without calling recommendation search or listing an unrelated product.
+- Preserve structured recommendation constraints and explain when a returned product matches an explicitly requested spice level.
+
+| Run | Scope | HTTP 200 | Grounding/safety assertions | Median | Model calls |
+|---|---|---:|---:|---:|---:|
+| Recovery dev v2 baseline on 614c635 | 6 sessions / 18 turns | 18/18 | 6/18 | 48 ms | 2 |
+| Recovery dev v2 after fixes | 6 sessions / 18 turns | 18/18 | 18/18 | 49 ms | 0 |
+| Existing v3 dev regression after fixes | 41 sessions / 203 turns | 203/203 | 203/203 | 46 ms | 5 |
+
+The v2 after-run used the same live API/Groq configuration and demo catalog, but all 18 turns were answered through deterministic API/catalog/policy routing; it made **zero Groq calls**. The six initial product lookups used search_products, fourteen grounded follow-ups used get_product_snapshot, and two constrained suggestions used recommend_products. Therefore 18/18 is evidence for intent routing, session context, catalog grounding and abstention, not a measure of LLM answer quality. The paired baseline used two Groq calls, so this comparison measures the full routing change rather than model quality alone.
+
+The broader v3 regression used Groq on five turns and recorded three model tool calls. All 203 turns passed deterministic assertions. Rate limiting occurred during Qwen and OSS-120B attempts; configured fallback completed the affected turns, with individual responses taking about 8.6–10.5 seconds. The 46 ms median reflects that most routes are local/deterministic and does not hide these slower fallback turns.
+
+Additional verification on this revision: **643 backend tests passed**, Ruff and compileall passed, P0 regression **40/40**, and shopping sandbox **10/10** with zero false-paid confirmations and zero cross-session leakage events. Catalog runtime was explicitly set to the six-product demo fixture. PostgreSQL was not available and was not tested; the 3,099-row JSON remains an offline evaluation snapshot, not a live sales/inventory source.
+
+Artifacts:
+
+- [Recovery v2 after live run, 18/18](../../evaluation/results/recovery_dev_v2_after_live_20261019_final.json)
+- [P0 regression, 40/40](../../evaluation/results/recovery_dev_v2_p0_20261019.json)
+- [Shopping sandbox, 10/10](../../evaluation/results/recovery_dev_v2_shopping_20261019.json)
+- [Full v3 dev live rerun, 203/203](../../evaluation/results/goal_v3_dev_after_recovery_v2_20261019.json)
+
+The previously reviewed held-out set was not rerun after these changes and was not used to tune them. A new unseen evaluation set and PostgreSQL integration test remain outstanding.

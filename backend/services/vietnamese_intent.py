@@ -30,6 +30,8 @@ def normalize_vietnamese(text: str) -> str:
             r"\1 nhat",
         ),  # Southern colloquial spelling of "nhất", in ranking phrases only
         (r"\b(mon|cai|loai)\s+mo\b", r"\1 nao"),  # Central "mô" = which
+        (r"\bo\s+mo\s+rua\b", "o dau vay"),  # Central "ở mô rứa" = where
+        (r"\bo\s+mo\b", "o dau"),  # Central "ở mô" = where
         (r"\b(mon|cai|loai)\s+chi(?=\s+(?:ngon|hop|re|tot|duoc)\b)", r"\1 nao"),
         (r"\b(an|uong)\s+chi\b", r"\1 gi"),
         (r"\bmo(?=\s+(?:ngon|an|uong|ban|chay|hop|re|tot|duoc)\b)", "nao"),
@@ -252,6 +254,10 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "哪里",
             "货架",
         ),
+    ) or bool(
+        re.search(r"\b(?:chi\s+)?ke\b.{0,25}\b(?:giup|o|day|dau|nao|may)\b", normalized)
+        or re.search(r"\bo\s+day\s+(?:nao|may)\b", normalized)
+        or re.search(r"\bke\s+o\s+day\s+(?:nao|may)\b", normalized)
     )
     expiry = _has_phrase(
         normalized,
@@ -343,9 +349,20 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "ghi nhan ngay nao",
             "du lieu ghi nhan ngay nao",
             "gia ghi nhan ngay nao",
+            "du lieu tu ngay nao",
+            "lay du lieu tu ngay nao",
+            "muc gia ay lay du lieu tu ngay nao",
+            "muc gia nay lay du lieu tu ngay nao",
             "du lieu moi khong",
             "du lieu co moi khong",
             "thong tin moi khong",
+            "cap nhat truc tiep",
+            "cap nhat truc tiep khong",
+            "co cap nhat truc tiep khong",
+            "du lieu truc tiep",
+            "real time",
+            "real-time",
+            "up to date",
             "bao gio cap nhat",
             "when was this updated",
             "when was it updated",
@@ -359,7 +376,7 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "数据更新时间",
         ),
     )
-    freshness_date_question = data_timestamp and _has_phrase(
+    freshness_question = data_timestamp and _has_phrase(
         normalized,
         (
             "ngay nao",
@@ -368,6 +385,12 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "bao gio cap nhat",
             "when was",
             "updated when",
+            "cap nhat truc tiep",
+            "real time",
+            "real-time",
+            "up to date",
+            "du lieu moi khong",
+            "thong tin moi khong",
         ),
     )
     explicit_price_amount_question = _has_phrase(
@@ -383,7 +406,7 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "whats the price",
         ),
     )
-    if freshness_date_question and not explicit_price_amount_question:
+    if freshness_question and not explicit_price_amount_question:
         price = False
 
     fields: list[str] = []
