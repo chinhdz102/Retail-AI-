@@ -11,7 +11,7 @@ Vòng đánh giá gần nhất sửa hai lỗi hội thoại thực tế: câu �
 
 Kết quả kiểm tra ngày 20/10/2026:
 
-- Backend: full pytest run trước đó đạt **675 passed**; lượt chạy song song offline mới nhất đạt **667 passed** (487 + 97 + 83), không chạy các suite gọi nhà cung cấp thật. Frontend: **49 passed**; production build, Ruff và compileall đều thành công.
+- Backend: lượt offline cuối trên working tree đạt **681 passed**, không chạy các suite gọi Groq/Azure thật. Frontend: **49 passed**; production build, Ruff và compileall đều thành công.
 - Live Groq dev: **41 phiên / 203 lượt**, HTTP **203/203**, grounding/safety **203/203**, 0 lỗi; median **47 ms**, 3 LLM calls và 1 tool call. Đây là bộ dev đã lộ, không phải held-out mù; số lượt LLM thấp nên không đo đầy đủ chất lượng sinh câu trả lời.
 - Exposed held-out regression: **10 phiên / 50 lượt**, HTTP **50/50**, automated assertions **47/50**, 0 LLM calls. Kiểm tra 3 lượt fail cho thấy assertion chưa khớp câu trả lời; xem mục R, không tính chúng là 50/50 PASS.
 - P0: **40/40**; shopping sandbox: **100/100**, 0 xác nhận thanh toán giả trong 20 lần kiểm tra và 0 rò chéo phiên trong 20 lần kiểm tra.
@@ -24,7 +24,7 @@ Kết quả kiểm tra ngày 20/10/2026:
 - Nhánh làm việc: codex/retail-text-quality-v4-20261019.
 - Commit đầu vòng: 50c61e2 — test: harden retail customer care conversation flow.
 - Nhánh main không bị thay đổi. Bản giao được đẩy lên nhánh feature này.
-- Runtime eval dùng demo catalog gồm 6 sản phẩm. Snapshot WinMart dùng riêng cho retrieval offline có 3.099 dòng: 3.081 dòng được nhận và 18 dòng quarantine.
+- Bộ test/API fixtures tiếp tục đặt demo catalog 6 sản phẩm; `.env` hiện trỏ runtime tới snapshot WinMart có 3.099 dòng: 3.081 dòng được nhận và 18 dòng quarantine. Snapshot được đọc khi khởi động backend; không phải nguồn bán hàng hoặc tồn kho thời gian thực.
 - PostgreSQL search thật chưa chạy thành công; probe trước đó timeout. Không thay connection string hoặc secret. Redis thật cũng chưa được probe thành công; tests serializer/pipeline dùng fixture.
 - Không đưa .env hay API key vào commit. Live benchmark chỉ lưu metadata, output, trace và lỗi; không ghi secret.
 - Báo cáo V3 cũ nói 580 backend tests và chỉ chạy 7 live case; nội dung đó đã được thay bằng kết quả hiện tại.
@@ -411,3 +411,41 @@ $env:CATALOG_REPOSITORY='demo'
 .venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark --case-file evaluation\cases\vietnamese_text_sales_flow_v3_dev.json --pace-seconds 9 --output evaluation\results\goal_postfix_v3_dev_live_20261020.json
 .venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark --case-file evaluation\cases\vietnamese_text_sales_flow_v5_heldout_20261020.json --pace-seconds 9 --output evaluation\results\goal_postfix_v5_exposed_heldout_20261020.json
 ```
+
+## S. Runtime catalog snapshot và kiểm thử song song cuối — 20/10/2026
+
+### Thay đổi và xác minh runtime
+
+- Backend repository factory nay đọc `CATALOG_REPOSITORY=snapshot` và `CATALOG_SNAPSHOT_PATH=data/winmart_products.json`. Khởi tạo bằng chính cấu hình `.env` trả source `winmart_json_snapshot`, **3.081 sản phẩm hợp lệ** và **18 dòng quarantine**.
+- Tìm kiếm dùng tên, thương hiệu, taxonomy, barcode/item number, alias tiếng Việt, dấu câu, typo gần và đơn vị đóng gói. Bộ truy vấn catalog 28 ca đạt **28/28 có sản phẩm gold trong top 5**. Ca bổ sung “Coca Zero chai nhỏ” đưa chai 600ml lên đầu, không nhầm với bản 390ml bán theo thùng.
+- Giá lấy từ snapshot ngày **15/09/2026**, không xác minh giá hiện tại. Tồn kho cũ được gắn `stock_is_current=false`; yêu cầu lọc hàng còn hiện tại sẽ abstain. Snapshot thiếu thuộc tính độ cay nên bộ lọc cay cũng abstain. Checkout sandbox không dùng repository snapshot.
+- Kệ là vị trí planogram đề xuất theo taxonomy; không xác nhận hàng đang được đặt ở vị trí vật lý đó. PostgreSQL/Redis và giao dịch cửa hàng thật chưa được kiểm tra.
+
+### Kết quả kiểm thử chạy song song trên working tree hiện tại
+
+| Kiểm tra | Kết quả |
+|---|---:|
+| Backend offline pytest (bỏ qua Groq/Azure live suites) | **681 passed / 0 failed** |
+| Bộ test riêng cho snapshot catalog | **14 passed** |
+| Frontend Vitest | **49 passed / 6 files** |
+| Frontend typecheck + production build | Pass; `model-viewer` chunk 1.024 kB còn cảnh báo lớn hơn 500 kB |
+| Ruff | Pass |
+| Python compileall | Pass |
+| Runtime smoke dùng cấu hình `.env` | snapshot source, 3.081 sản phẩm; tồn kho hiện tại và bộ lọc độ cay không được hỗ trợ |
+
+Lượt này không gọi live Groq hoặc Azure. Các bài test offline xác nhận repository, tool routing, cách công khai freshness/field thiếu, API regressions, checkout guard, UI và build; chúng **không** chấm độ tự nhiên của model live. Key failover đã có test giả lập ở các mục trước; trạng thái key/quota live không được xác minh lại trong batch này.
+
+### Thay đổi đã kiểm tra
+
+- Giá và tồn snapshot được biểu diễn rõ là dữ liệu tham khảo; tool không biến tồn kho cũ thành lời khẳng định còn hàng.
+- Giá, promotion và đề xuất từ snapshot kèm thời điểm dữ liệu/freshness; sản phẩm thiếu độ cay không bị coi mặc định là “không cay”.
+- `/products/search` mặc định trả kết quả snapshot mà không lọc theo tồn cũ; nếu client yêu cầu `in_stock=true`, API trả HTTP 409 vì nguồn không có tồn hiện hành. `in_stock=false` vẫn trả được catalog.
+- Frontend gắn nhãn giá tham khảo, tồn kho chưa xác minh và ẩn thao tác thêm giỏ đối với nguồn snapshot.
+- Rà truy vấn đóng gói phát hiện UOM `Thùng` có thể đứng trên một chai đơn; ranking đã dùng đơn vị bán để tránh trường hợp này và có regression test.
+
+Artifacts:
+
+- [Snapshot repository tests](../../tests/test_snapshot_repository.py)
+- [Snapshot data](../../data/winmart_products.json)
+- [Snapshot repository implementation](../../backend/products/snapshot_repository.py)
+- [Frontend freshness labels](../../apps/kiosk-airi/src/components/ChatPanel.vue)

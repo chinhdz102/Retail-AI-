@@ -28,6 +28,50 @@ def snapshot_disclosure_keys(
     return tuple(f"{fingerprint}|{field}" for field in sorted(volatile_fields))
 
 
+def _stock_fact(product: ProductSnapshot, language: Language) -> str:
+    if not product.stock_is_current:
+        recorded = product.stock
+        if language == "en":
+            return (
+                f"the dated catalog snapshot recorded {recorded} units; "
+                "current store availability is unverified"
+            )
+        if language == "zh":
+            return f"旧版目录记录为 {recorded} 件；门店当前库存尚未核实"
+        return (
+            f"snapshot ghi nhận {recorded} {product.uom or 'sản phẩm'}; "
+            "tồn hiện tại chưa được xác minh"
+        )
+    if product.sellable_stock == 0:
+        if language == "en":
+            return "the catalog records no sellable units"
+        if language == "zh":
+            return "目录记录中没有可售库存"
+        return "catalog chưa ghi nhận hàng bán được"
+    if language == "en":
+        return f"the catalog records {product.sellable_stock} sellable units"
+    if language == "zh":
+        return f"目录记录有 {product.sellable_stock} 件可售"
+    return (
+        f"catalog ghi nhận {product.sellable_stock} {product.uom or 'sản phẩm'} "
+        "có thể bán được"
+    )
+
+
+def _spicy_fact(product: ProductSnapshot, language: Language) -> str:
+    if product.spicy is None:
+        return {
+            "en": "spice level is not listed in the catalog",
+            "zh": "目录未记录辣度",
+            "vi": "catalog chưa có dữ liệu về độ cay",
+        }[language]
+    if language == "en":
+        return "spicy" if product.spicy else "not spicy"
+    if language == "zh":
+        return "辣" if product.spicy else "不辣"
+    return "có vị cay" if product.spicy else "không cay"
+
+
 def render_verified_snapshot(
     product: ProductSnapshot,
     language: Language,
@@ -70,11 +114,7 @@ def render_verified_snapshot(
         if "price_vnd" in fields:
             facts.append(f"reference price {price} VND")
         if "stock" in fields:
-            facts.append(
-                "the catalog records no sellable units"
-                if product.sellable_stock == 0
-                else f"the catalog records {product.sellable_stock} sellable units"
-            )
+            facts.append(_stock_fact(product, language))
         if "shelf" in fields:
             facts.append(_shelf_label(product, language))
         if "promotion" in fields:
@@ -84,7 +124,7 @@ def render_verified_snapshot(
         if "ingredients" in fields:
             facts.append(f"ingredients: {product.ingredients}")
         if "spicy" in fields:
-            facts.append("spicy" if product.spicy else "not spicy")
+            facts.append(_spicy_fact(product, language))
         response = f"{product.name}: " + "; ".join(facts) + "."
         if "price_vnd" in fields and include_price_caveat:
             response += " Store prices may differ from this catalog snapshot."
@@ -101,11 +141,7 @@ def render_verified_snapshot(
         if "price_vnd" in fields:
             facts.append(f"参考价格 {price} 越南盾")
         if "stock" in fields:
-            facts.append(
-                "目录记录中没有可售库存"
-                if product.sellable_stock == 0
-                else f"目录记录有 {product.sellable_stock} 件可售"
-            )
+            facts.append(_stock_fact(product, language))
         if "shelf" in fields:
             facts.append(_shelf_label(product, language))
         if "promotion" in fields:
@@ -115,7 +151,7 @@ def render_verified_snapshot(
         if "ingredients" in fields:
             facts.append(f"配料：{product.ingredients}")
         if "spicy" in fields:
-            facts.append("辣" if product.spicy else "不辣")
+            facts.append(_spicy_fact(product, language))
         response = f"{product.name}：" + "；".join(facts) + "。"
         if "price_vnd" in fields and include_price_caveat:
             response += " 门店实际价格可能与目录记录不同。"
@@ -131,11 +167,7 @@ def render_verified_snapshot(
     if "price_vnd" in fields:
         facts.append(f"giá tham khảo {price}đ")
     if "stock" in fields:
-        facts.append(
-            "catalog chưa ghi nhận hàng bán được"
-            if product.sellable_stock == 0
-            else f"catalog ghi nhận {product.sellable_stock} {product.uom or 'sản phẩm'} có thể bán"
-        )
+        facts.append(_stock_fact(product, language))
     if "shelf" in fields:
         facts.append(_shelf_label(product, language))
     if "promotion" in fields:
@@ -149,7 +181,7 @@ def render_verified_snapshot(
     if "ingredients" in fields:
         facts.append(f"thành phần: {product.ingredients}")
     if "spicy" in fields:
-        facts.append("có vị cay" if product.spicy else "không cay")
+        facts.append(_spicy_fact(product, language))
 
     if fields == ("price_vnd",):
         response = f"{product.name} có giá tham khảo {price}đ nhé."
@@ -157,12 +189,17 @@ def render_verified_snapshot(
             response += " Giá tại cửa hàng có thể khác."
         return response
     if fields == ("stock",):
-        stock = (
-            "chưa có hàng bán được"
-            if product.sellable_stock == 0
-            else f"còn {product.sellable_stock} {product.uom or 'sản phẩm'} có thể bán được"
-        )
-        response = f"{product.name}: {stock} theo catalog."
+        if not product.stock_is_current:
+            stock = _stock_fact(product, language)
+            response = f"{product.name}: {stock}."
+        else:
+            stock = (
+                "chưa có hàng bán được"
+                if product.sellable_stock == 0
+                else f"còn {product.sellable_stock} {product.uom or 'sản phẩm'} "
+                "có thể bán được theo catalog"
+            )
+            response = f"{product.name}: {stock}."
         if include_stock_caveat:
             response += " Tồn thực tế tại cửa hàng có thể khác."
         return response
@@ -175,7 +212,7 @@ def render_verified_snapshot(
             )
         return f"{product.name} ở kệ {product.shelf} nhé."
     if fields == ("promotion",):
-        if product.sellable_stock == 0:
+        if product.stock_is_current and product.sellable_stock == 0:
             if language == "en":
                 return (
                     f"The catalog shows no sellable stock for {product.name}, "
@@ -202,7 +239,12 @@ def render_verified_snapshot(
         ingredients = (product.ingredients or "").rstrip(".")
         return f"Thành phần của {product.name} gồm {ingredients} nhé."
     if fields == ("spicy",):
-        return f"{product.name} {'có vị cay' if product.spicy else 'không cay'} nhé."
+        if product.spicy is None:
+            return (
+                f"Catalog chưa có dữ liệu về độ cay của {product.name}; "
+                "bạn xem thêm trên bao bì nhé."
+            )
+        return f"{product.name} {'có vị cay' if product.spicy else 'không cay'} theo catalog nhé."
 
     response = f"{product.name}: " + ", ".join(facts) + "."
     has_price = "price_vnd" in fields and include_price_caveat

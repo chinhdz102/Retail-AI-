@@ -180,8 +180,11 @@ const shoppingText = computed(() => {
       simulateFailed: 'Simulate failure',
       add: 'Add',
       stock: 'available in demo',
+      snapshotStock: 'recorded in snapshot · current stock unverified',
+      referencePrice: 'Reference price',
       catalogDemo: 'Demo catalog',
       catalogWinmart: 'WinMart catalog',
+      catalogSnapshot: 'WinMart dated snapshot',
       catalogUnknown: 'Catalog',
       end: 'End session',
       support: 'Call staff · demo',
@@ -195,9 +198,12 @@ const shoppingText = computed(() => {
       confirm: '确认演示订单', cancel: '返回购物车', order: '沙盒订单',
       simulatePaid: '模拟支付成功', simulateFailed: '模拟支付失败', add: '添加',
       stock: '演示库存', end: '结束会话',
+      snapshotStock: '目录记录库存 · 当前库存未核实',
+      referencePrice: '参考价',
       support: '联系店员 · 演示', ticketLabel: '演示服务请求',
       ticketDemo: '仅供演示 · 尚未联系真实店员',
       catalogDemo: '演示商品目录', catalogWinmart: 'WinMart 商品目录',
+      catalogSnapshot: 'WinMart 历史快照',
       catalogUnknown: '商品目录',
     }
   }
@@ -213,8 +219,11 @@ const shoppingText = computed(() => {
     simulateFailed: 'Mô phỏng thất bại',
     add: 'Thêm',
     stock: 'còn bán trong demo',
+    snapshotStock: 'ghi nhận trong snapshot · tồn hiện tại chưa xác minh',
+    referencePrice: 'Giá tham khảo',
     catalogDemo: 'Catalog demo',
     catalogWinmart: 'Catalog WinMart',
+    catalogSnapshot: 'Snapshot WinMart có ngày dữ liệu',
     catalogUnknown: 'Catalog',
     end: 'Kết thúc phiên',
     support: 'Gọi nhân viên · demo',
@@ -237,11 +246,25 @@ function productProvenance(product: ProductCard) {
     ? shoppingText.value.catalogDemo
     : product.data_source === 'winmart_postgres_catalog'
       ? shoppingText.value.catalogWinmart
+      : product.data_source === 'winmart_json_snapshot'
+        ? shoppingText.value.catalogSnapshot
       : shoppingText.value.catalogUnknown
   const date = new Intl.DateTimeFormat(props.language === 'en' ? 'en-GB' : 'vi-VN', {
     day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh',
   }).format(new Date(product.data_timestamp))
   return `${source} · ${date}`
+}
+
+function productStockLabel(product: ProductCard) {
+  if (product.stock_is_current === false) return shoppingText.value.snapshotStock
+  return `${product.stock} ${shoppingText.value.stock}`
+}
+
+function productPriceLabel(product: ProductCard) {
+  const price = formatVnd(product.price_vnd)
+  return product.stock_is_current === false
+    ? `${shoppingText.value.referencePrice}: ${price}`
+    : price
 }
 
 const quickPrompts = computed(() => {
@@ -350,10 +373,10 @@ function onKeydown(event: KeyboardEvent) {
           <article v-for="product in message.products" :key="product.product_id" class="message-product-card">
             <div class="message-product-copy">
               <strong>{{ product.name }}</strong>
-              <span>{{ formatVnd(product.price_vnd) }} · {{ product.stock }} {{ shoppingText.stock }}</span>
+              <span>{{ productPriceLabel(product) }} · {{ productStockLabel(product) }}</span>
               <small class="product-provenance">{{ productProvenance(product) }}</small>
             </div>
-            <button type="button" class="small-action-button" @click="emit('add-product', product.product_id)">
+            <button v-if="product.data_source === 'demo_product_catalog'" type="button" class="small-action-button" @click="emit('add-product', product.product_id)">
               <ShoppingCartIcon :size="16" weight="duotone" aria-hidden="true" />
               {{ shoppingText.add }}
             </button>

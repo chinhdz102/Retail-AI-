@@ -51,6 +51,8 @@ def _normalize_product_query(raw_query: str) -> tuple[str, list[str], bool]:
 
 class PostgresProductRepository:
     source_name = "winmart_postgres_catalog"
+    supports_current_stock = False
+    supports_spicy_filter = False
 
     def __init__(self, database_url: str) -> None:
         self._dsn = re.sub(r"^postgresql\+asyncpg://", "postgresql://", database_url)
@@ -423,6 +425,7 @@ class PostgresProductRepository:
             category=row["category_name"] or "",
             price_vnd=row["effective_price_vnd"],
             stock=row["physical_stock"],
+            stock_is_current=False,
             shelf=shelf,
             promotion=row["discount_promotion"],
             spicy=row["spicy"],

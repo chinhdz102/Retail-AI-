@@ -16,7 +16,8 @@ export interface ProductSnapshot {
   stock: number
   shelf: string
   promotion: string | null
-  spicy: boolean
+  spicy: boolean | null
+  stock_is_current?: boolean
   ingredients: string
   expiry_at: string
   data_timestamp: string
@@ -61,6 +62,7 @@ export interface ProductCard {
   brand: string | null
   price_vnd: number
   stock: number
+  stock_is_current?: boolean
   uom: string | null
   data_timestamp: string
   data_source: string
