@@ -955,6 +955,10 @@ def _prompt_override_requested(text: str) -> bool:
         "bo qua huong dan truoc",
         "bo qua chinh sach",
         "bo qua du lieu that",
+        "bo qua xac minh",
+        "bo qua xac thuc",
+        "skip verification",
+        "bypass verification",
         "ignore previous instructions",
         "ignore all previous instructions",
         "ignore all instructions",
@@ -3103,6 +3107,14 @@ async def agent_respond(
             request,
             record.state,
             _localized_internal_information_denial(request.language),
+        )
+    if _prompt_override_requested(request.text) and not _requested_snapshot_fields(
+        request.text
+    ):
+        return _local_policy_response(
+            request,
+            record.state,
+            _localized_prompt_override_denial(request.language),
         )
     safe_checkout_confirmation = (
         record.state == SessionState.CHECKOUT_CONFIRMATION
