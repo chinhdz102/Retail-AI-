@@ -29,16 +29,36 @@ export function createRequestId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000): Promise<T> {
+function createTimedController(timeoutMs: number, parentSignal?: AbortSignal | null) {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  let didTimeout = false
+  const abortFromParent = () => controller.abort(parentSignal?.reason)
+  if (parentSignal?.aborted) abortFromParent()
+  else parentSignal?.addEventListener('abort', abortFromParent, { once: true })
+  const timer = setTimeout(() => {
+    didTimeout = true
+    controller.abort()
+  }, timeoutMs)
+  return {
+    controller,
+    didTimeout: () => didTimeout,
+    dispose: () => {
+      clearTimeout(timer)
+      parentSignal?.removeEventListener('abort', abortFromParent)
+    },
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000): Promise<T> {
+  const { signal: parentSignal, ...requestInit } = init ?? {}
+  const timed = createTimedController(timeoutMs, parentSignal)
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      signal: controller.signal,
+      ...requestInit,
+      signal: timed.controller.signal,
       headers: {
         Accept: 'application/json',
-        ...init?.headers,
+        ...requestInit.headers,
       },
     })
 
@@ -55,10 +75,10 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000):
 
     return await response.json() as T
   } catch (error) {
-    if (controller.signal.aborted) throw new Error('Kết nối phản hồi quá lâu. Bạn thử lại giúp mình nhé.')
+    if (timed.didTimeout()) throw new Error('Kết nối phản hồi quá lâu. Bạn thử lại giúp mình nhé.')
     throw error
   } finally {
-    clearTimeout(timer)
+    timed.dispose()
   }
 }
 
@@ -68,15 +88,15 @@ async function requestAgentStream(
   language: LanguageCode,
   clientTurnId: string,
   onTextDelta: (text: string) => void,
+  signal?: AbortSignal,
   timeoutMs = 45_000,
 ): Promise<AgentResponse> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  const timed = createTimedController(timeoutMs, signal)
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
   try {
     const response = await fetch(`${API_BASE_URL}/agent/respond/stream`, {
       method: 'POST',
-      signal: controller.signal,
+      signal: timed.controller.signal,
       headers: {
         Accept: 'text/event-stream',
         'Content-Type': 'application/json',
@@ -105,7 +125,11 @@ async function requestAgentStream(
     const decoder = new TextDecoder()
     let buffer = ''
     let accumulatedText = ''
-    const state: { metadata: Omit<AgentResponse, 'text'> | null } = { metadata: null }
+    const state: {
+      metadata: Omit<AgentResponse, 'text'> | null
+      sessionValidated: boolean
+      completed: boolean
+    } = { metadata: null, sessionValidated: false, completed: false }
 
     const consumeFrame = (frame: string) => {
       let eventName = 'message'
@@ -119,13 +143,26 @@ async function requestAgentStream(
         text?: string
         response?: Omit<AgentResponse, 'text'>
       }
-      if (eventName === 'delta') {
+      if (eventName === 'start') {
+        if (!payload.response) throw new Error('Invalid response stream metadata.')
+        assertResponseSession(sessionId, payload.response)
+        state.metadata = payload.response
+        state.sessionValidated = true
+      } else if (eventName === 'delta') {
         if (typeof payload.text !== 'string') throw new Error('Invalid response stream delta.')
+        if (!state.sessionValidated) {
+          throw new Error('Response stream sent text before session validation.')
+        }
         accumulatedText += payload.text
         onTextDelta(payload.text)
       } else if (eventName === 'complete') {
         if (!payload.response) throw new Error('Invalid final response stream event.')
+        if (!state.sessionValidated) {
+          throw new Error('Response stream completed before session validation.')
+        }
+        assertResponseSession(sessionId, payload.response)
         state.metadata = payload.response
+        state.completed = true
       }
     }
 
@@ -138,16 +175,34 @@ async function requestAgentStream(
       if (done) break
     }
     if (buffer.trim()) consumeFrame(buffer)
-    if (!state.metadata) throw new Error('The response stream ended before completion.')
+    if (!state.metadata || !state.sessionValidated || !state.completed) {
+      throw new Error('The response stream ended before completion.')
+    }
     return { ...state.metadata, text: accumulatedText }
   } catch (error) {
-    if (controller.signal.aborted) {
+    if (timed.didTimeout()) {
       throw new Error('Kết nối phản hồi quá lâu. Bạn thử lại giúp mình nhé.')
     }
     throw error
   } finally {
     if (reader) void reader.cancel().catch(() => undefined)
-    clearTimeout(timer)
+    timed.dispose()
+  }
+}
+
+function assertResponseSession(
+  expectedSessionId: string,
+  response: Pick<AgentResponse, 'session_id' | 'cart' | 'checkout_quote' | 'order' | 'support_ticket'>,
+): void {
+  const nestedSessionIds = [
+    response.cart?.session_id,
+    response.checkout_quote?.cart.session_id,
+    response.order?.session_id,
+    response.support_ticket?.session_id,
+  ]
+  if (response.session_id !== expectedSessionId
+    || nestedSessionIds.some((sessionId) => sessionId !== undefined && sessionId !== expectedSessionId)) {
+    throw new Error('Câu trả lời không thuộc phiên hội thoại hiện tại.')
   }
 }
 
@@ -171,14 +226,19 @@ export function respond(
   language: LanguageCode = 'vi',
   clientTurnId = createRequestId(),
   onTextDelta?: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<AgentResponse> {
   if (onTextDelta) {
-    return requestAgentStream(sessionId, text, language, clientTurnId, onTextDelta)
+    return requestAgentStream(sessionId, text, language, clientTurnId, onTextDelta, signal)
   }
   return request<AgentResponse>('/agent/respond', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ session_id: sessionId, text, language, client_turn_id: clientTurnId }),
+    signal,
+  }).then((response) => {
+    assertResponseSession(sessionId, response)
+    return response
   })
 }
 

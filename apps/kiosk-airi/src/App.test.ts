@@ -96,6 +96,31 @@ describe('kiosk app', () => {
     expect(apiMocks.closeSession).toHaveBeenCalledWith('session-test')
   })
 
+  it('aborts an active answer request when the kiosk component is unloaded', async () => {
+    const pendingResponse = deferred<{
+      session_id: string
+      text: string
+      model: string
+      grounded_product_ids: string[]
+      state: string
+    }>()
+    apiMocks.respond.mockReturnValueOnce(pendingResponse.promise)
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledTimes(1))
+    const requestSignal = apiMocks.respond.mock.calls[0][5] as AbortSignal
+
+    wrapper.unmount()
+    expect(requestSignal.aborted).toBe(true)
+    pendingResponse.resolve({
+      session_id: 'session-test', text: 'Coca Zero có giá 13.000đ.', model: 'catalog',
+      grounded_product_ids: [], state: 'BROWSING',
+    })
+    await flushPromises()
+  })
+
   it('shares the first session boot when a customer sends before startup finishes', async () => {
     const session = deferred<{
       session_id: string
@@ -120,6 +145,7 @@ describe('kiosk app', () => {
     })
     await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledWith(
       'session-test', 'Giá Coca Zero', 'vi', expect.any(String), expect.any(Function),
+      expect.any(AbortSignal),
     ))
     expect(apiMocks.createSession).toHaveBeenCalledTimes(1)
   })
@@ -145,9 +171,11 @@ describe('kiosk app', () => {
     await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
     await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
     await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledTimes(1))
+    const requestSignal = apiMocks.respond.mock.calls[0][5] as AbortSignal
     expect(wrapper.text()).toContain('Giá Coca Zero')
 
     await wrapper.get('.end-session-button').trigger('click')
+    expect(requestSignal.aborted).toBe(true)
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(2))
     expect(wrapper.findAll('.message-row')).toHaveLength(0)
 
@@ -162,6 +190,32 @@ describe('kiosk app', () => {
     expect(wrapper.text()).not.toContain('Thông tin riêng của khách A')
     expect(apiMocks.respond).toHaveBeenCalledTimes(1)
     expect(apiMocks.createSession).toHaveBeenCalledTimes(2)
+  })
+
+  it('rejects an agent response whose session id does not match the active session', async () => {
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'different-session',
+      text: 'Nội dung không thuộc phiên hiện tại.',
+      model: 'catalog',
+      grounded_product_ids: [],
+      state: 'BROWSING',
+      cart: {
+        cart_id: 'other-cart', session_id: 'different-session', items: [], item_count: 0,
+        subtotal_vnd: 0, total_vnd: 0, version: 1, sandbox: true, data_source: 'DEMO_CATALOG',
+      },
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('textarea').setValue('Giá Coca Zero')
+    await wrapper.get('.composer').trigger('submit')
+
+    await vi.waitFor(() => expect(wrapper.text()).toContain(
+      'Câu trả lời không thuộc phiên hội thoại hiện tại.',
+    ))
+    expect(wrapper.text()).not.toContain('Nội dung không thuộc phiên hiện tại.')
+    expect(wrapper.text()).not.toContain('other-cart')
+    expect(wrapper.findAll('.message-assistant')).toHaveLength(0)
   })
 
   it('switches the chat to English and sends the selected language to the API', async () => {
@@ -183,6 +237,7 @@ describe('kiosk app', () => {
         'en',
         expect.any(String),
         expect.any(Function),
+        expect.any(AbortSignal),
       ),
     )
   })
@@ -229,6 +284,7 @@ describe('kiosk app', () => {
       'vi',
       expect.any(String),
       expect.any(Function),
+      expect.any(AbortSignal),
     ))
     await vi.waitFor(() => expect(wrapper.find('.support-ticket-card').exists()).toBe(true))
     expect(wrapper.get('.support-ticket-card').text()).toContain('ticket-demo-1')
@@ -357,6 +413,7 @@ describe('kiosk app', () => {
 
     expect(apiMocks.respond).toHaveBeenCalledWith(
       'session-test', 'Giá Coca Zero', 'vi', expect.any(String), expect.any(Function),
+      expect.any(AbortSignal),
     )
     await vi.waitFor(() => expect(wrapper.text()).toContain('Coca-Cola Zero hiện có giá'))
     expect(apiMocks.createSynthesisTicket).not.toHaveBeenCalled()
@@ -451,6 +508,7 @@ describe('kiosk app', () => {
       'vi',
       expect.any(String),
       expect.any(Function),
+      expect.any(AbortSignal),
     )
     await vi.waitFor(() =>
       expect(wrapper.text()).toContain('Mình chưa thể ghi nhận phản ánh'),
@@ -474,6 +532,7 @@ describe('kiosk app', () => {
       'vi',
       expect.any(String),
       expect.any(Function),
+      expect.any(AbortSignal),
     )
   })
 

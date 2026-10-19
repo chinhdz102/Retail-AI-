@@ -74,6 +74,7 @@ let sessionGeneration = 0
 let bootInFlight: { generation: number; promise: Promise<void> } | null = null
 let resetInFlight: Promise<void> | null = null
 let pendingTurn: { text: string; generation: number; id: string } | null = null
+let activeTurnController: AbortController | null = null
 
 const languageSettings: Record<LanguageCode, {
   label: string
@@ -602,6 +603,8 @@ async function resetKioskSession(notice?: string) {
 
   const generation = ++sessionGeneration
   const oldSessionId = sessionId.value
+  activeTurnController?.abort()
+  activeTurnController = null
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   sessionExpiryTimer = undefined
   speechRequestId += 1
@@ -692,22 +695,32 @@ async function sendMessage(value = draft.value, fromVoice = false, isRetry = fal
     : createRequestId()
   pendingTurn = { text, generation, id: clientTurnId }
   const assistantMessage = pushMessage('assistant', '')
+  const turnController = new AbortController()
+  activeTurnController = turnController
   status.value = 'thinking'
   voiceHint.value = languageSettings[language.value].thinking
 
   try {
-    const response = await withSessionRecovery((id) => respond(
-      id,
-      text,
-      language.value,
-      clientTurnId,
-      (delta) => {
-        if (generation === sessionGeneration && !isUnmounted) {
-          assistantMessage.text += delta
-        }
-      },
-    ))
+    let requestedSessionId: string | null = null
+    const response = await withSessionRecovery((id) => {
+      requestedSessionId = id
+      return respond(
+        id,
+        text,
+        language.value,
+        clientTurnId,
+        (delta) => {
+          if (generation === sessionGeneration && !isUnmounted) {
+            assistantMessage.text += delta
+          }
+        },
+        turnController.signal,
+      )
+    })
     if (generation !== sessionGeneration || isUnmounted) return
+    if (!requestedSessionId || response.session_id !== requestedSessionId) {
+      throw new Error('Câu trả lời không thuộc phiên hội thoại hiện tại.')
+    }
     if (response.state === 'CLOSED') {
       await resetKioskSession('Phiên đã kết thúc. Nội dung cũ đã được xóa khỏi kiosk.')
       return
@@ -746,6 +759,8 @@ async function sendMessage(value = draft.value, fromVoice = false, isRetry = fal
         ? 'Please try that question again.'
         : '请再试一次刚才的问题。'
     status.value = 'error'
+  } finally {
+    if (activeTurnController === turnController) activeTurnController = null
   }
 }
 
@@ -936,6 +951,8 @@ onMounted(() => {
 })
 onUnmounted(() => {
   isUnmounted = true
+  activeTurnController?.abort()
+  activeTurnController = null
   const closingSessionId = sessionId.value
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   navigator.mediaDevices?.removeEventListener?.('devicechange', refreshMicrophones)

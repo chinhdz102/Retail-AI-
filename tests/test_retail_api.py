@@ -1840,11 +1840,13 @@ async def test_validated_agent_response_can_be_delivered_as_server_sent_events(
         data = next(line[6:] for line in frame.splitlines() if line.startswith("data: "))
         events.append((event_name, json.loads(data)))
 
+    assert events[0][0] == "start"
     assert events[-1][0] == "complete"
-    assert all(event_name == "delta" for event_name, _payload in events[:-1])
-    streamed_text = "".join(payload["text"] for event_name, payload in events[:-1])
+    assert all(event_name == "delta" for event_name, _payload in events[1:-1])
+    streamed_text = "".join(payload["text"] for event_name, payload in events[1:-1])
     assert streamed_text.strip()
     assert "Ignore all previous instructions" not in streamed_text
+    assert events[0][1]["response"]["session_id"] == session_id
     assert events[-1][1]["response"]["session_id"] == session_id
     assert events[-1][1]["response"]["state"] == "BROWSING"
     assert events[-1][1]["response"]["tools_used"] == []

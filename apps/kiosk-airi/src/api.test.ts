@@ -21,6 +21,7 @@ describe('agent response stream API', () => {
 
   it('decodes incremental UTF-8 SSE events and assembles the validated response', async () => {
     const fetchMock = vi.fn().mockResolvedValue(eventStreamResponse([
+      'event: start\ndata: {"response":{"session_id":"session-1","model":"catalog","grounded_product_ids":[],"tools_used":["search_products"],"state":"BROWSING"}}\n\n',
       'event: delta\ndata: {"text":"Xin chào "}\n\n',
       'event: delta\ndata: {"text":"bạn!"}\n\n',
       'event: complete\ndata: {"response":{"session_id":"session-1","model":"catalog","grounded_product_ids":[],"tools_used":["search_products"],"state":"BROWSING"}}\n\n',
@@ -50,7 +51,8 @@ describe('agent response stream API', () => {
 
   it('does not accept a truncated stream without a complete event', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(eventStreamResponse(
-      'event: delta\ndata: {"text":"Chưa xong"}\n\n',
+      'event: start\ndata: {"response":{"session_id":"session-1","model":"catalog","grounded_product_ids":[],"state":"BROWSING"}}\n\n'
+      + 'event: delta\ndata: {"text":"Chưa xong"}\n\n',
     )))
 
     await expect(respond(
@@ -60,5 +62,67 @@ describe('agent response stream API', () => {
       'ccf7a3d6-9ca5-4aec-a052-f3e17e32a845',
       () => undefined,
     )).rejects.toThrow('The response stream ended before completion.')
+  })
+
+  it('rejects a mismatched session before showing any stream text', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(eventStreamResponse([
+      'event: start\ndata: {"response":{"session_id":"session-other","model":"catalog","grounded_product_ids":[],"state":"BROWSING"}}\n\n',
+      'event: delta\ndata: {"text":"Thông tin của phiên khác"}\n\n',
+    ].join(''))))
+    const deltas: string[] = []
+
+    await expect(respond(
+      'session-1',
+      'Giá Coca Zero?',
+      'vi',
+      'ccf7a3d6-9ca5-4aec-a052-f3e17e32a845',
+      (delta) => deltas.push(delta),
+    )).rejects.toThrow('không thuộc phiên hội thoại hiện tại')
+
+    expect(deltas).toEqual([])
+  })
+
+  it('rejects a mismatched session from the non-stream endpoint', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      session_id: 'session-other',
+      text: 'Thông tin của phiên khác',
+      model: 'catalog',
+      grounded_product_ids: [],
+      state: 'BROWSING',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+
+    await expect(respond('session-1', 'Giá Coca Zero?')).rejects.toThrow(
+      'không thuộc phiên hội thoại hiện tại',
+    )
+  })
+
+  it('rejects cart data attached to a different session', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      session_id: 'session-1',
+      text: 'Coca Zero có giá 13.000đ.',
+      model: 'catalog',
+      grounded_product_ids: [],
+      state: 'BROWSING',
+      cart: {
+        session_id: 'session-other',
+      },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+
+    await expect(respond('session-1', 'Giá Coca Zero?')).rejects.toThrow(
+      'không thuộc phiên hội thoại hiện tại',
+    )
+  })
+
+  it('aborts an in-flight stream when its owning session is cancelled', async () => {
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const controller = new AbortController()
+    const response = respond('session-1', 'Giá Coca Zero?', 'vi', undefined, () => undefined, controller.signal)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    controller.abort()
+
+    await expect(response).rejects.toMatchObject({ name: 'AbortError' })
   })
 })
