@@ -127,7 +127,7 @@ Tiếp tục một lượt live bị ngắt bằng `--resume`:
 
 Chỉ tiếp tục khi mode, số lượt, khoảng pacing và scenario set khớp với file kết quả. Chạy lại không có `--resume` sẽ tạo baseline mới.
 
-`live_groq_stt_benchmark.py` đo Groq STT trên audio có transcript tham chiếu. Nó nhận file audio bên ngoài repo để không lưu audio vào codebase, chạy 3 lượt mặc định, ghi model thực sự trả lời, fallback trace, latency, WER và CER nếu có transcript chuẩn. Có thể truyền transcript dài bằng `--reference-file`; timestamp dạng `[00:00:00]` sẽ được bỏ khi tính lỗi. Dùng `--omit-transcription` khi chỉ cần đo tốc độ mà không lưu nội dung nhận dạng vào báo cáo. Ví dụ với một clip tiếng Việt:
+`live_groq_stt_benchmark.py` đo Groq STT trên audio bên ngoài repo, mặc định chạy 3 lượt và ghi model/fallback/latency. M4A/MP4 lấy duration từ movie header. Chỉ truyền `--reference` hoặc `--reference-file` khi có transcript nguyên văn đầy đủ cho toàn bộ audio; caption tóm tắt hoặc transcript thiếu đoạn sẽ làm WER/CER sai lệch. Timestamp dạng `[00:00:00]` được bỏ trước khi chấm. Dùng `--omit-transcription` để không lưu nội dung nhận dạng vào báo cáo. Ví dụ với một clip tiếng Việt:
 
 ```powershell
 .\.venv\Scripts\python.exe -m evaluation.live_groq_stt_benchmark `
@@ -138,5 +138,14 @@ Chỉ tiếp tục khi mode, số lượt, khoảng pacing và scenario set kh�
 ```
 
 Kết quả mẫu ngày 01/10/2026 ở `evaluation/results/live_groq_stt_benchmark.json`; báo cáo tổng hợp nằm trong `evaluation/results/evaluation_report.md`. WER/CER được chuẩn hóa chữ hoa/thường, dấu câu và Unicode; WER tách từ theo khoảng trắng. Một audio lặp nhiều lượt chỉ hữu ích để đo độ ổn định latency, chưa phải đánh giá độ chính xác đại diện.
+
+`live_azure_tts_benchmark.py` gọi Azure Speech thật và đo riêng synth latency, thời gian nhận chunk audio đầu tiên và thời gian stream hoàn tất. Transcript không được ghi vào artifact; key chỉ đọc từ `.env`. Chạy hai lượt tiếng Việt:
+
+```powershell
+.\.venv\Scripts\python.exe evaluation\live_azure_tts_benchmark.py `
+  --language vi --trials 2
+```
+
+Artifact JSON có timestamp, voice, loại audio, số byte và latency từng lượt. Kết quả provider-level không đo thời gian phát trên browser hoặc thiết bị, chất lượng phát âm, micro hay lip-sync.
 
 Báo cáo sửa P0 nằm tại `evaluation/results/evaluation_report.md`.
