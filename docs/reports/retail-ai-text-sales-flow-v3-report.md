@@ -213,3 +213,27 @@ Artifacts mới:
 - [Sau sửa live API trace, 16/16](../../evaluation/results/recovery_dev_v1_after_live_20261019.json)
 - [P0 regression sau sửa](../../evaluation/results/recovery_dev_v1_p0_20261019.json)
 - [Shopping sandbox sau sửa](../../evaluation/results/recovery_dev_v1_shopping_20261019.json)
+
+## N. Latest revalidation before the next fixes — 19/10/2026
+
+Các lần chạy dưới đây dùng revision `614c635` trên API local, Groq live và demo catalog 6 sản phẩm. Chúng ghi nhận trạng thái hiện tại; không hàm ý các lỗi trong bộ phát triển mới đã được sửa.
+
+| Bộ đánh giá | Quy mô | HTTP 200 | Assertion grounding/safety | Median | LLM / tool calls |
+|---|---:|---:|---:|---:|---:|
+| Dev v3, chạy lại | 41 phiên / 203 lượt | 203/203 | 203/203 | 45 ms | 5 / 3 |
+| Held-out v3, replay hồi cứu | 10 phiên / 49 lượt | 48/49 | 27/49 | 43 ms | 6 / 4 |
+| Dev recovery v2, baseline mới | 6 phiên / 18 lượt | 18/18 | 6/18 | 48 ms | 2 / 2 |
+
+Held-out v3 đã được xem trong vòng đánh giá trước, nên lần replay này **không mù** và không dùng để tinh chỉnh quy tắc. Điểm 27/49 cao hơn lần trước 23/49 nhưng không phải bằng chứng tổng quát hóa. Bộ dev recovery v2 là baseline chưa có lần chạy sau sửa; 12 assertion fail chỉ ra còn lỗi ở câu hỏi ghép giá+kệ, hỏi độ mới dữ liệu, sửa mặt hàng, cách nói vùng miền/typo, hỏi tránh dị ứng và gợi ý có ràng buộc. Không nên coi baseline này là kết quả pass.
+
+Benchmark truy hồi ngoại tuyến chạy trên snapshot 3.099 dòng: Recall@1/3/5 = 1,0; MRR = 1,0; gold-set recall@3 = 0,9777 và @5 = 0,9866. Đây là xếp hạng lexical/edit-distance trên JSON, không gọi PostgreSQL; kết nối PostgreSQL timeout, vì vậy điểm này **không** xác nhận tích hợp catalog runtime hay tồn kho thực.
+
+Artifacts:
+
+- [Dev v3 live rerun, 203/203](../../evaluation/results/goal_v3_dev_current_614c635_20261019.json)
+- [Held-out v3 retrospective replay, 27/49](../../evaluation/results/goal_v3_heldout_replay_current_614c635_20261019.json)
+- [Recovery dev v2 cases](../../evaluation/cases/vietnamese_text_sales_recovery_dev_v2.json)
+- [Recovery dev v2 live baseline, 6/18](../../evaluation/results/recovery_dev_v2_baseline_live_614c635_20261019.json)
+- [Offline catalog revalidation, 28 queries](../../evaluation/results/retail_quality_goal_revalidation_20261019.json)
+
+Next work remains: fix the dev v2 failures using only that development set, add a distinct unseen evaluation set, and rerun API, security, frontend and full-flow checks. PostgreSQL-backed catalog behavior still needs a live integration test.
