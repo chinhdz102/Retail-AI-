@@ -50,6 +50,11 @@ from backend.services.elevenlabs import (
 )
 from backend.services.groq import GroqConfigurationError, GroqProviderError, GroqService
 from backend.services.organization_profiles import OrganizationAnswer, get_organization_answer
+from backend.services.product_comparison import (
+    comparison_metric,
+    is_comparison_request,
+    parse_comparison_queries,
+)
 from backend.services.retail_agent import (
     RetailAgentResult,
     _explicit_recommendation_category,
@@ -3093,6 +3098,309 @@ async def _handle_shopping_action(
     return None
 
 
+def _comparison_price(value: int, language: LanguageCode) -> str:
+    currency = "đ" if language == "vi" else "VND" if language == "en" else "越南盾"
+    return f"{value:,}".replace(",", ".") + currency
+
+
+def _comparison_source_label(source: str, language: LanguageCode) -> str:
+    if source == "demo_product_catalog":
+        return {"vi": "catalog demo", "en": "demo catalog", "zh": "演示目录"}[language]
+    return {
+        "vi": "snapshot catalog trực tuyến",
+        "en": "online catalog snapshot",
+        "zh": "在线目录快照",
+    }[language]
+
+
+def _comparison_clarification(language: LanguageCode, *, missing_products: bool) -> str:
+    if language == "en":
+        if missing_products:
+            return (
+                "Which two products would you like me to compare? Please include the size or "
+                "brand if needed."
+            )
+        return (
+            "Would you like me to compare price or sellable stock? I don't have verified ratings "
+            "for taste or popularity."
+        )
+    if language == "zh":
+        if missing_products:
+            return "请告诉我您想比较的两种商品；如有需要，请补充品牌或规格。"
+        return "您想比较价格还是可售库存？我没有经过核实的口味评分或热销数据。"
+    if missing_products:
+        return (
+            "Bạn muốn mình so sánh hai sản phẩm nào? Nếu cần, cho mình thêm thương hiệu hoặc "
+            "quy cách nhé."
+        )
+    return (
+        "Bạn muốn so sánh theo giá hay lượng còn bán được? Mình chưa có dữ liệu đã xác minh "
+        "về vị ngon hoặc độ bán chạy."
+    )
+
+
+def _comparison_reply(
+    products: list[ProductSnapshot],
+    language: LanguageCode,
+    metric: str | None,
+    source: str,
+) -> str:
+    first, second = products
+    source_label = _comparison_source_label(source, language)
+    if metric == "price":
+        if first.price_vnd == second.price_vnd:
+            price = _comparison_price(first.price_vnd, language)
+            if language == "vi":
+                result = f"Hai sản phẩm cùng giá {price} theo {source_label}."
+            elif language == "en":
+                result = f"Both products have the same {source_label} price: {price}."
+            else:
+                result = f"两种商品在{source_label}中的价格相同：{price}。"
+        else:
+            cheaper, dearer = sorted(products, key=lambda item: item.price_vnd)
+            difference = _comparison_price(dearer.price_vnd - cheaper.price_vnd, language)
+            if language == "vi":
+                result = (
+                    f"{cheaper.name} rẻ hơn {dearer.name} {difference} "
+                    f"theo giá {source_label}."
+                )
+            elif language == "en":
+                result = (
+                    f"{cheaper.name} is {difference} cheaper than {dearer.name} "
+                    f"in the {source_label}."
+                )
+            else:
+                result = f"按{source_label}价格，{cheaper.name}比{dearer.name}便宜{difference}。"
+    elif metric == "stock":
+        if (first.uom or "").casefold() != (second.uom or "").casefold():
+            if language == "vi":
+                result = "Mình chưa thể so sánh số lượng vì hai sản phẩm dùng đơn vị khác nhau."
+            elif language == "en":
+                result = "I can't compare quantities because these products use different units."
+            else:
+                result = "两种商品的计量单位不同，暂时无法比较数量。"
+        elif first.sellable_stock == second.sellable_stock:
+            quantity = first.sellable_stock
+            if language == "vi":
+                result = f"Hai sản phẩm cùng còn bán được {quantity} {first.uom or 'đơn vị'}."
+            elif language == "en":
+                result = f"Both products have {quantity} {first.uom or 'units'} sellable."
+            else:
+                result = f"两种商品均有{quantity}件可售。"
+        else:
+            more, fewer = sorted(products, key=lambda item: item.sellable_stock, reverse=True)
+            difference = more.sellable_stock - fewer.sellable_stock
+            unit = more.uom or ("đơn vị" if language == "vi" else "units")
+            if language == "vi":
+                result = (
+                    f"{more.name} còn bán được nhiều hơn {fewer.name} {difference} {unit} "
+                    f"theo {source_label}."
+                )
+            elif language == "en":
+                result = (
+                    f"{more.name} has {difference} more sellable {unit} than {fewer.name} "
+                    f"in the {source_label}."
+                )
+            else:
+                result = f"按{source_label}，{more.name}比{fewer.name}多{difference}件可售商品。"
+    else:
+        day = max(item.data_timestamp for item in products).strftime("%d/%m/%Y")
+        if language == "vi":
+            lines = [
+                f"{item.name}: {_comparison_price(item.price_vnd, language)}; "
+                f"còn bán được {item.sellable_stock} {item.uom or 'đơn vị'}"
+                for item in products
+            ]
+            result = (
+                f"Mình so sánh theo {source_label} ngày {day}:\n- "
+                + "\n- ".join(lines)
+            )
+            if first.price_vnd != second.price_vnd:
+                cheaper = min(products, key=lambda item: item.price_vnd)
+                difference = _comparison_price(abs(first.price_vnd - second.price_vnd), language)
+                result += f"\nTheo giá catalog, {cheaper.name} rẻ hơn {difference}."
+        elif language == "en":
+            lines = [
+                f"{item.name}: {_comparison_price(item.price_vnd, language)}; "
+                f"{item.sellable_stock} {item.uom or 'units'} sellable"
+                for item in products
+            ]
+            result = f"{source_label.title()} comparison dated {day}:\n- " + "\n- ".join(lines)
+            if first.price_vnd != second.price_vnd:
+                cheaper = min(products, key=lambda item: item.price_vnd)
+                difference = _comparison_price(abs(first.price_vnd - second.price_vnd), language)
+                result += f"\nBy catalog price, {cheaper.name} is cheaper by {difference}."
+        else:
+            lines = [
+                f"{item.name}：{_comparison_price(item.price_vnd, language)}；可售数量 "
+                f"{item.sellable_stock} {item.uom or '件'}"
+                for item in products
+            ]
+            result = f"{source_label}（{day}）比较：\n- " + "\n- ".join(lines)
+    if language == "vi" and metric is None:
+        result += "\nMình chưa có rating đã xác minh để kết luận món nào ngon hơn."
+    elif language == "en" and metric is None:
+        result += "\nI don't have verified ratings to say which one tastes better."
+    elif language == "zh" and metric is None:
+        result += "\n我没有经过核实的评分来判断哪种口味更好。"
+    if source == "demo_product_catalog":
+        caveat = {
+            "vi": (
+                " Đây là dữ liệu demo, không xác nhận giá hay tồn kho thời gian thực "
+                "tại cửa hàng."
+            ),
+            "en": " This is demo data and does not verify live store prices or inventory.",
+            "zh": " 这是演示数据，不代表门店实时价格或库存。",
+        }[language]
+    else:
+        caveat = {
+            "vi": (
+                " Đây là snapshot catalog trực tuyến, không xác nhận giá hoặc tồn kho "
+                "của chi nhánh hiện tại."
+            ),
+            "en": " This is an online catalog snapshot, not verified branch pricing or inventory.",
+            "zh": " 这是在线目录快照，未核实当前门店的价格或库存。",
+        }[language]
+    return result + caveat
+
+
+async def _comparison_snapshots_by_ids(product_ids: list[str]) -> list[ProductSnapshot] | None:
+    snapshots: list[ProductSnapshot] = []
+    for product_id in product_ids:
+        observation = await lookup_followup_snapshot(product_id, ("price_vnd", "stock"))
+        if observation.status != "SUCCESS" or not observation.products:
+            return None
+        snapshots.append(observation.products[0])
+    return snapshots if len(snapshots) == 2 else None
+
+
+async def _handle_product_comparison(
+    request: AgentRespondRequest,
+    record,
+    queries: tuple[str, str] | None,
+    metric: str | None,
+) -> AgentRespondResponse:
+    if queries is None:
+        saved_ids = record.shopping.comparison_product_ids
+        if len(saved_ids) != 2:
+            return _record_shopping_turn(
+                request,
+                _comparison_clarification(request.language, missing_products=True),
+                model="comparison-clarification",
+            )
+        products = await _comparison_snapshots_by_ids(saved_ids)
+        if products is None:
+            return _record_shopping_turn(
+                request,
+                "Mình chưa lấy được dữ liệu catalog để so sánh lại; mình chưa kết luận nhé."
+                if request.language == "vi"
+                else "I couldn't refresh the catalog facts, so I can't compare them right now.",
+                model="comparison-controller",
+                tools_used=["get_product_snapshot"],
+            )
+        reply = _comparison_reply(
+            products,
+            request.language,
+            metric,
+            get_product_repository().source_name,
+        )
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="comparison-controller",
+            tools_used=["get_product_snapshot"],
+            products=products,
+        )
+
+    resolved: list[ProductSnapshot] = []
+    for query in queries:
+        observation = await lookup_product_candidates(query)
+        candidates = observation.products
+        if not candidates:
+            reply = (
+                f"Mình chưa tìm thấy sản phẩm khớp với ‘{query}’ trong catalog hiện có. "
+                "Bạn kiểm tra lại tên hoặc quy cách nhé."
+                if request.language == "vi"
+                else (
+                    f"I couldn't find ‘{query}’ in the current catalog. "
+                    "Please check the name or size."
+                )
+            )
+            return _record_shopping_turn(
+                request,
+                reply,
+                model="comparison-clarification",
+                tools_used=["search_products"],
+            )
+        product_id = (
+            candidates[0].product_id
+            if len(candidates) == 1
+            else _unique_product_match_id(query, candidates)
+        )
+        product = next((item for item in candidates if item.product_id == product_id), None)
+        if product is None:
+            names = "; ".join(item.name for item in candidates[:4])
+            reply = (
+                f"Mình thấy vài sản phẩm gần với ‘{query}’: {names}. "
+                "Bạn cho mình đúng tên hoặc quy cách để so sánh nhé."
+                if request.language == "vi"
+                else (
+                    f"I found several products close to ‘{query}’: {names}. "
+                    "Please specify the exact name or size."
+                )
+            )
+            return _record_shopping_turn(
+                request,
+                reply,
+                model="comparison-clarification",
+                tools_used=["search_products"],
+                products=list(candidates[:4]),
+            )
+        resolved.append(product)
+
+    if resolved[0].product_id == resolved[1].product_id:
+        return _record_shopping_turn(
+            request,
+            "Hai tên bạn nêu đang khớp cùng một sản phẩm. Bạn cho mình tên món thứ hai nhé."
+            if request.language == "vi"
+            else (
+                "Both names resolve to the same product. "
+                "Please provide a different second product."
+            ),
+            model="comparison-clarification",
+            tools_used=["search_products"],
+            products=resolved,
+        )
+
+    products = await _comparison_snapshots_by_ids([item.product_id for item in resolved])
+    if products is None:
+        return _record_shopping_turn(
+            request,
+            "Mình chưa lấy đủ dữ liệu catalog để so sánh; mình chưa kết luận nhé."
+            if request.language == "vi"
+            else "I couldn't retrieve enough catalog data to compare these products.",
+            model="comparison-controller",
+            tools_used=["search_products", "get_product_snapshot"],
+        )
+    session_store.update_shopping(
+        request.session_id,
+        current_intent=IntentType.COMPARISON,
+        comparison_product_ids=[item.product_id for item in products],
+    )
+    return _record_shopping_turn(
+        request,
+        _comparison_reply(
+            products,
+            request.language,
+            metric,
+            get_product_repository().source_name,
+        ),
+        model="comparison-controller",
+        tools_used=["search_products", "get_product_snapshot"],
+        products=products,
+    )
+
+
 @app.post("/agent/respond", response_model=AgentRespondResponse)
 async def agent_respond(
     request: AgentRespondRequest,
@@ -3259,6 +3567,15 @@ async def agent_respond(
             request,
             record.state,
             _localized_vnd_budget_clarification(request.language),
+        )
+
+    comparison_queries = parse_comparison_queries(request.text)
+    if comparison_queries is not None or is_comparison_request(request.text):
+        return await _handle_product_comparison(
+            request,
+            record,
+            comparison_queries,
+            comparison_metric(request.text),
         )
 
     requested_fields = _requested_snapshot_fields(request.text)

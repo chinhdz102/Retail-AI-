@@ -1334,6 +1334,66 @@ async def test_validated_agent_response_can_be_delivered_as_server_sent_events(
 
 
 @pytest.mark.asyncio
+async def test_product_comparison_is_grounded_and_kept_for_followup(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "comparison-test"})
+    session_id = created.json()["session_id"]
+
+    comparison = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "So sánh Coca Zero với nước suối",
+        },
+    )
+    followup = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Cái nào rẻ hơn?"},
+    )
+
+    assert comparison.status_code == followup.status_code == 200
+    first = comparison.json()
+    second = followup.json()
+    assert first["grounded_product_ids"] == ["COKE_ZERO_330", "WATER01"]
+    assert first["tools_used"] == ["search_products", "get_product_snapshot"]
+    assert "13.000đ" in first["text"] and "7.000đ" in first["text"]
+    assert "rẻ hơn 6.000đ" in first["text"]
+    assert second["grounded_product_ids"] == ["COKE_ZERO_330", "WATER01"]
+    assert "Nước suối 500ml rẻ hơn Coca-Cola Zero 330ml" in second["text"]
+    assert "không xác nhận giá hay tồn kho thời gian thực tại cửa hàng" in second["text"]
+    saved = session_store.get(UUID(session_id)).shopping
+    assert saved.comparison_product_ids == ["COKE_ZERO_330", "WATER01"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_product_comparison_clarifies_unknown_product_without_guessing(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "comparison-unknown-test"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "So sánh Mars Bar với nước suối",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "chưa tìm thấy" in payload["text"].casefold()
+    assert payload["grounded_product_ids"] == []
+    assert payload["tools_used"] == ["search_products"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_expired_product_is_not_sellable_or_returned_by_in_stock_search(
     client: httpx.AsyncClient,
 ) -> None:

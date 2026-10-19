@@ -14,9 +14,9 @@ Retail AI đã có thể dẫn dắt phiên mua sắm demo từ tra cứu sản 
 
 Benchmark tiếng Việt phát hiện ba vấn đề: grader tìm tham số recommendation trong trace LLM dù router chạy xác định; câu “chuyển khoản xong rồi” không được nhận diện khi chờ thanh toán; yêu cầu “bỏ qua xác minh” có thể bị hiểu thành gọi nhân viên. Sau sửa, hội thoại live v2 đạt 13/13 assertion; ba ca mặc định về thêm giỏ, checkout giỏ trống và yêu cầu nhân viên demo đạt 3/3.
 
-Trong báo cáo đánh giá trước, commit `1757bbd` đạt **490 backend**, **41 frontend**, **40/40 P0 regression** và **20/20 shopping sandbox**. Follow-up trên nhánh nêu trên đạt **495 backend**, **49 frontend**, **40/40 P0 regression**, **20/20 shopping sandbox** và smoke backend **23 PASS / 0 FAIL / 7 UNSUPPORTED**; TypeScript, production build, Ruff, compileall và diff check đều qua. Đây là bằng chứng test/sandbox và một mẫu Groq live nhỏ, không phải độ chính xác khách hàng thật hay chứng nhận production.
+Trong báo cáo đánh giá trước, commit `1757bbd` đạt **490 backend**, **41 frontend**, **40/40 P0 regression** và **20/20 shopping sandbox**. Follow-up trên nhánh nêu trên hiện đạt **514 backend**, **49 frontend**, **40/40 P0 regression**, **20/20 shopping sandbox** và smoke backend **27 PASS / 0 FAIL / 3 UNSUPPORTED / 1 NOT RUN**; TypeScript, production build, Ruff, compileall và diff check đều qua. Đây là bằng chứng test/sandbox và một mẫu Groq live nhỏ, không phải độ chính xác khách hàng thật hay chứng nhận production.
 
-Giới hạn chính: PostgreSQL và Redis đã cấu hình nhưng probe kết nối timeout; demo có 6 sản phẩm; kho WinMart 3.099 dòng là snapshot, không phải tồn kho chi nhánh thời gian thực; ticket nhân viên và payment chỉ là simulator; chat gửi SSE delta sau khi model và backend hoàn tất kiểm tra, chưa stream token trong lúc model đang sinh; voice/STT/TTS và kiosk thật không nằm trong benchmark này.
+Giới hạn chính: probe PostgreSQL `SELECT 1` timeout sau khoảng 2 giây và Redis `PING` không kết nối được; demo có 6 sản phẩm; kho WinMart 3.099 dòng là snapshot, không phải tồn kho chi nhánh thời gian thực; ticket nhân viên và payment chỉ là simulator; chat gửi SSE delta sau khi model và backend hoàn tất kiểm tra, chưa stream token trong lúc model đang sinh; voice/STT/TTS và kiosk thật không nằm trong benchmark này.
 
 ## Follow-up Validation: Session Isolation and Product Disambiguation
 
@@ -25,20 +25,22 @@ Các thay đổi follow-up trên nhánh `codex/session-isolation-ui-hardening` t
 - Kiosk gắn request đang chờ với generation của phiên; câu trả lời đến muộn sau khi khách A kết thúc không được đưa vào hội thoại khách B. Audio đã thu không bị gửi lại sang phiên mới khi phiên cũ hết hạn. Khởi tạo phiên được single-flight và component đóng phiên đang dùng khi bị tháo.
 - Khi đóng phiên, cart của khách bị xóa; order đang `PENDING` được giữ trong kho order tách biệt và chỉ đọc được bằng session sở hữu nó.
 - Truy vấn tiếng lóng `bim bim`/`bimbim` chỉ match cụm trong tên sản phẩm để tránh va chạm khi bỏ dấu với danh mục tã/bỉm. Truy vấn có dấu `bỉm` thêm điều kiện danh mục tã/bỉm.
+- So sánh hai sản phẩm chỉ chạy khi khách nêu rõ cặp món hoặc có lượt so sánh trước; giá/tồn được đọc lại từ catalog và câu trả lời nêu nguồn dữ liệu. Các câu hỏi “món nào ngon/bán chạy nhất” tiếp tục qua luồng tư vấn, không bị nhầm thành so sánh.
 - `evaluation/cases/product_resolution_v2.jsonl` có 23 truy vấn, gồm snack, tã/bỉm, đồ uống, hóa mỹ phẩm, thực phẩm và sữa chua. Test xác nhận mọi gold product ID có trong 3.081 sản phẩm được importer chấp nhận từ snapshot 3.099 dòng. Đây là kiểm tra dữ liệu và SQL dựng ra, chưa phải đo Recall trên PostgreSQL.
 - Chat kiosk dùng SSE để cập nhật câu trả lời theo từng cụm từ. Endpoint chạy xong policy, tools, grounding và xử lý giao dịch trước khi phát delta; việc này làm nội dung hiển thị dần nhưng không giảm thời gian chờ model tạo câu trả lời.
 - Khi yêu cầu gặp lỗi mạng, nút thử lại dùng lại `client_turn_id` của lượt đó và không thêm dòng câu hỏi trùng trong UI.
 
 | Kiểm tra follow-up | Kết quả | Giới hạn |
 |---|---:|---|
-| Backend pytest | **495 passed** | Catalog demo/in-process; không bao gồm DB production. |
+| Backend pytest | **514 passed** | Catalog demo/in-process; không bao gồm DB production. |
 | Frontend Vitest | **49 passed / 6 files** | Component/JSDOM; không phải browser E2E. JSDOM báo các API media/canvas chưa giả lập. |
 | Vue TypeScript + production build | **Pass** | Main JS 171,31 kB (gzip 56,23 kB); avatar/model-viewer ở chunk tải riêng 1.024,05 kB (gzip 290,30 kB), Vite vẫn cảnh báo chunk lớn. |
 | Ruff, compileall, `git diff --check` | **Pass** | Có cảnh báo chuẩn hóa LF/CRLF của Git trên Windows. |
 | PostgreSQL product search v2 | **Không đo được** | Chạy read-only benchmark kết thúc bằng `TimeoutError`; không có Recall/latency mới để báo cáo. |
-| P0 regression | **40/40 pass** (8 nhóm × 5 lượt) | Scripted responses; artifact cuối `evaluation/results/p0_regression_20261019T094550Z.json`. |
-| Shopping sandbox | **20/20 pass**, 98 API calls, 0 LLM calls | False-payment 0/4; cross-session leakage 0/4; in-process P50 1,41 ms, P95 14,226 ms. Artifact cuối `evaluation/results/shopping_flow_sandbox_20261019T094549Z.json`. |
-| Deterministic smoke benchmark | **23 PASS / 0 FAIL / 7 UNSUPPORTED** | Kiểm API/tool/grounding/policy bằng scripted Groq và demo catalog; không đo live tool planning. Artifact cuối `evaluation/results/smoke_benchmark_followup_20261019_final.json`. Bản runner cũ được giữ tại `evaluation/results/smoke_benchmark_followup_20261019.json`; 7 FAIL của bản đó là assertion lỗi thời về tool trace/format và được triage, không phải regression của backend. |
+| P0 regression | **40/40 pass** (8 nhóm × 5 lượt) | Scripted responses; artifact cuối `evaluation/results/p0_regression_20261019T100407Z.json`. |
+| Shopping sandbox | **20/20 pass**, 98 API calls, 0 LLM calls | False-payment 0/4; cross-session leakage 0/4; in-process P50 0,924 ms, P95 8,454 ms. Artifact cuối `evaluation/results/shopping_flow_sandbox_20261019T100256Z.json`. |
+| Deterministic smoke benchmark | **27 PASS / 0 FAIL / 3 UNSUPPORTED / 1 NOT RUN** | Bao gồm hội thoại giỏ, tham chiếu món trước, payment sandbox và so sánh hai sản phẩm cùng lượt hỏi “cái nào rẻ hơn”. Scripted Groq/demo catalog; không đo live tool planning. Artifact mới `evaluation/results/smoke_benchmark_coverage_20261019_final_verified.json`. Ba mục chưa hỗ trợ là FEFO theo lô, knowledge base sản phẩm và RAG; Redis live tách thành NOT RUN. Các artifact trước được giữ nguyên để bảo toàn lịch sử. |
+| External data stores | PostgreSQL **NOT RUN** (read-only `SELECT 1` timeout, ~2,01 s); Redis **NOT RUN** (`PING` connection error, ~2,03 s) | Không ghi các probe là PASS; không khởi động local services. |
 
 Các kiểm thử phiên bao gồm late response sau đổi khách, không replay audio, single-flight boot, đóng phiên khi unmount và luồng UI từ sản phẩm đến thanh toán mô phỏng. Kiểm thử SSE bao gồm byte UTF-8 chia nhỏ, ráp delta và từ chối stream bị cắt trước event hoàn tất. Chúng chưa thay thế kiểm thử trình duyệt, micro thật hoặc backend đang kết nối PostgreSQL/Redis.
 
@@ -52,7 +54,7 @@ Các kiểm thử phiên bao gồm late response sau đổi khách, không repla
 | backend/services/retail_agent.py | Vòng gọi tool LLM; tối đa 2 vòng, 5 tool calls và một retry timeout theo cấu hình. Có unit/API coverage; chưa kiểm tra live tool planning ở mọi lượt. |
 | backend/services/retail_tools.py | Hợp đồng và thực thi tìm kiếm, snapshot, recommendation, promotion/store info và các thao tác đọc. |
 | backend/services/vietnamese_intent.py | Chuẩn hóa dấu, cách viết chat và một số biến thể vùng miền; deterministic routing cho intent phổ biến, chưa bao phủ hết cách nói tự do. |
-| backend/services/sessions.py | ShoppingSessionState, TTL, state version, SET/REPLACE/REMOVE/KEEP. Redis adapter có fail-closed; chưa kết nối live được. |
+| backend/services/sessions.py | ShoppingSessionState, TTL, state version, SET/REPLACE/REMOVE/KEEP. Redis adapter có fail-closed; live Redis hiện không kết nối được. |
 | backend/services/shopping_flow.py và backend/services/shopping.py | Phân loại cart/checkout; cart, quote, order, idempotency và payment sandbox. Dữ liệu ghi là in-memory demo, không phải POS/order DB bền. |
 | backend/services/support.py | Phân loại vấn đề và ticket idempotent trong SupportTicketStore một process; trạng thái RECEIVED_DEMO, không thông báo nhân viên thật. |
 | backend/products/postgres_repository.py | Đọc catalog PostgreSQL; không coi catalog snapshot là tồn chi nhánh. Query live không kiểm chứng do timeout. |
@@ -132,7 +134,7 @@ flowchart LR
   API --> UI
 ~~~
 
-API vẫn điều phối nhiều logic. PostgreSQL/Redis là adapter có trong code nhưng probe hiện tại timeout. Production không nên dùng cart/ticket in-memory; snapshot không phải POS tồn live.
+API vẫn điều phối nhiều logic. PostgreSQL `SELECT 1` timeout và Redis `PING` không kết nối được trong probe hiện tại. Production không nên dùng cart/ticket in-memory; snapshot không phải POS tồn live.
 
 ### Luồng dữ liệu
 
@@ -254,7 +256,7 @@ Yêu cầu hỗ trợ rõ ràng tạo ticket demo có ID, loại vấn đề, m�
 - Baseline commit 2f8b036 có 487 backend pass và 41 frontend pass. Sau regression injection và checkout, code cuối có 490 backend pass.
 - Lần v2 đầu đạt 10/13 theo grader cũ. Một assertion là false negative: grader yêu cầu arguments trong LLM trace trong khi recommendation chạy deterministic và session constraints đúng. Hai lỗi thật là phrase “chuyển khoản xong” và injection “bỏ qua xác minh”. Sau sửa parser, policy gate và state-aware grader, đạt 13/13.
 - Lần đầu chạy 3 default cases đạt 2/3; “Tạo đơn … QR” không được route sang checkout. Thêm “tạo đơn/create order”; chạy lại đạt 3/3, không phát QR hay claim thanh toán.
-- Smoke benchmark follow-up đầu tiên báo 16 PASS / 7 FAIL / 7 UNSUPPORTED vì grader còn đòi trace tool cũ, format giá không dấu chấm và tool observation dù policy chặn trước model. Harness được sửa để kiểm tra route recommendation xác định, dữ kiện trả ra, constraint đã áp dụng và chặn local; lần cuối đạt 23 PASS / 0 FAIL / 7 UNSUPPORTED. Bảy UNSUPPORTED là giới hạn tính năng/adapter được liệt kê trong artifact, không được tính là pass.
+- Smoke benchmark follow-up đầu tiên báo 16 PASS / 7 FAIL / 7 UNSUPPORTED vì grader còn đòi trace tool cũ, format giá không dấu chấm và tool observation dù policy chặn trước model. Harness được sửa để kiểm tra route recommendation xác định, dữ kiện trả ra, constraint đã áp dụng và chặn local; lần kế đạt 23 PASS / 0 FAIL / 7 UNSUPPORTED. Audit sâu sau đó tìm thấy bốn mục bị gắn UNSUPPORTED dù controller đã hỗ trợ: thêm/xem giỏ, tham chiếu món trong giỏ, payment status sandbox và Redis adapter tồn tại. Smoke tiếp theo kiểm tra ba flow qua API; Redis live đổi thành NOT RUN, kết quả 26 PASS / 0 FAIL / 3 UNSUPPORTED / 1 NOT RUN. Bổ sung comparison controller và coverage giá/tồn/follow-up làm kết quả mới nhất thành 27 PASS / 0 FAIL / 3 UNSUPPORTED / 1 NOT RUN. Regression cho thấy câu hỏi “món nào ngon/bán chạy nhất” từng bị detector so sánh bắt nhầm; điều kiện follow-up được siết và toàn bộ test ranking/comparison hiện pass. Ba mục chưa hỗ trợ là FEFO theo batch, product knowledge runtime và RAG.
 - Sandbox benchmark cũ cũng 20/20. Chênh lệch timing in-process giữa lần chạy không đại diện hiệu năng production.
 - 13/13 là assertion định trước (ID, phrase, state, cart, order, ticket), không phải chấm thủ công naturalness và không có nghĩa hallucination rate bằng 0.
 
@@ -265,11 +267,13 @@ Artifact mới được giữ riêng, không ghi đè lịch sử:
 - evaluation/results/live_text_retail_v2_20261019.json
 - evaluation/results/live_text_retail_default_cases_20261019.json
 - evaluation/results/live_text_retail_default_cases_after_fixes_20261019.json
-- evaluation/results/p0_regression_20261019T094550Z.json
-- evaluation/results/shopping_flow_sandbox_20261019T094549Z.json
+- evaluation/results/p0_regression_20261019T100407Z.json
+- evaluation/results/shopping_flow_sandbox_20261019T100256Z.json
+- evaluation/results/smoke_benchmark_coverage_20261019_final_verified.json
 - evaluation/results/live_groq_model_after_shopping_20261019.json
 - evaluation/results/smoke_benchmark_followup_20261019.json (runner cũ, diagnostic được giữ nguyên)
 - evaluation/results/smoke_benchmark_followup_20261019_final.json (runner đã sửa)
+- evaluation/results/smoke_benchmark_coverage_20261019.json (coverage đã đối chiếu lại với runtime)
 
 ## 9. Error Analysis
 
@@ -280,7 +284,7 @@ Artifact mới được giữ riêng, không ghi đè lịch sử:
 | Retrieval | Demo live chỉ 6 SKU; retrieval PostgreSQL trên 3.099 dòng không chạy được. | Chưa kết luận Recall@k/typo quality; chạy lại khi DB hoạt động. |
 | Grounding | Snapshot có ngày cũ; giá demo có thể khác quầy hiện tại. | Gắn freshness khi có; cần feed giá/tồn theo chi nhánh và SLA. Thiếu field thì không khẳng định. |
 | Recommendation | Không có doanh số/ratings để xếp “bán chạy nhất/ngon nhất”. | Chỉ gợi ý theo constraint có dữ liệu; chưa có analytics khách hàng/thị trường. |
-| Database | PostgreSQL và Redis cấu hình có nhưng timeout. | Chưa chạy query/session integration live; unit adapter không thay cho vận hành thật. |
+| Database | PostgreSQL read-only probe timeout; Redis endpoint trả connection error. | Chưa chạy query/session integration live; unit adapter không thay cho vận hành thật. |
 | Payment | Không có bank webhook. | Sandbox giữ PENDING; LLM không đặt PAID. Chưa có payment provider, không gửi QR thật. |
 | Customer support | Ticket simulator không liên hệ nhân viên/CRM. | Response ghi rõ demo; cần queue có ack nếu triển khai handoff thật. |
 | Security | Guard chặn các injection đã nhận diện, gồm bypass verification. | Chưa penetration test, chưa đánh giá injection gián tiếp từ feed/catalog. |
@@ -318,7 +322,7 @@ Không có load test production, payment thật, POS, PostgreSQL/Redis live, sta
 - Báo cáo đánh giá cũ giữ riêng tại `docs/reports/archive/`; follow-up được commit trên nhánh feature này.
 - Runtime test dùng catalog demo với CATALOG_REPOSITORY=demo.
 - Live Groq cần key trong .env; báo cáo và artifact không chứa giá trị key.
-- PostgreSQL/Redis probe timeout; không dùng chúng để tạo kết quả pass giả.
+- PostgreSQL/Redis live probe không khả dụng; không dùng chúng để tạo kết quả pass giả.
 - Python 3.13.15, Node 24.21.0, npm 11.19.0.
 
 ### Lệnh kiểm tra
@@ -339,9 +343,10 @@ npm run build
 
 ~~~powershell
 $env:CATALOG_REPOSITORY = 'demo'
+$env:CATALOG_REPOSITORY = 'demo'
 .venv\Scripts\python.exe evaluation\run_p0_regressions.py --trials-per-case 5
 .venv\Scripts\python.exe evaluation\run_shopping_flow_benchmark.py --trials 2
-.venv\Scripts\python.exe evaluation\run_smoke_benchmark.py --output evaluation\results\smoke_benchmark_followup_20261019_final.json
+.venv\Scripts\python.exe evaluation\run_smoke_benchmark.py --output evaluation\results\smoke_benchmark_coverage_20261019_final_verified.json
 .venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark --case-file evaluation\cases\vietnamese_retail_shopping_v2.json --pace-seconds 9 --output evaluation\results\live_text_retail_v2_reproduced.json
 .venv\Scripts\python.exe -m evaluation.run_product_search_benchmark --cases evaluation\cases\product_resolution_v2.jsonl --output evaluation\results\product_search_benchmark_v2.json
 ~~~
