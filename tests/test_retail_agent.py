@@ -71,6 +71,43 @@ async def test_terminal_snapshot_skips_redundant_final_llm_call() -> None:
     assert result.observations[-1].terminal is True
 
 
+@pytest.mark.asyncio
+async def test_timestamp_snapshot_round_trips_through_agent_tool_message() -> None:
+    groq = ScriptedGroq(
+        GroqChatResult(
+            "",
+            "qwen/qwen3.8-27b",
+            [tool_call("search_products", {"query": "Coca Zero"})],
+        ),
+        GroqChatResult(
+            "",
+            "qwen/qwen3.8-27b",
+            [
+                tool_call(
+                    "get_product_snapshot",
+                    {
+                        "product_id": "COKE_ZERO_330",
+                        "fields": ["data_timestamp"],
+                    },
+                )
+            ],
+        ),
+    )
+
+    result = await run_retail_agent(
+        groq,
+        [{"role": "user", "content": "Coca Zero price?"}],
+        SessionState.BROWSING,
+        candidate_query="coca zero",
+    )
+
+    assert groq.calls == 2
+    assert result.observations[-1].content["product"]["data_timestamp"] == (
+        "2026-08-31T00:00:00+00:00"
+    )
+    assert result.observations[-1].terminal is True
+
+
 def test_product_match_requires_specific_words_that_select_one_variant() -> None:
     candidates = (
         ProductSnapshot(

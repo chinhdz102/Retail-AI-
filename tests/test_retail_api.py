@@ -18,10 +18,12 @@ from backend.api.main import (
     _localized_catalog_promotions,
     _new_stock_arrival_requested,
     _price_constraint_from_text,
+    _product_card,
     _product_ranking_requested,
     _promotion_list_tool_arguments,
     _prompt_override_requested,
     _recommendation_tool_arguments,
+    _render_verified_snapshot,
     _requested_snapshot_fields,
     _retail_chain_operator_question,
     _sensitive_internal_information_requested,
@@ -37,7 +39,7 @@ from backend.api.main import (
     session_store,
 )
 from backend.config import Settings, get_settings
-from backend.products.catalog import ProductSnapshot
+from backend.products.catalog import DEMO_PRODUCTS, ProductSnapshot
 from backend.products.repository import DemoProductRepository
 from backend.services import retail_tools
 from backend.services.azure_speech import AzureSpeechProviderError
@@ -99,7 +101,7 @@ def test_broad_promotion_intent_lists_records_but_named_product_uses_snapshot(
     assert _promotion_list_tool_arguments(text) == expected
 
 
-def test_catalog_promotion_response_keeps_snapshot_and_validity_caveat() -> None:
+def test_catalog_promotion_response_keeps_validity_caveat_without_repeating_date() -> None:
     observation = ToolObservation(
         content={
             "items": [
@@ -116,9 +118,63 @@ def test_catalog_promotion_response_keeps_snapshot_and_validity_caveat() -> None
 
     reply = _localized_catalog_promotions(observation, "vi")
 
-    assert "31/08/2026" in reply
+    assert "31/08/2026" not in reply
     assert "Mua 2 hộp giảm 1.000đ" in reply
     assert "chưa có hạn và điều kiện" in reply
+
+
+@pytest.mark.parametrize(
+    ("fields", "expected", "forbidden"),
+    [
+        (("price_vnd",), "giá tham khảo 13.000đ", "Theo dữ liệu ngày"),
+        (("stock",), "16 lon có thể bán được", "Theo dữ liệu ngày"),
+        (("shelf",), "A2-L2", "31/08/2026"),
+    ],
+)
+def test_verified_snapshot_answers_are_concise_and_keep_critical_caveat(
+    fields: tuple[str, ...], expected: str, forbidden: str
+) -> None:
+    product = DEMO_PRODUCTS[0]
+    observation = ToolObservation(
+        content={"data_timestamp": product.data_timestamp.isoformat()},
+        products=(product,),
+        tool_name="get_product_snapshot",
+        source="demo_product_catalog",
+        requested_fields=fields,
+    )
+    reply = _render_verified_snapshot(observation, "vi", fields)
+
+    assert expected in reply
+    assert forbidden not in reply
+    if fields == ("price_vnd",):
+        assert "Giá tại cửa hàng có thể khác" in reply
+    if fields == ("stock",):
+        assert "Tồn thực tế tại cửa hàng có thể khác" in reply
+
+
+def test_verified_snapshot_reports_record_date_only_when_customer_asks() -> None:
+    product = DEMO_PRODUCTS[0]
+    observation = ToolObservation(
+        content={"data_timestamp": product.data_timestamp.isoformat()},
+        products=(product,),
+        tool_name="get_product_snapshot",
+        source="demo_product_catalog",
+        requested_fields=("data_timestamp",),
+    )
+    reply = _render_verified_snapshot(observation, "vi", ("data_timestamp",))
+
+    assert "31/08/2026" in reply
+    assert "chưa thể xác nhận đây là dữ liệu mới nhất" in reply
+
+
+def test_product_card_preserves_catalog_source_and_timestamp(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "backend.api.main.get_product_repository", lambda: DemoProductRepository()
+    )
+    card = _product_card(DEMO_PRODUCTS[0])
+
+    assert card.data_source == "demo_product_catalog"
+    assert card.data_timestamp == DEMO_PRODUCTS[0].data_timestamp
 
 
 @pytest.mark.parametrize(
@@ -435,10 +491,10 @@ async def test_broad_promotion_question_uses_catalog_list_without_llm(
 
     assert response.status_code == 200
     payload = response.json()
-    assert "Mua 2 hộp giảm 1.000đ" in payload["text"]
-    assert "hạn và điều kiện" in payload["text"]
+    assert "chưa ghi nhận khuyến mãi phù hợp" in payload["text"]
+    assert "Mua 2 hộp giảm 1.000đ" not in payload["text"]
     assert payload["tools_used"] == ["list_product_promotions"]
-    assert payload["grounded_product_ids"] == ["MILK01"]
+    assert payload["grounded_product_ids"] == []
 
 
 @pytest.mark.asyncio
@@ -883,6 +939,7 @@ def test_system_prompt_does_not_end_a_conversation_before_the_user_says_goodbye(
         ("Giá bao nhiêu vậy?", ("price_vnd",)),
         ("Còn lấy ở kệ nào?", ("shelf",)),
         ("Nó còn hàng không?", ("stock",)),
+        ("Dữ liệu ghi còn bán được không?", ("stock",)),
         ("À, còn nằm kệ nào ấy nhỉ?", ("shelf",)),
         ("Vậy trong lon còn nhiều không?", ("stock",)),
         ("Cái đó có những thành phần gì vậy?", ("ingredients",)),
@@ -1538,7 +1595,8 @@ async def test_recommendation_returns_sellable_matching_candidate(
     assert response.status_code == 200
     assert "Nước suối 500ml" in response.json()["text"]
     assert "7.000đ" in response.json()["text"]
-    assert "31/08/2026" in response.json()["text"]
+    assert "31/08/2026" not in response.json()["text"]
+    assert "Giá tại cửa hàng có thể khác catalog" in response.json()["text"]
     assert response.json()["grounded_product_ids"] == ["WATER01"]
     assert service.calls == 0
 
@@ -1563,7 +1621,7 @@ async def test_reservation_request_explicitly_says_items_cannot_be_held(
     )
 
     assert response.status_code == 200
-    assert "hiện còn 16 lon" in response.json()["text"]
+    assert "còn 16 lon có thể bán được theo catalog" in response.json()["text"]
     assert response.json()["text"].endswith("nhé.")
     assert "chưa thể giữ hàng" in response.json()["text"]
     assert response.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
@@ -1610,6 +1668,93 @@ async def test_snapshot_field_controls_deterministic_answer_and_product_attribut
     assert "16" in response.json()["text"]
     assert "Pepsi" not in response.json()["text"]
     assert "13.000" not in response.json()["text"]
+
+
+@pytest.mark.asyncio
+async def test_freshness_question_returns_snapshot_date_and_source_metadata(
+    client: httpx.AsyncClient,
+) -> None:
+    service = ScriptedToolGroqService(
+        '{"product_id":"COKE_ZERO_330","fields":["data_timestamp"]}',
+        "Đã kiểm tra.",
+    )
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-freshness"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Coca Zero cập nhật ngày nào?",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "31/08/2026" in payload["text"]
+    assert "chưa thể xác nhận đây là dữ liệu mới nhất" in payload["text"]
+    assert payload["data_timestamp"] == "2026-08-31T00:00:00Z"
+    assert payload["data_source"] == "demo_product_catalog"
+
+
+@pytest.mark.asyncio
+async def test_elliptical_freshness_question_uses_last_grounded_product_without_llm(
+    client: httpx.AsyncClient,
+) -> None:
+    first_service = SearchOnlyGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: first_service
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-freshness-followup"})
+    session_id = created.json()["session_id"]
+    first = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Mình muốn mua Coca Zero."},
+    )
+
+    followup_service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: followup_service
+    followup = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Giá này được cập nhật ngày nào?"},
+    )
+
+    assert first.status_code == 200
+    assert followup.status_code == 200
+    payload = followup.json()
+    assert "31/08/2026" in payload["text"]
+    assert "chưa thể xác nhận đây là dữ liệu mới nhất" in payload["text"]
+    assert payload["grounded_product_ids"] == ["COKE_ZERO_330"]
+    assert payload["tools_used"] == ["get_product_snapshot"]
+    assert payload["data_source"] == "demo_product_catalog"
+    assert followup_service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_elliptical_stock_question_with_data_preface_uses_last_grounded_product(
+    client: httpx.AsyncClient,
+) -> None:
+    first_service = SearchOnlyGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: first_service
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-stock-followup"})
+    session_id = created.json()["session_id"]
+    first = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Mình muốn mua Coca Zero."},
+    )
+
+    followup_service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: followup_service
+    followup = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Dữ liệu ghi còn bán được không?"},
+    )
+
+    assert first.status_code == 200
+    assert followup.status_code == 200
+    payload = followup.json()
+    assert "còn 16 lon" in payload["text"]
+    assert payload["grounded_product_ids"] == ["COKE_ZERO_330"]
+    assert payload["tools_used"] == ["get_product_snapshot"]
+    assert followup_service.calls == 0
 
 
 @pytest.mark.asyncio
@@ -1881,7 +2026,9 @@ async def test_consultation_phrasings_recommend_matching_live_catalog_items(
     payload = response.json()
     assert product_name in payload["text"]
     assert price in payload["text"]
-    assert "31/08/2026" in payload["text"]
+    assert "31/08/2026" not in payload["text"]
+    assert payload["data_timestamp"] == "2026-08-31T00:00:00Z"
+    assert payload["data_source"] == "demo_product_catalog"
     assert payload["grounded_product_ids"] == [product_id]
     assert payload["tools_used"] == ["recommend_products"]
 

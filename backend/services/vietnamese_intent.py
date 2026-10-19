@@ -174,6 +174,8 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "co san",
             "con ban",
             "co ban khong",
+            "con ban duoc khong",
+            "ban duoc khong",
             "con khong",
             "het chua",
             "con chua",
@@ -195,6 +197,7 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
     ) or bool(
         re.search(r"\b(?:con|co)\s+(?:chai|lon|hop|goi|ly|cai)\b.{0,40}\bkhong\b", normalized)
         or re.search(r"\bcon\s+(?:chai|lon|hop|goi|ly|cai)\b.{0,20}\bnao\b", normalized)
+        or re.search(r"\bcon\b.{0,30}\bban duoc\b.{0,15}\bkhong\b", normalized)
         or re.search(r"\bmua duoc\b.{0,45}\bkhong\b", normalized)
         or re.search(r"\bco ban\b.{0,40}\bkhong\b", normalized)
         or re.search(r"\bco san\b.{0,40}\bkhong\b", normalized)
@@ -319,6 +322,56 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "不辣",
         ),
     )
+    data_timestamp = _has_phrase(
+        normalized,
+        (
+            "du lieu cap nhat",
+            "du lieu duoc cap nhat",
+            "cap nhat ngay nao",
+            "cap nhat hom nao",
+            "cap nhat luc nao",
+            "ngay cap nhat",
+            "ngay du lieu",
+            "du lieu moi khong",
+            "du lieu co moi khong",
+            "thong tin moi khong",
+            "bao gio cap nhat",
+            "when was this updated",
+            "when was it updated",
+            "when was the data updated",
+            "data freshness",
+            "last updated",
+            "updated when",
+            "更新时间",
+            "数据更新时间",
+        ),
+    )
+    freshness_date_question = data_timestamp and _has_phrase(
+        normalized,
+        (
+            "ngay nao",
+            "hom nao",
+            "luc nao",
+            "bao gio cap nhat",
+            "when was",
+            "updated when",
+        ),
+    )
+    explicit_price_amount_question = _has_phrase(
+        normalized,
+        (
+            "gia bao nhieu",
+            "bao nhieu tien",
+            "bao tien",
+            "may dong",
+            "how much",
+            "what is the price",
+            "what s the price",
+            "whats the price",
+        ),
+    )
+    if freshness_date_question and not explicit_price_amount_question:
+        price = False
 
     fields: list[str] = []
     if price:
@@ -335,6 +388,8 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
         fields.append("ingredients")
     if spicy:
         fields.append("spicy")
+    if data_timestamp:
+        fields.append("data_timestamp")
     return tuple(fields)
 
 

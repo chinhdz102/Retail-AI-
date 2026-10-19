@@ -33,6 +33,8 @@ export interface AgentResponse {
   model: string
   grounded_product_ids: string[]
   tools_used?: string[]
+  data_timestamp?: string | null
+  data_source?: string | null
   state: string
   products?: ProductCard[]
   cart?: ShoppingCart | null
@@ -61,6 +63,7 @@ export interface ProductCard {
   stock: number
   uom: string | null
   data_timestamp: string
+  data_source: string
 }
 
 export interface CartLine {

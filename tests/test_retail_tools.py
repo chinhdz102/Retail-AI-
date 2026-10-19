@@ -47,10 +47,39 @@ def test_snapshot_can_verify_spice_attribute() -> None:
     assert observation.content["product"]["spicy"] is True
 
 
+def test_snapshot_timestamp_is_json_serializable_for_agent_tool_messages() -> None:
+    observation = execute_catalog_tool(
+        "get_product_snapshot",
+        json.dumps({"product_id": "COKE_ZERO_330", "fields": ["data_timestamp"]}),
+    )
+
+    encoded = json.dumps(observation.to_envelope(), ensure_ascii=False)
+    decoded = json.loads(encoded)
+
+    assert decoded["data"]["product"]["data_timestamp"] == "2026-08-31T00:00:00+00:00"
+
+
 def test_promotion_list_returns_only_catalog_records_with_snapshot_provenance() -> None:
+    class ActivePromotionRepository:
+        source_name = "active_promotion_test_catalog"
+
+        def list_promotions(self, *, category: str | None, limit: int):
+            assert category is None
+            return (
+                ProductSnapshot(
+                    product_id="PROMO01",
+                    name="Coca-Cola Zero 330ml",
+                    category="drink",
+                    price_vnd=13000,
+                    stock=16,
+                    promotion="Giảm 2.000đ",
+                ),
+            )[:limit]
+
     observation = execute_catalog_tool(
         "list_product_promotions",
         json.dumps({"limit": 5}),
+        repository=ActivePromotionRepository(),
     )
 
     assert observation.status == "SUCCESS"
@@ -60,11 +89,22 @@ def test_promotion_list_returns_only_catalog_records_with_snapshot_provenance() 
     assert observation.content["campaign_validity_verified"] is False
     assert observation.content["count"] == 1
     assert observation.content["items"][0] == {
-        "product_id": "MILK01",
-        "name": "Sữa tươi ít đường 180ml",
-        "promotion": "Mua 2 hộp giảm 1.000đ",
+        "product_id": "PROMO01",
+        "name": "Coca-Cola Zero 330ml",
+        "promotion": "Giảm 2.000đ",
         "data_timestamp": observation.products[0].data_timestamp.isoformat(),
     }
+
+
+def test_promotion_list_excludes_expired_catalog_products() -> None:
+    observation = execute_catalog_tool(
+        "list_product_promotions",
+        json.dumps({"limit": 5}),
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.content["count"] == 0
+    assert observation.content["items"] == []
 
 
 def test_promotion_list_rejects_unsupported_repository_instead_of_guessing() -> None:

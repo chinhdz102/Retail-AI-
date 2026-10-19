@@ -26,6 +26,7 @@ from backend.services.vietnamese_intent import (
         ("Coca Zero bn vậy?", ("price_vnd",)),
         ("Coca Zero 13k à?", ("price_vnd",)),
         ("Coca Zero còn hàng chứ?", ("stock",)),
+        ("Coca Zero còn bán được không?", ("stock",)),
         ("Ở đây còn bán loại này không?", ("stock",)),
         ("Món này hết chưa vậy?", ("stock",)),
         ("Còn chai Coca nào không?", ("stock",)),
@@ -55,6 +56,10 @@ from backend.services.vietnamese_intent import (
         ("Coca Zero có gì ngon?", ()),
         ("Có mã giảm giá cho Coca Zero không?", ("promotion",)),
         ("Coca Zero giảm giá còn bao nhiêu tiền?", ("price_vnd", "promotion")),
+        ("Dữ liệu giá Coca Zero cập nhật ngày nào?", ("data_timestamp",)),
+        ("Giá này được cập nhật ngày nào?", ("data_timestamp",)),
+        ("Catalog có dữ liệu mới không?", ("data_timestamp",)),
+        ("When was the data updated for Coca Zero?", ("data_timestamp",)),
     ],
 )
 def test_snapshot_intents_cover_colloquial_and_indirect_vietnamese(
