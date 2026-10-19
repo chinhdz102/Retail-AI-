@@ -2624,6 +2624,31 @@ async def test_contextual_spice_followup_uses_grounded_bim_bim_snapshot(
 
 
 @pytest.mark.asyncio
+async def test_contextual_noodle_reference_keeps_product_for_spice_question(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "noodle-spice-followup"})
+    session_id = created.json()["session_id"]
+    product = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Mì ly bò hầm cay giá bao nhiêu?"},
+    )
+    spice = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Mì này có cay không?"},
+    )
+
+    assert product.status_code == spice.status_code == 200
+    assert product.json()["grounded_product_ids"] == ["NOODLE01"]
+    assert "có vị cay" in spice.json()["text"].casefold()
+    assert spice.json()["grounded_product_ids"] == ["NOODLE01"]
+    assert spice.json()["tools_used"] == ["get_product_snapshot"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_false_staff_acknowledgement_request_is_denied_without_llm_or_ticket(
     client: httpx.AsyncClient,
 ) -> None:

@@ -1,24 +1,22 @@
 # Retail AI V3 — báo cáo đánh giá luồng bán hàng bằng text
 
-- **Ngày chạy:** 19/10/2026 (Asia/Ho_Chi_Minh)
+- **Ngày chạy:** 19–20/10/2026 (Asia/Ho_Chi_Minh)
 - **Repository:** chinhdz102/Retail-AI-
 - **Nhánh:** codex/retail-text-quality-v4-20261019
 - **Phạm vi:** hội thoại text, tìm kiếm/tư vấn sản phẩm, so sánh, giỏ hàng, checkout sandbox, an toàn và session. Không tối ưu STT/TTS trong vòng này.
 
 ## A. Executive Summary
 
-Vòng này tách renderer câu trả lời catalog sang module riêng; làm cho cảnh báo giá/tồn/khuyến mãi chỉ xuất hiện một lần cho cùng snapshot trong một session; giữ lại caveat khi đổi sản phẩm, dữ liệu hoặc session; và lưu trạng thái disclosure qua Redis serializer. So sánh giá/tồn được nhận diện tường minh. Khi hỏi cảm nhận vị hoặc món bán chạy mà không có số liệu, Sky từ chối kết luận thay vì suy đoán. Câu hỏi dị ứng không nêu rõ mặt hàng được hỏi tên sản phẩm trước; câu hỏi sức khỏe và công dụng không có dữ liệu tiếp tục được trả lời bằng cách nói rõ chưa xác minh.
+Vòng đánh giá gần nhất sửa hai lỗi hội thoại thực tế: câu “Mì này có cay không?” phải bám sản phẩm vừa tra và chỉ gọi snapshot; yêu cầu thêm nhiều món như “Cho 1 snack khoai tây với 1 chai nước suối vào giỏ” phải giữ từng món/số lượng và đi trọn luồng checkout sandbox. Groq service hỗ trợ tối đa năm credential khác nhau, thử key tiếp theo khi provider trả lỗi xác thực/quota, rồi mới chuyển model.
 
-Kết quả kiểm tra mã sau follow-up:
+Kết quả kiểm tra ngày 20/10/2026:
 
-- Backend: **628 passed** với CATALOG_REPOSITORY=demo.
-- Frontend: **49 passed**; vue-tsc và production build thành công.
-- Ruff và compileall: thành công.
-- P0: **40/40**; shopping sandbox: **10/10**, không xác nhận thanh toán giả và không rò dữ liệu session trong các assertion đã chạy.
-- Offline product retrieval trên snapshot: Recall@1/3/5 đều **28/28**, MRR **1.0**.
-- Live Groq development trước follow-up: **41 phiên, 203 lượt; 203/203 HTTP 200 và 203/203 assertion** sau khi sửa tiêu chí tiếng Anh “rating” thành tiếng Việt “đánh giá vị”. Bộ dev bổ sung sau follow-up đạt **16/16 assertion** trên 4 phiên mới; chi tiết ở mục M.
-- Live held-out trước follow-up: **10 phiên, 49 lượt; 47/49 HTTP 200 và 23/49 assertion đạt**. Có 2 lượt HTTP 502 khi các model được cấu hình đều bị rate limit. Held-out không được chạy lại cho code mới; kết quả này không đại diện cho code sau follow-up.
-- Không có giao dịch thanh toán thật. PostgreSQL/Redis thật, streaming token thật, STT/TTS end-to-end và review thủ công độc lập chưa được xác minh ở vòng này.
+- Backend: **675 passed**; frontend: **49 passed**; production build, Ruff và compileall đều thành công.
+- Live Groq dev: **41 phiên / 203 lượt**, HTTP **203/203**, grounding/safety **203/203**, 0 lỗi; median **47 ms**, 3 LLM calls và 1 tool call. Đây là bộ dev đã lộ, không phải held-out mù; số lượt LLM thấp nên không đo đầy đủ chất lượng sinh câu trả lời.
+- P0: **40/40**; shopping sandbox: **100/100**, 0 xác nhận thanh toán giả trong 20 lần kiểm tra và 0 rò chéo phiên trong 20 lần kiểm tra.
+- Product retrieval ngoại tuyến: Recall@1/3/5 = **1.0**; gold-set recall@3/@5 = **0.9777/0.9866**; MRR = **1.0**.
+- Kiểm tra credential cho thấy hai giá trị key gửi gần đây trùng với fallback_1 và fallback_2 đã có; hiện có **3 credential duy nhất**, không phải 5. Live Groq đã ghi nhận primary bị 429 và fallback_1 thành công.
+- Chưa xác minh PostgreSQL/Redis thật, held-out mới chưa lộ, đánh giá tự nhiên bởi người chấm độc lập, hoặc STT/TTS end-to-end. Các giới hạn dữ liệu và benchmark được ghi ở mục R.
 
 ## B. Repository & Branch Audit
 
@@ -343,9 +341,9 @@ Bộ 50 lượt là **exploratory/dev đã lộ**, không phải kiểm tra mù 
 
 Tất cả benchmark P0 và 50 lượt hội thoại trên dùng catalog demo sáu mặt hàng theo cấu hình tường minh. Một lượt P0 khi vô tình chạy theo `.env` mặc định (repository PostgreSQL, nhưng DB không sẵn sàng) chỉ đạt 25/40; ba nhóm kiểm tra cần catalog thất bại. Sau khi đặt rõ `CATALOG_REPOSITORY=demo`, P0 đạt 40/40. Đây là giới hạn runtime cần xử lý trước khi xem dữ liệu DB thật trong demo. Chỉ benchmark truy hồi ngoại tuyến chạy trên snapshot WinMart; nó không kiểm tra truy vấn PostgreSQL, tồn kho thời gian thực hoặc Redis.
 
-### Hai key fallback mới
+### Kiểm tra hai giá trị key người dùng cung cấp
 
-Đã đặt hai credential người dùng cung cấp vào `.env` dưới hai slot fallback. `.env` vẫn bị Git ignore; thay đổi được push chỉ gồm tên cấu hình/logic failover, không gồm giá trị secret. Cả ba slot được chọn để xác minh đã cấu hình. Các GET `/models` trước đó trả HTTP 200 cho từng slot, nhưng yêu cầu generation từ cả ba slot/model đều gặp HTTP 429 trong cùng đợt quota. Vì vậy chưa có bằng chứng các key có quota độc lập; fallback giữ nguyên thứ tự và sẽ thử credential kế tiếp khi quota/provider cho phép.
+Đối chiếu trong bộ nhớ xác nhận hai giá trị gửi gần đây trùng lần lượt với `GROQ_API_KEY_FALLBACK_1` và `GROQ_API_KEY_FALLBACK_2` đã có trong `.env`. Chúng không tạo thêm credential độc lập. `.env` vẫn bị Git ignore; báo cáo và code không chứa giá trị secret. Xác minh `/models` trả HTTP 200 cho ba credential duy nhất. Ở lần benchmark live sau đó, primary bị 429 và fallback_1 hoàn thành request; xem mục R.
 
 ### Artifacts cuối
 
@@ -356,3 +354,37 @@ Tất cả benchmark P0 và 50 lượt hội thoại trên dùng catalog demo s�
 - [Exploratory/dev cases](../../evaluation/cases/vietnamese_text_sales_flow_v5_exploratory_20261020.json)
 
 Kết quả hiện tại không chứng minh chất lượng model live dưới quota, độ tự nhiên bằng đánh giá người dùng, hoặc tích hợp PostgreSQL/Redis. Chưa chạy lại STT/TTS trong lần kiểm tra text này.
+
+## R. Revalidation sau sửa cart/context và kiểm tra credential — 20/10/2026
+
+### Các thay đổi được kiểm tra
+
+- Parser giữ dấu phẩy/liên từ và số lượng trong yêu cầu thêm nhiều món; chuỗi test đi từ thêm món, xem giỏ, checkout đến xác nhận đơn sandbox. Lời nói “đã thanh toán” vẫn không tự xác nhận giao dịch.
+- Câu hỏi thuộc tính có tham chiếu “mì này” dùng sản phẩm đã xác minh trong lượt trước và không chạy nhầm công cụ recommendation.
+- Cấu hình nhận tối đa năm credential duy nhất. SDK retry nội bộ được tắt để ứng dụng kiểm soát thứ tự xoay key; các slot trùng key được gộp một lần. Khi mọi key cho model hiện tại không dùng được, service mới thử model fallback.
+
+### Kiểm tra song song
+
+| Kiểm tra | Kết quả |
+|---|---:|
+| Backend pytest | **675 passed** |
+| Frontend Vitest | **49 passed / 6 files** |
+| Frontend production build + vue-tsc | Pass; chunk `model-viewer` 1,024 kB vẫn có cảnh báo vượt 500 kB |
+| Ruff / compileall | Pass / Pass |
+| Live Groq development | **41 phiên / 203 lượt; HTTP 203/203; grounding/safety 203/203; 0 lỗi** |
+| Live dev latency / model usage | Median **47 ms**; 3 LLM calls; 1 tool call |
+| P0 regression | **40/40** trên 8 case × 5 lần, catalog demo |
+| Shopping sandbox | **100/100**; 0/20 false payment; 0/20 cross-session leakage; 0 LLM calls |
+| Offline product retrieval | Recall@1/3/5 = **1.0**; gold-set recall@3/@5 = **0.9777/0.9866**; MRR **1.0** |
+
+Live trace ghi nhận cả ba request LLM bị primary trả 429 rồi fallback_1 thành công; output benchmark chỉ lưu tên slot/model và không chứa secret. Ba credential duy nhất đều xác thực được qua GET `/models`, mỗi slot hiển thị 11 model. Hai giá trị vừa gửi trong chat thực ra trùng fallback_1 và fallback_2, vì vậy cấu hình hiện có ba key khác nhau. Code đã sẵn sàng nhận key mới ở `GROQ_API_KEY_FALLBACK_3` và `_4`; hai slot này hiện chưa có giá trị riêng.
+
+Bộ live 41 phiên/203 lượt là development đã lộ, không phải held-out mới. Benchmark có 3 LLM calls; phần lớn câu được trả bằng deterministic API/catalog routing. `expected_model_tool_selection_count=0`, nên lượt chạy này không đánh giá chất lượng chọn tool của model. Median thấp không phản ánh các fallback chậm: một số lượt có primary quota wait mất nhiều giây. Không có đánh giá người dùng độc lập, PostgreSQL/Redis thật vẫn chưa kết nối, và không chạy STT/TTS trong vòng này.
+
+Artifacts:
+
+- [Live Groq dev, 203/203](../../evaluation/results/goal_postfix_v3_dev_live_20261020.json)
+- [P0 regression, 40/40](../../evaluation/results/goal_postfix_p0_20261020.json)
+- [Shopping sandbox, 100/100](../../evaluation/results/goal_postfix_shopping_20261020.json)
+- [Offline product retrieval](../../evaluation/results/goal_postfix_product_resolution_20261020.json)
+- [Code regression for cart/context fixes](../../tests/test_shopping_flow.py) và [API follow-up regression](../../tests/test_retail_api.py)

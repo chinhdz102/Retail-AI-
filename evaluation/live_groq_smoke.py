@@ -19,7 +19,6 @@ from time import perf_counter
 from typing import Any
 
 import httpx
-from openai import AsyncOpenAI
 
 from backend.api.main import app, get_groq_service
 from backend.config import Settings
@@ -61,12 +60,24 @@ class RecordingGroq(GroqService):
     def __init__(
         self,
         settings: Settings,
-        client: AsyncOpenAI,
         pacer: RequestPacer,
     ) -> None:
-        super().__init__(settings=settings, client=client)
+        # Use the real GroqService credential loop. Injecting one shared SDK
+        # client here would silently test only the primary key.
+        super().__init__(settings=settings)
         self.trace: list[dict[str, Any]] = []
         self.pacer = pacer
+
+    def reset_trace(self) -> None:
+        self.trace.clear()
+
+    async def aclose(self) -> None:
+        clients = list(self._clients_by_credential.values())
+        self._clients_by_credential.clear()
+        await asyncio.gather(
+            *(client.close() for client in clients if hasattr(client, "close")),
+            return_exceptions=True,
+        )
 
     async def chat(self, messages, model=None, tools=None, tool_choice=None):
         pacing_wait_ms = await self.pacer.wait()
@@ -137,9 +148,15 @@ def grade_minimum_fields(scenario_id: str, trace: list[dict[str, Any]]) -> dict[
 
 def settings_for_mode(settings: Settings, mode: str) -> Settings:
     if mode == "system":
-        return settings
+        return settings.model_copy(update={"groq_timeout_seconds": 12.0})
     if mode == "model":
-        return settings.model_copy(update={"groq_fallback_model": "", "groq_fallback_model_2": ""})
+        return settings.model_copy(
+            update={
+                "groq_fallback_model": "",
+                "groq_fallback_model_2": "",
+                "groq_timeout_seconds": 12.0,
+            }
+        )
     raise ValueError("mode must be 'system' or 'model'")
 
 
@@ -266,6 +283,9 @@ async def run(
         "benchmark_mode": mode,
         "model_locked": mode == "model",
         "fallback_enabled": mode == "system",
+        "credential_failover_enabled": len(settings.groq_api_credentials) > 1,
+        "credential_slots": [slot for slot, _ in settings.groq_api_credentials],
+        "provider_timeout_seconds": settings.groq_timeout_seconds,
         "minimum_model_request_interval_seconds": pace_seconds,
         "complete": False,
         "note": (
@@ -290,22 +310,14 @@ async def run(
     completed = {(item["scenario_id"], item["trial"]) for item in results}
     save_report(report, output)
     pacer = RequestPacer(pace_seconds)
-    async with (
-        httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app), base_url="http://evaluation"
-        ) as client,
-        AsyncOpenAI(
-            api_key=settings.groq_api_key.get_secret_value(),
-            base_url=settings.groq_base_url,
-            timeout=12.0,
-            max_retries=0,
-        ) as provider,
-    ):
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://evaluation"
+    ) as client:
         for scenario_id, prompt in selected_scenarios.items():
             for trial in range(1, trials + 1):
                 if (scenario_id, trial) in completed:
                     continue
-                service = RecordingGroq(settings, provider, pacer)
+                service = RecordingGroq(settings, pacer)
                 app.dependency_overrides[get_groq_service] = lambda: service
                 started = perf_counter()
                 try:
@@ -327,6 +339,7 @@ async def run(
                     status = None
                 finally:
                     app.dependency_overrides.pop(get_groq_service, None)
+                    await service.aclose()
                 tool_call_count = sum(
                     len(model_call.get("tool_calls", [])) for model_call in service.trace
                 )

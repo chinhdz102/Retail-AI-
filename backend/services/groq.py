@@ -135,15 +135,14 @@ class GroqService:
                 api_key=api_key,
                 base_url=self.settings.groq_base_url,
                 timeout=self.settings.groq_timeout_seconds,
+                max_retries=0,
             )
         return self._clients_by_credential[slot]
 
     @staticmethod
     def _can_rotate_credential(exc: Exception) -> bool:
         response = getattr(exc, "response", None)
-        status_code = getattr(exc, "status_code", None) or getattr(
-            response, "status_code", None
-        )
+        status_code = getattr(exc, "status_code", None) or getattr(response, "status_code", None)
         if status_code in {401, 403, 429}:
             return True
         return type(exc).__name__.lower() in {
@@ -254,9 +253,7 @@ class GroqService:
                         "error_type": type(exc).__name__,
                     }
                     error_response = getattr(exc, "response", None)
-                    response_headers = _rate_limit_headers(
-                        getattr(error_response, "headers", None)
-                    )
+                    response_headers = _rate_limit_headers(getattr(error_response, "headers", None))
                     if response_headers:
                         failed_attempt["rate_limit_headers"] = response_headers
                     if len(credentials) > 1:

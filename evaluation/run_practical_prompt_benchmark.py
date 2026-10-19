@@ -21,7 +21,6 @@ from time import perf_counter
 from typing import Any
 
 import httpx
-from openai import AsyncOpenAI
 
 from backend.api.main import _system_prompt, app, get_groq_service
 from backend.config import Settings
@@ -536,6 +535,7 @@ async def run_benchmark(
     pace_seconds: float,
     resume: bool,
 ) -> dict[str, Any]:
+    settings = settings.model_copy(update={"groq_timeout_seconds": 12.0})
     source_bytes = cases_path.read_bytes()
     case_definitions = json.loads(source_bytes)
     if not isinstance(case_definitions, list) or not case_definitions:
@@ -552,6 +552,9 @@ async def run_benchmark(
             for model in (settings.groq_fallback_model, settings.groq_fallback_model_2)
             if model
         ],
+        "credential_failover_enabled": len(settings.groq_api_credentials) > 1,
+        "credential_slots": [slot for slot, _ in settings.groq_api_credentials],
+        "provider_timeout_seconds": settings.groq_timeout_seconds,
         "prompt_sha256": _prompt_digest(),
         "case_set": str(cases_path.relative_to(ROOT)),
         "case_set_sha256": case_digest,
@@ -581,17 +584,9 @@ async def run_benchmark(
     by_id = {case["case_id"]: case for case in report["cases"]}
     pacer = RequestPacer(pace_seconds)
     stop_reason: str | None = None
-    async with (
-        httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app), base_url="http://evaluation"
-        ) as client,
-        AsyncOpenAI(
-            api_key=settings.groq_api_key.get_secret_value(),
-            base_url=settings.groq_base_url,
-            timeout=12.0,
-            max_retries=0,
-        ) as provider,
-    ):
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://evaluation"
+    ) as client:
         for definition in case_definitions:
             case_id = definition["case_id"]
             if case_id in completed_ids:
@@ -623,7 +618,7 @@ async def run_benchmark(
 
             previous_turn: dict[str, Any] | None = None
             for turn_index, turn_definition in enumerate(definition["turns"], start=1):
-                service = RecordingGroq(settings, provider, pacer)
+                service = RecordingGroq(settings, pacer)
                 app.dependency_overrides[get_groq_service] = lambda: service
                 started = perf_counter()
                 try:
@@ -644,6 +639,7 @@ async def run_benchmark(
                     body = {"error_type": type(exc).__name__, "error": str(exc)[:300]}
                 finally:
                     app.dependency_overrides.pop(get_groq_service, None)
+                    await service.aclose()
 
                 grade = grade_turn(
                     turn_definition.get("checks", {}),

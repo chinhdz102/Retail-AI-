@@ -42,9 +42,7 @@ class FallbackChatCompletions:
             raise RuntimeError("primary model unavailable")
         return SimpleNamespace(
             choices=[
-                SimpleNamespace(
-                    message=SimpleNamespace(content="Xin chào từ model dự phòng.")
-                )
+                SimpleNamespace(message=SimpleNamespace(content="Xin chào từ model dự phòng."))
             ]
         )
 
@@ -358,7 +356,26 @@ def test_groq_builds_a_separate_client_for_each_configured_key(monkeypatch) -> N
         "primary-test-key",
         "fallback-test-key-1",
     ]
+    assert all(kwargs["max_retries"] == 0 for kwargs in created)
     assert service._client_for_credential(primary_slot, primary_key) is primary_client
+
+
+def test_settings_preserves_all_five_groq_credentials_in_failover_order() -> None:
+    settings = Settings(
+        groq_api_key="primary-test-key",
+        groq_api_key_fallback_1="fallback-test-key-1",
+        groq_api_key_fallback_2="fallback-test-key-2",
+        groq_api_key_fallback_3="fallback-test-key-3",
+        groq_api_key_fallback_4="fallback-test-key-4",
+    )
+
+    assert [slot for slot, _ in settings.groq_api_credentials] == [
+        "primary",
+        "fallback_1",
+        "fallback_2",
+        "fallback_3",
+        "fallback_4",
+    ]
 
 
 @pytest.mark.asyncio
@@ -393,6 +410,40 @@ async def test_chat_uses_model_fallback_after_all_configured_keys_are_limited() 
         "primary",
         "fallback_1",
         "fallback_2",
+        "primary",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_chat_tries_all_five_keys_before_falling_back_to_another_model() -> None:
+    completions = RotatingKeyCompletions(failures_before_success=5)
+    client = SimpleNamespace(
+        chat=SimpleNamespace(completions=completions),
+        audio=SimpleNamespace(transcriptions=FakeTranscriptions()),
+    )
+    service = GroqService(
+        settings=Settings(
+            groq_api_key="primary-test-key",
+            groq_api_key_fallback_1="fallback-test-key-1",
+            groq_api_key_fallback_2="fallback-test-key-2",
+            groq_api_key_fallback_3="fallback-test-key-3",
+            groq_api_key_fallback_4="fallback-test-key-4",
+            groq_model="qwen/primary-model",
+            groq_fallback_model="openai/fallback-model",
+            groq_fallback_model_2="",
+        ),
+        client=client,
+    )
+
+    result = await service.chat([{"role": "user", "content": "hello"}])
+
+    assert result.model == "openai/fallback-model"
+    assert [attempt.get("credential_slot") for attempt in result.fallback_trace] == [
+        "primary",
+        "fallback_1",
+        "fallback_2",
+        "fallback_3",
+        "fallback_4",
         "primary",
     ]
 
