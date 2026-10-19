@@ -95,6 +95,13 @@ from backend.services.shopping_flow import (
     ShoppingActionType,
     classify_shopping_action,
 )
+from backend.services.smalltalk import (
+    classify_smalltalk_intent,
+    localized_identity_response,
+    localized_smalltalk_fallback,
+    smalltalk_reply_is_safe,
+    smalltalk_system_prompt,
+)
 from backend.services.speech_tickets import SpeechTicketStore
 from backend.services.support import (
     SupportIdempotencyConflictError,
@@ -2568,6 +2575,9 @@ def _system_prompt(retail_context: str, language: LanguageCode = "vi") -> str:
 Reply in natural English, in no more than two short sentences and 35 words.
 Use a warm, conversational tone. Answer only the question asked. Do not repeat old turns or
 restart a product discussion after a simple thanks.
+For clear greetings, light social conversation, or a short joke request without a product need,
+reply naturally without searching the catalog or forcing the conversation back to shopping. If a
+clear product or store request is included, handle it with the verified retail tools below.
 Use verified information only. Keep official product names and shelf codes unchanged. Never
 invent prices, stock, shelf locations, promotions, ingredients, expiry dates, or product benefits.
 For product search or verified facts, use the catalog tools when available. Search first, then
@@ -2615,6 +2625,9 @@ Trả lời ngắn gọn, thân thiện và chỉ dùng dữ liệu được xá
 Chỉ trả lời tối đa 2 câu và 35 từ để hội thoại bằng giọng nói phản hồi nhanh.
 Trong tiếng Việt, xưng hô nhất quán mình–bạn. Với lời cảm ơn hoặc xác nhận ngắn, đáp tự nhiên,
 không tóm tắt lại các lượt cũ hay tự khơi lại câu hỏi sản phẩm.
+Nếu khách chào hỏi, trò chuyện xã giao hoặc xin chuyện vui ngắn mà không hỏi về hàng hóa,
+hãy đáp tự nhiên, không tra catalog và không ép chuyển chủ đề sang mua sắm. Nếu cùng câu có
+yêu cầu sản phẩm rõ ràng, tiếp tục xử lý bằng dữ liệu và công cụ bán lẻ đã xác minh.
 Chỉ nêu đúng thông tin được hỏi; không tự thêm tồn kho hoặc vị trí kệ nếu người dùng chưa hỏi.
 Không tự kết thúc cuộc trò chuyện hoặc nói "tạm biệt" trừ khi người dùng chủ động nói lời tạm biệt.
 Trả lời bằng {language_name}, giữ nguyên tên sản phẩm và mã kệ khi cần.
@@ -4825,6 +4838,62 @@ async def agent_respond(
             request,
             record.state,
             _localized_vnd_budget_clarification(request.language),
+        )
+
+    smalltalk_intent = classify_smalltalk_intent(request.text)
+    if smalltalk_intent == "identity":
+        return _record_shopping_turn(
+            request,
+            localized_identity_response(request.language),
+            model="local-identity",
+        )
+    if smalltalk_intent is not None:
+        try:
+            smalltalk_result = await groq.chat(
+                [
+                    {
+                        "role": "system",
+                        "content": smalltalk_system_prompt(request.language),
+                    },
+                    *session_store.messages_for_model(request.session_id),
+                    {"role": "user", "content": request.text},
+                ],
+                tools=[],
+            )
+            reply = str(smalltalk_result).strip()
+            model = getattr(smalltalk_result, "model", None) or "groq"
+            if not reply or not smalltalk_reply_is_safe(smalltalk_intent, reply):
+                logger.warning(
+                    "Small-talk output rejected intent=%s empty=%s",
+                    smalltalk_intent,
+                    not bool(reply),
+                )
+                reply = localized_smalltalk_fallback(smalltalk_intent, request.language)
+                model = "local-smalltalk-fallback"
+        except GroqConfigurationError as exc:
+            logger.warning(
+                "Small-talk model unavailable intent=%s error_type=%s",
+                smalltalk_intent,
+                type(exc).__name__,
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="Groq chat provider is not configured",
+            ) from exc
+        except GroqProviderError as exc:
+            logger.warning(
+                "Small-talk model unavailable intent=%s error_type=%s",
+                smalltalk_intent,
+                type(exc).__name__,
+            )
+            raise HTTPException(
+                status_code=502,
+                detail="Groq chat provider unavailable",
+            ) from exc
+        return _record_shopping_turn(
+            request,
+            reply,
+            model=model,
         )
 
     comparison_queries = parse_comparison_queries(request.text)

@@ -832,10 +832,23 @@ class ScriptedToolGroqService(GroqService):
 
 class SmallTalkGroqService(GroqService):
     def __init__(self) -> None:
-        pass
+        self.calls = 0
+        self.messages = []
+        self.tool_arguments = []
 
     async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
+        self.calls += 1
+        self.messages.append(messages)
+        self.tool_arguments.append(tools)
         return GroqChatResult("Mình có một câu chuyện vui cho bạn.", "qwen/qwen3.8-27b")
+
+
+class UnsafeSmallTalkGroqService(GroqService):
+    async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
+        return GroqChatResult(
+            "Con mèo nhà mình bị điện giật rồi bỏ chạy.",
+            "qwen/qwen3.8-27b",
+        )
 
 
 class FallbackSttGroqService(GroqService):
@@ -2507,7 +2520,8 @@ async def test_elliptical_stock_question_with_data_preface_uses_last_grounded_pr
 async def test_small_talk_answer_is_not_replaced_with_catalog_fallback(
     client: httpx.AsyncClient,
 ) -> None:
-    app.dependency_overrides[get_groq_service] = lambda: SmallTalkGroqService()
+    service = SmallTalkGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
     created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
 
     response = await client.post(
@@ -2518,6 +2532,57 @@ async def test_small_talk_answer_is_not_replaced_with_catalog_fallback(
     assert response.status_code == 200
     assert response.json()["text"] == "Mình có một câu chuyện vui cho bạn."
     assert response.json()["tools_used"] == []
+    assert service.calls == 1
+    assert service.tool_arguments == [[]]
+    assert "không ép chuyển chủ đề sang mua sắm" in service.messages[0][0]["content"].lower()
+
+
+@pytest.mark.asyncio
+async def test_identity_question_is_answered_truthfully_without_catalog_or_llm(
+    client: httpx.AsyncClient,
+) -> None:
+    service = StaticGroqService("This response must not be used.")
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Bạn là ai, có phải người thật đang tư vấn cho mình không?",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "trợ lý AI" in response.json()["text"]
+    assert "không phải người thật" in response.json()["text"]
+    assert response.json()["tools_used"] == []
+    assert response.json()["model"] == "local-identity"
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_harmful_personal_joke_is_replaced_with_safe_local_reply(
+    client: httpx.AsyncClient,
+) -> None:
+    app.dependency_overrides[get_groq_service] = lambda: UnsafeSmallTalkGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Kể cho mình một chuyện vui ngắn đi.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "điện giật" not in response.json()["text"]
+    assert response.json()["text"] == (
+        "Mình kể chuyện vui nhé: Vì sao cái bóng đi học muộn? Vì mải đi theo mặt trời!"
+    )
+    assert response.json()["tools_used"] == []
+    assert response.json()["model"] == "local-smalltalk-fallback"
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,67 @@
+{
+  "dataset_id": "retail_vietnamese_smalltalk_quality_dev_v1_20261020",
+  "language_scope": "Vietnamese only",
+  "description": "Development probe for natural Vietnamese social conversation. Cases vary across greeting, joke request, emotional context, casual observation, compliment, and assistant identity. This is a small live quality probe, not a blind or statistically representative evaluation.",
+  "cases": [
+    {
+      "case_id": "greeting_and_wellbeing",
+      "tags": ["dev", "smalltalk", "greeting"],
+      "turns": [
+        {
+          "text": "Chào bạn, hôm nay bạn thế nào?",
+          "no_tools_expected": true
+        }
+      ]
+    },
+    {
+      "case_id": "short_joke_request",
+      "tags": ["dev", "smalltalk", "creative"],
+      "turns": [
+        {
+          "text": "Kể cho mình một chuyện vui ngắn đi.",
+          "no_tools_expected": true
+        }
+      ]
+    },
+    {
+      "case_id": "tired_user_wants_cheering_up",
+      "tags": ["dev", "smalltalk", "empathy"],
+      "turns": [
+        {
+          "text": "Hôm nay mình hơi mệt, nói câu gì vui vui cho mình đi.",
+          "no_tools_expected": true
+        }
+      ]
+    },
+    {
+      "case_id": "casual_weather_observation",
+      "tags": ["dev", "smalltalk", "casual"],
+      "turns": [
+        {
+          "text": "Hôm nay nóng thật đấy nhỉ.",
+          "no_tools_expected": true
+        }
+      ]
+    },
+    {
+      "case_id": "compliment_and_thanks",
+      "tags": ["dev", "smalltalk", "acknowledgement"],
+      "turns": [
+        {
+          "text": "Bạn nói chuyện dễ thương ghê, cảm ơn nha.",
+          "no_tools_expected": true
+        }
+      ]
+    },
+    {
+      "case_id": "assistant_identity_transparency",
+      "tags": ["dev", "smalltalk", "identity"],
+      "turns": [
+        {
+          "text": "Bạn là ai, có phải người thật đang tư vấn cho mình không?",
+          "no_tools_expected": true
+        }
+      ]
+    }
+  ]
+}
