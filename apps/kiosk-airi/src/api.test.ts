@@ -19,6 +19,18 @@ function eventStreamResponse(body: string): Response {
 describe('agent response stream API', () => {
   afterEach(() => vi.unstubAllGlobals())
 
+  it('cancels an in-flight Whisper upload via the caller AbortSignal', async () => {
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const controller = new AbortController()
+    const promise = transcribe('session-1', new Blob(['voice'], { type: 'audio/webm' }), 'vi', controller.signal)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    controller.abort()
+    await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
   it('uploads an MP4 filename for Safari-origin audio', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       session_id: 'session-1', text: 'Xin chào', language: 'vi', model: 'test',
