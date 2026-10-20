@@ -28,6 +28,7 @@ from backend.api.main import app, get_groq_service, session_store
 from backend.config import Settings
 from backend.data.catalog_import import analyze_dataset
 from backend.products.catalog import DEMO_PRODUCTS
+from backend.products.repository import get_product_repository
 from evaluation.live_groq_smoke import RecordingGroq, RequestPacer
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -252,6 +253,60 @@ def _service_override(service: RecordingGroq):
     return provide_service
 
 
+def _preflight_case_catalog(
+    cases: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+    settings: Settings,
+) -> dict[str, Any]:
+    """Reject product-ID assertions that cannot exist in the selected catalog."""
+    product_ids = sorted(
+        {
+            str(product_id)
+            for case in cases
+            for turn in case.get("turns", [])
+            for field in ("expected_product_ids", "must_not_include_product_ids")
+            for product_id in turn.get(field, [])
+            if product_id
+        }
+    )
+    if not product_ids:
+        return {
+            "status": "NOT_REQUIRED",
+            "catalog_repository": settings.catalog_repository,
+            "checked_product_ids": 0,
+        }
+    if settings.catalog_repository == "postgres":
+        return {
+            "status": "NOT_RUN",
+            "catalog_repository": settings.catalog_repository,
+            "checked_product_ids": 0,
+            "reason": (
+                "PostgreSQL case-ID preflight is not implemented; "
+                "verify DB integration separately."
+            ),
+        }
+
+    repository = get_product_repository(settings)
+    missing = [
+        product_id
+        for product_id in product_ids
+        if repository.get_product_snapshot(product_id) is None
+    ]
+    if missing:
+        preview = ", ".join(missing[:10])
+        remainder = f" (+{len(missing) - 10} more)" if len(missing) > 10 else ""
+        raise ValueError(
+            "Case catalog mismatch: "
+            f"CATALOG_REPOSITORY={settings.catalog_repository!r} does not contain "
+            f"expected/excluded product IDs: {preview}{remainder}. "
+            "Select a compatible case set or set CATALOG_REPOSITORY to the matching catalog."
+        )
+    return {
+        "status": "PASSED",
+        "catalog_repository": settings.catalog_repository,
+        "checked_product_ids": len(product_ids),
+    }
+
+
 def grade_turn(
     turn: dict[str, Any],
     body: dict[str, Any],
@@ -421,6 +476,7 @@ async def run(
     selected_ids = {case["case_id"] for case in selected_cases}
     if not selected_cases or (case_ids and selected_ids != set(case_ids)):
         raise ValueError("case_ids must contain known case IDs")
+    case_catalog_preflight = _preflight_case_catalog(selected_cases, settings)
     # A single user turn may need several paced LLM/tool rounds. Keep the
     # HTTP deadline above that bounded worst case so the benchmark measures
     # the agent rather than cancelling valid replies at one fixed 50s mark.
@@ -447,6 +503,7 @@ async def run(
         "response_timeout_seconds": response_timeout_seconds,
         "catalog_scope": {
             "runtime_repository": settings.catalog_repository,
+            "case_catalog_preflight": case_catalog_preflight,
             "runtime_demo_products": len(DEMO_PRODUCTS),
             "winmart_dataset_rows": dataset_report["rows_total"],
             "winmart_accepted_rows": dataset_report["rows_accepted"],

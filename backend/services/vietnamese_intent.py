@@ -201,7 +201,6 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "co hang",
             "het hang",
             "con san",
-            "co san",
             "con ban",
             "co ban khong",
             "dang ban",
@@ -241,7 +240,7 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
         or re.search(r"\bcon\b.{0,30}\bban duoc\b.{0,15}\bkhong\b", normalized)
         or re.search(r"\bmua duoc\b.{0,45}\bkhong\b", normalized)
         or re.search(r"\bco ban\b.{0,40}\bkhong\b", normalized)
-        or re.search(r"\bco san\b.{0,40}\bkhong\b", normalized)
+        or re.search(r"\bco san\b(?!\s+pham\b).{0,40}\bkhong\b", normalized)
         or re.search(r"\bcon\s+\d+\s+(?:chai|lon|hop|goi|ly|cai)\b", normalized)
         or re.search(
             r"\b(?:con|co)\s+\d+(?:(?:[.,]|\s)\d+)?\s*(?:ml|l|lit|g|kg)\b",
@@ -253,7 +252,30 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
         )
     )
     # In a promotion query, "đang có" describes the offer rather than stock.
-    stock = stock or (_has_phrase(normalized, ("dang co",)) and not promotion)
+    asks_for_a_product_type = _has_phrase(
+        normalized,
+        ("co san pham", "san pham nao", "mat hang nao"),
+    )
+    stock = stock or (
+        _has_phrase(normalized, ("dang co",)) and not promotion and not asks_for_a_product_type
+    )
+    stock = stock or _has_phrase(
+        normalized,
+        ("co san hang", "co san trong kho", "co san de ban"),
+    )
+    if asks_for_a_product_type and not _has_phrase(
+        normalized,
+        (
+            "con hang",
+            "het hang",
+            "ton kho",
+            "so luong ton",
+            "con ban",
+            "het chua",
+            "con bao nhieu",
+        ),
+    ):
+        stock = False
     remaining_quantity_question = _has_phrase(normalized, ("con bao nhieu",)) or bool(
         re.search(r"\bcon\s+may\s+(?:chai|lon|hop|goi|ly|cai)\b", normalized)
     )
@@ -609,6 +631,22 @@ _CATEGORY_CUES: dict[str, tuple[str, ...]] = {
         "hot food",
         "hungry",
     ),
+    "skincare": (
+        "cham soc da",
+        "cham soc da mat",
+        "duong da",
+        "da mat",
+        "skincare",
+        "skin care",
+        "skin-care",
+    ),
+    "cosmetic": (
+        "my pham",
+        "hoa my pham",
+        "cosmetic",
+        "cosmetics",
+        "makeup",
+    ),
 }
 
 
@@ -726,6 +764,16 @@ _RECOMMENDATION_QUERY_CUES = (
     "bim bim",
     "banh keo",
     "milk tea",
+    "sua rua mat",
+    "kem duong da",
+    "kem chong nang",
+    "duong am",
+    "serum",
+    "face wash",
+    "moisturizer",
+    "sunscreen",
+    "skincare",
+    "skin care",
     "instant noodles",
     "soft drink",
     "soft drinks",
@@ -832,6 +880,8 @@ _RECOMMENDATION_CUES = (
     "looking for",
     "i need",
     "i want",
+    "co san pham nao",
+    "san pham nao",
 )
 
 
@@ -839,6 +889,17 @@ _CONSULTATION_FILLER_TOKENS = frozenset(
     {
         "a",
         "an",
+        "um",
+        "uhm",
+        "neu",
+        "hoi",
+        "trong",
+        "danh",
+        "muc",
+        "ay",
+        "cac",
+        "thi",
+        "khoa",
         "bao",
         "ban",
         "be",
@@ -1020,13 +1081,19 @@ def consultation_product_query(text: str) -> str:
     normalized = " ".join(normalize_vietnamese(text).split())
     for cue in sorted(_RECOMMENDATION_CUES, key=len, reverse=True):
         normalized = re.sub(rf"(?<!\w){re.escape(cue)}(?!\w)", " ", normalized)
-    return " ".join(
-        token
-        for token in normalized.split()
-        if token not in _CONSULTATION_FILLER_TOKENS
-        and not token.isdigit()
-        and not re.fullmatch(r"\d+(?:k|d|dong|vnd)", token)
-    )
+    query_words: list[str] = []
+    seen: set[str] = set()
+    for token in normalized.split():
+        if (
+            token in _CONSULTATION_FILLER_TOKENS
+            or token.isdigit()
+            or re.fullmatch(r"\d+(?:k|d|dong|vnd)", token)
+            or (token in seen and not (token == "bim" and query_words[-1:] == ["bim"]))
+        ):
+            continue
+        query_words.append(token)
+        seen.add(token)
+    return " ".join(query_words)
 
 
 def has_specific_product_reference(text: str) -> bool:

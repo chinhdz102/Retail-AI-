@@ -411,6 +411,8 @@ def _whole_cart_recommendation(
         "snack": "đồ ăn vặt",
         "dairy": "sữa",
         "meal": "đồ ăn chính",
+        "skincare": "chăm sóc da",
+        "cosmetic": "mỹ phẩm",
     }
     candidate_groups: list[list[ProductSnapshot]] = []
     missing_categories: list[str] = []
@@ -534,9 +536,11 @@ def _whole_cart_recommendation(
 
 
 def _category_for_repository(category: str | None, repository: ProductRepository) -> str | None:
-    if not category or repository.source_name != "winmart_postgres_catalog":
+    if not category:
         return category
     canonical_category = category.strip().casefold()
+    if repository.source_name != "winmart_postgres_catalog":
+        return category
     # The WinMart source stores Vietnamese taxonomy labels rather than the
     # agent's stable category IDs. Translate only known IDs; keep free-form
     # customer/model categories intact.
@@ -545,6 +549,8 @@ def _category_for_repository(category: str | None, repository: ProductRepository
         "snack": "bánh snack",
         "dairy": "sữa",
         "meal": "thực phẩm ăn liền",
+        "skincare": "chăm sóc da",
+        "cosmetic": "hoá mỹ phẩm",
     }.get(canonical_category, category)
 
 
@@ -595,6 +601,13 @@ def _query_category_hint(query: str) -> tuple[str | None, bool]:
         "noodles",
         "hot food",
         "hungry",
+        "cham soc da",
+        "cham soc da mat",
+        "da mat",
+        "skincare",
+        "skin care",
+        "my pham",
+        "cosmetics",
     }
     return category, category_only
 

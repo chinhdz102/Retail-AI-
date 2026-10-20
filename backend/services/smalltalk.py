@@ -121,6 +121,11 @@ def classify_smalltalk_intent(text: str) -> str | None:
         return "joke"
     if _matches(normalized, _WELLBEING_PATTERNS):
         return "wellbeing"
+    if re.search(
+        r"\b(?:tam biet|hen gap lai|bye(?: bye)?|goodbye|chao(?: ban| nha| nhe))$",
+        normalized,
+    ) or (normalized != "chao" and re.search(r"\bchao$", normalized)):
+        return "farewell"
     if _matches(normalized, _GREETING_PATTERNS):
         return "greeting"
     if _matches(normalized, _EMOTION_PATTERNS):
@@ -205,7 +210,8 @@ def localized_smalltalk_fallback(intent: str, language: str) -> str:
                 "Vì mải đi theo mặt trời!"
             ),
             "wellbeing": "Mình đang sẵn sàng trò chuyện với bạn đây. Cảm ơn bạn đã hỏi nhé!",
-            "greeting": "Chào bạn, mình là Sky. Bạn cứ thoải mái trò chuyện với mình nhé.",
+            "greeting": "Chào bạn, mình nghe đây. Bạn cứ nói tiếp nhé.",
+            "farewell": "Ừ, chào bạn nhé. Hẹn gặp lại!",
             "emotion": (
                 "Nghe hôm nay không dễ chịu lắm. Bạn muốn mình lắng nghe "
                 "hay kể một chuyện vui ngắn?"
@@ -219,7 +225,8 @@ def localized_smalltalk_fallback(intent: str, language: str) -> str:
                 "It was following the sun!"
             ),
             "wellbeing": "I'm here and ready to chat. Thanks for asking!",
-            "greeting": "Hi, I'm Sky. Feel free to chat with me.",
+            "greeting": "Hi, I'm listening. What can I help with?",
+            "farewell": "Bye for now. Take care!",
             "emotion": (
                 "Sounds like today has been a lot. "
                 "Would you like me to listen or share a quick joke?"
@@ -230,7 +237,8 @@ def localized_smalltalk_fallback(intent: str, language: str) -> str:
         "zh": {
             "joke": "讲个小笑话：影子为什么上课迟到？因为一路都在追着太阳跑！",
             "wellbeing": "我随时可以和你聊聊，谢谢你关心！",
-            "greeting": "你好，我是 Sky。欢迎随时和我聊聊。",
+            "greeting": "你好，我在听。需要我帮你什么？",
+            "farewell": "再见，祝你一切顺利！",
             "emotion": "听起来今天不太轻松。你想让我听你说说，还是讲个小笑话？",
             "weather": "听起来挺热的，记得休息一下、喝点水。",
             "compliment": "谢谢你，很高兴这段对话对你有帮助。",

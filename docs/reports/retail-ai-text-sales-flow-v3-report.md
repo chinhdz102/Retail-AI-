@@ -662,3 +662,43 @@ Các kết quả P0, smoke, shopping sandbox và catalog retrieval ở mục W �
 - [Small-talk development cases](../../evaluation/cases/vietnamese_smalltalk_quality_dev_v1_20261020.json)
 - [Live baseline trước sửa](../../evaluation/results/smalltalk_baseline_live_20261020.json)
 - [Live sau sửa và kiểm tra fallback](../../evaluation/results/smalltalk_final2_live_20261020.json)
+
+## XI. Sửa lỗi hỏi chuyện tự nhiên và truy vấn catalog — 20/10/2026
+
+### Nguyên nhân và thay đổi
+
+- Câu hỏi dạng “có sản phẩm nào … không” bị nhận nhầm thành hỏi tồn kho do cụm “có sẵn”; bỏ điều kiện tồn kho giả này khi khách đang hỏi một loại sản phẩm.
+- Bổ sung nhận diện nhóm chăm sóc da/mỹ phẩm và đồng bộ alias với snapshot WinMart, gồm danh mục `Chăm Sóc Da`.
+- Làm sạch từ đệm, từ lặp và phần tự sửa thường gặp ở lời nói trước khi tìm sản phẩm. Ví dụ “Khoa hỏi thịt không phải sốt ướp” được rút thành truy vấn “thịt”, không kéo “sốt ướp” vào kết quả.
+- Phân biệt yêu cầu xem danh sách với yêu cầu xếp hạng/gợi ý; API nay trả kèm thẻ sản phẩm để frontend hiển thị tên, giá tham khảo và ngày snapshot.
+- Lời chào/tạm biệt rõ ràng được trả lời cục bộ trong tiếng Việt, Anh và Trung, không gọi model hoặc tool tra catalog.
+- Bản demo trên cổng 5174 gặp CORS vì mặc định chỉ cho phép cổng 5173. Mở rộng danh sách origin phát triển mặc định để demo tiếp tục gọi được API.
+
+### Chạy thử với snapshot WinMart thật
+
+| Câu nói | Luồng | Kết quả | Thời gian API* |
+|---|---|---|---:|
+| “Nghen nhé. Ngoài thích, chào.” | small talk cục bộ, 0 tool | “Ừ, chào bạn nhé. Hẹn gặp lại!” | 65 ms |
+| Hỏi có sản phẩm chăm sóc da mặt không | `recommend_products` | 3 mặt nạ có tên và giá 12.000đ, 12.000đ, 16.000đ; nói rõ giá tham khảo/tồn chưa xác minh và hỏi khách ưu tiên dưỡng ẩm, làm sạch hay chống nắng | 880 ms |
+| Hỏi xem khăn mặt giữa nhiều từ đệm/lặp | `search_products` | Trả 5 thẻ khăn mặt, giá từ 29.000đ đến 88.000đ; không báo thiếu dữ liệu | 93 ms |
+| “Khoa hỏi thịt không phải sốt ướp thì đâu.” | `search_products` | Trả 5 sản phẩm thịt; phần sửa “không phải sốt ướp” không bị dùng làm danh mục | 100 ms |
+
+*Đây là một lượt đo mỗi câu, để tham khảo độ trễ chứ chưa phải benchmark thống kê. Nguồn của các câu hỏi sản phẩm là `winmart_json_snapshot`; snapshot hiển thị ngày 15/09/2026. Giá là giá ghi trong snapshot, tồn kho cửa hàng hiện tại chưa được xác minh.
+
+Đã chạy truy vấn khăn mặt trực tiếp trên giao diện tại `http://127.0.0.1:5174/`. Frontend gửi request streaming; chữ phản hồi hiện dần, sau đó hiển thị đủ 5 thẻ sản phẩm. CORS preflight cho origin 5174 trả HTTP 200.
+
+### Kiểm tra sau sửa
+
+| Hạng mục | Kết quả |
+|---|---:|
+| Backend pytest offline (bỏ qua live Groq/STT/Azure TTS riêng) | **762 passed / 0 failed**, 35,23 giây |
+| Frontend Vitest | **55/55**, 6 files |
+| TypeScript và production build | Pass; bundle `model-viewer` **1.024,05 kB** còn cảnh báo vượt ngưỡng 500 kB |
+| Ruff, compileall và `git diff --check` | Pass |
+| UI text stream → backend → snapshot catalog → product cards | Pass trên câu hỏi khăn mặt |
+
+### Giới hạn còn lại
+
+- Gợi ý tổng quát cho chăm sóc da hiện lấy ba kết quả rẻ nhất theo danh mục, nên lượt thử này đưa ra các mặt nạ trước. Sky hỏi thêm nhu cầu cụ thể; lượt thử chưa chứng minh được cách xếp hạng đa dạng theo từng bước skincare.
+- Bộ chạy trực tiếp ở trên gồm bốn câu được chọn từ lỗi trong ảnh; đây chưa phải đánh giá mù hoặc chấm độ tự nhiên bởi người dùng độc lập.
+- Lượt này kiểm tra text và streaming. Không benchmark STT, microphone hay TTS.

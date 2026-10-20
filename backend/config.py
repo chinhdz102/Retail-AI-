@@ -45,7 +45,10 @@ class Settings(BaseSettings):
     elevenlabs_zh_voice_id: str = "SAz9YHcvj6GT2YYXdXww"
     elevenlabs_timeout_seconds: float = 45.0
 
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = (
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:5174,http://127.0.0.1:5174"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
