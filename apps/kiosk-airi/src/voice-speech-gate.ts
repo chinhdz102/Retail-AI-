@@ -34,6 +34,20 @@ export class SpeechEnvelopeGate {
     this.previous = level
   }
 
+  /**
+   * Only classify a long, nearly flat RMS envelope as stationary interference.
+   * This is not proof that the input is non-speech. Never use it to reject
+   * variable environmental noise or to replace a speech-trained VAD.
+   */
+  stationaryNoiseLevel(): number | null {
+    if (this.frames < 12 || this.voicedMs < 480) return null
+    const mean = this.sum / this.frames
+    if (mean <= 0) return null
+    const flatRange = this.max - this.min <= Math.max(0.002, mean * 0.06)
+    const flatChanges = this.variation <= Math.max(0.003, mean * 0.08) * (this.frames - 1)
+    return flatRange && flatChanges ? mean : null
+  }
+
   hasSpeechEvidence(): boolean {
     if (this.frames < 4 || this.voicedMs < 160) return false
     const mean = this.sum / this.frames
