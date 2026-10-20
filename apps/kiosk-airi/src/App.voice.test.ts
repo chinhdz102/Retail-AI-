@@ -125,6 +125,24 @@ describe('voice transcript integration', () => {
     wrapper.unmount()
   })
 
+  it('never sends a transcript from a mismatched customer session', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({
+      session_id: 'session-test',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+    apiMocks.transcribe.mockResolvedValueOnce({
+      session_id: 'session-other', text: 'Mua hàng', language: 'vi', model: 'mock',
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onAudio(new Blob(['voice']))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Phiên âm thanh không thuộc phiên'))
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('keeps transcription errors visible when hands-free listening resumes', async () => {
     vi.clearAllMocks()
     apiMocks.createSession.mockResolvedValue({ session_id: 'session-test' })
