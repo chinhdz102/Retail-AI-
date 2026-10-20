@@ -36,6 +36,45 @@ jobs:
         with:
           python-version: '3.13'
       - run: uv sync --frozen
+      - name: Diagnose snapshot tool and API follow-up
+        env:
+          CATALOG_REPOSITORY: demo
+        run: |
+          uv run python - <<'PY'
+          import asyncio
+          import json
+          from pathlib import Path
+          import httpx
+          from backend.api import main
+          from backend.products.snapshot_repository import SnapshotProductRepository
+          from backend.services import retail_tools
+          from backend.services.retail_tools import execute_catalog_tool
+          repo = SnapshotProductRepository(Path('data/winmart_products.json'))
+          main.get_product_repository = lambda: repo
+          retail_tools.get_product_repository = lambda: repo
+          for product_id in ['WIN_10194711', 'WIN_10194182']:
+              product = repo.get_product_snapshot(product_id)
+              observation = execute_catalog_tool(
+                  'get_product_snapshot',
+                  json.dumps({'product_id':product_id, 'fields':['shelf']}),
+                  repository=repo,
+              )
+              print('DIRECT', product_id, 'shelf=', product.shelf,
+                  'shelf_source=', product.shelf_source,
+                  'tool_status=',observation.status, 'tool_content=',str(observation.content)[:650])
+          async def probe():
+              transport = httpx.ASGITransport(app=main.app)
+              async with httpx.AsyncClient(transport=transport, base_url='http://test') as client:
+                  created=await client.post('/sessions',json={'kiosk_id':'debug'})
+                  sid=created.json()['session_id']
+                  for t in ['Coca Zero chai 600ml giá bao nhiêu?', 'Nó ở kệ nào?']:
+                      result=await client.post('/agent/respond',json={'session_id':sid,'text':t})
+                      body=result.json()
+                      print('API',t,'status=',result.status_code,
+                          'model=',body.get('model'),'text=',body.get('text'),
+                          'tools=',body.get('tools_used'),'ids=',body.get('grounded_product_ids'))
+          asyncio.run(probe())
+          PY
       - name: Diagnose snapshot follow-up parsing
         env:
           CATALOG_REPOSITORY: demo
@@ -66,23 +105,3 @@ jobs:
         run: uv run ruff check backend tests evaluation
       - if: always()
         run: uv run python -m compileall -q backend tests evaluation
-
-  base-snapshot-regression:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ab53fe118e4524a5bc925704c94126f9f631c956
-      - uses: astral-sh/setup-uv@v6
-        with:
-          python-version: '3.13'
-      - run: uv sync --frozen
-      - name: Test two snapshot follow-ups on untouched base revision
-        env:
-          CATALOG_REPOSITORY: demo
-          GROQ_API_KEY: ''
-          AZURE_SPEECH_KEY: ''
-          ELEVENLABS_API_KEY: ''
-        run: |
-          uv run pytest -q tests/test_snapshot_repository.py -k 'test_snapshot_api_keeps_price_freshness_shelf_and_stock_claims_grounded or test_snapshot_unavailable_attribute_keeps_selected_product_for_followups'
