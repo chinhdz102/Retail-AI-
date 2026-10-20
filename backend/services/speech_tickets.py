@@ -17,6 +17,10 @@ class SpeechTicketStore:
         clock: Callable[[], float] = monotonic,
         token_factory: Callable[[], str] | None = None,
     ) -> None:
+        if ttl_seconds <= 0:
+            raise ValueError("ttl_seconds must be positive")
+        if max_entries < 1:
+            raise ValueError("max_entries must be positive")
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
         self.clock = clock
@@ -32,9 +36,16 @@ class SpeechTicketStore:
 
     def create(self, payload: dict) -> str:
         self._expire()
+        # A token collision must never overwrite an outstanding customer's
+        # speech ticket. Generate a unique handle before evicting any ticket.
+        for _ in range(16):
+            token = self.token_factory()
+            if token and token not in self._tickets:
+                break
+        else:
+            raise RuntimeError("Unable to generate a unique speech ticket")
         while len(self._tickets) >= self.max_entries:
             self._tickets.popitem(last=False)
-        token = self.token_factory()
         self._tickets[token] = (self.clock() + self.ttl_seconds, dict(payload))
         return token
 
