@@ -30,3 +30,7 @@ Record consenting test speakers and reference transcriptions locally. Evaluate 1
 
 ## Architecture decision
 Keep existing local MediaRecorder + Groq + Azure baseline while measuring. For a full realtime path, compare native on-device Silero (or equivalent) plus AudioWorklet pre-roll against LiveKit Agents Silero VAD + streaming STT, using paired Vietnamese audio and explicitly disabling unsupported Vietnamese semantic turn models.
+
+## Verified GitHub Actions run and inherited snapshot test drift
+
+Initial PR CI: frontend Vitest **63/63 passed**, TypeScript/Vite production build **passed**. Backend **768 passed, 2 failed** due to historic snapshot-planogram fixture assumptions; these exact tests also fail on the untouched parent commit `ab53fe118e4524a5bc925704c94126f9f631c956` (independent baseline-check job). The runtime correctly fails closed and states it has no verified shelf when the planogram's dataset version does not match the current snapshot. Updated the two assertions to accept a version-consistent proposed location, or a grounded unavailable answer when no proposed location can be verified. This does NOT fabricate shelf assignments. Removed an unused `asyncio` import after eliminating the SSE pacing delay. A subsequent CI run is required to validate the updated source.
