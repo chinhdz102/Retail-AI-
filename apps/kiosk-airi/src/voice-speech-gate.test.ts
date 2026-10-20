@@ -33,6 +33,17 @@ describe('SpeechEnvelopeGate (energy heuristics, not ML VAD)', () => {
     expect(gate.hasSpeechEvidence()).toBe(false)
   })
 
+  it('recognizes only sustained flat envelopes as stationary interference', () => {
+    const gate = new SpeechEnvelopeGate()
+    for (let i = 0; i < 8; i += 1) gate.observe(0.15, 40)
+    expect(gate.stationaryNoiseLevel()).toBeNull()
+    for (let i = 0; i < 8; i += 1) gate.observe(0.15, 40)
+    expect(gate.stationaryNoiseLevel()).toBeCloseTo(0.15)
+    gate.reset()
+    for (let i = 0; i < 16; i += 1) gate.observe(i % 2 ? 0.06 : 0.15, 40)
+    expect(gate.stationaryNoiseLevel()).toBeNull()
+  })
+
   it('rejects non-finite samples without corrupting state', () => {
     const gate = new SpeechEnvelopeGate()
     gate.observe(Number.NaN, 40)
