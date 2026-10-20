@@ -512,6 +512,42 @@ describe('VoiceConversationController', () => {
     expect(onError).toHaveBeenCalledWith(expect.objectContaining({ kind: 'unsupported' }))
   })
 
+  it('terminates sustained stationary noise early without uploading it', async () => {
+    vi.useFakeTimers()
+    const onAudio = vi.fn()
+    const onState = vi.fn()
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, validateSpeechEnvelope: true,
+      getUserMedia: async () => fakeStream(), MediaRecorder: FakeRecorder,
+      createAudioContext: () => fakeAudioContext({
+        fftSize: 32, getByteTimeDomainData: (data) => data.fill(170),
+      }),
+      onTranscript: vi.fn(), onState, onError: vi.fn(), onAudio, now: () => Date.now(),
+    })
+    await controller.start()
+    await vi.advanceTimersByTimeAsync(1_100)
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(onState).toHaveBeenCalledWith(expect.objectContaining({ phase: 'listening' }))
+    expect(controller.isActive).toBe(true)
+    controller.stop()
+  })
+
+  it('does not start a second microphone while already listening', async () => {
+    const getUserMedia = vi.fn(async () => fakeStream())
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true,
+      getUserMedia, MediaRecorder: FakeRecorder,
+      createAudioContext: () => fakeAudioContext({
+        fftSize: 32, getByteTimeDomainData: (data) => data.fill(128),
+      }),
+      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(), onAudio: vi.fn(),
+    })
+    await controller.start()
+    await controller.resume()
+    expect(getUserMedia).toHaveBeenCalledTimes(1)
+    controller.stop()
+  })
+
   it('does not send stationary fan noise to STT when the evidence guard is enabled', async () => {
     vi.useFakeTimers()
     const onAudio = vi.fn()
