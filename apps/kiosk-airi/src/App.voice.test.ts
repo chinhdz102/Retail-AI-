@@ -71,7 +71,7 @@ describe('voice transcript integration', () => {
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(2))
     await vi.waitFor(() => expect(wrapper.text()).toContain('Phiên trước đã kết thúc'))
     expect(apiMocks.createSession).toHaveBeenCalledTimes(2)
-    expect(apiMocks.transcribe).toHaveBeenNthCalledWith(1, 'old-session', audio, 'vi')
+    expect(apiMocks.transcribe).toHaveBeenNthCalledWith(1, 'old-session', audio, 'vi', expect.any(AbortSignal))
     expect(apiMocks.transcribe).toHaveBeenCalledTimes(1)
     expect(apiMocks.respond).not.toHaveBeenCalled()
     expect(wrapper.findAll('.message-row')).toHaveLength(0)
@@ -92,7 +92,10 @@ describe('voice transcript integration', () => {
     await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
     controllerStore.current.options.onAudio(new Blob(['voice']))
     await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledTimes(1))
+    const transcriptionSignal = apiMocks.transcribe.mock.calls[0][3] as AbortSignal
+    expect(transcriptionSignal.aborted).toBe(false)
     await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    expect(transcriptionSignal.aborted).toBe(true)
     resolveTranscript({ session_id: 'session-test', text: 'Hai chai nước', language: 'vi' })
     await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
     expect(apiMocks.respond).not.toHaveBeenCalled()
@@ -195,6 +198,7 @@ describe('voice transcript integration', () => {
       'session-test',
       expect.any(Blob),
       'vi',
+      expect.any(AbortSignal),
     ))
     await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledWith(
       'session-test',
