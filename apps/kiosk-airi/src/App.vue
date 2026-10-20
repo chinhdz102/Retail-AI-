@@ -75,6 +75,7 @@ let bootInFlight: { generation: number; promise: Promise<void> } | null = null
 let resetInFlight: Promise<void> | null = null
 let pendingTurn: { text: string; generation: number; id: string } | null = null
 let activeTurnController: AbortController | null = null
+let activeTranscriptionController: AbortController | null = null
 let activeTurnFromVoice = false
 let voiceTurnEpoch = 0
 
@@ -224,11 +225,15 @@ async function handleVoiceAudio(audio: Blob) {
   const generation = sessionGeneration
   const voiceEpoch = voiceTurnEpoch
   const transcriptionSessionId = sessionId.value
+  // A later microphone turn supersedes any unfinished upload.
+  activeTranscriptionController?.abort()
+  const transcriptionController = new AbortController()
+  activeTranscriptionController = transcriptionController
   status.value = 'transcribing'
   voiceHint.value = languageSettings[language.value].transcribing
   try {
     const result = await withSessionRecovery(
-      (id) => transcribe(id, audio, language.value),
+      (id) => transcribe(id, audio, language.value, transcriptionController.signal),
     )
     if (generation !== sessionGeneration || isUnmounted || voiceEpoch !== voiceTurnEpoch || !isHandsFree.value) return
     if (result.session_id !== transcriptionSessionId) throw new Error('Phiên âm thanh không thuộc phiên hội thoại hiện tại.')
@@ -253,6 +258,10 @@ async function handleVoiceAudio(audio: Blob) {
     status.value = 'error'
     voiceHint.value = languageSettings[language.value].retry
     void resumeHandsFree()
+  } finally {
+    if (activeTranscriptionController === transcriptionController) {
+      activeTranscriptionController = null
+    }
   }
 }
 
@@ -612,6 +621,8 @@ async function resetKioskSession(notice?: string) {
   const oldSessionId = sessionId.value
   activeTurnController?.abort()
   activeTurnController = null
+  activeTranscriptionController?.abort()
+  activeTranscriptionController = null
   activeTurnFromVoice = false
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   sessionExpiryTimer = undefined
@@ -924,6 +935,8 @@ function toggleRecording() {
   if (isHandsFree.value || voiceController?.isActive || isVoiceActive.value) {
     voiceTurnEpoch += 1
     if (activeTurnFromVoice) activeTurnController?.abort()
+    activeTranscriptionController?.abort()
+    activeTranscriptionController = null
     isHandsFree.value = false
     speechRequestId += 1
     pendingSpeechText.value = null
@@ -963,6 +976,8 @@ function handleLanguageChange(nextLanguage: LanguageCode) {
   if (language.value === nextLanguage) return
   voiceTurnEpoch += 1
   if (activeTurnFromVoice) activeTurnController?.abort()
+  activeTranscriptionController?.abort()
+  activeTranscriptionController = null
   language.value = nextLanguage
   document.documentElement.lang = nextLanguage === 'en' ? 'en-US' : nextLanguage === 'zh' ? 'zh-CN' : 'vi-VN'
   voiceHint.value = languageSettings[nextLanguage].switching
@@ -984,6 +999,8 @@ onUnmounted(() => {
   voiceTurnEpoch += 1
   activeTurnController?.abort()
   activeTurnController = null
+  activeTranscriptionController?.abort()
+  activeTranscriptionController = null
   const closingSessionId = sessionId.value
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   navigator.mediaDevices?.removeEventListener?.('devicechange', refreshMicrophones)
