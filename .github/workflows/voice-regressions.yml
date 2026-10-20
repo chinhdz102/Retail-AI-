@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - codex/voice-silence-gate-streaming-20261020
+  pull_request:
   workflow_dispatch:
 
 permissions:
