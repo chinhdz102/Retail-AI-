@@ -1,0 +1,30 @@
+name: Neural browser smoke
+on:
+  push:
+    branches: [codex/voice-silence-gate-streaming-20261020]
+    paths:
+      - .github/workflows/neural-browser-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  neural-chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/kiosk-airi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/kiosk-airi/package-lock.json
+      - run: npm ci
+      - run: npm install --no-save --ignore-scripts playwright-core@1.56.1
+      - run: npm run predev
+      - name: Load real local ONNX neural VAD in Chromium with synthetic mic
+        run: node scripts/smoke-neural-browser.mjs
