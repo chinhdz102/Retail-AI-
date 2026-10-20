@@ -1,0 +1,50 @@
+name: Voice regression checks
+
+on:
+  push:
+    branches:
+      - codex/voice-silence-gate-streaming-20261020
+  pull_request:
+    branches:
+      - codex/retail-text-quality-v4-20261019
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/kiosk-airi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/kiosk-airi/package-lock.json
+      - run: npm ci
+      - run: npm run test:run
+      - run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.13'
+      - run: uv sync --frozen
+      - name: Pytest without real provider calls
+        env:
+          CATALOG_REPOSITORY: demo
+          GROQ_API_KEY: ''
+          AZURE_SPEECH_KEY: ''
+          ELEVENLABS_API_KEY: ''
+        run: uv run pytest -q
+      - run: uv run ruff check backend tests evaluation
+      - run: uv run python -m compileall -q backend tests evaluation
