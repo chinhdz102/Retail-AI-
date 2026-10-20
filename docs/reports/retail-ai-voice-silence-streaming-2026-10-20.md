@@ -34,3 +34,12 @@ Keep existing local MediaRecorder + Groq + Azure baseline while measuring. For a
 ## Verified GitHub Actions run and inherited snapshot test drift
 
 Initial PR CI: frontend Vitest **63/63 passed**, TypeScript/Vite production build **passed**. Backend **768 passed, 2 failed** due to historic snapshot-planogram fixture assumptions; these exact tests also fail on the untouched parent commit `ab53fe118e4524a5bc925704c94126f9f631c956` (independent baseline-check job). The runtime correctly fails closed and states it has no verified shelf when the planogram's dataset version does not match the current snapshot. Updated the two assertions to accept a version-consistent proposed location, or a grounded unavailable answer when no proposed location can be verified. This does NOT fabricate shelf assignments. Removed an unused `asyncio` import after eliminating the SSE pacing delay. A subsequent CI run is required to validate the updated source.
+
+## Follow-up hardening (20/10/2026, latest voice branch)
+- `SpeechEnvelopeGate.stationaryNoiseLevel()` now exposes a conservative sustained-flat-envelope signal only after at least 480 ms and 12 frames. This is **not a neural VAD** and is deliberately silent about fluctuating interference.
+- Recorder uses that evidence to end a likely stationary-noise segment early after three confirming polls, and adapts the subsequent noise floor. Upload evidence check remains in place; manual stop semantics remain unchanged.
+- Recorder error callback now closes capture/audio resources and invalidates pending callbacks, including browsers that never dispatch a follow-up `onstop`.
+- `resume()` no longer opens another microphone session while one is already active; `start()` avoids overlapping an outstanding recorder shutdown.
+- Added regression tests for flat versus varied envelopes, early stationary-noise termination and duplicate microphone start.
+- **Important:** no real store recordings, live microphones, neural VAD, streaming STT, LiveKit, live provider credentials, WER/CER comparison or barge-in tests are represented by these changes. Browser audio processing / RMS features cannot classify all real-world speech and noise.
+- The applicable CI run is the latest GitHub Actions `Voice regression checks` on this branch. Pass status must be checked against the last commit, not an earlier run.
