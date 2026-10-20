@@ -43,3 +43,27 @@ Initial PR CI: frontend Vitest **63/63 passed**, TypeScript/Vite production buil
 - Added regression tests for flat versus varied envelopes, early stationary-noise termination and duplicate microphone start.
 - **Important:** no real store recordings, live microphones, neural VAD, streaming STT, LiveKit, live provider credentials, WER/CER comparison or barge-in tests are represented by these changes. Browser audio processing / RMS features cannot classify all real-world speech and noise.
 - The applicable CI run is the latest GitHub Actions `Voice regression checks` on this branch. Pass status must be checked against the last commit, not an earlier run.
+
+## Phase 3: local neural VAD, real pre-roll and bounded STT (20/10/2026)
+
+**Supersedes the prior note saying neural VAD and pre-roll are absent.** They are now implemented on the feature branch and are *not* present on `main`.
+
+### Delivered
+- The kiosk prefers pinned `@ricky0123/vad-web@0.0.31` Silero v5 with locally served ONNX, worklet and `onnxruntime-web@1.22.0` assets, with no CDN dependency during kiosk use. The build invokes `scripts/copy-vad-assets.mjs` and fails if required assets are missing.
+- `MicVAD` uses the device selected in the kiosk and the browser echo cancellation/noise suppression/AGC constraints. It emits mono 16-kHz WAV only on neural speech end, including `preSpeechPadMs=350`; rejects VAD misfires and discards speech on pause.
+- If AudioWorklet is missing, the local VAD model fails, or model initialization is unsupported, the controller uses the prior recorder path. The optional AudioWorklet PCM fallback has a 350-ms ring and 16-bit WAV encoder; MediaRecorder WebM/MP4 remains the final fallback.
+- A maximum 12-second neural utterance deadline safely rejects overly long continuous input rather than allowing unbounded audio uploads. Neural initialization failures are cached within a controller to avoid repeated expensive model loading.
+- STT `fetch` accepts `AbortSignal` and is canceled on stop, language switch, session reset and component teardown. Browser STT request timeout is 25 seconds. The backend bounds primary plus fallback Groq transcription to 20 seconds and returns HTTP 504 on timeout.
+- Voice regression tests now cover neural callbacks, misfires, cancellation, late callbacks, >12-second input, model fallback, worklet pre-roll, WAV/MP4 formats, session mismatch, and STT timeout. See GitHub Actions on the **latest** PR head SHA for exact counts.
+
+### Deployment/runtime caveats
+- ONNX/WASM assets together are about 38 MiB in the build output (only needed assets are fetched at runtime). This can affect cold-start on constrained kiosk networks and should be measured.
+- Neural VAD is *speech-vs-nonspeech*, not speaker identification; nearby customers or music with vocals may still trigger it. AEC requires calibration with the actual speaker/microphone placement.
+- **STT remains completed-audio Groq Whisper; there is no real token-streaming STT.** The SSE optimization is only post-validation answer text transport. The agent and TTS remain non-incremental. Automatic barge-in and LiveKit are not introduced, because they require provider integration plus echo-safe validation.
+- This implementation has automated tests using mocked microphone/model callbacks and CI builds. It does **not** assert measured Vietnamese WER/CER, live mic acoustic accuracy, real neural ONNX inference in a browser, real Azure/Groq latency or field barge-in success.
+
+### Field acceptance plan (not yet executed)
+1. Run `npm ci`, `npm run dev` on a secure local/HTTPS kiosk, confirm `/vad/silero_vad_v5.onnx` and `/vad/onnx/*.wasm` load locally, not from a CDN. Repeat after a cold browser restart.
+2. Test 10 minutes each of silence, fan/AC, store music, background conversation and loudspeaker echo; record false activations/hour and requests to `/audio/transcribe`. Repeat 1–2 syllable Vietnamese commands at different volumes and accents and record missed starts/false rejects.
+3. Capture consenting, labeled speech clips and verbatim reference transcriptions. Run `python -m evaluation.live_groq_stt_benchmark --audio <clip.wav> --reference-file <text.txt> --source kiosk` and aggregate WER/CER, p50/p95 STT and end-of-speech-to-first-audio. Do not commit recordings or transcripts.
+4. Compare current PR with unchanged `codex/retail-text-quality-v4-20261019` under identical devices and recordings. Merge only after measurable improvement in recognition quality and no new false wake-ups.
