@@ -319,6 +319,7 @@ export function transcribe(
   sessionId: string,
   audio: Blob,
   language: LanguageCode = 'vi',
+  signal?: AbortSignal,
 ): Promise<TranscriptionResponse> {
   const form = new FormData()
   form.append('session_id', sessionId)
@@ -331,7 +332,8 @@ export function transcribe(
   return request<TranscriptionResponse>('/audio/transcribe', {
     method: 'POST',
     body: form,
-  })
+    signal,
+  }, 25_000)
 }
 
 export async function createSynthesisTicket(
