@@ -35,6 +35,15 @@ try {
   page.on('request', request => {
     if (request.url().includes('/vad/')) vadRequests.push(request.url())
   })
+  page.on('response', response => {
+    if (response.url().includes('/vad/')) {
+      console.info('VAD asset', response.status(),
+        response.headers()['content-type'] ?? 'unspecified', response.url())
+    }
+  })
+  page.on('requestfailed', request => {
+    console.error('Browser request failed', request.url(), request.failure()?.errorText)
+  })
   await page.goto(origin, { waitUntil: 'domcontentloaded' })
   await page.locator('body').click()
   const result = await page.evaluate(async () => {
