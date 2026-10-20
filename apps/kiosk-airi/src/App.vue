@@ -239,7 +239,7 @@ async function handleVoiceAudio(audio: Blob) {
     )
     await sendMessage(result.text, true)
   } catch (error) {
-    if (generation !== sessionGeneration || isUnmounted) return
+    if (generation !== sessionGeneration || isUnmounted || voiceEpoch !== voiceTurnEpoch || !isHandsFree.value) return
     errorMessage.value = toErrorMessage(
       error,
       language.value === 'vi'
