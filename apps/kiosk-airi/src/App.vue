@@ -75,6 +75,9 @@ let bootInFlight: { generation: number; promise: Promise<void> } | null = null
 let resetInFlight: Promise<void> | null = null
 let pendingTurn: { text: string; generation: number; id: string } | null = null
 let activeTurnController: AbortController | null = null
+let activeTranscriptionController: AbortController | null = null
+let activeTurnFromVoice = false
+let voiceTurnEpoch = 0
 
 const languageSettings: Record<LanguageCode, {
   label: string
@@ -218,15 +221,22 @@ function handleVoiceError(error: VoiceControllerError) {
 }
 
 async function handleVoiceAudio(audio: Blob) {
-  if (!sessionId.value || isUnmounted) return
+  if (!sessionId.value || isUnmounted || !isHandsFree.value) return
   const generation = sessionGeneration
+  const voiceEpoch = voiceTurnEpoch
+  const transcriptionSessionId = sessionId.value
+  // A later microphone turn supersedes any unfinished upload.
+  activeTranscriptionController?.abort()
+  const transcriptionController = new AbortController()
+  activeTranscriptionController = transcriptionController
   status.value = 'transcribing'
   voiceHint.value = languageSettings[language.value].transcribing
   try {
     const result = await withSessionRecovery(
-      (id) => transcribe(id, audio, language.value),
+      (id) => transcribe(id, audio, language.value, transcriptionController.signal),
     )
-    if (generation !== sessionGeneration || isUnmounted) return
+    if (generation !== sessionGeneration || isUnmounted || voiceEpoch !== voiceTurnEpoch || !isHandsFree.value) return
+    if (result.session_id !== transcriptionSessionId) throw new Error('Phiên âm thanh không thuộc phiên hội thoại hiện tại.')
     if (!result.text.trim()) throw new Error(
       language.value === 'vi'
         ? 'Không nghe rõ câu nói, bạn thử lại nhé'
@@ -236,7 +246,7 @@ async function handleVoiceAudio(audio: Blob) {
     )
     await sendMessage(result.text, true)
   } catch (error) {
-    if (generation !== sessionGeneration || isUnmounted) return
+    if (generation !== sessionGeneration || isUnmounted || voiceEpoch !== voiceTurnEpoch || !isHandsFree.value) return
     errorMessage.value = toErrorMessage(
       error,
       language.value === 'vi'
@@ -248,6 +258,10 @@ async function handleVoiceAudio(audio: Blob) {
     status.value = 'error'
     voiceHint.value = languageSettings[language.value].retry
     void resumeHandsFree()
+  } finally {
+    if (activeTranscriptionController === transcriptionController) {
+      activeTranscriptionController = null
+    }
   }
 }
 
@@ -256,6 +270,9 @@ function ensureVoiceController(): VoiceConversationController {
     voiceController = new VoiceConversationController({
       locale: languageSettings[language.value].locale,
       preferRecorder: true,
+      preferPcmWorklet: true,
+      preferNeuralVad: true,
+      validateSpeechEnvelope: true,
       deviceId: selectedMicrophone.value,
       onState: handleVoiceState,
       onTranscript: (text) => { void sendMessage(text, true) },
@@ -602,9 +619,13 @@ async function resetKioskSession(notice?: string) {
   if (resetInFlight) return resetInFlight
 
   const generation = ++sessionGeneration
+  voiceTurnEpoch += 1
   const oldSessionId = sessionId.value
   activeTurnController?.abort()
   activeTurnController = null
+  activeTranscriptionController?.abort()
+  activeTranscriptionController = null
+  activeTurnFromVoice = false
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   sessionExpiryTimer = undefined
   speechRequestId += 1
@@ -675,11 +696,12 @@ async function withSessionRecovery<T>(
 
 async function sendMessage(value = draft.value, fromVoice = false, isRetry = false) {
   const text = value.trim()
+  const voiceEpoch = voiceTurnEpoch
   if (!text || status.value === 'thinking' || (status.value === 'transcribing' && !fromVoice)) return
   const callGeneration = sessionGeneration
   if (!sessionId.value) await bootKiosk()
   if (callGeneration !== sessionGeneration) return
-  if (!sessionId.value || isUnmounted) return
+  if (!sessionId.value || isUnmounted || (fromVoice && (!isHandsFree.value || voiceEpoch !== voiceTurnEpoch))) return
   const generation = sessionGeneration
 
   if (fromVoice) void unlockAudio()
@@ -697,6 +719,7 @@ async function sendMessage(value = draft.value, fromVoice = false, isRetry = fal
   const assistantMessage = pushMessage('assistant', '')
   const turnController = new AbortController()
   activeTurnController = turnController
+  activeTurnFromVoice = fromVoice
   status.value = 'thinking'
   voiceHint.value = languageSettings[language.value].thinking
 
@@ -718,6 +741,12 @@ async function sendMessage(value = draft.value, fromVoice = false, isRetry = fal
       )
     })
     if (generation !== sessionGeneration || isUnmounted) return
+    if (fromVoice && (voiceEpoch !== voiceTurnEpoch || !isHandsFree.value)) {
+      const assistantIndex = messages.value.findIndex((message) => message.id === assistantMessage.id)
+      if (assistantIndex >= 0) messages.value.splice(assistantIndex, 1)
+      pendingTurn = null
+      return
+    }
     if (!requestedSessionId || response.session_id !== requestedSessionId) {
       throw new Error('Câu trả lời không thuộc phiên hội thoại hiện tại.')
     }
@@ -743,6 +772,12 @@ async function sendMessage(value = draft.value, fromVoice = false, isRetry = fal
     }
   } catch (error) {
     if (generation !== sessionGeneration || isUnmounted) return
+    if (fromVoice && (voiceEpoch !== voiceTurnEpoch || !isHandsFree.value)) {
+      const assistantIndex = messages.value.findIndex((message) => message.id === assistantMessage.id)
+      if (assistantIndex >= 0) messages.value.splice(assistantIndex, 1)
+      pendingTurn = null
+      return
+    }
     const assistantIndex = messages.value.findIndex((message) => message.id === assistantMessage.id)
     if (assistantIndex >= 0) messages.value.splice(assistantIndex, 1)
     errorMessage.value = toErrorMessage(
@@ -760,7 +795,10 @@ async function sendMessage(value = draft.value, fromVoice = false, isRetry = fal
         : '请再试一次刚才的问题。'
     status.value = 'error'
   } finally {
-    if (activeTurnController === turnController) activeTurnController = null
+    if (activeTurnController === turnController) {
+      activeTurnController = null
+      activeTurnFromVoice = false
+    }
   }
 }
 
@@ -897,12 +935,17 @@ function toggleTextPanel() {
 function toggleRecording() {
   unlockAudio()
   if (isHandsFree.value || voiceController?.isActive || isVoiceActive.value) {
+    voiceTurnEpoch += 1
+    if (activeTurnFromVoice) activeTurnController?.abort()
+    activeTranscriptionController?.abort()
+    activeTranscriptionController = null
     isHandsFree.value = false
     speechRequestId += 1
     pendingSpeechText.value = null
     releaseAudioPlayback()
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
-    voiceController?.stopCapture()
+    // The stop button means discard, not 'submit a manual short utterance'.
+    voiceController?.pause()
     isVoiceActive.value = false
     isRecording.value = false
     voiceHint.value = languageSettings[language.value].ready
@@ -933,6 +976,10 @@ function retryLastPrompt() {
 
 function handleLanguageChange(nextLanguage: LanguageCode) {
   if (language.value === nextLanguage) return
+  voiceTurnEpoch += 1
+  if (activeTurnFromVoice) activeTurnController?.abort()
+  activeTranscriptionController?.abort()
+  activeTranscriptionController = null
   language.value = nextLanguage
   document.documentElement.lang = nextLanguage === 'en' ? 'en-US' : nextLanguage === 'zh' ? 'zh-CN' : 'vi-VN'
   voiceHint.value = languageSettings[nextLanguage].switching
@@ -951,8 +998,11 @@ onMounted(() => {
 })
 onUnmounted(() => {
   isUnmounted = true
+  voiceTurnEpoch += 1
   activeTurnController?.abort()
   activeTurnController = null
+  activeTranscriptionController?.abort()
+  activeTranscriptionController = null
   const closingSessionId = sessionId.value
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   navigator.mediaDevices?.removeEventListener?.('devicechange', refreshMicrophones)
@@ -993,7 +1043,7 @@ onUnmounted(() => {
           class="vrm-control vrm-mic-control"
           :class="{ active: isVoiceActive, recording: isRecording }"
           :aria-label="voiceButtonLabel"
-          :disabled="status === 'transcribing' || status === 'thinking'"
+          :disabled="!isHandsFree && (status === 'transcribing' || status === 'thinking')"
           @click="toggleRecording"
         >
           <Stop v-if="isVoiceActive" :size="22" weight="fill" aria-hidden="true" />

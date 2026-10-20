@@ -17,3 +17,6 @@ htmlcov/
 .vscode/
 .idea/
 *.log
+
+# Generated local ONNX/VAD assets (copied from pinned npm packages)
+apps/kiosk-airi/public/vad/
