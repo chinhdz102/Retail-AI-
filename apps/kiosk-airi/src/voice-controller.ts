@@ -230,6 +230,7 @@ export class VoiceConversationController {
   private lastVoiceAt = 0
   private lastPollAt: number | null = null
   private noiseFloor = 0.008
+  private stationaryNoiseSamples = 0
   private voicedDurationMs = 0
   private readonly envelopeGate = new SpeechEnvelopeGate()
   private forceSegmentEmit = false
@@ -256,6 +257,8 @@ export class VoiceConversationController {
 
   async start(): Promise<void> {
     if (this.destroyed || this.active) return
+    // A previous segment may still be shutting down; invalidate callbacks first.
+    if (this.segmentRecorder) return
     this.active = true
     const token = ++this.generation
     const Recognition = this.dependencies.getRecognition?.() ?? null
@@ -274,7 +277,7 @@ export class VoiceConversationController {
 
   async resume(): Promise<void> {
     if (this.destroyed) return
-    this.active = false
+    if (this.active) return
     await this.start()
   }
 
@@ -451,6 +454,7 @@ export class VoiceConversationController {
       this.permission = 'granted'
       this.options.onInputDevice?.(stream.getTracks()[0]?.label || 'Micro mặc định')
       this.noiseFloor = 0.008
+      this.stationaryNoiseSamples = 0
       this.lastPollAt = this.dependencies.now?.() ?? Date.now()
       this.setState('recorder', 'listening')
       this.pollAudio(token)
@@ -505,6 +509,22 @@ export class VoiceConversationController {
       this.envelopeGate.observe(level, elapsed)
       this.lastVoiceAt = now
       this.voicedDurationMs += elapsed
+      // Flat, sustained noise should not keep the recorder in RECORDING for 12s.
+      // Adapt the floor only after stationary evidence; real fluctuating speech
+      // is intentionally left to normal endpointing and the upload gate.
+      const stationary = this.options.validateSpeechEnvelope
+        ? this.envelopeGate.stationaryNoiseLevel()
+        : null
+      if (stationary !== null) {
+        this.stationaryNoiseSamples += 1
+        if (this.stationaryNoiseSamples >= 3) {
+          this.noiseFloor = Math.max(this.noiseFloor, Math.min(MAX_SPEECH_THRESHOLD / 1.6, stationary * 0.7))
+          this.stopSegment(true)
+          return
+        }
+      } else {
+        this.stationaryNoiseSamples = 0
+      }
     }
     if (this.segmentRecorder && (
       now - this.lastVoiceAt >= SILENCE_DURATION_MS
@@ -533,6 +553,7 @@ export class VoiceConversationController {
       this.lastVoiceAt = now
       this.voicedDurationMs = 0
       this.envelopeGate.reset()
+      this.stationaryNoiseSamples = 0
       this.forceSegmentEmit = false
       this.segmentRecorder = recorder
       recorder.ondataavailable = (event) => {
@@ -548,6 +569,7 @@ export class VoiceConversationController {
         this.segmentChunks = []
         this.voicedDurationMs = 0
         this.envelopeGate.reset()
+        this.stationaryNoiseSamples = 0
         this.forceSegmentEmit = false
         if (blob.size > 0 && token === this.generation && hasSpeech) {
           this.releaseAudioResources()
@@ -564,6 +586,9 @@ export class VoiceConversationController {
         }
       }
       recorder.onerror = (event) => {
+        // Invalidate callbacks and release the microphone, even if the browser
+        // never follows onerror with onstop.
+        this.stopMonitor(true)
         this.emitError('runtime', event.error || 'Audio recording failed')
       }
       recorder.start(100)
