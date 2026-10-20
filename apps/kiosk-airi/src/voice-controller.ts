@@ -1,4 +1,5 @@
 import { SpeechEnvelopeGate } from './voice-speech-gate'
+import { PcmCaptureBuffer } from './voice-pcm'
 
 export type VoiceMode = 'idle' | 'recognition' | 'recorder'
 export type VoicePhase = 'idle' | 'listening' | 'recording'
@@ -101,12 +102,21 @@ export interface AudioAnalyserLike {
 }
 
 export interface AudioMediaStreamSourceLike {
-  connect: (node: AudioAnalyserLike) => void
+  connect: (node: AudioAnalyserLike | PcmWorkletNodeLike) => void
   disconnect?: () => void
+}
+
+export interface PcmWorkletNodeLike {
+  port: { onmessage: ((event: { data: Float32Array }) => void) | null }
+  connect: (destination: unknown) => void
+  disconnect: () => void
 }
 
 export interface AudioContextLike {
   state?: string
+  sampleRate?: number
+  destination?: unknown
+  audioWorklet?: { addModule: (url: string) => Promise<void> }
   resume?: () => Promise<void> | void
   createMediaStreamSource: (stream: MediaStreamLike) => AudioMediaStreamSourceLike
   createAnalyser: () => AudioAnalyserLike
@@ -119,6 +129,7 @@ export interface VoiceControllerDependencies {
   getUserMedia?: (constraints: VoiceMediaConstraints) => Promise<MediaStreamLike>
   MediaRecorder?: MediaRecorderConstructor | null
   createAudioContext?: () => AudioContextLike
+  createPcmWorkletNode?: (context: AudioContextLike) => PcmWorkletNodeLike
   setTimeout?: (handler: () => void, timeout: number) => number
   clearTimeout?: (timer: number) => void
   now?: () => number
@@ -130,12 +141,38 @@ export interface VoiceConversationOptions extends VoiceControllerDependencies {
   preferRecorder?: boolean
   /** Conservative guard against constant noise before uploading speech. */
   validateSpeechEnvelope?: boolean
+  /** Browser AudioWorklet PCM capture with 350ms pre-roll; falls back to MediaRecorder. */
+  preferPcmWorklet?: boolean
   onState: (state: VoiceState) => void
   onTranscript: (text: string) => void
   onAudio: (audio: Blob) => void
   onLevel?: (level: number) => void
   onInputDevice?: (label: string) => void
   onError: (error: VoiceControllerError) => void
+}
+
+/** MediaRecorder-compatible adapter to reuse the existing segment/state logic. */
+class PcmRecorderAdapter implements MediaRecorderLike {
+  state: 'inactive' | 'recording' = 'inactive'
+  readonly mimeType = 'audio/wav'
+  ondataavailable: ((event: MediaRecorderDataEventLike) => void) | null = null
+  onstop: (() => void) | null = null
+  onerror: ((event: { error?: string }) => void) | null = null
+
+  constructor(private readonly buffer: PcmCaptureBuffer) {}
+
+  start(): void {
+    this.buffer.start()
+    this.state = 'recording'
+  }
+
+  stop(): void {
+    if (this.state === 'inactive') return
+    this.state = 'inactive'
+    const data = this.buffer.finish()
+    this.ondataavailable?.({ data })
+    this.onstop?.()
+  }
 }
 
 const MIN_SPEECH_THRESHOLD = 0.012
@@ -224,6 +261,8 @@ export class VoiceConversationController {
   private audioContext: AudioContextLike | null = null
   private audioSource: AudioMediaStreamSourceLike | null = null
   private analyser: AudioAnalyserLike | null = null
+  private pcmBuffer: PcmCaptureBuffer | null = null
+  private pcmWorkletNode: PcmWorkletNodeLike | null = null
   private monitorTimer: number | null = null
   private segmentRecorder: MediaRecorderLike | null = null
   private segmentChunks: Blob[] = []
@@ -408,7 +447,7 @@ export class VoiceConversationController {
     const getUserMedia = this.dependencies.getUserMedia
     const Recorder = this.dependencies.MediaRecorder
     const createAudioContext = this.dependencies.createAudioContext
-    if (!getUserMedia || !Recorder || !createAudioContext) {
+    if (!getUserMedia || !createAudioContext || (!Recorder && !this.options.preferPcmWorklet)) {
       this.emitError(
         'unsupported',
         'This browser cannot start microphone recording. Please allow microphone access or use text input.',
@@ -443,7 +482,6 @@ export class VoiceConversationController {
       if (context.state === 'suspended') {
         throw new Error('Bộ xử lý âm thanh chưa chạy. Bạn bấm mic để thử lại nhé.')
       }
-      this.clearRecorderStart()
       const analyser = context.createAnalyser()
       analyser.fftSize = 512
       const source = context.createMediaStreamSource(stream)
@@ -452,6 +490,40 @@ export class VoiceConversationController {
       this.audioContext = context
       this.audioSource = source
       this.analyser = analyser
+      if (this.options.preferPcmWorklet && context.audioWorklet
+        && context.sampleRate && context.destination !== undefined) {
+        // Worklet is progressive enhancement. Older browsers and restricted
+        // contexts continue using MediaRecorder rather than losing voice mode.
+        let node: PcmWorkletNodeLike | null = null
+        try {
+          await context.audioWorklet.addModule(`${import.meta.env.BASE_URL}pcm-capture.worklet.js`)
+          if (!this.active || token !== this.generation) {
+            this.releaseAudioResources()
+            return
+          }
+          node = this.dependencies.createPcmWorkletNode
+            ? this.dependencies.createPcmWorkletNode(context)
+            : new AudioWorkletNode(context as AudioContext, 'retail-pcm-capture') as unknown as PcmWorkletNodeLike
+          const buffer = new PcmCaptureBuffer(context.sampleRate, 350)
+          node.port.onmessage = (event) => {
+            if (this.active && token === this.generation && event.data instanceof Float32Array) {
+              buffer.append(event.data)
+            }
+          }
+          source.connect(node)
+          node.connect(context.destination)
+          this.pcmBuffer = buffer
+          this.pcmWorkletNode = node
+        } catch {
+          if (node) {
+            node.port.onmessage = null
+            node.disconnect()
+          }
+          if (!Recorder) throw new Error('AudioWorklet recording unavailable')
+        }
+      }
+      if (!Recorder && !this.pcmBuffer) throw new Error('No supported microphone recorder')
+      this.clearRecorderStart()
       this.permission = 'granted'
       this.options.onInputDevice?.(stream.getTracks()[0]?.label || 'Micro mặc định')
       this.noiseFloor = 0.008
@@ -542,14 +614,16 @@ export class VoiceConversationController {
 
   private startSegment(now: number): void {
     const Recorder = this.dependencies.MediaRecorder
-    if (!Recorder || !this.stream) return
-    // Safari may only offer MP4, while Chromium generally supports WebM/Opus.
-    // When capability detection is absent, allow the browser to choose its default.
-    const selectedMimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
-      .find((candidate) => Recorder.isTypeSupported?.(candidate))
+    if (!this.stream || (!Recorder && !this.pcmBuffer)) return
+    const selectedMimeType = Recorder
+      ? ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
+        .find((candidate) => Recorder.isTypeSupported?.(candidate))
+      : undefined
     try {
-      const recorder = new Recorder(this.stream, selectedMimeType ? { mimeType: selectedMimeType } : undefined)
-      const mimeType = selectedMimeType ?? recorder.mimeType ?? 'audio/webm'
+      const recorder: MediaRecorderLike = this.pcmBuffer
+        ? new PcmRecorderAdapter(this.pcmBuffer)
+        : new Recorder!(this.stream, selectedMimeType ? { mimeType: selectedMimeType } : undefined)
+      const mimeType = this.pcmBuffer ? 'audio/wav' : selectedMimeType ?? recorder.mimeType ?? 'audio/webm'
       const token = this.generation
       this.segmentChunks = []
       this.segmentStartedAt = now
@@ -659,6 +733,13 @@ export class VoiceConversationController {
   }
 
   private releaseAudioResources(): void {
+    if (this.pcmWorkletNode) {
+      this.pcmWorkletNode.port.onmessage = null
+      this.pcmWorkletNode.disconnect()
+      this.pcmWorkletNode = null
+    }
+    this.pcmBuffer?.clear()
+    this.pcmBuffer = null
     this.audioSource?.disconnect?.()
     this.audioSource = null
     this.analyser = null
