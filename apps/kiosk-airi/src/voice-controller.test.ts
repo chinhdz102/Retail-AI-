@@ -511,4 +511,62 @@ describe('VoiceConversationController', () => {
     expect(controller.isActive).toBe(false)
     expect(onError).toHaveBeenCalledWith(expect.objectContaining({ kind: 'unsupported' }))
   })
+
+  it('does not send stationary fan noise to STT when the evidence guard is enabled', async () => {
+    vi.useFakeTimers()
+    const onAudio = vi.fn()
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, validateSpeechEnvelope: true,
+      getUserMedia: async () => fakeStream(), MediaRecorder: FakeRecorder,
+      createAudioContext: () => fakeAudioContext({
+        fftSize: 32, getByteTimeDomainData: (data) => data.fill(170),
+      }),
+      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(), onAudio,
+      now: () => Date.now(),
+    })
+    await controller.start()
+    await vi.advanceTimersByTimeAsync(12_300)
+    expect(onAudio).not.toHaveBeenCalled()
+    controller.stop()
+  })
+
+  it('still emits varied speech and drops stationary noise in subsequent turns', async () => {
+    vi.useFakeTimers()
+    const onAudio = vi.fn()
+    const wave = [128, 149, 184, 220, 170, 205, 235, 179]
+    let index = 0
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, validateSpeechEnvelope: true,
+      getUserMedia: async () => fakeStream(), MediaRecorder: FakeRecorder,
+      createAudioContext: () => fakeAudioContext({
+        fftSize: 32,
+        getByteTimeDomainData: (data) => data.fill(wave[index++] ?? 128),
+      }),
+      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(), onAudio,
+      now: () => Date.now(),
+    })
+    await controller.start()
+    await vi.advanceTimersByTimeAsync(1_100)
+    expect(onAudio).toHaveBeenCalledOnce()
+    controller.stop()
+  })
+
+  it('manual capture can emit a brief utterance despite the automatic noise guard', async () => {
+    vi.useFakeTimers()
+    const onAudio = vi.fn()
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, validateSpeechEnvelope: true,
+      getUserMedia: async () => fakeStream(), MediaRecorder: FakeRecorder,
+      createAudioContext: () => fakeAudioContext({
+        fftSize: 32, getByteTimeDomainData: (data) => data.fill(230),
+      }),
+      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(), onAudio,
+      now: () => Date.now(),
+    })
+    await controller.start()
+    await vi.advanceTimersByTimeAsync(80)
+    controller.stopCapture()
+    expect(onAudio).toHaveBeenCalledOnce()
+  })
+
 })

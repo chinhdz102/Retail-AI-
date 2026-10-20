@@ -1,3 +1,5 @@
+import { SpeechEnvelopeGate } from './voice-speech-gate'
+
 export type VoiceMode = 'idle' | 'recognition' | 'recorder'
 export type VoicePhase = 'idle' | 'listening' | 'recording'
 export type VoicePermission = 'unknown' | 'granted' | 'denied'
@@ -125,6 +127,8 @@ export interface VoiceConversationOptions extends VoiceControllerDependencies {
   locale: string
   deviceId?: string
   preferRecorder?: boolean
+  /** Conservative guard against constant noise before uploading speech. */
+  validateSpeechEnvelope?: boolean
   onState: (state: VoiceState) => void
   onTranscript: (text: string) => void
   onAudio: (audio: Blob) => void
@@ -227,6 +231,7 @@ export class VoiceConversationController {
   private lastPollAt: number | null = null
   private noiseFloor = 0.008
   private voicedDurationMs = 0
+  private readonly envelopeGate = new SpeechEnvelopeGate()
   private forceSegmentEmit = false
   private generation = 0
 
@@ -488,9 +493,16 @@ export class VoiceConversationController {
         Math.min(MAX_SPEECH_THRESHOLD, this.noiseFloor * 2),
       )
     }
-    const speechDetected = level >= (this.segmentRecorder ? threshold * 0.68 : threshold)
+    // Do not lower the threshold below the quiet-room floor once recording:
+    // otherwise a fan/AGC background can hold the recorder open until 12s.
+    const speechDetected = level >= (this.segmentRecorder
+      ? Math.max(MIN_SPEECH_THRESHOLD, threshold * 0.88)
+      : threshold)
     if (speechDetected) {
+      // Recorder starts on the FIRST possible speech frame. We decide whether
+      // to upload only after accumulating evidence, preserving initial syllables.
       if (!this.segmentRecorder) this.startSegment(now)
+      this.envelopeGate.observe(level, elapsed)
       this.lastVoiceAt = now
       this.voicedDurationMs += elapsed
     }
@@ -520,6 +532,7 @@ export class VoiceConversationController {
       this.segmentStartedAt = now
       this.lastVoiceAt = now
       this.voicedDurationMs = 0
+      this.envelopeGate.reset()
       this.forceSegmentEmit = false
       this.segmentRecorder = recorder
       recorder.ondataavailable = (event) => {
@@ -527,10 +540,14 @@ export class VoiceConversationController {
       }
       recorder.onstop = () => {
         const blob = new Blob(this.segmentChunks, { type: mimeType })
-        const hasSpeech = this.forceSegmentEmit || this.voicedDurationMs >= MIN_VOICED_DURATION_MS
+        const hasSpeech = this.forceSegmentEmit || (
+          this.voicedDurationMs >= MIN_VOICED_DURATION_MS
+          && (!this.options.validateSpeechEnvelope || this.envelopeGate.hasSpeechEvidence())
+        )
         this.segmentRecorder = null
         this.segmentChunks = []
         this.voicedDurationMs = 0
+        this.envelopeGate.reset()
         this.forceSegmentEmit = false
         if (blob.size > 0 && token === this.generation && hasSpeech) {
           this.releaseAudioResources()
