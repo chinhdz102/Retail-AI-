@@ -7,11 +7,13 @@ export class PcmCaptureBuffer {
   private ringSamples = 0
   private recorded: Float32Array[] | null = null
   private readonly preRollSamples: number
+  readonly sampleRate: number
 
-  constructor(readonly sampleRate: number, preRollMs = 350) {
+  constructor(sampleRate: number, preRollMs = 350) {
     if (!Number.isFinite(sampleRate) || sampleRate < 8000 || sampleRate > 192000) {
       throw new Error('Unsupported audio sample rate')
     }
+    this.sampleRate = sampleRate
     this.preRollSamples = Math.round(sampleRate * preRollMs / 1000)
   }
 
