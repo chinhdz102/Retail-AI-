@@ -159,7 +159,11 @@ class PcmRecorderAdapter implements MediaRecorderLike {
   onstop: (() => void) | null = null
   onerror: ((event: { error?: string }) => void) | null = null
 
-  constructor(private readonly buffer: PcmCaptureBuffer) {}
+  private readonly buffer: PcmCaptureBuffer
+
+  constructor(buffer: PcmCaptureBuffer) {
+    this.buffer = buffer
+  }
 
   start(): void {
     this.buffer.start()
@@ -503,7 +507,7 @@ export class VoiceConversationController {
           }
           node = this.dependencies.createPcmWorkletNode
             ? this.dependencies.createPcmWorkletNode(context)
-            : new AudioWorkletNode(context as AudioContext, 'retail-pcm-capture') as unknown as PcmWorkletNodeLike
+            : new AudioWorkletNode(context as unknown as AudioContext, 'retail-pcm-capture') as unknown as PcmWorkletNodeLike
           const buffer = new PcmCaptureBuffer(context.sampleRate, 350)
           node.port.onmessage = (event) => {
             if (this.active && token === this.generation && event.data instanceof Float32Array) {
