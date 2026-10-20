@@ -60,6 +60,78 @@ afterEach(() => {
 })
 
 describe('VoiceConversationController', () => {
+  it('prefers WAV AudioWorklet with pre-roll and no speaker feedback', async () => {
+    vi.useFakeTimers()
+    const onAudio = vi.fn()
+    const getUserMedia = vi.fn(async () => fakeStream())
+    const source = { connect: vi.fn(), disconnect: vi.fn() }
+    let frameIndex = 0
+    const analyser = {
+      fftSize: 32,
+      getByteTimeDomainData(data: Uint8Array) {
+        const speaking = frameIndex >= 3 && frameIndex < 10
+        data.fill(speaking ? [155, 200, 180, 210][frameIndex % 4] : 128)
+        frameIndex += 1
+      },
+    }
+    const addModule = vi.fn().mockResolvedValue(undefined)
+    const context = {
+      sampleRate: 16000,
+      destination: {},
+      audioWorklet: { addModule },
+      createMediaStreamSource: () => source,
+      createAnalyser: () => analyser,
+      close: vi.fn(async () => undefined),
+    }
+    const node = {
+      port: { onmessage: null as null | ((event: { data: Float32Array }) => void) },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    }
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferPcmWorklet: true,
+      getUserMedia, MediaRecorder: FakeRecorder,
+      createAudioContext: () => context,
+      createPcmWorkletNode: () => node,
+      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(), onAudio,
+      now: () => Date.now(),
+    })
+    await controller.start()
+    expect(addModule).toHaveBeenCalledWith(expect.stringContaining('pcm-capture.worklet.js'))
+    expect(node.connect).toHaveBeenCalledWith(context.destination)
+    // A quieter initial consonant is buffered before the RMS start threshold.
+    node.port.onmessage?.({ data: new Float32Array(160).fill(0.1) })
+    await vi.advanceTimersByTimeAsync(240)
+    node.port.onmessage?.({ data: new Float32Array(160).fill(0.5) })
+    await vi.advanceTimersByTimeAsync(950)
+    expect(onAudio).toHaveBeenCalledOnce()
+    const blob = onAudio.mock.calls[0][0] as Blob
+    expect(blob.type).toBe('audio/wav')
+    const view = new DataView(await blob.arrayBuffer())
+    expect(String.fromCharCode(...new Uint8Array(view.buffer, 0, 4))).toBe('RIFF')
+    expect(view.getInt16(44, true)).toBeCloseTo(Math.floor(0.1 * 32767), -1)
+    expect(node.disconnect).toHaveBeenCalled()
+    controller.stop()
+  })
+
+  it('falls back to MediaRecorder when the AudioWorklet cannot load', async () => {
+    const onAudio = vi.fn()
+    const analyser = { fftSize: 32, getByteTimeDomainData: (data: Uint8Array) => data.fill(128) }
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferPcmWorklet: true,
+      getUserMedia: async () => fakeStream(), MediaRecorder: FakeRecorder,
+      createAudioContext: () => ({
+        ...fakeAudioContext(analyser),
+        sampleRate: 16000, destination: {},
+        audioWorklet: { addModule: vi.fn().mockRejectedValue(new Error('CSP blocked')) },
+      }),
+      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(), onAudio,
+    })
+    await controller.start()
+    expect(controller.phase).toBe('listening')
+    controller.stop()
+  })
+
   it('uses MP4 when the browser does not support WebM recording', async () => {
     let selectedMimeType: string | undefined
     class Mp4Recorder extends FakeRecorder {
