@@ -7,6 +7,16 @@ on:
       - apps/kiosk-airi/vite.config.ts
       - apps/kiosk-airi/scripts/smoke-neural-browser.mjs
       - apps/kiosk-airi/src/voice-neural.ts
+  pull_request:
+    paths:
+      - .github/workflows/neural-browser-smoke.yml
+      - apps/kiosk-airi/vite.config.ts
+      - apps/kiosk-airi/package.json
+      - apps/kiosk-airi/package-lock.json
+      - apps/kiosk-airi/scripts/copy-vad-assets.mjs
+      - apps/kiosk-airi/scripts/smoke-neural-browser.mjs
+      - apps/kiosk-airi/src/voice-neural.ts
+      - apps/kiosk-airi/src/voice-controller.ts
   workflow_dispatch:
 
 permissions:
