@@ -82,6 +82,7 @@ export interface MediaRecorderDataEventLike {
 
 export interface MediaRecorderLike {
   state: 'inactive' | 'recording' | 'paused'
+  mimeType?: string
   ondataavailable: ((event: MediaRecorderDataEventLike) => void) | null
   onstop: (() => void) | null
   onerror: ((event: { error?: string }) => void) | null
@@ -542,11 +543,13 @@ export class VoiceConversationController {
   private startSegment(now: number): void {
     const Recorder = this.dependencies.MediaRecorder
     if (!Recorder || !this.stream) return
-    const mimeType = Recorder.isTypeSupported?.('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : 'audio/webm'
+    // Safari may only offer MP4, while Chromium generally supports WebM/Opus.
+    // When capability detection is absent, allow the browser to choose its default.
+    const selectedMimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
+      .find((candidate) => Recorder.isTypeSupported?.(candidate))
     try {
-      const recorder = new Recorder(this.stream, { mimeType })
+      const recorder = new Recorder(this.stream, selectedMimeType ? { mimeType: selectedMimeType } : undefined)
+      const mimeType = selectedMimeType ?? recorder.mimeType ?? 'audio/webm'
       const token = this.generation
       this.segmentChunks = []
       this.segmentStartedAt = now
