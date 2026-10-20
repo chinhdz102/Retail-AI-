@@ -60,6 +60,79 @@ afterEach(() => {
 })
 
 describe('VoiceConversationController', () => {
+  it('emits only neural-validated WAV speech and frees the microphone', async () => {
+    const trackStop = vi.fn()
+    const onAudio = vi.fn()
+    const onState = vi.fn()
+    const destroy = vi.fn().mockResolvedValue(undefined)
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getUserMedia: async () => ({ getTracks: () => [{ stop: trackStop, label: 'USB mic' }] }),
+      createNeuralVad: async (value) => {
+        callbacks = value
+        return { start: vi.fn().mockResolvedValue(undefined), destroy }
+      },
+      onAudio, onTranscript: vi.fn(), onState, onError: vi.fn(),
+    })
+    await controller.start()
+    expect(controller.phase).toBe('listening')
+    callbacks.onVADMisfire()
+    expect(onAudio).not.toHaveBeenCalled()
+    callbacks.onSpeechStart()
+    expect(controller.phase).toBe('recording')
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.24))
+    expect(onAudio).toHaveBeenCalledOnce()
+    const audio = onAudio.mock.calls[0][0] as Blob
+    expect(audio.type).toBe('audio/wav')
+    expect(audio.size).toBe(44 + 8_000 * 2)
+    expect(destroy).toHaveBeenCalledOnce()
+    expect(trackStop).toHaveBeenCalledOnce()
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.7))
+    expect(onAudio).toHaveBeenCalledOnce()
+    controller.stop()
+  })
+
+  it('falls back to the recorder when neural VAD model fails to initialize', async () => {
+    const onError = vi.fn()
+    const getUserMedia = vi.fn(async () => fakeStream())
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getUserMedia, MediaRecorder: FakeRecorder,
+      createNeuralVad: async () => { throw new Error('WASM not supported') },
+      createAudioContext: () => fakeAudioContext({
+        fftSize: 32, getByteTimeDomainData: (data) => data.fill(128),
+      }),
+      onAudio: vi.fn(), onTranscript: vi.fn(), onState: vi.fn(), onError,
+    })
+    await controller.start()
+    expect(controller.phase).toBe('listening')
+    expect(getUserMedia).toHaveBeenCalledTimes(2)
+    expect(onError).not.toHaveBeenCalled()
+    controller.stop()
+  })
+
+  it('drops delayed neural callback when the user cancels microphone capture', async () => {
+    const onAudio = vi.fn()
+    const destroy = vi.fn().mockResolvedValue(undefined)
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (value) => {
+        callbacks = value
+        return { start: vi.fn().mockResolvedValue(undefined), destroy }
+      },
+      onAudio, onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+    })
+    await controller.start()
+    controller.pause()
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.4))
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(destroy).toHaveBeenCalled()
+    controller.stop()
+  })
+
   it('prefers WAV AudioWorklet with pre-roll and no speaker feedback', async () => {
     vi.useFakeTimers()
     const onAudio = vi.fn()
