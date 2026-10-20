@@ -223,6 +223,7 @@ async function handleVoiceAudio(audio: Blob) {
   if (!sessionId.value || isUnmounted || !isHandsFree.value) return
   const generation = sessionGeneration
   const voiceEpoch = voiceTurnEpoch
+  const transcriptionSessionId = sessionId.value
   status.value = 'transcribing'
   voiceHint.value = languageSettings[language.value].transcribing
   try {
@@ -230,6 +231,7 @@ async function handleVoiceAudio(audio: Blob) {
       (id) => transcribe(id, audio, language.value),
     )
     if (generation !== sessionGeneration || isUnmounted || voiceEpoch !== voiceTurnEpoch || !isHandsFree.value) return
+    if (result.session_id !== transcriptionSessionId) throw new Error('Phiên âm thanh không thuộc phiên hội thoại hiện tại.')
     if (!result.text.trim()) throw new Error(
       language.value === 'vi'
         ? 'Không nghe rõ câu nói, bạn thử lại nhé'
