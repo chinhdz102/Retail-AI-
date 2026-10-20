@@ -456,6 +456,12 @@ export class VoiceConversationController {
   }
 
   private async startNeuralRecorder(token: number): Promise<void> {
+    // Neural inference requires a secure-context AudioWorklet. Do not attempt
+    // to initialize ONNX in unsupported browsers, jsdom or HTTP deployments.
+    if (!this.dependencies.createNeuralVad && typeof AudioWorkletNode === 'undefined') {
+      await this.startRecorder(token)
+      return
+    }
     const getUserMedia = this.dependencies.getUserMedia
     if (!getUserMedia) {
       await this.startRecorder(token)
