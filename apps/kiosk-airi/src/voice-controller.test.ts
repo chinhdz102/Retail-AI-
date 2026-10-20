@@ -60,6 +60,46 @@ afterEach(() => {
 })
 
 describe('VoiceConversationController', () => {
+  it('uses MP4 when the browser does not support WebM recording', async () => {
+    let selectedMimeType: string | undefined
+    class Mp4Recorder extends FakeRecorder {
+      static isTypeSupported = vi.fn((candidate: string) => candidate === 'audio/mp4')
+      constructor(_stream: MediaStreamLike, options?: { mimeType?: string }) {
+        super()
+        selectedMimeType = options?.mimeType
+      }
+    }
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true,
+      getUserMedia: async () => fakeStream(), MediaRecorder: Mp4Recorder,
+      createAudioContext: () => fakeAudioContext({
+        fftSize: 32, getByteTimeDomainData: (data) => data.fill(220),
+      }),
+      onAudio: vi.fn(), onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+    })
+    await controller.start()
+    expect(selectedMimeType).toBe('audio/mp4')
+    controller.stop()
+  })
+
+  it('discards a current recording when explicitly paused', async () => {
+    const onAudio = vi.fn()
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true,
+      getUserMedia: async () => fakeStream(), MediaRecorder: FakeRecorder,
+      createAudioContext: () => fakeAudioContext({
+        fftSize: 32, getByteTimeDomainData: (data) => data.fill(220),
+      }),
+      onAudio, onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+    })
+    await controller.start()
+    expect(controller.phase).toBe('recording')
+    controller.pause()
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(controller.isActive).toBe(false)
+    controller.stop()
+  })
+
   it('records from the selected microphone and reports its actual label', async () => {
     const getUserMedia = vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn(), label: 'Headset microphone' }] }))
     const onInputDevice = vi.fn()
