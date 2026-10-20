@@ -16,7 +16,7 @@ export default defineConfig({
           const pathname = request.url?.split('?')[0] ?? ''
           const filename = pathname.startsWith('/vad/onnx/')
             ? pathname.slice('/vad/onnx/'.length) : ''
-          if (!/^ort-[a-zA-Z0-9_.-]+\\.(mjs|wasm)$/.test(filename)) {
+          if (!/^ort-[a-zA-Z0-9_.-]+\.(mjs|wasm)$/.test(filename)) {
             next()
             return
           }
