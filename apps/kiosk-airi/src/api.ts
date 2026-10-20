@@ -323,7 +323,11 @@ export function transcribe(
   const form = new FormData()
   form.append('session_id', sessionId)
   form.append('language', language)
-  form.append('file', audio, 'voice.webm')
+  const extension = audio.type.startsWith('audio/mp4') ? 'mp4'
+    : audio.type.startsWith('audio/ogg') ? 'ogg'
+      : audio.type.startsWith('audio/wav') ? 'wav'
+        : 'webm'
+  form.append('file', audio, `voice.${extension}`)
   return request<TranscriptionResponse>('/audio/transcribe', {
     method: 'POST',
     body: form,
