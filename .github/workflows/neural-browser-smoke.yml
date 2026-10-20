@@ -4,6 +4,9 @@ on:
     branches: [codex/voice-silence-gate-streaming-20261020]
     paths:
       - .github/workflows/neural-browser-smoke.yml
+      - apps/kiosk-airi/vite.config.ts
+      - apps/kiosk-airi/scripts/smoke-neural-browser.mjs
+      - apps/kiosk-airi/src/voice-neural.ts
   workflow_dispatch:
 
 permissions:
