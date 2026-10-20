@@ -659,7 +659,7 @@ def _administrative_action_requested(text: str) -> bool:
         r"\b(?:doi|cap nhat|dieu chinh|thay doi|set|update|modify|change|"
         r"increase|decrease|raise|lower|add|remove|tang|giam)\b"
         r".{0,35}\b(?:ton kho|hang ton|inventory|stock)\b",
-        r"\b(?:tang|giam|cap nhat|doi|set|update|modify|change|increase|decrease)\b"
+        r"\b(?:tang|giam|dat|cap nhat|doi|set|update|modify|change|increase|decrease)\b"
         r".{0,35}\bton\b.{0,60}\b\d+(?:\s+\d+)*\b",
     )
     # Accent stripping makes "sữa" (milk) and "sửa" (edit) identical. Only
@@ -683,6 +683,11 @@ def _administrative_action_requested(text: str) -> bool:
         r"\b(?:ha|giam|tang|lower|raise|increase|decrease)\b"
         r".{0,80}\b\d+(?:\s+\d+)*\s*(?:d|dong|vnd)\b",
         r"\b(?:danh dau|xac nhan|mark|confirm)\b.{0,80}\b(?:paid|thanh toan|payment)\b",
+        r"\b(?:xac nhan|confirm|verify)\b.{0,40}\b(?:da|duoc)\s+"
+        r"(?:doi|cap nhat|dieu chinh|thay doi)\b.{0,30}\b"
+        r"(?:ton|ton kho|hang ton|inventory|stock)\b",
+        r"\b(?:confirm|verify)\b.{0,30}\b(?:inventory|stock)\b.{0,25}\b"
+        r"(?:was|has been|is)\s+(?:updated|changed|modified|set)\b",
         r"\bpaid\b",
     )
     return bool(
@@ -1334,6 +1339,12 @@ def _localized_recommendation_candidates(
     products = observation.products[:3]
     items = []
     constraints = observation.content.get("constraints")
+    recommended_category = (
+        _normalize_request_text(str(constraints.get("category", "")))
+        if isinstance(constraints, dict)
+        else ""
+    )
+    skincare_recommendation = recommended_category in {"skincare", "cham soc da"}
     spicy_constraint = (
         constraints.get("spicy")
         if isinstance(constraints, dict) and isinstance(constraints.get("spicy"), bool)
@@ -1387,6 +1398,8 @@ def _localized_recommendation_candidates(
             response += " Store prices may differ from the catalog."
         if include_stock_caveat and any(not product.stock_is_current for product in products):
             response += " Current availability has not been verified."
+        if skincare_recommendation:
+            response += " Are you looking for moisturizing, cleansing, or sun protection?"
         return response
     if language == "zh":
         response = "可以试试" + "、".join(items) + "。"
@@ -1394,12 +1407,16 @@ def _localized_recommendation_candidates(
             response += "门店实际价格可能与目录不同。"
         if include_stock_caveat and any(not product.stock_is_current for product in products):
             response += "当前库存尚未核实。"
+        if skincare_recommendation:
+            response += "您更关注保湿、清洁还是防晒？"
         return response
     response = "Mình gợi ý " + ", ".join(items) + " nhé."
     if include_price_caveat:
         response += " Giá tại cửa hàng có thể khác catalog."
     if include_stock_caveat and any(not product.stock_is_current for product in products):
         response += " Tồn hiện tại chưa được xác minh."
+    if skincare_recommendation:
+        response += " Bạn ưu tiên dưỡng ẩm, làm sạch hay chống nắng?"
     return response
 
 
@@ -4847,6 +4864,12 @@ async def agent_respond(
             localized_identity_response(request.language),
             model="local-identity",
         )
+    if smalltalk_intent in {"greeting", "farewell"}:
+        return _record_shopping_turn(
+            request,
+            localized_smalltalk_fallback(smalltalk_intent, request.language),
+            model="local-smalltalk",
+        )
     if smalltalk_intent is not None:
         try:
             smalltalk_result = await groq.chat(
@@ -5358,7 +5381,10 @@ async def agent_respond(
         and explicit_fact_query
         and _fact_query_has_product_target(explicit_fact_query)
         and whole_cart_arguments is None
-        and not is_recommendation_request(request.text)
+        and (
+            not is_recommendation_request(request.text)
+            or _explicit_product_list_requested(request.text)
+        )
         and not recommendation_lookup_request
         and not prompt_override
         and not unsupported_attribute_requested
@@ -6003,6 +6029,7 @@ async def agent_respond(
         data_source=(
             latest_catalog_observation.source if latest_catalog_observation is not None else None
         ),
+        products=[_product_card(product) for product in products],
         state=record.state,
     )
 
@@ -6218,6 +6245,14 @@ def _catalog_additions_tool_arguments(text: str) -> dict[str, object] | None:
 _FACT_QUERY_STOP_WORDS = {
     "a",
     "an",
+    "um",
+    "uhm",
+    "neu",
+    "danh",
+    "muc",
+    "cac",
+    "phai",
+    "khoa",
     "are",
     "at",
     "available",
@@ -6670,6 +6705,10 @@ def _fact_product_query(text: str) -> str:
         " ",
         normalized,
     )
+    normalized = re.sub(r"\b(?:cho|khoa) hoi\b", " ", normalized)
+    # Spoken corrections often append an unwanted neighboring category after
+    # the requested product, e.g. "thịt, không phải sốt ướp".
+    normalized = re.sub(r"\bkhong phai sot uop\b", " ", normalized)
     normalized = re.sub(r"\b(?:hoi )?binh thuong\b", " ", normalized)
     normalized = re.sub(r"\bben minh\b", " ", normalized)
     normalized = re.sub(
@@ -6744,7 +6783,31 @@ def _fact_product_query(text: str) -> str:
     ]
     if has_front_loader_hint:
         query_words.extend(word for word in ("cua", "truoc") if word not in query_words)
-    return " ".join(query_words)
+    unique_query_words: list[str] = []
+    seen_query_words: set[str] = set()
+    for word in query_words:
+        if word in seen_query_words and not (
+            word == "bim" and unique_query_words[-1:] == ["bim"]
+        ):
+            continue
+        unique_query_words.append(word)
+        seen_query_words.add(word)
+    return " ".join(unique_query_words)
+
+
+def _explicit_product_list_requested(text: str) -> bool:
+    """Recognize a request to show matching products rather than rank them."""
+    if _explicit_recommendation_category(text) is not None:
+        return False
+    normalized = " ".join(_normalize_request_text(text).split())
+    return bool(
+        re.search(
+            r"\b(?:co\s+(?:cai\s+|loai\s+)?(?:san pham|mat hang)\b|"
+            r"(?:cho|de)\s+(?:minh|toi|em|anh|chi)\s+xem\b|"
+            r"xem\s+(?:cac|nhung)\b|show\s+me\b)",
+            normalized,
+        )
+    )
 
 
 def _fact_query_has_product_target(query: str) -> bool:

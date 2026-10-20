@@ -237,6 +237,7 @@ def _category_matches(category: str | None, candidate: _Candidate) -> bool:
         "snack": ("banh snack", "do an vat", "snack"),
         "dairy": ("sua", "sua chua", "pho mai"),
         "meal": ("thuc pham an lien", "thuc an san", "mi", "do an nong"),
+        "skincare": ("cham soc da",),
         "cosmetic": (
             "cham soc da",
             "cham soc toc",

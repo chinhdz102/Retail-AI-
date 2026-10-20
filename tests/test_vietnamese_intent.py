@@ -29,6 +29,8 @@ from backend.services.vietnamese_intent import (
         ("Coca Zero 13k à?", ("price_vnd",)),
         ("Nước suối 500ml, dữ liệu giá ghi nhận ngày nào?", ("data_timestamp",)),
         ("Coca Zero còn hàng chứ?", ("stock",)),
+        ("Có sản phẩm nào chăm sóc da mặt không?", ()),
+        ("Trong danh mục có khăn mặt không?", ()),
         ("Coca Zero còn bán được không?", ("stock",)),
         ("Coca Zero lon 330ml đang có.", ("stock",)),
         ("Ở đây còn bán loại này không?", ("stock",)),
@@ -153,6 +155,8 @@ def test_supported_product_facts_are_not_mistaken_for_unsupported_attributes(tex
         ("Gợi ý đồ ăn vặt, đừng lấy bữa chính.", "snack"),
         ("Mình đói, ăn gì bây giờ?", "meal"),
         ("Mình muốn uống gì mát mát.", "drink"),
+        ("Tôi muốn chăm sóc da mặt, có sản phẩm nào không?", "skincare"),
+        ("Gợi ý mỹ phẩm cho mình.", "cosmetic"),
     ],
 )
 def test_recommendation_category_handles_natural_vietnamese_paraphrases(
@@ -182,6 +186,9 @@ def test_recommendation_categories_preserve_multiple_explicit_groups(
 
 def test_explicit_recommendation_language_forces_tool_even_without_extra_filters() -> None:
     assert _recommendation_tool_arguments("Gợi ý cho mình món ăn vặt đi.") == {"category": "snack"}
+    assert _recommendation_tool_arguments(
+        "Tôi muốn chăm sóc da mặt, có sản phẩm nào không?"
+    ) == {"category": "skincare"}
 
 
 @pytest.mark.parametrize(

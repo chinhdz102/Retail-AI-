@@ -1623,11 +1623,11 @@ body {
 }
 
 .text-is-open .sky-avatar {
-  right: calc(min(450px, calc(100vw - 32px)) + 32px);
+  right: calc(min(560px, calc(100vw - 32px)) + 32px);
 }
 
 .text-is-open .sky-avatar .sky-model {
-  width: min(36vw, calc(100vw - 500px), 440px);
+  width: min(36vw, calc(100vw - 624px), 440px);
 }
 
 .text-is-open .vrm-controls {
@@ -1768,7 +1768,7 @@ body {
   position: fixed;
   inset: 16px 16px 16px auto;
   z-index: 20;
-  width: min(450px, calc(100vw - 32px));
+  width: min(560px, calc(100vw - 32px));
   min-height: 0;
   overflow: hidden;
   border-radius: 24px;
@@ -1796,7 +1796,82 @@ body {
 }
 
 .text-drawer .chat-header {
+  align-items: stretch;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 14px 58px 12px 18px;
+}
+
+.text-drawer .chat-title-copy {
+  width: 100%;
+}
+
+.text-drawer .chat-header h1 {
+  max-width: none;
+  margin-top: 2px;
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  line-height: 1.12;
+}
+
+.text-drawer .chat-voice-hint {
+  max-width: none;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.text-drawer .chat-header-tools {
+  width: 100%;
+  align-items: center;
+  flex-direction: row;
   flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.text-drawer .voice-mode-chip,
+.text-drawer .language-picker {
+  min-height: 32px;
+  gap: 5px;
+  font-size: 0.62rem;
+}
+
+.text-drawer .voice-mode-chip {
+  padding-inline: 9px;
+}
+
+.text-drawer .language-picker {
+  padding: 2px 3px 2px 7px;
+}
+
+.text-drawer .language-option {
+  min-width: 31px;
+  min-height: 26px;
+  padding-inline: 6px;
+  font-size: 0.62rem;
+}
+
+.text-drawer .end-session-button,
+.text-drawer .support-request-button {
+  min-height: 30px;
+  padding-inline: 9px;
+  font-size: 0.62rem;
+}
+
+.text-drawer .microphone-picker {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.66rem;
+}
+
+.text-drawer .microphone-picker select {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 5px 8px;
 }
 
 .text-drawer .conversation {
@@ -1850,8 +1925,8 @@ body {
 
   .text-drawer {
     inset: auto 8px env(safe-area-inset-bottom);
-    width: min(450px, calc(100vw - 16px));
-    height: min(68dvh, 520px);
+    width: min(560px, calc(100vw - 16px));
+    height: min(72dvh, 560px);
     border-radius: 20px;
   }
 
@@ -1860,14 +1935,14 @@ body {
   }
 
   .text-drawer .chat-header {
-    padding: 10px 17px;
+    padding: 12px 58px 10px 16px;
     gap: 6px;
   }
 
   .text-drawer .chat-header h1 {
     margin-top: 0;
-    padding-right: 42px;
-    font-size: 1.05rem;
+    padding-right: 0;
+    font-size: 1.1rem;
   }
 
   .text-drawer .panel-eyebrow {
@@ -1876,12 +1951,8 @@ body {
 
   .text-drawer .chat-voice-hint {
     margin-top: 4px;
-    padding-right: 30px;
+    padding-right: 0;
     font-size: 0.75rem;
-  }
-
-  .text-drawer .chat-title-copy {
-    width: 100%;
   }
 
   .text-drawer .conversation {
@@ -1902,7 +1973,7 @@ body {
   }
 
   .text-is-open .sky-avatar .sky-model {
-    width: min(44vw, 220px);
-    height: min(28dvh, 180px);
+    width: min(34vw, 170px);
+    height: min(22dvh, 132px);
   }
 }

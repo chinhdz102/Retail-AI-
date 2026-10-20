@@ -55,8 +55,7 @@ onMounted(async () => {
         interaction-prompt="none"
         shadow-intensity="0.7"
         exposure="1.05"
-        camera-orbit="0deg 78deg 2.8m"
-        field-of-view="28deg"
+        camera-orbit="0deg 78deg auto"
         loading="eager"
         @load="syncAnimation"
       ></model-viewer>

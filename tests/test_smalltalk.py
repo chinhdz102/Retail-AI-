@@ -27,6 +27,7 @@ from backend.services.smalltalk import (
         ("Tell me a short joke, please.", "joke"),
         ("Are you a real person?", "identity"),
         ("Hi, how are you?", "wellbeing"),
+        ("Nghen nhé. Ngoài thích, chào.", "farewell"),
         ("你好，讲个笑话吧。", "joke"),
     ],
 )
@@ -71,6 +72,7 @@ def test_smalltalk_fallback_is_available_without_provider() -> None:
     assert "chuyện vui" in localized_smalltalk_fallback("joke", "vi").lower()
     assert "water" in localized_smalltalk_fallback("weather", "en").lower()
     assert localized_smalltalk_fallback("greeting", "zh")
+    assert "hẹn gặp lại" in localized_smalltalk_fallback("farewell", "vi").lower()
 
 
 @pytest.mark.parametrize(
