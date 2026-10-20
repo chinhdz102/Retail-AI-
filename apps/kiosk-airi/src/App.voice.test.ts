@@ -94,7 +94,7 @@ describe('voice transcript integration', () => {
     await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledTimes(1))
     await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
     resolveTranscript({ session_id: 'session-test', text: 'Hai chai nước', language: 'vi' })
-    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
     expect(apiMocks.respond).not.toHaveBeenCalled()
     expect(wrapper.findAll('.message-user')).toHaveLength(0)
     wrapper.unmount()
