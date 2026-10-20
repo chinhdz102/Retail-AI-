@@ -271,6 +271,7 @@ function ensureVoiceController(): VoiceConversationController {
       locale: languageSettings[language.value].locale,
       preferRecorder: true,
       preferPcmWorklet: true,
+      preferNeuralVad: true,
       validateSpeechEnvelope: true,
       deviceId: selectedMicrophone.value,
       onState: handleVoiceState,
