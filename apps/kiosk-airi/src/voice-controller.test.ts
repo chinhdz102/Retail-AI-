@@ -93,6 +93,32 @@ describe('VoiceConversationController', () => {
     controller.stop()
   })
 
+  it('stops overlong neural input before uploading any truncated audio', async () => {
+    const onAudio = vi.fn()
+    const onError = vi.fn()
+    let now = 0
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (hooks) => {
+        callbacks = hooks
+        return { start: vi.fn().mockResolvedValue(undefined), destroy: vi.fn().mockResolvedValue(undefined) }
+      },
+      onAudio, onTranscript: vi.fn(), onState: vi.fn(), onError, now: () => now,
+    })
+    await controller.start()
+    callbacks.onSpeechStart()
+    now = 12_200
+    callbacks.onFrameProcessed({ isSpeech: 0.95 }, new Float32Array(512).fill(0.2))
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'runtime', message: expect.stringContaining('12 giây'),
+    }))
+    expect(controller.isActive).toBe(false)
+    controller.stop()
+  })
+
   it('falls back to the recorder when neural VAD model fails to initialize', async () => {
     const onError = vi.fn()
     const getUserMedia = vi.fn(async () => fakeStream())
