@@ -77,6 +77,54 @@ describe('voice transcript integration', () => {
     expect(wrapper.findAll('.message-row')).toHaveLength(0)
   })
 
+  it('discards a pending transcription after the user stops listening', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({
+      session_id: 'session-test',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+    let resolveTranscript!: (value: unknown) => void
+    apiMocks.transcribe.mockImplementationOnce(() =>
+      new Promise((resolve) => { resolveTranscript = resolve }),
+    )
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onAudio(new Blob(['voice']))
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledTimes(1))
+    await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    resolveTranscript({ session_id: 'session-test', text: 'Hai chai nước', language: 'vi' })
+    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.message-user')).toHaveLength(0)
+    wrapper.unmount()
+  })
+
+  it('discards a late voice agent answer after the user stops listening', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({
+      session_id: 'session-test',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+    let resolveAgent!: (value: unknown) => void
+    apiMocks.respond.mockImplementationOnce(() =>
+      new Promise((resolve) => { resolveAgent = resolve }),
+    )
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onTranscript('Giá coca bao nhiêu?')
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledTimes(1))
+    await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    resolveAgent({
+      session_id: 'session-test', text: 'Coca giá 13.000đ.',
+      state: 'BROWSING', model: 'mock', grounded_product_ids: [],
+    })
+    await vi.waitFor(() => expect(wrapper.findAll('.message-assistant')).toHaveLength(0))
+    expect(apiMocks.createSynthesisTicket).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('keeps transcription errors visible when hands-free listening resumes', async () => {
     vi.clearAllMocks()
     apiMocks.createSession.mockResolvedValue({ session_id: 'session-test' })
