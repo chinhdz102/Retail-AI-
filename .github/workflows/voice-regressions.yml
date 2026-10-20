@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - codex/voice-silence-gate-streaming-20261020
-  pull_request:
-    branches:
-      - codex/retail-text-quality-v4-20261019
   workflow_dispatch:
 
 permissions:
@@ -39,6 +36,25 @@ jobs:
         with:
           python-version: '3.13'
       - run: uv sync --frozen
+      - name: Diagnose snapshot follow-up parsing
+        env:
+          CATALOG_REPOSITORY: demo
+        run: |
+          uv run python - <<'PY'
+          from backend.api import main
+          for query in (
+              "Nó ở kệ nào?",
+              "Kệ của gói này ở đâu?",
+              "Nó có cay không?",
+          ):
+              print({
+                  "text": query,
+                  "requested_fields": main._requested_snapshot_fields(query),
+                  "followup_fields": main._implicit_followup_fields(query),
+                  "unsupported": main._unsupported_catalog_attribute_requested(query),
+                  "product_query": main._fact_product_query(query),
+              })
+          PY
       - name: Pytest without real provider calls
         env:
           CATALOG_REPOSITORY: demo
@@ -46,5 +62,27 @@ jobs:
           AZURE_SPEECH_KEY: ''
           ELEVENLABS_API_KEY: ''
         run: uv run pytest -q
-      - run: uv run ruff check backend tests evaluation
-      - run: uv run python -m compileall -q backend tests evaluation
+      - if: always()
+        run: uv run ruff check backend tests evaluation
+      - if: always()
+        run: uv run python -m compileall -q backend tests evaluation
+
+  base-snapshot-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ab53fe118e4524a5bc925704c94126f9f631c956
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.13'
+      - run: uv sync --frozen
+      - name: Test two snapshot follow-ups on untouched base revision
+        env:
+          CATALOG_REPOSITORY: demo
+          GROQ_API_KEY: ''
+          AZURE_SPEECH_KEY: ''
+          ELEVENLABS_API_KEY: ''
+        run: |
+          uv run pytest -q tests/test_snapshot_repository.py -k 'test_snapshot_api_keeps_price_freshness_shelf_and_stock_claims_grounded or test_snapshot_unavailable_attribute_keeps_selected_product_for_followups'
