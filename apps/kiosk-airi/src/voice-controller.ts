@@ -272,6 +272,7 @@ export class VoiceConversationController {
   private pcmBuffer: PcmCaptureBuffer | null = null
   private pcmWorkletNode: PcmWorkletNodeLike | null = null
   private neuralVad: NeuralVadSession | null = null
+  private neuralUnavailable = false
   private monitorTimer: number | null = null
   private segmentRecorder: MediaRecorderLike | null = null
   private segmentChunks: Blob[] = []
@@ -310,7 +311,7 @@ export class VoiceConversationController {
     if (this.segmentRecorder) return
     this.active = true
     const token = ++this.generation
-    if (this.options.preferNeuralVad) {
+    if (this.options.preferNeuralVad && !this.neuralUnavailable) {
       await this.startNeuralRecorder(token)
       return
     }
@@ -468,6 +469,7 @@ export class VoiceConversationController {
       return
     }
     let stream: MediaStreamLike | null = null
+    let speechStartedAt: number | null = null
     try {
       this.recorderStartTimer = this.schedule(() => {
         this.recorderStartTimer = null
@@ -488,21 +490,41 @@ export class VoiceConversationController {
       const callbacks: NeuralVadCallbacks = {
         getStream: async () => stream as unknown as MediaStream,
         onSpeechStart: () => {
-          if (this.active && token === this.generation) this.setState('recorder', 'recording')
+          if (this.active && token === this.generation) {
+            speechStartedAt = this.dependencies.now?.() ?? Date.now()
+            this.setState('recorder', 'recording')
+          }
         },
         onVADMisfire: () => {
-          if (this.active && token === this.generation) this.setState('recorder', 'listening')
+          if (this.active && token === this.generation) {
+            speechStartedAt = null
+            this.setState('recorder', 'listening')
+          }
         },
         onFrameProcessed: (_probabilities, frame) => {
           if (!this.active || token !== this.generation || !frame.length) return
+          const now = this.dependencies.now?.() ?? Date.now()
+          if (speechStartedAt !== null && now - speechStartedAt >= MAX_SEGMENT_DURATION_MS) {
+            this.active = false
+            this.releaseAudioResources()
+            this.emitError('runtime', 'Câu nói dài hơn 12 giây. Bạn chia yêu cầu thành câu ngắn hơn nhé.')
+            return
+          }
           let sum = 0
           for (const sample of frame) sum += sample * sample
           this.options.onLevel?.(Math.min(1, Math.sqrt(sum / frame.length) / 0.15))
         },
         onSpeechEnd: (audio) => {
           if (!this.active || token !== this.generation) return
+          speechStartedAt = null
           if (!audio.length || audio.length < 16_000 * 0.2) {
             this.setState('recorder', 'listening')
+            return
+          }
+          if (audio.length > 16_000 * MAX_SEGMENT_DURATION_MS / 1000) {
+            this.active = false
+            this.releaseAudioResources()
+            this.emitError('runtime', 'Câu nói dài hơn 12 giây. Bạn chia yêu cầu thành câu ngắn hơn nhé.')
             return
           }
           const capture = new PcmCaptureBuffer(16_000, 0)
@@ -536,6 +558,12 @@ export class VoiceConversationController {
       this.clearRecorderStart()
       if (!this.active || token !== this.generation) return
       this.releaseAudioResources()
+      const name = (error as { name?: string })?.name
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        this.emitError('permission', 'Microphone permission is required for voice conversation.', error)
+        return
+      }
+      this.neuralUnavailable = true
       // A model download, WASM or microphone capability error is not
       // allowed to make an otherwise working kiosk lose its voice input.
       await this.startRecorder(token, error)
