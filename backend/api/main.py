@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -8187,14 +8188,21 @@ async def transcribe_audio(
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Audio file is too large")
     try:
-        transcription = await groq.transcribe(
-            file.filename or "voice.webm",
-            content,
-            content_type,
-            language=language,
+        # One bounded deadline covers primary + fallback Whisper attempts.
+        # Without a shared budget each slow fallback can outlive the browser.
+        transcription = await asyncio.wait_for(
+            groq.transcribe(
+                file.filename or "voice.webm",
+                content,
+                content_type,
+                language=language,
+            ),
+            timeout=max(0.1, settings.groq_stt_total_timeout_seconds),
         )
         text = str(transcription)
         transcription_model = getattr(transcription, "model", settings.groq_stt_model)
+    except TimeoutError as exc:
+        raise HTTPException(status_code=504, detail="Speech recognition timed out") from exc
     except GroqConfigurationError as exc:
         raise HTTPException(status_code=503, detail="Speech recognition is not configured") from exc
     except GroqProviderError as exc:
