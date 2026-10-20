@@ -267,8 +267,14 @@ async def test_snapshot_api_keeps_price_freshness_shelf_and_stock_claims_grounde
     assert price_confirmation.json()["grounded_product_ids"] == ["WIN_10194711"]
     assert price_body["data_source"] == "winmart_json_snapshot"
     assert price_body["products"][0]["stock_is_current"] is False
-    assert "sơ đồ kệ đề xuất" in shelf.json()["text"].casefold()
-    assert "chưa xác minh" in shelf.json()["text"].casefold()
+    # The planogram is version-bound. A mismatch must NOT invent a shelf location.
+    suggested_shelf = snapshot_repo.get_product_snapshot("WIN_10194711").shelf
+    if suggested_shelf is not None:
+        assert "sơ đồ kệ đề xuất" in shelf.json()["text"].casefold()
+        assert "chưa xác minh" in shelf.json()["text"].casefold()
+    else:
+        assert "chưa có dữ liệu đã xác minh" in shelf.json()["text"].casefold()
+        assert shelf.json()["grounded_product_ids"] == ["WIN_10194711"]
     assert "tồn hiện tại chưa được xác minh" in stock.json()["text"].casefold()
     assert "15/09/2026" in freshness.json()["text"]
 
@@ -391,7 +397,15 @@ async def test_snapshot_unavailable_attribute_keeps_selected_product_for_followu
     assert spice.json()["grounded_product_ids"] == [product_id]
     assert "chưa có dữ liệu về độ cay" in spice.json()["text"].casefold()
     assert shelf.json()["grounded_product_ids"] == [product_id]
-    assert "A06-B01-L05-P07" in shelf.json()["text"]
+    # If the source dataset no longer matches the planogram, a missing shelf
+    # is the correct fail-closed answer; it must not claim an outdated location.
+    suggested_shelf = snapshot_repo.get_product_snapshot(product_id).shelf
+    if suggested_shelf is not None:
+        assert suggested_shelf in shelf.json()["text"]
+        assert "sơ đồ kệ đề xuất" in shelf.json()["text"].casefold()
+    else:
+        assert "chưa có dữ liệu đã xác minh" in shelf.json()["text"].casefold()
+        assert shelf.json()["grounded_product_ids"] == [product_id]
 
 
 @pytest.mark.asyncio

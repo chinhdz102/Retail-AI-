@@ -514,7 +514,7 @@ function onKeydown(event: KeyboardEvent) {
           class="mic-button"
           :class="{ recording: isRecording }"
           :aria-label="isVoiceActive || isHandsFree ? copy.voiceStop : copy.micStart"
-          :disabled="status === 'transcribing' || status === 'thinking'"
+          :disabled="!isHandsFree && (status === 'transcribing' || status === 'thinking')"
           @click="emit('toggle-recording')"
         >
           <Stop v-if="isRecording || isVoiceActive" :size="21" weight="fill" aria-hidden="true" />

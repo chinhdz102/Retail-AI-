@@ -1,3 +1,7 @@
+import { SpeechEnvelopeGate } from './voice-speech-gate'
+import { PcmCaptureBuffer } from './voice-pcm'
+import { createLocalNeuralVad, type NeuralVadCallbacks, type NeuralVadSession } from './voice-neural'
+
 export type VoiceMode = 'idle' | 'recognition' | 'recorder'
 export type VoicePhase = 'idle' | 'listening' | 'recording'
 export type VoicePermission = 'unknown' | 'granted' | 'denied'
@@ -80,6 +84,7 @@ export interface MediaRecorderDataEventLike {
 
 export interface MediaRecorderLike {
   state: 'inactive' | 'recording' | 'paused'
+  mimeType?: string
   ondataavailable: ((event: MediaRecorderDataEventLike) => void) | null
   onstop: (() => void) | null
   onerror: ((event: { error?: string }) => void) | null
@@ -98,12 +103,21 @@ export interface AudioAnalyserLike {
 }
 
 export interface AudioMediaStreamSourceLike {
-  connect: (node: AudioAnalyserLike) => void
+  connect: (node: AudioAnalyserLike | PcmWorkletNodeLike) => void
   disconnect?: () => void
+}
+
+export interface PcmWorkletNodeLike {
+  port: { onmessage: ((event: { data: Float32Array }) => void) | null }
+  connect: (destination: unknown) => void
+  disconnect: () => void
 }
 
 export interface AudioContextLike {
   state?: string
+  sampleRate?: number
+  destination?: unknown
+  audioWorklet?: { addModule: (url: string) => Promise<void> }
   resume?: () => Promise<void> | void
   createMediaStreamSource: (stream: MediaStreamLike) => AudioMediaStreamSourceLike
   createAnalyser: () => AudioAnalyserLike
@@ -116,6 +130,8 @@ export interface VoiceControllerDependencies {
   getUserMedia?: (constraints: VoiceMediaConstraints) => Promise<MediaStreamLike>
   MediaRecorder?: MediaRecorderConstructor | null
   createAudioContext?: () => AudioContextLike
+  createPcmWorkletNode?: (context: AudioContextLike) => PcmWorkletNodeLike
+  createNeuralVad?: (callbacks: NeuralVadCallbacks) => Promise<NeuralVadSession>
   setTimeout?: (handler: () => void, timeout: number) => number
   clearTimeout?: (timer: number) => void
   now?: () => number
@@ -125,12 +141,46 @@ export interface VoiceConversationOptions extends VoiceControllerDependencies {
   locale: string
   deviceId?: string
   preferRecorder?: boolean
+  /** Conservative guard against constant noise before uploading speech. */
+  validateSpeechEnvelope?: boolean
+  /** Browser AudioWorklet PCM capture with 350ms pre-roll; falls back to MediaRecorder. */
+  preferPcmWorklet?: boolean
+  /** Prefer local Silero VAD before the RMS fallback (opt-in per deployment). */
+  preferNeuralVad?: boolean
   onState: (state: VoiceState) => void
   onTranscript: (text: string) => void
   onAudio: (audio: Blob) => void
   onLevel?: (level: number) => void
   onInputDevice?: (label: string) => void
   onError: (error: VoiceControllerError) => void
+}
+
+/** MediaRecorder-compatible adapter to reuse the existing segment/state logic. */
+class PcmRecorderAdapter implements MediaRecorderLike {
+  state: 'inactive' | 'recording' = 'inactive'
+  readonly mimeType = 'audio/wav'
+  ondataavailable: ((event: MediaRecorderDataEventLike) => void) | null = null
+  onstop: (() => void) | null = null
+  onerror: ((event: { error?: string }) => void) | null = null
+
+  private readonly buffer: PcmCaptureBuffer
+
+  constructor(buffer: PcmCaptureBuffer) {
+    this.buffer = buffer
+  }
+
+  start(): void {
+    this.buffer.start()
+    this.state = 'recording'
+  }
+
+  stop(): void {
+    if (this.state === 'inactive') return
+    this.state = 'inactive'
+    const data = this.buffer.finish()
+    this.ondataavailable?.({ data })
+    this.onstop?.()
+  }
 }
 
 const MIN_SPEECH_THRESHOLD = 0.012
@@ -219,6 +269,10 @@ export class VoiceConversationController {
   private audioContext: AudioContextLike | null = null
   private audioSource: AudioMediaStreamSourceLike | null = null
   private analyser: AudioAnalyserLike | null = null
+  private pcmBuffer: PcmCaptureBuffer | null = null
+  private pcmWorkletNode: PcmWorkletNodeLike | null = null
+  private neuralVad: NeuralVadSession | null = null
+  private neuralUnavailable = false
   private monitorTimer: number | null = null
   private segmentRecorder: MediaRecorderLike | null = null
   private segmentChunks: Blob[] = []
@@ -226,7 +280,9 @@ export class VoiceConversationController {
   private lastVoiceAt = 0
   private lastPollAt: number | null = null
   private noiseFloor = 0.008
+  private stationaryNoiseSamples = 0
   private voicedDurationMs = 0
+  private readonly envelopeGate = new SpeechEnvelopeGate()
   private forceSegmentEmit = false
   private generation = 0
 
@@ -251,8 +307,14 @@ export class VoiceConversationController {
 
   async start(): Promise<void> {
     if (this.destroyed || this.active) return
+    // A previous segment may still be shutting down; invalidate callbacks first.
+    if (this.segmentRecorder) return
     this.active = true
     const token = ++this.generation
+    if (this.options.preferNeuralVad && !this.neuralUnavailable) {
+      await this.startNeuralRecorder(token)
+      return
+    }
     const Recognition = this.dependencies.getRecognition?.() ?? null
     if (Recognition && !this.options.preferRecorder) {
       try {
@@ -269,7 +331,7 @@ export class VoiceConversationController {
 
   async resume(): Promise<void> {
     if (this.destroyed) return
-    this.active = false
+    if (this.active) return
     await this.start()
   }
 
@@ -394,12 +456,126 @@ export class VoiceConversationController {
     }
   }
 
+  private async startNeuralRecorder(token: number): Promise<void> {
+    // Neural inference requires a secure-context AudioWorklet. Do not attempt
+    // to initialize ONNX in unsupported browsers, jsdom or HTTP deployments.
+    if (!this.dependencies.createNeuralVad && typeof AudioWorkletNode === 'undefined') {
+      await this.startRecorder(token)
+      return
+    }
+    const getUserMedia = this.dependencies.getUserMedia
+    if (!getUserMedia) {
+      await this.startRecorder(token)
+      return
+    }
+    let stream: MediaStreamLike | null = null
+    let speechStartedAt: number | null = null
+    try {
+      this.recorderStartTimer = this.schedule(() => {
+        this.recorderStartTimer = null
+        if (!this.active || token !== this.generation) return
+        this.pause()
+        this.emitError('runtime', 'Không tải được bộ nhận diện giọng nói. Hãy thử lại micro.')
+      }, 12_000)
+      const constraints = typeof MICROPHONE_CONSTRAINTS.audio === 'object'
+        ? MICROPHONE_CONSTRAINTS.audio : {}
+      stream = await getUserMedia(this.deviceId
+        ? { audio: { ...constraints, deviceId: { exact: this.deviceId } } }
+        : MICROPHONE_CONSTRAINTS)
+      if (!this.active || token !== this.generation) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
+      this.stream = stream
+      const callbacks: NeuralVadCallbacks = {
+        getStream: async () => stream as unknown as MediaStream,
+        onSpeechStart: () => {
+          if (this.active && token === this.generation) {
+            speechStartedAt = this.dependencies.now?.() ?? Date.now()
+            this.setState('recorder', 'recording')
+          }
+        },
+        onVADMisfire: () => {
+          if (this.active && token === this.generation) {
+            speechStartedAt = null
+            this.setState('recorder', 'listening')
+          }
+        },
+        onFrameProcessed: (_probabilities, frame) => {
+          if (!this.active || token !== this.generation || !frame.length) return
+          const now = this.dependencies.now?.() ?? Date.now()
+          if (speechStartedAt !== null && now - speechStartedAt >= MAX_SEGMENT_DURATION_MS) {
+            this.active = false
+            this.releaseAudioResources()
+            this.emitError('runtime', 'Câu nói dài hơn 12 giây. Bạn chia yêu cầu thành câu ngắn hơn nhé.')
+            return
+          }
+          let sum = 0
+          for (const sample of frame) sum += sample * sample
+          this.options.onLevel?.(Math.min(1, Math.sqrt(sum / frame.length) / 0.15))
+        },
+        onSpeechEnd: (audio) => {
+          if (!this.active || token !== this.generation) return
+          speechStartedAt = null
+          if (!audio.length || audio.length < 16_000 * 0.2) {
+            this.setState('recorder', 'listening')
+            return
+          }
+          if (audio.length > 16_000 * MAX_SEGMENT_DURATION_MS / 1000) {
+            this.active = false
+            this.releaseAudioResources()
+            this.emitError('runtime', 'Câu nói dài hơn 12 giây. Bạn chia yêu cầu thành câu ngắn hơn nhé.')
+            return
+          }
+          const capture = new PcmCaptureBuffer(16_000, 0)
+          capture.start()
+          capture.append(audio)
+          const wav = capture.finish()
+          this.active = false
+          this.releaseAudioResources()
+          this.lastPollAt = null
+          this.options.onAudio(wav)
+        },
+      }
+      const factory = this.dependencies.createNeuralVad ?? createLocalNeuralVad
+      const vad = await factory(callbacks)
+      if (!this.active || token !== this.generation) {
+        void Promise.resolve(vad.destroy()).catch(() => undefined)
+        this.releaseAudioResources()
+        return
+      }
+      this.neuralVad = vad
+      await vad.start()
+      if (!this.active || token !== this.generation) {
+        this.releaseAudioResources()
+        return
+      }
+      this.clearRecorderStart()
+      this.permission = 'granted'
+      this.options.onInputDevice?.(stream.getTracks()[0]?.label || 'Micro mặc định')
+      this.setState('recorder', 'listening')
+    } catch (error) {
+      this.clearRecorderStart()
+      if (!this.active || token !== this.generation) return
+      this.releaseAudioResources()
+      const name = (error as { name?: string })?.name
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        this.emitError('permission', 'Microphone permission is required for voice conversation.', error)
+        return
+      }
+      this.neuralUnavailable = true
+      // A model download, WASM or microphone capability error is not
+      // allowed to make an otherwise working kiosk lose its voice input.
+      await this.startRecorder(token, error)
+    }
+  }
+
   private async startRecorder(token: number, cause?: unknown): Promise<void> {
     this.clearRecognitionStart()
     const getUserMedia = this.dependencies.getUserMedia
     const Recorder = this.dependencies.MediaRecorder
     const createAudioContext = this.dependencies.createAudioContext
-    if (!getUserMedia || !Recorder || !createAudioContext) {
+    if (!getUserMedia || !createAudioContext || (!Recorder && !this.options.preferPcmWorklet)) {
       this.emitError(
         'unsupported',
         'This browser cannot start microphone recording. Please allow microphone access or use text input.',
@@ -434,7 +610,6 @@ export class VoiceConversationController {
       if (context.state === 'suspended') {
         throw new Error('Bộ xử lý âm thanh chưa chạy. Bạn bấm mic để thử lại nhé.')
       }
-      this.clearRecorderStart()
       const analyser = context.createAnalyser()
       analyser.fftSize = 512
       const source = context.createMediaStreamSource(stream)
@@ -443,9 +618,44 @@ export class VoiceConversationController {
       this.audioContext = context
       this.audioSource = source
       this.analyser = analyser
+      if (this.options.preferPcmWorklet && context.audioWorklet
+        && context.sampleRate && context.destination !== undefined) {
+        // Worklet is progressive enhancement. Older browsers and restricted
+        // contexts continue using MediaRecorder rather than losing voice mode.
+        let node: PcmWorkletNodeLike | null = null
+        try {
+          await context.audioWorklet.addModule(`${import.meta.env.BASE_URL}pcm-capture.worklet.js`)
+          if (!this.active || token !== this.generation) {
+            this.releaseAudioResources()
+            return
+          }
+          node = this.dependencies.createPcmWorkletNode
+            ? this.dependencies.createPcmWorkletNode(context)
+            : new AudioWorkletNode(context as unknown as AudioContext, 'retail-pcm-capture') as unknown as PcmWorkletNodeLike
+          const buffer = new PcmCaptureBuffer(context.sampleRate, 350)
+          node.port.onmessage = (event) => {
+            if (this.active && token === this.generation && event.data instanceof Float32Array) {
+              buffer.append(event.data)
+            }
+          }
+          source.connect(node)
+          node.connect(context.destination)
+          this.pcmBuffer = buffer
+          this.pcmWorkletNode = node
+        } catch {
+          if (node) {
+            node.port.onmessage = null
+            node.disconnect()
+          }
+          if (!Recorder) throw new Error('AudioWorklet recording unavailable')
+        }
+      }
+      if (!Recorder && !this.pcmBuffer) throw new Error('No supported microphone recorder')
+      this.clearRecorderStart()
       this.permission = 'granted'
       this.options.onInputDevice?.(stream.getTracks()[0]?.label || 'Micro mặc định')
       this.noiseFloor = 0.008
+      this.stationaryNoiseSamples = 0
       this.lastPollAt = this.dependencies.now?.() ?? Date.now()
       this.setState('recorder', 'listening')
       this.pollAudio(token)
@@ -488,11 +698,34 @@ export class VoiceConversationController {
         Math.min(MAX_SPEECH_THRESHOLD, this.noiseFloor * 2),
       )
     }
-    const speechDetected = level >= (this.segmentRecorder ? threshold * 0.68 : threshold)
+    // Do not lower the threshold below the quiet-room floor once recording:
+    // otherwise a fan/AGC background can hold the recorder open until 12s.
+    const speechDetected = level >= (this.segmentRecorder
+      ? Math.max(MIN_SPEECH_THRESHOLD, threshold * 0.88)
+      : threshold)
     if (speechDetected) {
+      // Recorder starts on the FIRST possible speech frame. We decide whether
+      // to upload only after accumulating evidence, preserving initial syllables.
       if (!this.segmentRecorder) this.startSegment(now)
+      this.envelopeGate.observe(level, elapsed)
       this.lastVoiceAt = now
       this.voicedDurationMs += elapsed
+      // Flat, sustained noise should not keep the recorder in RECORDING for 12s.
+      // Adapt the floor only after stationary evidence; real fluctuating speech
+      // is intentionally left to normal endpointing and the upload gate.
+      const stationary = this.options.validateSpeechEnvelope
+        ? this.envelopeGate.stationaryNoiseLevel()
+        : null
+      if (stationary !== null) {
+        this.stationaryNoiseSamples += 1
+        if (this.stationaryNoiseSamples >= 3) {
+          this.noiseFloor = Math.max(this.noiseFloor, Math.min(MAX_SPEECH_THRESHOLD / 1.6, stationary * 0.7))
+          this.stopSegment(true)
+          return
+        }
+      } else {
+        this.stationaryNoiseSamples = 0
+      }
     }
     if (this.segmentRecorder && (
       now - this.lastVoiceAt >= SILENCE_DURATION_MS
@@ -509,17 +742,23 @@ export class VoiceConversationController {
 
   private startSegment(now: number): void {
     const Recorder = this.dependencies.MediaRecorder
-    if (!Recorder || !this.stream) return
-    const mimeType = Recorder.isTypeSupported?.('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : 'audio/webm'
+    if (!this.stream || (!Recorder && !this.pcmBuffer)) return
+    const selectedMimeType = Recorder
+      ? ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
+        .find((candidate) => Recorder.isTypeSupported?.(candidate))
+      : undefined
     try {
-      const recorder = new Recorder(this.stream, { mimeType })
+      const recorder: MediaRecorderLike = this.pcmBuffer
+        ? new PcmRecorderAdapter(this.pcmBuffer)
+        : new Recorder!(this.stream, selectedMimeType ? { mimeType: selectedMimeType } : undefined)
+      const mimeType = this.pcmBuffer ? 'audio/wav' : selectedMimeType ?? recorder.mimeType ?? 'audio/webm'
       const token = this.generation
       this.segmentChunks = []
       this.segmentStartedAt = now
       this.lastVoiceAt = now
       this.voicedDurationMs = 0
+      this.envelopeGate.reset()
+      this.stationaryNoiseSamples = 0
       this.forceSegmentEmit = false
       this.segmentRecorder = recorder
       recorder.ondataavailable = (event) => {
@@ -527,10 +766,15 @@ export class VoiceConversationController {
       }
       recorder.onstop = () => {
         const blob = new Blob(this.segmentChunks, { type: mimeType })
-        const hasSpeech = this.forceSegmentEmit || this.voicedDurationMs >= MIN_VOICED_DURATION_MS
+        const hasSpeech = this.forceSegmentEmit || (
+          this.voicedDurationMs >= MIN_VOICED_DURATION_MS
+          && (!this.options.validateSpeechEnvelope || this.envelopeGate.hasSpeechEvidence())
+        )
         this.segmentRecorder = null
         this.segmentChunks = []
         this.voicedDurationMs = 0
+        this.envelopeGate.reset()
+        this.stationaryNoiseSamples = 0
         this.forceSegmentEmit = false
         if (blob.size > 0 && token === this.generation && hasSpeech) {
           this.releaseAudioResources()
@@ -547,6 +791,9 @@ export class VoiceConversationController {
         }
       }
       recorder.onerror = (event) => {
+        // Invalidate callbacks and release the microphone, even if the browser
+        // never follows onerror with onstop.
+        this.stopMonitor(true)
         this.emitError('runtime', event.error || 'Audio recording failed')
       }
       recorder.start(100)
@@ -614,6 +861,16 @@ export class VoiceConversationController {
   }
 
   private releaseAudioResources(): void {
+    const vad = this.neuralVad
+    this.neuralVad = null
+    if (vad) void Promise.resolve(vad.destroy()).catch(() => undefined)
+    if (this.pcmWorkletNode) {
+      this.pcmWorkletNode.port.onmessage = null
+      this.pcmWorkletNode.disconnect()
+      this.pcmWorkletNode = null
+    }
+    this.pcmBuffer?.clear()
+    this.pcmBuffer = null
     this.audioSource?.disconnect?.()
     this.audioSource = null
     this.analyser = null

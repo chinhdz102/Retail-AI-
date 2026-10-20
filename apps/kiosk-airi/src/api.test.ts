@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { respond } from './api'
+import { respond, transcribe } from './api'
 
 function eventStreamResponse(body: string): Response {
   const bytes = new TextEncoder().encode(body)
@@ -18,6 +18,30 @@ function eventStreamResponse(body: string): Response {
 
 describe('agent response stream API', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  it('cancels an in-flight Whisper upload via the caller AbortSignal', async () => {
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const controller = new AbortController()
+    const promise = transcribe('session-1', new Blob(['voice'], { type: 'audio/webm' }), 'vi', controller.signal)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    controller.abort()
+    await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  it('uploads an MP4 filename for Safari-origin audio', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      session_id: 'session-1', text: 'Xin chào', language: 'vi', model: 'test',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await transcribe('session-1', new Blob(['audio data'], { type: 'audio/mp4' }), 'vi')
+    const form = fetchMock.mock.calls[0][1].body as FormData
+    const file = form.get('file') as File
+    expect(file.name).toBe('voice.mp4')
+    expect(file.type).toBe('audio/mp4')
+  })
 
   it('decodes incremental UTF-8 SSE events and assembles the validated response', async () => {
     const fetchMock = vi.fn().mockResolvedValue(eventStreamResponse([
