@@ -26,7 +26,7 @@ class DelayedRecognition extends FakeRecognition {
 }
 
 class FakeRecorder implements MediaRecorderLike {
-  static isTypeSupported = vi.fn(() => true)
+  static isTypeSupported = vi.fn((_candidate: string) => true)
   static lastTimeslice: number | undefined
   state: 'inactive' | 'recording' = 'inactive'
   ondataavailable: ((event: { data: Blob }) => void) | null = null
