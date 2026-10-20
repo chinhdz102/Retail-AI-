@@ -1,5 +1,6 @@
 import { SpeechEnvelopeGate } from './voice-speech-gate'
 import { PcmCaptureBuffer } from './voice-pcm'
+import { createLocalNeuralVad, type NeuralVadCallbacks, type NeuralVadSession } from './voice-neural'
 
 export type VoiceMode = 'idle' | 'recognition' | 'recorder'
 export type VoicePhase = 'idle' | 'listening' | 'recording'
@@ -130,6 +131,7 @@ export interface VoiceControllerDependencies {
   MediaRecorder?: MediaRecorderConstructor | null
   createAudioContext?: () => AudioContextLike
   createPcmWorkletNode?: (context: AudioContextLike) => PcmWorkletNodeLike
+  createNeuralVad?: (callbacks: NeuralVadCallbacks) => Promise<NeuralVadSession>
   setTimeout?: (handler: () => void, timeout: number) => number
   clearTimeout?: (timer: number) => void
   now?: () => number
@@ -143,6 +145,8 @@ export interface VoiceConversationOptions extends VoiceControllerDependencies {
   validateSpeechEnvelope?: boolean
   /** Browser AudioWorklet PCM capture with 350ms pre-roll; falls back to MediaRecorder. */
   preferPcmWorklet?: boolean
+  /** Prefer local Silero VAD before the RMS fallback (opt-in per deployment). */
+  preferNeuralVad?: boolean
   onState: (state: VoiceState) => void
   onTranscript: (text: string) => void
   onAudio: (audio: Blob) => void
@@ -267,6 +271,7 @@ export class VoiceConversationController {
   private analyser: AudioAnalyserLike | null = null
   private pcmBuffer: PcmCaptureBuffer | null = null
   private pcmWorkletNode: PcmWorkletNodeLike | null = null
+  private neuralVad: NeuralVadSession | null = null
   private monitorTimer: number | null = null
   private segmentRecorder: MediaRecorderLike | null = null
   private segmentChunks: Blob[] = []
@@ -305,6 +310,10 @@ export class VoiceConversationController {
     if (this.segmentRecorder) return
     this.active = true
     const token = ++this.generation
+    if (this.options.preferNeuralVad) {
+      await this.startNeuralRecorder(token)
+      return
+    }
     const Recognition = this.dependencies.getRecognition?.() ?? null
     if (Recognition && !this.options.preferRecorder) {
       try {
@@ -443,6 +452,87 @@ export class VoiceConversationController {
       await this.startRecorder(token)
     } catch (error) {
       this.emitError('permission', 'Microphone permission is required for voice conversation.', error)
+    }
+  }
+
+  private async startNeuralRecorder(token: number): Promise<void> {
+    const getUserMedia = this.dependencies.getUserMedia
+    if (!getUserMedia) {
+      await this.startRecorder(token)
+      return
+    }
+    let stream: MediaStreamLike | null = null
+    try {
+      this.recorderStartTimer = this.schedule(() => {
+        this.recorderStartTimer = null
+        if (!this.active || token !== this.generation) return
+        this.pause()
+        this.emitError('runtime', 'Không tải được bộ nhận diện giọng nói. Hãy thử lại micro.')
+      }, 12_000)
+      const constraints = typeof MICROPHONE_CONSTRAINTS.audio === 'object'
+        ? MICROPHONE_CONSTRAINTS.audio : {}
+      stream = await getUserMedia(this.deviceId
+        ? { audio: { ...constraints, deviceId: { exact: this.deviceId } } }
+        : MICROPHONE_CONSTRAINTS)
+      if (!this.active || token !== this.generation) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
+      this.stream = stream
+      const callbacks: NeuralVadCallbacks = {
+        getStream: async () => stream as unknown as MediaStream,
+        onSpeechStart: () => {
+          if (this.active && token === this.generation) this.setState('recorder', 'recording')
+        },
+        onVADMisfire: () => {
+          if (this.active && token === this.generation) this.setState('recorder', 'listening')
+        },
+        onFrameProcessed: (_probabilities, frame) => {
+          if (!this.active || token !== this.generation || !frame.length) return
+          let sum = 0
+          for (const sample of frame) sum += sample * sample
+          this.options.onLevel?.(Math.min(1, Math.sqrt(sum / frame.length) / 0.15))
+        },
+        onSpeechEnd: (audio) => {
+          if (!this.active || token !== this.generation) return
+          if (!audio.length || audio.length < 16_000 * 0.2) {
+            this.setState('recorder', 'listening')
+            return
+          }
+          const capture = new PcmCaptureBuffer(16_000, 0)
+          capture.start()
+          capture.append(audio)
+          const wav = capture.finish()
+          this.active = false
+          this.releaseAudioResources()
+          this.lastPollAt = null
+          this.options.onAudio(wav)
+        },
+      }
+      const factory = this.dependencies.createNeuralVad ?? createLocalNeuralVad
+      const vad = await factory(callbacks)
+      if (!this.active || token !== this.generation) {
+        void Promise.resolve(vad.destroy()).catch(() => undefined)
+        this.releaseAudioResources()
+        return
+      }
+      this.neuralVad = vad
+      await vad.start()
+      if (!this.active || token !== this.generation) {
+        this.releaseAudioResources()
+        return
+      }
+      this.clearRecorderStart()
+      this.permission = 'granted'
+      this.options.onInputDevice?.(stream.getTracks()[0]?.label || 'Micro mặc định')
+      this.setState('recorder', 'listening')
+    } catch (error) {
+      this.clearRecorderStart()
+      if (!this.active || token !== this.generation) return
+      this.releaseAudioResources()
+      // A model download, WASM or microphone capability error is not
+      // allowed to make an otherwise working kiosk lose its voice input.
+      await this.startRecorder(token, error)
     }
   }
 
@@ -737,6 +827,9 @@ export class VoiceConversationController {
   }
 
   private releaseAudioResources(): void {
+    const vad = this.neuralVad
+    this.neuralVad = null
+    if (vad) void Promise.resolve(vad.destroy()).catch(() => undefined)
     if (this.pcmWorkletNode) {
       this.pcmWorkletNode.port.onmessage = null
       this.pcmWorkletNode.disconnect()
