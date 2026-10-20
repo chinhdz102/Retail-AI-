@@ -1022,7 +1022,7 @@ onUnmounted(() => {
           class="vrm-control vrm-mic-control"
           :class="{ active: isVoiceActive, recording: isRecording }"
           :aria-label="voiceButtonLabel"
-          :disabled="status === 'transcribing' || status === 'thinking'"
+          :disabled="!isHandsFree && (status === 'transcribing' || status === 'thinking')"
           @click="toggleRecording"
         >
           <Stop v-if="isVoiceActive" :size="22" weight="fill" aria-hidden="true" />
