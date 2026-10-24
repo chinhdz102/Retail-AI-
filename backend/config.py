@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     groq_model: str = "qwen/qwen3.8-27b"
     groq_fallback_model: str = "openai/gpt-oss-120b"
     groq_fallback_model_2: str = "openai/gpt-oss-20b"
-    groq_stt_model: str = "whisper-large-v3-turbo"
-    groq_stt_fallback_model: str = "whisper-large-v3"
+    groq_stt_model: str = "whisper-large-v3"
+    groq_stt_fallback_model: str = "whisper-large-v3-turbo"
     groq_timeout_seconds: float = 45.0
 
     azure_speech_key: SecretStr = SecretStr("")

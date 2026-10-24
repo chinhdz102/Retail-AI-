@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { listMicrophoneOptions, preferredMicrophoneId } from './microphone-devices'
+import { isLikelyVirtualMicrophone, listMicrophoneOptions, preferredMicrophoneId } from './microphone-devices'
 
 describe('microphone device selection', () => {
   const devices = [
@@ -18,14 +18,36 @@ describe('microphone device selection', () => {
     ])
   })
 
-  it('defaults to the working AMD physical input and keeps an explicit selection', () => {
-    const options = listMicrophoneOptions(devices)
-    expect(preferredMicrophoneId(options)).toBe('amd-direct')
-    expect(preferredMicrophoneId(options, 'desk-in', 'amd-direct')).toBe('desk-in')
+  it('identifies common virtual audio inputs without flagging the AMD microphone', () => {
+    expect(isLikelyVirtualMicrophone('Microphone (DeskIn(R) Virtual Audio Device)')).toBe(true)
+    expect(isLikelyVirtualMicrophone('Microphone Array (AMD Audio Device)')).toBe(false)
   })
 
-  it('falls back to the first physical input if the preferred mic is absent', () => {
+  it('defaults to the working AMD physical input instead of a previously saved virtual mic', () => {
+    const options = listMicrophoneOptions(devices)
+    expect(preferredMicrophoneId(options)).toBe('amd-direct')
+    expect(preferredMicrophoneId(options, '', 'desk-in')).toBe('amd-direct')
+    expect(preferredMicrophoneId(options, 'desk-in', 'desk-in')).toBe('amd-direct')
+  })
+
+  it('keeps a mic explicitly selected by the user', () => {
+    const options = listMicrophoneOptions(devices)
+    expect(preferredMicrophoneId(options, 'desk-in', 'desk-in', true)).toBe('desk-in')
+    expect(preferredMicrophoneId(options, '', 'desk-in', true)).toBe('')
+  })
+
+  it('uses the OS default instead of auto-selecting a virtual input', () => {
     const options = listMicrophoneOptions(devices.slice(0, 2))
-    expect(preferredMicrophoneId(options)).toBe('desk-in')
+    expect(preferredMicrophoneId(options)).toBe('')
+    expect(preferredMicrophoneId(options, '', 'desk-in')).toBe('')
+    expect(preferredMicrophoneId(options, 'desk-in')).toBe('')
+  })
+
+  it('falls back to the first non-virtual input when the preferred mic is absent', () => {
+    const options = listMicrophoneOptions([
+      { deviceId: 'virtual', groupId: 'virtual', kind: 'audioinput', label: 'Virtual Audio Device' },
+      { deviceId: 'usb', groupId: 'usb', kind: 'audioinput', label: 'USB Microphone' },
+    ])
+    expect(preferredMicrophoneId(options)).toBe('usb')
   })
 })

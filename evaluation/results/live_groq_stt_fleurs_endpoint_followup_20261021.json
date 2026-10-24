@@ -1,0 +1,90 @@
+{
+  "kind": "live_groq_stt_fleurs_endpoint_followup",
+  "timestamp_utc": "2026-10-21T10:07:03.978894+00:00",
+  "dataset": "google/fleurs",
+  "config": "vi_vn",
+  "split": "test",
+  "source": "https://huggingface.co/datasets/google/fleurs/resolve/main/data/vi_vn/audio/test.tar.gz",
+  "license": "CC-BY-4.0",
+  "endpoint": "POST http://127.0.0.1:8001/audio/transcribe",
+  "limitations": [
+    "Clean read speech, not spontaneous retail conversation or microphone-room acoustics.",
+    "Three clips are a smoke sample, not an accuracy estimate."
+  ],
+  "results": [
+    {
+      "filename": "10057024225045006889.wav",
+      "duration_seconds": 11.34,
+      "reference": "Văn hóa và bộ lạc cổ xưa đã bắt đầu giữ những con vật này để dễ lấy sữa, tóc, thịt, và da.",
+      "transcription": "Văn hóa và bộ lạc cổ xưa đã bắt đầu giữ những con vật này để dễ lấy sữa, tóc, thịt và da.",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 1954,
+      "quality": {
+        "no_speech_prob": 8.2194805e-05,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.05330298,
+        "compression_ratio": 1.0079365,
+        "high_compression_duration_ratio": 0.0
+      },
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 23,
+      "character_errors": 0,
+      "reference_character_count": 64
+    },
+    {
+      "filename": "1015279164912843543.wav",
+      "duration_seconds": 14.88,
+      "reference": "Châu Âu là lục địa tương đối nhỏ nhưng có nhiều quốc gia độc lập. Thông thường, việc đi qua nhiều quốc gia đồng nghĩa với việc phải xin thị thực và xét hộ chiếu nhiều lần.",
+      "transcription": "Châu Âu là lục địa tương đối nhỏ nhưng có nhiều quốc gia độc lập. Thông thường, việc đi qua nhiều quốc gia đồng nghĩa với việc phải xin thị thực và xét hộ chiếu nhiều lần.",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 2806,
+      "quality": {
+        "no_speech_prob": 2.6106834e-05,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.05070438199999999,
+        "compression_ratio": 1.2944444000000002,
+        "high_compression_duration_ratio": 0.0
+      },
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 37,
+      "character_errors": 0,
+      "reference_character_count": 132
+    },
+    {
+      "filename": "10169179696365895477.wav",
+      "duration_seconds": 22.56,
+      "reference": "Thông báo thông thường trong khu Metro chỉ được phát bằng tiếng Catalunya tuy nhiên với những sự cố bất ngờ thì thông báo sẽ được thực hiên qua hệ thống tự động bằng nhiều thứ tiếng gồm tiếng Tây Ban Nha, tiếng Anh, tiếng Pháp, tiếng Ả rập và tiếng Nhật.",
+      "transcription": "Thông báo thông thường trong khu Metro chỉ được phát bằng tiếng Catalonia. Tuy nhiên, với những sự cố bất ngờ thì thông báo sẽ được thực hiện qua hệ thống tự động ở nhiều thứ tiếng gồm tiếng Tây Ban Nha, tiếng Anh, tiếng Pháp, tiếng Ả Rập và tiếng Nhật.",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 2093,
+      "quality": {
+        "no_speech_prob": 4.506111000000001e-05,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.09104311,
+        "compression_ratio": 1.4255319,
+        "high_compression_duration_ratio": 0.0
+      },
+      "wer": 0.057692307692307696,
+      "cer": 0.035175879396984924,
+      "word_errors": 3,
+      "reference_word_count": 52,
+      "character_errors": 7,
+      "reference_character_count": 199
+    }
+  ],
+  "summary": {
+    "clips": 3,
+    "accepted": 3,
+    "exact_matches": 2,
+    "mean_wer": 0.0192,
+    "mean_cer": 0.0117,
+    "median_latency_ms": 2093
+  }
+}

@@ -1,0 +1,283 @@
+{
+  "kind": "live_groq_stt_fleurs_current_endpoint_postfix",
+  "timestamp_utc": "2026-10-21T11:23:09.298137+00:00",
+  "endpoint": "POST http://127.0.0.1:8002/audio/transcribe",
+  "dataset": "google/fleurs",
+  "config": "vi_vn",
+  "split": "test",
+  "source": "https://huggingface.co/datasets/google/fleurs/resolve/main/data/vi_vn/audio/test.tar.gz",
+  "license": "CC-BY-4.0",
+  "sample_count": 12,
+  "limitations": [
+    "12 clean read-speech clips; not natural conversation, dialect stress test, or microphone capture."
+  ],
+  "results": [
+    {
+      "filename": "10057024225045006889.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 3354,
+      "text": "Văn hóa và bộ lạc cổ xưa đã bắt đầu giữ những con vật này để dễ lấy sữa, tóc, thịt và da.",
+      "quality": {
+        "no_speech_prob": 8.2194805e-05,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.05330298,
+        "compression_ratio": 1.0079365,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "33318a8f837de6c2953248729f658292c31520b57aa36ee0fe55c234d55c4b54",
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 23,
+      "character_errors": 0,
+      "reference_character_count": 64
+    },
+    {
+      "filename": "10072308967409148015.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 608,
+      "text": "Đối với Spring Book, trận này đã giúp đội tuyển kết thúc chui thua 5 trận liền.",
+      "quality": {
+        "no_speech_prob": 0.004299164,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.18576701,
+        "compression_ratio": 0.9716981,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "3211626fb751053176762108ee6825501ddd4400aff42ce9633f83c71b07d1de",
+      "wer": 0.1875,
+      "cer": 0.04838709677419355,
+      "word_errors": 3,
+      "reference_word_count": 16,
+      "character_errors": 3,
+      "reference_character_count": 62
+    },
+    {
+      "filename": "10078277432407694754.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 685,
+      "text": "Nó cũng tấn công mọi thứ trong nước, ngay cả khủng long khổng lồ như tibet cũng không phải là đối thủ với nó.",
+      "quality": {
+        "no_speech_prob": 4.2021275e-05,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.11814274,
+        "compression_ratio": 1.0909091,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "43febdf828f97a7efc3a45180a99d76747d3c45bf9143fbf8bf62d7c0adedc26",
+      "wer": 0.08,
+      "cer": 0.03614457831325301,
+      "word_errors": 2,
+      "reference_word_count": 25,
+      "character_errors": 3,
+      "reference_character_count": 83
+    },
+    {
+      "filename": "10093159547857080890.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 617,
+      "text": "Số người có mặt quá lớn nên việc mọi người tới được nơi tổ chức lễ tang tại quảng trường Thánh Peter là không thể.",
+      "quality": {
+        "no_speech_prob": 0.00023436546,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.06686205,
+        "compression_ratio": 1.1197183,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "cca46c77040d86068a55feef4ef95b21289afba255b4a8db8b00d878545cf33f",
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 25,
+      "character_errors": 0,
+      "reference_character_count": 89
+    },
+    {
+      "filename": "1015279164912843543.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 700,
+      "text": "Châu Âu là lục địa tương đối nhỏ nhưng có nhiều quốc gia độc lập. Thông thường, việc đi qua nhiều quốc gia đồng nghĩa với việc phải xin thị thực và xét hộ chiếu nhiều lần.",
+      "quality": {
+        "no_speech_prob": 2.6106834e-05,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.05070438199999999,
+        "compression_ratio": 1.2944444000000002,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "37e2cb772dbdc7c4cc70aece3e508a3c56ff2cf7519f8e28d2b7e310d77fdeda",
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 37,
+      "character_errors": 0,
+      "reference_character_count": 132
+    },
+    {
+      "filename": "1015563747297542961.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 659,
+      "text": "Mỗi danh từ kế bên từ SI dành cho bạn luôn bắt đầu bằng một chữ viết hoa ngay cả khi ở dưới câu.",
+      "quality": {
+        "no_speech_prob": 0.00022029877,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.12901038,
+        "compression_ratio": 1.0,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "8ac66d54510d2481167b649134d4674708e9fc2b6aa3890287a98f5fa83db313",
+      "wer": 0.125,
+      "cer": 0.08450704225352113,
+      "word_errors": 3,
+      "reference_word_count": 24,
+      "character_errors": 6,
+      "reference_character_count": 71
+    },
+    {
+      "filename": "10169179696365895477.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 840,
+      "text": "Thông báo thông thường trong khu Metro chỉ được phát bằng tiếng Catalonia. Tuy nhiên, với những sự cố bất ngờ thì thông báo sẽ được thực hiện qua hệ thống tự động ở nhiều thứ tiếng gồm tiếng Tây Ban Nha, tiếng Anh, tiếng Pháp, tiếng Ả Rập và tiếng Nhật.",
+      "quality": {
+        "no_speech_prob": 4.506111000000001e-05,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.09104311,
+        "compression_ratio": 1.4255319,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "985195913a77e0889b14e85dd5628f12261d29d879ee272dd572da1a22855687",
+      "wer": 0.057692307692307696,
+      "cer": 0.035175879396984924,
+      "word_errors": 3,
+      "reference_word_count": 52,
+      "character_errors": 7,
+      "reference_character_count": 199
+    },
+    {
+      "filename": "10185666587391780903.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 597,
+      "text": "Các nguyên tố như canxi và kali được coi là kim loại. Dĩ nhiên, cũng có các kim loại như vàng và bạc.",
+      "quality": {
+        "no_speech_prob": 0.0010023117,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.08057489,
+        "compression_ratio": 1.1140351,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "c06fd5f367fb476ad23068ff7dda4c5151e028c62f3f5e364fd993503e669d07",
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 23,
+      "character_errors": 0,
+      "reference_character_count": 76
+    },
+    {
+      "filename": "10188670312101823236.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 680,
+      "text": "Học sơ theo dụ gọi gỹ sẽ nhắc tới xung đột biên giới đều Palatine muốn dựa trên đường biên giới trước cuộc chiến tranh Trung Đông 1967.",
+      "quality": {
+        "no_speech_prob": 8.773804e-05,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.246357,
+        "compression_ratio": 1.13125,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "d1dcf34dd0757b8de5f5d891d1b4e1c0306b21372d459d7eac6c186eeb956dde",
+      "wer": 0.21428571428571427,
+      "cer": 0.102803738317757,
+      "word_errors": 6,
+      "reference_word_count": 28,
+      "character_errors": 11,
+      "reference_character_count": 107
+    },
+    {
+      "filename": "1020360004532126324.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 776,
+      "text": "Trung Hoa Cô Đại có một cách thức độc đáo để trình bày những niên đại khác nhau mỗi mỗi giai đoạn của Trung Hoa hoặc mỗi một gia tập từng nắm giữ quyền lực tương ứng với một giai đoạn khác nhau.",
+      "quality": {
+        "no_speech_prob": 0.00028014183,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.16989493,
+        "compression_ratio": 1.3957219,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "a7e0d97985f5e25b1ea2ccbbac32e65b1615ac330d5eaad61d4b0523495e0d2b",
+      "wer": 0.11627906976744186,
+      "cer": 0.08391608391608392,
+      "word_errors": 5,
+      "reference_word_count": 43,
+      "character_errors": 12,
+      "reference_character_count": 143
+    },
+    {
+      "filename": "10205789067921017036.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 697,
+      "text": "LO là công cụ kích thích sự hợp tác và khuyến khích học sinh mở gọn việc học tập ra ngoài khuôn khổ lớp học truyền thống.",
+      "quality": {
+        "no_speech_prob": 0.00016129017,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.10811711999999998,
+        "compression_ratio": 1.1338028,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "f1fbdb4228de18fd1091283ad2249be453e2a0e41a076871504721652cf8d73f",
+      "wer": 0.07407407407407407,
+      "cer": 0.05154639175257732,
+      "word_errors": 2,
+      "reference_word_count": 27,
+      "character_errors": 5,
+      "reference_character_count": 97
+    },
+    {
+      "filename": "10241630228065064831.wav",
+      "status": "accepted",
+      "model": "whisper-large-v3",
+      "latency_ms": 622,
+      "text": "Cụ thể, người ta cho rằng một người có thể phát hiện ai đó đang nói dối bằng việc dạy nghĩa chính xác từng biểu hiện rất nhỏ.",
+      "quality": {
+        "no_speech_prob": 4.2676926e-05,
+        "no_speech_duration_ratio": 0.0,
+        "avg_logprob": -0.07216357,
+        "compression_ratio": 1.1632653,
+        "high_compression_duration_ratio": 0.0
+      },
+      "audio_sha256": "440adfbc6123029252dd3d875af0ea39bdebe897544e3b11fd4dac3caa711b41",
+      "wer": 0.03571428571428571,
+      "cer": 0.042105263157894736,
+      "word_errors": 1,
+      "reference_word_count": 28,
+      "character_errors": 4,
+      "reference_character_count": 95
+    }
+  ],
+  "complete": true,
+  "summary": {
+    "attempt_count": 12,
+    "accepted": 12,
+    "rejected": 0,
+    "errors": 0,
+    "exact_matches": 4,
+    "aggregate_wer": 0.07122507122507123,
+    "aggregate_cer": 0.04187192118226601,
+    "median_latency_ms": 682,
+    "p95_latency_ms": 3354,
+    "models_used": [
+      "whisper-large-v3"
+    ]
+  }
+}

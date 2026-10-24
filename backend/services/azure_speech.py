@@ -52,8 +52,38 @@ class AzureSpeechService:
             self.client = httpx.AsyncClient(
                 base_url=f"https://{region}.tts.speech.microsoft.com",
                 timeout=self.settings.azure_speech_timeout_seconds,
+                limits=httpx.Limits(
+                    max_connections=20,
+                    max_keepalive_connections=10,
+                    keepalive_expiry=60.0,
+                ),
             )
         return self.client, key
+
+    async def preconnect(self, language: str = "vi") -> None:
+        """Warm the reusable Azure connection while the customer is speaking."""
+        voice = self.VOICES.get(language)
+        if voice is None:
+            raise AzureSpeechProviderError("Azure Speech voice is unavailable")
+
+        client, key = self._client_or_raise()
+        locale, _ = voice
+        try:
+            response = await client.get(
+                "/cognitiveservices/voices/list",
+                params={"language": locale},
+                headers={"Ocp-Apim-Subscription-Key": key},
+                timeout=min(self.settings.azure_speech_timeout_seconds, 5.0),
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise AzureSpeechProviderError(
+                f"Azure Speech preconnect failed with HTTP {exc.response.status_code}"
+            ) from exc
+        except AzureSpeechProviderError:
+            raise
+        except Exception as exc:
+            raise AzureSpeechProviderError("Azure Speech preconnect failed") from exc
 
     async def synthesize(self, text: str, language: str = "vi") -> AzureSpeechAudio:
         voice = self.VOICES.get(language)

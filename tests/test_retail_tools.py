@@ -5,7 +5,7 @@ import pytest
 
 from backend.products.catalog import ProductSnapshot, search_products
 from backend.products.repository import DemoProductRepository
-from backend.services.retail_tools import execute_catalog_tool
+from backend.services.retail_tools import CATALOG_TOOL_DEFINITIONS, execute_catalog_tool
 from backend.services.vietnamese_intent import normalize_vietnamese
 
 
@@ -240,6 +240,7 @@ def test_search_tool_returns_candidate_metadata_without_product_facts() -> None:
             "product_id": "COKE_ZERO_330",
             "name": "Coca-Cola Zero 330ml",
             "category": "drink",
+                "subcategory": "drink",
             "brand": None,
             "matched_constraints": ["in_stock"],
         }
@@ -410,9 +411,21 @@ def test_catalog_tool_registry_separates_recommendations_from_lookup() -> None:
         "search_products",
         "recommend_products",
         "get_product_snapshot",
+        "plan_shopping_mission",
         "list_product_promotions",
         "list_new_catalog_products",
     ]
+
+
+def test_shopping_mission_schema_separates_customer_quantity_from_estimate() -> None:
+    tool = next(
+        entry["function"]
+        for entry in CATALOG_TOOL_DEFINITIONS
+        if entry["function"]["name"] == "plan_shopping_mission"
+    )
+    need_properties = tool["parameters"]["properties"]["needs"]["items"]["properties"]
+    assert need_properties["quantity"]["maximum"] == 200
+    assert "quantity_is_explicit" in need_properties
 
 
 def test_expired_product_snapshot_reports_zero_sellable_stock() -> None:

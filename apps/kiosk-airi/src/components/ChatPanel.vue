@@ -101,6 +101,7 @@ const copy = computed(() => {
       sectionLabel: 'Conversation with Sky',
       microphone: 'Input microphone',
       defaultMicrophone: 'Default microphone',
+      activeMicrophone: 'Currently capturing from',
       microphoneAriaLabel: 'Choose an input microphone',
       microphoneLevel: 'Microphone signal level',
       inputLabel: 'Type a question for Sky',
@@ -130,6 +131,7 @@ const copy = computed(() => {
       sectionLabel: '与 Sky 对话',
       microphone: '输入麦克风',
       defaultMicrophone: '默认麦克风',
+      activeMicrophone: '当前正在使用',
       microphoneAriaLabel: '选择输入麦克风',
       microphoneLevel: '麦克风信号强度',
       inputLabel: '输入问题给 Sky',
@@ -158,6 +160,7 @@ const copy = computed(() => {
     sectionLabel: 'Trò chuyện với Sky',
     microphone: 'Micro đầu vào',
     defaultMicrophone: 'Micro mặc định',
+    activeMicrophone: 'Đang thu từ',
     microphoneAriaLabel: 'Chọn micro đầu vào',
     microphoneLevel: 'Mức tín hiệu micro',
     inputLabel: 'Nhập câu hỏi cho Sky',
@@ -339,6 +342,7 @@ function onKeydown(event: KeyboardEvent) {
           <option value="">{{ activeMicrophone || copy.defaultMicrophone }}</option>
           <option v-for="device in microphoneDevices" :key="device.id" :value="device.id">{{ device.label }}</option>
         </select>
+        <small v-if="activeMicrophone" class="active-microphone-label">{{ copy.activeMicrophone }}: {{ activeMicrophone }}</small>
       </label>
     </header>
 
@@ -369,7 +373,42 @@ function onKeydown(event: KeyboardEvent) {
           <span>{{ message.supportTicket.ticket_id }} · {{ message.supportTicket.status }}</span>
           <small>{{ message.supportTicket.demo ? shoppingText.ticketDemo : '' }}</small>
         </div>
-        <div v-if="message.products?.length" class="message-product-list">
+        <section v-if="message.shoppingPlan" class="shopping-plan-card" :aria-label="language === 'en' ? 'Suggested shopping plan' : language === 'zh' ? '购物方案建议' : 'Phương án mua sắm gợi ý'">
+          <article v-for="option in message.shoppingPlan.options" :key="option.option_id" class="shopping-plan-option">
+            <header class="shopping-plan-option-header">
+              <strong>{{ option.label }}</strong>
+              <strong>{{ formatVnd(option.total_vnd) }}</strong>
+            </header>
+            <div v-for="item in option.items" :key="`${option.option_id}-${item.need_id}-${item.product_id}`" class="shopping-plan-item">
+              <div class="shopping-plan-item-heading">
+                <strong>{{ item.need_label }}</strong>
+                <span>{{ item.source === 'EXPLICIT' ? (language === 'en' ? 'Requested' : language === 'zh' ? '已说明' : 'Bạn đã nêu') : (language === 'en' ? 'Optional idea' : language === 'zh' ? '可选建议' : 'Gợi ý thêm') }}</span>
+              </div>
+              <span>{{ item.name }} × {{ item.quantity }} · {{ formatVnd(item.line_total_vnd) }}</span>
+              <small v-if="item.rationale">{{ item.rationale }}</small>
+              <small>{{ item.stock_is_current ? (language === 'en' ? 'Stock checked by the active source' : language === 'zh' ? '已由当前数据源核实库存' : 'Tồn kho đã được nguồn dữ liệu hiện tại kiểm tra') : (language === 'en' ? 'Current stock is not verified' : language === 'zh' ? '当前库存尚未核实' : 'Tồn kho hiện tại chưa được xác minh') }}</small>
+            </div>
+            <p v-if="option.remaining_budget_vnd !== null" class="shopping-plan-remaining">
+              {{ language === 'en' ? 'Remaining budget' : language === 'zh' ? '剩余预算' : 'Còn lại' }}: {{ formatVnd(option.remaining_budget_vnd) }}
+            </p>
+          </article>
+          <p v-if="message.shoppingPlan.missing_required_needs.length" class="shopping-plan-note">
+            {{ language === 'en' ? 'Could not verify' : language === 'zh' ? '未能核实' : 'Chưa xác minh được' }}: {{ message.shoppingPlan.missing_required_needs.join(', ') }}
+          </p>
+          <p v-if="message.shoppingPlan.optional_needs_not_selected.length" class="shopping-plan-note">
+            {{ language === 'en' ? 'Optional needs not included' : language === 'zh' ? '未纳入的可选需求' : 'Chưa đưa vào phương án' }}: {{ message.shoppingPlan.optional_needs_not_selected.join(', ') }}
+          </p>
+          <p v-if="message.shoppingPlan.budget_shortfall_vnd" class="shopping-plan-note">
+            {{ language === 'en' ? 'Minimum budget shortfall' : language === 'zh' ? '最低预算缺口' : 'Ngân sách tối thiểu còn thiếu' }}: {{ formatVnd(message.shoppingPlan.budget_shortfall_vnd) }}
+          </p>
+          <small v-if="!message.shoppingPlan.inventory_verified" class="shopping-plan-provenance">
+            {{ language === 'en' ? 'Prices use the listed catalog snapshot; current store stock is not verified.' : language === 'zh' ? '价格来自目录快照；门店当前库存尚未核实。' : 'Giá lấy từ ảnh chụp catalog; tồn kho thực tế tại cửa hàng chưa được xác minh.' }}
+          </small>
+          <small v-if="!message.shoppingPlan.cart_mutated" class="shopping-plan-provenance">
+            {{ language === 'en' ? 'This is a proposal and has not been added to your cart.' : language === 'zh' ? '这是购物建议，尚未加入购物车。' : 'Đây là phương án tư vấn, chưa được thêm vào giỏ hàng.' }}
+          </small>
+        </section>
+        <div v-if="message.products?.length && !message.shoppingPlan" class="message-product-list">
           <article v-for="product in message.products" :key="product.product_id" class="message-product-card">
             <div class="message-product-copy">
               <strong>{{ product.name }}</strong>

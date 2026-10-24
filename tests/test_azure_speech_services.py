@@ -28,6 +28,11 @@ class FakeAzureSpeechClient:
     def __init__(self, response=None):
         self.response = response or FakeResponse()
         self.calls = []
+        self.get_calls = []
+
+    async def get(self, url, **kwargs):
+        self.get_calls.append((url, kwargs))
+        return self.response
 
     async def post(self, url, **kwargs):
         self.calls.append((url, kwargs))
@@ -67,6 +72,46 @@ async def test_synthesize_uses_configured_region_and_language_voice(
     assert f'xml:lang="{locale}"' in ssml
     assert f'<voice name="{voice}">' in ssml
     assert "Giá &lt; 20.000đ &amp; mới" in ssml
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("language", "locale"),
+    [("vi", "vi-VN"), ("en", "en-US"), ("zh", "zh-CN")],
+)
+async def test_preconnect_uses_the_language_specific_voices_endpoint(
+    language: str, locale: str
+) -> None:
+    client = FakeAzureSpeechClient()
+    service = AzureSpeechService(
+        settings=Settings(azure_speech_key="azure-secret", azure_speech_region="southeastasia"),
+        client=client,
+    )
+
+    await service.preconnect(language)
+
+    assert client.get_calls == [(
+        "/cognitiveservices/voices/list",
+        {
+            "params": {"language": locale},
+            "headers": {"Ocp-Apim-Subscription-Key": "azure-secret"},
+            "timeout": 5.0,
+        },
+    )]
+
+
+@pytest.mark.asyncio
+async def test_preconnect_rejects_invalid_voice_without_network_call() -> None:
+    client = FakeAzureSpeechClient()
+    service = AzureSpeechService(
+        settings=Settings(azure_speech_key="azure-secret", azure_speech_region="southeastasia"),
+        client=client,
+    )
+
+    with pytest.raises(AzureSpeechProviderError, match="voice is unavailable"):
+        await service.preconnect("xx")
+
+    assert client.get_calls == []
 
 
 @pytest.mark.asyncio

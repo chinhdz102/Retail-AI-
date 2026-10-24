@@ -18,6 +18,7 @@ import {
   createSession,
   createSynthesisTicket,
   getCart,
+  prewarmSpeech,
   prepareCheckout,
   respond,
   setCartItemQuantity,
@@ -26,8 +27,9 @@ import {
 } from './api'
 import ChatPanel from './components/ChatPanel.vue'
 import type { CheckoutQuote, SandboxOrder, ShoppingCart } from './types'
+import { isLikelyRepeatedSpeechTranscript } from './transcript-quality'
 const SkyAvatar = defineAsyncComponent(() => import('./components/SkyAvatar.vue'))
-import { listMicrophoneOptions, preferredMicrophoneId } from './microphone-devices'
+import { isLikelyVirtualMicrophone, listMicrophoneOptions, preferredMicrophoneId } from './microphone-devices'
 import type { AssistantStatus, ChatMessage, LanguageCode } from './types'
 import {
   VoiceConversationController,
@@ -67,6 +69,7 @@ let audioPlayback: HTMLAudioElement | null = null
 let audioUnlockPromise: Promise<boolean> | null = null
 let speechRequestId = 0
 let voiceController: VoiceConversationController | null = null
+let keepExplicitMicrophoneChoice = false
 let listeningStartedAt = 0
 let sessionExpiryTimer: ReturnType<typeof setTimeout> | undefined
 let sessionIdleTimeoutMs = 30 * 60 * 1000
@@ -75,6 +78,9 @@ let bootInFlight: { generation: number; promise: Promise<void> } | null = null
 let resetInFlight: Promise<void> | null = null
 let pendingTurn: { text: string; generation: number; id: string } | null = null
 let activeTurnController: AbortController | null = null
+let speechPrewarmSessionId = ''
+let speechPrewarmLastAttemptAt = 0
+let speechPrewarmInFlight = false
 
 const languageSettings: Record<LanguageCode, {
   label: string
@@ -86,6 +92,8 @@ const languageSettings: Record<LanguageCode, {
   thinking: string
   recording: string
   transcribing: string
+  noSpeech: string
+  virtualMicrophone: string
   permission: string
   retry: string
   sessionError: string
@@ -100,6 +108,8 @@ const languageSettings: Record<LanguageCode, {
     thinking: 'Mình đang tìm câu trả lời cho bạn',
     recording: 'Đang ghi âm tiếng Việt',
     transcribing: 'Đang nhận diện tiếng Việt',
+    noSpeech: 'Mình chưa nghe thấy câu nói rõ ràng. Bạn nói lại nhé.',
+    virtualMicrophone: 'Tab đang thu từ micro ảo. Nếu mức tín hiệu không nhảy, hãy chọn Microphone Array (AMD Audio Device) hoặc mở demo trong trình duyệt có micro thật.',
     permission: 'Microphone chưa được cấp quyền. Bạn có thể nhập câu hỏi bằng bàn phím.',
     retry: 'Mình sẽ nghe lại sau một chút',
     sessionError: 'Không kết nối được phiên trò chuyện. Bạn có thể thử lại.',
@@ -114,6 +124,8 @@ const languageSettings: Record<LanguageCode, {
     thinking: 'Finding the right answer for you',
     recording: 'Recording English speech',
     transcribing: 'Recognizing English speech',
+    noSpeech: 'I could not hear clear speech. Please say that again.',
+    virtualMicrophone: 'This tab is using a virtual microphone. If the signal meter does not move, choose the physical microphone or open the demo in a browser with microphone access.',
     permission: 'Microphone access is blocked. You can type your question instead.',
     retry: "I'll listen again in a moment",
     sessionError: 'Could not connect to the conversation session. Please try again.',
@@ -128,6 +140,8 @@ const languageSettings: Record<LanguageCode, {
     thinking: '正在为你查找答案',
     recording: '正在录制中文语音',
     transcribing: '正在识别中文语音',
+    noSpeech: '没有听到清楚的话，请再说一次。',
+    virtualMicrophone: '当前标签页正在使用虚拟麦克风。如果信号条不动，请选择实体麦克风，或在能访问实体麦克风的浏览器中打开演示。',
     permission: '麦克风尚未授权。你也可以直接输入问题。',
     retry: '我稍后会再次聆听',
     sessionError: '无法连接对话会话，请重试。',
@@ -189,13 +203,17 @@ function handleVoiceState(state: VoiceState) {
   isVoiceActive.value = state.mode !== 'idle'
   isRecording.value = state.phase === 'recording'
   if (state.phase === 'listening') {
+    maybePrewarmSpeech()
     listeningStartedAt = Date.now()
     void refreshMicrophones()
     status.value = 'listening'
-    voiceHint.value = languageSettings[language.value].listening
+    voiceHint.value = isLikelyVirtualMicrophone(activeMicrophone.value)
+      ? languageSettings[language.value].virtualMicrophone
+      : languageSettings[language.value].listening
     return
   }
   if (state.phase === 'recording') {
+    maybePrewarmSpeech()
     status.value = 'listening'
     voiceHint.value = languageSettings[language.value].recording
     return
@@ -203,6 +221,26 @@ function handleVoiceState(state: VoiceState) {
   if (state.mode === 'idle' && !['thinking', 'transcribing', 'speaking', 'error'].includes(status.value)) {
     status.value = 'idle'
   }
+}
+
+function maybePrewarmSpeech() {
+  const activeSessionId = sessionId.value
+  if (!activeSessionId || isUnmounted || speechPrewarmInFlight) return
+  if (speechPrewarmSessionId !== activeSessionId) {
+    speechPrewarmSessionId = activeSessionId
+    speechPrewarmLastAttemptAt = 0
+  }
+  if (Date.now() - speechPrewarmLastAttemptAt < 45_000) return
+
+  speechPrewarmLastAttemptAt = Date.now()
+  speechPrewarmInFlight = true
+  void prewarmSpeech(activeSessionId, language.value)
+    .catch(() => {
+      // Speech prewarming is best-effort and must never block the conversation.
+    })
+    .finally(() => {
+      speechPrewarmInFlight = false
+    })
 }
 
 function handleVoiceError(error: VoiceControllerError) {
@@ -227,13 +265,14 @@ async function handleVoiceAudio(audio: Blob) {
       (id) => transcribe(id, audio, language.value),
     )
     if (generation !== sessionGeneration || isUnmounted) return
-    if (!result.text.trim()) throw new Error(
-      language.value === 'vi'
-        ? 'Không nghe rõ câu nói, bạn thử lại nhé'
-        : language.value === 'en'
-          ? 'I could not hear that clearly. Please try again.'
-          : '没有听清楚，请再试一次。',
-    )
+    if (
+      result.speech_detected === false
+      || !result.text.trim()
+      || isLikelyRepeatedSpeechTranscript(result.text)
+    ) {
+      await rejectVoiceTranscript()
+      return
+    }
     await sendMessage(result.text, true)
   } catch (error) {
     if (generation !== sessionGeneration || isUnmounted) return
@@ -251,6 +290,14 @@ async function handleVoiceAudio(audio: Blob) {
   }
 }
 
+async function rejectVoiceTranscript() {
+  errorMessage.value = null
+  status.value = 'idle'
+  voiceHint.value = languageSettings[language.value].noSpeech
+  await resumeHandsFree()
+  if (isHandsFree.value) voiceHint.value = languageSettings[language.value].noSpeech
+}
+
 function ensureVoiceController(): VoiceConversationController {
   if (!voiceController) {
     voiceController = new VoiceConversationController({
@@ -258,19 +305,37 @@ function ensureVoiceController(): VoiceConversationController {
       preferRecorder: true,
       deviceId: selectedMicrophone.value,
       onState: handleVoiceState,
-      onTranscript: (text) => { void sendMessage(text, true) },
+      onTranscript: (text) => {
+        if (isLikelyRepeatedSpeechTranscript(text)) {
+          void rejectVoiceTranscript()
+          return
+        }
+        void sendMessage(text, true)
+      },
       onAudio: (audio) => { void handleVoiceAudio(audio) },
       onLevel: (level) => {
         microphoneLevel.value = level
         if (isVoiceActive.value && !isRecording.value && Date.now() - listeningStartedAt > 8_000) {
+          const inputIsSilent = level < 0.005
           voiceHint.value = language.value === 'en'
-            ? 'I have not heard you yet. Move closer to the microphone or check the selected input.'
+            ? inputIsSilent
+              ? 'The selected microphone has almost no input. Choose the physical microphone that receives your voice.'
+              : 'I have not heard a complete phrase yet. Speak a little closer and finish your sentence.'
             : language.value === 'zh'
-              ? '还没有听到你的声音。请靠近麦克风或检查所选输入设备。'
-              : 'Chưa nhận được câu nói. Bạn nói gần mic hoặc kiểm tra micro đầu vào nhé.'
+              ? inputIsSilent
+                ? '当前麦克风几乎没有输入。请选择能收到你声音的实体麦克风。'
+                : '还没有听到完整句子。请靠近麦克风并说完一句话。'
+              : inputIsSilent
+                ? 'Micro đang chọn gần như không có tín hiệu. Hãy chọn micro thật đang thu được giọng của bạn.'
+                : 'Chưa nghe được câu nói trọn vẹn. Bạn nói gần mic hơn và nói hết câu nhé.'
         }
       },
-      onInputDevice: (label) => { activeMicrophone.value = label },
+      onInputDevice: (label) => {
+        activeMicrophone.value = label
+        if (status.value === 'listening' && isLikelyVirtualMicrophone(label)) {
+          voiceHint.value = languageSettings[language.value].virtualMicrophone
+        }
+      },
       onError: handleVoiceError,
     })
   }
@@ -292,9 +357,12 @@ async function refreshMicrophones() {
     } catch {
       // Storage can be unavailable in private browsing; device selection still works in memory.
     }
-    const preferredId = preferredMicrophoneId(options, selectedMicrophone.value, savedId)
-    if (!preferredId) return
-
+    const preferredId = preferredMicrophoneId(
+      options,
+      selectedMicrophone.value,
+      savedId,
+      keepExplicitMicrophoneChoice,
+    )
     const changed = selectedMicrophone.value !== preferredId
     selectedMicrophone.value = preferredId
     voiceController?.setInputDevice(preferredId)
@@ -326,10 +394,12 @@ async function refreshMicrophones() {
 async function changeMicrophone(deviceId: string) {
   const wasEnabled = isHandsFree.value
   pauseVoice()
+  keepExplicitMicrophoneChoice = true
   selectedMicrophone.value = deviceId
   voiceController?.setInputDevice(deviceId)
   try {
     window.localStorage.setItem('retail-ai-microphone-device', deviceId)
+    window.localStorage.setItem('retail-ai-microphone-explicit-choice', '1')
   } catch {
     // Keep the selection for this page even when it cannot be persisted.
   }
@@ -729,6 +799,7 @@ async function sendMessage(value = draft.value, fromVoice = false, isRetry = fal
     assistantMessage.model = response.model
     assistantMessage.groundedProductIds = response.grounded_product_ids
     assistantMessage.products = response.products
+    assistantMessage.shoppingPlan = response.shopping_plan
     assistantMessage.supportTicket = response.support_ticket ?? undefined
     pendingTurn = null
     if (response.cart) cart.value = response.cart
@@ -945,6 +1016,17 @@ function handleLanguageChange(nextLanguage: LanguageCode) {
 }
 
 onMounted(() => {
+  try {
+    const explicitChoice = window.localStorage.getItem('retail-ai-microphone-explicit-choice') === '1'
+    keepExplicitMicrophoneChoice = explicitChoice
+    // Honor choices made in the picker. Legacy saved IDs are only hints: some
+    // installations persisted a virtual mic that no longer receives room audio.
+    selectedMicrophone.value = explicitChoice
+      ? window.localStorage.getItem('retail-ai-microphone-device') ?? ''
+      : ''
+  } catch {
+    // The OS default remains available when storage is disabled.
+  }
   void bootKiosk()
   void refreshMicrophones()
   navigator.mediaDevices?.addEventListener?.('devicechange', refreshMicrophones)

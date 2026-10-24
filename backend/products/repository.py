@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
@@ -13,6 +14,10 @@ from backend.products.catalog import (
     ProductSnapshot,
     get_product_snapshot,
     search_products,
+)
+from backend.products.category_taxonomy import (
+    collect_category_hierarchies,
+    diversify_by_category_leaf,
 )
 
 
@@ -38,7 +43,14 @@ class ProductRepository(Protocol):
         brand: str | None = None,
         price_operator: PriceOperator | None = None,
         price_value_vnd: int | None = None,
+        diversify_by_subcategory: bool = False,
     ) -> list[ProductSnapshot]: ...
+
+    def list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]: ...
+
+    def list_speech_terms(self, limit: int = 32) -> tuple[str, ...]: ...
+
+    def list_brand_names(self, limit: int = 300) -> tuple[str, ...]: ...
 
     def get_product_snapshot(self, product_id: str) -> ProductSnapshot | None: ...
 
@@ -57,7 +69,22 @@ class DemoProductRepository:
     supports_spicy_filter = True
 
     def search(self, **criteria) -> list[ProductSnapshot]:
-        return search_products(**criteria)
+        diversify = bool(criteria.pop("diversify_by_subcategory", False))
+        products = search_products(**criteria)
+        return (
+            diversify_by_category_leaf(products, int(criteria.get("limit", 10)))
+            if diversify
+            else products
+        )
+
+    def list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]:
+        return collect_category_hierarchies(DEMO_PRODUCTS)
+
+    def list_speech_terms(self, limit: int = 32) -> tuple[str, ...]:
+        return catalog_speech_terms(DEMO_PRODUCTS, limit=limit)
+
+    def list_brand_names(self, limit: int = 300) -> tuple[str, ...]:
+        return catalog_brand_names(DEMO_PRODUCTS, limit=limit)
 
     def get_product_snapshot(self, product_id: str) -> ProductSnapshot | None:
         return get_product_snapshot(product_id)
@@ -81,6 +108,49 @@ class DemoProductRepository:
     ) -> CatalogAdditions:
         # The demo catalog has no prior complete import to compare against.
         return CatalogAdditions(comparable=False)
+
+
+def catalog_speech_terms(
+    products: tuple[ProductSnapshot, ...] | list[ProductSnapshot],
+    *,
+    limit: int = 32,
+) -> tuple[str, ...]:
+    """Return frequent brands and leaf categories for domain-aware STT spelling."""
+    bounded_limit = max(4, min(int(limit), 48))
+    brand_counts = Counter(
+        product.brand.strip()
+        for product in products
+        if product.brand and product.brand.strip()
+        and product.brand.strip().casefold() not in {"nobrand", "no brand"}
+    )
+    category_counts = Counter(
+        (product.category_hierarchy or product.category).split(">")[-1].strip()
+        for product in products
+        if (product.category_hierarchy or product.category).strip()
+    )
+    # Whisper has a small prompt budget. Favor recognizable catalog brands, then
+    # reserve the remaining slots for category words. The previous one-brand-per-
+    # category sampler spent many slots on repeated high-frequency brands and
+    # omitted common spoken names such as Oishi.
+    brand_limit = max(1, (bounded_limit * 3) // 4)
+    brands = [term for term, _ in brand_counts.most_common(brand_limit)]
+    categories = [term for term, _ in category_counts.most_common(bounded_limit - len(brands))]
+    return tuple(dict.fromkeys((*brands, *categories)))
+
+
+def catalog_brand_names(
+    products: tuple[ProductSnapshot, ...] | list[ProductSnapshot],
+    *,
+    limit: int = 300,
+) -> tuple[str, ...]:
+    bounded_limit = max(1, min(int(limit), 1000))
+    counts = Counter(
+        product.brand.strip()
+        for product in products
+        if product.brand and product.brand.strip()
+        and product.brand.strip().casefold() not in {"nobrand", "no brand"}
+    )
+    return tuple(brand for brand, _ in counts.most_common(bounded_limit))
 
 
 def get_product_repository(settings: Settings | None = None) -> ProductRepository:

@@ -114,6 +114,26 @@ def _explicit_quantity(value: str) -> bool:
     return bool(tokens and (tokens[0].isdigit() or tokens[0] in _NUMBER_WORDS))
 
 
+def _remove_negated_cart_additions(text: str) -> str:
+    """Remove cart-write clauses the customer explicitly negates.
+
+    A broad ``cho ... vào giỏ`` pattern can otherwise span across unrelated
+    text and mistake phrases such as ``đừng cho vào giỏ`` for authorization.
+    Stop at clause punctuation so a later, explicit positive cart action still
+    works in the same message.
+    """
+    return re.sub(
+        r"\b(?:đừng|dung|không|khong|chưa|chua|khoan|never|dont|don't|do\s+not|"
+        r"no\s+need\s+to)\b(?:\s+\w+){0,3}\s+"
+        r"\b(?:thêm|them|bổ\s+sung|bo\s+sung|cho|lấy|lay|mua|add|put|place)\b"
+        r"[^,;.!?]{0,120}?\b(?:vào|vao|vô|vo|to|in)\s+(?:cái\s+|cai\s+)?"
+        r"(?:(?:my|the)\s+)?(?:giỏ(?:\s+hàng)?|gio(?:\s+hang)?|cart)\b[^,;.!?]*",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    ).strip()
+
+
 def _implicit_purchase_action(text: str) -> ShoppingAction | None:
     """Parse clear "I'll take/buy …" requests as cart additions.
 
@@ -124,6 +144,22 @@ def _implicit_purchase_action(text: str) -> ShoppingAction | None:
     if "?" in text or "？" in text:
         return None
     normalized = normalize_vietnamese(text)
+    has_plan_context = bool(
+        re.search(
+            r"\b(?:ke hoach|phuong an|danh sach(?: mua sam)?|nhu cau|plan|shopping list)\b",
+            normalized,
+        )
+    )
+    has_explicit_cart_target = bool(
+        re.search(
+            r"\b(?:vao|vo)\s+(?:cai\s+)?gio(?:\s+hang)?\b|\bto\s+(?:my\s+)?cart\b",
+            normalized,
+        )
+    )
+    if has_plan_context and not has_explicit_cart_target:
+        # Editing a consultation plan or shopping list is not permission to
+        # mutate the real cart.
+        return None
     direct_cart_purchase = re.match(
         r"^(?:(?:minh|toi|em|anh|chi)\s+)?(?:them|bo\s+sung|cho|lay|mua)\s+"
         r"(.+?)\s+(?:bo\s+)?(?:vao|vo)\s+(?:cai\s+)?gio(?:\s+hang)?\s*[.!?]*$",
@@ -279,6 +315,11 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
     if "xem truoc" in compact and "chua them" in compact:
         return None
 
+    action_text = _remove_negated_cart_additions(text)
+    if action_text != text:
+        normalized = normalize_vietnamese(action_text)
+        compact = " ".join(normalized.split())
+
     if state == SessionState.CHECKOUT_CONFIRMATION and any(
         phrase in compact
         for phrase in ("huy checkout", "huy thanh toan", "quay lai gio hang", "cancel checkout")
@@ -306,7 +347,7 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
     ):
         return ShoppingAction(ShoppingActionType.VIEW_CART)
 
-    implicit_purchase = _implicit_purchase_action(text)
+    implicit_purchase = _implicit_purchase_action(action_text)
     if implicit_purchase is not None:
         return implicit_purchase
 
@@ -318,12 +359,13 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
         flags=re.IGNORECASE,
     )
     if add_match:
+        add_source = text if action_text == text else action_text
         original_add_match = re.search(
             r"\b(?:thêm|them|bổ sung|bo sung|cho|lấy|lay|mua)\s+(.+?)\s+"
             r"(?:vào|vao|vô|vo|bỏ\s+(?:vào|vô)|bo\s+(?:vao|vo))\s+"
             r"(?:cái\s+)?(?:giỏ|gio)(?:\s+(?:hàng|hang))?\b|"
             r"\badd\s+(.+?)\s+to\s+(?:my\s+)?cart\b",
-            text,
+            add_source,
             flags=re.IGNORECASE,
         )
         raw_query = (

@@ -64,9 +64,11 @@ npm --prefix apps/kiosk-airi run dev
 Open `http://127.0.0.1:5173`. Sky waits in a ready state without adding a chat bubble or
 requesting microphone access. Open the text panel to type a question or select a quick
 prompt. Voice capture starts only after the visitor clicks the microphone button.
-The microphone recorder sends captured speech to Groq Whisper (`whisper-large-v3-turbo`,
-then `whisper-large-v3` on provider failure). Local adaptive voice detection trims silence
-and very short noise before upload. Cloud TTS streams through a short-lived, one-use URL;
+Silero VAD runs locally in the browser and sends only detected speech to Groq Whisper
+(`whisper-large-v3`, then `whisper-large-v3-turbo` on provider failure). It keeps a short
+pre-speech buffer, closes the microphone before agent/TTS playback, and rejects low-confidence
+Whisper outputs so silence does not become a customer message.
+Cloud TTS streams through a short-lived, one-use URL;
 see [the voice pipeline notes](docs/voice-pipeline.md).
 If the browser blocks autoplay, click \`Bật âm thanh\` once; the same gesture unlocks the
 audio element and resumes the pending reply. The supplied \`sky.glb\` includes

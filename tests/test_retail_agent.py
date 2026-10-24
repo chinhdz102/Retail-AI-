@@ -1,13 +1,21 @@
 import json
+import time
 
 import pytest
 
+import backend.services.retail_agent as retail_agent
 from backend.products.catalog import ProductSnapshot, get_product_snapshot
+from backend.products.repository import DemoProductRepository
 from backend.services.groq import GroqChatResult
 from backend.services.retail_agent import (
+    _catalog_tool_timeout_policy,
+    _enforce_shopping_mission_call_semantics,
+    _execute_tool_call,
     _unique_product_match_id,
     run_retail_agent,
 )
+from backend.services.retail_tools import ToolObservation
+from backend.services.shopping_mission import build_shopping_mission_plan
 from backend.shared.contracts import SessionState
 
 
@@ -30,6 +38,441 @@ def tool_call(name: str, arguments: dict[str, object]) -> dict[str, object]:
             "arguments": json.dumps(arguments),
         },
     }
+
+
+@pytest.mark.asyncio
+async def test_shopping_mission_planner_uses_one_extended_tool_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert _catalog_tool_timeout_policy("plan_shopping_mission") == (15.0, 0)
+    assert _catalog_tool_timeout_policy("search_products") == (2.0, 1)
+
+    monkeypatch.setattr(retail_agent, "SHOPPING_MISSION_TOOL_TIMEOUT_SECONDS", 0.01)
+    calls = 0
+
+    def slow_mission_tool(name, arguments, previous_mission=None):
+        nonlocal calls
+        calls += 1
+        time.sleep(0.05)
+        return ToolObservation(content={"ok": True}, tool_name=name)
+
+    monkeypatch.setattr(retail_agent, "execute_catalog_tool", slow_mission_tool)
+    name, observation = await _execute_tool_call(
+        tool_call("plan_shopping_mission", {"needs": []}),
+        calls_executed=0,
+    )
+
+    assert name == "plan_shopping_mission"
+    assert calls == 1
+    assert observation.status == "TEMPORARY_FAILURE"
+    assert observation.content["failure_type"] == "TimeoutError"
+
+
+def test_mission_edit_preserves_existing_skus_and_softens_spice_preference() -> None:
+    call = tool_call(
+        "plan_shopping_mission",
+        {
+            "goal": "Help prepare snacks and drinks",
+            "rejected_product_ids": ["SKU-OLD"],
+            "hard_requirements": ["spicy=false", "non_spicy"],
+            "exclusions": ["spicy=false", "non_spicy"],
+            "needs": [
+                {
+                    "need_id": "snack",
+                    "label": "Snack",
+                    "category": "snack",
+                    "source": "EXPLICIT",
+                    "required": True,
+                    "spicy": False,
+                    "unverified_constraints": ["không cay", "spicy=false", "non_spicy"],
+                    "preference_terms": [],
+                },
+                {
+                    "need_id": "drink",
+                    "label": "Đồ uống",
+                    "category": "drink",
+                    "source": "EXPLICIT",
+                    "required": True,
+                    "unverified_constraints": ["không cay", "non_spicy"],
+                    "preference_terms": [],
+                },
+            ],
+        },
+    )
+    previous = {
+        "rejected_product_ids": ["SKU-REJECTED-EARLIER"],
+        "proposed_items": [{"product_id": "SKU-OLD"}],
+    }
+
+    calls = _enforce_shopping_mission_call_semantics(
+        [call],
+        "Ưu tiên món không cay, đừng ép gợi ý thêm thành bắt buộc.",
+        previous,
+    )
+    arguments = json.loads(calls[0]["function"]["arguments"])
+
+    assert arguments["rejected_product_ids"] == ["SKU-REJECTED-EARLIER"]
+    assert arguments["hard_requirements"] == []
+    assert arguments["exclusions"] == []
+    assert arguments["needs"][0]["spicy"] is None
+    assert arguments["needs"][0]["preference_terms"] == ["không cay"]
+    assert arguments["needs"][0]["unverified_constraints"] == []
+    assert arguments["needs"][0]["source"] == "INFERRED"
+    assert arguments["needs"][0]["required"] is False
+    assert arguments["needs"][1]["preference_terms"] == []
+    assert arguments["needs"][1]["spicy"] is None
+    assert arguments["needs"][1]["unverified_constraints"] == []
+
+    plan = build_shopping_mission_plan(arguments, DemoProductRepository())
+    assert plan.content["options"]
+    assert plan.content["missing_required_needs"] == []
+
+
+def test_explicit_needs_are_required_and_remain_explicit_when_budget_is_revised() -> None:
+    previous = {
+        "mission_id": "mission-1",
+        "needs": [
+            {
+                "need_id": "need-snack",
+                "source": "EXPLICIT",
+                "required": True,
+            },
+            {
+                "need_id": "need-drink",
+                "source": "EXPLICIT",
+                "required": True,
+            },
+        ],
+    }
+    call = tool_call(
+        "plan_shopping_mission",
+        {
+            "needs": [
+                {
+                    "need_id": "need-snack",
+                    "label": "Đồ ăn nhẹ",
+                    "category": "snack",
+                    "source": "INFERRED",
+                    "required": False,
+                },
+                {
+                    "need_id": "need-drink",
+                    "label": "Đồ uống",
+                    "category": "drink",
+                    "source": "INFERRED",
+                    "required": False,
+                },
+            ]
+        },
+    )
+
+    explicit = _enforce_shopping_mission_call_semantics(
+        [call],
+        (
+            "Thêm vào kế hoạch đồ ăn nhẹ để chia nhau và đồ uống; "
+            "đây là các nhu cầu mình muốn tính đến."
+        ),
+        previous,
+    )
+    revised = _enforce_shopping_mission_call_semantics(
+        explicit,
+        "Tăng ngân sách lên 180.000đ để có thêm lựa chọn.",
+        {**previous, "needs": json.loads(explicit[0]["function"]["arguments"])["needs"]},
+    )
+    needs = json.loads(revised[0]["function"]["arguments"])["needs"]
+
+    assert [(need["source"], need["required"]) for need in needs] == [
+        ("EXPLICIT", True),
+        ("EXPLICIT", True),
+    ]
+
+
+def test_confirmed_groups_are_required_but_other_existing_suggestions_stay_optional() -> None:
+    text = (
+        "Để đủ phần chính, mình cần đồ ăn nhẹ để chia nhau, đồ uống và giấy ăn. "
+        "Các nhóm này mình xác nhận là cần; thứ bạn tự gợi ý thêm thì để tùy chọn."
+    )
+    needs = [
+        {
+            "need_id": "need-snack",
+            "label": "Snack ăn vặt",
+            "category": "Thực phẩm > Bánh kẹo > Snack",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "need-drink",
+            "label": "Đồ uống",
+            "category": "Thực phẩm > Nước uống không cồn",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "need-paper",
+            "label": "Giấy ăn",
+            "category": "Phi thực phẩm > Giấy ăn, giấy vệ sinh",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "need-appetizer",
+            "label": "Đồ ăn kèm",
+            "category": "Thực phẩm > Thịt nguội",
+            "product_query": "thịt nguội ăn kèm",
+            "source": "EXPLICIT",
+            "required": True,
+        },
+        {
+            "need_id": "need-fruit",
+            "label": "Trái cây",
+            "category": "Thực phẩm > Trái cây nội địa",
+            "source": "INFERRED",
+            "required": False,
+        },
+    ]
+    previous = {"needs": [{**need} for need in needs]}
+    call = tool_call("plan_shopping_mission", {"needs": needs})
+
+    result = _enforce_shopping_mission_call_semantics([call], text, previous)
+    output = json.loads(result[0]["function"]["arguments"])
+
+    assert {
+        need["need_id"]: (need["source"], need["required"])
+        for need in output["needs"]
+    } == {
+        "need-snack": ("EXPLICIT", True),
+        "need-drink": ("EXPLICIT", True),
+        "need-paper": ("EXPLICIT", True),
+        "need-appetizer": ("INFERRED", False),
+        "need-fruit": ("INFERRED", False),
+    }
+
+
+def test_broad_snack_intent_does_not_promote_inferred_candy_to_required() -> None:
+    text = (
+        "Mình xác nhận cần có món nhâm nhi để chia nhau và thức uống; "
+        "thứ gì bạn gợi ý thêm thì cứ để tùy chọn."
+    )
+    needs = [
+        {
+            "need_id": "snack",
+            "label": "Món nhâm nhi",
+            "category": "Thực phẩm > Bánh kẹo > Snack",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "drink",
+            "label": "Thức uống",
+            "category": "Thực phẩm > Nước uống không cồn và hoa quả",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "candy",
+            "label": "Kẹo/chocolate",
+            "category": "Thực phẩm > Bánh kẹo > Kẹo & Chocolate",
+            "product_query": "kẹo chocolate",
+            "source": "INFERRED",
+            "required": False,
+        },
+    ]
+    previous = {"needs": [{**need} for need in needs]}
+    call = tool_call("plan_shopping_mission", {"needs": needs})
+
+    result = _enforce_shopping_mission_call_semantics([call], text, previous)
+    output = json.loads(result[0]["function"]["arguments"])
+
+    assert {
+        need["need_id"]: (need["source"], need["required"])
+        for need in output["needs"]
+    } == {
+        "snack": ("EXPLICIT", True),
+        "drink": ("EXPLICIT", True),
+        "candy": ("INFERRED", False),
+    }
+
+    explicit_candy = _enforce_shopping_mission_call_semantics(
+        [tool_call("plan_shopping_mission", {"needs": needs})],
+        "Mình xác nhận món nhâm nhi, thức uống và kẹo chocolate bắt buộc; "
+        "gợi ý thêm thì cứ để tùy chọn.",
+        previous,
+    )
+    explicit_needs = json.loads(explicit_candy[0]["function"]["arguments"])["needs"]
+    assert next(need for need in explicit_needs if need["need_id"] == "candy")["required"] is True
+
+
+def test_optional_suggestions_instruction_works_in_english() -> None:
+    call = tool_call(
+        "plan_shopping_mission",
+        {
+            "needs": [
+                {
+                    "need_id": "snack",
+                    "label": "Snack",
+                    "category": "snack",
+                    "source": "EXPLICIT",
+                    "required": True,
+                },
+                {
+                    "need_id": "fruit",
+                    "label": "Fresh fruit",
+                    "category": "fruit",
+                    "source": "EXPLICIT",
+                    "required": True,
+                },
+            ]
+        },
+    )
+
+    result = _enforce_shopping_mission_call_semantics(
+        [call],
+        "Snacks are required; any other recommendations should stay optional.",
+        None,
+    )
+    needs = json.loads(result[0]["function"]["arguments"])["needs"]
+
+    assert [(need["source"], need["required"]) for need in needs] == [
+        ("EXPLICIT", True),
+        ("INFERRED", False),
+    ]
+
+
+def test_lexically_named_catalog_need_becomes_required_even_without_intent_alias() -> None:
+    call = tool_call(
+        "plan_shopping_mission",
+        {
+            "needs": [
+                {
+                    "need_id": "need-paper",
+                    "label": "Giấy dùng khi đi đường",
+                    "category": "Phi thực phẩm > Giấy ăn, giấy vệ sinh",
+                    "product_query": "giấy ăn, giấy vệ sinh dùng khi đi đường",
+                    "source": "INFERRED",
+                    "required": False,
+                }
+            ]
+        },
+    )
+
+    result = _enforce_shopping_mission_call_semantics(
+        [call],
+        "Thêm vào kế hoạch giấy dùng khi đi đường; đây là nhu cầu mình muốn tính đến.",
+        None,
+    )
+    need = json.loads(result[0]["function"]["arguments"])["needs"][0]
+
+    assert need["source"] == "EXPLICIT"
+    assert need["required"] is True
+
+
+def test_activity_words_in_model_need_label_do_not_make_inferred_category_required() -> None:
+    call = tool_call(
+        "plan_shopping_mission",
+        {
+            "needs": [
+                {
+                    "need_id": "need-snack",
+                    "label": "Snack xem bóng",
+                    "category": "Thực phẩm > Bánh kẹo > Snack",
+                    "product_query": "snack xem bóng đá",
+                    "source": "EXPLICIT",
+                    "required": True,
+                }
+            ]
+        },
+    )
+
+    result = _enforce_shopping_mission_call_semantics(
+        [call],
+        (
+            "Tư vấn giúp mình cho buổi xem bóng, khoảng 5 người; "
+            "mình chưa biết cần những nhóm gì."
+        ),
+        None,
+    )
+    need = json.loads(result[0]["function"]["arguments"])["needs"][0]
+
+    assert need["source"] == "INFERRED"
+    assert need["required"] is False
+
+
+def test_existing_explicit_category_is_recorded_and_removed_from_purchase_plan() -> None:
+    call = tool_call(
+        "plan_shopping_mission",
+        {
+            "needs": [
+                {
+                    "need_id": "need-snack",
+                    "label": "Đồ ăn nhẹ",
+                    "category": "snack",
+                    "source": "EXPLICIT",
+                    "required": True,
+                },
+                {
+                    "need_id": "need-drink",
+                    "label": "Đồ uống",
+                    "category": "drink",
+                    "source": "EXPLICIT",
+                    "required": True,
+                },
+            ]
+        },
+    )
+
+    result = _enforce_shopping_mission_call_semantics(
+        [call],
+        "Mình đã có đồ ăn nhẹ, ghi nhận là có sẵn và bỏ khỏi danh sách mua.",
+        None,
+    )
+    arguments = json.loads(result[0]["function"]["arguments"])
+
+    assert arguments["existing_items"] == ["Đồ ăn nhẹ"]
+    assert arguments["needs"][0]["satisfied_by_existing"] is True
+    assert arguments["needs"][1].get("satisfied_by_existing", False) is False
+
+
+def test_plan_revision_preserves_budget_and_party_size_until_user_changes_them() -> None:
+    previous = {
+        "mission_id": "mission-stable",
+        "total_budget_vnd": 150_000,
+        "party_size": 7,
+        "needs": [],
+    }
+    call = tool_call(
+        "plan_shopping_mission",
+        {"total_budget_vnd": 900_000, "party_size": 9, "needs": []},
+    )
+
+    preserved = _enforce_shopping_mission_call_semantics(
+        [call], "Thêm giấy dùng khi đi đường vào phương án.", previous
+    )
+    preserved_arguments = json.loads(preserved[0]["function"]["arguments"])
+    assert preserved_arguments["total_budget_vnd"] == 150_000
+    assert preserved_arguments["party_size"] == 7
+
+    changed = _enforce_shopping_mission_call_semantics(
+        preserved,
+        "Tăng ngân sách lên 210.000đ và nhóm có 9 người.",
+        previous,
+    )
+    changed_arguments = json.loads(changed[0]["function"]["arguments"])
+    assert changed_arguments["total_budget_vnd"] == 210_000
+    assert changed_arguments["party_size"] == 9
+
+
+def test_explicit_alternative_request_rejects_prior_plan_skus() -> None:
+    call = tool_call("plan_shopping_mission", {"needs": []})
+    previous = {
+        "rejected_product_ids": [],
+        "proposed_items": [{"product_id": "SKU-OLD"}],
+    }
+
+    calls = _enforce_shopping_mission_call_semantics(
+        [call], "Cho mình lựa chọn khác nhé.", previous
+    )
+
+    assert json.loads(calls[0]["function"]["arguments"])["rejected_product_ids"] == ["SKU-OLD"]
 
 
 @pytest.mark.asyncio
@@ -135,21 +578,32 @@ def test_product_match_requires_specific_words_that_select_one_variant() -> None
     )
     assert _unique_product_match_id("lay s", candidates) is None
     assert _unique_product_match_id("lay s", (candidates[0],)) is None
-    assert _unique_product_match_id(
-        "lay s stax 110g",
-        (candidates[0],),
-    ) == "LAY_110"
+    assert (
+        _unique_product_match_id(
+            "lay s stax 110g",
+            (candidates[0],),
+        )
+        == "LAY_110"
+    )
 
 
 def test_product_match_uses_verified_unit_when_name_uses_packaging_abbreviation() -> None:
     candidates = (
         ProductSnapshot(
-            product_id="ZERO_600", name="Nước Giải Khát Coca-Cola Zero Pet 600ml",
-            category="drink", price_vnd=9_900, stock=5, uom="Chai",
+            product_id="ZERO_600",
+            name="Nước Giải Khát Coca-Cola Zero Pet 600ml",
+            category="drink",
+            price_vnd=9_900,
+            stock=5,
+            uom="Chai",
         ),
         ProductSnapshot(
-            product_id="ZERO_1500", name="Coca-Cola Zero 1500ml",
-            category="drink", price_vnd=15_900, stock=5, uom="Chai",
+            product_id="ZERO_1500",
+            name="Coca-Cola Zero 1500ml",
+            category="drink",
+            price_vnd=15_900,
+            stock=5,
+            uom="Chai",
         ),
     )
     assert _unique_product_match_id("coca zero chai 600ml", candidates) == "ZERO_600"

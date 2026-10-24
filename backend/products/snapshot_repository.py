@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
+from functools import lru_cache
 from pathlib import Path
 
 from backend.data.catalog_import import analyze_dataset
@@ -14,9 +16,18 @@ from backend.products.catalog import (
     ProductSnapshot,
     matches_price_constraint,
 )
+from backend.products.category_taxonomy import (
+    collect_category_hierarchies,
+    diversify_by_category_leaf,
+    normalize_category_text,
+)
 from backend.products.planogram import recommended_shelf
 from backend.products.postgres_repository import normalize_search_text
-from backend.products.repository import CatalogAdditions
+from backend.products.repository import (
+    CatalogAdditions,
+    catalog_brand_names,
+    catalog_speech_terms,
+)
 
 _FILLER_WORDS = QUERY_STOP_WORDS | frozenset(
     {
@@ -62,7 +73,11 @@ class _Candidate:
     title_words: frozenset[str]
     brand_words: frozenset[str]
     category_words: frozenset[str]
+    category_segment_words: tuple[frozenset[str], ...]
+    category_segment_texts: tuple[str, ...]
     uom_words: frozenset[str]
+    native_words: frozenset[str]
+    baby_audience: bool
 
 
 def _tokens(value: str | None) -> tuple[str, ...]:
@@ -71,6 +86,79 @@ def _tokens(value: str | None) -> tuple[str, ...]:
     normalized = normalize_search_text(value)
     normalized = re.sub(r"(?<=[a-z])['’](?=[a-z])", "", normalized)
     return tuple(_TOKEN_PATTERN.findall(normalized))
+
+
+def _native_tokens(value: str | None) -> tuple[str, ...]:
+    if not value:
+        return ()
+    normalized = unicodedata.normalize("NFC", value.casefold())
+    return tuple(re.findall(r"[^\W_]+", normalized, flags=re.UNICODE))
+
+
+def _has_vietnamese_diacritic(value: str) -> bool:
+    return "đ" in value or any(
+        unicodedata.category(character) == "Mn"
+        for character in unicodedata.normalize("NFD", value)
+    )
+
+
+@lru_cache(maxsize=128)
+def _category_key(value: str) -> str:
+    return normalize_search_text(value).strip()
+
+
+_CATEGORY_PHRASE_ALIASES = {
+    "drink": ("nuoc uong", "nuoc ngot", "nuoc suoi", "ca phe", "tra"),
+    "snack": ("banh snack", "do an vat", "snack"),
+    "dairy": ("sua", "sua chua", "pho mai"),
+    "meal": ("thuc pham an lien", "thuc an san", "mi", "do an nong"),
+    "skincare": ("cham soc da",),
+    "haircare": (
+        "cham soc toc",
+        "dau goi",
+        "dau xa",
+        "dau goi tre em",
+        "dau xa tre em",
+    ),
+    "oral_care": (
+        "cham soc rang mieng",
+        "kem danh rang",
+        "ban chai danh rang",
+        "nuoc suc mieng",
+        "chi nha khoa",
+    ),
+    "home_cleaning": ("ve sinh nha",),
+    "cosmetic": (
+        "cham soc da",
+        "cham soc toc",
+        "cham soc rang mieng",
+        "cham soc ca nhan",
+        "cham soc suc khoe",
+        "my pham",
+        "my pham cham soc ca nhan",
+        "oral care",
+        "personal care",
+    ),
+    "diaper": ("ta bim", "ta quan", "giay quan"),
+    "laundry": ("bot giat", "nuoc giat", "giat xa", "chat giat tay"),
+}
+
+
+def _category_alias_key(normalized: str) -> str:
+    if normalized in _CATEGORY_PHRASE_ALIASES:
+        return normalized
+    underscored = normalized.replace(" ", "_")
+    return underscored if underscored in _CATEGORY_PHRASE_ALIASES else normalized
+
+
+@lru_cache(maxsize=128)
+def _category_phrase_tokens(normalized: str) -> tuple[tuple[str, ...], ...]:
+    alias_key = _category_alias_key(normalized)
+    return tuple(
+        _tokens(phrase)
+        for phrase in _CATEGORY_PHRASE_ALIASES.get(alias_key, (normalized,))
+        if _tokens(phrase)
+    )
 
 
 def _query_terms(query: str) -> tuple[list[str], bool, bool]:
@@ -131,8 +219,28 @@ def _score(
         candidate.uom_words,
     )
     field_weights = (3.0, 2.4, 1.3, 1.8)
+    accented_query_words: dict[str, set[str]] = defaultdict(set)
+    for native_word in _native_tokens(query):
+        if not _has_vietnamese_diacritic(native_word):
+            continue
+        folded = _tokens(native_word)
+        if folded:
+            accented_query_words[folded[0]].add(native_word)
+
+    def has_accent_collision(token: str) -> bool:
+        variants = accented_query_words.get(token)
+        if not variants or candidate.native_words.intersection(variants):
+            return False
+        return any(
+            folded and folded[0] == token
+            for native_word in candidate.native_words
+            for folded in (_tokens(native_word),)
+        )
+
     term_scores = [
-        max(
+        0.0
+        if has_accent_collision(token)
+        else max(
             (
                 weight
                 for words, weight in zip(field_words, field_weights, strict=True)
@@ -228,34 +336,47 @@ def _measure(title: str) -> tuple[float, str] | None:
     return amount, "mass"
 
 
-def _category_matches(category: str | None, candidate: _Candidate) -> bool:
+def _category_matches(
+    category: str | None,
+    candidate: _Candidate,
+    known_category_keys: frozenset[str] = frozenset(),
+) -> bool:
     if not category:
         return True
-    normalized = normalize_search_text(category).strip()
-    aliases = {
-        "drink": ("nuoc uong", "nuoc ngot", "nuoc suoi", "ca phe", "tra"),
-        "snack": ("banh snack", "do an vat", "snack"),
-        "dairy": ("sua", "sua chua", "pho mai"),
-        "meal": ("thuc pham an lien", "thuc an san", "mi", "do an nong"),
-        "skincare": ("cham soc da",),
-        "cosmetic": (
-            "cham soc da",
-            "cham soc toc",
-            "cham soc rang mieng",
-            "cham soc ca nhan",
-            "cham soc suc khoe",
-            "oral care",
-            "personal care",
-            "my pham",
-        ),
-        "diaper": ("ta bim", "ta quan", "giay quan"),
-        "laundry": ("bot giat", "nuoc giat", "giat xa", "chat giat tay"),
-    }
-    phrases = aliases.get(normalized, (normalized,))
-    category_text = f"{candidate.category} {candidate.product.category}"
+    normalized = _category_key(category)
+    if normalized == "baby":
+        if candidate.baby_audience:
+            return True
+        # This parent identifies an intentional baby and maternity department.
+        # Match it as one taxonomy segment, rather than by concatenating every
+        # segment in the path (which previously leaked unrelated categories).
+        baby_department = frozenset({"do", "dung", "cham", "soc", "me", "va", "be"})
+        return any(
+            segment == baby_department
+            for segment in candidate.category_segment_words[:-1]
+        )
+
+    alias_key = _category_alias_key(normalized)
+    taxonomy_key = normalize_category_text(category)
+    if (
+        taxonomy_key in known_category_keys
+        and alias_key not in _CATEGORY_PHRASE_ALIASES
+    ):
+        # Catalog labels are authoritative. Match their actual hierarchy
+        # segment so homonyms and partial token overlaps cannot widen a search.
+        return taxonomy_key in candidate.category_segment_texts
+
+    category_segments = candidate.category_segment_texts
+    if normalized == "oral_care" and any(
+        segment == frozenset({"do", "dung", "cham", "soc", "me", "va", "be"})
+        for segment in candidate.category_segment_words[:-1]
+    ):
+        category_segments += (" ".join(_tokens(candidate.product.name)),)
+
     return any(
-        all(token in _tokens(category_text) for token in _tokens(phrase))
-        for phrase in phrases
+        f" {' '.join(phrase)} " in f" {segment} "
+        for phrase in _category_phrase_tokens(normalized)
+        for segment in category_segments
     )
 
 
@@ -319,6 +440,14 @@ class SnapshotProductRepository:
                 )
             )
         self.products = tuple(products)
+        self._speech_brand_names = catalog_brand_names(self.products, limit=1000)
+        self._category_hierarchies = collect_category_hierarchies(self.products)
+        self._known_category_keys = frozenset(
+            normalize_category_text(segment)
+            for path in self._category_hierarchies
+            for segment in path
+            if normalize_category_text(segment)
+        )
         self.dataset_sha256 = dataset_version
         self.rows_quarantined = len(quarantined)
         self._by_id = {product.product_id.casefold(): product for product in products}
@@ -343,6 +472,7 @@ class SnapshotProductRepository:
     def _candidate(product: ProductSnapshot) -> _Candidate:
         title = normalize_search_text(product.name)
         brand = normalize_search_text(product.brand)
+        raw_hierarchy = product.category_hierarchy or ""
         category = normalize_search_text(
             " ".join(
                 filter(
@@ -357,6 +487,31 @@ class SnapshotProductRepository:
             )
         )
         uom = normalize_search_text(product.uom)
+        category_segment_words = tuple(
+            frozenset(_tokens(part))
+            for part in raw_hierarchy.split(">")
+            if part.strip()
+        )
+        category_segment_texts = tuple(
+            " ".join(_tokens(part))
+            for part in raw_hierarchy.split(">")
+            if part.strip()
+        )
+        if not category_segment_words:
+            category_segment_words = (
+                frozenset(_tokens(f"{category} {product.category}")),
+            )
+            category_segment_texts = (
+                " ".join(_tokens(f"{category} {product.category}")),
+            )
+        leaf = raw_hierarchy.split(">")[-1] if raw_hierarchy else product.category
+        baby_audience = bool(
+            re.search(
+                r"(?<!\w)(?:bé|trẻ em|bỉm|tã|t\.em)(?!\w)",
+                f"{leaf} {product.name}",
+                re.IGNORECASE,
+            )
+        )
         words = tuple(
             dict.fromkeys(
                 (
@@ -383,7 +538,28 @@ class SnapshotProductRepository:
             title_words=frozenset(_tokens(title)),
             brand_words=frozenset(_tokens(brand)),
             category_words=frozenset(_tokens(category)),
+            category_segment_words=category_segment_words,
+            category_segment_texts=category_segment_texts,
             uom_words=frozenset(_tokens(uom)),
+            native_words=frozenset(
+                _native_tokens(
+                    " ".join(
+                        filter(
+                            None,
+                            (
+                                product.name,
+                                product.brand,
+                                product.category,
+                                product.category_hierarchy,
+                                product.department,
+                                product.sub_department,
+                                product.uom,
+                            ),
+                        )
+                    )
+                )
+            ),
+            baby_audience=baby_audience,
         )
 
     def search(
@@ -397,6 +573,7 @@ class SnapshotProductRepository:
         brand: str | None = None,
         price_operator: PriceOperator | None = None,
         price_value_vnd: int | None = None,
+        diversify_by_subcategory: bool = False,
     ) -> list[ProductSnapshot]:
         terms, comparison, _snack_slang = _query_terms(query)
         normalized = normalize_search_text(query).strip().casefold()
@@ -416,7 +593,9 @@ class SnapshotProductRepository:
         for product_id in candidate_ids:
             candidate = self._by_candidate_id[product_id]
             product = candidate.product
-            if not _category_matches(category, candidate):
+            if not _category_matches(
+                category, candidate, self._known_category_keys
+            ):
                 continue
             if normalized_brand and not all(
                 token in candidate.brand_words for token in normalized_brand
@@ -439,7 +618,20 @@ class SnapshotProductRepository:
             results.sort(key=lambda pair: (pair[1].price_vnd, pair[1].name.casefold()))
         else:
             results.sort(key=lambda pair: (-pair[0], pair[1].name.casefold()))
-        return [product for _score_value, product in results[: max(1, min(limit, 20))]]
+        products = [product for _score_value, product in results]
+        bounded_limit = max(1, min(limit, 20))
+        if diversify_by_subcategory:
+            return diversify_by_category_leaf(products, bounded_limit)
+        return products[:bounded_limit]
+
+    def list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]:
+        return self._category_hierarchies
+
+    def list_speech_terms(self, limit: int = 32) -> tuple[str, ...]:
+        return catalog_speech_terms(self.products, limit=limit)
+
+    def list_brand_names(self, limit: int = 300) -> tuple[str, ...]:
+        return self._speech_brand_names[: max(1, min(int(limit), len(self._speech_brand_names)))]
 
     def get_product_snapshot(self, product_id: str) -> ProductSnapshot | None:
         return self._by_id.get(product_id.strip().casefold())
@@ -451,7 +643,11 @@ class SnapshotProductRepository:
             product
             for product in self.products
             if product.promotion
-            and _category_matches(category, self._by_candidate_id[product.product_id])
+            and _category_matches(
+                category,
+                self._by_candidate_id[product.product_id],
+                self._known_category_keys,
+            )
         ]
         products.sort(key=lambda product: (product.price_vnd, product.name.casefold()))
         return products[: max(1, min(limit, 10))]

@@ -1,4 +1,6 @@
-export type VoiceMode = 'idle' | 'recognition' | 'recorder'
+import type { RealTimeVADOptions } from '@ricky0123/vad-web'
+
+export type VoiceMode = 'idle' | 'recorder'
 export type VoicePhase = 'idle' | 'listening' | 'recording'
 export type VoicePermission = 'unknown' | 'granted' | 'denied'
 export type VoiceErrorKind = 'permission' | 'unsupported' | 'runtime'
@@ -15,47 +17,6 @@ export interface VoiceControllerError {
   cause?: unknown
 }
 
-export interface SpeechRecognitionAlternativeLike {
-  transcript: string
-}
-
-export interface SpeechRecognitionResultLike {
-  isFinal: boolean
-  length?: number
-  [index: number]: SpeechRecognitionAlternativeLike
-}
-
-export interface SpeechRecognitionEventLike {
-  resultIndex?: number
-  results: {
-    length: number
-    [index: number]: SpeechRecognitionResultLike
-  }
-}
-
-export interface SpeechRecognitionErrorEventLike {
-  error?: string
-  message?: string
-}
-
-export interface SpeechRecognitionLike {
-  lang: string
-  continuous: boolean
-  interimResults: boolean
-  maxAlternatives: number
-  onstart: (() => void) | null
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null
-  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null
-  onend: (() => void) | null
-  start: () => void
-  stop: () => void
-  abort?: () => void
-}
-
-export interface SpeechRecognitionConstructor {
-  new (): SpeechRecognitionLike
-}
-
 export interface MediaStreamTrackLike {
   stop: () => void
   label?: string
@@ -67,6 +28,7 @@ export interface MediaStreamLike {
 
 export interface VoiceMediaConstraints {
   audio: boolean | {
+    channelCount?: number
     echoCancellation?: boolean
     noiseSuppression?: boolean
     autoGainControl?: boolean
@@ -74,51 +36,39 @@ export interface VoiceMediaConstraints {
   }
 }
 
-export interface MediaRecorderDataEventLike {
-  data: Blob
+export interface VoiceVADLike {
+  start: () => Promise<void> | void
+  pause: () => Promise<void> | void
+  destroy?: () => Promise<void> | void
 }
 
-export interface MediaRecorderLike {
-  state: 'inactive' | 'recording' | 'paused'
-  ondataavailable: ((event: MediaRecorderDataEventLike) => void) | null
-  onstop: (() => void) | null
-  onerror: ((event: { error?: string }) => void) | null
-  start: (timeslice?: number) => void
-  stop: () => void
-}
-
-export interface MediaRecorderConstructor {
-  new (stream: MediaStreamLike, options?: { mimeType?: string }): MediaRecorderLike
-  isTypeSupported?: (mimeType: string) => boolean
-}
-
-export interface AudioAnalyserLike {
-  fftSize: number
-  getByteTimeDomainData: (data: Uint8Array) => void
-}
-
-export interface AudioMediaStreamSourceLike {
-  connect: (node: AudioAnalyserLike) => void
-  disconnect?: () => void
-}
-
-export interface AudioContextLike {
-  state?: string
-  resume?: () => Promise<void> | void
-  createMediaStreamSource: (stream: MediaStreamLike) => AudioMediaStreamSourceLike
-  createAnalyser: () => AudioAnalyserLike
-  close: () => Promise<void> | void
+export interface VoiceVADOptions {
+  getStream: () => Promise<MediaStream>
+  pauseStream: (stream: MediaStream) => Promise<void>
+  resumeStream: (stream: MediaStream) => Promise<MediaStream>
+  onFrameProcessed: (probabilities: { isSpeech: number; notSpeech: number }, frame: Float32Array) => void
+  onSpeechStart: () => void
+  onSpeechRealStart: () => void
+  onSpeechEnd: (audio: Float32Array) => void
+  onVADMisfire: () => void
+  positiveSpeechThreshold: number
+  negativeSpeechThreshold: number
+  redemptionMs: number
+  preSpeechPadMs: number
+  minSpeechMs: number
+  submitUserSpeechOnPause: boolean
+  model: 'v5'
+  processorType: 'auto'
+  baseAssetPath: string
+  onnxWASMBasePath: string
+  ortConfig: NonNullable<RealTimeVADOptions['ortConfig']>
 }
 
 export interface VoiceControllerDependencies {
-  getRecognition?: () => SpeechRecognitionConstructor | null
-  createRecognition?: () => SpeechRecognitionLike
   getUserMedia?: (constraints: VoiceMediaConstraints) => Promise<MediaStreamLike>
-  MediaRecorder?: MediaRecorderConstructor | null
-  createAudioContext?: () => AudioContextLike
+  createVAD?: (options: VoiceVADOptions) => Promise<VoiceVADLike>
   setTimeout?: (handler: () => void, timeout: number) => number
   clearTimeout?: (timer: number) => void
-  now?: () => number
 }
 
 export interface VoiceConversationOptions extends VoiceControllerDependencies {
@@ -133,107 +83,120 @@ export interface VoiceConversationOptions extends VoiceControllerDependencies {
   onError: (error: VoiceControllerError) => void
 }
 
-const MIN_SPEECH_THRESHOLD = 0.012
-const MAX_SPEECH_THRESHOLD = 0.12
-const NOISE_FLOOR_ALPHA = 0.08
-const SILENCE_DURATION_MS = 600
-const MAX_SEGMENT_DURATION_MS = 12_000
-const MIN_VOICED_DURATION_MS = 120
-const POLL_INTERVAL_MS = 40
-const RECOGNITION_START_TIMEOUT_MS = 500
+const START_TIMEOUT_MS = 12_000
+const MAX_SEGMENT_DURATION_MS = 30_000
+// Keep pauses inside a natural Vietnamese sentence and preserve initial consonants.
+const MIN_SPEECH_MS = 400
+const REDEMPTION_MS = 1_400
+const PRE_SPEECH_PAD_MS = 800
+const MIN_AUDIO_FRAME_RMS = 0.00075
+const MIN_AUDIO_ACTIVE_MS = 160
+
 const MICROPHONE_CONSTRAINTS: VoiceMediaConstraints = {
   audio: {
+    channelCount: 1,
     echoCancellation: true,
     noiseSuppression: true,
     autoGainControl: true,
   },
 }
 
-interface BrowserWindowLike {
-  SpeechRecognition?: SpeechRecognitionConstructor
-  webkitSpeechRecognition?: SpeechRecognitionConstructor
-  MediaRecorder?: MediaRecorderConstructor
-  AudioContext?: new () => AudioContextLike
-  webkitAudioContext?: new () => AudioContextLike
-}
-
-function browserWindow(): BrowserWindowLike {
-  return globalThis as unknown as BrowserWindowLike
-}
-
-function defaultDependencies(): VoiceControllerDependencies {
-  const currentWindow = browserWindow()
-  const mediaDevices = (globalThis as typeof globalThis & {
-    navigator?: { mediaDevices?: { getUserMedia?: (constraints: { audio: true }) => Promise<MediaStreamLike> } }
+function getBrowserMediaDevices() {
+  return (globalThis as typeof globalThis & {
+    navigator?: { mediaDevices?: { getUserMedia?: (constraints: MediaStreamConstraints) => Promise<MediaStream> } }
   }).navigator?.mediaDevices
-  const getUserMedia = mediaDevices?.getUserMedia
-    ? (constraints: VoiceMediaConstraints) => mediaDevices.getUserMedia!(constraints)
-    : undefined
-  const audioContextConstructor = currentWindow.AudioContext ?? currentWindow.webkitAudioContext
-
-  return {
-    getRecognition: () => currentWindow.SpeechRecognition ?? currentWindow.webkitSpeechRecognition ?? null,
-    getUserMedia,
-    MediaRecorder: currentWindow.MediaRecorder ?? null,
-    createAudioContext: audioContextConstructor ? () => new audioContextConstructor() : undefined,
-    setTimeout: (handler, timeout) => setTimeout(handler, timeout) as unknown as number,
-    clearTimeout: (timer) => clearTimeout(timer),
-    now: () => Date.now(),
-  }
 }
 
-function finalTranscript(event: SpeechRecognitionEventLike): string {
-  const startIndex = event.resultIndex ?? 0
-  const parts: string[] = []
-  for (let index = startIndex; index < event.results.length; index += 1) {
-    const result = event.results[index]
-    if (result?.isFinal && result[0]?.transcript) parts.push(result[0].transcript)
+function defaultGetUserMedia(constraints: VoiceMediaConstraints): Promise<MediaStreamLike> {
+  const mediaDevices = getBrowserMediaDevices()
+  if (!mediaDevices?.getUserMedia) {
+    return Promise.reject(new Error('Trình duyệt này không hỗ trợ microphone.'))
   }
-  return parts.join(' ').trim()
+  return mediaDevices.getUserMedia(constraints as MediaStreamConstraints)
 }
 
-function rms(data: Uint8Array): number {
+async function defaultCreateVAD(options: VoiceVADOptions): Promise<VoiceVADLike> {
+  const { MicVAD } = await import('@ricky0123/vad-web')
+  return MicVAD.new(options as Partial<RealTimeVADOptions>)
+}
+
+function rms(samples: Float32Array): number {
+  if (samples.length === 0) return 0
   let sum = 0
-  for (const sample of data) {
-    const normalized = (sample - 128) / 128
-    sum += normalized * normalized
+  for (const sample of samples) sum += sample * sample
+  return Math.sqrt(sum / samples.length)
+}
+
+function hasMeaningfulAudioLevel(samples: Float32Array): boolean {
+  const frameSize = 512 // 32 ms at the VAD's 16 kHz sample rate.
+  let activeMilliseconds = 0
+  for (let start = 0; start < samples.length; start += frameSize) {
+    const frame = samples.subarray(start, Math.min(start + frameSize, samples.length))
+    if (rms(frame) >= MIN_AUDIO_FRAME_RMS) {
+      activeMilliseconds += (frame.length / 16_000) * 1_000
+    }
   }
-  return Math.sqrt(sum / data.length)
+  return activeMilliseconds >= MIN_AUDIO_ACTIVE_MS
+}
+
+function encodePcm16Wav(samples: Float32Array): Blob {
+  const buffer = new ArrayBuffer(44 + samples.length * 2)
+  const view = new DataView(buffer)
+  const writeAscii = (offset: number, value: string) => {
+    for (let index = 0; index < value.length; index += 1) {
+      view.setUint8(offset + index, value.charCodeAt(index))
+    }
+  }
+
+  writeAscii(0, 'RIFF')
+  view.setUint32(4, 36 + samples.length * 2, true)
+  writeAscii(8, 'WAVE')
+  writeAscii(12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, 16_000, true)
+  view.setUint32(28, 32_000, true)
+  view.setUint16(32, 2, true)
+  view.setUint16(34, 16, true)
+  writeAscii(36, 'data')
+  view.setUint32(40, samples.length * 2, true)
+  for (let index = 0; index < samples.length; index += 1) {
+    const sample = Math.max(-1, Math.min(1, samples[index] ?? 0))
+    view.setInt16(44 + index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true)
+  }
+
+  return new Blob([buffer], { type: 'audio/wav' })
+}
+
+function vadAssetRoot(): string {
+  const baseUrl = import.meta.env.BASE_URL.endsWith('/')
+    ? import.meta.env.BASE_URL
+    : `${import.meta.env.BASE_URL}/`
+  return new URL(`${baseUrl}vad/`, window.location.origin).toString()
 }
 
 export class VoiceConversationController {
   private readonly options: VoiceConversationOptions
   private readonly dependencies: VoiceControllerDependencies
-  private locale: string
   private deviceId: string
   private active = false
   private destroyed = false
   private currentMode: VoiceMode = 'idle'
   private currentPhase: VoicePhase = 'idle'
   private permission: VoicePermission = 'unknown'
-  private recognition: SpeechRecognitionLike | null = null
-  private recognitionStartTimer: number | null = null
-  private recorderStartTimer: number | null = null
-  private recognitionRestartTimer: number | null = null
+  private vad: VoiceVADLike | null = null
+  private vadGeneration: number | null = null
+  private vadLifecycle: Promise<void> = Promise.resolve()
   private stream: MediaStreamLike | null = null
-  private audioContext: AudioContextLike | null = null
-  private audioSource: AudioMediaStreamSourceLike | null = null
-  private analyser: AudioAnalyserLike | null = null
-  private monitorTimer: number | null = null
-  private segmentRecorder: MediaRecorderLike | null = null
-  private segmentChunks: Blob[] = []
-  private segmentStartedAt = 0
-  private lastVoiceAt = 0
-  private lastPollAt: number | null = null
-  private noiseFloor = 0.008
-  private voicedDurationMs = 0
-  private forceSegmentEmit = false
+  private startTimer: number | null = null
+  private maxSegmentTimer: number | null = null
+  private manualStopRequested = false
   private generation = 0
 
   constructor(options: VoiceConversationOptions) {
     this.options = options
-    this.dependencies = { ...defaultDependencies(), ...options }
-    this.locale = options.locale
+    this.dependencies = options
     this.deviceId = options.deviceId ?? ''
   }
 
@@ -253,18 +216,63 @@ export class VoiceConversationController {
     if (this.destroyed || this.active) return
     this.active = true
     const token = ++this.generation
-    const Recognition = this.dependencies.getRecognition?.() ?? null
-    if (Recognition && !this.options.preferRecorder) {
-      try {
-        this.startRecognition(Recognition, token)
-        return
-      } catch (error) {
-        this.stopRecognition()
-        await this.startRecorder(token, error)
-        return
+    const setTimeoutFn = this.dependencies.setTimeout ?? ((handler, timeout) => setTimeout(handler, timeout) as unknown as number)
+    this.startTimer = setTimeoutFn(() => {
+      this.startTimer = null
+      if (!this.active || token !== this.generation) return
+      this.fail('runtime', 'Chưa mở được bộ lọc giọng nói. Hãy tải lại trang rồi thử lại nhé.')
+      void this.pauseVAD()
+    }, START_TIMEOUT_MS)
+
+    try {
+      await this.enqueueVADLifecycle(async () => {
+        if (!this.active || token !== this.generation) return
+
+        if (!this.vad || this.vadGeneration !== token) {
+          const previousVAD = this.vad
+          this.vad = null
+          this.vadGeneration = null
+          if (previousVAD) await this.disposeVAD(previousVAD)
+
+          const nextVAD = await this.createVAD(token)
+          if (!this.active || token !== this.generation) {
+            await this.disposeVAD(nextVAD)
+            return
+          }
+          this.vad = nextVAD
+          this.vadGeneration = token
+        }
+
+        const vad = this.vad
+        if (!vad) return
+        await vad.start()
+        if (!this.active || token !== this.generation) {
+          if (this.vad === vad) {
+            this.vad = null
+            this.vadGeneration = null
+          }
+          await this.disposeVAD(vad)
+          return
+        }
+        this.clearStartTimer()
+        this.permission = 'granted'
+        this.setState('recorder', 'listening')
+      })
+    } catch (error) {
+      if (token !== this.generation) return
+      this.clearStartTimer()
+      const name = (error as { name?: string })?.name
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        this.fail('permission', 'Microphone permission is required for voice conversation.', error)
+      } else if (name === 'NotFoundError') {
+        this.fail('runtime', 'Không tìm thấy micro. Bạn kiểm tra thiết bị đầu vào nhé.', error)
+      } else if (name === 'NotReadableError') {
+        this.fail('runtime', 'Không mở được micro. Bạn kiểm tra xem ứng dụng khác có đang giữ micro không.', error)
+      } else {
+        this.fail('unsupported', 'Không tải được bộ nhận diện giọng nói. Bạn có thể nhập câu hỏi bằng chữ.', error)
       }
+      await this.pauseVAD()
     }
-    await this.startRecorder(token)
   }
 
   async resume(): Promise<void> {
@@ -275,23 +283,29 @@ export class VoiceConversationController {
 
   pause(): void {
     this.active = false
+    this.manualStopRequested = false
     this.generation += 1
-    this.clearRecognitionStart()
-    this.clearRecorderStart()
-    this.clearRecognitionRestart()
-    this.stopRecognition()
-    this.stopMonitor(true)
+    this.clearStartTimer()
+    this.clearMaxSegmentTimer()
     this.options.onLevel?.(0)
     this.setState('idle', 'idle')
+    void this.pauseVAD()
   }
 
   stop(): void {
     this.destroyed = true
-    this.pause()
+    this.active = false
+    this.manualStopRequested = false
+    this.generation += 1
+    this.clearStartTimer()
+    this.clearMaxSegmentTimer()
+    this.options.onLevel?.(0)
+    this.setState('idle', 'idle')
+    void this.pauseVAD()
   }
 
-  setLocale(locale: string): void {
-    this.locale = locale
+  setLocale(_locale: string): void {
+    // Silero detects speech independently of the language. Groq receives the selected locale.
   }
 
   setInputDevice(deviceId: string): void {
@@ -299,16 +313,184 @@ export class VoiceConversationController {
   }
 
   stopCapture(): void {
-    if (this.segmentRecorder?.state === 'recording') {
-      this.active = false
-      this.clearRecognitionRestart()
-      this.stopRecognition()
-      this.stopMonitor(false)
-      this.setState('idle', 'idle')
-      this.stopSegment(true, true)
+    if (!this.vad || !this.active) {
+      this.pause()
       return
     }
-    this.pause()
+    this.active = false
+    this.manualStopRequested = true
+    this.clearStartTimer()
+    this.clearMaxSegmentTimer()
+    this.options.onLevel?.(0)
+    this.setState('idle', 'idle')
+    const vad = this.vad
+    const token = this.generation
+    void this.enqueueVADLifecycle(async () => {
+      if (this.vad !== vad) return
+      try {
+        await vad.pause()
+      } catch {
+        // The VAD may already have stopped after the maximum segment timer.
+      } finally {
+        this.releaseStream()
+        // onSpeechEnd clears this flag when it flushes the segment. If there was
+        // no segment, clear it only after pause has completed.
+        if (token === this.generation && this.manualStopRequested) {
+          this.manualStopRequested = false
+        }
+      }
+    })
+  }
+
+  private async createVAD(token: number): Promise<VoiceVADLike> {
+    const createVAD = this.dependencies.createVAD ?? defaultCreateVAD
+    const openMicrophone = async (): Promise<MediaStream> => {
+      const constraints = this.deviceId
+        ? {
+            audio: {
+              ...(MICROPHONE_CONSTRAINTS.audio as Exclude<VoiceMediaConstraints['audio'], boolean>),
+              deviceId: { exact: this.deviceId },
+            },
+          }
+        : MICROPHONE_CONSTRAINTS
+      const getUserMedia = this.dependencies.getUserMedia ?? defaultGetUserMedia
+      let stream: MediaStreamLike
+      try {
+        stream = await getUserMedia(constraints)
+      } catch (error) {
+        const name = (error as { name?: string })?.name
+        const unavailableDevice = [
+          'NotFoundError',
+          'OverconstrainedError',
+          'ConstraintNotSatisfiedError',
+        ].includes(name ?? '')
+        if (!this.deviceId || !unavailableDevice) throw error
+
+        // A device ID can become stale after a USB/headset change. Keep voice usable
+        // by trying the operating-system default, then refresh the picker after capture.
+        this.deviceId = ''
+        stream = await getUserMedia(MICROPHONE_CONSTRAINTS)
+      }
+      this.stream = stream
+      if (this.active && token === this.generation) {
+        this.permission = 'granted'
+        this.options.onInputDevice?.(stream.getTracks()[0]?.label || 'Micro mặc định')
+      }
+      return stream as MediaStream
+    }
+    const stopMicrophone = async (stream: MediaStream): Promise<void> => {
+      stream.getTracks().forEach((track) => track.stop())
+      if (this.stream === stream) this.stream = null
+    }
+    const assetRoot = vadAssetRoot()
+    const vad = await createVAD({
+      getStream: openMicrophone,
+      pauseStream: stopMicrophone,
+      resumeStream: async () => openMicrophone(),
+      onFrameProcessed: (_probabilities, frame) => {
+        if (!this.active || token !== this.generation) return
+        this.options.onLevel?.(Math.min(1, rms(frame) / 0.15))
+      },
+      onSpeechStart: () => {
+        if (!this.active || token !== this.generation) return
+        this.setState('recorder', 'recording')
+        this.clearMaxSegmentTimer()
+        const setTimeoutFn = this.dependencies.setTimeout ?? ((handler, timeout) => setTimeout(handler, timeout) as unknown as number)
+        this.maxSegmentTimer = setTimeoutFn(() => this.stopCapture(), MAX_SEGMENT_DURATION_MS)
+      },
+      onSpeechRealStart: () => {
+        if (this.active && token === this.generation) this.setState('recorder', 'recording')
+      },
+      onSpeechEnd: (audio) => { void this.finishSegment(audio, token) },
+      onVADMisfire: () => {
+        if (this.active && token === this.generation) {
+          this.clearMaxSegmentTimer()
+          this.setState('recorder', 'listening')
+        }
+      },
+      positiveSpeechThreshold: 0.42,
+      negativeSpeechThreshold: 0.28,
+      redemptionMs: REDEMPTION_MS,
+      preSpeechPadMs: PRE_SPEECH_PAD_MS,
+      minSpeechMs: MIN_SPEECH_MS,
+      submitUserSpeechOnPause: true,
+      model: 'v5',
+      processorType: 'auto',
+      baseAssetPath: assetRoot,
+      onnxWASMBasePath: assetRoot,
+      ortConfig: (runtime) => {
+        runtime.env.logLevel = 'error'
+        runtime.env.wasm.numThreads = 1
+        runtime.env.wasm.wasmPaths = {
+          mjs: new URL('ort-wasm-simd-threaded.mjs', assetRoot).toString(),
+          wasm: new URL('ort-wasm-simd-threaded.wasm', assetRoot).toString(),
+        }
+      },
+    })
+    return vad
+  }
+
+  private async finishSegment(audio: Float32Array, token: number): Promise<void> {
+    if (token !== this.generation || (!this.active && !this.manualStopRequested) || this.destroyed) return
+    const resumeAfterQuietSegment = this.active && !this.manualStopRequested
+    this.active = false
+    this.manualStopRequested = false
+    this.clearStartTimer()
+    this.clearMaxSegmentTimer()
+    this.options.onLevel?.(0)
+    await this.pauseVAD()
+    if (token !== this.generation || this.destroyed || audio.length === 0) return
+    this.setState('idle', 'idle')
+    if (!hasMeaningfulAudioLevel(audio)) {
+      if (resumeAfterQuietSegment) await this.start()
+      return
+    }
+    this.options.onAudio(encodePcm16Wav(audio))
+  }
+
+  private enqueueVADLifecycle(operation: () => Promise<void>): Promise<void> {
+    const task = this.vadLifecycle.catch(() => undefined).then(operation)
+    this.vadLifecycle = task.then(() => undefined, () => undefined)
+    return task
+  }
+
+  private async disposeVAD(vad: VoiceVADLike): Promise<void> {
+    try {
+      if (vad.destroy) await Promise.resolve(vad.destroy())
+      else await Promise.resolve(vad.pause())
+    } catch {
+      // Keep shutdown best effort; MediaStream tracks are stopped below as a second guard.
+    } finally {
+      if (this.vad === vad) {
+        this.vad = null
+        this.vadGeneration = null
+      }
+      this.releaseStream()
+    }
+  }
+
+  private pauseVAD(): Promise<void> {
+    this.clearMaxSegmentTimer()
+    return this.enqueueVADLifecycle(async () => {
+      const vad = this.vad
+      this.vad = null
+      this.vadGeneration = null
+      if (vad) await this.disposeVAD(vad)
+      else this.releaseStream()
+    })
+  }
+
+  private releaseStream(): void {
+    const stream = this.stream
+    this.stream = null
+    stream?.getTracks().forEach((track) => track.stop())
+  }
+
+  private fail(kind: VoiceErrorKind, message: string, cause?: unknown): void {
+    this.active = false
+    if (kind === 'permission') this.permission = 'denied'
+    this.options.onError({ kind, message, cause })
+    this.setState('idle', 'idle')
   }
 
   private setState(mode: VoiceMode, phase: VoicePhase): void {
@@ -317,333 +499,19 @@ export class VoiceConversationController {
     this.options.onState({ mode, phase, permission: this.permission })
   }
 
-  private emitError(kind: VoiceErrorKind, message: string, cause?: unknown): void {
-    this.active = false
-    if (kind === 'permission') this.permission = 'denied'
-    this.options.onError({ kind, message, cause })
-    this.setState('idle', 'idle')
+  private clearStartTimer(): void {
+    if (this.startTimer !== null) {
+      const clearTimeoutFn = this.dependencies.clearTimeout ?? ((timer) => clearTimeout(timer))
+      clearTimeoutFn(this.startTimer)
+    }
+    this.startTimer = null
   }
 
-  private startRecognition(Recognition: SpeechRecognitionConstructor, token: number): void {
-    if (!this.active || token !== this.generation) return
-    this.clearRecognitionRestart()
-    const recognition = this.dependencies.createRecognition?.() ?? new Recognition()
-    this.recognition = recognition
-    recognition.lang = this.locale
-    recognition.continuous = true
-    recognition.interimResults = true
-    recognition.maxAlternatives = 1
-    recognition.onstart = () => {
-      if (!this.active || token !== this.generation) return
-      this.clearRecognitionStart()
-      this.permission = 'granted'
-      this.setState('recognition', 'listening')
+  private clearMaxSegmentTimer(): void {
+    if (this.maxSegmentTimer !== null) {
+      const clearTimeoutFn = this.dependencies.clearTimeout ?? ((timer) => clearTimeout(timer))
+      clearTimeoutFn(this.maxSegmentTimer)
     }
-    recognition.onresult = (event) => {
-      if (!this.active || token !== this.generation) return
-      const text = finalTranscript(event)
-      if (!text) return
-      this.pause()
-      this.options.onTranscript(text)
-    }
-    recognition.onerror = (event) => {
-      if (!this.active || token !== this.generation) return
-      if (
-        event.error === 'not-allowed'
-        || event.error === 'service-not-allowed'
-        || event.error === 'network'
-      ) {
-        this.clearRecognitionStart()
-        void this.fallbackToRecorder(token)
-        return
-      }
-      this.options.onError({
-        kind: 'runtime',
-        message: event.message || event.error || 'Speech recognition failed',
-      })
-    }
-    recognition.onend = () => {
-      if (!this.active || token !== this.generation) return
-      this.clearRecognitionStart()
-      this.recognition = null
-      this.recognitionRestartTimer = this.schedule(() => {
-        this.recognitionRestartTimer = null
-        if (!this.active || token !== this.generation) return
-        try {
-          this.startRecognition(Recognition, token)
-        } catch (error) {
-          void this.startRecorder(token, error)
-        }
-      }, 350)
-    }
-    this.recognitionStartTimer = this.schedule(() => {
-      this.recognitionStartTimer = null
-      if (!this.active || token !== this.generation || this.recognition !== recognition) return
-      void this.fallbackToRecorder(token)
-    }, RECOGNITION_START_TIMEOUT_MS)
-    recognition.start()
-  }
-
-  private async fallbackToRecorder(token: number): Promise<void> {
-    if (!this.active || token !== this.generation) return
-    this.stopRecognition()
-    try {
-      await this.startRecorder(token)
-    } catch (error) {
-      this.emitError('permission', 'Microphone permission is required for voice conversation.', error)
-    }
-  }
-
-  private async startRecorder(token: number, cause?: unknown): Promise<void> {
-    this.clearRecognitionStart()
-    const getUserMedia = this.dependencies.getUserMedia
-    const Recorder = this.dependencies.MediaRecorder
-    const createAudioContext = this.dependencies.createAudioContext
-    if (!getUserMedia || !Recorder || !createAudioContext) {
-      this.emitError(
-        'unsupported',
-        'This browser cannot start microphone recording. Please allow microphone access or use text input.',
-        cause,
-      )
-      return
-    }
-
-    try {
-      this.recorderStartTimer = this.schedule(() => {
-        this.recorderStartTimer = null
-        if (!this.active || token !== this.generation) return
-        this.pause()
-        this.emitError('runtime', 'Chưa mở được micro. Hãy kiểm tra quyền micro rồi bấm mic để thử lại.')
-      }, 12_000)
-      const audioConstraints = typeof MICROPHONE_CONSTRAINTS.audio === 'object' ? MICROPHONE_CONSTRAINTS.audio : {}
-      const stream = await getUserMedia(this.deviceId
-        ? { audio: { ...audioConstraints, deviceId: { exact: this.deviceId } } }
-        : MICROPHONE_CONSTRAINTS)
-      if (!this.active || token !== this.generation) {
-        stream.getTracks().forEach((track) => track.stop())
-        return
-      }
-      const context = createAudioContext()
-      this.stream = stream
-      this.audioContext = context
-      if (context.resume && context.state !== 'running') await context.resume()
-      if (!this.active || token !== this.generation) {
-        if (this.audioContext === context) this.releaseAudioResources()
-        return
-      }
-      if (context.state === 'suspended') {
-        throw new Error('Bộ xử lý âm thanh chưa chạy. Bạn bấm mic để thử lại nhé.')
-      }
-      this.clearRecorderStart()
-      const analyser = context.createAnalyser()
-      analyser.fftSize = 512
-      const source = context.createMediaStreamSource(stream)
-      source.connect(analyser)
-      this.stream = stream
-      this.audioContext = context
-      this.audioSource = source
-      this.analyser = analyser
-      this.permission = 'granted'
-      this.options.onInputDevice?.(stream.getTracks()[0]?.label || 'Micro mặc định')
-      this.noiseFloor = 0.008
-      this.lastPollAt = this.dependencies.now?.() ?? Date.now()
-      this.setState('recorder', 'listening')
-      this.pollAudio(token)
-    } catch (error) {
-      this.clearRecorderStart()
-      if (token !== this.generation) return
-      this.stopMonitor(true)
-      const name = (error as { name?: string })?.name
-      if (name === 'NotAllowedError' || name === 'SecurityError') {
-        this.emitError('permission', 'Microphone permission is required for voice conversation.', error)
-      } else {
-        this.emitError('runtime', name === 'NotFoundError'
-          ? 'Không tìm thấy micro. Bạn kiểm tra thiết bị đầu vào nhé.'
-          : name === 'NotReadableError'
-            ? 'Không mở được micro. Bạn kiểm tra xem ứng dụng khác có đang giữ micro không.'
-            : error instanceof Error ? error.message : 'Không khởi động được micro.', error)
-      }
-    }
-  }
-
-  private pollAudio(token: number): void {
-    if (!this.active || token !== this.generation || this.currentMode !== 'recorder' || !this.analyser) return
-    const data = new Uint8Array(this.analyser.fftSize)
-    this.analyser.getByteTimeDomainData(data)
-    const level = rms(data)
-    this.options.onLevel?.(Math.min(1, level / 0.15))
-    const now = this.dependencies.now?.() ?? Date.now()
-    const elapsed = this.lastPollAt === null
-      ? POLL_INTERVAL_MS
-      : Math.max(0, Math.min(now - this.lastPollAt, POLL_INTERVAL_MS * 2))
-    this.lastPollAt = now
-    let threshold = Math.max(
-      MIN_SPEECH_THRESHOLD,
-      Math.min(MAX_SPEECH_THRESHOLD, this.noiseFloor * 2),
-    )
-    if (!this.segmentRecorder && level < threshold) {
-      this.noiseFloor += (level - this.noiseFloor) * NOISE_FLOOR_ALPHA
-      threshold = Math.max(
-        MIN_SPEECH_THRESHOLD,
-        Math.min(MAX_SPEECH_THRESHOLD, this.noiseFloor * 2),
-      )
-    }
-    const speechDetected = level >= (this.segmentRecorder ? threshold * 0.68 : threshold)
-    if (speechDetected) {
-      if (!this.segmentRecorder) this.startSegment(now)
-      this.lastVoiceAt = now
-      this.voicedDurationMs += elapsed
-    }
-    if (this.segmentRecorder && (
-      now - this.lastVoiceAt >= SILENCE_DURATION_MS
-      || now - this.segmentStartedAt >= MAX_SEGMENT_DURATION_MS
-    )) {
-      this.stopSegment(true)
-      return
-    }
-    this.monitorTimer = this.schedule(() => {
-      this.monitorTimer = null
-      this.pollAudio(token)
-    }, POLL_INTERVAL_MS)
-  }
-
-  private startSegment(now: number): void {
-    const Recorder = this.dependencies.MediaRecorder
-    if (!Recorder || !this.stream) return
-    const mimeType = Recorder.isTypeSupported?.('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : 'audio/webm'
-    try {
-      const recorder = new Recorder(this.stream, { mimeType })
-      const token = this.generation
-      this.segmentChunks = []
-      this.segmentStartedAt = now
-      this.lastVoiceAt = now
-      this.voicedDurationMs = 0
-      this.forceSegmentEmit = false
-      this.segmentRecorder = recorder
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) this.segmentChunks.push(event.data)
-      }
-      recorder.onstop = () => {
-        const blob = new Blob(this.segmentChunks, { type: mimeType })
-        const hasSpeech = this.forceSegmentEmit || this.voicedDurationMs >= MIN_VOICED_DURATION_MS
-        this.segmentRecorder = null
-        this.segmentChunks = []
-        this.voicedDurationMs = 0
-        this.forceSegmentEmit = false
-        if (blob.size > 0 && token === this.generation && hasSpeech) {
-          this.releaseAudioResources()
-          this.lastPollAt = null
-          this.options.onAudio(blob)
-        } else if (token === this.generation && !this.destroyed) {
-          this.active = true
-          this.lastPollAt = this.dependencies.now?.() ?? Date.now()
-          this.setState('recorder', 'listening')
-          this.pollAudio(token)
-        } else {
-          this.releaseAudioResources()
-          this.lastPollAt = null
-        }
-      }
-      recorder.onerror = (event) => {
-        this.emitError('runtime', event.error || 'Audio recording failed')
-      }
-      recorder.start(100)
-      this.setState('recorder', 'recording')
-    } catch (error) {
-      this.segmentRecorder = null
-      this.segmentChunks = []
-      this.releaseAudioResources()
-      this.emitError('runtime', 'Audio recording could not start.', error)
-    }
-  }
-
-  private stopSegment(emitAudio: boolean, forceEmit = false): void {
-    const recorder = this.segmentRecorder
-    if (!recorder) return
-    this.active = false
-    this.stopMonitor(false)
-    if (!emitAudio) {
-      this.forceSegmentEmit = false
-      recorder.ondataavailable = null
-      recorder.onstop = null
-      this.segmentRecorder = null
-      this.segmentChunks = []
-    }
-    try {
-      if (forceEmit) this.forceSegmentEmit = true
-      if (recorder.state !== 'inactive') recorder.stop()
-    } catch (error) {
-      this.segmentRecorder = null
-      this.segmentChunks = []
-      this.forceSegmentEmit = false
-      this.releaseAudioResources()
-      if (emitAudio) this.emitError('runtime', 'Audio recording could not stop.', error)
-    }
-  }
-
-  private stopRecognition(): void {
-    this.clearRecognitionStart()
-    const recognition = this.recognition
-    this.recognition = null
-    if (!recognition) return
-    recognition.onstart = null
-    recognition.onresult = null
-    recognition.onerror = null
-    recognition.onend = null
-    try {
-      recognition.stop()
-    } catch {
-      recognition.abort?.()
-    }
-  }
-
-  private clearRecorderStart(): void {
-    if (this.recorderStartTimer !== null) this.clearTimer(this.recorderStartTimer)
-    this.recorderStartTimer = null
-  }
-
-  private stopMonitor(discardSegment: boolean): void {
-    if (this.monitorTimer !== null) {
-      this.clearTimer(this.monitorTimer)
-      this.monitorTimer = null
-    }
-    if (discardSegment && this.segmentRecorder) this.stopSegment(false)
-    if (discardSegment) this.releaseAudioResources()
-  }
-
-  private releaseAudioResources(): void {
-    this.audioSource?.disconnect?.()
-    this.audioSource = null
-    this.analyser = null
-    const context = this.audioContext
-    this.audioContext = null
-    if (context) void context.close()
-    const stream = this.stream
-    this.stream = null
-    stream?.getTracks().forEach((track) => track.stop())
-  }
-
-  private clearRecognitionRestart(): void {
-    if (this.recognitionRestartTimer !== null) {
-      this.clearTimer(this.recognitionRestartTimer)
-      this.recognitionRestartTimer = null
-    }
-  }
-
-  private clearRecognitionStart(): void {
-    if (this.recognitionStartTimer !== null) {
-      this.clearTimer(this.recognitionStartTimer)
-      this.recognitionStartTimer = null
-    }
-  }
-
-  private schedule(handler: () => void, timeout: number): number {
-    return (this.dependencies.setTimeout ?? ((callback, delay) => setTimeout(callback, delay) as unknown as number))(handler, timeout)
-  }
-
-  private clearTimer(timer: number): void {
-    (this.dependencies.clearTimeout ?? ((value) => clearTimeout(value)))(timer)
+    this.maxSegmentTimer = null
   }
 }
