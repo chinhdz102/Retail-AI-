@@ -7,6 +7,7 @@ const apiMocks = vi.hoisted(() => ({
   createSession: vi.fn(),
   createRequestId: vi.fn(() => 'request-test-id'),
   closeSession: vi.fn().mockResolvedValue({}),
+  prewarmSpeech: vi.fn().mockResolvedValue({ warmed: true, provider: 'azure-speech' }),
   respond: vi.fn(),
   transcribe: vi.fn(),
   createSynthesisTicket: vi.fn(),
@@ -19,7 +20,24 @@ const apiMocks = vi.hoisted(() => ({
   simulateSandboxPayment: vi.fn(),
 }))
 
+const vadMocks = vi.hoisted(() => ({ stream: null as MediaStream | null }))
+
 vi.mock('./api', () => apiMocks)
+vi.mock('@ricky0123/vad-web', () => ({
+  MicVAD: {
+    new: async (options: {
+      getStream: () => Promise<MediaStream>
+      pauseStream: (stream: MediaStream) => Promise<void>
+    }) => ({
+      start: async () => { vadMocks.stream = await options.getStream() },
+      pause: async () => {
+        if (vadMocks.stream) await options.pauseStream(vadMocks.stream)
+        vadMocks.stream = null
+      },
+      destroy: async () => undefined,
+    }),
+  },
+}))
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -325,6 +343,35 @@ describe('kiosk app', () => {
     expect(window.localStorage.getItem('retail-ai-microphone-device')).toBe('amd-direct')
   })
 
+  it('uses a saved microphone before labels are exposed by the browser', async () => {
+    window.localStorage.setItem('retail-ai-microphone-device', 'saved-physical-mic')
+    window.localStorage.setItem('retail-ai-microphone-explicit-choice', '1')
+    const getUserMedia = vi.fn(async () => ({
+      getTracks: () => [{ stop: vi.fn(), label: 'Saved physical microphone' }],
+    }))
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        enumerateDevices: vi.fn(async () => [
+          { deviceId: 'saved-physical-mic', groupId: 'saved', kind: 'audioinput', label: '' },
+        ]),
+        getUserMedia,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      },
+    })
+
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+
+    await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledOnce())
+    expect(getUserMedia).toHaveBeenCalledWith({ audio: expect.objectContaining({
+      deviceId: { exact: 'saved-physical-mic' },
+    }) })
+    wrapper.unmount()
+  })
+
   it('waits for the user and prefers the Groq recorder when browser recognition exists', async () => {
     let recognitionInstance: {
       lang: string
@@ -394,6 +441,7 @@ describe('kiosk app', () => {
     await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
     await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledWith({
       audio: {
+        channelCount: 1,
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,

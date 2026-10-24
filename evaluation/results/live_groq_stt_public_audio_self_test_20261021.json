@@ -1,0 +1,56 @@
+{
+  "kind": "fresh_fleurs_full_endpoint_self_test",
+  "timestamp": "2026-10-21T15:08:25Z",
+  "dataset": "google/fleurs",
+  "license": "CC-BY-4.0",
+  "sample_count": 3,
+  "all_http_200": true,
+  "exact": 2,
+  "mean_wer": 0.0625,
+  "mean_cer": 0.016129032258064516,
+  "median_endpoint_ms": 912,
+  "results": [
+    {
+      "file": "10057024225045006889.wav",
+      "expected": "Văn hóa và bộ lạc cổ xưa đã bắt đầu giữ những con vật này để dễ lấy sữa, tóc, thịt, và da.",
+      "text": "Văn hóa và bộ lạc cổ xưa đã bắt đầu giữ những con vật này để dễ lấy sữa, tóc, thịt và da.",
+      "model": "whisper-large-v3",
+      "speech_detected": true,
+      "latency_ms": 2064,
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 23,
+      "character_errors": 0,
+      "reference_character_count": 64
+    },
+    {
+      "file": "10072308967409148015.wav",
+      "expected": "Đối với Springboks, trận này đã giúp đội tuyển kết thúc chuỗi thua 5 trận liền.",
+      "text": "Đối với Spring Book, trận này đã giúp đội tuyển kết thúc chui thua 5 trận liền.",
+      "model": "whisper-large-v3",
+      "speech_detected": true,
+      "latency_ms": 766,
+      "wer": 0.1875,
+      "cer": 0.04838709677419355,
+      "word_errors": 3,
+      "reference_word_count": 16,
+      "character_errors": 3,
+      "reference_character_count": 62
+    },
+    {
+      "file": "1015279164912843543.wav",
+      "expected": "Châu Âu là lục địa tương đối nhỏ nhưng có nhiều quốc gia độc lập. Thông thường, việc đi qua nhiều quốc gia đồng nghĩa với việc phải xin thị thực và xét hộ chiếu nhiều lần.",
+      "text": "Châu Âu là lục địa tương đối nhỏ nhưng có nhiều quốc gia độc lập. Thông thường, việc đi qua nhiều quốc gia đồng nghĩa với việc phải xin thị thực và xét hộ chiếu nhiều lần.",
+      "model": "whisper-large-v3",
+      "speech_detected": true,
+      "latency_ms": 912,
+      "wer": 0.0,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_word_count": 37,
+      "character_errors": 0,
+      "reference_character_count": 132
+    }
+  ]
+}

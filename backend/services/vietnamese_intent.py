@@ -111,9 +111,17 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "促销",
         ),
     )
+    # ``giá`` and ``gia đình`` normalize to the same token sequence. Do not
+    # classify an activity about family as a price lookup just because the
+    # latter phrase starts with the unaccented token ``gia``.
+    price_query_text = re.sub(
+        r"\btham\s+gia\b|\bgia\s+(?:dinh|vi|nhap|han|tang|cong|tri)\b",
+        " ",
+        normalized,
+    )
     price = (
         _has_phrase(
-            normalized,
+            price_query_text,
             (
                 "gia",
                 "price",
@@ -185,7 +193,7 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
     # A discount question is not a price lookup unless the customer also asks
     # for the actual price (e.g. "giá sau giảm còn bao nhiêu?").
     promotion = promotion or bool(re.search(r"\bmua\s+\w+\s+tang\s+\w+\b", normalized))
-    promotion_stripped = normalized
+    promotion_stripped = price_query_text
     for cue in ("ma giam gia", "giam gia", "khuyen mai", "uu dai", "deal", "on sale", "sale"):
         promotion_stripped = re.sub(rf"(?<!\w){re.escape(cue)}(?!\w)", " ", promotion_stripped)
     explicit_price_with_promotion = _has_phrase(
@@ -538,9 +546,12 @@ _CATEGORY_CUES: dict[str, tuple[str, ...]] = {
         "qua vat",
         "do nham",
         "nham nhi",
+        "mon nham nhi",
         "do lai rai",
         "an lai rai",
+        "mon lai rai",
         "an choi",
+        "mon an choi",
         "banh keo",
         "bim bim",
         "khoai tay chien",
@@ -634,11 +645,90 @@ _CATEGORY_CUES: dict[str, tuple[str, ...]] = {
     "skincare": (
         "cham soc da",
         "cham soc da mat",
+        "sua rua mat",
+        "da kho",
+        "dry skin",
+        "da nhay cam",
+        "sensitive skin",
+        "da mun",
+        "mun",
+        "mun trung ca",
+        "da dau",
+        "oily skin",
         "duong da",
         "da mat",
         "skincare",
         "skin care",
         "skin-care",
+        "facial skin care",
+    ),
+    "haircare": (
+        "cham soc toc",
+        "dau goi",
+        "dau xa",
+        "toc kho",
+        "toc dau",
+        "gau dau",
+        "rung toc",
+        "hair care",
+        "haircare",
+        "shampoo",
+        "conditioner",
+    ),
+    "oral_care": (
+        "cham soc rang mieng",
+        "rang mieng",
+        "kem danh rang",
+        "ban chai danh rang",
+        "nuoc suc mieng",
+        "chi nha khoa",
+        "oral care",
+        "mouth care",
+        "toothpaste",
+        "toothbrush",
+        "mouthwash",
+    ),
+    "home_cleaning": (
+        "ve sinh nha cua",
+        "ve sinh nha",
+        "don dep nha",
+        "lau nha",
+        "rua chen bat",
+        "rua bat",
+        "nuoc lau san",
+        "lau kinh",
+        "lau bon cau",
+        "tay rua bep",
+        "household cleaning",
+        "cleaning products",
+        "household cleaning products",
+    ),
+    "laundry": (
+        "giat giu quan ao",
+        "giat quan ao",
+        "do giat",
+        "nuoc giat",
+        "bot giat",
+        "nuoc xa vai",
+        "laundry detergent",
+        "laundry",
+    ),
+    "baby": (
+        "do cho em be",
+        "do cho be",
+        "do cho tre em",
+        "do dung cho be",
+        "cham soc be",
+        "me va be",
+        "em be",
+        "tre em",
+        "ta bim",
+        "baby care",
+        "baby",
+        "kids",
+        "children",
+        "for kids",
+        "for children",
     ),
     "cosmetic": (
         "my pham",
@@ -649,13 +739,47 @@ _CATEGORY_CUES: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# These phrases describe the customer's use case or intended recipient. When a
+# product department is also named (for example, laundry for children), keep
+# the department as the hard catalog filter and retain the qualifier in the
+# product query instead of switching to a broad baby or skincare category.
+_CONTEXT_ONLY_CATEGORY_CUES: dict[str, frozenset[str]] = {
+    "skincare": frozenset(
+        {
+            "da kho",
+            "dry skin",
+            "da nhay cam",
+            "sensitive skin",
+            "da mun",
+            "mun",
+            "mun trung ca",
+            "da dau",
+            "oily skin",
+        }
+    ),
+    "haircare": frozenset({"toc kho", "toc dau", "gau dau", "rung toc"}),
+    "baby": frozenset({"tre em", "em be", "baby", "kids", "children"}),
+}
+
 
 def explicit_recommendation_category(text: str) -> str | None:
     normalized = " ".join(normalize_vietnamese(text).split())
+    named_query = explicit_recommendation_query(text)
+    if named_query:
+        matching_categories = {
+            category
+            for category, cues in _CATEGORY_CUES.items()
+            if any(
+                cue == named_query and _has_phrase(normalized, (cue,))
+                for cue in cues
+            )
+        }
+        if len(matching_categories) == 1:
+            return next(iter(matching_categories))
     # Resolve overlapping broad phrases by the most specific phrase. An
     # explicit "đồ ăn vặt" therefore wins over the shorter "đồ ăn" cue.
     matches = [
-        (len(cue.split()), category)
+        (len(cue.split()), category, cue)
         for category, cues in _CATEGORY_CUES.items()
         for cue in cues
         if _has_phrase(normalized, (cue,))
@@ -663,11 +787,43 @@ def explicit_recommendation_category(text: str) -> str | None:
             category == "snack" and cue == "qua vat" and _has_phrase(normalized, ("qua vat chat",))
         )
     ]
+    # Spoken Vietnamese often inserts a subject or verb between the need and
+    # the body area ("da mình bị khô", "tóc nhanh bết"). Keep that as use-case
+    # context for catalog lookup, without claiming any product is suitable.
+    if re.search(
+        r"\bda\b(?:\s+(?:cua\s+)?(?:minh|toi|em|ban|rat|hoi|bi|dang)){0,3}"
+        r"\s+(?:kho|dau|nhay cam|mun)\b",
+        normalized,
+    ):
+        matches.append((2, "skincare", "da kho"))
+    if re.search(
+        r"\btoc\b(?:\s+(?:cua\s+)?(?:minh|toi|em|ban|rat|hoi|bi|dang|nhanh)){0,3}"
+        r"\s+(?:kho|dau|bet|gau|rung)\b",
+        normalized,
+    ):
+        matches.append((2, "haircare", "toc dau"))
     if not matches:
         return None
-    longest = max(length for length, _ in matches)
-    categories = {category for length, category in matches if length == longest}
+    has_product_department = any(
+        cue not in _CONTEXT_ONLY_CATEGORY_CUES.get(category, frozenset())
+        for _length, category, cue in matches
+    )
+    if has_product_department:
+        matches = [
+            item
+            for item in matches
+            if item[2] not in _CONTEXT_ONLY_CATEGORY_CUES.get(item[1], frozenset())
+        ]
+    longest = max(length for length, _category, _cue in matches)
+    categories = {
+        category for length, category, _cue in matches if length == longest
+    }
     return next(iter(categories)) if len(categories) == 1 else None
+
+
+def recommendation_category_cues(category: str) -> tuple[str, ...]:
+    """Return the phrases that explicitly name a supported recommendation group."""
+    return _CATEGORY_CUES.get(category, ())
 
 
 def explicit_recommendation_categories(text: str) -> list[str]:
@@ -750,6 +906,33 @@ def explicit_recommendation_categories(text: str) -> list[str]:
 
 
 _RECOMMENDATION_QUERY_CUES = (
+    "ve sinh nha cua",
+    "cham soc rang mieng",
+    "cham soc toc",
+    "cham soc da",
+    "do cho em be",
+    "do dung cho be",
+    "giat quan ao",
+    "household cleaning products",
+    "household cleaning",
+    "cleaning products",
+    "baby care",
+    "baby products",
+    "hair care",
+    "oral care",
+    "laundry detergent",
+    "da kho",
+    "da nhay cam",
+    "da dau",
+    "da mun",
+    "toc kho",
+    "gau dau",
+    "rung toc",
+    "dry skin",
+    "sensitive skin",
+    "oily skin",
+    "skin care",
+    "skincare",
     "nuoc suoi",
     "nuoc loc",
     "nuoc ngot",
@@ -763,6 +946,23 @@ _RECOMMENDATION_QUERY_CUES = (
     "mi goi",
     "bim bim",
     "banh keo",
+    "dau goi",
+    "dau xa",
+    "kem danh rang",
+    "ban chai danh rang",
+    "toothpaste",
+    "toothbrush",
+    "mouthwash",
+    "shampoo",
+    "conditioner",
+    "nuoc suc mieng",
+    "nuoc rua chen",
+    "nuoc giat",
+    "bot giat",
+    "khan mat",
+    "khan tam",
+    "khan giay",
+    "mat na",
     "milk tea",
     "sua rua mat",
     "kem duong da",
@@ -790,11 +990,32 @@ _RECOMMENDATION_QUERY_CUES = (
     "noodles",
 )
 
+_RECOMMENDATION_CONTEXT_QUERY_CUES = frozenset(
+    {
+        "da kho",
+        "da nhay cam",
+        "da dau",
+        "da mun",
+        "toc kho",
+        "toc dau",
+        "gau dau",
+        "rung toc",
+        "dry skin",
+        "sensitive skin",
+        "oily skin",
+    }
+)
+
 
 def explicit_recommendation_query(text: str) -> str | None:
     """Keep a clearly named subcategory as a catalog filter during consultation."""
     normalized = " ".join(normalize_vietnamese(text).split())
     matches = [cue for cue in _RECOMMENDATION_QUERY_CUES if _has_phrase(normalized, (cue,))]
+    product_type_matches = [
+        cue for cue in matches if cue not in _RECOMMENDATION_CONTEXT_QUERY_CUES
+    ]
+    if product_type_matches:
+        matches = product_type_matches
     return max(matches, key=len, default=None)
 
 
@@ -864,6 +1085,9 @@ _RECOMMENDATION_CUES = (
     "help me pick",
     "help me find",
     "what should i buy",
+    "what should i use",
+    "what can i use",
+    "what do i need for",
     "what do you recommend",
     "what would you recommend",
     "what do you suggest",
@@ -882,6 +1106,9 @@ _RECOMMENDATION_CUES = (
     "i want",
     "co san pham nao",
     "san pham nao",
+    "co gi dung",
+    "co gi su dung",
+    "dung gi cho",
 )
 
 
@@ -907,6 +1134,28 @@ _CONSULTATION_FILLER_TOKENS = frozenset(
         "cai",
         "can",
         "cho",
+        "choi",
+        "den",
+        "da",
+        "kho",
+        "chuan",
+        "bi",
+        "nhay",
+        "cam",
+        "dung",
+        "nguoi",
+        "khach",
+        "sap",
+        "bien",
+        "chuyen",
+        "ngay",
+        "tuan",
+        "tre",
+        "con",
+        "may",
+        "dua",
+        "sinh",
+        "cuoi",
         "chay",
         "co",
         "dang",
@@ -993,6 +1242,36 @@ _CONSULTATION_FILLER_TOKENS = frozenset(
         "a",
         "an",
         "are",
+        "friends",
+        "visiting",
+        "tonight",
+        "there",
+        "have",
+        "five",
+        "six",
+        "us",
+        "and",
+        "spend",
+        "around",
+        "coming",
+        "over",
+        "guests",
+        "family",
+        "trip",
+        "travel",
+        "vacation",
+        "beach",
+        "camping",
+        "picnic",
+        "party",
+        "birthday",
+        "wedding",
+        "moving",
+        "apartment",
+        "dry",
+        "skin",
+        "sensitive",
+        "oily",
         "any",
         "anything",
         "buy",
@@ -1070,8 +1349,239 @@ _CONSULTATION_FILLER_TOKENS = frozenset(
         "chips",
         "candy",
         "noodles",
+        "kem",
         "thirsty",
         "hungry",
+        # Generic goal, category and revision words are not product names.
+        "va",
+        "cau",
+        "them",
+        "vao",
+        "nhom",
+        "phuong",
+        "ke",
+        "hoach",
+        "giu",
+        "tinh",
+        "day",
+        "sach",
+        "khac",
+        "nhau",
+        "giay",
+        "vai",
+        "vua",
+        "uong",
+        "chua",
+        "bat",
+        "nhung",
+        "uu",
+        "tien",
+        "theo",
+        "len",
+        "buoc",
+        "khoang",
+        "tong",
+        "nguyen",
+        "cu",
+        "so",
+        "trai",
+        "cham",
+        "soc",
+        "thanh",
+        "du",
+        "ep",
+        "tu",
+        "ca",
+        "bua",
+        "ve",
+        "moi",
+        "chi",
+        "lai",
+        "viec",
+        "bo",
+        "vat",
+        "dau",
+        "cung",
+        "giam",
+        "doi",
+        "xuong",
+        "chot",
+        "dinh",
+        "nang",
+        "hoc",
+        "banh",
+        "tran",
+        "nhan",
+        "phai",
+        "nen",
+        "tru",
+        "buoi",
+        "ghi",
+        "khoi",
+        "bep",
+        "nghi",
+        "ra",
+        "lo",
+        "tham",
+        "duong",
+        "giat",
+        "thuc",
+        "nua",
+        "chinh",
+        "mang",
+        "truoc",
+        "noi",
+        "sua",
+        "don",
+        "tap",
+        "dieu",
+        "lieu",
+        "xac",
+        "nuoc",
+        "cuoc",
+        "ro",
+        "thu",
+        "gon",
+        "huong",
+        "chia",
+        "sam",
+        "khang",
+        "hoac",
+        "phuc",
+        "vu",
+        "ngoai",
+        "cong",
+        "vien",
+        "hieu",
+        "can",
+        "ho",
+        "le",
+        "tiec",
+        "van",
+        "phong",
+        "hop",
+        "truong",
+        "con",
+        "nho",
+        "tre",
+        "gio",
+        "lam",
+        "khach",
+        "gia",
+        "dinh",
+        "dong",
+        "nghiep",
+        "chuyen",
+        "lich",
+        "que",
+        "dua",
+        "tiep",
+        "lang",
+        "cach",
+        "dung",
+        "muc",
+        "tieu",
+        "nguon",
+        "ngan",
+        "tien",
+        "nguoi",
+        "dem",
+        "ban",
+        "be",
+        "kien",
+        "troi",
+        "sinh",
+        "nhat",
+        "mat",
+        "phim",
+        "hoa",
+        "qua",
+        "do",
+        "an",
+        "nhu",
+        "vao",
+        "the",
+        "nao",
+        "chua",
+        "biet",
+        "nhung",
+        "gi",
+        "san",
+        "pham",
+        "cay",
+        "khi",
+        "chon",
+        "tang",
+        "bong",
+        "ni",
+        "khao",
+        "lua",
+        "xep",
+        "dai",
+        "khan",
+        "chieu",
+        "tac",
+        "ky",
+        "thiet",
+        "lop",
+        "cua",
+        "ghe",
+        "gap",
+        "hoan",
+        "tro",
+        "xa",
+        "bang",
+        "xe",
+        "thoi",
+        "mui",
+        "gioi",
+        "han",
+        "roi",
+        "trung",
+        "gian",
+        "dep",
+        "ong",
+        "mai",
+        "phe",
+        "tra",
+        "yeu",
+        "chat",
+        "tay",
+        "ngoi",
+        "lien",
+        "xom",
+        "tau",
+        "quan",
+        "vi",
+        "chup",
+        "anh",
+        "tiet",
+        "hanh",
+        "quen",
+        "giai",
+        "quyet",
+        "nhanh",
+        "chau",
+        "dip",
+        "trao",
+        "dao",
+        "tao",
+        "keo",
+        "tieng",
+        "ket",
+        "dan",
+        "thao",
+        "luan",
+        "rieng",
+        "thien",
+        "thieu",
+        "thue",
+        "on",
+        "hoat",
+        "chu",
+        "ben",
+        "khu",
+        "bai",
     }
 )
 
@@ -1152,6 +1662,7 @@ def is_alternative_product_request(text: str) -> bool:
         "neu khong tim thay",
         "nuoc nao khac",
         "mon nao khac",
+        "lua chon khac",
         "loai nao khac",
         "san pham nao khac",
         "loai khac",
@@ -1199,6 +1710,18 @@ def unsupported_catalog_attribute_requested(text: str) -> bool:
         "cach nau",
         "bao quan nhu the nao",
         "co tot khong",
+        "da kho",
+        "da nhay cam",
+        "da dau",
+        "toc kho",
+        "toc dau",
+        "gau dau",
+        "rung toc",
+        "dry skin",
+        "sensitive skin",
+        "oily skin",
+        "dry hair",
+        "sensitive scalp",
         "tot cho suc khoe",
         "bo duong",
         "dinh duong",
@@ -1293,6 +1816,20 @@ def unsupported_catalog_attribute_requested(text: str) -> bool:
     return (
         contextual_use_or_safety
         or _has_phrase(normalized, unsupported_phrases)
+        or bool(
+            re.search(
+                r"\bda\b(?:\s+(?:cua\s+)?(?:minh|toi|em|ban|rat|hoi|bi|dang)){0,3}"
+                r"\s+(?:kho|dau|nhay cam|mun)\b",
+                normalized,
+            )
+        )
+        or bool(
+            re.search(
+                r"\btoc\b(?:\s+(?:cua\s+)?(?:minh|toi|em|ban|rat|hoi|bi|dang|nhanh)){0,3}"
+                r"\s+(?:kho|dau|bet|gau|rung)\b",
+                normalized,
+            )
+        )
         or bool(
             tokens
             & {

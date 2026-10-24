@@ -162,3 +162,61 @@ Qwen chỉ gọi qua Tool Gateway; agent không được tự dựng URL hoặc 
 - Mỗi nguồn sự thật có owner duy nhất.
 - State transition không cho phép thanh toán giả hoặc session reopen.
 - ERD trong `docs/database_erd.md` biểu diễn các quan hệ cần cho P0/P1.
+
+## 11. Runtime extension: tư vấn mua sắm theo nhu cầu
+
+Khách có thể bắt đầu bằng mục tiêu, hoạt động hoặc ngân sách mà chưa biết tên hàng hay danh mục. Shopping mission là state tư vấn gắn với một session; nó chạy song song với giỏ hàng và không tự ghi đơn.
+
+```mermaid
+sequenceDiagram
+    actor C as Customer
+    participant API as /agent/respond
+    participant R as Mission router
+    participant L as Groq planner
+    participant TG as Tool gateway
+    participant SM as Shopping-mission service
+    participant CAT as Configured catalog repository
+    participant SS as Session store
+
+    C->>API: Mục tiêu / nhu cầu / thay đổi phương án
+    API->>SS: Đọc session-owned mission state
+    API->>R: Query + active mission + intent context
+    R->>L: Structured prompt + catalog taxonomy + prior mission
+    L->>TG: plan_shopping_mission(arguments)
+    TG->>SM: Validate structured mission arguments
+    SM->>CAT: Search candidates per need/category
+    CAT-->>SM: Verified SKUs + catalog provenance
+    SM->>SM: Apply constraints, rank SKU combinations, compute quantity-based totals
+    SM-->>TG: ShoppingPlan + updated mission state
+    TG-->>API: Grounded plan and evidence
+    API->>SS: Compare-and-set mission revision
+    API-->>C: Advice, options, totals, caveats; cart unchanged
+```
+
+### Thành phần và hợp đồng
+
+| Thành phần | File/module hiện tại | Trách nhiệm |
+|---|---|---|
+| Mission router | `backend/services/shopping_mission_routing.py` và nhánh `/agent/respond` trong `backend/api/main.py` | Route mục tiêu rộng và sửa mission đang hoạt động sang planner; giữ câu hỏi SKU/danh mục đơn ở tool catalog phù hợp. |
+| Planner prompt/tool | `_shopping_mission_planner_system_prompt` và `plan_shopping_mission` trong `backend/api/main.py`, `backend/services/retail_tools.py` | Yêu cầu model trích state có cấu trúc; chỉ một tool được ép gọi cho lượt mission. Query, taxonomy và state được coi là dữ liệu không tin cậy. |
+| Mission schema/state | `backend/services/shopping_mission.py`, `backend/services/sessions.py` | Lưu mục tiêu, dịp/use case, số người, ngân sách, needs, yêu cầu cứng/loại trừ, sở thích, món đã có, đề xuất, lựa chọn đang chờ và revision trong session sở hữu lượt hội thoại. |
+| Candidate retrieval | `ProductRepository`/snapshot repository và `backend/products/category_taxonomy.py` | Tra SKU theo từng need/category; lọc theo yêu cầu có thể xác minh và giữ nguồn, thời điểm dữ liệu. |
+| Planner deterministic | `build_shopping_mission_plan` trong `backend/services/shopping_mission.py` | Gộp revision, giữ need không liên quan khi sửa, phân biệt `EXPLICIT` với `INFERRED`, áp hard constraints, chọn tổ hợp SKU theo số lượng need đã phân tích, tính line total/tổng tiền và giữ phương án trong ngân sách. Số lượng là đề xuất có cấu trúc của model; backend kiểm tra phạm vi, tồn khả dụng khi có dữ liệu và phép tính. |
+| Session write | `update_shopping_mission_if_revision` trong `backend/services/sessions.py` | Compare-and-set theo revision để tránh ghi đè cập nhật đồng thời; state không được dùng chung giữa session. |
+| Response | `/agent/respond` | Trả `shopping_plan`, grounded product IDs, data source/timestamp và caveat; không gọi tool ghi giỏ chỉ vì người dùng đang xin tư vấn. |
+
+### Bất biến nghiệp vụ
+
+- Need người dùng nêu rõ là bắt buộc; nhu cầu suy ra từ dịp/mục tiêu vẫn là tùy chọn cho tới khi người dùng xác nhận.
+- Giá, line total, option total và giới hạn ngân sách được tính từ catalog bằng code xác định; LLM chỉ cung cấp ý định và ràng buộc có cấu trúc.
+- Mỗi món trong phương án phải có `product_id` thuộc catalog đang cấu hình. Tên, giá, thuộc tính, tồn kho và nguồn không được suy đoán nếu thiếu dữ liệu.
+- Thay một nhóm hàng giữ nhóm khác; thay đổi ngân sách/số lượng phải tính lại toàn bộ phương án. Sở thích mềm không được biến thành hard filter ngoài phạm vi phù hợp.
+- `ShoppingPlan` là đề xuất. Cart write, checkout và đặt hàng vẫn đi qua tool/confirmation riêng.
+- Lỗi planner/provider không được tạo mission state giả hoặc ghi giỏ. Session revision chỉ được cập nhật sau khi tool trả state hợp lệ.
+- Câu hỏi fact về sản phẩm trong lúc tư vấn đi qua tra cứu catalog; route giữ nguyên `shopping_mission` để khách có thể tiếp tục chỉnh cùng kế hoạch ở lượt sau. Nếu khách nói rõ mục đích còn thiếu, hệ thống hỏi về dịp/hoàn cảnh trước khi lập kế hoạch, không yêu cầu tên món.
+
+### Giới hạn dữ liệu và trạng thái kiểm chứng
+
+Runtime snapshot WinMart hiện dùng cho benchmark có 3.099 dòng tại thời điểm đóng băng. Snapshot cho phép kiểm tra SKU, giá và trường kệ đã lưu; nó không phải feed tồn kho real-time của một chi nhánh và không xác nhận thuộc tính không có trong catalog. Vì vậy planner phải nêu giới hạn này thay vì tự khẳng định tồn kho, mức bán chạy hoặc chất lượng.
+
+Bộ v1 gồm 100 hội thoại tiếng Việt product-name-free, ba lượt mỗi hội thoại; v2 gồm 100 hội thoại/300 lượt và đã bị lộ một phần trong lần chạy chẩn đoán. Bộ v3 mới gồm 100 hội thoại/bốn lượt, trong đó 90 ca không nêu tên sản phẩm, 10 ca hỏi giá có grounding giữa mission rồi tiếp tục chỉnh kế hoạch, và 10 ca thiếu bối cảnh cần một câu hỏi làm rõ trước khi tạo mission. Các file/hash nằm trong `evaluation/cases/`. Bộ chấm tự động kiểm tra state, coverage, constraint, ngân sách, phép tính, provenance, factual lookup trong mission, clarification và an toàn giỏ. Kết quả live current-versus-controlled-ablation đủ 100 ca và đánh giá tự nhiên/hữu ích vẫn là gate riêng; trạng thái được cập nhật trong `docs/reports/retail_ai_shopping_mission_evaluation_20261021.md`.

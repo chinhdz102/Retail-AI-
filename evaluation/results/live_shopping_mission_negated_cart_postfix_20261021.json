@@ -1,0 +1,1765 @@
+{
+  "kind": "live_shopping_mission_benchmark",
+  "generated_at_utc": "2026-10-21T09:29:30.991154+00:00",
+  "dataset_id": "vietnamese_shopping_mission_heldout_v1_20261021",
+  "dataset_sha256": "cecbcfbff4646b5f3095d062c621268ce660900a08ae66e27c8e87b87f62ea64",
+  "dataset_case_count": 100,
+  "selected_case_ids": [
+    "SMH-003"
+  ],
+  "selected_turn_count": 3,
+  "catalog_snapshot_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "live_model_comparison": true,
+  "human_quality_review": "required; automatic grades cover state/data/safety only",
+  "pace_seconds": 5.0,
+  "partial": true,
+  "mode_results": [
+    {
+      "mode": "current",
+      "mode_description": "Current mission route and planner",
+      "model_primary": "qwen/qwen3.8-27b",
+      "fallback_models": [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b"
+      ],
+      "credential_slots": [
+        "primary",
+        "fallback_1",
+        "fallback_2"
+      ],
+      "catalog_repository": "snapshot",
+      "catalog_product_ids_loaded": 3099,
+      "cases": [
+        {
+          "case_id": "SMH-003",
+          "archetype": "gathering",
+          "tags": [
+            "hard_constraint",
+            "optional_inference",
+            "category_addition",
+            "budget_revision",
+            "heldout",
+            "multi_turn",
+            "no_product_names",
+            "party_gathering",
+            "regional_vietnamese"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "user_text": "Giúp mình lên phương án cho việc mời đồng nghiệp ghé chơi sau giờ làm. Nhóm có 5 người, chi khoảng 180.000đ; đừng cho vào giỏ vội.",
+              "http_status": 200,
+              "latency_ms": 4110,
+              "response": {
+                "session_id": "4844c0e7-7e25-47c5-a7b1-981e55bc0947",
+                "text": "Mình hiểu mục tiêu là Phương án mời 5 đồng nghiệp ghé chơi sau giờ làm, chi khoảng 180.000đ; chưa cho vào giỏ.. Tồn kho hiện tại chưa được xác minh. Phương án gợi ý: Snack bắp ngọt Oishi gói 42g × 1 (5,500đ); Nước uống tinh khiết Dasani chai 1.5 lít × 5 (50,000đ); Bánh gạo ngọt Orion An vị tự nhiên 14 gói (10.8g/gói) × 1 (21,600đ); Khăn giấy bỏ túi Let-Green lốc 9 gói × 1 (15,900đ). Tổng 93,000đ. Mình chưa thêm món nào vào giỏ.",
+                "model": "qwen/qwen3.8-27b",
+                "grounded_product_ids": [
+                  "WIN_10015794",
+                  "WIN_10011221",
+                  "WIN_10626549",
+                  "WIN_10020644",
+                  "WIN_10604925",
+                  "WIN_10303026",
+                  "WIN_10020777",
+                  "WIN_10015798"
+                ],
+                "tools_used": [
+                  "plan_shopping_mission"
+                ],
+                "data_timestamp": "2026-09-15T13:53:41.144523Z",
+                "data_source": "winmart_json_snapshot",
+                "state": "BROWSING",
+                "products": [
+                  {
+                    "product_id": "WIN_10015794",
+                    "name": "Snack bắp ngọt Oishi gói 42g",
+                    "category": "Bánh Snack",
+                    "brand": "OISHI",
+                    "price_vnd": 5500,
+                    "stock": 32,
+                    "stock_is_current": false,
+                    "uom": "Gói",
+                    "data_timestamp": "2026-09-15T13:53:30.458391Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10011221",
+                    "name": "Nước uống tinh khiết Dasani chai 1.5 lít",
+                    "category": "Nước Suối",
+                    "brand": "DASANI",
+                    "price_vnd": 10000,
+                    "stock": 191,
+                    "stock_is_current": false,
+                    "uom": "Chai",
+                    "data_timestamp": "2026-09-15T13:53:41.144523Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10626549",
+                    "name": "Bánh gạo ngọt Orion An vị tự nhiên 14 gói (10.8g/gói)",
+                    "category": "Bánh Xốp - Bánh Quy",
+                    "brand": "AN",
+                    "price_vnd": 21600,
+                    "stock": 267,
+                    "stock_is_current": false,
+                    "uom": "Gói",
+                    "data_timestamp": "2026-09-15T13:53:30.452176Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10020644",
+                    "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+                    "category": "Khăn Giấy - Khăn Ướt",
+                    "brand": "LETGREEN",
+                    "price_vnd": 15900,
+                    "stock": 14,
+                    "stock_is_current": false,
+                    "uom": "Gói",
+                    "data_timestamp": "2026-09-15T13:53:35.421066Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10604925",
+                    "name": "Snack  Doritos vị Taco gói 65g",
+                    "category": "Bánh Snack",
+                    "brand": "DORITOS",
+                    "price_vnd": 25500,
+                    "stock": 3,
+                    "stock_is_current": false,
+                    "uom": "Gói",
+                    "data_timestamp": "2026-09-15T13:53:30.294086Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10303026",
+                    "name": "Bánh gạo ngọt vị phô mai bắp One One gói 118g",
+                    "category": "Bánh Xốp - Bánh Quy",
+                    "brand": "ONEONE",
+                    "price_vnd": 30100,
+                    "stock": 18,
+                    "stock_is_current": false,
+                    "uom": "Gói",
+                    "data_timestamp": "2026-09-15T13:53:30.292917Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10020777",
+                    "name": "Khăn giấy lụa 2 lớp Teddy Bear Mollis gói 300 tờ",
+                    "category": "Khăn Giấy - Khăn Ướt",
+                    "brand": "TEDDYBEAR",
+                    "price_vnd": 29700,
+                    "stock": 6,
+                    "stock_is_current": false,
+                    "uom": "Gói",
+                    "data_timestamp": "2026-09-15T13:53:35.421532Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10015798",
+                    "name": "Snack bí đỏ vị bò nướng Oishi gói 42g",
+                    "category": "Bánh Snack",
+                    "brand": "OISHI",
+                    "price_vnd": 5500,
+                    "stock": 167,
+                    "stock_is_current": false,
+                    "uom": "Gói",
+                    "data_timestamp": "2026-09-15T13:53:30.458710Z",
+                    "data_source": "winmart_json_snapshot"
+                  }
+                ],
+                "shopping_plan": {
+                  "mission_id": "460df0f9c44a46188abd58fbde79cdd6",
+                  "revision": 1,
+                  "goal": "Phương án mời 5 đồng nghiệp ghé chơi sau giờ làm, chi khoảng 180.000đ; chưa cho vào giỏ.",
+                  "use_case": "Tiệc nhẹ tại chỗ cho 5 người",
+                  "occasion": "Mời đồng nghiệp ghé chơi sau giờ làm",
+                  "party_size": 5,
+                  "budget_vnd": 180000,
+                  "budget_exclusive": false,
+                  "confirmed_needs": [],
+                  "inferred_needs": [
+                    "Snack chia sẻ",
+                    "Nước uống",
+                    "Bánh ngọt",
+                    "Khăn giấy"
+                  ],
+                  "satisfied_needs": [],
+                  "needs": [
+                    {
+                      "need_id": "n1",
+                      "label": "Snack chia sẻ",
+                      "rationale": "Khách mời 5 người cần đồ ăn nhẹ.",
+                      "requested_category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack",
+                      "resolved_category": "Snack",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10015794",
+                        "WIN_10015798",
+                        "WIN_10015799",
+                        "WIN_10016022",
+                        "WIN_10625390"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "n2",
+                      "label": "Nước uống",
+                      "rationale": "Mỗi người một đồ uống.",
+                      "requested_category": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả",
+                      "resolved_category": "Nước uống không cồn và hoa quả",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 5,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10011221",
+                        "WIN_10150448",
+                        "WIN_10011393",
+                        "WIN_10011394",
+                        "WIN_10196077"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "n3",
+                      "label": "Bánh ngọt",
+                      "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                      "requested_category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh",
+                      "resolved_category": "Bánh",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 3,
+                      "candidate_product_ids": [
+                        "WIN_10626549",
+                        "WIN_10303026",
+                        "WIN_10013857"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "n4",
+                      "label": "Khăn giấy",
+                      "rationale": "Dọn dẹp khi ăn uống.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                      "resolved_category": "Giấy ăn, giấy vệ sinh",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10020644",
+                        "WIN_10020563",
+                        "WIN_10020513",
+                        "WIN_10020501",
+                        "WIN_10020624"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    }
+                  ],
+                  "options": [
+                    {
+                      "option_id": "option-1",
+                      "label": "Tiết kiệm",
+                      "items": [
+                        {
+                          "need_id": "n1",
+                          "need_label": "Snack chia sẻ",
+                          "category": "Snack",
+                          "rationale": "Khách mời 5 người cần đồ ăn nhẹ.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10015794",
+                          "name": "Snack bắp ngọt Oishi gói 42g",
+                          "brand": "OISHI",
+                          "quantity": 1,
+                          "unit_price_vnd": 5500,
+                          "line_total_vnd": 5500,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:30.458391Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 5500
+                        },
+                        {
+                          "need_id": "n2",
+                          "need_label": "Nước uống",
+                          "category": "Nước uống không cồn và hoa quả",
+                          "rationale": "Mỗi người một đồ uống.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10011221",
+                          "name": "Nước uống tinh khiết Dasani chai 1.5 lít",
+                          "brand": "DASANI",
+                          "quantity": 5,
+                          "unit_price_vnd": 10000,
+                          "line_total_vnd": 50000,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:41.144523Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 50000
+                        },
+                        {
+                          "need_id": "n3",
+                          "need_label": "Bánh ngọt",
+                          "category": "Bánh",
+                          "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10626549",
+                          "name": "Bánh gạo ngọt Orion An vị tự nhiên 14 gói (10.8g/gói)",
+                          "brand": "AN",
+                          "quantity": 1,
+                          "unit_price_vnd": 21600,
+                          "line_total_vnd": 21600,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:30.452176Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 21600
+                        },
+                        {
+                          "need_id": "n4",
+                          "need_label": "Khăn giấy",
+                          "category": "Giấy ăn, giấy vệ sinh",
+                          "rationale": "Dọn dẹp khi ăn uống.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10020644",
+                          "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+                          "brand": "LETGREEN",
+                          "quantity": 1,
+                          "unit_price_vnd": 15900,
+                          "line_total_vnd": 15900,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:35.421066Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 15900
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "n1",
+                        "n2",
+                        "n3",
+                        "n4"
+                      ],
+                      "total_vnd": 93000,
+                      "remaining_budget_vnd": 87000,
+                      "budget_fit": true
+                    },
+                    {
+                      "option_id": "option-2",
+                      "label": "Cân bằng",
+                      "items": [
+                        {
+                          "need_id": "n1",
+                          "need_label": "Snack chia sẻ",
+                          "category": "Snack",
+                          "rationale": "Khách mời 5 người cần đồ ăn nhẹ.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10604925",
+                          "name": "Snack  Doritos vị Taco gói 65g",
+                          "brand": "DORITOS",
+                          "quantity": 1,
+                          "unit_price_vnd": 25500,
+                          "line_total_vnd": 25500,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:30.294086Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 25500
+                        },
+                        {
+                          "need_id": "n2",
+                          "need_label": "Nước uống",
+                          "category": "Nước uống không cồn và hoa quả",
+                          "rationale": "Mỗi người một đồ uống.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10011221",
+                          "name": "Nước uống tinh khiết Dasani chai 1.5 lít",
+                          "brand": "DASANI",
+                          "quantity": 5,
+                          "unit_price_vnd": 10000,
+                          "line_total_vnd": 50000,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:41.144523Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 50000
+                        },
+                        {
+                          "need_id": "n3",
+                          "need_label": "Bánh ngọt",
+                          "category": "Bánh",
+                          "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10303026",
+                          "name": "Bánh gạo ngọt vị phô mai bắp One One gói 118g",
+                          "brand": "ONEONE",
+                          "quantity": 1,
+                          "unit_price_vnd": 30100,
+                          "line_total_vnd": 30100,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:30.292917Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 30100
+                        },
+                        {
+                          "need_id": "n4",
+                          "need_label": "Khăn giấy",
+                          "category": "Giấy ăn, giấy vệ sinh",
+                          "rationale": "Dọn dẹp khi ăn uống.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10020777",
+                          "name": "Khăn giấy lụa 2 lớp Teddy Bear Mollis gói 300 tờ",
+                          "brand": "TEDDYBEAR",
+                          "quantity": 1,
+                          "unit_price_vnd": 29700,
+                          "line_total_vnd": 29700,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:35.421532Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 29700
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "n1",
+                        "n2",
+                        "n3",
+                        "n4"
+                      ],
+                      "total_vnd": 135300,
+                      "remaining_budget_vnd": 44700,
+                      "budget_fit": true
+                    },
+                    {
+                      "option_id": "option-3",
+                      "label": "Lựa chọn khác",
+                      "items": [
+                        {
+                          "need_id": "n1",
+                          "need_label": "Snack chia sẻ",
+                          "category": "Snack",
+                          "rationale": "Khách mời 5 người cần đồ ăn nhẹ.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10015798",
+                          "name": "Snack bí đỏ vị bò nướng Oishi gói 42g",
+                          "brand": "OISHI",
+                          "quantity": 1,
+                          "unit_price_vnd": 5500,
+                          "line_total_vnd": 5500,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:30.458710Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 5500
+                        },
+                        {
+                          "need_id": "n2",
+                          "need_label": "Nước uống",
+                          "category": "Nước uống không cồn và hoa quả",
+                          "rationale": "Mỗi người một đồ uống.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10011221",
+                          "name": "Nước uống tinh khiết Dasani chai 1.5 lít",
+                          "brand": "DASANI",
+                          "quantity": 5,
+                          "unit_price_vnd": 10000,
+                          "line_total_vnd": 50000,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:41.144523Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 50000
+                        },
+                        {
+                          "need_id": "n3",
+                          "need_label": "Bánh ngọt",
+                          "category": "Bánh",
+                          "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10626549",
+                          "name": "Bánh gạo ngọt Orion An vị tự nhiên 14 gói (10.8g/gói)",
+                          "brand": "AN",
+                          "quantity": 1,
+                          "unit_price_vnd": 21600,
+                          "line_total_vnd": 21600,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:30.452176Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 21600
+                        },
+                        {
+                          "need_id": "n4",
+                          "need_label": "Khăn giấy",
+                          "category": "Giấy ăn, giấy vệ sinh",
+                          "rationale": "Dọn dẹp khi ăn uống.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10020644",
+                          "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+                          "brand": "LETGREEN",
+                          "quantity": 1,
+                          "unit_price_vnd": 15900,
+                          "line_total_vnd": 15900,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:35.421066Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 15900
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "n1",
+                        "n2",
+                        "n3",
+                        "n4"
+                      ],
+                      "total_vnd": 93000,
+                      "remaining_budget_vnd": 87000,
+                      "budget_fit": true
+                    }
+                  ],
+                  "missing_required_needs": [],
+                  "missing_optional_needs": [],
+                  "optional_needs_not_selected": [],
+                  "budget_shortfall_vnd": null,
+                  "pending_decision": "choose_a_plan_option",
+                  "inventory_verified": false,
+                  "data_source": "winmart_json_snapshot",
+                  "data_timestamp": "2026-09-15T13:53:41.144523Z",
+                  "cart_mutated": false,
+                  "unresolved_details": [],
+                  "unknown_details": []
+                },
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "460df0f9c44a46188abd58fbde79cdd6",
+                "revision": 1,
+                "goal": "Phương án mời 5 đồng nghiệp ghé chơi sau giờ làm, chi khoảng 180.000đ; chưa cho vào giỏ.",
+                "use_case": "Tiệc nhẹ tại chỗ cho 5 người",
+                "occasion": "Mời đồng nghiệp ghé chơi sau giờ làm",
+                "party_size": 5,
+                "total_budget_vnd": 180000,
+                "total_budget_exclusive": false,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [
+                  "Không cho vào giỏ vội"
+                ],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": "choose_a_plan_option",
+                "needs": [
+                  {
+                    "need_id": "n1",
+                    "label": "Snack chia sẻ",
+                    "rationale": "Khách mời 5 người cần đồ ăn nhẹ.",
+                    "category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "snack gói lớn chia sẻ",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Snack",
+                    "retrieval_query_used": "Snack"
+                  },
+                  {
+                    "need_id": "n2",
+                    "label": "Nước uống",
+                    "rationale": "Mỗi người một đồ uống.",
+                    "category": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 5,
+                    "product_query": "nước uống không cồn",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Nước uống không cồn và hoa quả",
+                    "retrieval_query_used": "nước uống không cồn"
+                  },
+                  {
+                    "need_id": "n3",
+                    "label": "Bánh ngọt",
+                    "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                    "category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "bánh ngọt",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Bánh",
+                    "retrieval_query_used": "bánh ngọt"
+                  },
+                  {
+                    "need_id": "n4",
+                    "label": "Khăn giấy",
+                    "rationale": "Dọn dẹp khi ăn uống.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "khăn giấy ăn",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Giấy ăn, giấy vệ sinh",
+                    "retrieval_query_used": "khăn giấy ăn"
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [
+                  {
+                    "need_id": "n1",
+                    "need_label": "Snack chia sẻ",
+                    "rationale": "Khách mời 5 người cần đồ ăn nhẹ.",
+                    "category": "Snack",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10015794",
+                    "name": "Snack bắp ngọt Oishi gói 42g",
+                    "brand": "OISHI",
+                    "quantity": 1,
+                    "unit_price_vnd": 5500,
+                    "line_total_vnd": 5500,
+                    "uom": "Gói",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:30.458391+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 5500
+                  },
+                  {
+                    "need_id": "n2",
+                    "need_label": "Nước uống",
+                    "rationale": "Mỗi người một đồ uống.",
+                    "category": "Nước uống không cồn và hoa quả",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10011221",
+                    "name": "Nước uống tinh khiết Dasani chai 1.5 lít",
+                    "brand": "DASANI",
+                    "quantity": 5,
+                    "unit_price_vnd": 10000,
+                    "line_total_vnd": 50000,
+                    "uom": "Chai",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:41.144523+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 50000
+                  },
+                  {
+                    "need_id": "n3",
+                    "need_label": "Bánh ngọt",
+                    "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                    "category": "Bánh",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10626549",
+                    "name": "Bánh gạo ngọt Orion An vị tự nhiên 14 gói (10.8g/gói)",
+                    "brand": "AN",
+                    "quantity": 1,
+                    "unit_price_vnd": 21600,
+                    "line_total_vnd": 21600,
+                    "uom": "Gói",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:30.452176+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 21600
+                  },
+                  {
+                    "need_id": "n4",
+                    "need_label": "Khăn giấy",
+                    "rationale": "Dọn dẹp khi ăn uống.",
+                    "category": "Giấy ăn, giấy vệ sinh",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10020644",
+                    "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+                    "brand": "LETGREEN",
+                    "quantity": 1,
+                    "unit_price_vnd": 15900,
+                    "line_total_vnd": 15900,
+                    "uom": "Gói",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:35.421066+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 15900
+                  }
+                ],
+                "unresolved_details": [],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [],
+                "inferred_needs": [
+                  "Snack chia sẻ",
+                  "Nước uống",
+                  "Bánh ngọt",
+                  "Khăn giấy"
+                ],
+                "satisfied_needs": [],
+                "data_timestamp": "2026-09-15T13:53:41.144523+00:00"
+              },
+              "llm_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "fallback_trace": [
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "success",
+                      "rate_limit_headers": {
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "999",
+                        "x-ratelimit-remaining-tokens": "4110",
+                        "x-ratelimit-reset-requests": "1m26.4s",
+                        "x-ratelimit-reset-tokens": "29.175s"
+                      },
+                      "credential_slot": "primary"
+                    }
+                  ],
+                  "latency_ms": 3267,
+                  "pacing_wait_ms": 0,
+                  "tool_calls": [
+                    {
+                      "name": "plan_shopping_mission",
+                      "arguments": "{\"goal\":\"Phương án mời 5 đồng nghiệp ghé chơi sau giờ làm, chi khoảng 180.000đ; chưa cho vào giỏ.\",\"needs\":[{\"category\":\"Thực phẩm \\u003e Thực phẩm công nghệ \\u003e Bánh kẹo \\u003e Snack\",\"label\":\"Snack chia sẻ\",\"need_id\":\"n1\",\"product_query\":\"snack gói lớn chia sẻ\",\"quantity\":1,\"rationale\":\"Khách mời 5 người cần đồ ăn nhẹ.\",\"required\":true,\"source\":\"EXPLICIT\"},{\"category\":\"Thực phẩm \\u003e Thực phẩm công nghệ \\u003e Đồ uống, thuốc lá \\u003e Nước uống không cồn và hoa quả\",\"label\":\"Nước uống\",\"need_id\":\"n2\",\"product_query\":\"nước uống không cồn\",\"quantity\":5,\"rationale\":\"Mỗi người một đồ uống.\",\"required\":true,\"source\":\"EXPLICIT\"},{\"category\":\"Thực phẩm \\u003e Thực phẩm công nghệ \\u003e Bánh kẹo \\u003e Bánh\",\"label\":\"Bánh ngọt\",\"need_id\":\"n3\",\"product_query\":\"bánh ngọt\",\"quantity\":1,\"rationale\":\"Bổ sung món ngọt cho buổi gặp.\",\"required\":false,\"source\":\"INFERRED\"},{\"category\":\"Phi thực phẩm \\u003e Hoá mỹ phẩm \\u003e Giấy và bông \\u003e Giấy ăn, giấy vệ sinh\",\"label\":\"Khăn giấy\",\"need_id\":\"n4\",\"product_query\":\"khăn giấy ăn\",\"quantity\":1,\"rationale\":\"Dọn dẹp khi ăn uống.\",\"required\":false,\"source\":\"INFERRED\"}],\"occasion\":\"Mời đồng nghiệp ghé chơi sau giờ làm\",\"party_size\":5,\"preferences\":[\"Không cho vào giỏ vội\"],\"total_budget_vnd\":180000,\"use_case\":\"Tiệc nhẹ tại chỗ cho 5 người\"}"
+                    }
+                  ],
+                  "usage": {
+                    "prompt_tokens": 3781,
+                    "completion_tokens": 428,
+                    "total_tokens": 4209
+                  }
+                }
+              ],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": true,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": true,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": true,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": true,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  true,
+                  true
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 12,
+                "primary_plan_item_count": 4,
+                "plan_totals_vnd": [
+                  93000,
+                  135300,
+                  93000
+                ],
+                "mission_need_count": 4,
+                "grounded_product_count": 8,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 2,
+              "user_text": "Thêm vào kế hoạch đồ ăn nhẹ để chia nhau và đồ uống; đây là các nhu cầu mình muốn tính đến. Ưu tiên món không cay, nhưng không cần ép các gợi ý thêm thành bắt buộc.",
+              "http_status": 200,
+              "latency_ms": 6125,
+              "response": {
+                "session_id": "4844c0e7-7e25-47c5-a7b1-981e55bc0947",
+                "text": "Mình hiểu mục tiêu là Phương án mời 5 đồng nghiệp ghé chơi sau giờ làm, chi khoảng 180.000đ; chưa cho vào giỏ.. Tồn kho hiện tại chưa được xác minh. Phương án gợi ý: Snack bắp ngọt Oishi gói 42g × 1 (5,500đ); Nước uống tinh khiết Dasani chai 1.5 lít × 5 (50,000đ); Bánh gạo ngọt Orion An vị tự nhiên 14 gói (10.8g/gói) × 1 (21,600đ); Khăn giấy bỏ túi Let-Green lốc 9 gói × 1 (15,900đ). Tổng 93,000đ. Mình chưa thêm món nào vào giỏ. Catalog chưa có thuộc tính vị cay nên mình chưa xác minh được món không cay.",
+                "model": "openai/gpt-oss-120b",
+                "grounded_product_ids": [
+                  "WIN_10015794",
+                  "WIN_10011221",
+                  "WIN_10626549",
+                  "WIN_10020644"
+                ],
+                "tools_used": [
+                  "plan_shopping_mission"
+                ],
+                "data_timestamp": "2026-09-15T13:53:41.144523Z",
+                "data_source": "winmart_json_snapshot",
+                "state": "BROWSING",
+                "products": [
+                  {
+                    "product_id": "WIN_10015794",
+                    "name": "Snack bắp ngọt Oishi gói 42g",
+                    "category": "Bánh Snack",
+                    "brand": "OISHI",
+                    "price_vnd": 5500,
+                    "stock": 32,
+                    "stock_is_current": false,
+                    "uom": "Gói",
+                    "data_timestamp": "2026-09-15T13:53:30.458391Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10011221",
+                    "name": "Nước uống tinh khiết Dasani chai 1.5 lít",
+                    "category": "Nước Suối",
+                    "brand": "DASANI",
+                    "price_vnd": 10000,
+                    "stock": 191,
+                    "stock_is_current": false,
+                    "uom": "Chai",
+                    "data_timestamp": "2026-09-15T13:53:41.144523Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10626549",
+                    "name": "Bánh gạo ngọt Orion An vị tự nhiên 14 gói (10.8g/gói)",
+                    "category": "Bánh Xốp - Bánh Quy",
+                    "brand": "AN",
+                    "price_vnd": 21600,
+                    "stock": 267,
+                    "stock_is_current": false,
+                    "uom": "Gói",
+                    "data_timestamp": "2026-09-15T13:53:30.452176Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10020644",
+                    "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+                    "category": "Khăn Giấy - Khăn Ướt",
+                    "brand": "LETGREEN",
+                    "price_vnd": 15900,
+                    "stock": 14,
+                    "stock_is_current": false,
+                    "uom": "Gói",
+                    "data_timestamp": "2026-09-15T13:53:35.421066Z",
+                    "data_source": "winmart_json_snapshot"
+                  }
+                ],
+                "shopping_plan": {
+                  "mission_id": "460df0f9c44a46188abd58fbde79cdd6",
+                  "revision": 2,
+                  "goal": "Phương án mời 5 đồng nghiệp ghé chơi sau giờ làm, chi khoảng 180.000đ; chưa cho vào giỏ.",
+                  "use_case": "Tiệc nhẹ tại chỗ cho 5 người",
+                  "occasion": "Mời đồng nghiệp ghé chơi sau giờ làm",
+                  "party_size": 5,
+                  "budget_vnd": 180000,
+                  "budget_exclusive": false,
+                  "confirmed_needs": [
+                    "Snack chia sẻ",
+                    "Nước uống"
+                  ],
+                  "inferred_needs": [
+                    "Bánh ngọt",
+                    "Khăn giấy"
+                  ],
+                  "satisfied_needs": [],
+                  "needs": [
+                    {
+                      "need_id": "n1",
+                      "label": "Snack chia sẻ",
+                      "rationale": "Đồ ăn nhẹ chia nhau cho 5 người",
+                      "requested_category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack",
+                      "resolved_category": "Snack",
+                      "source": "EXPLICIT",
+                      "required": true,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10015794",
+                        "WIN_10015798",
+                        "WIN_10015799",
+                        "WIN_10016022",
+                        "WIN_10625390"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "n2",
+                      "label": "Nước uống",
+                      "rationale": "Mỗi người một đồ uống không cay",
+                      "requested_category": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả",
+                      "resolved_category": "Nước uống không cồn và hoa quả",
+                      "source": "EXPLICIT",
+                      "required": true,
+                      "quantity": 5,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10011221",
+                        "WIN_10150448",
+                        "WIN_10011393",
+                        "WIN_10011394",
+                        "WIN_10196077"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "n3",
+                      "label": "Bánh ngọt",
+                      "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                      "requested_category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh",
+                      "resolved_category": "Bánh",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 3,
+                      "candidate_product_ids": [
+                        "WIN_10626549",
+                        "WIN_10303026",
+                        "WIN_10013857"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "n4",
+                      "label": "Khăn giấy",
+                      "rationale": "Dọn dẹp khi ăn uống.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                      "resolved_category": "Giấy ăn, giấy vệ sinh",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10020644",
+                        "WIN_10020563",
+                        "WIN_10020513",
+                        "WIN_10020501",
+                        "WIN_10020624"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    }
+                  ],
+                  "options": [
+                    {
+                      "option_id": "option-1",
+                      "label": "Tiết kiệm",
+                      "items": [
+                        {
+                          "need_id": "n1",
+                          "need_label": "Snack chia sẻ",
+                          "category": "Snack",
+                          "rationale": "Đồ ăn nhẹ chia nhau cho 5 người",
+                          "source": "EXPLICIT",
+                          "required": true,
+                          "product_id": "WIN_10015794",
+                          "name": "Snack bắp ngọt Oishi gói 42g",
+                          "brand": "OISHI",
+                          "quantity": 1,
+                          "unit_price_vnd": 5500,
+                          "line_total_vnd": 5500,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:30.458391Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 5500
+                        },
+                        {
+                          "need_id": "n2",
+                          "need_label": "Nước uống",
+                          "category": "Nước uống không cồn và hoa quả",
+                          "rationale": "Mỗi người một đồ uống không cay",
+                          "source": "EXPLICIT",
+                          "required": true,
+                          "product_id": "WIN_10011221",
+                          "name": "Nước uống tinh khiết Dasani chai 1.5 lít",
+                          "brand": "DASANI",
+                          "quantity": 5,
+                          "unit_price_vnd": 10000,
+                          "line_total_vnd": 50000,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:41.144523Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 50000
+                        },
+                        {
+                          "need_id": "n3",
+                          "need_label": "Bánh ngọt",
+                          "category": "Bánh",
+                          "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10626549",
+                          "name": "Bánh gạo ngọt Orion An vị tự nhiên 14 gói (10.8g/gói)",
+                          "brand": "AN",
+                          "quantity": 1,
+                          "unit_price_vnd": 21600,
+                          "line_total_vnd": 21600,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:30.452176Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 21600
+                        },
+                        {
+                          "need_id": "n4",
+                          "need_label": "Khăn giấy",
+                          "category": "Giấy ăn, giấy vệ sinh",
+                          "rationale": "Dọn dẹp khi ăn uống.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10020644",
+                          "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+                          "brand": "LETGREEN",
+                          "quantity": 1,
+                          "unit_price_vnd": 15900,
+                          "line_total_vnd": 15900,
+                          "uom": "Gói",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:35.421066Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 15900
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "n1",
+                        "n2",
+                        "n3",
+                        "n4"
+                      ],
+                      "total_vnd": 93000,
+                      "remaining_budget_vnd": 87000,
+                      "budget_fit": true
+                    }
+                  ],
+                  "missing_required_needs": [],
+                  "missing_optional_needs": [],
+                  "optional_needs_not_selected": [],
+                  "budget_shortfall_vnd": null,
+                  "pending_decision": null,
+                  "inventory_verified": false,
+                  "data_source": "winmart_json_snapshot",
+                  "data_timestamp": "2026-09-15T13:53:41.144523Z",
+                  "cart_mutated": false,
+                  "unresolved_details": [
+                    "preference_unverified:spicy"
+                  ],
+                  "unknown_details": []
+                },
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "460df0f9c44a46188abd58fbde79cdd6",
+                "revision": 2,
+                "goal": "Phương án mời 5 đồng nghiệp ghé chơi sau giờ làm, chi khoảng 180.000đ; chưa cho vào giỏ.",
+                "use_case": "Tiệc nhẹ tại chỗ cho 5 người",
+                "occasion": "Mời đồng nghiệp ghé chơi sau giờ làm",
+                "party_size": 5,
+                "total_budget_vnd": 180000,
+                "total_budget_exclusive": false,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [
+                  "Không cho vào giỏ vội"
+                ],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": null,
+                "needs": [
+                  {
+                    "need_id": "n1",
+                    "label": "Snack chia sẻ",
+                    "rationale": "Đồ ăn nhẹ chia nhau cho 5 người",
+                    "category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack",
+                    "alternative_categories": [],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "snack   gói lớn chia sẻ",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [
+                      "không cay"
+                    ],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Snack",
+                    "retrieval_query_used": "Snack"
+                  },
+                  {
+                    "need_id": "n2",
+                    "label": "Nước uống",
+                    "rationale": "Mỗi người một đồ uống không cay",
+                    "category": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả",
+                    "alternative_categories": [],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 5,
+                    "product_query": "nước uống không cồn",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Nước uống không cồn và hoa quả",
+                    "retrieval_query_used": "nước uống không cồn"
+                  },
+                  {
+                    "need_id": "n3",
+                    "label": "Bánh ngọt",
+                    "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                    "category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "bánh ngọt",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Bánh",
+                    "retrieval_query_used": "bánh ngọt"
+                  },
+                  {
+                    "need_id": "n4",
+                    "label": "Khăn giấy",
+                    "rationale": "Dọn dẹp khi ăn uống.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "khăn giấy ăn",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Giấy ăn, giấy vệ sinh",
+                    "retrieval_query_used": "khăn giấy ăn"
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [
+                  {
+                    "need_id": "n1",
+                    "need_label": "Snack chia sẻ",
+                    "rationale": "Đồ ăn nhẹ chia nhau cho 5 người",
+                    "category": "Snack",
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "product_id": "WIN_10015794",
+                    "name": "Snack bắp ngọt Oishi gói 42g",
+                    "brand": "OISHI",
+                    "quantity": 1,
+                    "unit_price_vnd": 5500,
+                    "line_total_vnd": 5500,
+                    "uom": "Gói",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:30.458391+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 5500
+                  },
+                  {
+                    "need_id": "n2",
+                    "need_label": "Nước uống",
+                    "rationale": "Mỗi người một đồ uống không cay",
+                    "category": "Nước uống không cồn và hoa quả",
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "product_id": "WIN_10011221",
+                    "name": "Nước uống tinh khiết Dasani chai 1.5 lít",
+                    "brand": "DASANI",
+                    "quantity": 5,
+                    "unit_price_vnd": 10000,
+                    "line_total_vnd": 50000,
+                    "uom": "Chai",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:41.144523+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 50000
+                  },
+                  {
+                    "need_id": "n3",
+                    "need_label": "Bánh ngọt",
+                    "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                    "category": "Bánh",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10626549",
+                    "name": "Bánh gạo ngọt Orion An vị tự nhiên 14 gói (10.8g/gói)",
+                    "brand": "AN",
+                    "quantity": 1,
+                    "unit_price_vnd": 21600,
+                    "line_total_vnd": 21600,
+                    "uom": "Gói",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:30.452176+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 21600
+                  },
+                  {
+                    "need_id": "n4",
+                    "need_label": "Khăn giấy",
+                    "rationale": "Dọn dẹp khi ăn uống.",
+                    "category": "Giấy ăn, giấy vệ sinh",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10020644",
+                    "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+                    "brand": "LETGREEN",
+                    "quantity": 1,
+                    "unit_price_vnd": 15900,
+                    "line_total_vnd": 15900,
+                    "uom": "Gói",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:35.421066+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 15900
+                  }
+                ],
+                "unresolved_details": [
+                  "preference_unverified:spicy"
+                ],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Snack chia sẻ",
+                  "Nước uống"
+                ],
+                "inferred_needs": [
+                  "Bánh ngọt",
+                  "Khăn giấy"
+                ],
+                "satisfied_needs": [],
+                "data_timestamp": "2026-09-15T13:53:41.144523+00:00"
+              },
+              "llm_trace": [
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "fallback_trace": [
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "15",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "999",
+                        "x-ratelimit-remaining-tokens": "4257",
+                        "x-ratelimit-reset-requests": "1m26.4s",
+                        "x-ratelimit-reset-tokens": "28.902s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "BadRequestError",
+                      "rate_limit_headers": {
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "999",
+                        "x-ratelimit-remaining-tokens": "2551",
+                        "x-ratelimit-reset-requests": "1m26.4s",
+                        "x-ratelimit-reset-tokens": "40.867s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "success",
+                      "rate_limit_headers": {
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "999",
+                        "x-ratelimit-remaining-tokens": "2774",
+                        "x-ratelimit-reset-requests": "1m26.4s",
+                        "x-ratelimit-reset-tokens": "39.195s"
+                      },
+                      "credential_slot": "primary"
+                    }
+                  ],
+                  "latency_ms": 4635,
+                  "pacing_wait_ms": 593,
+                  "tool_calls": [
+                    {
+                      "name": "plan_shopping_mission",
+                      "arguments": "{\"goal\":\"Phương án mời 5 đồng nghiệp ghé chơi sau giờ làm, chi khoảng 180.000đ; chưa cho vào giỏ.\",\"needs\":[{\"category\":\"Thực phẩm \\u003e Thực phẩm công nghệ \\u003e Bánh kẹo \\u003e Snack\",\"label\":\"Snack chia sẻ\",\"need_id\":\"n1\",\"product_query\":\"snack không cay gói lớn chia sẻ\",\"quantity\":1,\"rationale\":\"Đồ ăn nhẹ chia nhau cho 5 người\",\"required\":false,\"source\":\"EXPLICIT\",\"spicy\":false,\"unverified_constraints\":[]},{\"category\":\"Thực phẩm \\u003e Thực phẩm công nghệ \\u003e Đồ uống, thuốc lá \\u003e Nước uống không cồn và hoa quả\",\"label\":\"Nước uống\",\"need_id\":\"n2\",\"product_query\":\"nước uống không cồn không cay\",\"quantity\":5,\"rationale\":\"Mỗi người một đồ uống không cay\",\"required\":false,\"source\":\"EXPLICIT\",\"spicy\":false,\"unverified_constraints\":[]}],\"occasion\":\"Mời đồng nghiệp ghé chơi sau giờ làm\",\"party_size\":5,\"pending_decision\":\"choose_a_plan_option\",\"preferences\":[\"Không cho vào giỏ vội\"],\"rejected_product_ids\":[],\"total_budget_exclusive\":false,\"total_budget_vnd\":180000,\"use_case\":\"Tiệc nhẹ tại chỗ cho 5 người\"}"
+                    }
+                  ],
+                  "usage": {
+                    "prompt_tokens": 4870,
+                    "completion_tokens": 415,
+                    "total_tokens": 5285
+                  }
+                }
+              ],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": true,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": true,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": true,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": true,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  true,
+                  true
+                ],
+                "required_group_coverage": [
+                  true,
+                  true
+                ],
+                "primary_plan_required_group_coverage": [
+                  true,
+                  true
+                ],
+                "plan_item_count": 4,
+                "primary_plan_item_count": 4,
+                "plan_totals_vnd": [
+                  93000
+                ],
+                "mission_need_count": 4,
+                "grounded_product_count": 4,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 3,
+              "user_text": "Thêm cả nhu cầu trái cây vào phương án và nâng tổng lên 210.000đ; các nhóm cũ vẫn giữ.",
+              "http_status": 200,
+              "latency_ms": 119,
+              "response": {
+                "session_id": "4844c0e7-7e25-47c5-a7b1-981e55bc0947",
+                "text": "Mình chưa tìm thấy ca nhu cau trai cay phuong an đang bán được trong catalog; giỏ được giữ nguyên nhé.",
+                "model": "shopping-controller",
+                "grounded_product_ids": [],
+                "tools_used": [
+                  "search_products"
+                ],
+                "data_timestamp": null,
+                "data_source": null,
+                "state": "BROWSING",
+                "products": [],
+                "shopping_plan": null,
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "460df0f9c44a46188abd58fbde79cdd6",
+                "revision": 2,
+                "goal": "Phương án mời 5 đồng nghiệp ghé chơi sau giờ làm, chi khoảng 180.000đ; chưa cho vào giỏ.",
+                "use_case": "Tiệc nhẹ tại chỗ cho 5 người",
+                "occasion": "Mời đồng nghiệp ghé chơi sau giờ làm",
+                "party_size": 5,
+                "total_budget_vnd": 180000,
+                "total_budget_exclusive": false,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [
+                  "Không cho vào giỏ vội"
+                ],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": null,
+                "needs": [
+                  {
+                    "need_id": "n1",
+                    "label": "Snack chia sẻ",
+                    "rationale": "Đồ ăn nhẹ chia nhau cho 5 người",
+                    "category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack",
+                    "alternative_categories": [],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "snack   gói lớn chia sẻ",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [
+                      "không cay"
+                    ],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Snack",
+                    "retrieval_query_used": "Snack"
+                  },
+                  {
+                    "need_id": "n2",
+                    "label": "Nước uống",
+                    "rationale": "Mỗi người một đồ uống không cay",
+                    "category": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả",
+                    "alternative_categories": [],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 5,
+                    "product_query": "nước uống không cồn",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Nước uống không cồn và hoa quả",
+                    "retrieval_query_used": "nước uống không cồn"
+                  },
+                  {
+                    "need_id": "n3",
+                    "label": "Bánh ngọt",
+                    "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                    "category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "bánh ngọt",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Bánh",
+                    "retrieval_query_used": "bánh ngọt"
+                  },
+                  {
+                    "need_id": "n4",
+                    "label": "Khăn giấy",
+                    "rationale": "Dọn dẹp khi ăn uống.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "khăn giấy ăn",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Giấy ăn, giấy vệ sinh",
+                    "retrieval_query_used": "khăn giấy ăn"
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [
+                  {
+                    "need_id": "n1",
+                    "need_label": "Snack chia sẻ",
+                    "rationale": "Đồ ăn nhẹ chia nhau cho 5 người",
+                    "category": "Snack",
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "product_id": "WIN_10015794",
+                    "name": "Snack bắp ngọt Oishi gói 42g",
+                    "brand": "OISHI",
+                    "quantity": 1,
+                    "unit_price_vnd": 5500,
+                    "line_total_vnd": 5500,
+                    "uom": "Gói",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:30.458391+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 5500
+                  },
+                  {
+                    "need_id": "n2",
+                    "need_label": "Nước uống",
+                    "rationale": "Mỗi người một đồ uống không cay",
+                    "category": "Nước uống không cồn và hoa quả",
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "product_id": "WIN_10011221",
+                    "name": "Nước uống tinh khiết Dasani chai 1.5 lít",
+                    "brand": "DASANI",
+                    "quantity": 5,
+                    "unit_price_vnd": 10000,
+                    "line_total_vnd": 50000,
+                    "uom": "Chai",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:41.144523+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 50000
+                  },
+                  {
+                    "need_id": "n3",
+                    "need_label": "Bánh ngọt",
+                    "rationale": "Bổ sung món ngọt cho buổi gặp.",
+                    "category": "Bánh",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10626549",
+                    "name": "Bánh gạo ngọt Orion An vị tự nhiên 14 gói (10.8g/gói)",
+                    "brand": "AN",
+                    "quantity": 1,
+                    "unit_price_vnd": 21600,
+                    "line_total_vnd": 21600,
+                    "uom": "Gói",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:30.452176+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 21600
+                  },
+                  {
+                    "need_id": "n4",
+                    "need_label": "Khăn giấy",
+                    "rationale": "Dọn dẹp khi ăn uống.",
+                    "category": "Giấy ăn, giấy vệ sinh",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10020644",
+                    "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+                    "brand": "LETGREEN",
+                    "quantity": 1,
+                    "unit_price_vnd": 15900,
+                    "line_total_vnd": 15900,
+                    "uom": "Gói",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:35.421066+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 15900
+                  }
+                ],
+                "unresolved_details": [
+                  "preference_unverified:spicy"
+                ],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Snack chia sẻ",
+                  "Nước uống"
+                ],
+                "inferred_needs": [
+                  "Bánh ngọt",
+                  "Khăn giấy"
+                ],
+                "satisfied_needs": [],
+                "data_timestamp": "2026-09-15T13:53:41.144523+00:00"
+              },
+              "llm_trace": [],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": true,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": false,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  true,
+                  true,
+                  true
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 4,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "scenario_count": 1,
+        "turn_count": 3,
+        "http_200_turns": 3,
+        "turns_with_plan": 2,
+        "all_checks_passed_turns": 0,
+        "check_pass_counts": {
+          "mission_plan_present": {
+            "passed": 2,
+            "total": 3
+          },
+          "goal_identified": {
+            "passed": 0,
+            "total": 3
+          },
+          "expected_category_groups_covered": {
+            "passed": 3,
+            "total": 3
+          },
+          "expected_required_groups_covered": {
+            "passed": 3,
+            "total": 3
+          },
+          "required_groups_present_in_primary_plan": {
+            "passed": 3,
+            "total": 3
+          },
+          "explicit_needs_are_required": {
+            "passed": 3,
+            "total": 3
+          },
+          "inferred_needs_stay_optional": {
+            "passed": 3,
+            "total": 3
+          },
+          "budget_preserved": {
+            "passed": 2,
+            "total": 3
+          },
+          "budget_compliant": {
+            "passed": 3,
+            "total": 3
+          },
+          "party_size_preserved": {
+            "passed": 3,
+            "total": 3
+          },
+          "minimum_plan_items": {
+            "passed": 2,
+            "total": 3
+          },
+          "products_exist_in_runtime_catalog": {
+            "passed": 3,
+            "total": 3
+          },
+          "plan_totals_match_line_items": {
+            "passed": 3,
+            "total": 3
+          },
+          "plan_products_have_catalog_provenance": {
+            "passed": 3,
+            "total": 3
+          },
+          "cart_write_tools_not_called": {
+            "passed": 3,
+            "total": 3
+          },
+          "cart_unchanged": {
+            "passed": 3,
+            "total": 3
+          },
+          "mission_id_stable": {
+            "passed": 3,
+            "total": 3
+          },
+          "existing_items_recorded": {
+            "passed": 3,
+            "total": 3
+          },
+          "unverified_constraints_tracked": {
+            "passed": 3,
+            "total": 3
+          },
+          "unsupported_constraints_cleared": {
+            "passed": 3,
+            "total": 3
+          }
+        },
+        "median_api_latency_ms": 4110
+      }
+    }
+  ],
+  "complete": false
+}

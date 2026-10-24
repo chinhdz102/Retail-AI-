@@ -10,8 +10,18 @@ from backend.api import main as api_main
 from backend.api.main import app
 from backend.config import Settings
 from backend.products.catalog import ProductSnapshot
+from backend.products.category_taxonomy import (
+    normalize_category_text,
+    resolve_catalog_category,
+)
 from backend.products.repository import get_product_repository
-from backend.products.snapshot_repository import SnapshotProductRepository
+from backend.products.snapshot_repository import (
+    _CATEGORY_PHRASE_ALIASES,
+    SnapshotProductRepository,
+    _category_alias_key,
+    _category_key,
+    _category_matches,
+)
 from backend.services import retail_tools
 from backend.services.retail_response_style import render_verified_snapshot
 from backend.services.retail_tools import execute_catalog_tool
@@ -61,6 +71,84 @@ def test_snapshot_prices_and_stock_are_never_presented_as_current(
     rendered = render_verified_snapshot(product, "vi", ("stock", "spicy"))
     assert "tồn hiện tại chưa được xác minh" in rendered
     assert "chưa có dữ liệu về độ cay" in rendered
+
+
+def test_exact_taxonomy_categories_never_match_unrelated_catalog_paths(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    labels = {
+        segment
+        for path in snapshot_repo.list_category_hierarchies()
+        for segment in path
+    }
+    candidates = snapshot_repo._candidates
+    for label in labels:
+        alias_key = _category_alias_key(_category_key(label))
+        if alias_key in _CATEGORY_PHRASE_ALIASES:
+            continue
+        normalized_label = normalize_category_text(label)
+        returned_ids = {
+            candidate.product.product_id
+            for candidate in candidates
+            if _category_matches(
+                label, candidate, snapshot_repo._known_category_keys
+            )
+        }
+        expected_ids = {
+            candidate.product.product_id
+            for candidate in candidates
+            if normalized_label in candidate.category_segment_texts
+        }
+        assert returned_ids == expected_ids, label
+
+
+@pytest.mark.parametrize(
+    ("query", "category", "forbidden_name_fragments"),
+    [
+        ("su su", "Su su", ("bao cao su",)),
+        ("bơ", "Bơ", ("thịt bò", "bò viên")),
+        ("dầu gội", "Mỹ phẩm, chăm sóc cá nhân", ("đậu bắp", "dao cạo")),
+        ("giấy vệ sinh", "Giấy vệ sinh", ("khăn giấy gói", "giấy bếp")),
+        ("bếp điện", "Bếp điện", ("ấm đun", "nồi cơm")),
+        ("nước hoa quả", "Nước hoa quả", ("nước khoáng", "nước tinh khiết")),
+    ],
+)
+def test_vietnamese_product_categories_do_not_leak_accent_or_phrase_homonyms(
+    snapshot_repo: SnapshotProductRepository,
+    query: str,
+    category: str,
+    forbidden_name_fragments: tuple[str, ...],
+) -> None:
+    products = snapshot_repo.search(query, category=category, limit=10)
+    assert products
+    names = [normalize_category_text(product.name) for product in products]
+    for fragment in forbidden_name_fragments:
+        normalized_fragment = normalize_category_text(fragment)
+        assert all(normalized_fragment not in name for name in names), (query, fragment, names)
+
+
+def test_shampoo_phrase_does_not_resolve_to_the_accent_folded_bean_category(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    match = resolve_catalog_category("dầu gội", snapshot_repo.list_category_hierarchies())
+
+    assert match is not None
+    assert normalize_category_text(match.category) != normalize_category_text("Đậu")
+    products = snapshot_repo.search("dầu gội", category=match.category, limit=10)
+    assert products
+    assert any("dầu gội" in product.name.casefold() for product in products)
+
+
+def test_single_word_taxonomy_resolution_preserves_vietnamese_tone_marks(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    hierarchies = snapshot_repo.list_category_hierarchies()
+    oil_match = resolve_catalog_category("dầu", hierarchies)
+    bean_match = resolve_catalog_category("đậu", hierarchies)
+
+    assert oil_match is None or oil_match.category.casefold() != "đậu"
+    assert bean_match is not None
+    assert bean_match.category.casefold() == "đậu"
 
 
 def test_runtime_catalog_resolves_all_heldout_product_queries_at_top_five(
@@ -286,7 +374,6 @@ async def test_unavailable_product_alternatives_use_catalog_and_retain_category(
 
     monkeypatch.setattr(api_main, "run_retail_agent", unexpected_llm_call)
     transport = httpx.ASGITransport(app=app)
-    expected_ids = {"WIN_10011695", "WIN_10150497", "WIN_10625446"}
 
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         for follow_up in (
@@ -309,7 +396,23 @@ async def test_unavailable_product_alternatives_use_catalog_and_retain_category(
             assert missing.json()["grounded_product_ids"] == []
             alternative_body = alternatives.json()
             assert "recommend_products" in alternative_body["tools_used"]
-            assert expected_ids.issubset(set(alternative_body["grounded_product_ids"]))
+            alternatives_found = [
+                snapshot_repo.get_product_snapshot(product_id)
+                for product_id in alternative_body["grounded_product_ids"]
+            ]
+            assert len(alternatives_found) >= 3, (follow_up, alternative_body)
+            assert all(product is not None for product in alternatives_found)
+            normalized_paths = [
+                normalize_category_text(product.category_hierarchy or "")
+                for product in alternatives_found
+            ]
+            assert all("do uong thuoc la" in path for path in normalized_paths), [
+                (product.product_id, product.name, product.category_hierarchy)
+                for product in alternatives_found
+                if product is not None
+            ]
+            leaves = [path.split(">")[-1].strip() for path in normalized_paths]
+            assert len(leaves) == len(set(leaves))
             assert "giá tham khảo" in alternative_body["text"].casefold()
             assert "tồn hiện tại chưa được xác minh" in alternative_body["text"].casefold()
             assert alternative_body.get("cart") is None

@@ -38,10 +38,93 @@ export interface AgentResponse {
   data_source?: string | null
   state: string
   products?: ProductCard[]
+  shopping_plan?: ShoppingPlan
   cart?: ShoppingCart | null
   checkout_quote?: CheckoutQuote | null
   order?: SandboxOrder | null
   support_ticket?: SupportTicket | null
+}
+
+export interface ShoppingPlanItem {
+  need_id: string
+  need_label: string
+  rationale: string
+  category: string
+  source: 'EXPLICIT' | 'INFERRED'
+  required: boolean
+  product_id: string
+  name: string
+  brand: string | null
+  quantity: number
+  unit_price_vnd: number
+  line_total_vnd: number
+  uom: string | null
+  stock_is_current: boolean
+  data_timestamp: string
+  data_source: string
+  budget_share_vnd: number | null
+}
+
+export interface ShoppingPlanOption {
+  option_id: string
+  label: string
+  items: ShoppingPlanItem[]
+  covered_need_ids: string[]
+  total_vnd: number
+  remaining_budget_vnd: number | null
+  budget_fit: boolean
+}
+
+export interface ShoppingPlanNeed {
+  need_id: string
+  label: string
+  rationale: string
+  requested_category: string
+  resolved_category: string | null
+  source: 'EXPLICIT' | 'INFERRED'
+  required: boolean
+  quantity: number
+  candidate_count: number
+  candidate_product_ids: string[]
+  alternative_categories: Array<{
+    category: string
+    products: Array<{
+      product_id: string
+      name: string
+      brand: string | null
+      price_vnd: number
+      stock_is_current: boolean
+      data_timestamp: string
+      data_source: string
+    }>
+  }>
+  blocked_reasons: string[]
+}
+
+export interface ShoppingPlan {
+  mission_id: string
+  revision: number
+  goal: string
+  use_case: string
+  occasion: string
+  party_size: number | null
+  budget_vnd: number | null
+  budget_exclusive: boolean
+  confirmed_needs: string[]
+  inferred_needs: string[]
+  needs: ShoppingPlanNeed[]
+  options: ShoppingPlanOption[]
+  missing_required_needs: string[]
+  missing_optional_needs: string[]
+  optional_needs_not_selected: string[]
+  budget_shortfall_vnd: number | null
+  pending_decision: string | null
+  inventory_verified: boolean
+  data_source: string
+  data_timestamp: string | null
+  cart_mutated: boolean
+  unresolved_details: string[]
+  unknown_details: string[]
 }
 
 export interface SupportTicket {
@@ -119,6 +202,8 @@ export interface TranscriptionResponse {
   text: string
   language: string
   model: string
+  speech_detected?: boolean
+  quality?: Record<string, number>
 }
 
 export interface ChatMessage {
@@ -128,5 +213,6 @@ export interface ChatMessage {
   model?: string
   groundedProductIds?: string[]
   products?: ProductCard[]
+  shoppingPlan?: ShoppingPlan
   supportTicket?: SupportTicket
 }

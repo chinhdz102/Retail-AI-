@@ -5,6 +5,7 @@ const apiMocks = vi.hoisted(() => ({
   createSession: vi.fn(),
   createRequestId: vi.fn(() => 'request-test-id'),
   closeSession: vi.fn().mockResolvedValue({}),
+  prewarmSpeech: vi.fn().mockResolvedValue({ warmed: true, provider: 'azure-speech' }),
   respond: vi.fn(),
   transcribe: vi.fn(),
   createSynthesisTicket: vi.fn(),
@@ -57,6 +58,42 @@ vi.mock('./voice-controller', () => ({
 import App from './App.vue'
 
 describe('voice transcript integration', () => {
+  it('prewarms speech in the background while listening without creating a chat turn', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({ session_id: 'session-test' })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.prewarmSpeech).toHaveBeenCalledWith('session-test', 'vi'))
+
+    controllerStore.current.options.onState({
+      mode: 'recorder',
+      phase: 'recording',
+      permission: 'granted',
+    })
+
+    expect(apiMocks.prewarmSpeech).toHaveBeenCalledOnce()
+    expect(apiMocks.transcribe).not.toHaveBeenCalled()
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.message-user')).toHaveLength(0)
+    wrapper.unmount()
+  })
+
+  it('keeps listening when the speech prewarm request fails', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({ session_id: 'session-test' })
+    apiMocks.prewarmSpeech.mockRejectedValueOnce(new Error('temporary prewarm failure'))
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.prewarmSpeech).toHaveBeenCalledOnce())
+
+    expect(wrapper.text()).toContain('Đang nghe')
+    expect(wrapper.find('.chat-error').exists()).toBe(false)
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('does not replay microphone audio into a new customer session after expiry', async () => {
     vi.clearAllMocks()
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
@@ -89,6 +126,86 @@ describe('voice transcript integration', () => {
     expect(wrapper.get('.chat-error').text()).toContain('Không nhận diện được tiếng nói: thử lại')
     expect(wrapper.get('.voice-mode-chip').text()).toContain('AUTO')
     expect(apiMocks.createSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not send an empty or rejected transcript to the retail agent', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({ session_id: 'session-test' })
+    apiMocks.transcribe.mockResolvedValue({
+      session_id: 'session-test',
+      text: '',
+      language: 'vi',
+      model: 'whisper-large-v3',
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onAudio(new Blob(['silence']))
+
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledOnce())
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.message-user')).toHaveLength(0)
+    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(2))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Mình chưa nghe thấy câu nói rõ ràng'))
+  })
+
+  it('does not forward provider-marked non-speech even if Whisper returned text', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({ session_id: 'session-test' })
+    apiMocks.transcribe.mockResolvedValue({
+      session_id: 'session-test',
+      text: 'Hãy subscribe cho kênh La La School.',
+      language: 'vi',
+      model: 'whisper-large-v3',
+      speech_detected: false,
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onAudio(new Blob(['quiet room noise']))
+
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledOnce())
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.message-user')).toHaveLength(0)
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Mình chưa nghe thấy câu nói rõ ràng'))
+  })
+
+  it('blocks a repeated Whisper loop before it reaches the retail agent', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({ session_id: 'session-test' })
+    apiMocks.transcribe.mockResolvedValue({
+      session_id: 'session-test',
+      text: 'Cảm ơn các bạn đã theo dõi và ủng thông, và hạn thấy nhiều thông, và hạn thấy nhiều thông.',
+      language: 'vi',
+      model: 'whisper-large-v3',
+      speech_detected: true,
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onAudio(new Blob(['misrecognized speech']))
+
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledOnce())
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.message-user')).toHaveLength(0)
+    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(2))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Mình chưa nghe thấy câu nói rõ ràng'))
+  })
+
+  it('blocks a repeated loop from the alternate transcript callback too', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({ session_id: 'session-test' })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+
+    controllerStore.current.options.onTranscript(
+      'Cảm ơn các bạn đã theo dõi và ủng thông, và hạn thấy nhiều thông, và hạn thấy nhiều thông.',
+    )
+
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.message-user')).toHaveLength(0)
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Mình chưa nghe thấy câu nói rõ ràng'))
   })
 
   afterEach(() => {

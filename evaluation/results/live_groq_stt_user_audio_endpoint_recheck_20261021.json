@@ -1,0 +1,22 @@
+{
+  "kind": "live_stt_demo_endpoint_recheck",
+  "timestamp_utc": "2026-10-21T09:51:49Z",
+  "endpoint": "POST http://127.0.0.1:8001/audio/transcribe",
+  "audio_filename": "user_supplied_audio.m4a",
+  "audio_bytes": 772651,
+  "language": "vi",
+  "http_status": 200,
+  "latency_ms": 2876,
+  "model": "whisper-large-v3",
+  "speech_detected": true,
+  "quality": {
+    "no_speech_prob": 0.00020130136680851065,
+    "no_speech_duration_ratio": 0.0,
+    "avg_logprob": -0.08668662140425533,
+    "compression_ratio": 1.6313346808510638,
+    "high_compression_duration_ratio": 0.0
+  },
+  "wer_cer": "not scored: supplied captions are not a verbatim reference",
+  "transcript_redacted": true,
+  "transcript_characters": 998
+}

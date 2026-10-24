@@ -4,11 +4,12 @@ Vue 3 + TypeScript one-screen kiosk for a multilingual retail assistant. The ava
 rendered from the locally attributed `public/avatars/sky.glb` asset. Sky opens in a ready
 state without adding a chat message or requesting microphone access. Visitors can type
 in the text panel; voice capture starts only after they click the microphone button.
-Sky supports Vietnamese, English and Chinese replies. Voice input uses the recorder and
-Groq Whisper first; the browser's built-in Speech Recognition is not used for the main
-transcription path. Selecting EN sends the English locale through transcription, the
-retail agent and speech synthesis; the microphone controls and chat labels follow the
-selected language as well.
+Sky supports Vietnamese, English and Chinese replies. Local Silero VAD detects speech and
+keeps a short pre-speech buffer before sending a 16 kHz WAV segment to Groq Whisper. The
+backend rejects low-confidence or non-speech transcripts before they can reach the retail
+agent. The browser's built-in Speech Recognition is not used for the main transcription
+path. Selecting EN sends the English locale through transcription, the retail agent and
+speech synthesis; the microphone controls and chat labels follow the selected language.
 Replies use Azure Speech Neural voices when the root `.env` has `AZURE_SPEECH_KEY` and
 `AZURE_SPEECH_REGION`. Azure's F0 tier provides 500,000 Neural characters per month;
 see the repository README for setup and quota details. When Azure is not configured, the

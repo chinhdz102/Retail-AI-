@@ -1,0 +1,3655 @@
+{
+  "kind": "live_shopping_mission_benchmark",
+  "generated_at_utc": "2026-10-21T09:11:11.396303+00:00",
+  "dataset_id": "vietnamese_shopping_mission_heldout_v1_20261021",
+  "dataset_sha256": "cecbcfbff4646b5f3095d062c621268ce660900a08ae66e27c8e87b87f62ea64",
+  "dataset_case_count": 100,
+  "selected_case_ids": [
+    "SMH-035",
+    "SMH-036",
+    "SMH-037",
+    "SMH-038",
+    "SMH-039",
+    "SMH-040",
+    "SMH-041",
+    "SMH-042",
+    "SMH-043",
+    "SMH-044",
+    "SMH-045",
+    "SMH-046",
+    "SMH-047",
+    "SMH-048",
+    "SMH-049",
+    "SMH-050",
+    "SMH-051",
+    "SMH-052",
+    "SMH-053",
+    "SMH-054",
+    "SMH-055",
+    "SMH-056",
+    "SMH-057",
+    "SMH-058",
+    "SMH-059",
+    "SMH-060",
+    "SMH-061",
+    "SMH-062",
+    "SMH-063",
+    "SMH-064",
+    "SMH-065",
+    "SMH-066",
+    "SMH-067"
+  ],
+  "selected_turn_count": 99,
+  "catalog_snapshot_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "live_model_comparison": true,
+  "human_quality_review": "required; automatic grades cover state/data/safety only",
+  "pace_seconds": 3.0,
+  "partial": true,
+  "mode_results": [
+    {
+      "mode": "current",
+      "mode_description": "Current mission route and planner",
+      "model_primary": "qwen/qwen3.8-27b",
+      "fallback_models": [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b"
+      ],
+      "credential_slots": [
+        "primary",
+        "fallback_1",
+        "fallback_2"
+      ],
+      "catalog_repository": "snapshot",
+      "catalog_product_ids_loaded": 3099,
+      "cases": [
+        {
+          "case_id": "SMH-035",
+          "archetype": "household_cleaning",
+          "tags": [
+            "multi_category",
+            "required_needs",
+            "existing_items",
+            "need_removal",
+            "heldout",
+            "multi_turn",
+            "no_product_names",
+            "household_shopping"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "user_text": "Mình chỉ có mục tiêu là vệ sinh căn nhà vừa chuyển tới, khoảng 100.000đ. Cứ tư vấn từ vấn đề giúp mình, chưa cần biết tên hàng.",
+              "http_status": 200,
+              "latency_ms": 4223,
+              "response": {
+                "session_id": "79fd25e2-8cbb-4bb4-9b43-ea62d8d55057",
+                "text": "Mình hiểu mục tiêu là Vệ sinh căn nhà vừa chuyển tới với ngân sách khoảng 100.000đ, tư vấn theo vấn đề, chưa cần tên hàng.. Tồn kho hiện tại chưa được xác minh. Catalog chưa xác minh được mặt hàng phù hợp cho: Vệ sinh sàn và bề mặt.",
+                "model": "qwen/qwen3.8-27b",
+                "grounded_product_ids": [],
+                "tools_used": [
+                  "plan_shopping_mission"
+                ],
+                "data_timestamp": null,
+                "data_source": "winmart_json_snapshot",
+                "state": "BROWSING",
+                "products": [],
+                "shopping_plan": {
+                  "mission_id": "6adadd8a9408496093a526ac7c842f5f",
+                  "revision": 1,
+                  "goal": "Vệ sinh căn nhà vừa chuyển tới với ngân sách khoảng 100.000đ, tư vấn theo vấn đề, chưa cần tên hàng.",
+                  "use_case": "Vệ sinh căn nhà vừa chuyển tới",
+                  "occasion": "Chuyển nhà mới",
+                  "party_size": 1,
+                  "budget_vnd": 100000,
+                  "budget_exclusive": false,
+                  "confirmed_needs": [
+                    "Vệ sinh sàn và bề mặt"
+                  ],
+                  "inferred_needs": [
+                    "Khăn lau và giấy vệ sinh"
+                  ],
+                  "satisfied_needs": [],
+                  "needs": [
+                    {
+                      "need_id": "need-floor-surface",
+                      "label": "Vệ sinh sàn và bề mặt",
+                      "rationale": "Khách cần dọn nhà mới chuyển tới, sàn và bề mặt là vấn đề chính.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà",
+                      "resolved_category": "Vệ sinh nhà",
+                      "source": "EXPLICIT",
+                      "required": true,
+                      "quantity": 1,
+                      "candidate_count": 0,
+                      "candidate_product_ids": [],
+                      "alternative_categories": [],
+                      "blocked_reasons": [
+                        "unverified:Ngân sách tổng khoảng 100.000đ"
+                      ],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "need-wipes-paper",
+                      "label": "Khăn lau và giấy vệ sinh",
+                      "rationale": "Khăn lau và giấy vệ sinh hỗ trợ lau chùi và vệ sinh cá nhân trong nhà.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                      "resolved_category": "Giấy ăn, giấy vệ sinh",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 0,
+                      "candidate_product_ids": [],
+                      "alternative_categories": [],
+                      "blocked_reasons": [
+                        "unverified:Ngân sách tổng khoảng 100.000đ"
+                      ],
+                      "satisfied_by_existing": false
+                    }
+                  ],
+                  "options": [],
+                  "missing_required_needs": [
+                    "Vệ sinh sàn và bề mặt"
+                  ],
+                  "missing_optional_needs": [
+                    "Khăn lau và giấy vệ sinh"
+                  ],
+                  "optional_needs_not_selected": [],
+                  "budget_shortfall_vnd": null,
+                  "pending_decision": null,
+                  "inventory_verified": false,
+                  "data_source": "winmart_json_snapshot",
+                  "data_timestamp": null,
+                  "cart_mutated": false,
+                  "unresolved_details": [
+                    "unverified:Ngân sách tổng khoảng 100.000đ"
+                  ],
+                  "unknown_details": []
+                },
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "6adadd8a9408496093a526ac7c842f5f",
+                "revision": 1,
+                "goal": "Vệ sinh căn nhà vừa chuyển tới với ngân sách khoảng 100.000đ, tư vấn theo vấn đề, chưa cần tên hàng.",
+                "use_case": "Vệ sinh căn nhà vừa chuyển tới",
+                "occasion": "Chuyển nhà mới",
+                "party_size": 1,
+                "total_budget_vnd": 100000,
+                "total_budget_exclusive": false,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [
+                  "Tư vấn theo vấn đề",
+                  "Chưa cần biết tên hàng"
+                ],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": null,
+                "needs": [
+                  {
+                    "need_id": "need-floor-surface",
+                    "label": "Vệ sinh sàn và bề mặt",
+                    "rationale": "Khách cần dọn nhà mới chuyển tới, sàn và bề mặt là vấn đề chính.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà",
+                    "alternative_categories": [
+                      "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da"
+                    ],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "chất tẩy rửa sàn và bề mặt",
+                    "brand": null,
+                    "max_price_vnd": 100000,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [
+                      "Ngân sách tổng khoảng 100.000đ"
+                    ],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Vệ sinh nhà"
+                  },
+                  {
+                    "need_id": "need-wipes-paper",
+                    "label": "Khăn lau và giấy vệ sinh",
+                    "rationale": "Khăn lau và giấy vệ sinh hỗ trợ lau chùi và vệ sinh cá nhân trong nhà.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                    "alternative_categories": [
+                      "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da"
+                    ],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "khăn lau và giấy vệ sinh",
+                    "brand": null,
+                    "max_price_vnd": 100000,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [
+                      "Ngân sách tổng khoảng 100.000đ"
+                    ],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Giấy ăn, giấy vệ sinh"
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [],
+                "unresolved_details": [
+                  "unverified:Ngân sách tổng khoảng 100.000đ"
+                ],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Vệ sinh sàn và bề mặt"
+                ],
+                "inferred_needs": [
+                  "Khăn lau và giấy vệ sinh"
+                ],
+                "satisfied_needs": [],
+                "data_timestamp": null
+              },
+              "llm_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "fallback_trace": [
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "success",
+                      "rate_limit_headers": {
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "3840",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "31.2s"
+                      },
+                      "credential_slot": "primary"
+                    }
+                  ],
+                  "latency_ms": 3445,
+                  "pacing_wait_ms": 0,
+                  "tool_calls": [
+                    {
+                      "name": "plan_shopping_mission",
+                      "arguments": "{\"goal\":\"Vệ sinh căn nhà vừa chuyển tới với ngân sách khoảng 100.000đ, tư vấn theo vấn đề, chưa cần tên hàng.\",\"needs\":[{\"alternative_categories\":[\"Phi thực phẩm \\u003e Hoá mỹ phẩm \\u003e Mỹ phẩm, chăm sóc cá nhân \\u003e Chăm sóc da\"],\"category\":\"Phi thực phẩm \\u003e Hoá mỹ phẩm \\u003e Hóa phẩm \\u003e Vệ sinh nhà\",\"label\":\"Vệ sinh sàn và bề mặt\",\"max_price_vnd\":100000,\"need_id\":\"need-floor-surface\",\"product_query\":\"chất tẩy rửa sàn và bề mặt\",\"quantity\":1,\"rationale\":\"Khách cần dọn nhà mới chuyển tới, sàn và bề mặt là vấn đề chính.\",\"required\":true,\"source\":\"EXPLICIT\",\"unverified_constraints\":[\"Ngân sách tổng khoảng 100.000đ\"]},{\"alternative_categories\":[\"Phi thực phẩm \\u003e Hoá mỹ phẩm \\u003e Mỹ phẩm, chăm sóc cá nhân \\u003e Chăm sóc da\"],\"category\":\"Phi thực phẩm \\u003e Hoá mỹ phẩm \\u003e Giấy và bông \\u003e Giấy ăn, giấy vệ sinh\",\"label\":\"Khăn lau và giấy vệ sinh\",\"max_price_vnd\":100000,\"need_id\":\"need-wipes-paper\",\"product_query\":\"khăn lau và giấy vệ sinh\",\"quantity\":1,\"rationale\":\"Khăn lau và giấy vệ sinh hỗ trợ lau chùi và vệ sinh cá nhân trong nhà.\",\"required\":false,\"source\":\"INFERRED\",\"unverified_constraints\":[\"Ngân sách tổng khoảng 100.000đ\"]}],\"occasion\":\"Chuyển nhà mới\",\"party_size\":1,\"preferences\":[\"Tư vấn theo vấn đề\",\"Chưa cần biết tên hàng\"],\"total_budget_vnd\":100000,\"use_case\":\"Vệ sinh căn nhà vừa chuyển tới\"}"
+                    }
+                  ],
+                  "usage": {
+                    "prompt_tokens": 3781,
+                    "completion_tokens": 498,
+                    "total_tokens": 4279
+                  }
+                }
+              ],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": true,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": true,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  true,
+                  false,
+                  true
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 2,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 2,
+              "user_text": "Thêm vào kế hoạch đồ vệ sinh nhà, giặt giũ và giấy dùng trong nhà; đây là các nhu cầu mình muốn tính đến. Mình vẫn muốn xem vài phương án khác nhau; các nhóm vừa nêu thì cần có.",
+              "http_status": 200,
+              "latency_ms": 128,
+              "response": {
+                "session_id": "79fd25e2-8cbb-4bb4-9b43-ea62d8d55057",
+                "text": "Mình chưa tìm thấy sản phẩm khớp với ‘them vao ke hoach do ve sinh nha giat giu’ trong catalog hiện có. Bạn kiểm tra lại tên hoặc quy cách nhé.",
+                "model": "comparison-clarification",
+                "grounded_product_ids": [],
+                "tools_used": [
+                  "search_products"
+                ],
+                "data_timestamp": null,
+                "data_source": null,
+                "state": "BROWSING",
+                "products": [],
+                "shopping_plan": null,
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "6adadd8a9408496093a526ac7c842f5f",
+                "revision": 1,
+                "goal": "Vệ sinh căn nhà vừa chuyển tới với ngân sách khoảng 100.000đ, tư vấn theo vấn đề, chưa cần tên hàng.",
+                "use_case": "Vệ sinh căn nhà vừa chuyển tới",
+                "occasion": "Chuyển nhà mới",
+                "party_size": 1,
+                "total_budget_vnd": 100000,
+                "total_budget_exclusive": false,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [
+                  "Tư vấn theo vấn đề",
+                  "Chưa cần biết tên hàng"
+                ],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": null,
+                "needs": [
+                  {
+                    "need_id": "need-floor-surface",
+                    "label": "Vệ sinh sàn và bề mặt",
+                    "rationale": "Khách cần dọn nhà mới chuyển tới, sàn và bề mặt là vấn đề chính.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà",
+                    "alternative_categories": [
+                      "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da"
+                    ],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "chất tẩy rửa sàn và bề mặt",
+                    "brand": null,
+                    "max_price_vnd": 100000,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [
+                      "Ngân sách tổng khoảng 100.000đ"
+                    ],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Vệ sinh nhà"
+                  },
+                  {
+                    "need_id": "need-wipes-paper",
+                    "label": "Khăn lau và giấy vệ sinh",
+                    "rationale": "Khăn lau và giấy vệ sinh hỗ trợ lau chùi và vệ sinh cá nhân trong nhà.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                    "alternative_categories": [
+                      "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da"
+                    ],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "khăn lau và giấy vệ sinh",
+                    "brand": null,
+                    "max_price_vnd": 100000,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [
+                      "Ngân sách tổng khoảng 100.000đ"
+                    ],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Giấy ăn, giấy vệ sinh"
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [],
+                "unresolved_details": [
+                  "unverified:Ngân sách tổng khoảng 100.000đ"
+                ],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Vệ sinh sàn và bề mặt"
+                ],
+                "inferred_needs": [
+                  "Khăn lau và giấy vệ sinh"
+                ],
+                "satisfied_needs": [],
+                "data_timestamp": null
+              },
+              "llm_trace": [],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": false,
+                  "required_groups_present_in_primary_plan": false,
+                  "explicit_needs_are_required": false,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": true,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  true,
+                  false,
+                  true
+                ],
+                "required_group_coverage": [
+                  true,
+                  false,
+                  true
+                ],
+                "primary_plan_required_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 2,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 3,
+              "user_text": "Mình đã có giấy dùng trong nhà; ghi nhận là có sẵn và bỏ khỏi danh sách mua. Giữ các nhu cầu khác, ngân sách 100.000đ.",
+              "http_status": 200,
+              "latency_ms": 5060,
+              "response": {
+                "session_id": "79fd25e2-8cbb-4bb4-9b43-ea62d8d55057",
+                "text": "Mình hiểu mục tiêu là Vệ sinh căn nhà vừa chuyển tới với ngân sách khoảng 100.000đ, tư vấn theo vấn đề, chưa cần tên hàng.. Tồn kho hiện tại chưa được xác minh. Catalog chưa xác minh được mặt hàng phù hợp cho: Vệ sinh sàn và bề mặt.",
+                "model": "openai/gpt-oss-120b",
+                "grounded_product_ids": [],
+                "tools_used": [
+                  "plan_shopping_mission"
+                ],
+                "data_timestamp": null,
+                "data_source": "winmart_json_snapshot",
+                "state": "BROWSING",
+                "products": [],
+                "shopping_plan": {
+                  "mission_id": "6adadd8a9408496093a526ac7c842f5f",
+                  "revision": 2,
+                  "goal": "Vệ sinh căn nhà vừa chuyển tới với ngân sách khoảng 100.000đ, tư vấn theo vấn đề, chưa cần tên hàng.",
+                  "use_case": "Vệ sinh căn nhà vừa chuyển tới",
+                  "occasion": "Chuyển nhà mới",
+                  "party_size": 1,
+                  "budget_vnd": 100000,
+                  "budget_exclusive": false,
+                  "confirmed_needs": [
+                    "Vệ sinh sàn và bề mặt"
+                  ],
+                  "inferred_needs": [
+                    "Khăn lau và giấy vệ sinh"
+                  ],
+                  "satisfied_needs": [
+                    "Khăn lau và giấy vệ sinh"
+                  ],
+                  "needs": [
+                    {
+                      "need_id": "need-floor-surface",
+                      "label": "Vệ sinh sàn và bề mặt",
+                      "rationale": "Khách cần dọn nhà mới chuyển tới, sàn và bề mặt là vấn đề chính.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà",
+                      "resolved_category": "Vệ sinh nhà",
+                      "source": "EXPLICIT",
+                      "required": true,
+                      "quantity": 1,
+                      "candidate_count": 0,
+                      "candidate_product_ids": [],
+                      "alternative_categories": [],
+                      "blocked_reasons": [
+                        "unverified:Ngân sách tổng khoảng 100.000đ"
+                      ],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "need-wipes-paper",
+                      "label": "Khăn lau và giấy vệ sinh",
+                      "rationale": "Khăn lau và giấy vệ sinh hỗ trợ lau chùi và vệ sinh cá nhân trong nhà.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                      "resolved_category": "Giấy ăn, giấy vệ sinh",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 0,
+                      "candidate_product_ids": [],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": true
+                    }
+                  ],
+                  "options": [],
+                  "missing_required_needs": [
+                    "Vệ sinh sàn và bề mặt"
+                  ],
+                  "missing_optional_needs": [],
+                  "optional_needs_not_selected": [],
+                  "budget_shortfall_vnd": null,
+                  "pending_decision": null,
+                  "inventory_verified": false,
+                  "data_source": "winmart_json_snapshot",
+                  "data_timestamp": null,
+                  "cart_mutated": false,
+                  "unresolved_details": [
+                    "unverified:Ngân sách tổng khoảng 100.000đ"
+                  ],
+                  "unknown_details": []
+                },
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "6adadd8a9408496093a526ac7c842f5f",
+                "revision": 2,
+                "goal": "Vệ sinh căn nhà vừa chuyển tới với ngân sách khoảng 100.000đ, tư vấn theo vấn đề, chưa cần tên hàng.",
+                "use_case": "Vệ sinh căn nhà vừa chuyển tới",
+                "occasion": "Chuyển nhà mới",
+                "party_size": 1,
+                "total_budget_vnd": 100000,
+                "total_budget_exclusive": false,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [
+                  "Tư vấn theo vấn đề",
+                  "Chưa cần biết tên hàng"
+                ],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": null,
+                "needs": [
+                  {
+                    "need_id": "need-floor-surface",
+                    "label": "Vệ sinh sàn và bề mặt",
+                    "rationale": "Khách cần dọn nhà mới chuyển tới, sàn và bề mặt là vấn đề chính.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà",
+                    "alternative_categories": [
+                      "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da"
+                    ],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "chất tẩy rửa sàn và bề mặt",
+                    "brand": null,
+                    "max_price_vnd": 100000,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [
+                      "Ngân sách tổng khoảng 100.000đ"
+                    ],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Vệ sinh nhà"
+                  },
+                  {
+                    "need_id": "need-wipes-paper",
+                    "label": "Khăn lau và giấy vệ sinh",
+                    "rationale": "Khăn lau và giấy vệ sinh hỗ trợ lau chùi và vệ sinh cá nhân trong nhà.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "khăn lau và giấy vệ sinh",
+                    "brand": null,
+                    "max_price_vnd": 100000,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [
+                      "Ngân sách tổng khoảng 100.000đ"
+                    ],
+                    "satisfied_by_existing": true,
+                    "resolved_category": "Giấy ăn, giấy vệ sinh"
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [],
+                "unresolved_details": [
+                  "unverified:Ngân sách tổng khoảng 100.000đ"
+                ],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Vệ sinh sàn và bề mặt"
+                ],
+                "inferred_needs": [
+                  "Khăn lau và giấy vệ sinh"
+                ],
+                "satisfied_needs": [
+                  "Khăn lau và giấy vệ sinh"
+                ],
+                "data_timestamp": null
+              },
+              "llm_trace": [
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "fallback_trace": [
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "9",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "4021",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "30.145s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "9",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "4149",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "28.882s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "9",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "4082",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "29.385s"
+                      },
+                      "credential_slot": "fallback_2"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "success",
+                      "rate_limit_headers": {
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "3545",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "33.412s"
+                      },
+                      "credential_slot": "primary"
+                    }
+                  ],
+                  "latency_ms": 4862,
+                  "pacing_wait_ms": 0,
+                  "tool_calls": [
+                    {
+                      "name": "plan_shopping_mission",
+                      "arguments": "{\"goal\":\"Vệ sinh căn nhà vừa chuyển tới với ngân sách khoảng 100.000đ, tư vấn theo vấn đề, chưa cần tên hàng.\",\"needs\":[{\"category\":\"Phi thực phẩm \\u003e Hoá mỹ phẩm \\u003e Giấy và bông \\u003e Giấy ăn, giấy vệ sinh\",\"label\":\"Khăn lau và giấy vệ sinh\",\"max_price_vnd\":100000,\"need_id\":\"need-wipes-paper\",\"product_query\":\"khăn lau và giấy vệ sinh\",\"quantity\":1,\"rationale\":\"Khăn lau và giấy vệ sinh hỗ trợ lau chùi và vệ sinh cá nhân trong nhà.\",\"required\":false,\"satisfied_by_existing\":true,\"source\":\"INFERRED\",\"unverified_constraints\":[\"Ngân sách tổng khoảng 100.000đ\"]}],\"preferences\":[\"Tư vấn theo vấn đề\",\"Chưa cần biết tên hàng\"],\"rejected_product_ids\":[],\"remove_need_ids\":[],\"total_budget_vnd\":100000}"
+                    }
+                  ],
+                  "usage": {
+                    "prompt_tokens": 4089,
+                    "completion_tokens": 390,
+                    "total_tokens": 4479
+                  }
+                }
+              ],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": true,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": true,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": false,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  true,
+                  false
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 2,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            }
+          ]
+        },
+        {
+          "case_id": "SMH-036",
+          "archetype": "household_cleaning",
+          "tags": [
+            "multi_category",
+            "required_needs",
+            "budget_revision",
+            "preserve_state",
+            "heldout",
+            "multi_turn",
+            "no_product_names",
+            "household_shopping"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "user_text": "Tối ni mình phải chuẩn bị đồ dùng cho buổi tổng vệ sinh, có 150.000đ. Chưa biết cần chi, chỉ giúp mình lên phương án tham khảo.",
+              "http_status": 200,
+              "latency_ms": 2278,
+              "response": {
+                "session_id": "510ac3ad-f1c7-4240-8afa-5fff88db4f21",
+                "text": "Mình hiểu mục tiêu là Chuẩn bị đồ dùng tổng vệ sinh nhà cửa tối nay, ngân sách 150.000đ, chưa rõ danh mục cụ thể.. Tồn kho hiện tại chưa được xác minh. Phương án gợi ý: Nước lau bếp  Gift chai 520ml/540ml × 1 (30,800đ); Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml × 1 (77,900đ). Tổng 108,700đ. Mình chưa thêm món nào vào giỏ.",
+                "model": "qwen/qwen3.8-27b",
+                "grounded_product_ids": [
+                  "WIN_10019692",
+                  "WIN_10162309",
+                  "WIN_10171184",
+                  "WIN_10314242"
+                ],
+                "tools_used": [
+                  "plan_shopping_mission"
+                ],
+                "data_timestamp": "2026-09-15T13:53:44.338760Z",
+                "data_source": "winmart_json_snapshot",
+                "state": "BROWSING",
+                "products": [
+                  {
+                    "product_id": "WIN_10019692",
+                    "name": "Nước lau bếp  Gift chai 520ml/540ml",
+                    "category": "Nước Tẩy Rửa",
+                    "brand": "GIFT",
+                    "price_vnd": 30800,
+                    "stock": 47,
+                    "stock_is_current": false,
+                    "uom": "Chai",
+                    "data_timestamp": "2026-09-15T13:53:44.337885Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10162309",
+                    "name": "Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml",
+                    "category": "Chăm Sóc Da",
+                    "brand": "NIVEA",
+                    "price_vnd": 77900,
+                    "stock": 14,
+                    "stock_is_current": false,
+                    "uom": "Chai",
+                    "data_timestamp": "2026-09-15T13:53:35.405722Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10171184",
+                    "name": "Kem tẩy Sunlight chuyên dụng siêu sạch siêu sáng 690g",
+                    "category": "Nước Tẩy Rửa",
+                    "brand": "SUNLIGHT",
+                    "price_vnd": 35000,
+                    "stock": 54,
+                    "stock_is_current": false,
+                    "uom": "Chai",
+                    "data_timestamp": "2026-09-15T13:53:44.338601Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10314242",
+                    "name": "Nước lau bếp Suzy chai 500ml",
+                    "category": "Nước Tẩy Rửa",
+                    "brand": "SUZY",
+                    "price_vnd": 30800,
+                    "stock": 29,
+                    "stock_is_current": false,
+                    "uom": "Chai",
+                    "data_timestamp": "2026-09-15T13:53:44.338760Z",
+                    "data_source": "winmart_json_snapshot"
+                  }
+                ],
+                "shopping_plan": {
+                  "mission_id": "e7164abe3f3c4f3aa720e928eb9de834",
+                  "revision": 1,
+                  "goal": "Chuẩn bị đồ dùng tổng vệ sinh nhà cửa tối nay, ngân sách 150.000đ, chưa rõ danh mục cụ thể.",
+                  "use_case": "",
+                  "occasion": "",
+                  "party_size": null,
+                  "budget_vnd": 150000,
+                  "budget_exclusive": false,
+                  "confirmed_needs": [
+                    "Nước tẩy rửa đa dụng"
+                  ],
+                  "inferred_needs": [
+                    "Khăn lau",
+                    "Giấy vệ sinh",
+                    "Găng tay cao su"
+                  ],
+                  "satisfied_needs": [],
+                  "needs": [
+                    {
+                      "need_id": "cleaner",
+                      "label": "Nước tẩy rửa đa dụng",
+                      "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà",
+                      "resolved_category": "Vệ sinh nhà",
+                      "source": "EXPLICIT",
+                      "required": true,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10019692",
+                        "WIN_10314242",
+                        "WIN_10170558",
+                        "WIN_10171184",
+                        "WIN_10171193"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "cloth",
+                      "label": "Khăn lau",
+                      "rationale": "Dùng lau chùi sau khi tẩy rửa.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam",
+                      "resolved_category": "Chăm sóc nam",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10162309",
+                        "WIN_10018979",
+                        "WIN_10018962",
+                        "WIN_10170646",
+                        "WIN_10018807"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "tissue",
+                      "label": "Giấy vệ sinh",
+                      "rationale": "Dọn vệ sinh khu vực vệ sinh.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                      "resolved_category": "Giấy ăn, giấy vệ sinh",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10020625",
+                        "WIN_10317183",
+                        "WIN_10020550",
+                        "WIN_10195149",
+                        "WIN_10020669"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "glove",
+                      "label": "Găng tay cao su",
+                      "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam",
+                      "resolved_category": "Chăm sóc nam",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10162309",
+                        "WIN_10018979",
+                        "WIN_10018962",
+                        "WIN_10170646",
+                        "WIN_10018807"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    }
+                  ],
+                  "options": [
+                    {
+                      "option_id": "option-1",
+                      "label": "Tiết kiệm",
+                      "items": [
+                        {
+                          "need_id": "cleaner",
+                          "need_label": "Nước tẩy rửa đa dụng",
+                          "category": "Vệ sinh nhà",
+                          "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                          "source": "EXPLICIT",
+                          "required": true,
+                          "product_id": "WIN_10019692",
+                          "name": "Nước lau bếp  Gift chai 520ml/540ml",
+                          "brand": "GIFT",
+                          "quantity": 1,
+                          "unit_price_vnd": 30800,
+                          "line_total_vnd": 30800,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:44.337885Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 30800
+                        },
+                        {
+                          "need_id": "glove",
+                          "need_label": "Găng tay cao su",
+                          "category": "Chăm sóc nam",
+                          "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10162309",
+                          "name": "Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml",
+                          "brand": "NIVEA",
+                          "quantity": 1,
+                          "unit_price_vnd": 77900,
+                          "line_total_vnd": 77900,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:35.405722Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 77900
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "cleaner",
+                        "glove"
+                      ],
+                      "total_vnd": 108700,
+                      "remaining_budget_vnd": 41300,
+                      "budget_fit": true
+                    },
+                    {
+                      "option_id": "option-2",
+                      "label": "Cân bằng",
+                      "items": [
+                        {
+                          "need_id": "cleaner",
+                          "need_label": "Nước tẩy rửa đa dụng",
+                          "category": "Vệ sinh nhà",
+                          "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                          "source": "EXPLICIT",
+                          "required": true,
+                          "product_id": "WIN_10171184",
+                          "name": "Kem tẩy Sunlight chuyên dụng siêu sạch siêu sáng 690g",
+                          "brand": "SUNLIGHT",
+                          "quantity": 1,
+                          "unit_price_vnd": 35000,
+                          "line_total_vnd": 35000,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:44.338601Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 35000
+                        },
+                        {
+                          "need_id": "glove",
+                          "need_label": "Găng tay cao su",
+                          "category": "Chăm sóc nam",
+                          "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10162309",
+                          "name": "Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml",
+                          "brand": "NIVEA",
+                          "quantity": 1,
+                          "unit_price_vnd": 77900,
+                          "line_total_vnd": 77900,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:35.405722Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 77900
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "cleaner",
+                        "glove"
+                      ],
+                      "total_vnd": 112900,
+                      "remaining_budget_vnd": 37100,
+                      "budget_fit": true
+                    },
+                    {
+                      "option_id": "option-3",
+                      "label": "Lựa chọn khác",
+                      "items": [
+                        {
+                          "need_id": "cleaner",
+                          "need_label": "Nước tẩy rửa đa dụng",
+                          "category": "Vệ sinh nhà",
+                          "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                          "source": "EXPLICIT",
+                          "required": true,
+                          "product_id": "WIN_10314242",
+                          "name": "Nước lau bếp Suzy chai 500ml",
+                          "brand": "SUZY",
+                          "quantity": 1,
+                          "unit_price_vnd": 30800,
+                          "line_total_vnd": 30800,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:44.338760Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 30800
+                        },
+                        {
+                          "need_id": "glove",
+                          "need_label": "Găng tay cao su",
+                          "category": "Chăm sóc nam",
+                          "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10162309",
+                          "name": "Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml",
+                          "brand": "NIVEA",
+                          "quantity": 1,
+                          "unit_price_vnd": 77900,
+                          "line_total_vnd": 77900,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:35.405722Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 77900
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "cleaner",
+                        "glove"
+                      ],
+                      "total_vnd": 108700,
+                      "remaining_budget_vnd": 41300,
+                      "budget_fit": true
+                    }
+                  ],
+                  "missing_required_needs": [],
+                  "missing_optional_needs": [],
+                  "optional_needs_not_selected": [
+                    "Khăn lau",
+                    "Giấy vệ sinh"
+                  ],
+                  "budget_shortfall_vnd": null,
+                  "pending_decision": "choose_a_plan_option",
+                  "inventory_verified": false,
+                  "data_source": "winmart_json_snapshot",
+                  "data_timestamp": "2026-09-15T13:53:44.338760Z",
+                  "cart_mutated": false,
+                  "unresolved_details": [],
+                  "unknown_details": []
+                },
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "e7164abe3f3c4f3aa720e928eb9de834",
+                "revision": 1,
+                "goal": "Chuẩn bị đồ dùng tổng vệ sinh nhà cửa tối nay, ngân sách 150.000đ, chưa rõ danh mục cụ thể.",
+                "use_case": "",
+                "occasion": "",
+                "party_size": null,
+                "total_budget_vnd": 150000,
+                "total_budget_exclusive": false,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": "choose_a_plan_option",
+                "needs": [
+                  {
+                    "need_id": "cleaner",
+                    "label": "Nước tẩy rửa đa dụng",
+                    "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà",
+                    "alternative_categories": [],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "nước tẩy rửa đa dụng",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Vệ sinh nhà",
+                    "retrieval_query_used": "nước tẩy rửa đa dụng"
+                  },
+                  {
+                    "need_id": "cloth",
+                    "label": "Khăn lau",
+                    "rationale": "Dùng lau chùi sau khi tẩy rửa.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "khăn lau",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Chăm sóc nam",
+                    "retrieval_query_used": "Chăm sóc nam"
+                  },
+                  {
+                    "need_id": "tissue",
+                    "label": "Giấy vệ sinh",
+                    "rationale": "Dọn vệ sinh khu vực vệ sinh.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "giấy vệ sinh",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Giấy ăn, giấy vệ sinh",
+                    "retrieval_query_used": "giấy vệ sinh"
+                  },
+                  {
+                    "need_id": "glove",
+                    "label": "Găng tay cao su",
+                    "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "găng tay cao su",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Chăm sóc nam",
+                    "retrieval_query_used": "Chăm sóc nam"
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [
+                  {
+                    "need_id": "cleaner",
+                    "need_label": "Nước tẩy rửa đa dụng",
+                    "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                    "category": "Vệ sinh nhà",
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "product_id": "WIN_10019692",
+                    "name": "Nước lau bếp  Gift chai 520ml/540ml",
+                    "brand": "GIFT",
+                    "quantity": 1,
+                    "unit_price_vnd": 30800,
+                    "line_total_vnd": 30800,
+                    "uom": "Chai",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:44.337885+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 30800
+                  },
+                  {
+                    "need_id": "glove",
+                    "need_label": "Găng tay cao su",
+                    "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                    "category": "Chăm sóc nam",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10162309",
+                    "name": "Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml",
+                    "brand": "NIVEA",
+                    "quantity": 1,
+                    "unit_price_vnd": 77900,
+                    "line_total_vnd": 77900,
+                    "uom": "Chai",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:35.405722+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 77900
+                  }
+                ],
+                "unresolved_details": [],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Nước tẩy rửa đa dụng"
+                ],
+                "inferred_needs": [
+                  "Khăn lau",
+                  "Giấy vệ sinh",
+                  "Găng tay cao su"
+                ],
+                "satisfied_needs": [],
+                "data_timestamp": "2026-09-15T13:53:44.338760+00:00"
+              },
+              "llm_trace": [
+                {
+                  "model": "qwen/qwen3.8-27b",
+                  "fallback_trace": [
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "success",
+                      "rate_limit_headers": {
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "553",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "55.852s"
+                      },
+                      "credential_slot": "primary"
+                    }
+                  ],
+                  "latency_ms": 1665,
+                  "pacing_wait_ms": 0,
+                  "tool_calls": [
+                    {
+                      "name": "plan_shopping_mission",
+                      "arguments": "{\"goal\":\"Chuẩn bị đồ dùng tổng vệ sinh nhà cửa tối nay, ngân sách 150.000đ, chưa rõ danh mục cụ thể.\",\"needs\":[{\"category\":\"Phi thực phẩm \\u003e Hoá mỹ phẩm \\u003e Hóa phẩm \\u003e Vệ sinh nhà\",\"label\":\"Nước tẩy rửa đa dụng\",\"need_id\":\"cleaner\",\"product_query\":\"nước tẩy rửa đa dụng\",\"quantity\":1,\"rationale\":\"Làm sạch bề mặt chung trong tổng vệ sinh.\",\"required\":true,\"source\":\"EXPLICIT\"},{\"category\":\"Phi thực phẩm \\u003e Hoá mỹ phẩm \\u003e Mỹ phẩm, chăm sóc cá nhân \\u003e Chăm sóc nam\",\"label\":\"Khăn lau\",\"need_id\":\"cloth\",\"product_query\":\"khăn lau\",\"quantity\":1,\"rationale\":\"Dùng lau chùi sau khi tẩy rửa.\",\"required\":true,\"source\":\"EXPLICIT\"},{\"category\":\"Phi thực phẩm \\u003e Hoá mỹ phẩm \\u003e Giấy và bông \\u003e Giấy ăn, giấy vệ sinh\",\"label\":\"Giấy vệ sinh\",\"need_id\":\"tissue\",\"product_query\":\"giấy vệ sinh\",\"quantity\":1,\"rationale\":\"Dọn vệ sinh khu vực vệ sinh.\",\"required\":true,\"source\":\"EXPLICIT\"},{\"category\":\"Phi thực phẩm \\u003e Hoá mỹ phẩm \\u003e Mỹ phẩm, chăm sóc cá nhân \\u003e Chăm sóc nam\",\"label\":\"Găng tay cao su\",\"need_id\":\"glove\",\"product_query\":\"găng tay cao su\",\"quantity\":1,\"rationale\":\"Bảo vệ tay khi dùng chất tẩy rửa.\",\"required\":true,\"source\":\"EXPLICIT\"}],\"total_budget_vnd\":150000}"
+                    }
+                  ],
+                  "usage": {
+                    "prompt_tokens": 3780,
+                    "completion_tokens": 373,
+                    "total_tokens": 4153
+                  }
+                }
+              ],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": true,
+                  "goal_identified": true,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": true,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  true,
+                  false,
+                  true
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 6,
+                "primary_plan_item_count": 2,
+                "plan_totals_vnd": [
+                  108700,
+                  112900,
+                  108700
+                ],
+                "mission_need_count": 4,
+                "grounded_product_count": 4,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 2,
+              "user_text": "Thêm vào kế hoạch đồ vệ sinh nhà, giặt giũ và giấy dùng trong nhà; đây là các nhu cầu mình muốn tính đến. Mình vẫn muốn xem vài phương án khác nhau; các nhóm vừa nêu thì cần có.",
+              "http_status": 200,
+              "latency_ms": 162,
+              "response": {
+                "session_id": "510ac3ad-f1c7-4240-8afa-5fff88db4f21",
+                "text": "Mình chưa tìm thấy sản phẩm khớp với ‘them vao ke hoach do ve sinh nha giat giu’ trong catalog hiện có. Bạn kiểm tra lại tên hoặc quy cách nhé.",
+                "model": "comparison-clarification",
+                "grounded_product_ids": [],
+                "tools_used": [
+                  "search_products"
+                ],
+                "data_timestamp": null,
+                "data_source": null,
+                "state": "BROWSING",
+                "products": [],
+                "shopping_plan": null,
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "e7164abe3f3c4f3aa720e928eb9de834",
+                "revision": 1,
+                "goal": "Chuẩn bị đồ dùng tổng vệ sinh nhà cửa tối nay, ngân sách 150.000đ, chưa rõ danh mục cụ thể.",
+                "use_case": "",
+                "occasion": "",
+                "party_size": null,
+                "total_budget_vnd": 150000,
+                "total_budget_exclusive": false,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": "choose_a_plan_option",
+                "needs": [
+                  {
+                    "need_id": "cleaner",
+                    "label": "Nước tẩy rửa đa dụng",
+                    "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà",
+                    "alternative_categories": [],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "nước tẩy rửa đa dụng",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Vệ sinh nhà",
+                    "retrieval_query_used": "nước tẩy rửa đa dụng"
+                  },
+                  {
+                    "need_id": "cloth",
+                    "label": "Khăn lau",
+                    "rationale": "Dùng lau chùi sau khi tẩy rửa.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "khăn lau",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Chăm sóc nam",
+                    "retrieval_query_used": "Chăm sóc nam"
+                  },
+                  {
+                    "need_id": "tissue",
+                    "label": "Giấy vệ sinh",
+                    "rationale": "Dọn vệ sinh khu vực vệ sinh.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "giấy vệ sinh",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Giấy ăn, giấy vệ sinh",
+                    "retrieval_query_used": "giấy vệ sinh"
+                  },
+                  {
+                    "need_id": "glove",
+                    "label": "Găng tay cao su",
+                    "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "găng tay cao su",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Chăm sóc nam",
+                    "retrieval_query_used": "Chăm sóc nam"
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [
+                  {
+                    "need_id": "cleaner",
+                    "need_label": "Nước tẩy rửa đa dụng",
+                    "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                    "category": "Vệ sinh nhà",
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "product_id": "WIN_10019692",
+                    "name": "Nước lau bếp  Gift chai 520ml/540ml",
+                    "brand": "GIFT",
+                    "quantity": 1,
+                    "unit_price_vnd": 30800,
+                    "line_total_vnd": 30800,
+                    "uom": "Chai",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:44.337885+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 30800
+                  },
+                  {
+                    "need_id": "glove",
+                    "need_label": "Găng tay cao su",
+                    "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                    "category": "Chăm sóc nam",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10162309",
+                    "name": "Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml",
+                    "brand": "NIVEA",
+                    "quantity": 1,
+                    "unit_price_vnd": 77900,
+                    "line_total_vnd": 77900,
+                    "uom": "Chai",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:35.405722+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 77900
+                  }
+                ],
+                "unresolved_details": [],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Nước tẩy rửa đa dụng"
+                ],
+                "inferred_needs": [
+                  "Khăn lau",
+                  "Giấy vệ sinh",
+                  "Găng tay cao su"
+                ],
+                "satisfied_needs": [],
+                "data_timestamp": "2026-09-15T13:53:44.338760+00:00"
+              },
+              "llm_trace": [],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": true,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": false,
+                  "required_groups_present_in_primary_plan": false,
+                  "explicit_needs_are_required": false,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": true,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  true,
+                  false,
+                  true
+                ],
+                "required_group_coverage": [
+                  true,
+                  false,
+                  true
+                ],
+                "primary_plan_required_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 4,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 3,
+              "user_text": "Giảm ngân sách xuống tối đa 130.000đ, giữ nguyên số người và các nhu cầu đã chốt nhé.",
+              "http_status": 200,
+              "latency_ms": 5770,
+              "response": {
+                "session_id": "510ac3ad-f1c7-4240-8afa-5fff88db4f21",
+                "text": "Mình hiểu mục tiêu là Chuẩn bị đồ dùng tổng vệ sinh nhà cửa tối nay, ngân sách 130.000đ, chưa rõ danh mục cụ thể.. Tồn kho hiện tại chưa được xác minh. Phương án gợi ý: Nước lau bếp  Gift chai 520ml/540ml × 1 (30,800đ); Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml × 1 (77,900đ). Tổng 108,700đ. Mình chưa thêm món nào vào giỏ.",
+                "model": "openai/gpt-oss-120b",
+                "grounded_product_ids": [
+                  "WIN_10019692",
+                  "WIN_10162309"
+                ],
+                "tools_used": [
+                  "plan_shopping_mission"
+                ],
+                "data_timestamp": "2026-09-15T13:53:44.337885Z",
+                "data_source": "winmart_json_snapshot",
+                "state": "BROWSING",
+                "products": [
+                  {
+                    "product_id": "WIN_10019692",
+                    "name": "Nước lau bếp  Gift chai 520ml/540ml",
+                    "category": "Nước Tẩy Rửa",
+                    "brand": "GIFT",
+                    "price_vnd": 30800,
+                    "stock": 47,
+                    "stock_is_current": false,
+                    "uom": "Chai",
+                    "data_timestamp": "2026-09-15T13:53:44.337885Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10162309",
+                    "name": "Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml",
+                    "category": "Chăm Sóc Da",
+                    "brand": "NIVEA",
+                    "price_vnd": 77900,
+                    "stock": 14,
+                    "stock_is_current": false,
+                    "uom": "Chai",
+                    "data_timestamp": "2026-09-15T13:53:35.405722Z",
+                    "data_source": "winmart_json_snapshot"
+                  }
+                ],
+                "shopping_plan": {
+                  "mission_id": "e7164abe3f3c4f3aa720e928eb9de834",
+                  "revision": 2,
+                  "goal": "Chuẩn bị đồ dùng tổng vệ sinh nhà cửa tối nay, ngân sách 130.000đ, chưa rõ danh mục cụ thể.",
+                  "use_case": "",
+                  "occasion": "",
+                  "party_size": null,
+                  "budget_vnd": 130000,
+                  "budget_exclusive": false,
+                  "confirmed_needs": [
+                    "Nước tẩy rửa đa dụng"
+                  ],
+                  "inferred_needs": [
+                    "Khăn lau",
+                    "Giấy vệ sinh",
+                    "Găng tay cao su"
+                  ],
+                  "satisfied_needs": [],
+                  "needs": [
+                    {
+                      "need_id": "cleaner",
+                      "label": "Nước tẩy rửa đa dụng",
+                      "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà",
+                      "resolved_category": "Vệ sinh nhà",
+                      "source": "EXPLICIT",
+                      "required": true,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10019692",
+                        "WIN_10314242",
+                        "WIN_10170558",
+                        "WIN_10171184",
+                        "WIN_10171193"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "cloth",
+                      "label": "Khăn lau",
+                      "rationale": "Dùng lau chùi sau khi tẩy rửa.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam",
+                      "resolved_category": "Chăm sóc nam",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10162309",
+                        "WIN_10018979",
+                        "WIN_10018962",
+                        "WIN_10170646",
+                        "WIN_10018807"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "tissue",
+                      "label": "Giấy vệ sinh",
+                      "rationale": "Dọn vệ sinh khu vực vệ sinh.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                      "resolved_category": "Giấy ăn, giấy vệ sinh",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10020625",
+                        "WIN_10317183",
+                        "WIN_10020550",
+                        "WIN_10195149",
+                        "WIN_10020669"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    },
+                    {
+                      "need_id": "glove",
+                      "label": "Găng tay cao su",
+                      "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                      "requested_category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam",
+                      "resolved_category": "Chăm sóc nam",
+                      "source": "INFERRED",
+                      "required": false,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10162309",
+                        "WIN_10018979",
+                        "WIN_10018962",
+                        "WIN_10170646",
+                        "WIN_10018807"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    }
+                  ],
+                  "options": [
+                    {
+                      "option_id": "option-1",
+                      "label": "Tiết kiệm",
+                      "items": [
+                        {
+                          "need_id": "cleaner",
+                          "need_label": "Nước tẩy rửa đa dụng",
+                          "category": "Vệ sinh nhà",
+                          "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                          "source": "EXPLICIT",
+                          "required": true,
+                          "product_id": "WIN_10019692",
+                          "name": "Nước lau bếp  Gift chai 520ml/540ml",
+                          "brand": "GIFT",
+                          "quantity": 1,
+                          "unit_price_vnd": 30800,
+                          "line_total_vnd": 30800,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:44.337885Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 30800
+                        },
+                        {
+                          "need_id": "glove",
+                          "need_label": "Găng tay cao su",
+                          "category": "Chăm sóc nam",
+                          "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                          "source": "INFERRED",
+                          "required": false,
+                          "product_id": "WIN_10162309",
+                          "name": "Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml",
+                          "brand": "NIVEA",
+                          "quantity": 1,
+                          "unit_price_vnd": 77900,
+                          "line_total_vnd": 77900,
+                          "uom": "Chai",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:35.405722Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 77900
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "cleaner",
+                        "glove"
+                      ],
+                      "total_vnd": 108700,
+                      "remaining_budget_vnd": 21300,
+                      "budget_fit": true
+                    }
+                  ],
+                  "missing_required_needs": [],
+                  "missing_optional_needs": [],
+                  "optional_needs_not_selected": [
+                    "Khăn lau",
+                    "Giấy vệ sinh"
+                  ],
+                  "budget_shortfall_vnd": null,
+                  "pending_decision": null,
+                  "inventory_verified": false,
+                  "data_source": "winmart_json_snapshot",
+                  "data_timestamp": "2026-09-15T13:53:44.337885Z",
+                  "cart_mutated": false,
+                  "unresolved_details": [],
+                  "unknown_details": []
+                },
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "e7164abe3f3c4f3aa720e928eb9de834",
+                "revision": 2,
+                "goal": "Chuẩn bị đồ dùng tổng vệ sinh nhà cửa tối nay, ngân sách 130.000đ, chưa rõ danh mục cụ thể.",
+                "use_case": "",
+                "occasion": "",
+                "party_size": null,
+                "total_budget_vnd": 130000,
+                "total_budget_exclusive": false,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": null,
+                "needs": [
+                  {
+                    "need_id": "cleaner",
+                    "label": "Nước tẩy rửa đa dụng",
+                    "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà",
+                    "alternative_categories": [],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "nước tẩy rửa đa dụng",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Vệ sinh nhà",
+                    "retrieval_query_used": "nước tẩy rửa đa dụng"
+                  },
+                  {
+                    "need_id": "cloth",
+                    "label": "Khăn lau",
+                    "rationale": "Dùng lau chùi sau khi tẩy rửa.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "khăn lau",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Chăm sóc nam",
+                    "retrieval_query_used": "Chăm sóc nam"
+                  },
+                  {
+                    "need_id": "tissue",
+                    "label": "Giấy vệ sinh",
+                    "rationale": "Dọn vệ sinh khu vực vệ sinh.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "giấy vệ sinh",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Giấy ăn, giấy vệ sinh",
+                    "retrieval_query_used": "giấy vệ sinh"
+                  },
+                  {
+                    "need_id": "glove",
+                    "label": "Găng tay cao su",
+                    "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam",
+                    "alternative_categories": [],
+                    "source": "INFERRED",
+                    "required": false,
+                    "quantity": 1,
+                    "product_query": "găng tay cao su",
+                    "brand": null,
+                    "max_price_vnd": null,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Chăm sóc nam",
+                    "retrieval_query_used": "Chăm sóc nam"
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [
+                  {
+                    "need_id": "cleaner",
+                    "need_label": "Nước tẩy rửa đa dụng",
+                    "rationale": "Làm sạch bề mặt chung trong tổng vệ sinh.",
+                    "category": "Vệ sinh nhà",
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "product_id": "WIN_10019692",
+                    "name": "Nước lau bếp  Gift chai 520ml/540ml",
+                    "brand": "GIFT",
+                    "quantity": 1,
+                    "unit_price_vnd": 30800,
+                    "line_total_vnd": 30800,
+                    "uom": "Chai",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:44.337885+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 30800
+                  },
+                  {
+                    "need_id": "glove",
+                    "need_label": "Găng tay cao su",
+                    "rationale": "Bảo vệ tay khi dùng chất tẩy rửa.",
+                    "category": "Chăm sóc nam",
+                    "source": "INFERRED",
+                    "required": false,
+                    "product_id": "WIN_10162309",
+                    "name": "Lăn ngăn mùi nam Nivea mát lạnh cool fresh 50ml",
+                    "brand": "NIVEA",
+                    "quantity": 1,
+                    "unit_price_vnd": 77900,
+                    "line_total_vnd": 77900,
+                    "uom": "Chai",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:35.405722+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 77900
+                  }
+                ],
+                "unresolved_details": [],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Nước tẩy rửa đa dụng"
+                ],
+                "inferred_needs": [
+                  "Khăn lau",
+                  "Giấy vệ sinh",
+                  "Găng tay cao su"
+                ],
+                "satisfied_needs": [],
+                "data_timestamp": "2026-09-15T13:53:44.337885+00:00"
+              },
+              "llm_trace": [
+                {
+                  "model": "openai/gpt-oss-120b",
+                  "fallback_trace": [
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "38",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "953",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "54.402s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "39",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "1219",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "55.105s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "38",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "1260",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "54.291s"
+                      },
+                      "credential_slot": "fallback_2"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "3",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "4609",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "25.432s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "7",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "999",
+                        "x-ratelimit-remaining-tokens": "4124",
+                        "x-ratelimit-reset-requests": "1m26.4s",
+                        "x-ratelimit-reset-tokens": "29.07s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "success",
+                      "rate_limit_headers": {
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "236",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "58.23s"
+                      },
+                      "credential_slot": "fallback_2"
+                    }
+                  ],
+                  "latency_ms": 4620,
+                  "pacing_wait_ms": 540,
+                  "tool_calls": [
+                    {
+                      "name": "plan_shopping_mission",
+                      "arguments": "{\"clear_exclusions\":false,\"clear_existing_items\":false,\"clear_hard_requirements\":false,\"clear_party_size\":false,\"clear_pending_decision\":false,\"clear_preferences\":false,\"clear_total_budget\":false,\"clear_unknown_details\":false,\"goal\":\"Chuẩn bị đồ dùng tổng vệ sinh nhà cửa tối nay, ngân sách 130.000đ, chưa rõ danh mục cụ thể.\",\"needs\":[],\"pending_decision\":\"choose_a_plan_option\",\"rejected_product_ids\":[],\"total_budget_vnd\":130000}"
+                    }
+                  ],
+                  "usage": {
+                    "prompt_tokens": 4588,
+                    "completion_tokens": 190,
+                    "total_tokens": 4778
+                  }
+                }
+              ],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": true,
+                  "goal_identified": true,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": true,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  true,
+                  false,
+                  true
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 2,
+                "primary_plan_item_count": 2,
+                "plan_totals_vnd": [
+                  108700
+                ],
+                "mission_need_count": 4,
+                "grounded_product_count": 2,
+                "missing_product_ids": []
+              }
+            }
+          ]
+        },
+        {
+          "case_id": "SMH-037",
+          "archetype": "household_cleaning",
+          "tags": [
+            "multi_category",
+            "required_needs",
+            "quantity_adjustment",
+            "preserve_state",
+            "heldout",
+            "multi_turn",
+            "no_product_names",
+            "household_shopping",
+            "regional_vietnamese"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "user_text": "Tui sắp dọn căn bếp và phòng tắm trong ngày nghỉ; nếu có 200.000đ thì nên ưu tiên nhu cầu nào trước?",
+              "http_status": 200,
+              "latency_ms": 4122,
+              "response": {
+                "session_id": "348c498d-1c8c-40ad-bd13-7ea850c29417",
+                "text": "Mình hiểu mục tiêu là Tui sắp dọn căn bếp và phòng tắm trong ngày nghỉ; nếu có 200.000đ thì nên ưu tiên nhu cầu nào trước?. Tồn kho hiện tại chưa được xác minh. Phương án gợi ý: WMHOME Túi Lohas WiN đỏ 30x36x15-55g × 1 (8,900đ). Tổng 8,900đ. Mình chưa thêm món nào vào giỏ.",
+                "model": "openai/gpt-oss-20b",
+                "grounded_product_ids": [
+                  "WIN_10270528",
+                  "WIN_10311415",
+                  "WIN_10270524"
+                ],
+                "tools_used": [
+                  "plan_shopping_mission"
+                ],
+                "data_timestamp": "2026-09-15T13:53:38.682272Z",
+                "data_source": "winmart_json_snapshot",
+                "state": "BROWSING",
+                "products": [
+                  {
+                    "product_id": "WIN_10270528",
+                    "name": "WMHOME Túi Lohas WiN đỏ 30x36x15-55g",
+                    "category": "Đồ dùng trong nhà",
+                    "brand": "WMHOME",
+                    "price_vnd": 8900,
+                    "stock": 188,
+                    "stock_is_current": false,
+                    "uom": "Cái",
+                    "data_timestamp": "2026-09-15T13:53:38.682272Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10311415",
+                    "name": "Găng tay tự hủy sinh học Green Eco size L (Hộp 100 cái)",
+                    "category": "Đồ dùng nhà bếp",
+                    "brand": "STAHAUS",
+                    "price_vnd": 17700,
+                    "stock": 222,
+                    "stock_is_current": false,
+                    "uom": "Hộp",
+                    "data_timestamp": "2026-09-15T13:53:38.679270Z",
+                    "data_source": "winmart_json_snapshot"
+                  },
+                  {
+                    "product_id": "WIN_10270524",
+                    "name": "Túi Lohas Xuân 43,5x39,5x22-85G",
+                    "category": "Đồ dùng trong nhà",
+                    "brand": "PHONG PHU",
+                    "price_vnd": 9000,
+                    "stock": 53,
+                    "stock_is_current": false,
+                    "uom": "Cái",
+                    "data_timestamp": "2026-09-15T13:53:38.682135Z",
+                    "data_source": "winmart_json_snapshot"
+                  }
+                ],
+                "shopping_plan": {
+                  "mission_id": "e9986d3c99404b719fd0077e8362ee47",
+                  "revision": 1,
+                  "goal": "Tui sắp dọn căn bếp và phòng tắm trong ngày nghỉ; nếu có 200.000đ thì nên ưu tiên nhu cầu nào trước?",
+                  "use_case": "",
+                  "occasion": "",
+                  "party_size": null,
+                  "budget_vnd": 200000,
+                  "budget_exclusive": true,
+                  "confirmed_needs": [
+                    "Sản phẩm dọn dẹp phòng tắm"
+                  ],
+                  "inferred_needs": [],
+                  "satisfied_needs": [],
+                  "needs": [
+                    {
+                      "need_id": "n1",
+                      "label": "Sản phẩm dọn dẹp phòng tắm",
+                      "rationale": "Dọn phòng tắm cần vật dụng và chất tẩy rửa.",
+                      "requested_category": "Phi thực phẩm > Homeline > Gia dụng",
+                      "resolved_category": "Gia dụng",
+                      "source": "EXPLICIT",
+                      "required": true,
+                      "quantity": 1,
+                      "candidate_count": 8,
+                      "candidate_product_ids": [
+                        "WIN_10270528",
+                        "WIN_10270524",
+                        "WIN_10270526",
+                        "WIN_10167100",
+                        "WIN_10197091"
+                      ],
+                      "alternative_categories": [],
+                      "blocked_reasons": [],
+                      "satisfied_by_existing": false
+                    }
+                  ],
+                  "options": [
+                    {
+                      "option_id": "option-1",
+                      "label": "Tiết kiệm",
+                      "items": [
+                        {
+                          "need_id": "n1",
+                          "need_label": "Sản phẩm dọn dẹp phòng tắm",
+                          "category": "Gia dụng",
+                          "rationale": "Dọn phòng tắm cần vật dụng và chất tẩy rửa.",
+                          "source": "EXPLICIT",
+                          "required": true,
+                          "product_id": "WIN_10270528",
+                          "name": "WMHOME Túi Lohas WiN đỏ 30x36x15-55g",
+                          "brand": "WMHOME",
+                          "quantity": 1,
+                          "unit_price_vnd": 8900,
+                          "line_total_vnd": 8900,
+                          "uom": "Cái",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:38.682272Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 8900
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "n1"
+                      ],
+                      "total_vnd": 8900,
+                      "remaining_budget_vnd": 191100,
+                      "budget_fit": true
+                    },
+                    {
+                      "option_id": "option-2",
+                      "label": "Cân bằng",
+                      "items": [
+                        {
+                          "need_id": "n1",
+                          "need_label": "Sản phẩm dọn dẹp phòng tắm",
+                          "category": "Gia dụng",
+                          "rationale": "Dọn phòng tắm cần vật dụng và chất tẩy rửa.",
+                          "source": "EXPLICIT",
+                          "required": true,
+                          "product_id": "WIN_10311415",
+                          "name": "Găng tay tự hủy sinh học Green Eco size L (Hộp 100 cái)",
+                          "brand": "STAHAUS",
+                          "quantity": 1,
+                          "unit_price_vnd": 17700,
+                          "line_total_vnd": 17700,
+                          "uom": "Hộp",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:38.679270Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 17700
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "n1"
+                      ],
+                      "total_vnd": 17700,
+                      "remaining_budget_vnd": 182300,
+                      "budget_fit": true
+                    },
+                    {
+                      "option_id": "option-3",
+                      "label": "Lựa chọn khác",
+                      "items": [
+                        {
+                          "need_id": "n1",
+                          "need_label": "Sản phẩm dọn dẹp phòng tắm",
+                          "category": "Gia dụng",
+                          "rationale": "Dọn phòng tắm cần vật dụng và chất tẩy rửa.",
+                          "source": "EXPLICIT",
+                          "required": true,
+                          "product_id": "WIN_10270524",
+                          "name": "Túi Lohas Xuân 43,5x39,5x22-85G",
+                          "brand": "PHONG PHU",
+                          "quantity": 1,
+                          "unit_price_vnd": 9000,
+                          "line_total_vnd": 9000,
+                          "uom": "Cái",
+                          "stock_is_current": false,
+                          "data_timestamp": "2026-09-15T13:53:38.682135Z",
+                          "data_source": "winmart_json_snapshot",
+                          "budget_share_vnd": 9000
+                        }
+                      ],
+                      "covered_need_ids": [
+                        "n1"
+                      ],
+                      "total_vnd": 9000,
+                      "remaining_budget_vnd": 191000,
+                      "budget_fit": true
+                    }
+                  ],
+                  "missing_required_needs": [],
+                  "missing_optional_needs": [],
+                  "optional_needs_not_selected": [],
+                  "budget_shortfall_vnd": null,
+                  "pending_decision": "choose_a_plan_option",
+                  "inventory_verified": false,
+                  "data_source": "winmart_json_snapshot",
+                  "data_timestamp": "2026-09-15T13:53:38.682272Z",
+                  "cart_mutated": false,
+                  "unresolved_details": [],
+                  "unknown_details": []
+                },
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "e9986d3c99404b719fd0077e8362ee47",
+                "revision": 1,
+                "goal": "Tui sắp dọn căn bếp và phòng tắm trong ngày nghỉ; nếu có 200.000đ thì nên ưu tiên nhu cầu nào trước?",
+                "use_case": "",
+                "occasion": "",
+                "party_size": null,
+                "total_budget_vnd": 200000,
+                "total_budget_exclusive": true,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": "choose_a_plan_option",
+                "needs": [
+                  {
+                    "need_id": "n1",
+                    "label": "Sản phẩm dọn dẹp phòng tắm",
+                    "rationale": "Dọn phòng tắm cần vật dụng và chất tẩy rửa.",
+                    "category": "Phi thực phẩm > Homeline > Gia dụng",
+                    "alternative_categories": [],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "",
+                    "brand": null,
+                    "max_price_vnd": 200000,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Gia dụng",
+                    "retrieval_query_used": ""
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [
+                  {
+                    "need_id": "n1",
+                    "need_label": "Sản phẩm dọn dẹp phòng tắm",
+                    "rationale": "Dọn phòng tắm cần vật dụng và chất tẩy rửa.",
+                    "category": "Gia dụng",
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "product_id": "WIN_10270528",
+                    "name": "WMHOME Túi Lohas WiN đỏ 30x36x15-55g",
+                    "brand": "WMHOME",
+                    "quantity": 1,
+                    "unit_price_vnd": 8900,
+                    "line_total_vnd": 8900,
+                    "uom": "Cái",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:38.682272+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 8900
+                  }
+                ],
+                "unresolved_details": [],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Sản phẩm dọn dẹp phòng tắm"
+                ],
+                "inferred_needs": [],
+                "satisfied_needs": [],
+                "data_timestamp": "2026-09-15T13:53:38.682272+00:00"
+              },
+              "llm_trace": [
+                {
+                  "model": "openai/gpt-oss-20b",
+                  "fallback_trace": [
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "22",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "1630",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "49.328s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "23",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "1713",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "50.099s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "22",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "1637",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "47.722s"
+                      },
+                      "credential_slot": "fallback_2"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "17",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "1537",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "48.472s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "BadRequestError",
+                      "rate_limit_headers": {
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "1010",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "52.425s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "15",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "1854",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "46.095s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "success",
+                      "rate_limit_headers": {
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "667",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "54.997s"
+                      },
+                      "credential_slot": "fallback_1"
+                    }
+                  ],
+                  "latency_ms": 3926,
+                  "pacing_wait_ms": 0,
+                  "tool_calls": [
+                    {
+                      "name": "plan_shopping_mission",
+                      "arguments": "{\"goal\":\"Tui sắp dọn căn bếp và phòng tắm trong ngày nghỉ; nếu có 200.000đ thì nên ưu tiên nhu cầu nào trước?\",\"needs\":[{\"category\":\"Phi thực phẩm \\u003e Homeline \\u003e Gia dụng\",\"label\":\"Sản phẩm dọn dẹp bếp\",\"max_price_vnd\":200000,\"need_id\":\"n1\",\"quantity\":1,\"rationale\":\"Dọn bếp cần dụng cụ và chất tẩy rửa.\",\"required\":true,\"satisfied_by_existing\":false,\"source\":\"EXPLICIT\",\"unverified_constraints\":[]},{\"category\":\"Phi thực phẩm \\u003e Homeline \\u003e Gia dụng\",\"label\":\"Sản phẩm dọn dẹp phòng tắm\",\"max_price_vnd\":200000,\"need_id\":\"n2\",\"quantity\":1,\"rationale\":\"Dọn phòng tắm cần vật dụng và chất tẩy rửa.\",\"required\":true,\"satisfied_by_existing\":false,\"source\":\"EXPLICIT\",\"unverified_constraints\":[]}],\"total_budget_exclusive\":true,\"total_budget_vnd\":200000}"
+                    }
+                  ],
+                  "usage": {
+                    "prompt_tokens": 3373,
+                    "completion_tokens": 404,
+                    "total_tokens": 3777
+                  }
+                }
+              ],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": true,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": false,
+                  "budget_preserved": true,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 3,
+                "primary_plan_item_count": 1,
+                "plan_totals_vnd": [
+                  8900,
+                  17700,
+                  9000
+                ],
+                "mission_need_count": 1,
+                "grounded_product_count": 3,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 2,
+              "user_text": "Thêm vào kế hoạch đồ vệ sinh nhà, giặt giũ và giấy dùng trong nhà; đây là các nhu cầu mình muốn tính đến. Mình vẫn muốn xem vài phương án khác nhau; các nhóm vừa nêu thì cần có.",
+              "http_status": 200,
+              "latency_ms": 161,
+              "response": {
+                "session_id": "348c498d-1c8c-40ad-bd13-7ea850c29417",
+                "text": "Mình chưa tìm thấy sản phẩm khớp với ‘them vao ke hoach do ve sinh nha giat giu’ trong catalog hiện có. Bạn kiểm tra lại tên hoặc quy cách nhé.",
+                "model": "comparison-clarification",
+                "grounded_product_ids": [],
+                "tools_used": [
+                  "search_products"
+                ],
+                "data_timestamp": null,
+                "data_source": null,
+                "state": "BROWSING",
+                "products": [],
+                "shopping_plan": null,
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {
+                "mission_id": "e9986d3c99404b719fd0077e8362ee47",
+                "revision": 1,
+                "goal": "Tui sắp dọn căn bếp và phòng tắm trong ngày nghỉ; nếu có 200.000đ thì nên ưu tiên nhu cầu nào trước?",
+                "use_case": "",
+                "occasion": "",
+                "party_size": null,
+                "total_budget_vnd": 200000,
+                "total_budget_exclusive": true,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": "choose_a_plan_option",
+                "needs": [
+                  {
+                    "need_id": "n1",
+                    "label": "Sản phẩm dọn dẹp phòng tắm",
+                    "rationale": "Dọn phòng tắm cần vật dụng và chất tẩy rửa.",
+                    "category": "Phi thực phẩm > Homeline > Gia dụng",
+                    "alternative_categories": [],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "",
+                    "brand": null,
+                    "max_price_vnd": 200000,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Gia dụng",
+                    "retrieval_query_used": ""
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [
+                  {
+                    "need_id": "n1",
+                    "need_label": "Sản phẩm dọn dẹp phòng tắm",
+                    "rationale": "Dọn phòng tắm cần vật dụng và chất tẩy rửa.",
+                    "category": "Gia dụng",
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "product_id": "WIN_10270528",
+                    "name": "WMHOME Túi Lohas WiN đỏ 30x36x15-55g",
+                    "brand": "WMHOME",
+                    "quantity": 1,
+                    "unit_price_vnd": 8900,
+                    "line_total_vnd": 8900,
+                    "uom": "Cái",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:38.682272+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 8900
+                  }
+                ],
+                "unresolved_details": [],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Sản phẩm dọn dẹp phòng tắm"
+                ],
+                "inferred_needs": [],
+                "satisfied_needs": [],
+                "data_timestamp": "2026-09-15T13:53:38.682272+00:00"
+              },
+              "llm_trace": [],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": false,
+                  "required_groups_present_in_primary_plan": false,
+                  "explicit_needs_are_required": false,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": true,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "required_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "primary_plan_required_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 1,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 3,
+              "user_text": "Tăng ngân sách lên 230.000đ để có thêm lựa chọn, còn các nhóm đã nêu thì giữ lại.",
+              "http_status": 502,
+              "latency_ms": 2964,
+              "response": {
+                "detail": "Groq chat provider unavailable"
+              },
+              "mission_state": {
+                "mission_id": "e9986d3c99404b719fd0077e8362ee47",
+                "revision": 1,
+                "goal": "Tui sắp dọn căn bếp và phòng tắm trong ngày nghỉ; nếu có 200.000đ thì nên ưu tiên nhu cầu nào trước?",
+                "use_case": "",
+                "occasion": "",
+                "party_size": null,
+                "total_budget_vnd": 200000,
+                "total_budget_exclusive": true,
+                "hard_requirements": [],
+                "exclusions": [],
+                "preferences": [],
+                "existing_items": [],
+                "unknown_details": [],
+                "pending_decision": "choose_a_plan_option",
+                "needs": [
+                  {
+                    "need_id": "n1",
+                    "label": "Sản phẩm dọn dẹp phòng tắm",
+                    "rationale": "Dọn phòng tắm cần vật dụng và chất tẩy rửa.",
+                    "category": "Phi thực phẩm > Homeline > Gia dụng",
+                    "alternative_categories": [],
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "quantity": 1,
+                    "product_query": "",
+                    "brand": null,
+                    "max_price_vnd": 200000,
+                    "spicy": null,
+                    "preference_terms": [],
+                    "unverified_constraints": [],
+                    "satisfied_by_existing": false,
+                    "resolved_category": "Gia dụng",
+                    "retrieval_query_used": ""
+                  }
+                ],
+                "rejected_product_ids": [],
+                "proposed_items": [
+                  {
+                    "need_id": "n1",
+                    "need_label": "Sản phẩm dọn dẹp phòng tắm",
+                    "rationale": "Dọn phòng tắm cần vật dụng và chất tẩy rửa.",
+                    "category": "Gia dụng",
+                    "source": "EXPLICIT",
+                    "required": true,
+                    "product_id": "WIN_10270528",
+                    "name": "WMHOME Túi Lohas WiN đỏ 30x36x15-55g",
+                    "brand": "WMHOME",
+                    "quantity": 1,
+                    "unit_price_vnd": 8900,
+                    "line_total_vnd": 8900,
+                    "uom": "Cái",
+                    "stock_is_current": false,
+                    "data_timestamp": "2026-09-15T13:53:38.682272+00:00",
+                    "data_source": "winmart_json_snapshot",
+                    "budget_share_vnd": 8900
+                  }
+                ],
+                "unresolved_details": [],
+                "last_updated_by": "plan_shopping_mission",
+                "inventory_verified": false,
+                "data_source": "winmart_json_snapshot",
+                "confirmed_needs": [
+                  "Sản phẩm dọn dẹp phòng tắm"
+                ],
+                "inferred_needs": [],
+                "satisfied_needs": [],
+                "data_timestamp": "2026-09-15T13:53:38.682272+00:00"
+              },
+              "llm_trace": [
+                {
+                  "model": null,
+                  "fallback_trace": [
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "24",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "2207",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "45s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "24",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "2295",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "45.737s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "24",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "2237",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "44.957s"
+                      },
+                      "credential_slot": "fallback_2"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "17",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "2140",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "43.95s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "21",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "1612",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "47.91s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "20",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "1621",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "47.842s"
+                      },
+                      "credential_slot": "fallback_2"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "15",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "2389",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "42.082s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "25",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "1034",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "52.245s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "4",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "999",
+                        "x-ratelimit-remaining-tokens": "3916",
+                        "x-ratelimit-reset-requests": "1m26.4s",
+                        "x-ratelimit-reset-tokens": "30.629s"
+                      },
+                      "credential_slot": "fallback_2"
+                    }
+                  ],
+                  "latency_ms": 2774,
+                  "pacing_wait_ms": 0,
+                  "tool_calls": [],
+                  "error_type": "GroqProviderError"
+                }
+              ],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": false,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 1,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            }
+          ]
+        },
+        {
+          "case_id": "SMH-038",
+          "archetype": "household_cleaning",
+          "tags": [
+            "multi_category",
+            "required_needs",
+            "category_addition",
+            "budget_revision",
+            "heldout",
+            "multi_turn",
+            "no_product_names",
+            "household_shopping",
+            "asr_like"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "user_text": "Mình cần làm sạch nhà trước khi đón người thân và có khoảng 250.000đ. Chưa biết nên bắt đầu từ đâu, tư vấn giúp mình.",
+              "http_status": 502,
+              "latency_ms": 2874,
+              "response": {
+                "detail": "Groq chat provider unavailable"
+              },
+              "mission_state": {},
+              "llm_trace": [
+                {
+                  "model": null,
+                  "fallback_trace": [
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "15",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "2615",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "41.94s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "16",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "2703",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "42.677s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "15",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "2628",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "40.29s"
+                      },
+                      "credential_slot": "fallback_2"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "9",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "2526",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "41.055s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "14",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "2006",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "44.955s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "13",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "2013",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "44.902s"
+                      },
+                      "credential_slot": "fallback_2"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "8",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "2777",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "39.172s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "17",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "1417",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "49.372s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "25",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "419",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "56.857s"
+                      },
+                      "credential_slot": "fallback_2"
+                    }
+                  ],
+                  "latency_ms": 2614,
+                  "pacing_wait_ms": 0,
+                  "tool_calls": [],
+                  "error_type": "GroqProviderError"
+                }
+              ],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": false,
+                  "budget_preserved": false,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 0,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 2,
+              "user_text": "Thêm vào kế hoạch đồ vệ sinh nhà, giặt giũ và giấy dùng trong nhà; đây là các nhu cầu mình muốn tính đến. Mình vẫn muốn xem vài phương án khác nhau; các nhóm vừa nêu thì cần có.",
+              "http_status": 200,
+              "latency_ms": 206,
+              "response": {
+                "session_id": "8698f4c1-46e0-45b4-9ea0-0fadb195db21",
+                "text": "Mình chưa tìm thấy sản phẩm khớp với ‘them vao ke hoach do ve sinh nha giat giu’ trong catalog hiện có. Bạn kiểm tra lại tên hoặc quy cách nhé.",
+                "model": "comparison-clarification",
+                "grounded_product_ids": [],
+                "tools_used": [
+                  "search_products"
+                ],
+                "data_timestamp": null,
+                "data_source": null,
+                "state": "BROWSING",
+                "products": [],
+                "shopping_plan": null,
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {},
+              "llm_trace": [],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": false,
+                  "required_groups_present_in_primary_plan": false,
+                  "explicit_needs_are_required": false,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": false,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "required_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "primary_plan_required_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 0,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 3,
+              "user_text": "Thêm cả nhu cầu đồ dùng nhà bếp vào phuong an và nâng tổng lên 280.000đ; các nhóm cũ vẫn giữ.",
+              "http_status": 200,
+              "latency_ms": 67,
+              "response": {
+                "session_id": "8698f4c1-46e0-45b4-9ea0-0fadb195db21",
+                "text": "Catalog chỉ có tồn kho snapshot cũ nên mình chưa xác minh được mặt hàng đó còn không; giỏ hàng chưa thay đổi nhé.",
+                "model": "shopping-controller",
+                "grounded_product_ids": [],
+                "tools_used": [
+                  "search_products"
+                ],
+                "data_timestamp": null,
+                "data_source": null,
+                "state": "BROWSING",
+                "products": [],
+                "shopping_plan": null,
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {},
+              "llm_trace": [],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": false,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  false,
+                  false,
+                  false,
+                  false
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 0,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            }
+          ]
+        },
+        {
+          "case_id": "SMH-039",
+          "archetype": "household_cleaning",
+          "tags": [
+            "multi_category",
+            "required_needs",
+            "category_substitution",
+            "budget_revision",
+            "heldout",
+            "multi_turn",
+            "no_product_names",
+            "household_shopping"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "user_text": "Sắp tới giải quyết việc giặt giũ và dọn dẹp cuối tuần; mình dự trù 350.000đ. Mình không biết tên món cần mua, gợi ý theo nhu cầu nhé.",
+              "http_status": 502,
+              "latency_ms": 4293,
+              "response": {
+                "detail": "Groq chat provider unavailable"
+              },
+              "mission_state": {},
+              "llm_trace": [
+                {
+                  "model": null,
+                  "fallback_trace": [
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "11",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "3089",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "38.382s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "11",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "3251",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "38.562s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "qwen/qwen3.8-27b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "10",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "3236",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "35.73s"
+                      },
+                      "credential_slot": "fallback_2"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "5",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "997",
+                        "x-ratelimit-remaining-tokens": "3135",
+                        "x-ratelimit-reset-requests": "4m19.2s",
+                        "x-ratelimit-reset-tokens": "36.487s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "9",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "2611",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "40.417s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "openai/gpt-oss-120b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "9",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "2619",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "40.357s"
+                      },
+                      "credential_slot": "fallback_2"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "2",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "3386",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "34.605s"
+                      },
+                      "credential_slot": "primary"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "13",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "2029",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "44.782s"
+                      },
+                      "credential_slot": "fallback_1"
+                    },
+                    {
+                      "model": "openai/gpt-oss-20b",
+                      "status": "error",
+                      "error_type": "RateLimitError",
+                      "rate_limit_headers": {
+                        "retry-after": "20",
+                        "x-ratelimit-limit-requests": "1000",
+                        "x-ratelimit-limit-tokens": "8000",
+                        "x-ratelimit-remaining-requests": "998",
+                        "x-ratelimit-remaining-tokens": "1030",
+                        "x-ratelimit-reset-requests": "2m52.8s",
+                        "x-ratelimit-reset-tokens": "52.275s"
+                      },
+                      "credential_slot": "fallback_2"
+                    }
+                  ],
+                  "latency_ms": 3890,
+                  "pacing_wait_ms": 0,
+                  "tool_calls": [],
+                  "error_type": "GroqProviderError"
+                }
+              ],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": false,
+                  "budget_preserved": false,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 0,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 2,
+              "user_text": "Thêm vào kế hoạch đồ vệ sinh nhà, giặt giũ và giấy dùng trong nhà; đây là các nhu cầu mình muốn tính đến. Mình vẫn muốn xem vài phương án khác nhau; các nhóm vừa nêu thì cần có.",
+              "http_status": 200,
+              "latency_ms": 199,
+              "response": {
+                "session_id": "112bd88c-e171-4943-817d-d37dacdda733",
+                "text": "Mình chưa tìm thấy sản phẩm khớp với ‘them vao ke hoach do ve sinh nha giat giu’ trong catalog hiện có. Bạn kiểm tra lại tên hoặc quy cách nhé.",
+                "model": "comparison-clarification",
+                "grounded_product_ids": [],
+                "tools_used": [
+                  "search_products"
+                ],
+                "data_timestamp": null,
+                "data_source": null,
+                "state": "BROWSING",
+                "products": [],
+                "shopping_plan": null,
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {},
+              "llm_trace": [],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": false,
+                  "required_groups_present_in_primary_plan": false,
+                  "explicit_needs_are_required": false,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": false,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "required_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "primary_plan_required_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 0,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            },
+            {
+              "turn": 3,
+              "user_text": "Đổi nhu cầu giấy dùng trong nhà sang đồ dùng nhà bếp, giữ nguyên các nhóm còn lại và đặt trần 340.000đ.",
+              "http_status": 200,
+              "latency_ms": 198,
+              "response": {
+                "session_id": "112bd88c-e171-4943-817d-d37dacdda733",
+                "text": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+                "model": "catalog",
+                "grounded_product_ids": [],
+                "tools_used": [
+                  "search_products"
+                ],
+                "data_timestamp": null,
+                "data_source": "winmart_json_snapshot",
+                "state": "BROWSING",
+                "products": [],
+                "shopping_plan": null,
+                "cart": null,
+                "checkout_quote": null,
+                "order": null,
+                "support_ticket": null
+              },
+              "mission_state": {},
+              "llm_trace": [],
+              "grade": {
+                "passed": false,
+                "checks": {
+                  "mission_plan_present": false,
+                  "goal_identified": false,
+                  "expected_category_groups_covered": false,
+                  "expected_required_groups_covered": true,
+                  "required_groups_present_in_primary_plan": true,
+                  "explicit_needs_are_required": true,
+                  "inferred_needs_stay_optional": true,
+                  "budget_preserved": false,
+                  "budget_compliant": true,
+                  "party_size_preserved": true,
+                  "minimum_plan_items": false,
+                  "products_exist_in_runtime_catalog": true,
+                  "plan_totals_match_line_items": true,
+                  "plan_products_have_catalog_provenance": true,
+                  "cart_write_tools_not_called": true,
+                  "cart_unchanged": true,
+                  "mission_id_stable": true,
+                  "existing_items_recorded": true,
+                  "unverified_constraints_tracked": true,
+                  "unsupported_constraints_cleared": true
+                },
+                "category_group_coverage": [
+                  false,
+                  false,
+                  false
+                ],
+                "required_group_coverage": [],
+                "primary_plan_required_group_coverage": [],
+                "plan_item_count": 0,
+                "primary_plan_item_count": 0,
+                "plan_totals_vnd": [],
+                "mission_need_count": 0,
+                "grounded_product_count": 0,
+                "missing_product_ids": []
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 import asyncpg
 
 from backend.products.catalog import QUERY_STOP_WORDS, PriceOperator, ProductSnapshot
+from backend.products.category_taxonomy import split_category_hierarchy
 from backend.products.planogram import recommended_shelf
 from backend.products.repository import CatalogAdditions
 
@@ -157,9 +158,26 @@ class PostgresProductRepository:
                 # both "bỉm" and the snack word "bim" into the same token.
                 where.append(contains("p.search_category", "bim"))
             if category:
-                for token in category.split():
-                    placeholder = bind(f"%{_escape_like_literal(token)}%")
-                    where.append(f"p.search_category ILIKE {placeholder} ESCAPE '!'")
+                category_column = "COALESCE(NULLIF(c.category_hierarchy, ''), p.search_category)"
+                category_terms = {
+                    "haircare": ("chăm sóc tóc", "dầu gội", "dầu xả"),
+                    "oral_care": (
+                        "chăm sóc răng miệng",
+                        "kem đánh răng",
+                        "bàn chải đánh răng",
+                        "nước súc miệng",
+                        "chỉ nha khoa",
+                    ),
+                }.get(category)
+                if category_terms:
+                    category_matches = [
+                        contains(category_column, term) for term in category_terms
+                    ]
+                    where.append("(" + " OR ".join(category_matches) + ")")
+                else:
+                    placeholder = bind(f"%{_escape_like_literal(category.strip())}%")
+                    where.append(
+                        category_column + f" ILIKE {placeholder} ESCAPE '!'")
             if brand:
                 for token in brand.split():
                     placeholder = bind(f"%{_escape_like_literal(token)}%")
@@ -184,6 +202,7 @@ class PostgresProductRepository:
 
             exact = bind(query) if query else "NULL"
             prefix = bind(f"{_escape_like_literal(query)}%") if query else "NULL"
+            diversify = bind(bool(criteria.get("diversify_by_subcategory", False)))
             limit = bind(max(1, min(int(criteria.get("limit", 10)), 20)))
             sql = f"""
                 WITH latest AS (
@@ -191,18 +210,42 @@ class PostgresProductRepository:
                     FROM store_product_snapshots
                     WHERE store_code = 'WINMART_WEB'
                     ORDER BY product_id, source_timestamp DESC, ingested_at DESC
+                ), matched AS (
+                    SELECT p.product_id, p.item_no, p.barcode, p.name, p.brand,
+                           p.category_code, c.category_name, p.department,
+                           p.sub_department, c.category_hierarchy, p.uom,
+                           p.image_url, p.description, p.seo_url, p.spicy,
+                           s.effective_price_vnd, s.regular_price_vnd, s.sale_price_vnd,
+                           s.physical_stock, s.discount_promotion, s.source_timestamp,
+                           s.price_quality_status, s.dataset_version,
+                           p.search_title, p.search_brand, p.search_category,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY COALESCE(
+                                   NULLIF(regexp_replace(
+                                       c.category_hierarchy,
+                                       '^.*>[[:space:]]*',
+                                       ''
+                                   ), ''),
+                                   c.category_name,
+                                   p.category_code,
+                                   p.product_id
+                               )
+                               ORDER BY s.effective_price_vnd, p.name
+                           ) AS category_leaf_rank
+                    FROM products p
+                    JOIN latest s ON s.product_id = p.product_id
+                    LEFT JOIN categories c ON c.category_code = p.category_code
+                    WHERE {" AND ".join(where)}
                 )
                 SELECT p.product_id, p.item_no, p.barcode, p.name, p.brand,
-                       p.category_code, c.category_name, p.department,
-                       p.sub_department, c.category_hierarchy, p.uom,
+                       p.category_code, p.category_name, p.department,
+                       p.sub_department, p.category_hierarchy, p.uom,
                        p.image_url, p.description, p.seo_url, p.spicy,
-                       s.effective_price_vnd, s.regular_price_vnd, s.sale_price_vnd,
-                       s.physical_stock, s.discount_promotion, s.source_timestamp,
-                       s.price_quality_status, s.dataset_version
-                FROM products p
-                JOIN latest s ON s.product_id = p.product_id
-                LEFT JOIN categories c ON c.category_code = p.category_code
-                WHERE {" AND ".join(where)}
+                       p.effective_price_vnd, p.regular_price_vnd, p.sale_price_vnd,
+                       p.physical_stock, p.discount_promotion, p.source_timestamp,
+                       p.price_quality_status, p.dataset_version
+                FROM matched p
+                WHERE (NOT {diversify} OR p.category_leaf_rank = 1)
                 ORDER BY
                     CASE
                         WHEN {exact_identifier} THEN 0
@@ -239,6 +282,7 @@ class PostgresProductRepository:
         brand: str | None = None,
         price_operator: PriceOperator | None = None,
         price_value_vnd: int | None = None,
+        diversify_by_subcategory: bool = False,
     ) -> list[ProductSnapshot]:
         return self._run(
             self._search(
@@ -251,8 +295,101 @@ class PostgresProductRepository:
                 brand=brand,
                 price_operator=price_operator,
                 price_value_vnd=price_value_vnd,
+                diversify_by_subcategory=diversify_by_subcategory,
             )
         )
+
+    async def _list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]:
+        conn = await asyncpg.connect(self._dsn, timeout=2)
+        try:
+            rows = await conn.fetch(
+                """
+                SELECT DISTINCT c.category_hierarchy, c.category_name
+                FROM products p
+                LEFT JOIN categories c ON c.category_code = p.category_code
+                WHERE p.active IS TRUE
+                ORDER BY c.category_hierarchy NULLS LAST, c.category_name
+                """
+            )
+            paths = {
+                split_category_hierarchy(row["category_hierarchy"])
+                or ((row["category_name"] or "").strip(),)
+                for row in rows
+            }
+            return tuple(sorted((path for path in paths if path), key=lambda item: item))
+        finally:
+            await conn.close()
+
+    def list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]:
+        return self._run(self._list_category_hierarchies())
+
+    async def _list_speech_terms(self, limit: int) -> tuple[str, ...]:
+        bounded_limit = max(4, min(int(limit), 48))
+        brand_limit = max(1, (bounded_limit * 3) // 4)
+        category_limit = max(1, bounded_limit - brand_limit)
+        conn = await asyncpg.connect(self._dsn, timeout=2)
+        try:
+            brands = await conn.fetch(
+                """
+                SELECT trim(p.brand) AS term, count(*) AS frequency
+                FROM products p
+                WHERE p.active IS TRUE
+                  AND p.brand IS NOT NULL
+                  AND btrim(p.brand) <> ''
+                  AND upper(btrim(p.brand)) NOT IN ('NOBRAND', 'NO BRAND')
+                GROUP BY trim(p.brand)
+                ORDER BY frequency DESC, term
+                LIMIT $1
+                """,
+                brand_limit,
+            )
+            categories = await conn.fetch(
+                """
+                SELECT trim(c.category_name) AS term, count(*) AS frequency
+                FROM products p
+                JOIN categories c ON c.category_code = p.category_code
+                WHERE p.active IS TRUE
+                  AND c.category_name IS NOT NULL
+                  AND btrim(c.category_name) <> ''
+                GROUP BY trim(c.category_name)
+                ORDER BY frequency DESC, term
+                LIMIT $1
+                """,
+                category_limit,
+            )
+            return tuple(dict.fromkeys(
+                [row["term"] for row in brands] + [row["term"] for row in categories]
+            ))
+        finally:
+            await conn.close()
+
+    def list_speech_terms(self, limit: int = 32) -> tuple[str, ...]:
+        return self._run(self._list_speech_terms(limit))
+
+    async def _list_brand_names(self, limit: int) -> tuple[str, ...]:
+        bounded_limit = max(1, min(int(limit), 1000))
+        conn = await asyncpg.connect(self._dsn, timeout=2)
+        try:
+            rows = await conn.fetch(
+                """
+                SELECT trim(p.brand) AS term, count(*) AS frequency
+                FROM products p
+                WHERE p.active IS TRUE
+                  AND p.brand IS NOT NULL
+                  AND btrim(p.brand) <> ''
+                  AND upper(btrim(p.brand)) NOT IN ('NOBRAND', 'NO BRAND')
+                GROUP BY trim(p.brand)
+                ORDER BY frequency DESC, term
+                LIMIT $1
+                """,
+                bounded_limit,
+            )
+            return tuple(row["term"] for row in rows)
+        finally:
+            await conn.close()
+
+    def list_brand_names(self, limit: int = 300) -> tuple[str, ...]:
+        return self._run(self._list_brand_names(limit))
 
     async def _get_product_snapshot(self, product_id: str) -> ProductSnapshot | None:
         conn = await asyncpg.connect(self._dsn, timeout=2)

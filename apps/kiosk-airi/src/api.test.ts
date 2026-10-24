@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { respond } from './api'
+import { prewarmSpeech, respond, transcribe } from './api'
 
 function eventStreamResponse(body: string): Response {
   const bytes = new TextEncoder().encode(body)
@@ -124,5 +124,49 @@ describe('agent response stream API', () => {
     controller.abort()
 
     await expect(response).rejects.toMatchObject({ name: 'AbortError' })
+  })
+})
+
+describe('audio transcription API', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('sends an audio filename matching the actual recording format', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      session_id: 'session-1',
+      text: 'Xin chào',
+      language: 'vi',
+      model: 'whisper-large-v3',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await transcribe('session-1', new Blob(['audio'], { type: 'audio/mp4' }), 'vi')
+
+    const form = fetchMock.mock.calls[0][1]?.body as FormData
+    const file = form.get('file') as File
+    expect(file.name).toBe('voice.m4a')
+    expect(file.type).toBe('audio/mp4')
+  })
+})
+
+describe('speech prewarm API', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('preconnects the selected session and language without sending speech text', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      warmed: true,
+      provider: 'azure-speech',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(prewarmSpeech('session-1', 'vi')).resolves.toEqual({
+      warmed: true,
+      provider: 'azure-speech',
+    })
+
+    expect(fetchMock.mock.calls[0][0]).toContain('/audio/synthesize/prewarm')
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toEqual({
+      session_id: 'session-1',
+      language: 'vi',
+    })
   })
 })

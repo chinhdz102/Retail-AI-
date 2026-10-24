@@ -11,6 +11,7 @@ from backend.products.catalog import get_product_snapshot
 from backend.services.groq import GroqService
 from backend.services.shopping import CartConflictError, ShoppingService
 from backend.services.shopping_flow import ShoppingActionType, classify_shopping_action
+from backend.services.shopping_mission_routing import should_route_to_shopping_mission
 from backend.shared.contracts import SessionState
 
 
@@ -46,6 +47,79 @@ def client() -> httpx.AsyncClient:
 )
 def test_product_advice_phrasing_does_not_trigger_cart_actions(text: str) -> None:
     assert classify_shopping_action(text, SessionState.BROWSING) is None
+
+
+def test_shopping_plan_edits_are_not_cart_writes() -> None:
+    plan_edit = classify_shopping_action(
+        "Thêm vào kế hoạch đồ ăn nhẹ và đồ uống giúp mình.",
+        SessionState.BROWSING,
+    )
+    direct_cart_write = classify_shopping_action(
+        "Thêm 2 lon Coca Zero vào giỏ nhé",
+        SessionState.BROWSING,
+    )
+
+    assert plan_edit is None
+    assert direct_cart_write is not None
+    assert direct_cart_write.action == ShoppingActionType.ADD_ITEM
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Thêm cả nhu cầu trái cây vào phương án và nâng tổng lên 210.000đ; các nhóm cũ vẫn giữ.",
+        "Thêm đồ uống vào kế hoạch mua sắm giúp mình.",
+    ],
+)
+def test_add_need_to_shopping_plan_is_not_a_real_cart_write(text: str) -> None:
+    assert classify_shopping_action(text, SessionState.BROWSING) is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Đừng cho vào giỏ vội.",
+        "Không thêm Coca Zero vào giỏ nhé.",
+        "Chưa cần cho Coca Zero vào giỏ.",
+        "Don't add Coca Zero to my cart.",
+        (
+            "Giúp mình lên phương án mời đồng nghiệp ghé chơi sau giờ làm, "
+            "nhóm 5 người, khoảng 180.000đ; đừng cho vào giỏ vội."
+        ),
+    ],
+)
+def test_negated_cart_addition_is_not_treated_as_authorization(text: str) -> None:
+    assert classify_shopping_action(text, SessionState.BROWSING) is None
+
+
+def test_explicit_positive_add_after_negated_cart_clause_still_works() -> None:
+    action = classify_shopping_action(
+        "Đừng cho snack vào giỏ, nhưng thêm 1 chai nước suối vào giỏ nhé.",
+        SessionState.BROWSING,
+    )
+
+    assert action is not None
+    assert action.action == ShoppingActionType.ADD_ITEM
+    assert action.query == "nuoc suoi"
+    assert action.quantity == 1
+
+
+def test_gathering_goal_with_explicit_no_cart_write_routes_to_mission_planner() -> None:
+    text = (
+        "Giúp mình lên phương án cho việc mời đồng nghiệp ghé chơi sau giờ làm. "
+        "Nhóm có 5 người, chi khoảng 180.000đ; đừng cho vào giỏ vội."
+    )
+
+    assert classify_shopping_action(text, SessionState.BROWSING) is None
+    assert should_route_to_shopping_mission(
+        text,
+        active_mission=False,
+        has_factual_lookup=True,
+        has_specific_product_reference=False,
+        recommendation_requested=False,
+        recommendation_tool_ready=False,
+        ranking_requested=False,
+    )
 
 
 @pytest.mark.parametrize(

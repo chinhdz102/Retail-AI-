@@ -323,10 +323,29 @@ export function transcribe(
   const form = new FormData()
   form.append('session_id', sessionId)
   form.append('language', language)
-  form.append('file', audio, 'voice.webm')
+  const audioType = audio.type.split(';')[0].toLowerCase()
+  const extension = ({
+    'audio/mp4': 'm4a',
+    'audio/mpeg': 'mp3',
+    'audio/ogg': 'ogg',
+    'audio/wav': 'wav',
+    'audio/webm': 'webm',
+  } as Record<string, string>)[audioType] ?? 'webm'
+  form.append('file', audio, `voice.${extension}`)
   return request<TranscriptionResponse>('/audio/transcribe', {
     method: 'POST',
     body: form,
+  })
+}
+
+export function prewarmSpeech(
+  sessionId: string,
+  language: LanguageCode = 'vi',
+): Promise<{ warmed: boolean; provider: string }> {
+  return request<{ warmed: boolean; provider: string }>('/audio/synthesize/prewarm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session_id: sessionId, language }),
   })
 }
 

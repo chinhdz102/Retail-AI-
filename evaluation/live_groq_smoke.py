@@ -44,14 +44,23 @@ class RequestPacer:
     def __init__(self, minimum_interval_seconds: float) -> None:
         self.minimum_interval_seconds = minimum_interval_seconds
         self.last_request_started: float | None = None
+        self.deferred_until = 0.0
+
+    def defer(self, seconds: float) -> None:
+        if seconds > 0:
+            self.deferred_until = max(self.deferred_until, perf_counter() + seconds)
 
     async def wait(self) -> int:
         wait_started = perf_counter()
-        now = wait_started
+        next_allowed = self.deferred_until
         if self.last_request_started is not None:
-            delay = self.minimum_interval_seconds - (now - self.last_request_started)
-            if delay > 0:
-                await asyncio.sleep(delay)
+            next_allowed = max(
+                next_allowed,
+                self.last_request_started + self.minimum_interval_seconds,
+            )
+        delay = next_allowed - wait_started
+        if delay > 0:
+            await asyncio.sleep(delay)
         self.last_request_started = perf_counter()
         return round((self.last_request_started - wait_started) * 1000)
 

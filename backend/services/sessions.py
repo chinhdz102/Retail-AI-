@@ -35,6 +35,10 @@ class SessionUnavailableError(SessionError):
     """Raised when the configured shared session store cannot be reached."""
 
 
+class SessionMissionConflictError(SessionError):
+    """Raised when a shopping mission changed while a new plan was being built."""
+
+
 @dataclass
 class ShoppingSessionState:
     """Minimal structured shopping memory; anonymous sessions never outlive their TTL."""
@@ -46,6 +50,7 @@ class ShoppingSessionState:
     constraints: dict[str, Any] = field(default_factory=dict)
     selected_product_ids: list[str] = field(default_factory=list)
     comparison_product_ids: list[str] = field(default_factory=list)
+    shopping_mission: dict[str, Any] = field(default_factory=dict)
     cart_reference: str | None = None
     pending_clarification: str | None = None
     pending_action: str | None = None
@@ -218,6 +223,21 @@ class InMemorySessionStore:
             record = self._active_record(session_id)
             for key, value in updates.items():
                 setattr(record.shopping, key, copy.deepcopy(value))
+            record.state_version += 1
+            return copy.deepcopy(record)
+
+    def update_shopping_mission_if_revision(
+        self,
+        session_id: UUID,
+        expected_revision: int,
+        mission: dict[str, Any],
+    ) -> SessionRecord:
+        with self._lock:
+            record = self._active_record(session_id)
+            current_revision = int(record.shopping.shopping_mission.get("revision", 0))
+            if current_revision != expected_revision:
+                raise SessionMissionConflictError("Shopping mission changed during this turn")
+            record.shopping.shopping_mission = copy.deepcopy(mission)
             record.state_version += 1
             return copy.deepcopy(record)
 
@@ -495,6 +515,20 @@ class RedisSessionStore:
         def apply(record: SessionRecord) -> None:
             for key, value in updates.items():
                 setattr(record.shopping, key, copy.deepcopy(value))
+
+        return self._mutate(session_id, apply)
+
+    def update_shopping_mission_if_revision(
+        self,
+        session_id: UUID,
+        expected_revision: int,
+        mission: dict[str, Any],
+    ) -> SessionRecord:
+        def apply(record: SessionRecord) -> None:
+            current_revision = int(record.shopping.shopping_mission.get("revision", 0))
+            if current_revision != expected_revision:
+                raise SessionMissionConflictError("Shopping mission changed during this turn")
+            record.shopping.shopping_mission = copy.deepcopy(mission)
 
         return self._mutate(session_id, apply)
 

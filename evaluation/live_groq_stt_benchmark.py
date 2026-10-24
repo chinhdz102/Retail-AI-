@@ -25,13 +25,50 @@ from openai import AsyncOpenAI
 from backend.config import Settings
 from backend.services.groq import GroqService
 
+_VIETNAMESE_NUMBER_WORDS = {
+    "một": "1",
+    "hai": "2",
+    "ba": "3",
+    "bốn": "4",
+    "năm": "5",
+    "sáu": "6",
+    "bảy": "7",
+    "tám": "8",
+    "chín": "9",
+    "mười": "10",
+}
+
 
 def normalize_text(text: str) -> str:
     text = re.sub(r"\[\d{1,2}:\d{2}(?::\d{2})?\]", " ", text)
     normalized = unicodedata.normalize("NFC", text).casefold()
-    return " ".join(
-        "".join(char if char.isalnum() or char.isspace() else " " for char in normalized).split()
+    normalized = normalized.replace("&", " and ")
+    normalized = re.sub(r"(?<=\d)[.,](?=\d{3}(?:[.,]|\D|$))", "", normalized)
+    normalized = "".join(
+        char if char.isalnum() or char.isspace() else " " for char in normalized
     )
+    normalized = re.sub(r"\b(\d+)\s*l(?:ít|it)?\b", r"\1 lít", normalized)
+    normalized = re.sub(r"\b(\d+)l\b", r"\1 lít", normalized)
+    tokens = normalized.split()
+    tokens = [_VIETNAMESE_NUMBER_WORDS.get(token, token) for token in tokens]
+    normalized = " ".join(tokens)
+    normalized = re.sub(
+        r"\b([2-9])\s+mươi\b",
+        lambda match: str(int(match.group(1)) * 10),
+        normalized,
+    )
+    normalized = re.sub(
+        r"\b(\d+)\s+nghìn\b",
+        lambda match: str(int(match.group(1)) * 1000),
+        normalized,
+    )
+    normalized = re.sub(
+        r"\b(\d+)\s+trăm\b",
+        lambda match: str(int(match.group(1)) * 100),
+        normalized,
+    )
+    normalized = re.sub(r"\b(\d+)\s+000\b", r"\1 000", normalized)
+    return " ".join(normalized.split())
 
 
 def edit_distance(left: list[str] | str, right: list[str] | str) -> int:
@@ -167,12 +204,14 @@ async def run(
                 text = str(transcription)
                 item = {
                     "trial": trial,
-                    "status": "success",
+                    "status": "success" if transcription.speech_detected else "rejected",
+                    "speech_detected": transcription.speech_detected,
                     "latency_ms": round((perf_counter() - started) * 1000),
                     "model": transcription.model,
                     "fallback_trace": transcription.fallback_trace,
+                    "quality": transcription.quality,
                 }
-                if reference is not None:
+                if reference is not None and transcription.speech_detected:
                     item.update(accuracy(reference, text))
                 if record_transcription:
                     item["transcription"] = text
@@ -196,6 +235,12 @@ async def run(
                     f"latency_ms={item['latency_ms']}{status}",
                     flush=True,
                 )
+            elif item["status"] == "rejected":
+                print(
+                    f"STT trial={trial} model={item['model']} status=rejected-no-speech "
+                    f"latency_ms={item['latency_ms']} quality={item['quality']}",
+                    flush=True,
+                )
             else:
                 print(
                     f"STT trial={trial} status=error "
@@ -205,13 +250,18 @@ async def run(
 
     successes = [item for item in report["results"] if item["status"] == "success"]
     latencies = sorted(item["latency_ms"] for item in successes)
+    report["summary"] = {
+        "attempt_count": len(report["results"]),
+        "accepted_count": len(successes),
+        "rejected_count": sum(item["status"] == "rejected" for item in report["results"]),
+        "error_count": sum(item["status"] == "error" for item in report["results"]),
+    }
     if latencies:
-        report["summary"] = {
-            "success_count": len(successes),
+        report["summary"].update({
             "median_latency_ms": latencies[len(latencies) // 2],
             "p95_latency_ms": latencies[max(0, math.ceil(0.95 * len(latencies)) - 1)],
             "models_used": sorted({item["model"] for item in successes}),
-        }
+        })
         if reference is not None:
             report["summary"].update(
                 {

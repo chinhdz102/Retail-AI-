@@ -1,0 +1,70 @@
+{
+  "kind": "live_api_tts_ticket_stream_benchmark",
+  "timestamp_utc": "2026-10-21T16:10:24.335410+00:00",
+  "endpoint": "http://127.0.0.1:8002/audio/synthesize/tickets",
+  "text_saved": false,
+  "text_characters": 91,
+  "trial_count": 3,
+  "results": [
+    {
+      "trial": 1,
+      "ticket_ms": 10,
+      "status": "success",
+      "http_status": 200,
+      "first_audio_byte_ms": 1984,
+      "stream_complete_ms": 2647,
+      "audio_bytes": 44352,
+      "chunk_count": 54,
+      "content_type": "audio/mpeg",
+      "provider": "azure-speech",
+      "voice_id": "vi-VN-HoaiMyNeural"
+    },
+    {
+      "trial": 2,
+      "ticket_ms": 2,
+      "status": "success",
+      "http_status": 200,
+      "first_audio_byte_ms": 272,
+      "stream_complete_ms": 459,
+      "audio_bytes": 44352,
+      "chunk_count": 47,
+      "content_type": "audio/mpeg",
+      "provider": "azure-speech",
+      "voice_id": "vi-VN-HoaiMyNeural"
+    },
+    {
+      "trial": 3,
+      "ticket_ms": 4,
+      "status": "success",
+      "http_status": 200,
+      "first_audio_byte_ms": 249,
+      "stream_complete_ms": 406,
+      "audio_bytes": 44352,
+      "chunk_count": 50,
+      "content_type": "audio/mpeg",
+      "provider": "azure-speech",
+      "voice_id": "vi-VN-HoaiMyNeural"
+    }
+  ],
+  "prewarm": {
+    "warmed": true,
+    "provider": "azure-speech",
+    "latency_ms": 622,
+    "status": 200
+  },
+  "complete": true,
+  "summary": {
+    "successes": 3,
+    "errors": 0,
+    "first_audio_byte_median_ms": 272,
+    "first_audio_byte_p95_ms": 1984,
+    "stream_complete_median_ms": 459,
+    "stream_complete_p95_ms": 2647,
+    "providers": [
+      "azure-speech"
+    ],
+    "voices": [
+      "vi-VN-HoaiMyNeural"
+    ]
+  }
+}

@@ -98,7 +98,7 @@ def test_english_recommendations_keep_category_budget_and_spice_constraints() ->
     }
     assert _recommendation_tool_arguments("I'm looking for coffee under 20k VND.") == {
         "category": "drink",
-        "query": "coffee",
+        "query": "ca phe",
         "price_constraint": {"operator": "LT", "value_vnd": 20_000},
     }
     assert _recommendation_tool_arguments(

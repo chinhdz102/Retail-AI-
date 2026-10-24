@@ -72,6 +72,17 @@ from backend.services.vietnamese_intent import (
         ("Mức giá ấy lấy dữ liệu từ ngày nào vậy?", ("data_timestamp",)),
         ("Mức giá này có cập nhật trực tiếp không?", ("data_timestamp",)),
         (
+            (
+                "Mình chuẩn bị vì em bé đi cùng gia đình trong chuyến thăm ông bà; "
+                "chưa rõ cần nhóm nào."
+            ),
+            (),
+        ),
+        (
+            "Con đi học cả ngày rồi tham gia câu lạc bộ, còn cần chuẩn bị nhóm hàng gì?",
+            (),
+        ),
+        (
             "Coca-Cola Zero 330ml cho mình xem giá tham khảo với, rồi chỉ kệ giúp nhé.",
             ("price_vnd", "shelf"),
         ),
@@ -137,6 +148,8 @@ def test_supported_product_facts_are_not_mistaken_for_unsupported_attributes(tex
         ("Gợi ý cho mình món ăn vặt đi.", "snack"),
         ("Tư vấn đồ nhắm nhâm nhi dưới 20k.", "snack"),
         ("Tư vấn đồ lai rai dưới 20k.", "snack"),
+        ("Mình cần món lai rai cho cả nhà xem bóng.", "snack"),
+        ("Có món ăn chơi nào cho buổi tụ họp không?", "snack"),
         ("Bày tui món ăn vặt lai rai khi coi phim với.", "snack"),
         ("Tìm món ăn nhẹ cho mình.", "snack"),
         ("Tư vấn món mô ăn vặt ngon nhứt.", "snack"),
@@ -250,6 +263,18 @@ def test_open_ended_consultation_is_recognized_but_does_not_guess_a_category() -
     assert has_specific_product_reference("Tư vấn Coca Zero giúp mình.")
     assert consultation_product_query("Tư vấn Coca Zero giúp mình.") == "coca zero"
     assert not has_specific_product_reference("Cái nào bán chạy nhất?")
+
+
+def test_goal_context_is_not_misread_as_a_product_name() -> None:
+    assert not has_specific_product_reference(
+        "Tối nay bạn mình đến chơi, 5 người, 200k, giúp mình với."
+    )
+    assert not has_specific_product_reference(
+        "I have friends visiting tonight. There are five of us, and I can spend around 200k."
+    )
+    assert not has_specific_product_reference("Da mình hơi khô, có gì dùng không?")
+    assert not has_specific_product_reference("Mình muốn tìm kem dưỡng da mặt cho da khô.")
+    assert has_specific_product_reference("Tư vấn Coca Zero giúp mình.")
 
 
 def test_contextual_consultation_reuses_category_only_from_a_prior_recommendation() -> None:
