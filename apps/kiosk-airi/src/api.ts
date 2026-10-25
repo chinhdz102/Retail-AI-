@@ -319,13 +319,14 @@ export function transcribe(
   sessionId: string,
   audio: Blob,
   language: LanguageCode = 'vi',
+  signal?: AbortSignal,
 ): Promise<TranscriptionResponse> {
   const form = new FormData()
   form.append('session_id', sessionId)
   form.append('language', language)
   const audioType = audio.type.split(';')[0].toLowerCase()
   const extension = ({
-    'audio/mp4': 'm4a',
+    'audio/mp4': 'mp4',
     'audio/mpeg': 'mp3',
     'audio/ogg': 'ogg',
     'audio/wav': 'wav',
@@ -335,7 +336,8 @@ export function transcribe(
   return request<TranscriptionResponse>('/audio/transcribe', {
     method: 'POST',
     body: form,
-  })
+    signal,
+  }, 25_000)
 }
 
 export function prewarmSpeech(

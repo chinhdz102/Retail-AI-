@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     groq_stt_model: str = "whisper-large-v3"
     groq_stt_fallback_model: str = "whisper-large-v3-turbo"
     groq_timeout_seconds: float = 45.0
+    groq_stt_total_timeout_seconds: float = 20.0
 
     azure_speech_key: SecretStr = SecretStr("")
     azure_speech_region: str = ""

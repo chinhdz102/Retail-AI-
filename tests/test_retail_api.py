@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import date
 from io import BytesIO
@@ -3860,6 +3861,27 @@ async def test_audio_endpoint_rejects_non_audio_upload(client: httpx.AsyncClient
     )
 
     assert response.status_code == 415
+
+
+@pytest.mark.asyncio
+async def test_audio_endpoint_enforces_total_stt_deadline(client: httpx.AsyncClient) -> None:
+    class SlowTranscriber:
+        async def transcribe(self, filename, content, content_type, language="vi", vocabulary=()):
+            await asyncio.sleep(1.0)
+            return "Should never be returned"
+
+    app.dependency_overrides[get_groq_service] = lambda: SlowTranscriber()
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        groq_stt_total_timeout_seconds=0.01,
+    )
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+    response = await client.post(
+        "/audio/transcribe",
+        data={"session_id": created.json()["session_id"]},
+        files={"file": ("voice.wav", BytesIO(b"audio"), "audio/wav")},
+    )
+    assert response.status_code == 504
+    assert "timed out" in response.json()["detail"]
 
 
 @pytest.mark.asyncio

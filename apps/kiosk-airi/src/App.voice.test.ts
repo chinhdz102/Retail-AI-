@@ -108,10 +108,79 @@ describe('voice transcript integration', () => {
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(2))
     await vi.waitFor(() => expect(wrapper.text()).toContain('Phiên trước đã kết thúc'))
     expect(apiMocks.createSession).toHaveBeenCalledTimes(2)
-    expect(apiMocks.transcribe).toHaveBeenNthCalledWith(1, 'old-session', audio, 'vi')
+    expect(apiMocks.transcribe).toHaveBeenNthCalledWith(1, 'old-session', audio, 'vi', expect.any(AbortSignal))
     expect(apiMocks.transcribe).toHaveBeenCalledTimes(1)
     expect(apiMocks.respond).not.toHaveBeenCalled()
     expect(wrapper.findAll('.message-row')).toHaveLength(0)
+  })
+
+  it('discards a pending transcription after the user stops listening', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({
+      session_id: 'session-test',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+    let resolveTranscript!: (value: unknown) => void
+    apiMocks.transcribe.mockImplementationOnce(() =>
+      new Promise((resolve) => { resolveTranscript = resolve }),
+    )
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onAudio(new Blob(['voice']))
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledTimes(1))
+    const transcriptionSignal = apiMocks.transcribe.mock.calls[0][3] as AbortSignal
+    expect(transcriptionSignal.aborted).toBe(false)
+    await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    expect(transcriptionSignal.aborted).toBe(true)
+    resolveTranscript({ session_id: 'session-test', text: 'Hai chai nước', language: 'vi' })
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.message-user')).toHaveLength(0)
+    wrapper.unmount()
+  })
+
+  it('discards a late voice agent answer after the user stops listening', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({
+      session_id: 'session-test',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+    let resolveAgent!: (value: unknown) => void
+    apiMocks.respond.mockImplementationOnce(() =>
+      new Promise((resolve) => { resolveAgent = resolve }),
+    )
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onTranscript('Giá coca bao nhiêu?')
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledTimes(1))
+    await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    resolveAgent({
+      session_id: 'session-test', text: 'Coca giá 13.000đ.',
+      state: 'BROWSING', model: 'mock', grounded_product_ids: [],
+    })
+    await vi.waitFor(() => expect(wrapper.findAll('.message-assistant')).toHaveLength(0))
+    expect(apiMocks.createSynthesisTicket).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('never sends a transcript from a mismatched customer session', async () => {
+    vi.clearAllMocks()
+    apiMocks.createSession.mockResolvedValue({
+      session_id: 'session-test',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+    apiMocks.transcribe.mockResolvedValueOnce({
+      session_id: 'session-other', text: 'Mua hàng', language: 'vi', model: 'mock',
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onAudio(new Blob(['voice']))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Phiên âm thanh không thuộc phiên'))
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 
   it('keeps transcription errors visible when hands-free listening resumes', async () => {
@@ -246,6 +315,7 @@ describe('voice transcript integration', () => {
       'session-test',
       expect.any(Blob),
       'vi',
+      expect.any(AbortSignal),
     ))
     await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledWith(
       'session-test',
