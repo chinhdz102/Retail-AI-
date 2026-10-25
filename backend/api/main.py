@@ -6744,11 +6744,9 @@ async def agent_respond_stream(
         payload = json.dumps({"response": metadata}, ensure_ascii=False, separators=(",", ":"))
         yield f"event: start\ndata: {payload}\n\n"
         chunks = _validated_text_chunks(response.text)
-        for index, chunk in enumerate(chunks):
+        for chunk in chunks:
             payload = json.dumps({"text": chunk}, ensure_ascii=False, separators=(",", ":"))
             yield f"event: delta\ndata: {payload}\n\n"
-            if index + 1 < len(chunks):
-                await asyncio.sleep(0.025)
         payload = json.dumps({"response": metadata}, ensure_ascii=False, separators=(",", ":"))
         yield f"event: complete\ndata: {payload}\n\n"
 
@@ -8992,12 +8990,17 @@ async def transcribe_audio(
                     getattr(catalog, "source_name", "unknown"),
                     type(exc).__name__,
                 )
-        transcription = await groq.transcribe(
-            file.filename or "voice.webm",
-            content,
-            content_type,
-            language=language,
-            vocabulary=vocabulary,
+        # One bounded deadline covers primary + fallback Whisper attempts.
+        # Without a shared budget each slow fallback can outlive the browser.
+        transcription = await asyncio.wait_for(
+            groq.transcribe(
+                file.filename or "voice.webm",
+                content,
+                content_type,
+                language=language,
+                vocabulary=vocabulary,
+            ),
+            timeout=max(0.1, settings.groq_stt_total_timeout_seconds),
         )
         text = str(transcription)
         transcription_model = getattr(transcription, "model", settings.groq_stt_model)
@@ -9015,6 +9018,8 @@ async def transcribe_audio(
                     transcription_model,
                     getattr(catalog, "source_name", "unknown"),
                 )
+    except (TimeoutError, asyncio.TimeoutError) as exc:
+        raise HTTPException(status_code=504, detail="Speech recognition timed out") from exc
     except GroqConfigurationError as exc:
         raise HTTPException(status_code=503, detail="Speech recognition is not configured") from exc
     except GroqProviderError as exc:

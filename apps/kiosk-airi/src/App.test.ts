@@ -74,6 +74,8 @@ describe('kiosk app', () => {
   afterEach(() => {
     delete (window as Window & { SpeechRecognition?: unknown }).SpeechRecognition
     delete (window as Window & { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition
+    Reflect.deleteProperty(window, 'MediaRecorder')
+    Reflect.deleteProperty(window, 'AudioContext')
     Reflect.deleteProperty(navigator, 'mediaDevices')
     window.localStorage.removeItem('retail-ai-microphone-device')
   })
@@ -323,7 +325,6 @@ describe('kiosk app', () => {
         removeEventListener: vi.fn(),
       },
     })
-
     const wrapper = mount(App)
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
     await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
@@ -360,6 +361,28 @@ describe('kiosk app', () => {
         removeEventListener: vi.fn(),
       },
     })
+    class FakeMediaRecorder {
+      static isTypeSupported = vi.fn(() => true)
+      state: 'inactive' | 'recording' = 'inactive'
+      ondataavailable: ((event: { data: Blob }) => void) | null = null
+      onstop: (() => void) | null = null
+      onerror: (() => void) | null = null
+      start = vi.fn(() => { this.state = 'recording' })
+      stop = vi.fn(() => { this.state = 'inactive' })
+    }
+    class FakeAudioContext {
+      state = 'running'
+      createAnalyser() {
+        return {
+          fftSize: 512,
+          getByteTimeDomainData(data: Uint8Array) { data.fill(128) },
+        }
+      }
+      createMediaStreamSource() { return { connect: vi.fn(), disconnect: vi.fn() } }
+      close = vi.fn(async () => undefined)
+    }
+    Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: FakeMediaRecorder })
+    Object.defineProperty(window, 'AudioContext', { configurable: true, value: FakeAudioContext })
 
     const wrapper = mount(App)
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
@@ -441,7 +464,6 @@ describe('kiosk app', () => {
     await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
     await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledWith({
       audio: {
-        channelCount: 1,
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
