@@ -253,7 +253,6 @@ QUERY_STOP_WORDS = frozenset(
         "under",
         "below",
         "less",
-        "than",
         "up",
         "to",
         "most",

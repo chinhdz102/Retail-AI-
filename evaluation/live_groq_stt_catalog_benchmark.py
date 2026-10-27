@@ -16,7 +16,7 @@ from backend.config import Settings
 from backend.products.repository import get_product_repository
 from backend.services.azure_speech import AzureSpeechService
 from backend.services.catalog_transcription import correct_catalog_words
-from backend.services.groq import GroqService
+from backend.services.groq import GROQ_STT_CATALOG_CONTEXT_TERMS, GroqService
 from evaluation.live_groq_stt_benchmark import accuracy
 
 CASES = (
@@ -68,6 +68,7 @@ async def run(settings: Settings, output: Path) -> dict[str, Any]:
         "language": "vi",
         "stt_primary_model": settings.groq_stt_model,
         "stt_fallback_model": settings.groq_stt_fallback_model,
+        "catalog_context_term_limit": GROQ_STT_CATALOG_CONTEXT_TERMS,
         "trial_count": len(CASES),
         "results": [],
         "complete": False,
@@ -87,7 +88,7 @@ async def run(settings: Settings, output: Path) -> dict[str, Any]:
                     audio.content,
                     audio.content_type,
                     language="vi",
-                    vocabulary=catalog.list_speech_terms(32),
+                    vocabulary=catalog.list_speech_terms(GROQ_STT_CATALOG_CONTEXT_TERMS),
                 )
                 raw_text = str(transcription)
                 text, corrections = correct_catalog_words(

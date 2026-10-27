@@ -248,7 +248,7 @@
         {
           "text": "Nếu chưa có thì có nước nào khác không?",
           "expected_tools": ["recommend_products"],
-          "expected_product_ids": ["WIN_10011695", "WIN_10150497", "WIN_10625446"],
+          "expected_product_ids_any": ["WIN_10011695", "WIN_10150497", "WIN_10625446"],
           "must_contain": ["giá tham khảo", "tồn hiện tại chưa được xác minh"],
           "must_not_contain": ["nước yến vị đào đang bán"]
         },

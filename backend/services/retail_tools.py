@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from backend.products.catalog import DEMO_PRODUCTS, PriceOperator, ProductSnapshot
 from backend.products.category_taxonomy import (
     CatalogCategoryMatch,
+    catalog_leaf_query_phrase,
     category_is_parent,
     category_leaf,
     normalize_category_text,
@@ -20,6 +21,12 @@ from backend.products.category_taxonomy import (
     resolve_catalog_category,
 )
 from backend.products.repository import ProductRepository, get_product_repository
+from backend.services.catalog_preferences import (
+    excluded_catalog_brands,
+    preparation_terms,
+    search_with_preferences,
+    title_mentions_preparation,
+)
 from backend.services.retail_information import (
     RetailInformationKind,
     lookup_retail_information,
@@ -34,7 +41,12 @@ from backend.services.vietnamese_intent import (
 from backend.services.vietnamese_intent import (
     normalize_vietnamese as _normalize_vietnamese,
 )
-from backend.services.vietnamese_intent import recommendation_category_cues as _category_cues
+from backend.services.vietnamese_intent import (
+    product_type_attribute_modifier as _product_type_attribute_modifier,
+)
+from backend.services.vietnamese_intent import (
+    recommendation_category_cues as _category_cues,
+)
 from backend.shared.contracts import SessionState
 
 MAX_PRODUCT_RESULTS = 10
@@ -118,6 +130,14 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "properties": {
                     "query": {"type": "string"},
                     "category": {"type": "string"},
+                    "preference_text": {
+                        "type": "string",
+                        "maxLength": 2000,
+                        "description": (
+                            "Copy the customer's original need verbatim for ranking catalog "
+                            "titles. This never verifies product benefits or suitability."
+                        ),
+                    },
                     "categories": {
                         "type": "array",
                         "items": {"type": "string"},
@@ -424,6 +444,9 @@ class RecommendProductsArguments(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     query: str = Field(default="", max_length=160)
+    preference_text: str = Field(default="", max_length=2000)
+    alternative_requested: bool = False
+    exclude_product_ids: list[str] = Field(default_factory=list, max_length=20)
     category: str | None = Field(default=None, max_length=160)
     categories: list[str] | None = Field(
         default=None, min_length=2, max_length=MAX_RECOMMENDATION_CATEGORIES
@@ -741,21 +764,19 @@ def _category_has_children(category: str | None, repository: ProductRepository) 
 _CATEGORY_QUERY_FILLER = frozenset(
     "a an ban biet can cho co con cua dang de gi giup hang hoi la loai mat minh muon mua nao "
     "nha nhe noi thoi tui di "
-    "um uhm neu thi chon nen goi so vai phim nhanh y "
+    "um uhm neu thi chon nen goi so vai phim nhanh y gioi thieu de xuat "
     "nhom san tim toi tu van voi xem the nao phu hop khong duoc do mot san pham "
     "em anh chi ay minh vay va nhu co the cac nhung hay bat ky thu nao type products product "
     "some any please find looking for recommend recommend me suggest show me want need "
     "good best better "
     "what which do can could have is are the for in your category item items kind type "
-    "i me to of and a an this that some any"
-    .split()
+    "i me to of and a an this that some any".split()
 )
 _CATEGORY_NEED_CONTEXT = frozenset(
     "da mat tay kho dau nhay cam mun toc rung gau bang bep chen bat quan ao giat "
     "rua lau sach mem phu hop nhu cau duong am lam dep don dep ve sinh cham soc "
     "dung cho cho be em gia dinh ca nhan nong lanh ngon cay man ngot re budget bet "
-    "thich dung su dung mau da tone mua sam tu van dry sensitive oily skin healthy"
-    .split()
+    "thich dung su dung mau da tone mua sam tu van dry sensitive oily skin healthy".split()
 )
 _CATEGORY_TAXONOMY_PARENTS = {
     "snack": "snack",
@@ -809,7 +830,11 @@ _BROAD_RECOMMENDATION_QUERY_CUES = frozenset(
 )
 
 
-def _query_matches_catalog_title(query: str, repository: ProductRepository) -> bool:
+def _query_matches_catalog_title(
+    query: str,
+    repository: ProductRepository,
+    category: str | None = None,
+) -> bool:
     terms = set(normalize_category_text(query).split())
     if not terms:
         return False
@@ -818,6 +843,8 @@ def _query_matches_catalog_title(query: str, repository: ProductRepository) -> b
         products = DEMO_PRODUCTS
     if products is None:
         return False
+    if category:
+        products = repository.search(query=query, category=category, limit=20)
     return any(
         terms
         <= set(normalize_category_text(product.name).split())
@@ -827,17 +854,21 @@ def _query_matches_catalog_title(query: str, repository: ProductRepository) -> b
 
 
 def _catalog_brand_tokens_in_query(query: str, repository: ProductRepository) -> set[str]:
-    query_tokens = set(normalize_category_text(query).split())
+    normalized = normalize_category_text(query)
     products = getattr(repository, "products", None)
     if products is None and repository.source_name == "demo_product_catalog":
         products = DEMO_PRODUCTS
     if products is None:
         return set()
+    brands = {normalize_category_text(product.brand) for product in products if product.brand}
+    excluded_brands = excluded_catalog_brands(query, list(brands))
+    # A token from a multiword brand is not a brand mention. In particular,
+    # Vietnamese pronouns must not match MINH HAO, TAO KAE NOI, or M&M.
     return {
         token
-        for product in products
-        for token in normalize_category_text(product.brand).split()
-        if token in query_tokens
+        for brand in brands
+        if brand and brand not in excluded_brands and f" {brand} " in f" {normalized} "
+        for token in brand.split()
     }
 
 
@@ -864,8 +895,9 @@ def _query_category_hint(
     repository: ProductRepository | None = None,
 ) -> tuple[str | None, bool]:
     """Resolve static intents or a phrase from the active catalog taxonomy."""
-    category = _explicit_category(query)
-    taxonomy_query = _normalize_catalog_query(query)
+    product_modifier = _product_type_attribute_modifier(query)
+    category = product_modifier[0] if product_modifier else _explicit_category(query)
+    taxonomy_query = _normalize_catalog_query(product_modifier[1] if product_modifier else query)
     match: CatalogCategoryMatch | None = None
     hierarchies: tuple[tuple[str, ...], ...] = ()
     if repository is not None:
@@ -882,11 +914,11 @@ def _query_category_hint(
         taxonomy_parent = _CATEGORY_TAXONOMY_PARENTS.get(category)
         related_match = bool(
             match.exact_phrase
+            or catalog_leaf_query_phrase(taxonomy_query, hierarchies)
             or (
                 taxonomy_parent
                 and any(
-                    normalize_category_text(taxonomy_parent)
-                    in normalize_category_text(segment)
+                    normalize_category_text(taxonomy_parent) in normalize_category_text(segment)
                     for path in hierarchies
                     if match.category in path
                     for segment in path
@@ -894,14 +926,14 @@ def _query_category_hint(
             )
         )
         if related_match:
-            match_is_explicit_leaf = (
-                not category_is_parent(match.category, hierarchies)
-                and bool(
+            match_is_explicit_leaf = not category_is_parent(match.category, hierarchies) and (
+                bool(
                     re.search(
                         rf"(?<!\w){re.escape(normalize_category_text(match.category))}(?!\w)",
                         normalize_category_text(taxonomy_query),
                     )
                 )
+                or bool(catalog_leaf_query_phrase(taxonomy_query, hierarchies))
             )
             if match_is_explicit_leaf:
                 category = match.category
@@ -935,8 +967,7 @@ def _query_category_hint(
         for segment in path[: normalized_path.index(parent_key) + 1]:
             residual.difference_update(normalize_category_text(segment).split())
     if query_names_catalog_leaf(taxonomy_query, hierarchies) or (
-        repository is not None
-        and _query_matches_catalog_title(taxonomy_query, repository)
+        repository is not None and _query_matches_catalog_title(taxonomy_query, repository)
     ):
         return category, False
     return category, not residual
@@ -987,24 +1018,21 @@ def _effective_catalog_search_query(
         explicit_query and query_names_catalog_leaf(explicit_query, hierarchies)
     )
     protected_tokens = (
-        set(normalize_category_text(explicit_query).split())
-        if protect_product_type
-        else set()
+        set(normalize_category_text(explicit_query).split()) if protect_product_type else set()
     )
+    if re.search(r"\b(?:tre em|em be|cho be|baby|kids|children)\b", normalized_query):
+        protected_tokens.update(_CUSTOMER_GROUP_QUERY_WORDS)
     tokens = normalize_category_text(normalized_query).split()
     retained = [
         token
         for token in tokens
-        if token in protected_tokens
-        or token not in _CATEGORY_QUERY_FILLER | _CATEGORY_NEED_CONTEXT
+        if token in protected_tokens or token not in _CATEGORY_QUERY_FILLER | _CATEGORY_NEED_CONTEXT
     ]
     if not retained:
         return ""
     retained_tokens = set(retained)
     raw_tokens = re.findall(r"[^\W_]+", normalized_query, flags=re.UNICODE)
-    normalized_tokens = [
-        normalize_category_text(token).split() for token in raw_tokens
-    ]
+    normalized_tokens = [normalize_category_text(token).split() for token in raw_tokens]
     if all(len(tokens_for_word) == 1 for tokens_for_word in normalized_tokens):
         return " ".join(
             raw
@@ -1185,6 +1213,10 @@ _ENGLISH_CATALOG_STOP_WORDS = frozenset(
 
 def _normalize_catalog_query(query: str) -> str:
     """Translate common English catalog terms and remove question filler before lookup."""
+    if re.search(r"[à-ỹđ]", query.casefold()):
+        # Vietnamese "cần/cân" is not English "can", and a brand's "Men"
+        # must not be translated inside a Vietnamese product request.
+        return query.strip()
     normalized = " ".join(_normalize_vietnamese(query).split())
     english_signals = (
         "where",
@@ -1376,11 +1408,14 @@ def recommendation_catalog_query(
             " ",
             normalized,
         )
-    explicit = _normalize_catalog_query(_explicit_query(text) or "")
+    modifier = _product_type_attribute_modifier(text)
+    type_query = _normalize_catalog_query(modifier[1] if modifier else text)
+    catalog_type_query = catalog_leaf_query_phrase(type_query, hierarchies)
+    explicit = catalog_type_query or _normalize_catalog_query(_explicit_query(text) or "")
     normalized_explicit = normalize_category_text(explicit)
     explicit_is_specific_type = bool(
         explicit
-        and _explicit_query(text)
+        and (catalog_type_query or _explicit_query(text))
         and normalized_explicit not in _BROAD_RECOMMENDATION_QUERY_CUES
     )
     explicit_match = resolve_catalog_category(explicit, hierarchies) if explicit else None
@@ -1393,7 +1428,8 @@ def recommendation_catalog_query(
         and set(normalize_category_text(explicit).split())
         <= _CATEGORY_NEED_CONTEXT | _CATEGORY_QUERY_FILLER
     )
-    category = _explicit_category(text)
+    taxonomy_match = resolve_catalog_category(type_query, hierarchies)
+    category = _explicit_category(text) or (taxonomy_match.category if taxonomy_match else None)
     explicit_is_broad_category_cue = bool(
         category
         and explicit
@@ -1416,9 +1452,7 @@ def recommendation_catalog_query(
             )
         )
     )
-    protected_tokens = (
-        set(normalize_category_text(explicit).split()) if protect_explicit else set()
-    )
+    protected_tokens = set(normalize_category_text(explicit).split()) if protect_explicit else set()
 
     broad_category_tokens: set[str] = set()
     if category:
@@ -1443,7 +1477,7 @@ def recommendation_catalog_query(
     # If the request names an exact taxonomy segment (including a concise
     # single-word department such as “thịt”), remove those category tokens
     # from the product-title filter. Explicit leaf types remain protected.
-    taxonomy_match = resolve_catalog_category(normalized, hierarchies)
+    taxonomy_match = resolve_catalog_category(type_query, hierarchies)
     if taxonomy_match and not query_names_catalog_leaf(normalized, hierarchies):
         broad_category_tokens.update(taxonomy_match.matched_tokens)
 
@@ -1466,39 +1500,69 @@ def recommendation_catalog_query(
         if token in protected_tokens:
             retained.append(token)
         elif token not in broad_category_tokens and token not in (
-            _CATEGORY_QUERY_FILLER
-            | _CATEGORY_NEED_CONTEXT
-            | _CUSTOMER_GROUP_QUERY_WORDS
+            _CATEGORY_QUERY_FILLER | _CATEGORY_NEED_CONTEXT | _CUSTOMER_GROUP_QUERY_WORDS
         ):
             retained.append(token)
     result = " ".join(dict.fromkeys(retained))[:160]
     if explicit_is_specific_type and (
-        getattr(repo, "products", None) is not None
-        or repo.source_name == "demo_product_catalog"
+        getattr(repo, "products", None) is not None or repo.source_name == "demo_product_catalog"
     ):
         explicit_tokens = set(normalized_explicit.split())
         brand_tokens = _catalog_brand_tokens_in_query(normalized, repo)
-        audience_tokens = set(normalize_category_text(normalized).split()) & (
-            _CUSTOMER_GROUP_QUERY_WORDS | {"tre", "em", "be"}
-        )
+        audience_tokens = {
+            token
+            for match in re.finditer(r"\b(?:tre em|em be|cho be|baby|kids|children)\b", normalized)
+            for token in match.group(0).split()
+            if token in _CUSTOMER_GROUP_QUERY_WORDS
+        }
         size_tokens = {
             token
             for token in normalize_category_text(normalized).split()
             if re.fullmatch(r"\d+(?:[.,]\d+)?(?:ml|l|g|kg|gram|grams)", token)
         }
         selected_tokens = explicit_tokens | brand_tokens | audience_tokens | size_tokens
-        result = " ".join(
-            dict.fromkeys(
-                token
-                for token in normalize_category_text(normalized).split()
-                if token in selected_tokens
+        if catalog_type_query:
+            type_matches = list(
+                re.finditer(
+                    rf"(?<!\w){re.escape(catalog_type_query)}(?!\w)",
+                    normalize_category_text(type_query),
+                )
             )
-        )[:160]
+            if type_matches:
+                type_match = type_matches[-1]
+                suffix = normalize_category_text(type_query)[type_match.end() :].split()
+                for token in suffix:
+                    if token in _CATEGORY_QUERY_FILLER or token in {
+                        "gia",
+                        "duoi",
+                        "tam",
+                        "khoang",
+                        "tren",
+                        "toi",
+                        "khong",
+                        "va",
+                        "di",
+                    }:
+                        break
+                    if token not in _CATEGORY_NEED_CONTEXT:
+                        # Keep an adjacent variant or unknown brand ("XYZ")
+                        # as an identity constraint, rather than silently
+                        # substituting any product of this type.
+                        selected_tokens.add(token)
+        # Preserve the actual type phrase and its word order. Taking its words
+        # from the entire utterance can reorder "kem dưỡng da" into "da kem
+        # dưỡng", and a repeated "đầu" can destroy the phrase "dầu gội".
+        extra_tokens = dict.fromkeys(
+            token
+            for token in normalize_category_text(normalized).split()
+            if token in selected_tokens and token not in explicit_tokens
+        )
+        result = " ".join((normalized_explicit, *extra_tokens))[:160]
     if (
         category
         and result
         and not query_names_catalog_leaf(normalized, hierarchies)
-        and not _query_matches_catalog_title(result, repo)
+        and not _query_matches_catalog_title(result, repo, category)
         and not explicit_is_specific_type
     ):
         # Do not turn an occasion, a vague need, or filler around a broad
@@ -1565,8 +1629,7 @@ def execute_catalog_tool(
             products = tuple(
                 product
                 for product in list_promotions(category=category, limit=parsed.limit)
-                if not getattr(repo, "supports_current_stock", False)
-                or product.sellable_stock > 0
+                if not getattr(repo, "supports_current_stock", False) or product.sellable_stock > 0
             )
             latest_timestamp = max(
                 (product.data_timestamp for product in products),
@@ -1581,11 +1644,7 @@ def execute_catalog_tool(
                             "promotion": product.promotion,
                             "data_timestamp": product.data_timestamp.isoformat(),
                         }
-                        | (
-                            {"stock_is_current": False}
-                            if not product.stock_is_current
-                            else {}
-                        )
+                        | ({"stock_is_current": False} if not product.stock_is_current else {})
                         for product in products
                     ],
                     "count": len(products),
@@ -1738,16 +1797,25 @@ def execute_catalog_tool(
             if parsed.categories is not None:
                 return _whole_cart_recommendation(repo, parsed)
             price = parsed.price_constraint
-            query_category, category_only_query = _query_category_hint(parsed.query, repo)
+            modifier = _product_type_attribute_modifier(parsed.preference_text)
+            category_context = (
+                parsed.preference_text if modifier else parsed.query or parsed.preference_text
+            )
+            query_category, category_only_query = _query_category_hint(category_context, repo)
             category_source = (
                 query_category
-                if _query_names_a_specific_category(parsed.query, query_category, repo)
+                if _query_names_a_specific_category(category_context, query_category, repo)
                 else parsed.category or query_category
             )
             category = _category_for_repository(category_source, repo)
+            list_hierarchies = getattr(repo, "list_category_hierarchies", None)
+            named_type = bool(
+                callable(list_hierarchies)
+                and query_names_catalog_leaf(parsed.query, list_hierarchies())
+            )
             effective_query = _effective_catalog_search_query(
                 parsed.query,
-                category_only_query,
+                category_only_query and not named_type,
                 repo,
             )
             category_browse = bool(category and not effective_query)
@@ -1763,10 +1831,112 @@ def execute_catalog_tool(
                 "price_value_vnd": price.value_vnd if price else None,
                 "diversify_by_subcategory": diversify,
             }
-            products = tuple(repo.search(**search_criteria))
-            if not products and category_only_query:
+            products, preference_matches = search_with_preferences(
+                repo,
+                search_criteria,
+                parsed.preference_text,
+            )
+            if not products and category_only_query and not parsed.query:
                 search_criteria["query"] = ""
-                products = tuple(repo.search(**search_criteria))
+                products, preference_matches = search_with_preferences(
+                    repo,
+                    search_criteria,
+                    parsed.preference_text,
+                )
+            # A category label can itself contain cooking words (e.g. cookware).
+            # Interpret only the remaining request as a preparation constraint.
+            preference_without_category = parsed.preference_text
+            if category:
+                preference_without_category = re.sub(
+                    re.escape(category), " ", preference_without_category, flags=re.IGNORECASE
+                )
+            preparation = preparation_terms(preference_without_category)
+            if parsed.alternative_requested and not preparation and parsed.exclude_product_ids:
+                candidates = list(products) + list(repo.search(**{**search_criteria, "limit": 20}))
+                excluded_brands = excluded_catalog_brands(
+                    parsed.preference_text, [p.brand for p in candidates if p.brand]
+                )
+                products = tuple({
+                    p.product_id: p for p in candidates
+                    if p.product_id not in parsed.exclude_product_ids
+                    and normalize_category_text(p.brand) not in excluded_brands
+                }.values())[:parsed.limit]
+            alternatives_unverified = False
+            if preparation:
+                # A broad category match alone does not establish that an item
+                # is suitable for the customer's stated preparation method.
+                products = tuple(
+                    product
+                    for product in products
+                    if title_mentions_preparation(product.name, preparation)
+                    and product.product_id not in parsed.exclude_product_ids
+                )
+                if not products and category and not effective_query:
+                    # The same kind of product can occur under different catalog
+                    # branches (for example, fresh and frozen goods). Search the
+                    # method across branches, then require the requested category
+                    # words in the actual hierarchy and the method in the title.
+                    category_words = normalize_category_text(category).split()
+                    candidate_pool = []
+                    for method in sorted(preparation):
+                        probe = {
+                            **search_criteria,
+                            "query": method,
+                            "category": None,
+                            "limit": 20,
+                            "diversify_by_subcategory": False,
+                        }
+                        candidate_pool.extend(repo.search(**probe))
+                    excluded = excluded_catalog_brands(
+                        parsed.preference_text,
+                        [p.brand for p in candidate_pool if p.brand],
+                    )
+                    products = tuple(
+                        {
+                            p.product_id: p
+                            for p in candidate_pool
+                            if all(
+                                word
+                                in normalize_category_text(
+                                    p.category_hierarchy or p.category
+                                ).split()
+                                for word in category_words
+                            )
+                            and title_mentions_preparation(p.name, preparation)
+                            and p.product_id not in parsed.exclude_product_ids
+                            and normalize_category_text(p.brand) not in excluded
+                        }.values()
+                    )[: parsed.limit]
+                if (
+                    not products and parsed.alternative_requested
+                    and "lau" in preparation and category
+                ):
+                    # Offer sliced products as possible options, with suitability unverified.
+                    probe = {**search_criteria, "query": "cat lat", "category": None,
+                             "limit": 20, "diversify_by_subcategory": False}
+                    category_words = normalize_category_text(category).split()
+                    pool = repo.search(**probe)
+                    excluded = excluded_catalog_brands(
+                        parsed.preference_text, [p.brand for p in pool if p.brand]
+                    )
+                    products = tuple(
+                        p for p in pool
+                        if all(
+                            word in normalize_category_text(
+                                p.category_hierarchy or p.category
+                            ).split()
+                            for word in category_words
+                        )
+                        and {"cat", "lat"}.issubset(set(normalize_category_text(p.name).split()))
+                        and p.product_id not in parsed.exclude_product_ids
+                        and normalize_category_text(p.brand) not in excluded
+                    )[:parsed.limit]
+                    alternatives_unverified = bool(products)
+                preference_matches = {
+                    product.product_id: preference_matches[product.product_id]
+                    for product in products
+                    if product.product_id in preference_matches
+                }
             matched = [
                 "sellable_only"
                 if getattr(repo, "supports_current_stock", False)
@@ -1778,6 +1948,9 @@ def execute_catalog_tool(
             if price:
                 matched.append(f"price_{price.operator.lower()}_{price.value_vnd}")
             content = _candidate_content(products, matched)
+            content["alternative_requested"] = parsed.alternative_requested
+            if alternatives_unverified:
+                content["preparation_alternatives_unverified"] = True
             content["constraints"] = {
                 "category": category,
                 "brand": parsed.brand,
@@ -1785,10 +1958,17 @@ def execute_catalog_tool(
                 "price_operator": price.operator if price else None,
                 "price_value_vnd": price.value_vnd if price else None,
             }
-            subcategories = list(
-                dict.fromkeys(category_leaf(product) for product in products)
-            )
-            if category_browse and len(subcategories) > 1:
+            content["current_stock_verified"] = bool(getattr(repo, "supports_current_stock", False))
+            if preparation and not products:
+                content["preparation_unverified"] = True
+                content["preparation_followup"] = "\n" in parsed.preference_text
+            if preference_matches:
+                content["preference_matches"] = preference_matches
+                content["preference_evidence"] = "PRODUCT_TITLE_ONLY"
+            if preparation and products:
+                content["preference_evidence"] = "PRODUCT_TITLE_ONLY"
+            subcategories = list(dict.fromkeys(category_leaf(product) for product in products))
+            if category_browse and len(subcategories) > 1 and not preparation:
                 content["browse_mode"] = "CATEGORY_OVERVIEW"
                 content["category_label"] = category
                 content["subcategories"] = subcategories
@@ -1847,9 +2027,7 @@ def execute_catalog_tool(
     data: dict[str, Any] = {"product_id": product.product_id, "name": product.name}
     for field_name in available_fields:
         if field_name == "stock":
-            data["stock"] = (
-                product.sellable_stock if product.stock_is_current else product.stock
-            )
+            data["stock"] = product.sellable_stock if product.stock_is_current else product.stock
             if not product.stock_is_current:
                 data["stock_is_current"] = False
                 data["availability_status"] = "NOT_CURRENTLY_VERIFIED"

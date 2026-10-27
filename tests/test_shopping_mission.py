@@ -79,15 +79,351 @@ def test_summary_labels_optional_suggestions_and_separates_their_cost() -> None:
     )
 
     for language, required_term, optional_term in (
-        ("vi", "các nhóm bạn xác nhận cần", "gợi ý thêm (tùy chọn)"),
-        ("en", "items you asked for", "optional suggestions"),
-        ("zh", "你确认需要的商品", "可选建议"),
+        ("vi", "theo yêu cầu của bạn", "nếu muốn mua thêm"),
+        ("en", "based on what you asked for", "if useful, you could also add"),
+        ("zh", "按你的要求", "如果你需要，也可以加上"),
     ):
         summary = render_shopping_plan_summary(result.content, language=language).casefold()
         assert required_term.casefold() in summary
         assert optional_term.casefold() in summary
         assert ".." not in summary
-    assert "là phần tùy chọn" in render_shopping_plan_summary(result.content).casefold()
+    assert "phần mua thêm" in render_shopping_plan_summary(result.content).casefold()
+
+
+def test_summary_varies_on_follow_up_and_formats_vietnamese_prices_naturally() -> None:
+    content = {
+        "mission": {"goal": "Chuẩn bị đồ ăn nhẹ", "revision": 1},
+        "needs": [
+            {"need_id": "snacks", "label": "Đồ ăn nhẹ"},
+            {"need_id": "drinks", "label": "Đồ uống"},
+        ],
+        "options": [
+            {
+                "items": [
+                    {
+                        "name": "Snack khoai tây",
+                        "quantity": 1,
+                        "line_total_vnd": 12_500,
+                        "required": True,
+                    },
+                    {
+                        "name": "Nước suối",
+                        "quantity": 1,
+                        "line_total_vnd": 8_000,
+                        "required": False,
+                    },
+                ],
+                "total_vnd": 20_500,
+            }
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.404439Z",
+        "inventory_verified": False,
+        "cart_mutated": False,
+    }
+
+    first = render_shopping_plan_summary(content)
+    updated = render_shopping_plan_summary(
+        {**content, "mission": {**content["mission"], "revision": 2}}
+    )
+
+    assert "12.500đ" in first and "20.500đ" in first and "8.000đ" in first
+    assert "Dữ liệu catalog ghi ngày 15/09/2026" in first
+    assert "tồn kho tại cửa hàng chưa được xác nhận theo thời gian thực" in first
+    assert "chưa thêm món nào vào giỏ" in first
+    assert "Mình cập nhật phương án nhé" not in updated
+    assert updated.startswith("Theo yêu cầu của bạn:")
+    assert "tồn kho tại cửa hàng chưa được xác nhận" not in updated
+    assert "chưa thêm món nào vào giỏ" not in updated
+    assert len(updated) < len(first)
+
+
+def test_followup_summary_reports_only_added_catalog_items_and_recomputed_total() -> None:
+    previous = {
+        "revision": 1,
+        "total_budget_vnd": 220_000,
+        "needs": [
+            {"need_id": "cleanser", "label": "Sữa rửa mặt", "required": False},
+            {"need_id": "moisturizer", "label": "Kem dưỡng ẩm", "required": False},
+            {"need_id": "sunscreen", "label": "Kem chống nắng", "required": False},
+        ],
+        "proposed_items": [
+            {
+                "product_id": "cleanser-sku",
+                "name": "Sữa rửa mặt",
+                "quantity": 1,
+                "line_total_vnd": 54_000,
+                "required": False,
+            },
+            {
+                "product_id": "sunscreen-sku",
+                "name": "Kem chống nắng",
+                "quantity": 1,
+                "line_total_vnd": 68_800,
+                "required": False,
+            },
+        ],
+    }
+    content = {
+        "mission": {
+            "revision": 2,
+            "total_budget_vnd": 220_000,
+            "needs": [
+                {"need_id": "cleanser", "label": "Sữa rửa mặt", "required": True},
+                {
+                    "need_id": "moisturizer",
+                    "label": "Sản phẩm dưỡng da mặt",
+                    "required": True,
+                },
+                {"need_id": "sunscreen", "label": "Kem chống nắng", "required": False},
+                {"need_id": "cotton", "label": "Bông tẩy trang", "required": True},
+            ],
+        },
+        "needs": [
+            {"need_id": "cleanser", "label": "Sữa rửa mặt"},
+            {"need_id": "moisturizer", "label": "Sản phẩm dưỡng da mặt"},
+            {"need_id": "sunscreen", "label": "Kem chống nắng"},
+            {"need_id": "cotton", "label": "Bông tẩy trang"},
+        ],
+        "options": [
+            {
+                "items": [
+                    {
+                        "product_id": "cleanser-sku",
+                        "need_id": "cleanser",
+                        "name": "Sữa rửa mặt",
+                        "quantity": 1,
+                        "line_total_vnd": 54_000,
+                        "required": True,
+                    },
+                    {
+                        "product_id": "sunscreen-sku",
+                        "need_id": "sunscreen",
+                        "name": "Kem chống nắng",
+                        "quantity": 1,
+                        "line_total_vnd": 68_800,
+                        "required": False,
+                    },
+                    {
+                        "product_id": "cotton-sku",
+                        "need_id": "cotton",
+                        "name": "Bông tẩy trang Jomi 120 miếng",
+                        "quantity": 1,
+                        "line_total_vnd": 39_000,
+                        "required": True,
+                    },
+                ],
+                "total_vnd": 161_800,
+                "remaining_budget_vnd": 58_200,
+            }
+        ],
+        "missing_required_needs": ["moisturizer"],
+        "inventory_verified": False,
+    }
+
+    summary = render_shopping_plan_summary(content, previous_mission=previous)
+
+    assert "Mình thêm vào phương án" in summary
+    assert "Bông tẩy trang Jomi 120 miếng × 1 (39.000đ)" in summary
+    assert "Tổng phương án hiện tại: 161.800đ" in summary
+    assert "Còn 58.200đ trong mức dự trù" in summary
+    assert "Sản phẩm dưỡng da mặt" in summary
+    assert "Bạn muốn tìm cụ thể loại nào, chẳng hạn kem dưỡng ẩm" in summary
+    assert "Sữa rửa mặt × 1 (54.000đ)" not in summary
+
+
+def test_followup_summary_acknowledges_new_required_need_already_in_plan() -> None:
+    previous = {
+        "revision": 2,
+        "total_budget_vnd": 220_000,
+        "needs": [
+            {"need_id": "sunscreen", "label": "Kem chống nắng", "required": False}
+        ],
+        "proposed_items": [
+            {
+                "product_id": "sunscreen-sku",
+                "name": "Kem chống nắng",
+                "quantity": 1,
+                "line_total_vnd": 68_800,
+                "required": False,
+            }
+        ],
+    }
+    content = {
+        "mission": {
+            "revision": 3,
+            "total_budget_vnd": 240_000,
+            "needs": [
+                {"need_id": "sunscreen", "label": "Kem chống nắng", "required": True}
+            ],
+        },
+        "needs": [{"need_id": "sunscreen", "label": "Kem chống nắng"}],
+        "options": [
+            {
+                "items": [
+                    {
+                        "product_id": "sunscreen-sku",
+                        "need_id": "sunscreen",
+                        "name": "Kem chống nắng",
+                        "quantity": 1,
+                        "line_total_vnd": 68_800,
+                        "required": True,
+                    }
+                ],
+                "total_vnd": 68_800,
+                "remaining_budget_vnd": 171_200,
+            }
+        ],
+        "missing_required_needs": [],
+        "inventory_verified": False,
+    }
+
+    summary = render_shopping_plan_summary(content, previous_mission=previous)
+
+    assert "Nhóm vừa được chốt đã có trong phương án: Kem chống nắng × 1" in summary
+    assert "Mức dự trù mới là 240.000đ" in summary
+    assert "Tổng phương án hiện tại: 68.800đ" in summary
+    assert "Còn 171.200đ trong mức dự trù" in summary
+
+
+def test_product_query_does_not_cross_match_a_different_catalog_product_type() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+
+    cotton_pads = build_shopping_mission_plan(
+        {
+            "goal": "Mua bông tẩy trang",
+            "needs": [
+                _need(
+                    "cotton-pads",
+                    "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Băng vệ sinh",
+                    label="Bông tẩy trang",
+                    product_query="bông tẩy trang",
+                )
+            ],
+        },
+        repository,
+    )
+    cotton_plan = cotton_pads.content["options"][0]["items"]
+    assert cotton_pads.content["needs"][0]["resolved_category"] == "Bông tẩy trang"
+    assert cotton_plan
+    assert all("bông tẩy trang" in item["name"].casefold() for item in cotton_plan)
+    assert all("diana" not in item["name"].casefold() for item in cotton_plan)
+
+    face_towels = build_shopping_mission_plan(
+        {
+            "goal": "Mua khăn mặt",
+            "needs": [
+                _need(
+                    "face-towel",
+                    "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+                    label="Khăn mặt",
+                    product_query="khăn mặt",
+                )
+            ],
+        },
+        repository,
+    )
+    towel_plan = face_towels.content["options"][0]["items"]
+    assert face_towels.content["needs"][0]["resolved_category"] == "Khăn mặt"
+    assert towel_plan
+    assert all("khăn mặt" in item["name"].casefold() for item in towel_plan)
+    assert all("khăn giấy" not in item["name"].casefold() for item in towel_plan)
+
+    napkins = build_shopping_mission_plan(
+        {
+            "goal": "Chuẩn bị giấy lau miệng khi ăn",
+            "needs": [
+                _need(
+                    "napkins",
+                    "Phi thực phẩm > Dệt may > Bông vải sợi, giày dép > Khăn > Khăn lau",
+                    label="Khăn lau miệng",
+                    product_query="khăn lau miệng cho cả nhóm",
+                )
+            ],
+        },
+        repository,
+    )
+    napkin_plan = napkins.content["options"][0]["items"]
+    assert napkin_plan
+    assert all(
+        "giấy" in item["name"].casefold() or "khăn giấy" in item["name"].casefold()
+        for item in napkin_plan
+    )
+    assert all("lau mặt" not in item["name"].casefold() for item in napkin_plan)
+
+    broad_skincare = build_shopping_mission_plan(
+        {
+            "goal": "Chăm sóc da mặt cơ bản",
+            "needs": [
+                _need(
+                    "skincare",
+                    "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da",
+                    label="Sản phẩm dưỡng da mặt",
+                    product_query="Sản phẩm dưỡng da mặt",
+                )
+            ],
+        },
+        repository,
+    )
+    assert broad_skincare.content["options"]
+    assert broad_skincare.content["needs"][0]["candidate_count"] > 0
+
+    moisturizer = build_shopping_mission_plan(
+        {
+            "goal": "Tìm kem dưỡng ẩm da mặt",
+            "needs": [
+                _need(
+                    "moisturizer",
+                    "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da",
+                    label="Kem dưỡng ẩm",
+                    product_query="kem dưỡng ẩm da mặt",
+                )
+            ],
+        },
+        repository,
+    )
+    assert moisturizer.content["needs"][0]["candidate_count"] == 0
+    assert moisturizer.content["missing_required_needs"] == ["Kem dưỡng ẩm"]
+
+    sunscreen = build_shopping_mission_plan(
+        {
+            "goal": "Tìm kem chống nắng",
+            "needs": [
+                _need(
+                    "sunscreen",
+                    "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da",
+                    label="Kem chống nắng",
+                    product_query="kem chống nắng",
+                )
+            ],
+        },
+        repository,
+    )
+    assert sunscreen.content["needs"][0]["candidate_count"] > 0
+    assert all(
+        "chống nắng" in item["name"].casefold()
+        for item in sunscreen.content["options"][0]["items"]
+    )
+
+    face_cleanser = build_shopping_mission_plan(
+        {
+            "goal": "Mua sữa rửa mặt",
+            "needs": [
+                _need(
+                    "face-cleanser",
+                    "Nước rửa chén",
+                    label="Sữa rửa mặt",
+                    product_query="nước rửa mặt",
+                )
+            ],
+        },
+        repository,
+    )
+    face_cleanser_items = face_cleanser.content["options"][0]["items"]
+    assert face_cleanser_items
+    assert all("rửa mặt" in item["name"].casefold() for item in face_cleanser_items)
+    assert all("rửa chén" not in item["name"].casefold() for item in face_cleanser_items)
 
 
 def test_unknown_package_size_names_item_and_says_original_quantity_needs_confirmation() -> None:
@@ -114,7 +450,7 @@ def test_unknown_package_size_names_item_and_says_original_quantity_needs_confir
 
     summary = render_shopping_plan_summary(content)
 
-    assert "gợi ý thêm (tùy chọn)" in summary.casefold()
+    assert "nếu muốn mua thêm" in summary.casefold()
     assert "cam cara úc" in summary.casefold()
     assert "giữ số lượng ban đầu" in summary.casefold()
 
@@ -468,6 +804,88 @@ def test_partial_plan_names_required_need_the_catalog_cannot_verify() -> None:
     assert "nhu cầu bắt buộc" in render_shopping_plan_summary(content).casefold()
     assert "required need" in render_shopping_plan_summary(content, language="en").casefold()
     assert "必需需求" in render_shopping_plan_summary(content, language="zh")
+
+
+def test_partial_plan_keeps_found_items_when_another_required_group_has_no_match() -> None:
+    result = _plan(
+        [
+            _need("drinks", "drink", label="Nước uống"),
+            _need(
+                "face_moisturizer",
+                "unlisted catalog category",
+                label="Kem dưỡng ẩm mặt",
+                product_query="kem dưỡng ẩm mặt",
+            ),
+        ],
+        total_budget_vnd=100_000,
+    )
+
+    assert result.content["missing_required_needs"] == ["Kem dưỡng ẩm mặt"]
+    assert result.content["options"]
+    option = result.content["options"][0]
+    assert [item["need_id"] for item in option["items"]] == ["drinks"]
+    assert option["total_vnd"] == sum(item["line_total_vnd"] for item in option["items"])
+    summary = render_shopping_plan_summary(result.content)
+    assert "Nước" in summary
+    assert "Kem dưỡng ẩm mặt" in summary
+    assert "tổng trên chỉ tính các món đã tìm thấy" in summary.casefold()
+
+
+def test_baby_wipes_wording_uses_catalog_child_wipes_not_broad_baby_care() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    result = build_shopping_mission_plan(
+        {
+            "goal": "Đồ dùng cho em bé đi cùng gia đình",
+            "needs": [
+                _need(
+                    "baby_wipes",
+                    "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > "
+                    "Đồ dùng chăm sóc mẹ và bé",
+                    label="Khăn ướt cho bé",
+                    product_query="khăn ướt trẻ em",
+                )
+            ],
+        },
+        repository,
+    )
+
+    need = result.content["needs"][0]
+    assert need["resolved_category"] == "Giấy ướt trẻ em"
+    assert need["candidate_count"] > 0
+    assert any("trẻ em" in product.name.casefold() for product in result.products)
+
+
+def test_dry_tissue_for_baby_does_not_resolve_to_wet_wipes() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    result = build_shopping_mission_plan(
+        {
+            "goal": "Đồ dùng mang theo khi đi cùng em bé",
+            "needs": [
+                _need(
+                    "paper_tissues",
+                    "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > "
+                    "Giấy ăn, giấy vệ sinh > Giấy ướt trẻ em",
+                    label="Khăn giấy cho bé",
+                    product_query="khăn giấy cho bé",
+                )
+            ],
+        },
+        repository,
+    )
+
+    need = result.content["needs"][0]
+    assert need["resolved_category"] == "Khăn giấy gói"
+    assert need["candidate_count"] > 0
+    # Dry tissues can be named "giấy lụa rút" or "khăn rút" in the catalog.
+    assert all(
+        (product.category_hierarchy or "").split(">")[-1].strip() == "Khăn giấy gói"
+        and "ướt" not in product.name.casefold()
+        for product in result.products
+    )
 
 
 def test_existing_items_are_not_recommended_again() -> None:

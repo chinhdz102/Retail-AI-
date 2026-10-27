@@ -26,7 +26,8 @@ def normalize_vietnamese(text: str) -> str:
         # have a clear conversational meaning. Keep the rest of the utterance
         # intact so product names are not aggressively rewritten.
         (
-            r"\b(ngon|chay|ban chay|dat hang|ua chuong|pho bien|hot|duoc mua nhieu)\s+nhut\b",
+            r"\b(ngon|tot|re|chay|ban chay|dat hang|ua chuong|pho bien|"
+            r"hot|duoc mua nhieu)\s+nhut\b",
             r"\1 nhat",
         ),  # Southern colloquial spelling of "nhất", in ranking phrases only
         (r"\b(mon|cai|loai)\s+mo\b", r"\1 nao"),  # Central "mô" = which
@@ -733,9 +734,24 @@ _CATEGORY_CUES: dict[str, tuple[str, ...]] = {
     "cosmetic": (
         "my pham",
         "hoa my pham",
+        "bong tay trang",
+        "mieng bong tay trang",
+        "cotton pad",
+        "cotton pads",
         "cosmetic",
         "cosmetics",
         "makeup",
+    ),
+    "paper_goods": (
+        "khan lau mieng",
+        "khan an",
+        "khan giay",
+        "giay an",
+        "giay lua",
+        "giay rut",
+        "paper napkin",
+        "napkin",
+        "tissue",
     ),
 }
 
@@ -762,8 +778,71 @@ _CONTEXT_ONLY_CATEGORY_CUES: dict[str, frozenset[str]] = {
 }
 
 
+def product_type_attribute_modifier(text: str) -> tuple[str, str, int, int] | None:
+    """Return the product group and category-only query for a flavor qualifier.
+
+    In phrases such as ``bim bim vị phô mai``, the last category-looking phrase
+    is a flavor, not the product department. Keep ``bim bim`` as the category
+    signal while leaving the full utterance available to product retrieval.
+    The returned offsets mark only the flavor clause in normalized text.
+    """
+    normalized = " ".join(normalize_vietnamese(text).split())
+    if not normalized:
+        return None
+
+    category_spans: list[tuple[int, int, str, int]] = []
+    for category, cues in _CATEGORY_CUES.items():
+        for cue in cues:
+            cue_text = " ".join(normalize_vietnamese(cue).split())
+            if not cue_text:
+                continue
+            if (
+                category == "dairy"
+                and cue in {"sua", "milk"}
+                and any(
+                    phrase in normalized
+                    for phrase in ("ca phe sua", "tra sua", "coffee milk", "milk tea")
+                )
+            ):
+                continue
+            for match in re.finditer(
+                rf"(?<!\w){re.escape(cue_text)}(?!\w)", normalized
+            ):
+                category_spans.append(
+                    (match.start(), match.end(), category, len(cue_text.split()))
+                )
+
+    marker_pattern = re.compile(
+        r"(?<!\w)(?:vi|huong|mui|flavor|flavour|taste)(?!\w)"
+    )
+    for marker in marker_pattern.finditer(normalized):
+        preceding = [span for span in category_spans if span[1] <= marker.start()]
+        following = [span for span in category_spans if span[0] >= marker.end()]
+        if not preceding or not following:
+            continue
+        head = max(preceding, key=lambda span: (span[1], span[3]))
+        flavor = min(following, key=lambda span: (span[0], -span[3]))
+        connector_words = normalized[marker.end() : flavor[0]].split()
+        if (
+            marker.start() - head[1] > 60
+            or flavor[0] - marker.end() > 32
+            or len(connector_words) > 2
+            or any(word in {"va", "voi", "nhung", "hoac", "and", "or", "but"}
+                   for word in connector_words)
+        ):
+            continue
+        category_query = (
+            normalized[: marker.start()] + " " + normalized[flavor[1] :]
+        ).strip()
+        return head[2], " ".join(category_query.split()), marker.start(), flavor[1]
+    return None
+
+
 def explicit_recommendation_category(text: str) -> str | None:
     normalized = " ".join(normalize_vietnamese(text).split())
+    modifier = product_type_attribute_modifier(normalized)
+    if modifier is not None:
+        return modifier[0]
     named_query = explicit_recommendation_query(text)
     if named_query:
         matching_categories = {
@@ -858,6 +937,14 @@ def explicit_recommendation_categories(text: str) -> list[str]:
                     negated_matches.append((match.start(), category))
                 else:
                     matches.append((match.start(), match.end(), category, cue))
+
+    modifier = product_type_attribute_modifier(normalized)
+    if modifier is not None:
+        _head_category, _category_query, modifier_start, modifier_end = modifier
+        matches = [
+            item for item in matches
+            if not (item[0] >= modifier_start and item[1] <= modifier_end)
+        ]
 
     # "nước" by itself is often part of a product name. Treat it as a drink
     # category only when the same request explicitly names another category.
@@ -1020,6 +1107,8 @@ def explicit_recommendation_query(text: str) -> str | None:
 
 
 _RECOMMENDATION_CUES = (
+    "gioi thieu",
+    "de xuat",
     "goi y",
     "goi y giup",
     "tu van",
@@ -1679,7 +1768,13 @@ def is_alternative_product_request(text: str) -> bool:
         "if out of stock",
         "similar product",
     )
-    return _has_phrase(normalized, cues)
+    return _has_phrase(normalized, cues) or bool(
+        re.search(
+            r"\b(?:loai|san pham|mat hang|mon|hang)\s+(?:[a-z0-9]+\s+){0,4}khac\b"
+            r"(?!\s+(?:gi|nhau|biet))",
+            normalized,
+        )
+    )
 
 
 def is_recommendation_request(text: str) -> bool:
@@ -1691,6 +1786,14 @@ def is_recommendation_request(text: str) -> bool:
         or _has_phrase(normalized, _RECOMMENDATION_CUES)
         or bool(re.search(r"(?<!giai )\bkhat(?:\s+nuoc)?\b", normalized))
     )
+
+
+def recommendation_content(text: str) -> str:
+    """Remove request phrases while retaining the customer's product needs."""
+    content = f" {' '.join(normalize_vietnamese(text).split())} "
+    for cue in sorted(_RECOMMENDATION_CUES, key=len, reverse=True):
+        content = content.replace(f" {cue} ", " ")
+    return " ".join(content.split())
 
 
 def unsupported_catalog_attribute_requested(text: str) -> bool:
@@ -1785,6 +1888,9 @@ def unsupported_catalog_attribute_requested(text: str) -> bool:
         "giam can",
         "tang can",
         "chua benh",
+        "chua khoi",
+        "tri dut diem",
+        "khoi han",
         "dieu tri",
         "health",
         "healthy",

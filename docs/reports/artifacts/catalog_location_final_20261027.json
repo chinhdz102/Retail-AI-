@@ -1,0 +1,2887 @@
+{
+  "created_at": "2026-10-27T14:11:41.579680+00:00",
+  "count": 72,
+  "passed": 72,
+  "results": [
+    {
+      "product_id": "WIN_10053675",
+      "question": "Thịt Thăn bò ở đâu?",
+      "expected_shelf": "A13-B05-L03-P05",
+      "response": {
+        "session_id": "b7a64170-19ab-4a6a-8bc4-19b6b49edebd",
+        "text": "Theo sơ đồ kệ đề xuất, Thịt Thăn bò ở vị trí A13-B05-L03-P05 (dãy A13, khoang B05, tầng L03, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10053675"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366057Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10053675",
+            "name": "Thịt Thăn bò",
+            "category": "Thịt",
+            "brand": "NOBRAND",
+            "price_vnd": 399000,
+            "stock": 60,
+            "stock_is_current": false,
+            "uom": "Kg",
+            "data_timestamp": "2026-09-15T13:53:54.366057Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10053675",
+      "question": "Cho mình hỏi Thịt Thăn bò nằm ở kệ nào vậy?",
+      "expected_shelf": "A13-B05-L03-P05",
+      "response": {
+        "session_id": "0a3d7184-6a7c-4251-9e46-47e6f5d8333a",
+        "text": "Theo sơ đồ kệ đề xuất, Thịt Thăn bò ở vị trí A13-B05-L03-P05 (dãy A13, khoang B05, tầng L03, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10053675"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366057Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10053675",
+            "name": "Thịt Thăn bò",
+            "category": "Thịt",
+            "brand": "NOBRAND",
+            "price_vnd": 399000,
+            "stock": 60,
+            "stock_is_current": false,
+            "uom": "Kg",
+            "data_timestamp": "2026-09-15T13:53:54.366057Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10053675",
+      "question": "Chỉ giúp mình vị trí của Thịt Thăn bò nhé",
+      "expected_shelf": "A13-B05-L03-P05",
+      "response": {
+        "session_id": "1250b0a5-d9df-4f27-838c-2f26208f1889",
+        "text": "Theo sơ đồ kệ đề xuất, Thịt Thăn bò ở vị trí A13-B05-L03-P05 (dãy A13, khoang B05, tầng L03, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10053675"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366057Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10053675",
+            "name": "Thịt Thăn bò",
+            "category": "Thịt",
+            "brand": "NOBRAND",
+            "price_vnd": 399000,
+            "stock": 60,
+            "stock_is_current": false,
+            "uom": "Kg",
+            "data_timestamp": "2026-09-15T13:53:54.366057Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10053675",
+      "question": "Cho mình biết vị trí Thịt Thăn bò với",
+      "expected_shelf": "A13-B05-L03-P05",
+      "response": {
+        "session_id": "0e3f7f7b-017f-4620-b1ce-e2b78b3cf76f",
+        "text": "Theo sơ đồ kệ đề xuất, Thịt Thăn bò ở vị trí A13-B05-L03-P05 (dãy A13, khoang B05, tầng L03, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10053675"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366057Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10053675",
+            "name": "Thịt Thăn bò",
+            "category": "Thịt",
+            "brand": "NOBRAND",
+            "price_vnd": 399000,
+            "stock": 60,
+            "stock_is_current": false,
+            "uom": "Kg",
+            "data_timestamp": "2026-09-15T13:53:54.366057Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10053675",
+      "question": "Mình tìm Thịt Thăn bò, kệ nào có vậy?",
+      "expected_shelf": "A13-B05-L03-P05",
+      "response": {
+        "session_id": "717f90d3-9052-4979-8105-69187c62ebe8",
+        "text": "Theo sơ đồ kệ đề xuất, Thịt Thăn bò ở vị trí A13-B05-L03-P05 (dãy A13, khoang B05, tầng L03, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10053675"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366057Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10053675",
+            "name": "Thịt Thăn bò",
+            "category": "Thịt",
+            "brand": "NOBRAND",
+            "price_vnd": 399000,
+            "stock": 60,
+            "stock_is_current": false,
+            "uom": "Kg",
+            "data_timestamp": "2026-09-15T13:53:54.366057Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10053675",
+      "question": "Cho mình hỏi Thịt Thăn bò nằm ở đâu?",
+      "expected_shelf": "A13-B05-L03-P05",
+      "response": {
+        "session_id": "808fa880-642d-4246-a0c0-b0525d8dffec",
+        "text": "Theo sơ đồ kệ đề xuất, Thịt Thăn bò ở vị trí A13-B05-L03-P05 (dãy A13, khoang B05, tầng L03, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10053675"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366057Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10053675",
+            "name": "Thịt Thăn bò",
+            "category": "Thịt",
+            "brand": "NOBRAND",
+            "price_vnd": 399000,
+            "stock": 60,
+            "stock_is_current": false,
+            "uom": "Kg",
+            "data_timestamp": "2026-09-15T13:53:54.366057Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10170963",
+      "question": "Dầu gội bưởi Cocoon 310ml ở đâu?",
+      "expected_shelf": "A03-B03-L01-P02",
+      "response": {
+        "session_id": "c3bbba41-fc60-4476-9d6d-4d80904b12de",
+        "text": "Theo sơ đồ kệ đề xuất, Dầu gội bưởi Cocoon 310ml ở vị trí A03-B03-L01-P02 (dãy A03, khoang B03, tầng L01, ô P02) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10170963"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396409Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10170963",
+            "name": "Dầu gội bưởi Cocoon 310ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "COCOON",
+            "price_vnd": 261000,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396409Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10170963",
+      "question": "Cho mình hỏi Dầu gội bưởi Cocoon 310ml nằm ở kệ nào vậy?",
+      "expected_shelf": "A03-B03-L01-P02",
+      "response": {
+        "session_id": "74284400-ae5b-4cba-805e-ca3844b84a46",
+        "text": "Theo sơ đồ kệ đề xuất, Dầu gội bưởi Cocoon 310ml ở vị trí A03-B03-L01-P02 (dãy A03, khoang B03, tầng L01, ô P02) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10170963"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396409Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10170963",
+            "name": "Dầu gội bưởi Cocoon 310ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "COCOON",
+            "price_vnd": 261000,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396409Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10170963",
+      "question": "Chỉ giúp mình vị trí của Dầu gội bưởi Cocoon 310ml nhé",
+      "expected_shelf": "A03-B03-L01-P02",
+      "response": {
+        "session_id": "42fd0601-00a5-4aa3-b017-e68d3317cdf0",
+        "text": "Theo sơ đồ kệ đề xuất, Dầu gội bưởi Cocoon 310ml ở vị trí A03-B03-L01-P02 (dãy A03, khoang B03, tầng L01, ô P02) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10170963"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396409Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10170963",
+            "name": "Dầu gội bưởi Cocoon 310ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "COCOON",
+            "price_vnd": 261000,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396409Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10170963",
+      "question": "Cho mình biết vị trí Dầu gội bưởi Cocoon 310ml với",
+      "expected_shelf": "A03-B03-L01-P02",
+      "response": {
+        "session_id": "61f695ca-39d9-4981-97d0-540e0d769230",
+        "text": "Theo sơ đồ kệ đề xuất, Dầu gội bưởi Cocoon 310ml ở vị trí A03-B03-L01-P02 (dãy A03, khoang B03, tầng L01, ô P02) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10170963"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396409Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10170963",
+            "name": "Dầu gội bưởi Cocoon 310ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "COCOON",
+            "price_vnd": 261000,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396409Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10170963",
+      "question": "Mình tìm Dầu gội bưởi Cocoon 310ml, kệ nào có vậy?",
+      "expected_shelf": "A03-B03-L01-P02",
+      "response": {
+        "session_id": "bf7756fd-0718-480d-9a9d-be5eee173e30",
+        "text": "Theo sơ đồ kệ đề xuất, Dầu gội bưởi Cocoon 310ml ở vị trí A03-B03-L01-P02 (dãy A03, khoang B03, tầng L01, ô P02) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10170963"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396409Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10170963",
+            "name": "Dầu gội bưởi Cocoon 310ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "COCOON",
+            "price_vnd": 261000,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396409Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10170963",
+      "question": "Cho mình hỏi Dầu gội bưởi Cocoon 310ml nằm ở đâu?",
+      "expected_shelf": "A03-B03-L01-P02",
+      "response": {
+        "session_id": "106611a5-82e0-4fbe-b3f2-e845dff601c4",
+        "text": "Theo sơ đồ kệ đề xuất, Dầu gội bưởi Cocoon 310ml ở vị trí A03-B03-L01-P02 (dãy A03, khoang B03, tầng L01, ô P02) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10170963"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396409Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10170963",
+            "name": "Dầu gội bưởi Cocoon 310ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "COCOON",
+            "price_vnd": 261000,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396409Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10167097",
+      "question": "Khăn mặt bamboo WinMart Home  34*75*124g ở đâu?",
+      "expected_shelf": "A01-B01-L02-P05",
+      "response": {
+        "session_id": "4d146453-cbf1-471b-a690-911d4d1a3ba7",
+        "text": "Theo sơ đồ kệ đề xuất, Khăn mặt bamboo WinMart Home  34*75*124g ở vị trí A01-B01-L02-P05 (dãy A01, khoang B01, tầng L02, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10167097"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.681866Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10167097",
+            "name": "Khăn mặt bamboo WinMart Home  34*75*124g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 68600,
+            "stock": 36,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681866Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10167097",
+      "question": "Cho mình hỏi Khăn mặt bamboo WinMart Home  34*75*124g nằm ở kệ nào vậy?",
+      "expected_shelf": "A01-B01-L02-P05",
+      "response": {
+        "session_id": "e7ee4315-73ad-4474-9e77-35794eae20c2",
+        "text": "Theo sơ đồ kệ đề xuất, Khăn mặt bamboo WinMart Home  34*75*124g ở vị trí A01-B01-L02-P05 (dãy A01, khoang B01, tầng L02, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10167097"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.681866Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10167097",
+            "name": "Khăn mặt bamboo WinMart Home  34*75*124g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 68600,
+            "stock": 36,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681866Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10167097",
+      "question": "Chỉ giúp mình vị trí của Khăn mặt bamboo WinMart Home  34*75*124g nhé",
+      "expected_shelf": "A01-B01-L02-P05",
+      "response": {
+        "session_id": "4a42983c-fb4a-40d5-a6c2-5a0ab87eaa82",
+        "text": "Theo sơ đồ kệ đề xuất, Khăn mặt bamboo WinMart Home  34*75*124g ở vị trí A01-B01-L02-P05 (dãy A01, khoang B01, tầng L02, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10167097"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.681866Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10167097",
+            "name": "Khăn mặt bamboo WinMart Home  34*75*124g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 68600,
+            "stock": 36,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681866Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10167097",
+      "question": "Cho mình biết vị trí Khăn mặt bamboo WinMart Home  34*75*124g với",
+      "expected_shelf": "A01-B01-L02-P05",
+      "response": {
+        "session_id": "5ebebfa6-0d37-4f58-979e-68f7b64b92ad",
+        "text": "Theo sơ đồ kệ đề xuất, Khăn mặt bamboo WinMart Home  34*75*124g ở vị trí A01-B01-L02-P05 (dãy A01, khoang B01, tầng L02, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10167097"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.681866Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10167097",
+            "name": "Khăn mặt bamboo WinMart Home  34*75*124g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 68600,
+            "stock": 36,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681866Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10167097",
+      "question": "Mình tìm Khăn mặt bamboo WinMart Home  34*75*124g, kệ nào có vậy?",
+      "expected_shelf": "A01-B01-L02-P05",
+      "response": {
+        "session_id": "cfb5a252-d9ee-48e4-be22-58fa76bea2bd",
+        "text": "Theo sơ đồ kệ đề xuất, Khăn mặt bamboo WinMart Home  34*75*124g ở vị trí A01-B01-L02-P05 (dãy A01, khoang B01, tầng L02, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10167097"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.681866Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10167097",
+            "name": "Khăn mặt bamboo WinMart Home  34*75*124g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 68600,
+            "stock": 36,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681866Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10167097",
+      "question": "Cho mình hỏi Khăn mặt bamboo WinMart Home  34*75*124g nằm ở đâu?",
+      "expected_shelf": "A01-B01-L02-P05",
+      "response": {
+        "session_id": "f524a25e-315b-46c8-b7bc-88881527ac88",
+        "text": "Theo sơ đồ kệ đề xuất, Khăn mặt bamboo WinMart Home  34*75*124g ở vị trí A01-B01-L02-P05 (dãy A01, khoang B01, tầng L02, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10167097"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.681866Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10167097",
+            "name": "Khăn mặt bamboo WinMart Home  34*75*124g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 68600,
+            "stock": 36,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681866Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10194712",
+      "question": "COCA-COLA Nc Zero SS.pet 390ml ở đâu?",
+      "expected_shelf": "A10-B03-L05-P07",
+      "response": {
+        "session_id": "2d32bd10-c557-49e3-944c-593bc5fd3a66",
+        "text": "Theo sơ đồ kệ đề xuất, COCA-COLA Nc Zero SS.pet 390ml ở vị trí A10-B03-L05-P07 (dãy A10, khoang B03, tầng L05, ô P07) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10194712"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:40.205139Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10194712",
+            "name": "COCA-COLA Nc Zero SS.pet 390ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 179800,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Thùng",
+            "data_timestamp": "2026-09-15T13:53:40.205139Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10194712",
+      "question": "Cho mình hỏi COCA-COLA Nc Zero SS.pet 390ml nằm ở kệ nào vậy?",
+      "expected_shelf": "A10-B03-L05-P07",
+      "response": {
+        "session_id": "78b70d77-592f-4d98-bffb-047297eda531",
+        "text": "Theo sơ đồ kệ đề xuất, COCA-COLA Nc Zero SS.pet 390ml ở vị trí A10-B03-L05-P07 (dãy A10, khoang B03, tầng L05, ô P07) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10194712"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:40.205139Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10194712",
+            "name": "COCA-COLA Nc Zero SS.pet 390ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 179800,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Thùng",
+            "data_timestamp": "2026-09-15T13:53:40.205139Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10194712",
+      "question": "Chỉ giúp mình vị trí của COCA-COLA Nc Zero SS.pet 390ml nhé",
+      "expected_shelf": "A10-B03-L05-P07",
+      "response": {
+        "session_id": "c2df7311-2906-48d0-b3e1-fa30b2f12b39",
+        "text": "Theo sơ đồ kệ đề xuất, COCA-COLA Nc Zero SS.pet 390ml ở vị trí A10-B03-L05-P07 (dãy A10, khoang B03, tầng L05, ô P07) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10194712"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:40.205139Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10194712",
+            "name": "COCA-COLA Nc Zero SS.pet 390ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 179800,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Thùng",
+            "data_timestamp": "2026-09-15T13:53:40.205139Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10194712",
+      "question": "Cho mình biết vị trí COCA-COLA Nc Zero SS.pet 390ml với",
+      "expected_shelf": "A10-B03-L05-P07",
+      "response": {
+        "session_id": "50a92882-4da4-460f-9fa5-5a9c852e710e",
+        "text": "Theo sơ đồ kệ đề xuất, COCA-COLA Nc Zero SS.pet 390ml ở vị trí A10-B03-L05-P07 (dãy A10, khoang B03, tầng L05, ô P07) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10194712"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:40.205139Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10194712",
+            "name": "COCA-COLA Nc Zero SS.pet 390ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 179800,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Thùng",
+            "data_timestamp": "2026-09-15T13:53:40.205139Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10194712",
+      "question": "Mình tìm COCA-COLA Nc Zero SS.pet 390ml, kệ nào có vậy?",
+      "expected_shelf": "A10-B03-L05-P07",
+      "response": {
+        "session_id": "3027b10f-0366-4fa3-b2c7-7db981278e3a",
+        "text": "Theo sơ đồ kệ đề xuất, COCA-COLA Nc Zero SS.pet 390ml ở vị trí A10-B03-L05-P07 (dãy A10, khoang B03, tầng L05, ô P07) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10194712"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:40.205139Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10194712",
+            "name": "COCA-COLA Nc Zero SS.pet 390ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 179800,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Thùng",
+            "data_timestamp": "2026-09-15T13:53:40.205139Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10194712",
+      "question": "Cho mình hỏi COCA-COLA Nc Zero SS.pet 390ml nằm ở đâu?",
+      "expected_shelf": "A10-B03-L05-P07",
+      "response": {
+        "session_id": "b25746c2-3c32-4641-9f6c-26110112d44a",
+        "text": "Theo sơ đồ kệ đề xuất, COCA-COLA Nc Zero SS.pet 390ml ở vị trí A10-B03-L05-P07 (dãy A10, khoang B03, tầng L05, ô P07) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10194712"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:40.205139Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10194712",
+            "name": "COCA-COLA Nc Zero SS.pet 390ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 179800,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Thùng",
+            "data_timestamp": "2026-09-15T13:53:40.205139Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10161777",
+      "question": "Nước giặt Omo bền đẹp cửa trước túi 2,8kg ở đâu?",
+      "expected_shelf": "A03-B07-L02-P04",
+      "response": {
+        "session_id": "fc721872-e48f-4514-bab5-c659df299ce6",
+        "text": "Theo sơ đồ kệ đề xuất, Nước giặt Omo bền đẹp cửa trước túi 2,8kg ở vị trí A03-B07-L02-P04 (dãy A03, khoang B07, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10161777"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.061085Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10161777",
+            "name": "Nước giặt Omo bền đẹp cửa trước túi 2,8kg",
+            "category": "Nước Giặt",
+            "brand": "OMO",
+            "price_vnd": 185000,
+            "stock": 29,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.061085Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10161777",
+      "question": "Cho mình hỏi Nước giặt Omo bền đẹp cửa trước túi 2,8kg nằm ở kệ nào vậy?",
+      "expected_shelf": "A03-B07-L02-P04",
+      "response": {
+        "session_id": "2924752e-d6dc-4529-9863-f94a462f0bf7",
+        "text": "Theo sơ đồ kệ đề xuất, Nước giặt Omo bền đẹp cửa trước túi 2,8kg ở vị trí A03-B07-L02-P04 (dãy A03, khoang B07, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10161777"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.061085Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10161777",
+            "name": "Nước giặt Omo bền đẹp cửa trước túi 2,8kg",
+            "category": "Nước Giặt",
+            "brand": "OMO",
+            "price_vnd": 185000,
+            "stock": 29,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.061085Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10161777",
+      "question": "Chỉ giúp mình vị trí của Nước giặt Omo bền đẹp cửa trước túi 2,8kg nhé",
+      "expected_shelf": "A03-B07-L02-P04",
+      "response": {
+        "session_id": "380ecffd-7ad3-483d-8f40-de882cc3150b",
+        "text": "Theo sơ đồ kệ đề xuất, Nước giặt Omo bền đẹp cửa trước túi 2,8kg ở vị trí A03-B07-L02-P04 (dãy A03, khoang B07, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10161777"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.061085Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10161777",
+            "name": "Nước giặt Omo bền đẹp cửa trước túi 2,8kg",
+            "category": "Nước Giặt",
+            "brand": "OMO",
+            "price_vnd": 185000,
+            "stock": 29,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.061085Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10161777",
+      "question": "Cho mình biết vị trí Nước giặt Omo bền đẹp cửa trước túi 2,8kg với",
+      "expected_shelf": "A03-B07-L02-P04",
+      "response": {
+        "session_id": "cf639a01-6676-4fc1-89db-300fd1b9ed83",
+        "text": "Theo sơ đồ kệ đề xuất, Nước giặt Omo bền đẹp cửa trước túi 2,8kg ở vị trí A03-B07-L02-P04 (dãy A03, khoang B07, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10161777"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.061085Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10161777",
+            "name": "Nước giặt Omo bền đẹp cửa trước túi 2,8kg",
+            "category": "Nước Giặt",
+            "brand": "OMO",
+            "price_vnd": 185000,
+            "stock": 29,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.061085Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10161777",
+      "question": "Mình tìm Nước giặt Omo bền đẹp cửa trước túi 2,8kg, kệ nào có vậy?",
+      "expected_shelf": "A03-B07-L02-P04",
+      "response": {
+        "session_id": "4640d847-4c4a-4c5a-a18d-3aaf9cdfca84",
+        "text": "Theo sơ đồ kệ đề xuất, Nước giặt Omo bền đẹp cửa trước túi 2,8kg ở vị trí A03-B07-L02-P04 (dãy A03, khoang B07, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10161777"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.061085Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10161777",
+            "name": "Nước giặt Omo bền đẹp cửa trước túi 2,8kg",
+            "category": "Nước Giặt",
+            "brand": "OMO",
+            "price_vnd": 185000,
+            "stock": 29,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.061085Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10161777",
+      "question": "Cho mình hỏi Nước giặt Omo bền đẹp cửa trước túi 2,8kg nằm ở đâu?",
+      "expected_shelf": "A03-B07-L02-P04",
+      "response": {
+        "session_id": "5be2717a-433c-4563-8653-196fc1917cc9",
+        "text": "Theo sơ đồ kệ đề xuất, Nước giặt Omo bền đẹp cửa trước túi 2,8kg ở vị trí A03-B07-L02-P04 (dãy A03, khoang B07, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10161777"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.061085Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10161777",
+            "name": "Nước giặt Omo bền đẹp cửa trước túi 2,8kg",
+            "category": "Nước Giặt",
+            "brand": "OMO",
+            "price_vnd": 185000,
+            "stock": 29,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.061085Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009734",
+      "question": "Gạo giống Nhật Bảo Minh túi 5kg ở đâu?",
+      "expected_shelf": "A07-B06-L04-P01",
+      "response": {
+        "session_id": "d2f7c32a-6f03-409f-8a29-188d129d5287",
+        "text": "Theo sơ đồ kệ đề xuất, Gạo giống Nhật Bảo Minh túi 5kg ở vị trí A07-B06-L04-P01 (dãy A07, khoang B06, tầng L04, ô P01) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009734"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.363401Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009734",
+            "name": "Gạo giống Nhật Bảo Minh túi 5kg",
+            "category": "Gạo - Nông Sản Khô",
+            "brand": "BẢO MINH",
+            "price_vnd": 170000,
+            "stock": 15,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.363401Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009734",
+      "question": "Cho mình hỏi Gạo giống Nhật Bảo Minh túi 5kg nằm ở kệ nào vậy?",
+      "expected_shelf": "A07-B06-L04-P01",
+      "response": {
+        "session_id": "19b520ac-c619-4b25-abc7-cd9a6c78acd4",
+        "text": "Theo sơ đồ kệ đề xuất, Gạo giống Nhật Bảo Minh túi 5kg ở vị trí A07-B06-L04-P01 (dãy A07, khoang B06, tầng L04, ô P01) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009734"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.363401Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009734",
+            "name": "Gạo giống Nhật Bảo Minh túi 5kg",
+            "category": "Gạo - Nông Sản Khô",
+            "brand": "BẢO MINH",
+            "price_vnd": 170000,
+            "stock": 15,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.363401Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009734",
+      "question": "Chỉ giúp mình vị trí của Gạo giống Nhật Bảo Minh túi 5kg nhé",
+      "expected_shelf": "A07-B06-L04-P01",
+      "response": {
+        "session_id": "68aab7f4-c0c0-437d-8962-b5148538460c",
+        "text": "Theo sơ đồ kệ đề xuất, Gạo giống Nhật Bảo Minh túi 5kg ở vị trí A07-B06-L04-P01 (dãy A07, khoang B06, tầng L04, ô P01) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009734"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.363401Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009734",
+            "name": "Gạo giống Nhật Bảo Minh túi 5kg",
+            "category": "Gạo - Nông Sản Khô",
+            "brand": "BẢO MINH",
+            "price_vnd": 170000,
+            "stock": 15,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.363401Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009734",
+      "question": "Cho mình biết vị trí Gạo giống Nhật Bảo Minh túi 5kg với",
+      "expected_shelf": "A07-B06-L04-P01",
+      "response": {
+        "session_id": "18a89e0a-9765-40cc-97fb-e469193f2ce8",
+        "text": "Theo sơ đồ kệ đề xuất, Gạo giống Nhật Bảo Minh túi 5kg ở vị trí A07-B06-L04-P01 (dãy A07, khoang B06, tầng L04, ô P01) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009734"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.363401Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009734",
+            "name": "Gạo giống Nhật Bảo Minh túi 5kg",
+            "category": "Gạo - Nông Sản Khô",
+            "brand": "BẢO MINH",
+            "price_vnd": 170000,
+            "stock": 15,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.363401Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009734",
+      "question": "Mình tìm Gạo giống Nhật Bảo Minh túi 5kg, kệ nào có vậy?",
+      "expected_shelf": "A07-B06-L04-P01",
+      "response": {
+        "session_id": "771e5d0b-57bb-4237-936a-f03e349a7084",
+        "text": "Theo sơ đồ kệ đề xuất, Gạo giống Nhật Bảo Minh túi 5kg ở vị trí A07-B06-L04-P01 (dãy A07, khoang B06, tầng L04, ô P01) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009734"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.363401Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009734",
+            "name": "Gạo giống Nhật Bảo Minh túi 5kg",
+            "category": "Gạo - Nông Sản Khô",
+            "brand": "BẢO MINH",
+            "price_vnd": 170000,
+            "stock": 15,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.363401Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009734",
+      "question": "Cho mình hỏi Gạo giống Nhật Bảo Minh túi 5kg nằm ở đâu?",
+      "expected_shelf": "A07-B06-L04-P01",
+      "response": {
+        "session_id": "ccb3abf1-85d5-45e7-92ff-aff72286a5da",
+        "text": "Theo sơ đồ kệ đề xuất, Gạo giống Nhật Bảo Minh túi 5kg ở vị trí A07-B06-L04-P01 (dãy A07, khoang B06, tầng L04, ô P01) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009734"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.363401Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009734",
+            "name": "Gạo giống Nhật Bảo Minh túi 5kg",
+            "category": "Gạo - Nông Sản Khô",
+            "brand": "BẢO MINH",
+            "price_vnd": 170000,
+            "stock": 15,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.363401Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009553",
+      "question": "Nước mắm cao cấp Barona vị xưa chai 500ml ở đâu?",
+      "expected_shelf": "A10-B02-L05-P05",
+      "response": {
+        "session_id": "9d66a094-faa5-49dd-aa0f-67fc5b9250e0",
+        "text": "Theo sơ đồ kệ đề xuất, Nước mắm cao cấp Barona vị xưa chai 500ml ở vị trí A10-B02-L05-P05 (dãy A10, khoang B02, tầng L05, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009553"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:42.605990Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009553",
+            "name": "Nước mắm cao cấp Barona vị xưa chai 500ml",
+            "category": "Nước Mắm - Nước Chấm",
+            "brand": "BARONA",
+            "price_vnd": 86500,
+            "stock": 50,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:42.605990Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009553",
+      "question": "Cho mình hỏi Nước mắm cao cấp Barona vị xưa chai 500ml nằm ở kệ nào vậy?",
+      "expected_shelf": "A10-B02-L05-P05",
+      "response": {
+        "session_id": "9051ff41-da99-424c-9e2f-4cba9130f846",
+        "text": "Theo sơ đồ kệ đề xuất, Nước mắm cao cấp Barona vị xưa chai 500ml ở vị trí A10-B02-L05-P05 (dãy A10, khoang B02, tầng L05, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009553"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:42.605990Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009553",
+            "name": "Nước mắm cao cấp Barona vị xưa chai 500ml",
+            "category": "Nước Mắm - Nước Chấm",
+            "brand": "BARONA",
+            "price_vnd": 86500,
+            "stock": 50,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:42.605990Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009553",
+      "question": "Chỉ giúp mình vị trí của Nước mắm cao cấp Barona vị xưa chai 500ml nhé",
+      "expected_shelf": "A10-B02-L05-P05",
+      "response": {
+        "session_id": "1115735c-7a19-4a8f-9dc7-f22d301bc9e8",
+        "text": "Theo sơ đồ kệ đề xuất, Nước mắm cao cấp Barona vị xưa chai 500ml ở vị trí A10-B02-L05-P05 (dãy A10, khoang B02, tầng L05, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009553"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:42.605990Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009553",
+            "name": "Nước mắm cao cấp Barona vị xưa chai 500ml",
+            "category": "Nước Mắm - Nước Chấm",
+            "brand": "BARONA",
+            "price_vnd": 86500,
+            "stock": 50,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:42.605990Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009553",
+      "question": "Cho mình biết vị trí Nước mắm cao cấp Barona vị xưa chai 500ml với",
+      "expected_shelf": "A10-B02-L05-P05",
+      "response": {
+        "session_id": "6560e1e2-108a-4c5d-9ad7-3b614ec10211",
+        "text": "Theo sơ đồ kệ đề xuất, Nước mắm cao cấp Barona vị xưa chai 500ml ở vị trí A10-B02-L05-P05 (dãy A10, khoang B02, tầng L05, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009553"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:42.605990Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009553",
+            "name": "Nước mắm cao cấp Barona vị xưa chai 500ml",
+            "category": "Nước Mắm - Nước Chấm",
+            "brand": "BARONA",
+            "price_vnd": 86500,
+            "stock": 50,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:42.605990Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009553",
+      "question": "Mình tìm Nước mắm cao cấp Barona vị xưa chai 500ml, kệ nào có vậy?",
+      "expected_shelf": "A10-B02-L05-P05",
+      "response": {
+        "session_id": "8bca0020-2770-401b-824f-e05c224fcdca",
+        "text": "Theo sơ đồ kệ đề xuất, Nước mắm cao cấp Barona vị xưa chai 500ml ở vị trí A10-B02-L05-P05 (dãy A10, khoang B02, tầng L05, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009553"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:42.605990Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009553",
+            "name": "Nước mắm cao cấp Barona vị xưa chai 500ml",
+            "category": "Nước Mắm - Nước Chấm",
+            "brand": "BARONA",
+            "price_vnd": 86500,
+            "stock": 50,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:42.605990Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10009553",
+      "question": "Cho mình hỏi Nước mắm cao cấp Barona vị xưa chai 500ml nằm ở đâu?",
+      "expected_shelf": "A10-B02-L05-P05",
+      "response": {
+        "session_id": "8e4a349e-6138-4e98-9467-44ede4119ac7",
+        "text": "Theo sơ đồ kệ đề xuất, Nước mắm cao cấp Barona vị xưa chai 500ml ở vị trí A10-B02-L05-P05 (dãy A10, khoang B02, tầng L05, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009553"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:42.605990Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009553",
+            "name": "Nước mắm cao cấp Barona vị xưa chai 500ml",
+            "category": "Nước Mắm - Nước Chấm",
+            "brand": "BARONA",
+            "price_vnd": 86500,
+            "stock": 50,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:42.605990Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10012928",
+      "question": "Cà phê phố sữa đá MacCoffee (24gx10) 240g ở đâu?",
+      "expected_shelf": "A07-B02-L01-P03",
+      "response": {
+        "session_id": "88c96e40-bba5-4278-9395-8f8394876839",
+        "text": "Theo sơ đồ kệ đề xuất, Cà phê phố sữa đá MacCoffee (24gx10) 240g ở vị trí A07-B02-L01-P03 (dãy A07, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10012928"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:32.689840Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10012928",
+            "name": "Cà phê phố sữa đá MacCoffee (24gx10) 240g",
+            "category": "Cà Phê",
+            "brand": "MACCOFFEE",
+            "price_vnd": 68700,
+            "stock": 5,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:32.689840Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10012928",
+      "question": "Cho mình hỏi Cà phê phố sữa đá MacCoffee (24gx10) 240g nằm ở kệ nào vậy?",
+      "expected_shelf": "A07-B02-L01-P03",
+      "response": {
+        "session_id": "1010b3c5-8b38-4b26-81e7-8c5e103efad8",
+        "text": "Theo sơ đồ kệ đề xuất, Cà phê phố sữa đá MacCoffee (24gx10) 240g ở vị trí A07-B02-L01-P03 (dãy A07, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10012928"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:32.689840Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10012928",
+            "name": "Cà phê phố sữa đá MacCoffee (24gx10) 240g",
+            "category": "Cà Phê",
+            "brand": "MACCOFFEE",
+            "price_vnd": 68700,
+            "stock": 5,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:32.689840Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10012928",
+      "question": "Chỉ giúp mình vị trí của Cà phê phố sữa đá MacCoffee (24gx10) 240g nhé",
+      "expected_shelf": "A07-B02-L01-P03",
+      "response": {
+        "session_id": "2fd15c1a-f09b-4e14-8f58-71d6533fc90b",
+        "text": "Theo sơ đồ kệ đề xuất, Cà phê phố sữa đá MacCoffee (24gx10) 240g ở vị trí A07-B02-L01-P03 (dãy A07, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10012928"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:32.689840Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10012928",
+            "name": "Cà phê phố sữa đá MacCoffee (24gx10) 240g",
+            "category": "Cà Phê",
+            "brand": "MACCOFFEE",
+            "price_vnd": 68700,
+            "stock": 5,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:32.689840Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10012928",
+      "question": "Cho mình biết vị trí Cà phê phố sữa đá MacCoffee (24gx10) 240g với",
+      "expected_shelf": "A07-B02-L01-P03",
+      "response": {
+        "session_id": "25d442d7-292a-40ab-bfbf-f13d1bf61016",
+        "text": "Theo sơ đồ kệ đề xuất, Cà phê phố sữa đá MacCoffee (24gx10) 240g ở vị trí A07-B02-L01-P03 (dãy A07, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10012928"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:32.689840Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10012928",
+            "name": "Cà phê phố sữa đá MacCoffee (24gx10) 240g",
+            "category": "Cà Phê",
+            "brand": "MACCOFFEE",
+            "price_vnd": 68700,
+            "stock": 5,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:32.689840Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10012928",
+      "question": "Mình tìm Cà phê phố sữa đá MacCoffee (24gx10) 240g, kệ nào có vậy?",
+      "expected_shelf": "A07-B02-L01-P03",
+      "response": {
+        "session_id": "e25c1dae-84e8-469d-86b5-02ae907859aa",
+        "text": "Theo sơ đồ kệ đề xuất, Cà phê phố sữa đá MacCoffee (24gx10) 240g ở vị trí A07-B02-L01-P03 (dãy A07, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10012928"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:32.689840Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10012928",
+            "name": "Cà phê phố sữa đá MacCoffee (24gx10) 240g",
+            "category": "Cà Phê",
+            "brand": "MACCOFFEE",
+            "price_vnd": 68700,
+            "stock": 5,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:32.689840Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10012928",
+      "question": "Cho mình hỏi Cà phê phố sữa đá MacCoffee (24gx10) 240g nằm ở đâu?",
+      "expected_shelf": "A07-B02-L01-P03",
+      "response": {
+        "session_id": "51f7adb3-5bf7-4386-b93d-fcdfb6fbffc5",
+        "text": "Theo sơ đồ kệ đề xuất, Cà phê phố sữa đá MacCoffee (24gx10) 240g ở vị trí A07-B02-L01-P03 (dãy A07, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10012928"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:32.689840Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10012928",
+            "name": "Cà phê phố sữa đá MacCoffee (24gx10) 240g",
+            "category": "Cà Phê",
+            "brand": "MACCOFFEE",
+            "price_vnd": 68700,
+            "stock": 5,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:32.689840Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10017633",
+      "question": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g ở đâu?",
+      "expected_shelf": "A02-B02-L01-P03",
+      "response": {
+        "session_id": "e729f900-dfd7-45b4-84ec-0a292f7a5331",
+        "text": "Theo sơ đồ kệ đề xuất, Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g ở vị trí A02-B02-L01-P03 (dãy A02, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017633"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.400664Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017633",
+            "name": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 17,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400664Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10017633",
+      "question": "Cho mình hỏi Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g nằm ở kệ nào vậy?",
+      "expected_shelf": "A02-B02-L01-P03",
+      "response": {
+        "session_id": "f950e509-dc1d-4a0e-954f-56495b96ba4a",
+        "text": "Theo sơ đồ kệ đề xuất, Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g ở vị trí A02-B02-L01-P03 (dãy A02, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017633"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.400664Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017633",
+            "name": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 17,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400664Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10017633",
+      "question": "Chỉ giúp mình vị trí của Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g nhé",
+      "expected_shelf": "A02-B02-L01-P03",
+      "response": {
+        "session_id": "c1cfdf1c-6bc3-4fd1-abb9-01d07de5e347",
+        "text": "Theo sơ đồ kệ đề xuất, Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g ở vị trí A02-B02-L01-P03 (dãy A02, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017633"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.400664Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017633",
+            "name": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 17,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400664Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10017633",
+      "question": "Cho mình biết vị trí Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g với",
+      "expected_shelf": "A02-B02-L01-P03",
+      "response": {
+        "session_id": "796c7690-6165-4dab-b8c7-a9bbb82115c1",
+        "text": "Theo sơ đồ kệ đề xuất, Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g ở vị trí A02-B02-L01-P03 (dãy A02, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017633"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.400664Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017633",
+            "name": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 17,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400664Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10017633",
+      "question": "Mình tìm Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g, kệ nào có vậy?",
+      "expected_shelf": "A02-B02-L01-P03",
+      "response": {
+        "session_id": "7f1fbaa9-8ec8-4435-a1c6-d42dd1545077",
+        "text": "Theo sơ đồ kệ đề xuất, Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g ở vị trí A02-B02-L01-P03 (dãy A02, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017633"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.400664Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017633",
+            "name": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 17,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400664Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10017633",
+      "question": "Cho mình hỏi Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g nằm ở đâu?",
+      "expected_shelf": "A02-B02-L01-P03",
+      "response": {
+        "session_id": "fca72218-491f-4967-ba77-1a8fe4abf007",
+        "text": "Theo sơ đồ kệ đề xuất, Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g ở vị trí A02-B02-L01-P03 (dãy A02, khoang B02, tầng L01, ô P03) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017633"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.400664Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017633",
+            "name": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 17,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400664Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10140199",
+      "question": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g ở đâu?",
+      "expected_shelf": "A11-B08-L02-P04",
+      "response": {
+        "session_id": "3636f17e-254b-4f42-94ac-a8e3c66c77c7",
+        "text": "Theo sơ đồ kệ đề xuất, Ba chỉ bò Úc  cắt lát  Kiaora khay 200g ở vị trí A11-B08-L02-P04 (dãy A11, khoang B08, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10140199"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366166Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10140199",
+            "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+            "category": "Thịt",
+            "brand": "KIAORA",
+            "price_vnd": 87100,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Khay",
+            "data_timestamp": "2026-09-15T13:53:54.366166Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10140199",
+      "question": "Cho mình hỏi Ba chỉ bò Úc  cắt lát  Kiaora khay 200g nằm ở kệ nào vậy?",
+      "expected_shelf": "A11-B08-L02-P04",
+      "response": {
+        "session_id": "d47b60dc-b3c2-4aa9-a514-ad3865ed08d6",
+        "text": "Theo sơ đồ kệ đề xuất, Ba chỉ bò Úc  cắt lát  Kiaora khay 200g ở vị trí A11-B08-L02-P04 (dãy A11, khoang B08, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10140199"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366166Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10140199",
+            "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+            "category": "Thịt",
+            "brand": "KIAORA",
+            "price_vnd": 87100,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Khay",
+            "data_timestamp": "2026-09-15T13:53:54.366166Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10140199",
+      "question": "Chỉ giúp mình vị trí của Ba chỉ bò Úc  cắt lát  Kiaora khay 200g nhé",
+      "expected_shelf": "A11-B08-L02-P04",
+      "response": {
+        "session_id": "de294dbd-4058-493a-b00e-e010574a17ac",
+        "text": "Theo sơ đồ kệ đề xuất, Ba chỉ bò Úc  cắt lát  Kiaora khay 200g ở vị trí A11-B08-L02-P04 (dãy A11, khoang B08, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10140199"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366166Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10140199",
+            "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+            "category": "Thịt",
+            "brand": "KIAORA",
+            "price_vnd": 87100,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Khay",
+            "data_timestamp": "2026-09-15T13:53:54.366166Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10140199",
+      "question": "Cho mình biết vị trí Ba chỉ bò Úc  cắt lát  Kiaora khay 200g với",
+      "expected_shelf": "A11-B08-L02-P04",
+      "response": {
+        "session_id": "23c317c7-e727-41f9-bdfc-ca01bc846561",
+        "text": "Theo sơ đồ kệ đề xuất, Ba chỉ bò Úc  cắt lát  Kiaora khay 200g ở vị trí A11-B08-L02-P04 (dãy A11, khoang B08, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10140199"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366166Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10140199",
+            "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+            "category": "Thịt",
+            "brand": "KIAORA",
+            "price_vnd": 87100,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Khay",
+            "data_timestamp": "2026-09-15T13:53:54.366166Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10140199",
+      "question": "Mình tìm Ba chỉ bò Úc  cắt lát  Kiaora khay 200g, kệ nào có vậy?",
+      "expected_shelf": "A11-B08-L02-P04",
+      "response": {
+        "session_id": "e344267a-60a7-4845-981f-293b751a0196",
+        "text": "Theo sơ đồ kệ đề xuất, Ba chỉ bò Úc  cắt lát  Kiaora khay 200g ở vị trí A11-B08-L02-P04 (dãy A11, khoang B08, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10140199"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366166Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10140199",
+            "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+            "category": "Thịt",
+            "brand": "KIAORA",
+            "price_vnd": 87100,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Khay",
+            "data_timestamp": "2026-09-15T13:53:54.366166Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10140199",
+      "question": "Cho mình hỏi Ba chỉ bò Úc  cắt lát  Kiaora khay 200g nằm ở đâu?",
+      "expected_shelf": "A11-B08-L02-P04",
+      "response": {
+        "session_id": "829c5e66-f792-4c93-a781-2e6e31fdbbec",
+        "text": "Theo sơ đồ kệ đề xuất, Ba chỉ bò Úc  cắt lát  Kiaora khay 200g ở vị trí A11-B08-L02-P04 (dãy A11, khoang B08, tầng L02, ô P04) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10140199"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366166Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10140199",
+            "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+            "category": "Thịt",
+            "brand": "KIAORA",
+            "price_vnd": 87100,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Khay",
+            "data_timestamp": "2026-09-15T13:53:54.366166Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10322820",
+      "question": "Bim bim Poppedcorn quẩy soắn 280g ở đâu?",
+      "expected_shelf": "A06-B02-L03-P08",
+      "response": {
+        "session_id": "b1e955c8-9ed4-43dd-bf2a-e529024617fc",
+        "text": "Theo sơ đồ kệ đề xuất, Bim bim Poppedcorn quẩy soắn 280g ở vị trí A06-B02-L03-P08 (dãy A06, khoang B02, tầng L03, ô P08) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10322820"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:30.447693Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10322820",
+            "name": "Bim bim Poppedcorn quẩy soắn 280g",
+            "category": "Bánh Snack",
+            "brand": "POPPEDCORN",
+            "price_vnd": 57500,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:30.447693Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10322820",
+      "question": "Cho mình hỏi Bim bim Poppedcorn quẩy soắn 280g nằm ở kệ nào vậy?",
+      "expected_shelf": "A06-B02-L03-P08",
+      "response": {
+        "session_id": "ea908350-26cc-48ad-a452-6d566cbf0fdd",
+        "text": "Theo sơ đồ kệ đề xuất, Bim bim Poppedcorn quẩy soắn 280g ở vị trí A06-B02-L03-P08 (dãy A06, khoang B02, tầng L03, ô P08) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10322820"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:30.447693Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10322820",
+            "name": "Bim bim Poppedcorn quẩy soắn 280g",
+            "category": "Bánh Snack",
+            "brand": "POPPEDCORN",
+            "price_vnd": 57500,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:30.447693Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10322820",
+      "question": "Chỉ giúp mình vị trí của Bim bim Poppedcorn quẩy soắn 280g nhé",
+      "expected_shelf": "A06-B02-L03-P08",
+      "response": {
+        "session_id": "da27a4d4-0a91-47f4-9001-24a3bfd72ee4",
+        "text": "Theo sơ đồ kệ đề xuất, Bim bim Poppedcorn quẩy soắn 280g ở vị trí A06-B02-L03-P08 (dãy A06, khoang B02, tầng L03, ô P08) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10322820"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:30.447693Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10322820",
+            "name": "Bim bim Poppedcorn quẩy soắn 280g",
+            "category": "Bánh Snack",
+            "brand": "POPPEDCORN",
+            "price_vnd": 57500,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:30.447693Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10322820",
+      "question": "Cho mình biết vị trí Bim bim Poppedcorn quẩy soắn 280g với",
+      "expected_shelf": "A06-B02-L03-P08",
+      "response": {
+        "session_id": "53d840a0-95df-4137-a011-de84b3b58a59",
+        "text": "Theo sơ đồ kệ đề xuất, Bim bim Poppedcorn quẩy soắn 280g ở vị trí A06-B02-L03-P08 (dãy A06, khoang B02, tầng L03, ô P08) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10322820"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:30.447693Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10322820",
+            "name": "Bim bim Poppedcorn quẩy soắn 280g",
+            "category": "Bánh Snack",
+            "brand": "POPPEDCORN",
+            "price_vnd": 57500,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:30.447693Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10322820",
+      "question": "Mình tìm Bim bim Poppedcorn quẩy soắn 280g, kệ nào có vậy?",
+      "expected_shelf": "A06-B02-L03-P08",
+      "response": {
+        "session_id": "42db209b-9eba-4842-ae0a-e3211466f7b5",
+        "text": "Theo sơ đồ kệ đề xuất, Bim bim Poppedcorn quẩy soắn 280g ở vị trí A06-B02-L03-P08 (dãy A06, khoang B02, tầng L03, ô P08) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10322820"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:30.447693Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10322820",
+            "name": "Bim bim Poppedcorn quẩy soắn 280g",
+            "category": "Bánh Snack",
+            "brand": "POPPEDCORN",
+            "price_vnd": 57500,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:30.447693Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10322820",
+      "question": "Cho mình hỏi Bim bim Poppedcorn quẩy soắn 280g nằm ở đâu?",
+      "expected_shelf": "A06-B02-L03-P08",
+      "response": {
+        "session_id": "38202894-40e9-494e-a6f9-cc041c371472",
+        "text": "Theo sơ đồ kệ đề xuất, Bim bim Poppedcorn quẩy soắn 280g ở vị trí A06-B02-L03-P08 (dãy A06, khoang B02, tầng L03, ô P08) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10322820"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:30.447693Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10322820",
+            "name": "Bim bim Poppedcorn quẩy soắn 280g",
+            "category": "Bánh Snack",
+            "brand": "POPPEDCORN",
+            "price_vnd": 57500,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:30.447693Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10618196",
+      "question": "Miến dong Bắc Kạn Thiên Nhiên Xanh 500g ở đâu?",
+      "expected_shelf": "A10-B01-L01-P05",
+      "response": {
+        "session_id": "135671a6-1090-497b-b226-fcc1eb3c6b92",
+        "text": "Theo sơ đồ kệ đề xuất, Miến dong Bắc Kạn Thiên Nhiên Xanh 500g ở vị trí A10-B01-L01-P05 (dãy A10, khoang B01, tầng L01, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10618196"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:47.629127Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10618196",
+            "name": "Miến dong Bắc Kạn Thiên Nhiên Xanh 500g",
+            "category": "Miến - Hủ Tíu - Bánh Canh",
+            "brand": "THIÊN NHIÊN XANH",
+            "price_vnd": 84400,
+            "stock": 104,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:47.629127Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10618196",
+      "question": "Cho mình hỏi Miến dong Bắc Kạn Thiên Nhiên Xanh 500g nằm ở kệ nào vậy?",
+      "expected_shelf": "A10-B01-L01-P05",
+      "response": {
+        "session_id": "63328791-fe93-4c07-a3b6-6938d27030dc",
+        "text": "Theo sơ đồ kệ đề xuất, Miến dong Bắc Kạn Thiên Nhiên Xanh 500g ở vị trí A10-B01-L01-P05 (dãy A10, khoang B01, tầng L01, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10618196"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:47.629127Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10618196",
+            "name": "Miến dong Bắc Kạn Thiên Nhiên Xanh 500g",
+            "category": "Miến - Hủ Tíu - Bánh Canh",
+            "brand": "THIÊN NHIÊN XANH",
+            "price_vnd": 84400,
+            "stock": 104,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:47.629127Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10618196",
+      "question": "Chỉ giúp mình vị trí của Miến dong Bắc Kạn Thiên Nhiên Xanh 500g nhé",
+      "expected_shelf": "A10-B01-L01-P05",
+      "response": {
+        "session_id": "1f933fc5-1cac-4bbd-8f3d-a9d8970f006a",
+        "text": "Theo sơ đồ kệ đề xuất, Miến dong Bắc Kạn Thiên Nhiên Xanh 500g ở vị trí A10-B01-L01-P05 (dãy A10, khoang B01, tầng L01, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10618196"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:47.629127Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10618196",
+            "name": "Miến dong Bắc Kạn Thiên Nhiên Xanh 500g",
+            "category": "Miến - Hủ Tíu - Bánh Canh",
+            "brand": "THIÊN NHIÊN XANH",
+            "price_vnd": 84400,
+            "stock": 104,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:47.629127Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10618196",
+      "question": "Cho mình biết vị trí Miến dong Bắc Kạn Thiên Nhiên Xanh 500g với",
+      "expected_shelf": "A10-B01-L01-P05",
+      "response": {
+        "session_id": "b2189028-a12c-463d-892f-064b3fe6a55b",
+        "text": "Theo sơ đồ kệ đề xuất, Miến dong Bắc Kạn Thiên Nhiên Xanh 500g ở vị trí A10-B01-L01-P05 (dãy A10, khoang B01, tầng L01, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10618196"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:47.629127Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10618196",
+            "name": "Miến dong Bắc Kạn Thiên Nhiên Xanh 500g",
+            "category": "Miến - Hủ Tíu - Bánh Canh",
+            "brand": "THIÊN NHIÊN XANH",
+            "price_vnd": 84400,
+            "stock": 104,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:47.629127Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10618196",
+      "question": "Mình tìm Miến dong Bắc Kạn Thiên Nhiên Xanh 500g, kệ nào có vậy?",
+      "expected_shelf": "A10-B01-L01-P05",
+      "response": {
+        "session_id": "ebdda39d-a8f6-406b-863c-112a58a60209",
+        "text": "Theo sơ đồ kệ đề xuất, Miến dong Bắc Kạn Thiên Nhiên Xanh 500g ở vị trí A10-B01-L01-P05 (dãy A10, khoang B01, tầng L01, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10618196"
+        ],
+        "tools_used": [
+          "recommend_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:47.629127Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10618196",
+            "name": "Miến dong Bắc Kạn Thiên Nhiên Xanh 500g",
+            "category": "Miến - Hủ Tíu - Bánh Canh",
+            "brand": "THIÊN NHIÊN XANH",
+            "price_vnd": 84400,
+            "stock": 104,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:47.629127Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "product_id": "WIN_10618196",
+      "question": "Cho mình hỏi Miến dong Bắc Kạn Thiên Nhiên Xanh 500g nằm ở đâu?",
+      "expected_shelf": "A10-B01-L01-P05",
+      "response": {
+        "session_id": "4a12de0d-cd63-4a90-9404-9675bf3e7c12",
+        "text": "Theo sơ đồ kệ đề xuất, Miến dong Bắc Kạn Thiên Nhiên Xanh 500g ở vị trí A10-B01-L01-P05 (dãy A10, khoang B01, tầng L01, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10618196"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:47.629127Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10618196",
+            "name": "Miến dong Bắc Kạn Thiên Nhiên Xanh 500g",
+            "category": "Miến - Hủ Tíu - Bánh Canh",
+            "brand": "THIÊN NHIÊN XANH",
+            "price_vnd": 84400,
+            "stock": 104,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:47.629127Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    }
+  ]
+}

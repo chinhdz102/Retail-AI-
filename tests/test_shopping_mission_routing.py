@@ -56,6 +56,36 @@ def test_active_mission_routes_revisions_but_not_factual_or_ranking_questions() 
     assert _route("Đổi nước ngọt thành nước lọc, tiền còn lại mua bánh quy.", active=True)
     assert _route("Thêm lựa chọn không cay và giảm ngân sách còn 150 nghìn.", active=True)
     assert not _route("Coca Zero giá bao nhiêu?", active=True, facts=True, product=True)
+    assert _route(
+        "Thêm bảo vệ da khi ra ngoài ban ngày vào nữa; các phần trước vẫn cần.",
+        active=True,
+        facts=True,
+        product=True,
+    )
+    assert _route(
+        "Thêm đồ ăn nhẹ cho người lớn trong chuyến đi vào nữa; các phần trước vẫn cần.",
+        active=True,
+        facts=True,
+        product=True,
+    )
+    assert not _route("Thêm nước suối vào giỏ giúp mình.", active=True)
+    assert _route(
+        "Mình vẫn chỉ tham khảo, chưa quyết định mua; cho xem phương án "
+        "nhưng đừng tự thêm gì vào giỏ.",
+        active=True,
+    )
+    assert not _route(
+        "Cho mình biết thêm thông tin về Coca Zero, giá bao nhiêu?",
+        active=True,
+        facts=True,
+        product=True,
+    )
+    assert not _route(
+        "Coca-Cola Zero chai 1,5l giá bao nhiêu? Đừng đổi kế hoạch đang lập.",
+        active=True,
+        facts=True,
+        product=True,
+    )
     assert not _route("Món nào bán chạy nhất?", active=True, ranking=True)
     assert _route(
         "Có thêm hai người tham gia, giờ thành 12 người; cập nhật phần chuẩn bị.",

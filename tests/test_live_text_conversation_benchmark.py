@@ -38,6 +38,31 @@ def test_case_catalog_preflight_checks_expected_and_excluded_ids(monkeypatch) ->
     }
 
 
+def test_case_catalog_preflight_checks_any_expected_product_ids(monkeypatch) -> None:
+    repository = FakeCatalogRepository({"WATER01", "TEA01"})
+    monkeypatch.setattr(benchmark, "get_product_repository", lambda _settings: repository)
+    settings = Settings(_env_file=None, catalog_repository="demo")
+
+    result = benchmark._preflight_case_catalog(
+        [{"turns": [{"expected_product_ids_any": ["WATER01", "TEA01"]}]}],
+        settings,
+    )
+
+    assert result["status"] == "PASSED"
+    assert result["checked_product_ids"] == 2
+
+
+def test_turn_grading_accepts_any_grounded_alternative_product() -> None:
+    grade = benchmark.grade_turn(
+        {"expected_product_ids_any": ["WATER01", "TEA01"]},
+        {"text": "Mình có vài lựa chọn thay thế.", "grounded_product_ids": ["TEA01"]},
+        200,
+    )
+
+    assert grade["checks"]["expected_product_ids_any"] is True
+    assert grade["passed"] is True
+
+
 def test_case_catalog_preflight_rejects_demo_ids_against_snapshot(monkeypatch) -> None:
     repository = FakeCatalogRepository({"WIN_10194711"})
     monkeypatch.setattr(benchmark, "get_product_repository", lambda _settings: repository)

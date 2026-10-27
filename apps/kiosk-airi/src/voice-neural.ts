@@ -25,8 +25,11 @@ export async function createLocalNeuralVad(callbacks: NeuralVadCallbacks): Promi
     onnxWASMBasePath: `${base}vad/onnx/`,
     positiveSpeechThreshold: 0.55,
     negativeSpeechThreshold: 0.35,
-    redemptionMs: 650,
-    preSpeechPadMs: 350,
+    // Keep conversational pauses intact while avoiding the upstream 1.4s delay.
+    // Offline tests on seven Vietnamese regional speech samples cut segmentation
+    // from 29 turns to 13 at 900ms, with only 250ms more end-of-turn wait.
+    redemptionMs: 900,
+    preSpeechPadMs: 600,
     minSpeechMs: 250,
     submitUserSpeechOnPause: false,
     ...callbacks,

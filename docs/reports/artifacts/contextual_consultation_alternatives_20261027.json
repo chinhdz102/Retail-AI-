@@ -1,0 +1,722 @@
+{
+  "created_at": "2026-10-27T13:31:34.088707+00:00",
+  "catalog_source": "winmart_json_snapshot",
+  "flow_count": 8,
+  "turn_count": 19,
+  "passed_turns": 19,
+  "results": [
+    {
+      "case_id": "shampoo_context",
+      "turns": [
+        {
+          "question": "Gợi ý dầu gội",
+          "response": {
+            "session_id": "f8cd545e-f296-4771-9ffc-1a0da6469541",
+            "model": "catalog",
+            "grounded_product_ids": [
+              "WIN_10170963",
+              "WIN_10170549",
+              "WIN_10016873"
+            ],
+            "tools_used": [
+              "recommend_products"
+            ],
+            "data_timestamp": "2026-09-15T13:53:35.396409Z",
+            "data_source": "winmart_json_snapshot",
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10170963",
+                "name": "Dầu gội bưởi Cocoon 310ml",
+                "category": "Chăm Sóc Tóc",
+                "brand": "COCOON",
+                "price_vnd": 261000,
+                "stock": 9,
+                "stock_is_current": false,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.396409Z",
+                "data_source": "winmart_json_snapshot"
+              },
+              {
+                "product_id": "WIN_10170549",
+                "name": "Dầu Gội Cao Cấp Cho Nam Romano Attitude (650g)",
+                "category": "Chăm Sóc Tóc",
+                "brand": "ROMANO",
+                "price_vnd": 189400,
+                "stock": 36,
+                "stock_is_current": false,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.395942Z",
+                "data_source": "winmart_json_snapshot"
+              },
+              {
+                "product_id": "WIN_10016873",
+                "name": "Dầu gội cao cấp Romano classic chai 380g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "ROMANO",
+                "price_vnd": 127600,
+                "stock": 40,
+                "stock_is_current": false,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:33.773402Z",
+                "data_source": "winmart_json_snapshot"
+              }
+            ],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình gợi ý Dầu gội bưởi Cocoon 310ml (giá tham khảo 261.000đ), Dầu Gội Cao Cấp Cho Nam Romano Attitude (650g) (giá tham khảo 189.400đ), Dầu gội cao cấp Romano classic chai 380g (giá tham khảo 127.600đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh."
+          },
+          "delta_count": 11,
+          "errors": []
+        },
+        {
+          "question": "loại nào rẻ nhất",
+          "response": {
+            "session_id": "f8cd545e-f296-4771-9ffc-1a0da6469541",
+            "model": "catalog",
+            "grounded_product_ids": [
+              "WIN_10016873"
+            ],
+            "tools_used": [
+              "get_product_snapshot"
+            ],
+            "data_timestamp": "2026-09-15T13:53:33.773402Z",
+            "data_source": "winmart_json_snapshot",
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10016873",
+                "name": "Dầu gội cao cấp Romano classic chai 380g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "ROMANO",
+                "price_vnd": 127600,
+                "stock": 40,
+                "stock_is_current": false,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:33.773402Z",
+                "data_source": "winmart_json_snapshot"
+              }
+            ],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Trong các sản phẩm vừa hiển thị, Dầu gội cao cấp Romano classic chai 380g có giá tham khảo thấp nhất: 127.600đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách."
+          },
+          "delta_count": 8,
+          "errors": []
+        },
+        {
+          "question": "loại nào là best seller",
+          "response": {
+            "session_id": "f8cd545e-f296-4771-9ffc-1a0da6469541",
+            "model": "local-clarification",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "data_timestamp": null,
+            "data_source": null,
+            "state": "BROWSING",
+            "products": [],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?"
+          },
+          "delta_count": 6,
+          "errors": []
+        },
+        {
+          "question": "loại nào ngon nhất",
+          "response": {
+            "session_id": "f8cd545e-f296-4771-9ffc-1a0da6469541",
+            "model": "local-clarification",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "data_timestamp": null,
+            "data_source": null,
+            "state": "BROWSING",
+            "products": [],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Với nhóm hàng đang xem, bạn muốn hỏi loại nào được đánh giá tốt nhất phải không? Mình chưa có đánh giá đã xác minh để xếp hạng; bạn muốn ưu tiên giá hay đặc điểm nào?"
+          },
+          "delta_count": 7,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "case_id": "snack_context",
+      "turns": [
+        {
+          "question": "Gợi ý bim bim",
+          "response": {
+            "session_id": "154453d0-851e-4d26-bd73-28a45fcbb309",
+            "model": "catalog",
+            "grounded_product_ids": [
+              "WIN_10322820"
+            ],
+            "tools_used": [
+              "recommend_products"
+            ],
+            "data_timestamp": "2026-09-15T13:53:30.447693Z",
+            "data_source": "winmart_json_snapshot",
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10322820",
+                "name": "Bim bim Poppedcorn quẩy soắn 280g",
+                "category": "Bánh Snack",
+                "brand": "POPPEDCORN",
+                "price_vnd": 57500,
+                "stock": 9,
+                "stock_is_current": false,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:30.447693Z",
+                "data_source": "winmart_json_snapshot"
+              }
+            ],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình gợi ý Bim bim Poppedcorn quẩy soắn 280g (giá tham khảo 57.500đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh."
+          },
+          "delta_count": 6,
+          "errors": []
+        },
+        {
+          "question": "cái mô rẻ nhứt",
+          "response": {
+            "session_id": "154453d0-851e-4d26-bd73-28a45fcbb309",
+            "model": "catalog",
+            "grounded_product_ids": [
+              "WIN_10322820"
+            ],
+            "tools_used": [
+              "get_product_snapshot"
+            ],
+            "data_timestamp": "2026-09-15T13:53:30.447693Z",
+            "data_source": "winmart_json_snapshot",
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10322820",
+                "name": "Bim bim Poppedcorn quẩy soắn 280g",
+                "category": "Bánh Snack",
+                "brand": "POPPEDCORN",
+                "price_vnd": 57500,
+                "stock": 9,
+                "stock_is_current": false,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:30.447693Z",
+                "data_source": "winmart_json_snapshot"
+              }
+            ],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình mới thấy một lựa chọn: Bim bim Poppedcorn quẩy soắn 280g, giá tham khảo 57.500đ. Bạn muốn mình tìm thêm cùng nhóm để so sánh không? Giá và tồn tại cửa hàng cần kiểm tra lại."
+          },
+          "delta_count": 7,
+          "errors": []
+        },
+        {
+          "question": "cái nào bán chạy nhất",
+          "response": {
+            "session_id": "154453d0-851e-4d26-bd73-28a45fcbb309",
+            "model": "local-clarification",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "data_timestamp": null,
+            "data_source": null,
+            "state": "BROWSING",
+            "products": [],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?"
+          },
+          "delta_count": 6,
+          "errors": []
+        },
+        {
+          "question": "loại nào ngon nhất",
+          "response": {
+            "session_id": "154453d0-851e-4d26-bd73-28a45fcbb309",
+            "model": "local-clarification",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "data_timestamp": null,
+            "data_source": null,
+            "state": "BROWSING",
+            "products": [],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình chưa có đánh giá vị đã xác minh để chọn loại ngon nhất trong nhóm đang xem. Bạn thích hương vị nào hoặc muốn chọn theo giá?"
+          },
+          "delta_count": 5,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "case_id": "laundry_context",
+      "turns": [
+        {
+          "question": "Gợi ý nước giặt",
+          "response": {
+            "session_id": "02672088-8d87-42da-b93e-19b25daabdfa",
+            "model": "catalog",
+            "grounded_product_ids": [
+              "WIN_10170503",
+              "WIN_10332741",
+              "WIN_10170510"
+            ],
+            "tools_used": [
+              "recommend_products"
+            ],
+            "data_timestamp": "2026-09-15T13:53:44.061896Z",
+            "data_source": "winmart_json_snapshot",
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10170503",
+                "name": "Nước giặt  Ariel downy đam mê túi 3.9kg",
+                "category": "Nước Giặt",
+                "brand": "ARIEL",
+                "price_vnd": 265100,
+                "stock": 45,
+                "stock_is_current": false,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:44.061372Z",
+                "data_source": "winmart_json_snapshot"
+              },
+              {
+                "product_id": "WIN_10332741",
+                "name": "Nước giặt Ariel  Downy cửa trên 2.5kg",
+                "category": "Nước Giặt",
+                "brand": "ARIEL",
+                "price_vnd": 185600,
+                "stock": 7,
+                "stock_is_current": false,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:44.061896Z",
+                "data_source": "winmart_json_snapshot"
+              },
+              {
+                "product_id": "WIN_10170510",
+                "name": "Nước giặt Ariel  hương hoa oải hương túi 3.2kg",
+                "category": "Nước Giặt",
+                "brand": "ARIEL",
+                "price_vnd": 199000,
+                "stock": 20,
+                "stock_is_current": false,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:44.061388Z",
+                "data_source": "winmart_json_snapshot"
+              }
+            ],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình gợi ý Nước giặt  Ariel downy đam mê túi 3.9kg (giá tham khảo 265.100đ), Nước giặt Ariel  Downy cửa trên 2.5kg (giá tham khảo 185.600đ), Nước giặt Ariel  hương hoa oải hương túi 3.2kg (giá tham khảo 199.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh."
+          },
+          "delta_count": 12,
+          "errors": []
+        },
+        {
+          "question": "giá nào thấp nhất",
+          "response": {
+            "session_id": "02672088-8d87-42da-b93e-19b25daabdfa",
+            "model": "catalog",
+            "grounded_product_ids": [
+              "WIN_10332741"
+            ],
+            "tools_used": [
+              "get_product_snapshot"
+            ],
+            "data_timestamp": "2026-09-15T13:53:44.061896Z",
+            "data_source": "winmart_json_snapshot",
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10332741",
+                "name": "Nước giặt Ariel  Downy cửa trên 2.5kg",
+                "category": "Nước Giặt",
+                "brand": "ARIEL",
+                "price_vnd": 185600,
+                "stock": 7,
+                "stock_is_current": false,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:44.061896Z",
+                "data_source": "winmart_json_snapshot"
+              }
+            ],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Trong các sản phẩm vừa hiển thị, Nước giặt Ariel  Downy cửa trên 2.5kg có giá tham khảo thấp nhất: 185.600đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách."
+          },
+          "delta_count": 8,
+          "errors": []
+        },
+        {
+          "question": "loại nào là best seller",
+          "response": {
+            "session_id": "02672088-8d87-42da-b93e-19b25daabdfa",
+            "model": "local-clarification",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "data_timestamp": null,
+            "data_source": null,
+            "state": "BROWSING",
+            "products": [],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?"
+          },
+          "delta_count": 6,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "case_id": "preparation_context",
+      "turns": [
+        {
+          "question": "thế t mua thịt nhúng lẩu m tư vấn cho t thịt nào ngon",
+          "response": {
+            "session_id": "0518b028-8377-4814-a4c2-a2a1648f2a03",
+            "model": "catalog",
+            "grounded_product_ids": [
+              "WIN_10601287"
+            ],
+            "tools_used": [
+              "recommend_products"
+            ],
+            "data_timestamp": "2026-09-15T13:53:54.417994Z",
+            "data_source": "winmart_json_snapshot",
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10601287",
+                "name": "Lẩu Tomyum ba chỉ bò Mỹ  Orifood 1.3kg",
+                "category": "Thịt Đông Lạnh",
+                "brand": "ORIFOOD",
+                "price_vnd": 334900,
+                "stock": 4,
+                "stock_is_current": false,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:54.417994Z",
+                "data_source": "winmart_json_snapshot"
+              }
+            ],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Trong catalog, mình tìm được Lẩu Tomyum ba chỉ bò Mỹ  Orifood 1.3kg (giá tham khảo 334.900đ). Mình chọn theo mô tả trong tên hàng; công dụng và độ phù hợp bạn cần kiểm tra thêm trên nhãn sản phẩm. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh."
+          },
+          "delta_count": 10,
+          "errors": []
+        },
+        {
+          "question": "mình thích thịt bò",
+          "response": {
+            "session_id": "0518b028-8377-4814-a4c2-a2a1648f2a03",
+            "model": "catalog",
+            "grounded_product_ids": [
+              "WIN_10601287"
+            ],
+            "tools_used": [
+              "recommend_products"
+            ],
+            "data_timestamp": "2026-09-15T13:53:54.417994Z",
+            "data_source": "winmart_json_snapshot",
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10601287",
+                "name": "Lẩu Tomyum ba chỉ bò Mỹ  Orifood 1.3kg",
+                "category": "Thịt Đông Lạnh",
+                "brand": "ORIFOOD",
+                "price_vnd": 334900,
+                "stock": 4,
+                "stock_is_current": false,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:54.417994Z",
+                "data_source": "winmart_json_snapshot"
+              }
+            ],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Trong catalog, mình tìm được Lẩu Tomyum ba chỉ bò Mỹ  Orifood 1.3kg (giá tham khảo 334.900đ). Mình chọn theo mô tả trong tên hàng; công dụng và độ phù hợp bạn cần kiểm tra thêm trên nhãn sản phẩm. Tồn hiện tại chưa được xác minh."
+          },
+          "delta_count": 9,
+          "errors": []
+        },
+        {
+          "question": "giới thiệu khăn mặt cho mình",
+          "response": {
+            "session_id": "0518b028-8377-4814-a4c2-a2a1648f2a03",
+            "model": "catalog",
+            "grounded_product_ids": [
+              "WIN_10601537",
+              "WIN_10167097",
+              "WIN_10330217"
+            ],
+            "tools_used": [
+              "recommend_products"
+            ],
+            "data_timestamp": "2026-09-15T13:53:38.681866Z",
+            "data_source": "winmart_json_snapshot",
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10601537",
+                "name": "Khăn mặt 2 lớp Mollis FM5A 40*80*87g",
+                "category": "Đồ Dùng Phòng Ngủ",
+                "brand": "MOLLIS",
+                "price_vnd": 59000,
+                "stock": 75,
+                "stock_is_current": false,
+                "uom": "Cái",
+                "data_timestamp": "2026-09-15T13:53:38.677561Z",
+                "data_source": "winmart_json_snapshot"
+              },
+              {
+                "product_id": "WIN_10167097",
+                "name": "Khăn mặt bamboo WinMart Home  34*75*124g",
+                "category": "Đồ Dùng Phòng Ngủ",
+                "brand": "WMHOME",
+                "price_vnd": 68600,
+                "stock": 36,
+                "stock_is_current": false,
+                "uom": "Cái",
+                "data_timestamp": "2026-09-15T13:53:38.681866Z",
+                "data_source": "winmart_json_snapshot"
+              },
+              {
+                "product_id": "WIN_10330217",
+                "name": "Khăn mặt cotton  WinMart Home 32*65*90g",
+                "category": "Đồ Dùng Phòng Ngủ",
+                "brand": "WMHOME",
+                "price_vnd": 29000,
+                "stock": 69,
+                "stock_is_current": false,
+                "uom": "Cái",
+                "data_timestamp": "2026-09-15T13:53:38.354585Z",
+                "data_source": "winmart_json_snapshot"
+              }
+            ],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình gợi ý Khăn mặt 2 lớp Mollis FM5A 40*80*87g (giá tham khảo 59.000đ), Khăn mặt bamboo WinMart Home  34*75*124g (giá tham khảo 68.600đ), Khăn mặt cotton  WinMart Home 32*65*90g (giá tham khảo 29.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh."
+          },
+          "delta_count": 11,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "case_id": "checkout_empty",
+      "turns": [
+        {
+          "question": "cho t thanh toán",
+          "response": {
+            "session_id": "b6eec20c-1c3e-4b7b-a803-5ea99e08a0bf",
+            "model": "shopping-controller",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "data_timestamp": null,
+            "data_source": null,
+            "state": "BROWSING",
+            "products": [],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Giỏ hàng đang trống trong phiên demo. Bạn có thể thêm sản phẩm để xem tổng; nếu mua trực tiếp, bạn đến quầy thanh toán nhé."
+          },
+          "delta_count": 5,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "case_id": "payment_policy",
+      "turns": [
+        {
+          "question": "Cửa hàng có nhận thanh toán bằng chuyển khoản không?",
+          "response": {
+            "session_id": "99c490d4-bcea-4824-905a-430000c089a7",
+            "model": "local-policy",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "data_timestamp": null,
+            "data_source": null,
+            "state": "BROWSING",
+            "products": [],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình chưa có dữ liệu chính sách đã xác minh. Bạn hỏi nhân viên tại quầy để xác nhận chính sách này nhé."
+          },
+          "delta_count": 4,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "case_id": "price_scope_change",
+      "turns": [
+        {
+          "question": "Gợi ý dầu gội",
+          "response": {
+            "session_id": "ff4afa86-a2b5-47fc-a32b-7e5c79fbee5e",
+            "model": "catalog",
+            "grounded_product_ids": [
+              "WIN_10170963",
+              "WIN_10170549",
+              "WIN_10016873"
+            ],
+            "tools_used": [
+              "recommend_products"
+            ],
+            "data_timestamp": "2026-09-15T13:53:35.396409Z",
+            "data_source": "winmart_json_snapshot",
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10170963",
+                "name": "Dầu gội bưởi Cocoon 310ml",
+                "category": "Chăm Sóc Tóc",
+                "brand": "COCOON",
+                "price_vnd": 261000,
+                "stock": 9,
+                "stock_is_current": false,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.396409Z",
+                "data_source": "winmart_json_snapshot"
+              },
+              {
+                "product_id": "WIN_10170549",
+                "name": "Dầu Gội Cao Cấp Cho Nam Romano Attitude (650g)",
+                "category": "Chăm Sóc Tóc",
+                "brand": "ROMANO",
+                "price_vnd": 189400,
+                "stock": 36,
+                "stock_is_current": false,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.395942Z",
+                "data_source": "winmart_json_snapshot"
+              },
+              {
+                "product_id": "WIN_10016873",
+                "name": "Dầu gội cao cấp Romano classic chai 380g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "ROMANO",
+                "price_vnd": 127600,
+                "stock": 40,
+                "stock_is_current": false,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:33.773402Z",
+                "data_source": "winmart_json_snapshot"
+              }
+            ],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình gợi ý Dầu gội bưởi Cocoon 310ml (giá tham khảo 261.000đ), Dầu Gội Cao Cấp Cho Nam Romano Attitude (650g) (giá tham khảo 189.400đ), Dầu gội cao cấp Romano classic chai 380g (giá tham khảo 127.600đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh."
+          },
+          "delta_count": 11,
+          "errors": []
+        },
+        {
+          "question": "Khăn mặt nào rẻ nhất?",
+          "response": {
+            "session_id": "ff4afa86-a2b5-47fc-a32b-7e5c79fbee5e",
+            "model": "local-clarification",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "data_timestamp": null,
+            "data_source": null,
+            "state": "BROWSING",
+            "products": [],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình chưa thể xác nhận loại rẻ nhất trong toàn bộ nhóm hàng. Mình có thể tìm vài lựa chọn để bạn so sánh giá; bạn muốn xem không?"
+          },
+          "delta_count": 5,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "case_id": "missing_ranking_context",
+      "turns": [
+        {
+          "question": "Cái nào bán chạy nhất?",
+          "response": {
+            "session_id": "acafa1c8-68ab-48e2-b9fc-d5bad947c940",
+            "model": "local-clarification",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "data_timestamp": null,
+            "data_source": null,
+            "state": "BROWSING",
+            "products": [],
+            "shopping_plan": null,
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null,
+            "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình xem nhóm hàng nào?"
+          },
+          "delta_count": 5,
+          "errors": []
+        }
+      ]
+    }
+  ]
+}

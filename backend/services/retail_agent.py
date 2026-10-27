@@ -32,8 +32,15 @@ from backend.shared.contracts import SessionState
 MAX_AGENT_TOOL_ROUNDS = 2
 MAX_AGENT_TOOL_CALLS = 5
 CATALOG_TOOL_TIMEOUT_SECONDS = 2.0
+CATALOG_RECOMMENDATION_TIMEOUT_SECONDS = 5.0
 SHOPPING_MISSION_TOOL_TIMEOUT_SECONDS = 15.0
 TOOL_TIMEOUT_RETRIES = 1
+_OPEN_ENDED_NEED_DISCOVERY_CUE = re.compile(
+    r"\b(?:chua biet can (?:nhung )?nhom (?:gi|nao)|"
+    r"chua ro can (?:nhung )?nhom (?:gi|nao)|"
+    r"chua biet can gi|chua biet nen mua gi|chua biet ten (?:mon|hang|san pham)|"
+    r"what should i buy|what do i need|help me (?:shop|choose|plan|prepare))\b"
+)
 
 
 def _catalog_tool_timeout_policy(tool_name: str) -> tuple[float, int]:
@@ -45,6 +52,8 @@ def _catalog_tool_timeout_policy(tool_name: str) -> tuple[float, int]:
     """
     if tool_name == "plan_shopping_mission":
         return SHOPPING_MISSION_TOOL_TIMEOUT_SECONDS, 0
+    if tool_name == "recommend_products":
+        return CATALOG_RECOMMENDATION_TIMEOUT_SECONDS, 0
     return CATALOG_TOOL_TIMEOUT_SECONDS, TOOL_TIMEOUT_RETRIES
 
 
@@ -128,6 +137,49 @@ def _only_explicit_needs_are_required(text: str) -> bool:
     return confirms_needs and keeps_suggestions_optional
 
 
+_SKINCARE_NEED_CUES: dict[str, tuple[str, ...]] = {
+    "cleanser": ("sua rua mat", "lam sach da mat", "lam sach mat"),
+    "moisturizer": (
+        "kem duong am",
+        "duong am da mat",
+        "kem duong da mat",
+        "duong da mat",
+    ),
+    "sunscreen": (
+        "kem chong nang",
+        "chong nang",
+        "bao ve da khi ra ngoai",
+        "bao ve da ban ngay",
+        "bao ve da khi di ra ngoai",
+        "sun screen",
+        "sunscreen",
+        "sun protection",
+    ),
+}
+
+
+def _specific_skincare_need_was_named(need_text: str, normalized_user_text: str) -> bool:
+    """Only harden a skincare component when the user named that component.
+
+    Broad phrases like ``chăm sóc da`` must not make every model-decomposed
+    routine step mandatory. A few unambiguous Vietnamese paraphrases are kept
+    here for common spoken requests such as ``đồ làm sạch da mặt``.
+    """
+    normalized_need = _normalize_vietnamese(need_text)
+    normalized_need = re.sub(r"[^\w\s]", " ", normalized_need)
+    for cues in _SKINCARE_NEED_CUES.values():
+        need_is_this_component = any(
+            re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized_need)
+            for cue in cues
+        )
+        if need_is_this_component and any(
+            re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized_user_text)
+            for cue in cues
+        ):
+            return True
+    return False
+
+
 def _explicit_recommendation_category(text: str) -> str | None:
     return _parse_recommendation_category(text)
 
@@ -136,8 +188,6 @@ def _enforce_recommendation_category(
     tool_calls: list[dict[str, Any]], user_text: str
 ) -> list[dict[str, Any]]:
     category = _explicit_recommendation_category(user_text)
-    if category is None:
-        return tool_calls
     normalized_calls = []
     for call in tool_calls:
         copied_call = copy.deepcopy(call)
@@ -151,7 +201,10 @@ def _enforce_recommendation_category(
             except (json.JSONDecodeError, TypeError):
                 arguments = None
             if isinstance(arguments, dict):
-                arguments["category"] = category
+                if category is not None:
+                    arguments["category"] = category
+                # Rank from the actual need, never from an invented benefit.
+                arguments["preference_text"] = user_text
                 function["arguments"] = json.dumps(arguments, ensure_ascii=False)
                 copied_call["function"] = function
         normalized_calls.append(copied_call)
@@ -297,6 +350,78 @@ def _enforce_shopping_mission_call_semantics(
 
         needs = arguments.get("needs")
         if isinstance(needs, list) and needs:
+            shared_use_explicit = bool(
+                re.search(r"\b(?:dung chung|share(?:d)?|shared use)\b", normalized_text)
+            )
+            if not shared_use_explicit:
+                for need in needs:
+                    if not isinstance(need, dict):
+                        continue
+                    rationale = str(need.get("rationale") or "")
+                    rationale = re.sub(
+                        r"(?:[,;:]?\s*)\b(?:dùng chung(?: cho cả nhóm)?|"
+                        r"cả nhóm dùng chung|dung chung(?: cho ca nhom)?|ca nhom dung chung|"
+                        r"share(?:d)? (?:by|with) (?:the )?(?:whole )?group)\b",
+                        "",
+                        rationale,
+                        flags=re.IGNORECASE,
+                    )
+                    rationale = re.sub(r"\s+([,;.])", r"\1", rationale)
+                    rationale = re.sub(r"[,;\s]+$", "", rationale).strip()
+                    if rationale:
+                        need["rationale"] = rationale
+                    preference_terms = need.get("preference_terms")
+                    if isinstance(preference_terms, list):
+                        need["preference_terms"] = [
+                            value
+                            for value in preference_terms
+                            if not re.search(
+                                r"\b(?:dung chung|dung cho ca nhom|dung duoc cho nhieu nguoi|"
+                                r"shared use|for group use)\b",
+                                _normalize_vietnamese(str(value)),
+                            )
+                        ]
+            for need in needs:
+                if not isinstance(need, dict):
+                    continue
+                constraints = need.get("unverified_constraints")
+                if not isinstance(constraints, list):
+                    continue
+                retained_constraints: list[str] = []
+                contextual_preferences: list[str] = []
+                for value in constraints:
+                    normalized_constraint = _normalize_vietnamese(str(value))
+                    is_negated = bool(
+                        re.search(
+                            r"\b(?:khong|tranh|khong duoc|not|avoid|without|must not)\b",
+                            normalized_constraint,
+                        )
+                    )
+                    is_contextual_use = any(
+                        phrase in normalized_constraint
+                        for phrase in (
+                            "dung cho da mat",
+                            "for face",
+                            "facial use",
+                            "dung moi ngay",
+                            "su dung hang ngay",
+                            "hang ngay",
+                            "daily use",
+                            "every day",
+                        )
+                    )
+                    if is_contextual_use and not is_negated:
+                        contextual_preferences.append(str(value))
+                    else:
+                        retained_constraints.append(str(value))
+                need["unverified_constraints"] = retained_constraints
+                if contextual_preferences:
+                    preference_terms = need.get("preference_terms")
+                    if not isinstance(preference_terms, list):
+                        preference_terms = []
+                    need["preference_terms"] = list(
+                        dict.fromkeys([*preference_terms, *contextual_preferences])
+                    )[:8]
             explicit_categories = set(_parse_explicit_recommendation_categories(user_text))
             explicit_needs_only = _only_explicit_needs_are_required(user_text)
             previous_needs = {
@@ -305,12 +430,18 @@ def _enforce_shopping_mission_call_semantics(
                 if isinstance(need, dict) and need.get("need_id")
             }
             user_tokens = set(re.findall(r"[a-z0-9]+", normalized_text))
+            open_ended_need_discovery = bool(
+                _OPEN_ENDED_NEED_DISCOVERY_CUE.search(normalized_text)
+            )
             generic_need_tokens = {
                 "an",
                 "ban",
                 "can",
                 "cho",
+                "be",
+                "em",
                 "do",
+                "di",
                 "gi",
                 "hang",
                 "la",
@@ -325,6 +456,22 @@ def _enforce_shopping_mission_call_semantics(
                 "tu",
                 "va",
                 "voi",
+                "cung",
+                "gia",
+                "dinh",
+                "chuyen",
+                "tham",
+                "ong",
+                "ba",
+                "tre",
+                "baby",
+                "babies",
+                "kid",
+                "kids",
+                "child",
+                "children",
+                "family",
+                "trip",
             }
             user_need_tokens = user_tokens - generic_need_tokens
             supported_categories = {
@@ -339,6 +486,7 @@ def _enforce_shopping_mission_call_semantics(
                 "laundry",
                 "baby",
                 "cosmetic",
+                "paper_goods",
             }
             for need in needs:
                 if not isinstance(need, dict):
@@ -349,6 +497,15 @@ def _enforce_shopping_mission_call_semantics(
                 canonical_need = _parse_recommendation_category(need_text)
                 need_id = str(need.get("need_id") or "")
                 previous_need = previous_needs.get(need_id)
+                need_is_lexically_named = any(
+                    len(phrase_tokens := _normalize_vietnamese(str(need.get(key) or "")).split())
+                    >= 2
+                    and re.search(
+                        rf"(?<!\w){re.escape(' '.join(phrase_tokens))}(?!\w)",
+                        normalized_text,
+                    )
+                    for key in ("label", "product_query")
+                )
                 if previous_need is not None and re.search(
                     r"\b(?:giu nguyen|giu lai|nhu cau da chot|keep (?:the )?same needs?)\b",
                     normalized_text,
@@ -358,6 +515,7 @@ def _enforce_shopping_mission_call_semantics(
                     continue
                 category_leaf = str(need.get("category") or "").split(">")[-1]
                 category_leaf_intent = _parse_recommendation_category(category_leaf)
+                canonical_need = canonical_need or category_leaf_intent
                 # The model can echo occasion words into a need label (for
                 # example, "snack xem bóng"). Only the catalog leaf can make a
                 # lexical match explicit; the label may contain activity context.
@@ -366,7 +524,12 @@ def _enforce_shopping_mission_call_semantics(
                     set(re.findall(r"[a-z0-9]+", _normalize_vietnamese(direct_need_text)))
                     - generic_need_tokens
                 )
-                if canonical_need in supported_categories:
+                if canonical_need == "skincare":
+                    directly_named = need_is_lexically_named or _specific_skincare_need_was_named(
+                        need_text,
+                        normalized_text,
+                    )
+                elif canonical_need in supported_categories:
                     # A broad intent such as "snack" must not turn every
                     # inferred child category (candy, sausage, chips, etc.)
                     # into an explicit requirement. The canonical category
@@ -378,6 +541,7 @@ def _enforce_shopping_mission_call_semantics(
                             canonical_need in explicit_categories
                             and category_leaf_intent == canonical_need
                         )
+                        or need_is_lexically_named
                         or len(need_tokens & user_need_tokens) >= 1
                     )
                     if canonical_need == "baby" and not re.search(
@@ -386,7 +550,26 @@ def _enforce_shopping_mission_call_semantics(
                     ):
                         directly_named = False
                 else:
-                    directly_named = len(need_tokens & user_need_tokens) >= 1
+                    directly_named = (
+                        need_is_lexically_named or len(need_tokens & user_need_tokens) >= 1
+                    )
+                if open_ended_need_discovery and not need_is_lexically_named:
+                    category_tokens = set(
+                        re.findall(r"[a-z0-9]+", _normalize_vietnamese(category_leaf))
+                    )
+                    query_tokens = set(
+                        re.findall(
+                            r"[a-z0-9]+",
+                            _normalize_vietnamese(str(need.get("product_query") or "")),
+                        )
+                    )
+                    specific_query_tokens = query_tokens - category_tokens - generic_need_tokens
+                    if specific_query_tokens - user_tokens:
+                        # A broad goal such as routine skincare can name the
+                        # context while leaving its component product groups
+                        # open for advice. Keep those inferred groups optional
+                        # until the customer names or confirms them.
+                        directly_named = False
                 if not directly_named:
                     if previous_need is not None and not explicit_needs_only:
                         need["source"] = previous_need.get(

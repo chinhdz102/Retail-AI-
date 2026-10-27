@@ -89,6 +89,25 @@ _MISSION_REVISION_CUES = re.compile(
     r"remove|add|increase|decrease|budget|remaining|another option|"
     r"different option|more options)\b"
 )
+_ACTIVE_MISSION_EDIT_CUE = re.compile(
+    r"\b(?:them|add|include)\b(?!\s+(?:thong tin|chi tiet|ve|about|details)\b)|"
+    r"\b(?:bo|doi|thay|thay the|giam|tang|uu tien|giu lai|giu nguyen|"
+    r"remove|replace|swap|increase|decrease)\b"
+)
+_EXPLICIT_KEEP_PLAN_CUE = re.compile(
+    r"\b(?:dung|khong|don't|do not|never)\b.{0,32}"
+    r"\b(?:doi|thay|cap nhat|sua|change|update|revise)\b.{0,32}"
+    r"\b(?:ke hoach|phuong an|shopping plan|plan|list)\b"
+)
+_EXPLICIT_CART_ADD_CUE = re.compile(
+    r"\b(?:them|bo sung|cho|lay|mua)\b.{0,100}"
+    r"\b(?:vao|vo)\s+(?:cai\s+)?gio(?:\s+hang)?\b|"
+    r"\badd\b.{1,100}\bto\s+(?:my\s+)?cart\b"
+)
+_NEGATED_CART_ADD_CUE = re.compile(
+    r"\b(?:khong|chua|dung|don't|do not|never)\b.{0,40}"
+    r"\b(?:them|bo sung|add)\b.{0,60}\b(?:gio|cart)\b"
+)
 _MISSION_HARD_CONSTRAINT_CUE = re.compile(
     r"\b(?:dieu kien(?: nay)?(?: la)? bat buoc|yeu cau(?: nay)?(?: la)? bat buoc|"
     r"hard requirement|hard constraint|"
@@ -131,9 +150,18 @@ def should_route_to_shopping_mission(
     decomposition and SKU selection remain model- and catalog-driven.
     """
     normalized = _normalize(text)
+    explicit_cart_add = bool(_EXPLICIT_CART_ADD_CUE.search(normalized))
+    negated_cart_add = bool(_NEGATED_CART_ADD_CUE.search(normalized))
+    if active_mission and explicit_cart_add and not negated_cart_add:
+        # A clear cart mutation is a separate action; do not reinterpret it as
+        # merely revising the advisory plan.
+        return False
     hard_constraint_update = active_mission and bool(
         _MISSION_HARD_CONSTRAINT_CUE.search(normalized)
     )
+    active_mission_edit = active_mission and bool(
+        _ACTIVE_MISSION_EDIT_CUE.search(normalized)
+    ) and not bool(_EXPLICIT_KEEP_PLAN_CUE.search(normalized))
     party_size_update = active_mission and bool(
         _ACTIVE_PARTY_SIZE_REVISION_CUE.search(normalized)
     )
@@ -146,7 +174,16 @@ def should_route_to_shopping_mission(
         # The shared catalog parser treats a bare VND amount as a possible price
         # question. In an activity/mission request it is a budget constraint.
         has_factual_lookup = False
-    if ranking_requested or (has_factual_lookup and not hard_constraint_update):
+    if ranking_requested:
+        return False
+
+    # An explicit edit to an open plan takes priority over the product-field
+    # parser. Phrases such as "thêm kem chống nắng vào nữa" can look like a
+    # standalone product lookup even though the customer is revising a multi-
+    # item plan. Pure fact questions still stay on the catalog lookup route.
+    if active_mission and (hard_constraint_update or active_mission_edit):
+        return True
+    if has_factual_lookup:
         return False
 
     if active_mission:

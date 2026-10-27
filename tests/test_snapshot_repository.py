@@ -406,7 +406,8 @@ async def test_unavailable_product_alternatives_use_catalog_and_retain_category(
                 snapshot_repo.get_product_snapshot(product_id)
                 for product_id in alternative_body["grounded_product_ids"]
             ]
-            assert len(alternatives_found) >= 3, (follow_up, alternative_body)
+            # Return the actual matching choices; never pad a suggestion list.
+            assert 1 <= len(alternatives_found) <= 3, (follow_up, alternative_body)
             assert all(product is not None for product in alternatives_found)
             normalized_paths = [
                 normalize_category_text(product.category_hierarchy or "")

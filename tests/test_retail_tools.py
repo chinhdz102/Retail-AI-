@@ -1,10 +1,12 @@
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
 from backend.products.catalog import ProductSnapshot, search_products
 from backend.products.repository import DemoProductRepository
+from backend.products.snapshot_repository import SnapshotProductRepository
 from backend.services.retail_tools import CATALOG_TOOL_DEFINITIONS, execute_catalog_tool
 from backend.services.vietnamese_intent import normalize_vietnamese
 
@@ -592,3 +594,20 @@ def test_bim_without_repetition_is_not_misread_as_snack_category() -> None:
 
     assert repository.criteria["category"] is None
     assert repository.criteria["query"] == "bỉm"
+
+
+def test_snack_flavor_modifier_does_not_route_cheese_snacks_to_dairy() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": "bim bim vi pho mai", "limit": 5}, ensure_ascii=False),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert len(observation.products) == 5
+    assert all("snack" in product.category_hierarchy.casefold() for product in observation.products)
+    assert all("pho mai" in normalize_vietnamese(product.name) for product in observation.products)

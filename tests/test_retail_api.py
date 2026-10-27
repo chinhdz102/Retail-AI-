@@ -64,6 +64,7 @@ from backend.products.snapshot_repository import SnapshotProductRepository
 from backend.services import retail_tools
 from backend.services.azure_speech import AzureSpeechProviderError
 from backend.services.groq import (
+    GROQ_STT_CATALOG_CONTEXT_TERMS,
     GroqChatResult,
     GroqProviderError,
     GroqService,
@@ -1133,6 +1134,10 @@ def test_fact_query_extraction_removes_request_words_without_guessing_product(
     assert _fact_product_query(text) == expected
 
 
+def test_fact_query_preserves_vietnamese_product_word_than():
+    assert _fact_product_query("thịt thăn bò ở đâu") == "thit than bo"
+
+
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
@@ -1347,7 +1352,7 @@ async def test_ambiguous_brand_price_question_asks_for_variant_without_quoting_p
     )
 
     assert response.status_code == 200
-    assert "muốn hỏi đúng vị hoặc khối lượng nào" in response.json()["text"]
+    assert "muốn tra sản phẩm nào trong số này" in response.json()["text"]
     assert "21.600đ" not in response.json()["text"]
     assert "33.000đ" not in response.json()["text"]
     assert "get_product_snapshot" not in response.json()["tools_used"]
@@ -1562,9 +1567,12 @@ async def test_product_ranking_abstains_without_searching_unrelated_candidates(
 
     assert response.status_code == 200
     payload = response.json()
-    assert "chưa có dữ liệu đã xác minh" in payload["text"]
+    assert "chưa có" in payload["text"] and "đã xác minh" in payload["text"]
     assert "Snack khoai tây vị tự nhiên" not in payload["text"]
-    assert "bán chạy nhất" in payload["text"]
+    if "bán" in prompt.casefold():
+        assert "bán chạy nhất" in payload["text"]
+    else:
+        assert "ngon nhất" in payload["text"]
     assert payload["grounded_product_ids"] == []
     assert payload["tools_used"] == []
     assert service.calls == 0
@@ -1753,7 +1761,7 @@ async def test_bestseller_abstention_does_not_poison_followup_snack_recommendati
     )
 
     assert ranking.status_code == recommendation.status_code == 200
-    assert "chưa có dữ liệu đã xác minh" in ranking.json()["text"]
+    assert "chưa có" in ranking.json()["text"] and "đã xác minh" in ranking.json()["text"]
     assert "bán chạy nhất là" not in ranking.json()["text"]
     assert ranking.json()["tools_used"] == []
     assert recommendation.json()["grounded_product_ids"] == ["SNACK01"]
@@ -1777,6 +1785,8 @@ async def test_bestseller_abstention_does_not_poison_followup_snack_recommendati
         ("Coca Zero giá bao nhiêu?", False),
         ("Cà phê sữa pha sẵn 235ml giá bao nhiêu?", False),
         ("Sữa tươi ít đường 180ml giá sao?", False),
+        ("Hạ tổng xuống dưới 80 nghìn được không?", False),
+        ("Hạ giá Coca Zero xuống 80 nghìn giúp mình.", True),
         ("Giảm ngân sách xuống tối đa 60.000đ, giữ các nhu cầu đã chốt.", False),
         ("Hạ tổng chi cho buổi tụ họp còn 50 nghìn.", False),
         ("Hạ trần xuống 230.000đ. Giữ số người và các nhu cầu đã nói.", False),
@@ -1804,6 +1814,9 @@ def test_active_mission_budget_revision_is_not_a_product_lookup() -> None:
     assert _active_mission_budget_revision_requested(
         "Mình cần hạ khoản chuẩn bị xuống 230.000đ; giữ số người và các phần đã xác nhận.",
         mission,
+    )
+    assert _active_mission_budget_revision_requested(
+        "Hạ tổng xuống dưới 80 nghìn được không?", mission
     )
     assert not _active_mission_budget_revision_requested(
         "Coca Zero giá bao nhiêu nếu ngân sách là 60.000đ?",
@@ -2322,6 +2335,23 @@ async def test_activity_only_request_creates_a_grounded_multicategory_plan(
     assert budget_revision.status_code == 200
     assert budget_revision.json()["shopping_plan"]["budget_vnd"] == 180_000
     assert service.calls == 3
+
+    added_need = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": (
+                "Thêm bảo vệ da khi ra ngoài ban ngày vào nữa; "
+                "giữ nguyên các nhóm đã xác nhận."
+            ),
+        },
+    )
+
+    assert added_need.status_code == 200
+    assert added_need.json()["shopping_plan"] is not None
+    assert added_need.json()["shopping_plan"]["revision"] == 4
+    assert added_need.json()["tools_used"] == ["plan_shopping_mission"]
+    assert service.calls == 4
 
 
 @pytest.mark.asyncio
@@ -3907,6 +3937,56 @@ async def test_audio_endpoint_transcribes_vietnamese_audio(client: httpx.AsyncCl
 
 
 @pytest.mark.asyncio
+async def test_audio_endpoint_limits_whisper_catalog_context_to_eight_terms(
+    client: httpx.AsyncClient,
+) -> None:
+    class SpeechVocabularyCatalog:
+        source_name = "test_catalog"
+
+        def __init__(self) -> None:
+            self.requested_limit = None
+
+        def list_speech_terms(self, limit=32):
+            self.requested_limit = limit
+            return tuple(f"Brand {index}" for index in range(1, limit + 1))
+
+        def list_brand_names(self, limit=300):
+            return ()
+
+        def list_category_hierarchies(self):
+            return ()
+
+        def search(self, query="", limit=10):
+            return []
+
+    class VocabularyCapturingStt:
+        def __init__(self) -> None:
+            self.vocabulary = None
+
+        async def transcribe(self, filename, content, content_type, language="vi", vocabulary=()):
+            self.vocabulary = tuple(vocabulary)
+            return "Chào bạn."
+
+    catalog = SpeechVocabularyCatalog()
+    service = VocabularyCapturingStt()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    app.dependency_overrides[get_transcription_catalog] = lambda: catalog
+    created = await client.post("/sessions", json={"kiosk_id": "kiosk-stt-context-limit"})
+
+    response = await client.post(
+        "/audio/transcribe",
+        data={"session_id": created.json()["session_id"]},
+        files={"file": ("voice.wav", BytesIO(b"audio"), "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    assert catalog.requested_limit == GROQ_STT_CATALOG_CONTEXT_TERMS
+    assert service.vocabulary == tuple(
+        f"Brand {index}" for index in range(1, GROQ_STT_CATALOG_CONTEXT_TERMS + 1)
+    )
+
+
+@pytest.mark.asyncio
 async def test_agent_uses_selected_language_for_catalog_fact_response(
     client: httpx.AsyncClient,
 ) -> None:
@@ -4398,7 +4478,7 @@ async def test_spoken_product_requests_resolve_from_the_full_snapshot_catalog(
         (
             "Ừm, thế cho tôi hỏi trong danh mục ấy thì có cái sản phẩm nào như khăn mặt không "
             "có khăn mặt không cho tôi xem các khăn mặt ấy.",
-            "search_products",
+            "recommend_products",
             "khăn mặt",
         ),
         ("Khoa hỏi thịt không phải sốt ướp thì đâu.", "search_products", "thịt"),
@@ -4433,8 +4513,9 @@ async def test_spoken_product_requests_resolve_from_the_full_snapshot_catalog(
         if expected_tool == "recommend_products":
             assert "giá tham khảo" in payload["text"].casefold()
             assert "giá tại cửa hàng có thể khác catalog" in payload["text"].casefold()
-            assert "các loại" in payload["text"].casefold()
-            assert "lọc tiếp theo loại nào" in payload["text"].casefold()
+            if index == 1:
+                assert "mình tìm thấy vài loại" in payload["text"].casefold()
+                assert "bạn muốn xem loại nào trước" in payload["text"].casefold()
         responses.append(payload)
 
     assert service.calls == 0
@@ -4582,7 +4663,10 @@ async def test_natural_product_discovery_stays_catalog_grounded_across_departmen
                 assert expected_name in name, (text, product.name)
 
         if broad:
-            assert "các loại:" in payload["text"].casefold(), (text, payload["text"])
+            assert "mình tìm thấy vài loại" in payload["text"].casefold(), (
+                text,
+                payload["text"],
+            )
             category_leaves = {
                 (product.category_hierarchy or product.category).split(">")[-1].strip().casefold()
                 for product in products

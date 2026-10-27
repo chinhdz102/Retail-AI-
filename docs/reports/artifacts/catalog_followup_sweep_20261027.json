@@ -1,0 +1,3158 @@
+{
+  "created_at": "2026-10-27T13:15:46.330512+00:00",
+  "count": 28,
+  "passed": 28,
+  "results": [
+    {
+      "case_id": "meat_overview",
+      "question": "Mình muốn mua thịt, gợi ý giúp một số loại.",
+      "first": {
+        "session_id": "e34f9eca-6829-41ba-9bc9-1ba29750c05d",
+        "text": "Mình tìm thấy vài loại Thịt: Gà nội địa: Gà Viên Lá Chanh Hoa Doanh 200g (giá tham khảo 30.000đ); Sơ chế thịt heo: MEATDELI Giò sống 200g (giá tham khảo 39.000đ); Sơ chế Bò, Bê: Thịt bò viên khay Hoa Doanh 300g (giá tham khảo 42.000đ). Bạn muốn xem loại nào trước? Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10183282",
+          "WIN_10281333",
+          "WIN_10620243"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:56.077799Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10183282",
+            "name": "Gà Viên Lá Chanh Hoa Doanh 200g",
+            "category": "Thực Phẩm Đông Lạnh Khác",
+            "brand": "HOA DOANH",
+            "price_vnd": 30000,
+            "stock": 1,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:56.077799Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10281333",
+            "name": "MEATDELI Giò sống 200g",
+            "category": "Chả Giò",
+            "brand": "MEAT DELI",
+            "price_vnd": 39000,
+            "stock": 5,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:32.920474Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10620243",
+            "name": "Thịt bò viên khay Hoa Doanh 300g",
+            "category": "Cá - Bò Viên",
+            "brand": "HOA DOANH",
+            "price_vnd": 42000,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:32.493147Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "e34f9eca-6829-41ba-9bc9-1ba29750c05d",
+        "text": "Trong các sản phẩm vừa hiển thị, Gà Viên Lá Chanh Hoa Doanh 200g có giá tham khảo thấp nhất: 30.000đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10183282"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:56.077799Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10183282",
+            "name": "Gà Viên Lá Chanh Hoa Doanh 200g",
+            "category": "Thực Phẩm Đông Lạnh Khác",
+            "brand": "HOA DOANH",
+            "price_vnd": 30000,
+            "stock": 1,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:56.077799Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "e34f9eca-6829-41ba-9bc9-1ba29750c05d",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "skincare_overview",
+      "question": "Mình muốn chăm sóc da mặt, chưa biết chọn loại nào, tư vấn giúp nhé.",
+      "first": {
+        "session_id": "01965678-5c1d-4550-9208-d898b0c38f97",
+        "text": "Mình tìm thấy vài loại chăm sóc da: Mặt nạ dưỡng da: Mặt nạ tinh chất Collagen Dabo 23g (giá tham khảo 12.000đ); Sữa rửa mặt nữ: Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g (giá tham khảo 54.000đ); Kem chống nắng: Sữa chống nắng bảo vệ da hoàn hảo Biore Perfect Block Milk 25ml (giá tham khảo 68.800đ). Bạn muốn xem loại nào trước? Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017790",
+          "WIN_10017633",
+          "WIN_10056929"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.404316Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017790",
+            "name": "Mặt nạ tinh chất Collagen Dabo 23g",
+            "category": "Chăm Sóc Da",
+            "brand": "DABO",
+            "price_vnd": 12000,
+            "stock": 95,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:35.401257Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10017633",
+            "name": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 17,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400664Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10056929",
+            "name": "Sữa chống nắng bảo vệ da hoàn hảo Biore Perfect Block Milk 25ml",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 68800,
+            "stock": 34,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.404316Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "01965678-5c1d-4550-9208-d898b0c38f97",
+        "text": "Trong các sản phẩm vừa hiển thị, Mặt nạ tinh chất Collagen Dabo 23g có giá tham khảo thấp nhất: 12.000đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017790"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.401257Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017790",
+            "name": "Mặt nạ tinh chất Collagen Dabo 23g",
+            "category": "Chăm Sóc Da",
+            "brand": "DABO",
+            "price_vnd": 12000,
+            "stock": 95,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:35.401257Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "01965678-5c1d-4550-9208-d898b0c38f97",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "household_overview",
+      "question": "Nhà muốn vệ sinh nhà cửa, có những loại nào?",
+      "first": {
+        "session_id": "39f8ce21-da84-47f8-b007-168690f68636",
+        "text": "Mình tìm thấy vài loại vệ sinh nhà cửa: Nước lau kính: Nước lau kính Gift 540ml/580ml (giá tham khảo 23.800đ); Nước t.rửa toilet nt: Viên treo bồn cầu Vim hương lavender 55g (giá tham khảo 27.500đ); Nước rửa chén bát: Nước rửa chén chanh Sunlight chai 750g (giá tham khảo 28.800đ). Bạn muốn xem loại nào trước? Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10019689",
+          "WIN_10613380",
+          "WIN_10638822"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.338898Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10019689",
+            "name": "Nước lau kính Gift 540ml/580ml",
+            "category": "Nước Lau Sàn - Lau Kính",
+            "brand": "GIFT",
+            "price_vnd": 23800,
+            "stock": 52,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:44.063248Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10613380",
+            "name": "Viên treo bồn cầu Vim hương lavender 55g",
+            "category": "Nước Tẩy Rửa",
+            "brand": "VIM",
+            "price_vnd": 27500,
+            "stock": 84,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:44.338898Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10638822",
+            "name": "Nước rửa chén chanh Sunlight chai 750g",
+            "category": "Nước Rửa Chén",
+            "brand": "SUNLIGHT",
+            "price_vnd": 28800,
+            "stock": 112,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:44.337622Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "39f8ce21-da84-47f8-b007-168690f68636",
+        "text": "Trong các sản phẩm vừa hiển thị, Nước lau kính Gift 540ml/580ml có giá tham khảo thấp nhất: 23.800đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10019689"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.063248Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10019689",
+            "name": "Nước lau kính Gift 540ml/580ml",
+            "category": "Nước Lau Sàn - Lau Kính",
+            "brand": "GIFT",
+            "price_vnd": 23800,
+            "stock": 52,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:44.063248Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "39f8ce21-da84-47f8-b007-168690f68636",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "reported_dandruff",
+      "question": "dạo này đầu tao nhiều gàu quá m giới thiệu giúp t vài loại dầu gội đầu",
+      "first": {
+        "session_id": "29145e77-fa1f-42fc-8acb-2718b4871c31",
+        "text": "Trong catalog, mình tìm được Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml (giá tham khảo 95.200đ); Dầu gội Clear  48h sạch gàu ngứa chai 630g (giá tham khảo 202.000đ); Dầu gội Clear Men Cool Sport bạc hà sạch gàu 630g (giá tham khảo 194.900đ). Mình chọn theo mô tả trong tên hàng; công dụng và độ phù hợp bạn cần kiểm tra thêm trên nhãn sản phẩm. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10016912",
+          "WIN_10170653",
+          "WIN_10601173"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396093Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10016912",
+            "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "SELSUN",
+            "price_vnd": 95200,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773419Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10170653",
+            "name": "Dầu gội Clear  48h sạch gàu ngứa chai 630g",
+            "category": "Chăm Sóc Tóc",
+            "brand": "CLEAR",
+            "price_vnd": 202000,
+            "stock": 40,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396093Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10601173",
+            "name": "Dầu gội Clear Men Cool Sport bạc hà sạch gàu 630g",
+            "category": "Chăm Sóc Tóc",
+            "brand": "CLEAR",
+            "price_vnd": 194900,
+            "stock": 113,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.770633Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "29145e77-fa1f-42fc-8acb-2718b4871c31",
+        "text": "Trong các sản phẩm vừa hiển thị, Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml có giá tham khảo thấp nhất: 95.200đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10016912"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:33.773419Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10016912",
+            "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "SELSUN",
+            "price_vnd": 95200,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773419Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "29145e77-fa1f-42fc-8acb-2718b4871c31",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "dandruff_paraphrase",
+      "question": "Đầu mình lắm gàu, giới thiệu mấy chai dầu gội với",
+      "first": {
+        "session_id": "66180b19-8a2d-4d8c-815e-b504157e1108",
+        "text": "Trong catalog, mình tìm được Dầu gội Clear  48h sạch gàu ngứa chai 630g (giá tham khảo 202.000đ); Dầu gội Sạch Gàu X-Men Clean & Fresh 24h Sạch Sâu chai 630g (giá tham khảo 189.500đ); Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml (giá tham khảo 95.200đ). Mình chọn theo mô tả trong tên hàng; công dụng và độ phù hợp bạn cần kiểm tra thêm trên nhãn sản phẩm. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10170653",
+          "WIN_10162324",
+          "WIN_10016912"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396093Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10170653",
+            "name": "Dầu gội Clear  48h sạch gàu ngứa chai 630g",
+            "category": "Chăm Sóc Tóc",
+            "brand": "CLEAR",
+            "price_vnd": 202000,
+            "stock": 40,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396093Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10162324",
+            "name": "Dầu gội Sạch Gàu X-Men Clean & Fresh 24h Sạch Sâu chai 630g",
+            "category": "Chăm Sóc Tóc",
+            "brand": "X-MEN",
+            "price_vnd": 189500,
+            "stock": 23,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.395926Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10016912",
+            "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "SELSUN",
+            "price_vnd": 95200,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773419Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "66180b19-8a2d-4d8c-815e-b504157e1108",
+        "text": "Trong các sản phẩm vừa hiển thị, Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml có giá tham khảo thấp nhất: 95.200đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10016912"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:33.773419Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10016912",
+            "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "SELSUN",
+            "price_vnd": 95200,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773419Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "66180b19-8a2d-4d8c-815e-b504157e1108",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "dandruff_unaccented",
+      "question": "toc tui nhieu gau qua, gioi thieu vai loai dau goi",
+      "first": {
+        "session_id": "9a3d2e91-22cb-460d-a2bb-8903f7191b5a",
+        "text": "Trong catalog, mình tìm được Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml (giá tham khảo 95.200đ); Dầu gội Clear  48h sạch gàu ngứa chai 630g (giá tham khảo 202.000đ); Dầu gội Clear Men Cool Sport bạc hà sạch gàu 630g (giá tham khảo 194.900đ). Mình chọn theo mô tả trong tên hàng; công dụng và độ phù hợp bạn cần kiểm tra thêm trên nhãn sản phẩm. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10016912",
+          "WIN_10170653",
+          "WIN_10601173"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396093Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10016912",
+            "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "SELSUN",
+            "price_vnd": 95200,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773419Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10170653",
+            "name": "Dầu gội Clear  48h sạch gàu ngứa chai 630g",
+            "category": "Chăm Sóc Tóc",
+            "brand": "CLEAR",
+            "price_vnd": 202000,
+            "stock": 40,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396093Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10601173",
+            "name": "Dầu gội Clear Men Cool Sport bạc hà sạch gàu 630g",
+            "category": "Chăm Sóc Tóc",
+            "brand": "CLEAR",
+            "price_vnd": 194900,
+            "stock": 113,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.770633Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "9a3d2e91-22cb-460d-a2bb-8903f7191b5a",
+        "text": "Trong các sản phẩm vừa hiển thị, Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml có giá tham khảo thấp nhất: 95.200đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10016912"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:33.773419Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10016912",
+            "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "SELSUN",
+            "price_vnd": 95200,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773419Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "9a3d2e91-22cb-460d-a2bb-8903f7191b5a",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "oily_hair",
+      "question": "Tóc mình nhanh bết, dầu gội nào dùng được?",
+      "first": {
+        "session_id": "ebc06feb-3331-400b-b709-42764065b6e9",
+        "text": "Mình gợi ý Dầu gội bưởi Cocoon 310ml (giá tham khảo 261.000đ), Dầu Gội Cao Cấp Cho Nam Romano Attitude (650g) (giá tham khảo 189.400đ), Dầu gội cao cấp Romano classic chai 380g (giá tham khảo 127.600đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh. Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10170963",
+          "WIN_10170549",
+          "WIN_10016873"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396409Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10170963",
+            "name": "Dầu gội bưởi Cocoon 310ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "COCOON",
+            "price_vnd": 261000,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396409Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10170549",
+            "name": "Dầu Gội Cao Cấp Cho Nam Romano Attitude (650g)",
+            "category": "Chăm Sóc Tóc",
+            "brand": "ROMANO",
+            "price_vnd": 189400,
+            "stock": 36,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.395942Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10016873",
+            "name": "Dầu gội cao cấp Romano classic chai 380g",
+            "category": "Chăm Sóc Tóc",
+            "brand": "ROMANO",
+            "price_vnd": 127600,
+            "stock": 40,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773402Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "ebc06feb-3331-400b-b709-42764065b6e9",
+        "text": "Trong các sản phẩm vừa hiển thị, Dầu gội cao cấp Romano classic chai 380g có giá tham khảo thấp nhất: 127.600đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10016873"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:33.773402Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10016873",
+            "name": "Dầu gội cao cấp Romano classic chai 380g",
+            "category": "Chăm Sóc Tóc",
+            "brand": "ROMANO",
+            "price_vnd": 127600,
+            "stock": 40,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773402Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "ebc06feb-3331-400b-b709-42764065b6e9",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "conditioner",
+      "question": "Tóc mình khô xơ, giới thiệu vài loại dầu xả",
+      "first": {
+        "session_id": "17df4b05-bbfb-48fe-b99a-1e49a2290f81",
+        "text": "Mình gợi ý Dầu xả dưỡng chất ngăn rụng tóc Pantene Hair Fall Control Conditioner 650ml (giá tham khảo 178.000đ), Dầu xả Pantene  3MM  biotin chai 480ml (giá tham khảo 199.000đ), Dầu xả Pantene mượt mà óng ả 650ml (giá tham khảo 178.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh. Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10056817",
+          "WIN_10171092",
+          "WIN_10016921"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.396625Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10056817",
+            "name": "Dầu xả dưỡng chất ngăn rụng tóc Pantene Hair Fall Control Conditioner 650ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "PANTENE",
+            "price_vnd": 178000,
+            "stock": 11,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773867Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10171092",
+            "name": "Dầu xả Pantene  3MM  biotin chai 480ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "PANTENE",
+            "price_vnd": 199000,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.396625Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10016921",
+            "name": "Dầu xả Pantene mượt mà óng ả 650ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "PANTENE",
+            "price_vnd": 178000,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773522Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "17df4b05-bbfb-48fe-b99a-1e49a2290f81",
+        "text": "Trong các sản phẩm vừa hiển thị, Dầu xả dưỡng chất ngăn rụng tóc Pantene Hair Fall Control Conditioner 650ml, Dầu xả Pantene mượt mà óng ả 650ml có giá tham khảo thấp nhất: 178.000đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10056817",
+          "WIN_10016921"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:33.773867Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10056817",
+            "name": "Dầu xả dưỡng chất ngăn rụng tóc Pantene Hair Fall Control Conditioner 650ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "PANTENE",
+            "price_vnd": 178000,
+            "stock": 11,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773867Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10016921",
+            "name": "Dầu xả Pantene mượt mà óng ả 650ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "PANTENE",
+            "price_vnd": 178000,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773522Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "17df4b05-bbfb-48fe-b99a-1e49a2290f81",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "moisturizer",
+      "question": "Da tao khô quá, giới thiệu vài loại kem dưỡng da mặt nha",
+      "first": {
+        "session_id": "59ca12a0-ce85-4316-aa7d-7fc111d40227",
+        "text": "Mình gợi ý Kem dưỡng mềm da Nivea 50ml (giá tham khảo 79.500đ), Kem dưỡng ban đêm Pond's Age Miracle 45G (giá tham khảo 299.900đ), Kem Pond's chống lão hóa ngày hộp 50g (giá tham khảo 299.900đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017296",
+          "WIN_10315206",
+          "WIN_10315205"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.408245Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017296",
+            "name": "Kem dưỡng mềm da Nivea 50ml",
+            "category": "Chăm Sóc Da",
+            "brand": "NIVEA",
+            "price_vnd": 79500,
+            "stock": 16,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:35.398375Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10315206",
+            "name": "Kem dưỡng ban đêm Pond's Age Miracle 45G",
+            "category": "Chăm Sóc Da",
+            "brand": "POND'S",
+            "price_vnd": 299900,
+            "stock": 29,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:35.408123Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10315205",
+            "name": "Kem Pond's chống lão hóa ngày hộp 50g",
+            "category": "Chăm Sóc Da",
+            "brand": "POND'S",
+            "price_vnd": 299900,
+            "stock": 23,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:35.408245Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "59ca12a0-ce85-4316-aa7d-7fc111d40227",
+        "text": "Trong các sản phẩm vừa hiển thị, Kem dưỡng mềm da Nivea 50ml có giá tham khảo thấp nhất: 79.500đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017296"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.398375Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017296",
+            "name": "Kem dưỡng mềm da Nivea 50ml",
+            "category": "Chăm Sóc Da",
+            "brand": "NIVEA",
+            "price_vnd": 79500,
+            "stock": 16,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:35.398375Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "59ca12a0-ce85-4316-aa7d-7fc111d40227",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "cleanser",
+      "question": "Muốn làm sạch mặt, giới thiệu vài loại sữa rửa mặt",
+      "first": {
+        "session_id": "38c267c1-5fb8-43a0-a198-81a6bb806d51",
+        "text": "Mình gợi ý Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g (giá tham khảo 54.000đ), Sữa rửa mặt Bioré sạch nhờn lỗ chân lông nhỏ mịn 100g (giá tham khảo 54.000đ), Sữa rửa mặt Dabo 3in1 tinh chất collagen 180ml (giá tham khảo 139.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017633",
+          "WIN_10017632",
+          "WIN_10600123"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.409429Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017633",
+            "name": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 17,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400664Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10017632",
+            "name": "Sữa rửa mặt Bioré sạch nhờn lỗ chân lông nhỏ mịn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400648Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10600123",
+            "name": "Sữa rửa mặt Dabo 3in1 tinh chất collagen 180ml",
+            "category": "Chăm Sóc Da",
+            "brand": "DABO",
+            "price_vnd": 139000,
+            "stock": 15,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:35.409429Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "38c267c1-5fb8-43a0-a198-81a6bb806d51",
+        "text": "Trong các sản phẩm vừa hiển thị, Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g, Sữa rửa mặt Bioré sạch nhờn lỗ chân lông nhỏ mịn 100g có giá tham khảo thấp nhất: 54.000đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10017633",
+          "WIN_10017632"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.400664Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10017633",
+            "name": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 17,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400664Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10017632",
+            "name": "Sữa rửa mặt Bioré sạch nhờn lỗ chân lông nhỏ mịn 100g",
+            "category": "Chăm Sóc Da",
+            "brand": "BIORE",
+            "price_vnd": 54000,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.400648Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "38c267c1-5fb8-43a0-a198-81a6bb806d51",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "toothpaste",
+      "question": "Răng mình hay ê buốt, giới thiệu vài loại kem đánh răng",
+      "first": {
+        "session_id": "e88b30c9-d3cb-4920-85f0-c4aae62342d8",
+        "text": "Mình gợi ý Kem đánh răng  Sensodyne bạc hà 160g (giá tham khảo 93.300đ), Kem đánh răng Closeup Diamond Attraction trắng răng 100g (giá tham khảo 26.900đ), Kem đánh răng Closeup dầu quất detox thơm mát 230g (giá tham khảo 45.900đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10086677",
+          "WIN_10018581",
+          "WIN_10615652"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.415187Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10086677",
+            "name": "Kem đánh răng  Sensodyne bạc hà 160g",
+            "category": "Chăm Sóc Răng Miệng",
+            "brand": "SENSODYNE",
+            "price_vnd": 93300,
+            "stock": 54,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:35.412682Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10018581",
+            "name": "Kem đánh răng Closeup Diamond Attraction trắng răng 100g",
+            "category": "Chăm Sóc Răng Miệng",
+            "brand": "CLOSE UP",
+            "price_vnd": 26900,
+            "stock": 261,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:33.770963Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10615652",
+            "name": "Kem đánh răng Closeup dầu quất detox thơm mát 230g",
+            "category": "Chăm Sóc Răng Miệng",
+            "brand": "CLOSE UP",
+            "price_vnd": 45900,
+            "stock": 14,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:35.415187Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "e88b30c9-d3cb-4920-85f0-c4aae62342d8",
+        "text": "Trong các sản phẩm vừa hiển thị, Kem đánh răng Closeup Diamond Attraction trắng răng 100g có giá tham khảo thấp nhất: 26.900đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10018581"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:33.770963Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10018581",
+            "name": "Kem đánh răng Closeup Diamond Attraction trắng răng 100g",
+            "category": "Chăm Sóc Răng Miệng",
+            "brand": "CLOSE UP",
+            "price_vnd": 26900,
+            "stock": 261,
+            "stock_is_current": false,
+            "uom": "Tuýp",
+            "data_timestamp": "2026-09-15T13:53:33.770963Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "e88b30c9-d3cb-4920-85f0-c4aae62342d8",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "mouthwash",
+      "question": "Có vài loại nước súc miệng nào không, giới thiệu mình xem",
+      "first": {
+        "session_id": "f4de9894-6416-42c0-abdb-45e39e06e2f6",
+        "text": "Mình gợi ý Nước súc miệng diệt khuẩn Listerine Cool Mint chai 250ml (giá tham khảo 70.600đ), Nước súc miệng diệt khuẩn Listerine Cool Mint chai 500ml (giá tham khảo 139.000đ), Nước súc miệng diệt khuẩn Listerine Cool Mint chai 750ml (giá tham khảo 167.800đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10018404",
+          "WIN_10018405",
+          "WIN_10018406"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.411876Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10018404",
+            "name": "Nước súc miệng diệt khuẩn Listerine Cool Mint chai 250ml",
+            "category": "Chăm Sóc Răng Miệng",
+            "brand": "LISTERINE",
+            "price_vnd": 70600,
+            "stock": 23,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.411707Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10018405",
+            "name": "Nước súc miệng diệt khuẩn Listerine Cool Mint chai 500ml",
+            "category": "Chăm Sóc Răng Miệng",
+            "brand": "LISTERINE",
+            "price_vnd": 139000,
+            "stock": 28,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.411636Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10018406",
+            "name": "Nước súc miệng diệt khuẩn Listerine Cool Mint chai 750ml",
+            "category": "Chăm Sóc Răng Miệng",
+            "brand": "LISTERINE",
+            "price_vnd": 167800,
+            "stock": 20,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.411876Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "f4de9894-6416-42c0-abdb-45e39e06e2f6",
+        "text": "Trong các sản phẩm vừa hiển thị, Nước súc miệng diệt khuẩn Listerine Cool Mint chai 250ml có giá tham khảo thấp nhất: 70.600đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10018404"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.411707Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10018404",
+            "name": "Nước súc miệng diệt khuẩn Listerine Cool Mint chai 250ml",
+            "category": "Chăm Sóc Răng Miệng",
+            "brand": "LISTERINE",
+            "price_vnd": 70600,
+            "stock": 23,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.411707Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "f4de9894-6416-42c0-abdb-45e39e06e2f6",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "dish_soap",
+      "question": "Bếp nhiều dầu mỡ, giới thiệu nước rửa chén giúp mình",
+      "first": {
+        "session_id": "c85f3e88-1916-4c30-9b5f-60141f553b9a",
+        "text": "Mình gợi ý Nước rửa chén bát Sunlight thiên nhiên lô hội túi 3.4Kg (giá tham khảo 116.200đ), Nước rửa chén bát Sunlight thiên nhiên muối khoáng và lô hội chai 750g (giá tham khảo 36.000đ), Nước rửa chén bát Sunlight trà xanh khử mùi tanh túi 3.4Kg (giá tham khảo 115.100đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10171191",
+          "WIN_10622318",
+          "WIN_10171190"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.337511Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10171191",
+            "name": "Nước rửa chén bát Sunlight thiên nhiên lô hội túi 3.4Kg",
+            "category": "Nước Rửa Chén",
+            "brand": "SUNLIGHT",
+            "price_vnd": 116200,
+            "stock": 70,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.337189Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10622318",
+            "name": "Nước rửa chén bát Sunlight thiên nhiên muối khoáng và lô hội chai 750g",
+            "category": "Nước Rửa Chén",
+            "brand": "SUNLIGHT",
+            "price_vnd": 36000,
+            "stock": 81,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:44.337511Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10171190",
+            "name": "Nước rửa chén bát Sunlight trà xanh khử mùi tanh túi 3.4Kg",
+            "category": "Nước Rửa Chén",
+            "brand": "SUNLIGHT",
+            "price_vnd": 115100,
+            "stock": 66,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.337037Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "c85f3e88-1916-4c30-9b5f-60141f553b9a",
+        "text": "Trong các sản phẩm vừa hiển thị, Nước rửa chén bát Sunlight thiên nhiên muối khoáng và lô hội chai 750g có giá tham khảo thấp nhất: 36.000đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10622318"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.337511Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10622318",
+            "name": "Nước rửa chén bát Sunlight thiên nhiên muối khoáng và lô hội chai 750g",
+            "category": "Nước Rửa Chén",
+            "brand": "SUNLIGHT",
+            "price_vnd": 36000,
+            "stock": 81,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:44.337511Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "c85f3e88-1916-4c30-9b5f-60141f553b9a",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "laundry",
+      "question": "Quần áo nhiều mùi, giới thiệu vài loại nước giặt",
+      "first": {
+        "session_id": "5ea0ca45-1836-48ee-b367-8ea20d224168",
+        "text": "Trong catalog, mình tìm được OMO NG Cửa trước Khử mùi ẩm mốc 3.8kg (giá tham khảo 193.000đ). Mình chọn theo mô tả trong tên hàng; công dụng và độ phù hợp bạn cần kiểm tra thêm trên nhãn sản phẩm. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10275943"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.614768Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10275943",
+            "name": "OMO NG Cửa trước Khử mùi ẩm mốc 3.8kg",
+            "category": "Giá Siêu Rẻ",
+            "brand": "OMO",
+            "price_vnd": 193000,
+            "stock": 243,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.614768Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "5ea0ca45-1836-48ee-b367-8ea20d224168",
+        "text": "Mình mới thấy một lựa chọn: OMO NG Cửa trước Khử mùi ẩm mốc 3.8kg, giá tham khảo 193.000đ. Bạn muốn mình tìm thêm cùng nhóm để so sánh không? Giá và tồn tại cửa hàng cần kiểm tra lại.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10275943"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.614768Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10275943",
+            "name": "OMO NG Cửa trước Khử mùi ẩm mốc 3.8kg",
+            "category": "Giá Siêu Rẻ",
+            "brand": "OMO",
+            "price_vnd": 193000,
+            "stock": 243,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.614768Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "5ea0ca45-1836-48ee-b367-8ea20d224168",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "fabric_softener",
+      "question": "Muốn quần áo thơm, giới thiệu nước xả vải nha",
+      "first": {
+        "session_id": "bb87a905-bde8-4180-b183-22a77e3aec5d",
+        "text": "Trong catalog, mình tìm được Nước Xả Vải Comfort Dịu Nhẹ Thơm Hương Phấn túi 3L (giá tham khảo 178.900đ). Mình chọn theo mô tả trong tên hàng; công dụng và độ phù hợp bạn cần kiểm tra thêm trên nhãn sản phẩm. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10617627"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.340786Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10617627",
+            "name": "Nước Xả Vải Comfort Dịu Nhẹ Thơm Hương Phấn túi 3L",
+            "category": "Nước Xả",
+            "brand": "COMFORT",
+            "price_vnd": 178900,
+            "stock": 303,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.340786Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "bb87a905-bde8-4180-b183-22a77e3aec5d",
+        "text": "Mình mới thấy một lựa chọn: Nước Xả Vải Comfort Dịu Nhẹ Thơm Hương Phấn túi 3L, giá tham khảo 178.900đ. Bạn muốn mình tìm thêm cùng nhóm để so sánh không? Giá và tồn tại cửa hàng cần kiểm tra lại.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10617627"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:44.340786Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10617627",
+            "name": "Nước Xả Vải Comfort Dịu Nhẹ Thơm Hương Phấn túi 3L",
+            "category": "Nước Xả",
+            "brand": "COMFORT",
+            "price_vnd": 178900,
+            "stock": 303,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:44.340786Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "bb87a905-bde8-4180-b183-22a77e3aec5d",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "face_towels",
+      "question": "Tôi muốn khăn mặt để lau mặt, giới thiệu vài cái",
+      "first": {
+        "session_id": "9dcf255e-5aac-403f-91bc-ddbe43b31d76",
+        "text": "Mình gợi ý Khăn mặt 2 lớp Mollis FM5A 40*80*87g (giá tham khảo 59.000đ), Khăn mặt bamboo WinMart Home  34*75*124g (giá tham khảo 68.600đ), Khăn mặt cotton  WinMart Home 32*65*90g (giá tham khảo 29.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10601537",
+          "WIN_10167097",
+          "WIN_10330217"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.681866Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10601537",
+            "name": "Khăn mặt 2 lớp Mollis FM5A 40*80*87g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "MOLLIS",
+            "price_vnd": 59000,
+            "stock": 75,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.677561Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10167097",
+            "name": "Khăn mặt bamboo WinMart Home  34*75*124g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 68600,
+            "stock": 36,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681866Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10330217",
+            "name": "Khăn mặt cotton  WinMart Home 32*65*90g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 29000,
+            "stock": 69,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.354585Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "9dcf255e-5aac-403f-91bc-ddbe43b31d76",
+        "text": "Trong các sản phẩm vừa hiển thị, Khăn mặt cotton  WinMart Home 32*65*90g có giá tham khảo thấp nhất: 29.000đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10330217"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.354585Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10330217",
+            "name": "Khăn mặt cotton  WinMart Home 32*65*90g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 29000,
+            "stock": 69,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.354585Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "9dcf255e-5aac-403f-91bc-ddbe43b31d76",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "bath_towels",
+      "question": "Giới thiệu cho tôi vài loại khăn tắm",
+      "first": {
+        "session_id": "992c6d69-821d-447a-9cc0-aa292038b0ef",
+        "text": "Mình gợi ý Khăn tắm bamboo WinMart Home 60*120*334g (giá tham khảo 186.400đ), Khăn tắm Cotton 50x100x175gr Winmart Home (giá tham khảo 69.000đ), Khăn tắm cotton Quảng Phú BQX6 50*98*147g ( Màu ngẫu nhiên) (giá tham khảo 107.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10167095",
+          "WIN_10264880",
+          "WIN_10266097"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.681890Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10167095",
+            "name": "Khăn tắm bamboo WinMart Home 60*120*334g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 186400,
+            "stock": 63,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681837Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10264880",
+            "name": "Khăn tắm Cotton 50x100x175gr Winmart Home",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 69000,
+            "stock": 35,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.355526Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10266097",
+            "name": "Khăn tắm cotton Quảng Phú BQX6 50*98*147g ( Màu ngẫu nhiên)",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "QUẢNG PHÚ",
+            "price_vnd": 107000,
+            "stock": 125,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681890Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "992c6d69-821d-447a-9cc0-aa292038b0ef",
+        "text": "Trong các sản phẩm vừa hiển thị, Khăn tắm Cotton 50x100x175gr Winmart Home có giá tham khảo thấp nhất: 69.000đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10264880"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.355526Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10264880",
+            "name": "Khăn tắm Cotton 50x100x175gr Winmart Home",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 69000,
+            "stock": 35,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.355526Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "992c6d69-821d-447a-9cc0-aa292038b0ef",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "tissue",
+      "question": "Cần giấy lau miệng, giới thiệu vài loại khăn giấy",
+      "first": {
+        "session_id": "d07b0dcf-58df-448f-a87b-7de4ab36fb63",
+        "text": "Mình gợi ý Khăn giấy bỏ túi Let-Green lốc 9 gói (giá tham khảo 15.900đ), Khăn giấy bỏ túi Tempo 4 lớp gói 90 tờ 16 x 19,5 cm (giá tham khảo 32.300đ), Khăn giấy lụa 2 lớp Elene gói 260 tờ (giá tham khảo 27.900đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10020644",
+          "WIN_10624441",
+          "WIN_10020501"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.422596Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10020644",
+            "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+            "category": "Khăn Giấy - Khăn Ướt",
+            "brand": "LETGREEN",
+            "price_vnd": 15900,
+            "stock": 14,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:35.421066Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10624441",
+            "name": "Khăn giấy bỏ túi Tempo 4 lớp gói 90 tờ 16 x 19,5 cm",
+            "category": "Khăn Giấy - Khăn Ướt",
+            "brand": "TEMPO",
+            "price_vnd": 32300,
+            "stock": 23,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:35.422596Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10020501",
+            "name": "Khăn giấy lụa 2 lớp Elene gói 260 tờ",
+            "category": "Khăn Giấy - Khăn Ướt",
+            "brand": "ELENE",
+            "price_vnd": 27900,
+            "stock": 614,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:35.420287Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "d07b0dcf-58df-448f-a87b-7de4ab36fb63",
+        "text": "Trong các sản phẩm vừa hiển thị, Khăn giấy bỏ túi Let-Green lốc 9 gói có giá tham khảo thấp nhất: 15.900đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10020644"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.421066Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10020644",
+            "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+            "category": "Khăn Giấy - Khăn Ướt",
+            "brand": "LETGREEN",
+            "price_vnd": 15900,
+            "stock": 14,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:35.421066Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "d07b0dcf-58df-448f-a87b-7de4ab36fb63",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "cotton_pads",
+      "question": "Muốn tẩy trang, giới thiệu vài loại bông tẩy trang",
+      "first": {
+        "session_id": "ab1eb68f-8e7f-45ea-b362-5a109b2558ad",
+        "text": "Mình gợi ý Bông trang điểm Silcot Premium 66 miếng (giá tham khảo 50.400đ), Bông tẩy trang 2 công dụng Pop Puf 90m (giá tham khảo 27.900đ), Bông tẩy trang Aura beauty 120+30 miếng (giá tham khảo 44.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10020891",
+          "WIN_10170800",
+          "WIN_10612256"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.420102Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10020891",
+            "name": "Bông trang điểm Silcot Premium 66 miếng",
+            "category": "Mỹ Phẩm",
+            "brand": "SILCOT",
+            "price_vnd": 50400,
+            "stock": 37,
+            "stock_is_current": false,
+            "uom": "Hộp",
+            "data_timestamp": "2026-09-15T13:53:35.419867Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10170800",
+            "name": "Bông tẩy trang 2 công dụng Pop Puf 90m",
+            "category": "Mỹ Phẩm",
+            "brand": "POP PUF",
+            "price_vnd": 27900,
+            "stock": 71,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:35.420068Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10612256",
+            "name": "Bông tẩy trang Aura beauty 120+30 miếng",
+            "category": "Mỹ Phẩm",
+            "brand": "AURA",
+            "price_vnd": 44000,
+            "stock": 39,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:35.420102Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "ab1eb68f-8e7f-45ea-b362-5a109b2558ad",
+        "text": "Trong các sản phẩm vừa hiển thị, Bông tẩy trang 2 công dụng Pop Puf 90m có giá tham khảo thấp nhất: 27.900đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10170800"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.420068Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10170800",
+            "name": "Bông tẩy trang 2 công dụng Pop Puf 90m",
+            "category": "Mỹ Phẩm",
+            "brand": "POP PUF",
+            "price_vnd": 27900,
+            "stock": 71,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:35.420068Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "ab1eb68f-8e7f-45ea-b362-5a109b2558ad",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "cooking_oil",
+      "question": "Mình hay nấu ăn, giới thiệu vài loại dầu ăn",
+      "first": {
+        "session_id": "12782230-fde0-4b25-a649-d45aa87c9a9d",
+        "text": "Mình tìm thấy vài loại Dầu ăn: Dầu hỗn hợp: Dầu ăn cao cấp Meizan GOLD 1L (giá tham khảo 49.900đ); Dầu nành: Dầu đậu nành Meizan 1L (giá tham khảo 53.900đ); Các loại dầu gạo, hạ: Dầu mè thơm hảo hạng Meizan chai 250ml (giá tham khảo 57.900đ). Bạn muốn xem loại nào trước? Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10010069",
+          "WIN_10010075",
+          "WIN_10010140"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:37.815943Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10010069",
+            "name": "Dầu ăn cao cấp Meizan GOLD 1L",
+            "category": "Dầu Ăn",
+            "brand": "MEIZAN",
+            "price_vnd": 49900,
+            "stock": 167,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:37.815002Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10010075",
+            "name": "Dầu đậu nành Meizan 1L",
+            "category": "Dầu Ăn",
+            "brand": "MEIZAN",
+            "price_vnd": 53900,
+            "stock": 157,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:37.815166Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10010140",
+            "name": "Dầu mè thơm hảo hạng Meizan chai 250ml",
+            "category": "Dầu Ăn",
+            "brand": "MEIZAN",
+            "price_vnd": 57900,
+            "stock": 47,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:37.815943Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "12782230-fde0-4b25-a649-d45aa87c9a9d",
+        "text": "Trong các sản phẩm vừa hiển thị, Dầu ăn cao cấp Meizan GOLD 1L có giá tham khảo thấp nhất: 49.900đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10010069"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:37.815002Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10010069",
+            "name": "Dầu ăn cao cấp Meizan GOLD 1L",
+            "category": "Dầu Ăn",
+            "brand": "MEIZAN",
+            "price_vnd": 49900,
+            "stock": 167,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:37.815002Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "12782230-fde0-4b25-a649-d45aa87c9a9d",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "fish_sauce",
+      "question": "Giới thiệu nước mắm cho nhà mình xem",
+      "first": {
+        "session_id": "d1b7eb92-aeae-4e01-b423-6557e00088f2",
+        "text": "Mình gợi ý Nước mắm cao cấp Barona vị xưa chai 500ml (giá tham khảo 86.500đ), Nước mắm cho bé Lê Gia 200ml (giá tham khảo 84.100đ), Nước mắm cá cơm 50 độ đạm Hạnh Phúc chai 250ml (giá tham khảo 59.400đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009553",
+          "WIN_10170270",
+          "WIN_10009611"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:42.609581Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009553",
+            "name": "Nước mắm cao cấp Barona vị xưa chai 500ml",
+            "category": "Nước Mắm - Nước Chấm",
+            "brand": "BARONA",
+            "price_vnd": 86500,
+            "stock": 50,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:42.605990Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10170270",
+            "name": "Nước mắm cho bé Lê Gia 200ml",
+            "category": "Nước Mắm - Nước Chấm",
+            "brand": "LÊ GIA",
+            "price_vnd": 84100,
+            "stock": 15,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:42.609581Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10009611",
+            "name": "Nước mắm cá cơm 50 độ đạm Hạnh Phúc chai 250ml",
+            "category": "Nước Mắm - Nước Chấm",
+            "brand": "HẠNH PHÚC",
+            "price_vnd": 59400,
+            "stock": 39,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:42.608770Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "d1b7eb92-aeae-4e01-b423-6557e00088f2",
+        "text": "Trong các sản phẩm vừa hiển thị, Nước mắm cá cơm 50 độ đạm Hạnh Phúc chai 250ml có giá tham khảo thấp nhất: 59.400đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10009611"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:42.608770Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10009611",
+            "name": "Nước mắm cá cơm 50 độ đạm Hạnh Phúc chai 250ml",
+            "category": "Nước Mắm - Nước Chấm",
+            "brand": "HẠNH PHÚC",
+            "price_vnd": 59400,
+            "stock": 39,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:42.608770Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "d1b7eb92-aeae-4e01-b423-6557e00088f2",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "rice",
+      "question": "Tui cần mua gạo, giới thiệu giúp vài loại",
+      "first": {
+        "session_id": "1e899d43-2194-4303-8caf-85511d6b508d",
+        "text": "Mình gợi ý Gáo nhựa Inochi Notoro (giá tham khảo 42.000đ), Gạo giống Nhật Bảo Minh túi 5kg (giá tham khảo 170.000đ), Gạo Ngọc Nương lúa tôm ST25 5Kg (giá tham khảo 180.900đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10250441",
+          "WIN_10009734",
+          "WIN_10141515"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.364081Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10250441",
+            "name": "Gáo nhựa Inochi Notoro",
+            "category": "Vệ Sinh Nhà Cửa",
+            "brand": "INOCHI",
+            "price_vnd": 42000,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681628Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10009734",
+            "name": "Gạo giống Nhật Bảo Minh túi 5kg",
+            "category": "Gạo - Nông Sản Khô",
+            "brand": "BẢO MINH",
+            "price_vnd": 170000,
+            "stock": 15,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.363401Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10141515",
+            "name": "Gạo Ngọc Nương lúa tôm ST25 5Kg",
+            "category": "Gạo - Nông Sản Khô",
+            "brand": "NGỌC NƯƠNG",
+            "price_vnd": 180900,
+            "stock": 16,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:41.364081Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "1e899d43-2194-4303-8caf-85511d6b508d",
+        "text": "Trong các sản phẩm vừa hiển thị, Gáo nhựa Inochi Notoro có giá tham khảo thấp nhất: 42.000đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10250441"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.681628Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10250441",
+            "name": "Gáo nhựa Inochi Notoro",
+            "category": "Vệ Sinh Nhà Cửa",
+            "brand": "INOCHI",
+            "price_vnd": 42000,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.681628Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "1e899d43-2194-4303-8caf-85511d6b508d",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "salt",
+      "question": "Nhà hết muối rồi, giới thiệu vài loại muối",
+      "first": {
+        "session_id": "3380e054-74a5-43cd-b769-8b9f3624c521",
+        "text": "Mình gợi ý Muối biển Visaco Mặt trời (tinh) 450g (giá tham khảo 6.800đ), Muối chấm hoa quả DHF lọ 110g (giá tham khảo 20.000đ), Muối chấm Tôm chua cay Hảo Hảo 120g (giá tham khảo 17.900đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10008651",
+          "WIN_10140900",
+          "WIN_10181052"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:42.616620Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10008651",
+            "name": "Muối biển Visaco Mặt trời (tinh) 450g",
+            "category": "Gia Vị Khác",
+            "brand": "VISACO",
+            "price_vnd": 6800,
+            "stock": 73,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:42.614285Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10140900",
+            "name": "Muối chấm hoa quả DHF lọ 110g",
+            "category": "Gia Vị Khác",
+            "brand": "DH FOODS",
+            "price_vnd": 20000,
+            "stock": 9,
+            "stock_is_current": false,
+            "uom": "Lọ",
+            "data_timestamp": "2026-09-15T13:53:42.616280Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10181052",
+            "name": "Muối chấm Tôm chua cay Hảo Hảo 120g",
+            "category": "Gia Vị Khác",
+            "brand": "HẢO HẢO",
+            "price_vnd": 17900,
+            "stock": 470,
+            "stock_is_current": false,
+            "uom": "Lọ",
+            "data_timestamp": "2026-09-15T13:53:42.616620Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "3380e054-74a5-43cd-b769-8b9f3624c521",
+        "text": "Trong các sản phẩm vừa hiển thị, Muối biển Visaco Mặt trời (tinh) 450g có giá tham khảo thấp nhất: 6.800đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10008651"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:42.614285Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10008651",
+            "name": "Muối biển Visaco Mặt trời (tinh) 450g",
+            "category": "Gia Vị Khác",
+            "brand": "VISACO",
+            "price_vnd": 6800,
+            "stock": 73,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:42.614285Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "3380e054-74a5-43cd-b769-8b9f3624c521",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "cheese_snack",
+      "question": "Tư vấn snack vị phô mai dưới 30k",
+      "first": {
+        "session_id": "d7bfee39-ed7e-4b03-8221-3a2c875a64f9",
+        "text": "Mình gợi ý Rong biển Miwon cuộn nướng vị pho mai 6g (giá tham khảo 15.700đ), Snack khoai tây vị phô mai Slide lon 75g (giá tham khảo 29.800đ), Snack Lay's wavy vị phô mai cheddar 95g (giá tham khảo 22.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10142168",
+          "WIN_10015708",
+          "WIN_10623327"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:51.079095Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10142168",
+            "name": "Rong biển Miwon cuộn nướng vị pho mai 6g",
+            "category": "Rong Biển - Tảo Biển",
+            "brand": "MIWON",
+            "price_vnd": 15700,
+            "stock": 14,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:51.079095Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10015708",
+            "name": "Snack khoai tây vị phô mai Slide lon 75g",
+            "category": "Bánh Snack",
+            "brand": "SLIDE",
+            "price_vnd": 29800,
+            "stock": 114,
+            "stock_is_current": false,
+            "uom": "Lon",
+            "data_timestamp": "2026-09-15T13:53:30.458257Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10623327",
+            "name": "Snack Lay's wavy vị phô mai cheddar 95g",
+            "category": "Bánh Snack",
+            "brand": "LAY'S",
+            "price_vnd": 22000,
+            "stock": 129,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:30.460420Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "d7bfee39-ed7e-4b03-8221-3a2c875a64f9",
+        "text": "Trong các sản phẩm vừa hiển thị, Rong biển Miwon cuộn nướng vị pho mai 6g có giá tham khảo thấp nhất: 15.700đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10142168"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:51.079095Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10142168",
+            "name": "Rong biển Miwon cuộn nướng vị pho mai 6g",
+            "category": "Rong Biển - Tảo Biển",
+            "brand": "MIWON",
+            "price_vnd": 15700,
+            "stock": 14,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:51.079095Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "d7bfee39-ed7e-4b03-8221-3a2c875a64f9",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "seaweed_snack",
+      "question": "Thích rong biển, giới thiệu vài loại snack rong biển",
+      "first": {
+        "session_id": "266d8d21-832e-475b-8ae2-9b6d1eec5583",
+        "text": "Mình gợi ý Snack Rong biển Taokeanoi vị truyền thống gói 32g (giá tham khảo 49.400đ), Rong biển  Miwon cuộn nướng vị truyền thống 6g (giá tham khảo 15.700đ), Rong biển Miwon cuộn nướng vị mực 6g (giá tham khảo 15.700đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10016026",
+          "WIN_10142167",
+          "WIN_10142169"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:51.079109Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10016026",
+            "name": "Snack Rong biển Taokeanoi vị truyền thống gói 32g",
+            "category": "Bánh Snack",
+            "brand": "TAO KAE NOI",
+            "price_vnd": 49400,
+            "stock": 14,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:30.459252Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10142167",
+            "name": "Rong biển  Miwon cuộn nướng vị truyền thống 6g",
+            "category": "Rong Biển - Tảo Biển",
+            "brand": "MIWON",
+            "price_vnd": 15700,
+            "stock": 12,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:51.079079Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10142169",
+            "name": "Rong biển Miwon cuộn nướng vị mực 6g",
+            "category": "Rong Biển - Tảo Biển",
+            "brand": "MIWON",
+            "price_vnd": 15700,
+            "stock": 46,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:51.079109Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "266d8d21-832e-475b-8ae2-9b6d1eec5583",
+        "text": "Trong các sản phẩm vừa hiển thị, Rong biển  Miwon cuộn nướng vị truyền thống 6g, Rong biển Miwon cuộn nướng vị mực 6g có giá tham khảo thấp nhất: 15.700đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10142167",
+          "WIN_10142169"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:51.079109Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10142167",
+            "name": "Rong biển  Miwon cuộn nướng vị truyền thống 6g",
+            "category": "Rong Biển - Tảo Biển",
+            "brand": "MIWON",
+            "price_vnd": 15700,
+            "stock": 12,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:51.079079Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10142169",
+            "name": "Rong biển Miwon cuộn nướng vị mực 6g",
+            "category": "Rong Biển - Tảo Biển",
+            "brand": "MIWON",
+            "price_vnd": 15700,
+            "stock": 46,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:51.079109Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "266d8d21-832e-475b-8ae2-9b6d1eec5583",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "instant_noodles",
+      "question": "Giới thiệu cho mình vài loại mì ăn liền",
+      "first": {
+        "session_id": "2bd085a1-b03e-46d2-96ea-27afe7b7a009",
+        "text": "Mình gợi ý Mì gói ăn liền vị gà cay Samyang 145g (giá tham khảo 43.500đ), Mì gói ăn liền cay Shin Ramyun Nongshim 114g (giá tham khảo 28.900đ), Mì trộn ăn liền Jjajangmen Paldo gói 200g (giá tham khảo 31.900đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10307181",
+          "WIN_10008050",
+          "WIN_10008219"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:46.467924Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10307181",
+            "name": "Mì gói ăn liền vị gà cay Samyang 145g",
+            "category": "Mì",
+            "brand": "SAMYANG",
+            "price_vnd": 43500,
+            "stock": 4,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:46.467924Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10008050",
+            "name": "Mì gói ăn liền cay Shin Ramyun Nongshim 114g",
+            "category": "Mì",
+            "brand": "NONGSHIM",
+            "price_vnd": 28900,
+            "stock": 101,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:46.028388Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10008219",
+            "name": "Mì trộn ăn liền Jjajangmen Paldo gói 200g",
+            "category": "Mì",
+            "brand": "PALDO",
+            "price_vnd": 31900,
+            "stock": 229,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:46.029072Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "2bd085a1-b03e-46d2-96ea-27afe7b7a009",
+        "text": "Trong các sản phẩm vừa hiển thị, Mì gói ăn liền cay Shin Ramyun Nongshim 114g có giá tham khảo thấp nhất: 28.900đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10008050"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:46.028388Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10008050",
+            "name": "Mì gói ăn liền cay Shin Ramyun Nongshim 114g",
+            "category": "Mì",
+            "brand": "NONGSHIM",
+            "price_vnd": 28900,
+            "stock": 101,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:46.028388Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "2bd085a1-b03e-46d2-96ea-27afe7b7a009",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "coffee",
+      "question": "Sáng cần uống cà phê, giới thiệu vài loại cà phê rang xay",
+      "first": {
+        "session_id": "be62f760-6a82-4490-994e-294a824fee08",
+        "text": "Trong catalog, mình tìm được Cà phê rang xay Sáng Tạo 2 Trung Nguyên gói 340g (giá tham khảo 111.100đ); Cà phê rang xay Sáng Tạo 4 Trung Nguyên gói 340g (giá tham khảo 154.200đ); Café xay Sáng Tạo 8 Trung Nguyên hộp 500g (giá tham khảo 641.700đ). Mình chọn theo mô tả trong tên hàng; công dụng và độ phù hợp bạn cần kiểm tra thêm trên nhãn sản phẩm. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10013012",
+          "WIN_10013014",
+          "WIN_10012983"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:32.690312Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10013012",
+            "name": "Cà phê rang xay Sáng Tạo 2 Trung Nguyên gói 340g",
+            "category": "Cà Phê",
+            "brand": "TRUNG NGUYÊN",
+            "price_vnd": 111100,
+            "stock": 28,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:32.690146Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10013014",
+            "name": "Cà phê rang xay Sáng Tạo 4 Trung Nguyên gói 340g",
+            "category": "Cà Phê",
+            "brand": "TRUNG NGUYÊN",
+            "price_vnd": 154200,
+            "stock": 30,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:32.690312Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10012983",
+            "name": "Café xay Sáng Tạo 8 Trung Nguyên hộp 500g",
+            "category": "Cà Phê",
+            "brand": "TRUNG NGUYÊN",
+            "price_vnd": 641700,
+            "stock": 23,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:32.689985Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "be62f760-6a82-4490-994e-294a824fee08",
+        "text": "Trong các sản phẩm vừa hiển thị, Cà phê rang xay Sáng Tạo 2 Trung Nguyên gói 340g có giá tham khảo thấp nhất: 111.100đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10013012"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:32.690146Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10013012",
+            "name": "Cà phê rang xay Sáng Tạo 2 Trung Nguyên gói 340g",
+            "category": "Cà Phê",
+            "brand": "TRUNG NGUYÊN",
+            "price_vnd": 111100,
+            "stock": 28,
+            "stock_is_current": false,
+            "uom": "Gói",
+            "data_timestamp": "2026-09-15T13:53:32.690146Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "be62f760-6a82-4490-994e-294a824fee08",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    },
+    {
+      "case_id": "drinking_water",
+      "question": "Muốn mua nước suối, giới thiệu vài loại",
+      "first": {
+        "session_id": "f2201fe3-1476-428a-b930-8d437d0baf23",
+        "text": "Mình tìm thấy vài loại đồ uống: Nước khoáng: Nước ion I-On Life 450ml (giá tham khảo 5.500đ); Nước trà: Nước trà chanh sả Fuzetea lon 320ml (giá tham khảo 8.400đ); Nước ngọt có ga: Nước Giải Khát Coca-Cola Sleek 235ml (giá tham khảo 8.800đ). Bạn muốn xem loại nào trước? Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10011695",
+          "WIN_10150497",
+          "WIN_10150435"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.149217Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10011695",
+            "name": "Nước ion I-On Life 450ml",
+            "category": "Nước Suối",
+            "brand": "I-ON LIFE",
+            "price_vnd": 5500,
+            "stock": 34,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:40.206591Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10150497",
+            "name": "Nước trà chanh sả Fuzetea lon 320ml",
+            "category": "Nước Ngọt",
+            "brand": "FUZETEA",
+            "price_vnd": 8400,
+            "stock": 5,
+            "stock_is_current": false,
+            "uom": "Lon",
+            "data_timestamp": "2026-09-15T13:53:40.206743Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10150435",
+            "name": "Nước Giải Khát Coca-Cola Sleek 235ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 8800,
+            "stock": 1099,
+            "stock_is_current": false,
+            "uom": "Lon",
+            "data_timestamp": "2026-09-15T13:53:41.149217Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cheapest": {
+        "session_id": "f2201fe3-1476-428a-b930-8d437d0baf23",
+        "text": "Trong các sản phẩm vừa hiển thị, Nước ion I-On Life 450ml có giá tham khảo thấp nhất: 5.500đ mỗi sản phẩm. Giá và tồn tại cửa hàng cần kiểm tra lại; các sản phẩm có thể khác quy cách.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10011695"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:40.206591Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10011695",
+            "name": "Nước ion I-On Life 450ml",
+            "category": "Nước Suối",
+            "brand": "I-ON LIFE",
+            "price_vnd": 5500,
+            "stock": 34,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:40.206591Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "bestseller": {
+        "session_id": "f2201fe3-1476-428a-b930-8d437d0baf23",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại bán chạy nhất. Bạn muốn mình so sánh giá hoặc lọc theo nhu cầu của nhóm đang xem không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "failures": []
+    }
+  ]
+}
