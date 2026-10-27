@@ -263,7 +263,11 @@ def _preflight_case_catalog(
             str(product_id)
             for case in cases
             for turn in case.get("turns", [])
-            for field in ("expected_product_ids", "must_not_include_product_ids")
+            for field in (
+                "expected_product_ids",
+                "expected_product_ids_any",
+                "must_not_include_product_ids",
+            )
             for product_id in turn.get(field, [])
             if product_id
         }
@@ -318,6 +322,7 @@ def grade_turn(
     normalized = response_text.casefold()
     product_ids = body.get("grounded_product_ids", [])
     expected_ids = turn.get("expected_product_ids", [])
+    expected_any_ids = turn.get("expected_product_ids_any", [])
     required = [str(item).casefold() for item in turn.get("must_contain", [])]
     forbidden = [str(item).casefold() for item in turn.get("must_not_contain", [])]
     model_tool_calls = [
@@ -339,6 +344,8 @@ def grade_turn(
     checks = {
         "http_200": status_code == 200,
         "expected_product_ids": all(product_id in product_ids for product_id in expected_ids),
+        "expected_product_ids_any": not expected_any_ids
+        or any(product_id in product_ids for product_id in expected_any_ids),
         "expected_tools": all(
             name in all_tool_names for name in turn.get("expected_tools", [])
         ),
@@ -595,6 +602,7 @@ async def run(
                         key: turn[key]
                         for key in (
                             "expected_product_ids",
+                            "expected_product_ids_any",
                             "expected_tools",
                             "expected_model_tools",
                             "expected_tool_arguments",

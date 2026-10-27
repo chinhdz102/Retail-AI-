@@ -209,14 +209,20 @@ function handleVoiceState(state: VoiceState) {
     maybePrewarmSpeech()
     listeningStartedAt = Date.now()
     void refreshMicrophones()
-    status.value = 'listening'
-    voiceHint.value = isLikelyVirtualMicrophone(activeMicrophone.value)
-      ? languageSettings[language.value].virtualMicrophone
-      : languageSettings[language.value].listening
+    if (status.value !== 'speaking') {
+      status.value = 'listening'
+      voiceHint.value = isLikelyVirtualMicrophone(activeMicrophone.value)
+        ? languageSettings[language.value].virtualMicrophone
+        : languageSettings[language.value].listening
+    }
     return
   }
   if (state.phase === 'recording') {
     maybePrewarmSpeech()
+    if (status.value === 'speaking') {
+      interruptSpeechForBargeIn()
+      return
+    }
     status.value = 'listening'
     voiceHint.value = languageSettings[language.value].recording
     return
@@ -526,7 +532,6 @@ function speakWithBrowser(text: string, afterSpeech?: () => void, requestId = sp
   const synthesis = window.speechSynthesis
   synthesis.cancel()
   synthesis.resume?.()
-  pauseVoice()
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = languageSettings[language.value].locale
   utterance.rate = 0.88
@@ -549,7 +554,6 @@ function speakWithBrowser(text: string, afterSpeech?: () => void, requestId = sp
 
 async function speak(text: string, afterSpeech?: () => void) {
   const requestId = ++speechRequestId
-  pauseVoice()
   releaseAudioPlayback()
   status.value = 'speaking'
   voiceHint.value = language.value === 'vi' ? 'Mình đang trả lời bằng giọng nói' : statusHint.value
@@ -557,7 +561,15 @@ async function speak(text: string, afterSpeech?: () => void) {
     if (!sessionId.value || typeof Audio === 'undefined') {
       throw new Error('Cloud audio playback is unavailable')
     }
-    const audioUrl = await withSessionRecovery((id) => createSynthesisTicket(id, text, language.value))
+    // Keep the microphone ready during spoken replies so a new customer turn can
+    // stop Sky as soon as the VAD detects speech. Start it while TTS is prepared.
+    const monitorReady = isHandsFree.value
+      ? ensureVoiceController().start().catch(() => undefined)
+      : Promise.resolve()
+    const [audioUrl] = await Promise.all([
+      withSessionRecovery((id) => createSynthesisTicket(id, text, language.value)),
+      monitorReady,
+    ])
     if (requestId !== speechRequestId || isUnmounted) return
     pendingSpeechText.value = text
     const audio = audioElement.value ?? new Audio()
@@ -1035,6 +1047,16 @@ function stopSpeaking() {
   status.value = 'idle'
   voiceHint.value = languageSettings[language.value].listening
   void resumeHandsFree()
+}
+
+function interruptSpeechForBargeIn() {
+  if (status.value !== 'speaking') return
+  speechRequestId += 1
+  pendingSpeechText.value = null
+  releaseAudioPlayback()
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  status.value = 'listening'
+  voiceHint.value = languageSettings[language.value].recording
 }
 
 function retryLastPrompt() {

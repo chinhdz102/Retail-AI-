@@ -163,6 +163,7 @@ def _category_phrase_tokens(normalized: str) -> tuple[tuple[str, ...], ...]:
 
 def _query_terms(query: str) -> tuple[list[str], bool, bool]:
     normalized = normalize_search_text(query).strip()
+    normalized = re.sub(r"\b(?:less|more)\s+than\b", " ", normalized)
     explicit_diaper = bool(re.search(r"\b(?:bỉm|tã\s+quần)\b", query.casefold()))
     comparison = bool(_COMPARISON_PATTERN.search(normalized)) or bool(
         re.search(r"\b(?:vs|versus)\b", normalized)
@@ -211,6 +212,9 @@ def _score(
     terms, comparison, snack_slang = _query_terms(query)
     if not terms:
         return 0.0
+    if re.search(r"\b(?:tre em|em be|cho be|baby|kids|children)\b", normalized):
+        if not candidate.baby_audience:
+            return 0.0
 
     field_words = (
         candidate.title_words,
@@ -318,7 +322,9 @@ def _score(
     elif not any(word in {"thung", "loc", "combo"} for word in terms):
         if candidate.uom_words.intersection({"thung", "loc", "combo"}):
             score -= 5.0
-    return max(score, 0.0)
+    # Packaging is a ranking preference, not an identity constraint. A valid
+    # match must remain retrievable when only packs/cases exist in this group.
+    return max(score, 0.1)
 
 
 def _measure(title: str) -> tuple[float, str] | None:

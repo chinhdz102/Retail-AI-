@@ -476,6 +476,16 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
     ) or compact in {"dat hang", "order", "place an order"}:
         return ShoppingAction(ShoppingActionType.PREPARE_CHECKOUT)
 
+    # Direct checkout requests should reach the cart controller even before a
+    # cart exists. Questions about payment methods and claims of past payment
+    # are handled separately and must not create an order.
+    if re.fullmatch(
+        r"(?:(?:cho|giup)\s+)?(?:t|toi|minh|tui|em|anh|chi)?\s*"
+        r"(?:thanh toan|tinh tien|tra tien)(?:\s+(?:nhe|nha|voi|giup|di|a))*",
+        compact,
+    ):
+        return ShoppingAction(ShoppingActionType.PREPARE_CHECKOUT)
+
     if state == SessionState.CART_ACTIVE and compact in {
         "thanh toan",
         "tinh tien",

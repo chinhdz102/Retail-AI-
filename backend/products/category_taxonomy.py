@@ -4,6 +4,7 @@ import re
 import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass
+from functools import lru_cache
 
 _CATEGORY_QUERY_STOP_WORDS = frozenset(
     {
@@ -101,17 +102,61 @@ _SINGLE_WORD_CATEGORY_CONTEXT_WORDS = frozenset(
         "looking",
         "for",
         "any",
+        "khac",
+        "other",
+        "others",
     }
 )
 _CATEGORY_QUERY_SYNONYMS: dict[str, tuple[str, ...]] = {
     # Resolve everyday napkin wording through the active catalog rather than
     # selecting a fabric-towel category on a literal "khăn lau" overlap.
-    "khan lau mieng": ("khan giay",),
-    "khan an": ("khan giay",),
-    "napkin": ("paper napkin", "khan giay"),
-    "paper napkin": ("khan giay",),
+    "khan lau mieng": ("khan giay", "giay an", "giay lua", "khan rut"),
+    "khan an": ("khan giay", "giay an", "giay lua", "khan rut"),
+    "napkin": ("khan giay", "giay an", "giay lua", "khan rut"),
+    "paper napkin": ("khan giay", "giay an", "giay lua", "khan rut"),
     "tissue": ("khan giay",),
+    # Everyday "baby wipes" wording belongs to the catalog's child-wipes
+    # category, even when the planner labels it as generic baby-care goods.
+    "khan giay cho be": ("khan giay", "giay an", "giay lua", "khan rut"),
+    "giay an tre em": ("khan giay", "giay an", "giay lua", "khan rut"),
+    "giay dung khi di cung be": ("khan giay", "giay an", "giay lua", "khan rut"),
+    "khan uot cho be": ("khan uot tre em", "giay uot tre em"),
+    "khan uot em be": ("khan uot tre em", "giay uot tre em"),
+    "khan uot tre em": ("khan uot tre em", "giay uot tre em"),
+    "baby wipes": ("khan uot tre em", "giay uot tre em"),
+    "nuoc rua mat": ("sua rua mat",),
+    "sua rua mat": ("sua rua mat",),
+    # Keep exact product-type wording anchored to the corresponding catalog
+    # leaf even when the model proposes a nearby personal-care category.
+    "bong tay trang": ("bong tay trang",),
+    "mieng bong tay trang": ("bong tay trang",),
+    "cotton pad": ("bong tay trang",),
+    "cotton pads": ("bong tay trang",),
 }
+
+
+def catalog_category_query_aliases(query: str) -> tuple[str, ...]:
+    """Return catalog-backed product-type synonyms found in a spoken query."""
+    normalized_query = normalize_category_text(query)
+    aliases = _CATEGORY_QUERY_SYNONYMS.get(normalized_query)
+    if aliases is not None:
+        return aliases
+    embedded_phrases = [
+        phrase
+        for phrase in _CATEGORY_QUERY_SYNONYMS
+        if re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized_query)
+    ]
+    if not embedded_phrases:
+        return ()
+    longest = max(len(phrase.split()) for phrase in embedded_phrases)
+    return tuple(
+        dict.fromkeys(
+            alias
+            for phrase in embedded_phrases
+            if len(phrase.split()) == longest
+            for alias in _CATEGORY_QUERY_SYNONYMS[phrase]
+        )
+    )
 
 
 @dataclass(frozen=True)
@@ -126,15 +171,15 @@ def resolve_catalog_category_alias(
     hierarchies: Iterable[tuple[str, ...]],
 ) -> CatalogCategoryMatch | None:
     """Resolve a known product-type synonym to a category in this catalog."""
-    aliases = _CATEGORY_QUERY_SYNONYMS.get(normalize_category_text(query), ())
     paths = tuple(hierarchies)
-    for alias in aliases:
+    for alias in catalog_category_query_aliases(query):
         match = resolve_catalog_category(alias, paths)
         if match is not None:
             return match
     return None
 
 
+@lru_cache(maxsize=16384)
 def normalize_category_text(value: str | None) -> str:
     if not value:
         return ""
@@ -192,6 +237,13 @@ def resolve_catalog_category(
     query: str,
     hierarchies: Iterable[tuple[str, ...]],
 ) -> CatalogCategoryMatch | None:
+    return _resolve_catalog_category_cached(query, tuple(hierarchies))
+
+
+@lru_cache(maxsize=512)
+def _resolve_catalog_category_cached(
+    query: str, hierarchies: tuple[tuple[str, ...], ...],
+) -> CatalogCategoryMatch | None:
     """Match a generic product-type phrase to the active catalog taxonomy.
 
     Exact taxonomy phrases win. Shorter spoken forms such as “rửa mặt” can match
@@ -241,16 +293,31 @@ def resolve_catalog_category(
         # two-or-more-word prefix such as “mỹ phẩm” for “Mỹ phẩm, chăm sóc cá
         # nhân”. A one-word segment is accepted only when the user says that
         # exact catalog label; it is never inferred from a one-word prefix.
-        phrase_in_query = bool(
-            re.search(rf"(?<!\w){re.escape(key)}(?!\w)", normalized_query)
-        )
+        phrase_in_query = f" {key} " in f" {normalized_query} "
         if len(label_words) == 1:
+            native_label_words = _native_category_words(label)
+            native_label_is_stated = bool(
+                native_label_words
+                and _has_category_diacritic(native_label_words[0])
+                and native_label_words[0] in _native_category_words(query)
+            )
+            if label_words[0] in {"khac", "other", "others"} or (
+                label_words[0] in _SINGLE_WORD_CATEGORY_CONTEXT_WORDS
+                and not native_label_is_stated
+            ):
+                continue
             # Accent folding makes Vietnamese homonyms collide inside longer
             # phrases (for example, "dầu gội" contains the folded token
             # "dau", which is also the folded spelling of "đậu"). A single
             # word taxonomy label is exact only when it is the full request
             # after conversational stop words are removed.
             exact_single_word = category_query_words == label_words
+            native_label_words = _native_category_words(label)
+            if native_label_words and native_label_words[0] in _native_category_words(query):
+                # Preserve accents when recognizing a named one-word type in a
+                # sentence: "gạo", "muối", "nồi", etc. Folded homonyms such as
+                # "dầu"/"đậu" must never establish a category by themselves.
+                exact_single_word = True
             if exact_single_word and len(native_category_query_words) == 1:
                 native_label_words = _native_category_words(label)
                 native_query_word = native_category_query_words[0]
@@ -372,6 +439,46 @@ def category_is_parent(
     )
 
 
+def catalog_leaf_query_phrase(query: str, hierarchies: Iterable[tuple[str, ...]]) -> str:
+    return _catalog_leaf_query_phrase_cached(query, tuple(hierarchies))
+
+
+@lru_cache(maxsize=512)
+def _catalog_leaf_query_phrase_cached(query: str, hierarchies: tuple[tuple[str, ...], ...]) -> str:
+    """Find the longest literal product-type prefix in the active taxonomy."""
+    words = normalize_category_text(query).split()
+    native_words = _native_category_words(query)
+    paths = tuple(hierarchies)
+    parents = {normalize_category_text(label) for path in paths for label in path[:-1]}
+    stated_parents = [
+        parent.split() for parent in parents if f" {parent} " in f" {' '.join(words)} "
+    ]
+    matches: list[tuple[int, int, str]] = []
+    for path in paths:
+        if len(path) < 4 or normalize_category_text(path[-1]) in parents:
+            continue
+        leaf_words = normalize_category_text(path[-1]).split()
+        if len(leaf_words) == 1:
+            native_label = _native_category_words(path[-1])[0]
+            if leaf_words[0] in {"khac", "other", "others"} or (
+                leaf_words[0] in _SINGLE_WORD_CATEGORY_CONTEXT_WORDS
+                and not (_has_category_diacritic(native_label) and native_label in native_words)
+            ):
+                continue
+        if len(leaf_words) == 1 and _native_category_words(path[-1])[0] in native_words:
+            matches.append((1, -words.index(leaf_words[0]), leaf_words[0]))
+        for size in range(min(len(words), len(leaf_words)), 1, -1):
+            prefix = leaf_words[:size]
+            if " ".join(prefix) in parents or any(
+                len(parent) >= size and parent[:size] == prefix for parent in stated_parents
+            ):
+                continue
+            for start in range(len(words) - size + 1):
+                if words[start:start + size] == prefix:
+                    matches.append((size, -start, " ".join(prefix)))
+    return max(matches, default=(0, 0, ""))[2]
+
+
 def query_names_catalog_leaf(query: str, hierarchies: Iterable[tuple[str, ...]]) -> bool:
     """Return whether a phrase in a query names or prefixes a catalog leaf.
 
@@ -380,34 +487,7 @@ def query_names_catalog_leaf(query: str, hierarchies: Iterable[tuple[str, ...]])
     The match is derived from the active catalog taxonomy, not a hand-maintained
     list of product categories.
     """
-    words = normalize_category_text(query).split()
-    if len(words) < 2:
-        return False
-
-    paths = tuple(hierarchies)
-    parent_keys = {
-        normalize_category_text(label)
-        for path in paths
-        for label in path[:-1]
-    }
-    leaves = {
-        normalize_category_text(path[-1])
-        for path in paths
-        if path
-        and len(path) >= 4
-        and normalize_category_text(path[-1]) not in parent_keys
-    }
-    for leaf in leaves:
-        leaf_words = leaf.split()
-        max_prefix = min(len(words), len(leaf_words))
-        for size in range(max_prefix, 1, -1):
-            prefix = leaf_words[:size]
-            if any(
-                words[start : start + size] == prefix
-                for start in range(len(words) - size + 1)
-            ):
-                return True
-    return False
+    return bool(catalog_leaf_query_phrase(query, hierarchies))
 
 
 def diversify_by_category_leaf(products: Iterable[object], limit: int) -> list:

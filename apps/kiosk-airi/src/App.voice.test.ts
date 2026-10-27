@@ -374,6 +374,126 @@ describe('voice transcript integration', () => {
     expect(play).toHaveBeenCalled()
   })
 
+  it('stops cloud TTS as soon as the microphone detects a new user turn', async () => {
+    const play = vi.fn().mockResolvedValue(undefined)
+    const pause = vi.fn()
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      configurable: true,
+      value: play,
+    })
+    Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
+      configurable: true,
+      value: pause,
+    })
+    apiMocks.createSession.mockResolvedValue({
+      session_id: 'session-test',
+      kiosk_id: 'kiosk-01',
+      state: 'BROWSING',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+    apiMocks.respond.mockResolvedValue({
+      session_id: 'session-test',
+      text: 'Coca Zero giá 13.000đ. Bạn cần mình tìm thêm gì không?',
+      model: 'qwen/qwen3.8-27b',
+      grounded_product_ids: ['COKE_ZERO_330'],
+      state: 'BROWSING',
+    })
+    apiMocks.createSynthesisTicket.mockResolvedValue(
+      'http://127.0.0.1:8000/audio/synthesize/stream/one-use-token',
+    )
+
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]')).toBeTruthy())
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    await vi.waitFor(() => expect(controllerStore.current).not.toBeNull())
+    controllerStore.current.options.onTranscript('Cho tôi biết giá Coca Zero.')
+
+    await vi.waitFor(() => expect(wrapper.get('audio').element.getAttribute('src')).toBe(
+      'http://127.0.0.1:8000/audio/synthesize/stream/one-use-token',
+    ))
+    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(2))
+    pause.mockClear()
+
+    controllerStore.current.options.onState({
+      mode: 'recorder',
+      phase: 'recording',
+      permission: 'granted',
+    })
+
+    expect(pause).toHaveBeenCalledOnce()
+    expect(wrapper.get('audio').element.getAttribute('src')).toBeNull()
+    expect(controllerStore.current.isActive).toBe(true)
+    await vi.waitFor(() => expect(wrapper.get('.vrm-mic-control').classes()).toContain('recording'))
+    await vi.waitFor(() => expect(wrapper.get('.voice-feedback').text()).toContain('Đang ghi âm tiếng Việt'))
+  })
+
+  it('cancels browser speech fallback when the microphone detects a new user turn', async () => {
+    const cancel = vi.fn()
+    let utterance: { onstart?: () => void; onend?: () => void; onerror?: () => void } | null = null
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: {
+        resume: vi.fn(),
+        cancel,
+        getVoices: () => [],
+        speak: (value: typeof utterance) => {
+          utterance = value
+          utterance?.onstart?.()
+        },
+      },
+    })
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', {
+      configurable: true,
+      value: class {
+        text: string
+        onstart: (() => void) | null = null
+        onend: (() => void) | null = null
+        onerror: (() => void) | null = null
+        lang = ''
+        rate = 1
+        pitch = 1
+        voice = null
+
+        constructor(text: string) {
+          this.text = text
+        }
+      },
+    })
+    apiMocks.createSession.mockResolvedValue({
+      session_id: 'session-test',
+      kiosk_id: 'kiosk-01',
+      state: 'BROWSING',
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+    apiMocks.respond.mockResolvedValue({
+      session_id: 'session-test',
+      text: 'Coca Zero giá 13.000đ.',
+      model: 'qwen/qwen3.8-27b',
+      grounded_product_ids: ['COKE_ZERO_330'],
+      state: 'BROWSING',
+    })
+    apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
+
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]')).toBeTruthy())
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    await vi.waitFor(() => expect(controllerStore.current).not.toBeNull())
+    controllerStore.current.options.onTranscript('Cho tôi biết giá Coca Zero.')
+
+    await vi.waitFor(() => expect(utterance).not.toBeNull())
+    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(2))
+    cancel.mockClear()
+    controllerStore.current.options.onState({
+      mode: 'recorder',
+      phase: 'recording',
+      permission: 'granted',
+    })
+
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(controllerStore.current.isActive).toBe(true)
+    await vi.waitFor(() => expect(wrapper.get('.voice-feedback').text()).toContain('Đang ghi âm tiếng Việt'))
+  })
+
   it('unlocks browser speech audio when the user starts voice mode', async () => {
     const resume = vi.fn()
     let spokenUtterance: any
@@ -508,10 +628,10 @@ describe('voice transcript integration', () => {
     controllerStore.current.options.onTranscript('Và thêm một câu nữa')
     await vi.waitFor(() => expect(utterances).toHaveLength(2))
 
-    expect(controllerStore.current.startCalls).toBe(1)
+    expect(controllerStore.current.startCalls).toBe(3)
     utterances[0].onend?.()
-    expect(controllerStore.current.startCalls).toBe(1)
+    expect(controllerStore.current.startCalls).toBe(3)
     utterances[1].onend?.()
-    expect(controllerStore.current.startCalls).toBe(2)
+    expect(controllerStore.current.startCalls).toBe(4)
   })
 })

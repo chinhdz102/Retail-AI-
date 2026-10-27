@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass
+from datetime import datetime
 from itertools import product as cartesian_product
 from math import ceil
 from typing import Any, Literal
@@ -12,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend.products.catalog import ProductSnapshot
 from backend.products.category_taxonomy import (
+    catalog_category_query_aliases,
     normalize_category_text,
     resolve_catalog_category,
     resolve_catalog_category_alias,
@@ -240,6 +242,11 @@ def _resolve_need_category(
     semantic_alias = resolve_catalog_category_alias(semantic_query, hierarchies)
     if semantic_alias is not None:
         return semantic_alias.category
+    semantic_category = resolve_catalog_category(semantic_query, hierarchies)
+    if semantic_category is not None and semantic_category.exact_phrase:
+        # An exact catalog leaf named in the product query is stronger
+        # evidence than a neighboring category supplied by the planner.
+        return semantic_category.category
 
     # The planner prompt may return the complete taxonomy path. Resolving that
     # whole string as one phrase can select a broad parent (or a normalized
@@ -461,7 +468,6 @@ def _fallback_query_matches_candidate(query: str, product: ProductSnapshot) -> b
         "da",
         "di",
         "duoc",
-        "bong",
         "giup",
         "hang",
         "khong",
@@ -470,33 +476,103 @@ def _fallback_query_matches_candidate(query: str, product: ProductSnapshot) -> b
         "nhe",
         "nguoi",
         "nhom",
-        "nuoc",
         "o",
         "phu",
         "se",
-        "thuc",
-        "vat",
         "xem",
         "y",
     }
-    query_terms = _tokens(query) - stop_words
-    if not query_terms:
+    # Only compare against the sellable item's name and brand. Matching words
+    # from a broad parent category or marketing description can make a related
+    # but different product look like a valid substitute (e.g. a sanitary pad
+    # whose name happens to contain “bông” for a request for cotton pads).
+    candidate_terms = _tokens(" ".join(filter(None, (product.name, product.brand or ""))))
+
+    verified_aliases = catalog_category_query_aliases(query)
+    # Once a known synonym is identified, do not also accept a fuzzy match on
+    # its original wording; that is how “khăn lau miệng” matched face wipes.
+    variants = list(verified_aliases) if verified_aliases else [query]
+    for variant in variants:
+        query_terms = _tokens(variant) - stop_words - _SCENE_QUERY_WORDS
+        if not query_terms:
+            return True
+        overlap = query_terms & candidate_terms
+        # Product-type queries are deliberately short. Requiring all
+        # significant terms for queries of up to four words avoids accepting
+        # fuzzy one-word matches. Catalog synonyms may use a different but
+        # equally specific wording, so each verified variant gets its own try.
+        if len(query_terms) <= 4 and query_terms <= candidate_terms:
+            return True
+        if len(query_terms) > 4 and len(overlap) >= 2 and len(overlap) / len(query_terms) >= 0.8:
+            return True
+    return False
+
+
+def _specific_skincare_need_type(need: dict[str, Any]) -> str | None:
+    query = normalize_category_text(
+        " ".join(str(need.get(key) or "") for key in ("label", "product_query"))
+    )
+    if any(
+        phrase in query
+        for phrase in (
+            "kem chong nang",
+            "chong nang",
+            "sunscreen",
+            "sun screen",
+            "sunblock",
+        )
+    ):
+        return "sunscreen"
+    if any(
+        phrase in query
+        for phrase in (
+            "kem duong am",
+            "duong am da mat",
+            "kem duong da mat",
+            "facial moisturizer",
+            "face moisturizer",
+        )
+    ):
+        return "moisturizer"
+    if any(
+        phrase in query
+        for phrase in (
+            "sua rua mat",
+            "lam sach da mat",
+            "facial cleanser",
+            "face wash",
+        )
+    ):
+        return "cleanser"
+    return None
+
+
+def _candidate_matches_skincare_need(need: dict[str, Any], product: ProductSnapshot) -> bool:
+    """Reject near-matches from a different skincare product type."""
+    requested_type = _specific_skincare_need_type(need)
+    if requested_type is None:
         return True
-    candidate_terms = _tokens(
+    product_terms = normalize_category_text(
         " ".join(
-            filter(
-                None,
-                (
-                    product.name,
-                    product.brand or "",
-                    product.category,
-                    product.category_hierarchy or "",
-                    product.description or "",
-                ),
-            )
+            str(value or "")
+            for value in (product.name, product.category, product.category_hierarchy)
         )
     )
-    return bool(query_terms & candidate_terms)
+    product_is_sunscreen = any(
+        phrase in product_terms
+        for phrase in ("kem chong nang", "chong nang", "sunscreen", "sun screen", "sunblock")
+    ) or bool(re.search(r"\bspf\b", product_terms))
+    product_is_cleanser = any(
+        phrase in product_terms
+        for phrase in ("sua rua mat", "facial cleanser", "face wash")
+    )
+    if requested_type == "moisturizer" and product_is_sunscreen:
+        return False
+    if requested_type == "cleanser" and product_is_sunscreen:
+        return False
+    if requested_type == "sunscreen" and product_is_cleanser:
+        return False
+    return True
 
 
 def _need_query_is_product_specific(
@@ -513,27 +589,82 @@ def _need_query_is_product_specific(
         return True
     if re.search(r"\d", query):
         return True
-    try:
-        if repository.search(query=query, limit=1):
-            return True
-    except (OSError, RuntimeError, TimeoutError, ValueError):
-        # If we cannot establish that a query is broad, avoid widening it to
-        # unrelated products in the category.
+    if catalog_category_query_aliases(query):
         return True
 
-    intent_context = " ".join(
-        [
-            str(need.get("category", "")),
-            str(need.get("rationale", "")),
-            " ".join(str(value) for value in need.get("preference_terms", [])),
-            " ".join(str(value) for value in mission.get("preferences", [])),
-            str(mission.get("goal", "")),
-            str(mission.get("use_case", "")),
-            str(mission.get("occasion", "")),
-        ]
-    )
-    query_terms = _tokens(query) - _SCENE_QUERY_WORDS
-    return bool(query_terms - _tokens(intent_context))
+    # Decide specificity from the query and its resolved taxonomy leaf. Do not
+    # use the LLM's paraphrased goal or rationale here: those often repeat the
+    # exact requested product words and can hide a category mismatch.
+    broad_need_terms = {
+        "an",
+        "ban",
+        "bao",
+        "bim",
+        "bimbim",
+        "bua",
+        "ca",
+        "co",
+        "chia",
+        "cho",
+        "da",
+        "do",
+        "de",
+        "dung",
+        "duoc",
+        "em",
+        "face",
+        "for",
+        "giai",
+        "group",
+        "guests",
+        "hop",
+        "khoang",
+        "khat",
+        "lai",
+        "mat",
+        "mon",
+        "nhau",
+        "nhe",
+        "nhom",
+        "ngay",
+        "ngoai",
+        "nguoi",
+        "product",
+        "products",
+        "party",
+        "people",
+        "pham",
+        "phu",
+        "rai",
+        "san",
+        "se",
+        "share",
+        "sharing",
+        "skin",
+        "skincare",
+        "snack",
+        "snacks",
+        "sua",
+        "suat",
+        "thuc",
+        "tuoi",
+        "uong",
+        "vat",
+        "ve",
+        "viewing",
+        "watching",
+        "xem",
+        "duong",
+        "kho",
+        "nhay",
+        "cam",
+        "mun",
+        "dau",
+        "toc",
+    }
+    query_terms = _tokens(query) - broad_need_terms
+    category_terms = _tokens(str(need.get("resolved_category") or need.get("category") or ""))
+    return bool(query_terms - category_terms)
 
 
 def _product_identity(product: ProductSnapshot) -> tuple[str, str, str]:
@@ -699,13 +830,23 @@ def _choose_options(
     mission: dict[str, Any],
     previous_items: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], int | None]:
-    required_missing = any(need.get("required") and not candidates for need, candidates in groups)
-    required_count = sum(bool(need.get("required")) for need, _ in groups)
-    if required_missing or not groups:
+    # Missing one required category should not hide useful, catalog-backed
+    # matches for the other categories. Keep the unavailable need visible in
+    # the response, but allow an explicitly partial plan when other groups
+    # have verified candidates.
+    if not groups:
         return [], None
+    available_required_count = sum(
+        bool(need.get("required")) and bool(candidates) for need, candidates in groups
+    )
 
     alternatives: list[list[ProductSnapshot | None]] = [
-        candidates if need.get("required") else [None, *candidates] for need, candidates in groups
+        candidates
+        if need.get("required") and candidates
+        else [None]
+        if need.get("required")
+        else [None, *candidates]
+        for need, candidates in groups
     ]
     preferences = list(mission.get("preferences", []))
     choice_metrics: dict[tuple[str, str], tuple[tuple[str, str, str], int, float]] = {}
@@ -740,7 +881,8 @@ def _choose_options(
                 break
             used_products.add(identity)
             chosen.append((need, item))
-        if not chosen or len(chosen) < required_count:
+        selected_required_count = sum(bool(need.get("required")) for need, _item in chosen)
+        if not chosen or selected_required_count < available_required_count:
             continue
         total = sum(
             choice_metrics[(str(need.get("need_id")), item.product_id)][1]
@@ -968,7 +1110,6 @@ def build_shopping_mission_plan(
                 if (
                     candidates
                     and primary_query
-                    and query != primary_query
                     and _need_query_is_product_specific(need, mission, primary_query, repository)
                 ):
                     candidates = [
@@ -976,6 +1117,11 @@ def build_shopping_mission_plan(
                         for item in candidates
                         if _fallback_query_matches_candidate(primary_query, item)
                     ]
+                candidates = [
+                    item
+                    for item in candidates
+                    if _candidate_matches_skincare_need(need, item)
+                ]
                 if candidates:
                     need["retrieval_query_used"] = query
                     break
@@ -1198,7 +1344,12 @@ def build_shopping_mission_plan(
     )
 
 
-def render_shopping_plan_summary(content: dict[str, Any], language: str = "vi") -> str:
+def render_shopping_plan_summary(
+    content: dict[str, Any],
+    language: str = "vi",
+    *,
+    previous_mission: dict[str, Any] | None = None,
+) -> str:
     """Render a concise grounded summary; all prices/totals come from the planner."""
     options = content.get("options") if isinstance(content.get("options"), list) else []
     missing = content.get("missing_required_needs") or []
@@ -1209,14 +1360,82 @@ def render_shopping_plan_summary(content: dict[str, Any], language: str = "vi") 
         if isinstance(need, dict) and need.get("need_id")
     }
     missing_labels = [labels_by_need_id.get(str(need), str(need)) for need in missing]
+    missing_optional = content.get("missing_optional_needs") or []
+    missing_optional_labels = [
+        labels_by_need_id.get(str(need), str(need)) for need in missing_optional
+    ]
     satisfied = content.get("satisfied_needs") or []
     shortfall = content.get("budget_shortfall_vnd")
     mission = content.get("mission") if isinstance(content.get("mission"), dict) else {}
-    goal = str(mission.get("goal") or "").strip().rstrip(" .,!?:;。；，！？")
     inventory_verified = bool(content.get("inventory_verified"))
     spicy_preference_unverified = "preference_unverified:spicy" in (
         content.get("unresolved_details") or []
     )
+    try:
+        follow_up = int(mission.get("revision", 1)) > 1
+    except (TypeError, ValueError):
+        follow_up = False
+
+    def format_vnd(amount: Any) -> str:
+        value = int(amount or 0)
+        if language == "en":
+            return f"{value:,} VND"
+        if language == "zh":
+            return f"{value:,} 越南盾"
+        return f"{value:,}".replace(",", ".") + "đ"
+
+    def catalog_freshness_note(language: str) -> str:
+        raw_timestamp = content.get("data_timestamp")
+        snapshot_date = None
+        if isinstance(raw_timestamp, str):
+            try:
+                snapshot_date = datetime.fromisoformat(
+                    raw_timestamp.replace("Z", "+00:00")
+                ).strftime("%d/%m/%Y")
+            except ValueError:
+                snapshot_date = None
+        if language == "en":
+            date_note = f"Catalog data is dated {snapshot_date}; " if snapshot_date else ""
+            return date_note + "store stock has not been verified in real time. "
+        if language == "zh":
+            date_note = f"目录数据日期为{snapshot_date}；" if snapshot_date else ""
+            return date_note + "门店库存尚未实时核实。"
+        date_note = f"Dữ liệu catalog ghi ngày {snapshot_date}; " if snapshot_date else ""
+        return date_note + "tồn kho tại cửa hàng chưa được xác nhận theo thời gian thực. "
+
+    def skincare_party_size_note() -> str:
+        if follow_up:
+            return ""
+        try:
+            party_size = int(mission.get("party_size") or 0)
+        except (TypeError, ValueError):
+            party_size = 0
+        if language != "vi" or party_size <= 1:
+            return ""
+        mission_needs = mission.get("needs") if isinstance(mission.get("needs"), list) else []
+        is_skincare_plan = any(
+            "cham soc da" in _normalize_category_words(need)
+            or "da mat" in _normalize_category_words(need)
+            for need in mission_needs
+            if isinstance(need, dict)
+        )
+        if not is_skincare_plan:
+            return ""
+        return (
+            " Mỗi mặt hàng hiện tính 1 đơn vị; mình chưa thể kết luận lượng này đủ cho "
+            f"{party_size} người nếu chưa biết dùng chung hay mỗi người dùng riêng. "
+            f"{party_size} người sẽ dùng chung sản phẩm hay mỗi người cần một bộ riêng?"
+        )
+
+    def _normalize_category_words(need: dict[str, Any]) -> str:
+        value = " ".join(
+            str(need.get(key) or "") for key in ("label", "category", "product_query")
+        )
+        decomposed = unicodedata.normalize("NFD", value.casefold())
+        unaccented = "".join(
+            char for char in decomposed if unicodedata.category(char) != "Mn"
+        ).replace("đ", "d")
+        return re.sub(r"[^\w\s]", " ", unaccented)
 
     def quantity_guidance(
         items: list[dict[str, Any]] | None = None, *, use_catalog_candidates: bool = False
@@ -1318,16 +1537,16 @@ def render_shopping_plan_summary(content: dict[str, Any], language: str = "vi") 
         def describe_rows(items: list[dict[str, Any]]) -> str:
             if language == "en":
                 return "; ".join(
-                    f"{item['name']} × {item['quantity']} ({item['line_total_vnd']:,} VND)"
+                    f"{item['name']} × {item['quantity']} ({format_vnd(item['line_total_vnd'])})"
                     for item in items
                 )
             if language == "zh":
                 return "；".join(
-                    f"{item['name']} × {item['quantity']}（{item['line_total_vnd']:,} 越南盾）"
+                    f"{item['name']} × {item['quantity']}（{format_vnd(item['line_total_vnd'])}）"
                     for item in items
                 )
             return "; ".join(
-                f"{item['name']} × {item['quantity']} ({item['line_total_vnd']:,}đ)"
+                f"{item['name']} × {item['quantity']} ({format_vnd(item['line_total_vnd'])})"
                 for item in items
             )
 
@@ -1335,54 +1554,209 @@ def render_shopping_plan_summary(content: dict[str, Any], language: str = "vi") 
         if required_rows:
             items = describe_rows(required_rows)
             sections.append(
-                f"Items you asked for: {items}."
+                f"Based on what you asked for: {items}."
                 if language == "en"
-                else f"你确认需要的商品：{items}。"
+                else f"按你的要求：{items}。"
                 if language == "zh"
-                else f"Các nhóm bạn xác nhận cần: {items}."
+                else f"Theo yêu cầu của bạn: {items}."
             )
         if optional_rows:
             items = describe_rows(optional_rows)
             sections.append(
-                f"Optional suggestions: {items}."
+                f"If useful, you could also add: {items}."
                 if language == "en"
-                else f"可选建议：{items}。"
+                else f"如果你需要，也可以加上：{items}。"
                 if language == "zh"
-                else f"Gợi ý thêm (tùy chọn): {items}."
+                else f"Nếu muốn mua thêm, bạn có thể chọn: {items}."
             )
 
         total = int(option.get("total_vnd") or 0)
         optional_total = sum(int(item.get("line_total_vnd") or 0) for item in optional_rows)
         if language == "en":
-            total_text = f"Total {total:,} VND"
+            total_text = f"Total: {format_vnd(total)}"
             if optional_rows:
-                total_text += f", including {optional_total:,} VND in optional suggestions."
+                total_text += f" (optional items: {format_vnd(optional_total)})."
             else:
                 total_text += "."
         elif language == "zh":
-            total_text = f"合计 {total:,} 越南盾"
+            total_text = f"合计：{format_vnd(total)}"
             if optional_rows:
-                total_text += f"，其中可选建议为 {optional_total:,} 越南盾。"
+                total_text += f"（可选商品：{format_vnd(optional_total)}）。"
             else:
                 total_text += "。"
         else:
-            total_text = f"Tổng {total:,}đ"
+            total_text = f"Tổng: {format_vnd(total)}"
             if optional_rows:
-                total_text += f", trong đó {optional_total:,}đ là phần tùy chọn."
+                total_text += f" (phần mua thêm: {format_vnd(optional_total)})."
             else:
                 total_text += "."
         return " ".join(sections), total_text
+
+    def render_followup_delta(option: dict[str, Any]) -> str | None:
+        """Summarize only what changed since the previous advisory plan."""
+        if language != "vi" or not isinstance(previous_mission, dict):
+            return None
+
+        previous_items = previous_mission.get("proposed_items")
+        if not isinstance(previous_items, list):
+            return None
+        current_items = [item for item in option.get("items", []) if isinstance(item, dict)]
+        previous_by_id = {
+            str(item.get("product_id")): item
+            for item in previous_items
+            if isinstance(item, dict) and item.get("product_id")
+        }
+        current_by_id = {
+            str(item.get("product_id")): item
+            for item in current_items
+            if item.get("product_id")
+        }
+        if len(previous_by_id) != len(previous_items):
+            return None
+
+        added_items = [
+            item for product_id, item in current_by_id.items() if product_id not in previous_by_id
+        ]
+        removed_items = [
+            item for product_id, item in previous_by_id.items() if product_id not in current_by_id
+        ]
+        changed_quantities = [
+            item
+            for product_id, item in current_by_id.items()
+            if product_id in previous_by_id
+            and int(item.get("quantity") or 0)
+            != int(previous_by_id[product_id].get("quantity") or 0)
+        ]
+        current_mission = mission
+        previous_needs = previous_mission.get("needs")
+        current_needs = current_mission.get("needs")
+        if not isinstance(previous_needs, list) or not isinstance(current_needs, list):
+            return None
+        previous_needs_by_id = {
+            str(need.get("need_id")): need
+            for need in previous_needs
+            if isinstance(need, dict) and need.get("need_id")
+        }
+        promoted_needs = [
+            need
+            for need in current_needs
+            if isinstance(need, dict)
+            and need.get("need_id") in previous_needs_by_id
+            and need.get("required")
+            and not previous_needs_by_id[str(need.get("need_id"))].get("required")
+        ]
+        previous_budget = previous_mission.get("total_budget_vnd")
+        current_budget = current_mission.get("total_budget_vnd")
+        budget_changed = previous_budget != current_budget and current_budget is not None
+
+        parts: list[str] = []
+        if added_items:
+            rendered = "; ".join(
+                f"{item.get('name', 'Mặt hàng trong catalog')} × "
+                f"{int(item.get('quantity') or 1)} "
+                f"({format_vnd(item.get('line_total_vnd'))})"
+                for item in added_items
+            )
+            parts.append("Mình thêm vào phương án: " + rendered + ".")
+        if removed_items:
+            parts.append(
+                "Mình bỏ khỏi phương án: "
+                + "; ".join(str(item.get("name") or "mặt hàng") for item in removed_items)
+                + "."
+            )
+        if changed_quantities:
+            parts.append(
+                "Mình cập nhật số lượng: "
+                + "; ".join(
+                    f"{item.get('name', 'Mặt hàng trong catalog')} × "
+                    f"{int(item.get('quantity') or 0)}"
+                    for item in changed_quantities
+                )
+                + "."
+            )
+        if promoted_needs:
+            promoted_items = [
+                item
+                for item in current_items
+                if any(
+                    str(item.get("need_id")) == str(need.get("need_id"))
+                    for need in promoted_needs
+                )
+            ]
+            if promoted_items:
+                rendered = "; ".join(
+                    f"{item.get('name', 'Mặt hàng trong catalog')} × "
+                    f"{int(item.get('quantity') or 1)}"
+                    for item in promoted_items
+                )
+                parts.append("Nhóm vừa được chốt đã có trong phương án: " + rendered + ".")
+        if not added_items and not removed_items and not changed_quantities and not promoted_needs:
+            parts.append(
+                "Mình giữ nguyên các mặt hàng trong phương án."
+                if budget_changed
+                else "Mình đã cộng lại theo phương án hiện tại."
+            )
+        if budget_changed:
+            parts.append(f"Mức dự trù mới là {format_vnd(current_budget)}.")
+
+        total = int(option.get("total_vnd") or 0)
+        total_note = f"Tổng phương án hiện tại: {format_vnd(total)}."
+        if current_budget is not None:
+            difference = int(current_budget) - total
+            if difference >= 0:
+                total_note += f" Còn {format_vnd(difference)} trong mức dự trù."
+            else:
+                total_note += f" Đang vượt mức dự trù {format_vnd(-difference)}."
+        parts.append(total_note)
+        if missing_labels:
+            parts.append(
+                "Catalog chưa xác nhận được mặt hàng phù hợp cho nhu cầu bắt buộc: "
+                + ", ".join(missing_labels)
+                + "; mình chưa tính nhóm này vào tổng."
+            )
+            current_needs_by_id = {
+                str(need.get("need_id")): need
+                for need in current_needs
+                if isinstance(need, dict) and need.get("need_id")
+            }
+            newly_missing_broad_skincare = any(
+                str(need.get("label") or "") in missing_labels
+                and normalize_category_text(str(need.get("label") or ""))
+                in {"san pham duong da mat", "san pham cham soc da", "duong da mat"}
+                and (
+                    str(need.get("need_id")) not in previous_needs_by_id
+                    or not previous_needs_by_id[str(need.get("need_id"))].get("required")
+                )
+                for need in current_needs_by_id.values()
+            )
+            if newly_missing_broad_skincare:
+                parts.append(
+                    "Bạn muốn tìm cụ thể loại nào, chẳng hạn kem dưỡng ẩm, "
+                    "để mình tra đúng nhóm sản phẩm?"
+                )
+        elif missing_optional_labels:
+            parts.append(
+                "Catalog chưa tìm thấy sản phẩm phù hợp cho: "
+                + ", ".join(missing_optional_labels)
+                + "."
+            )
+        return " ".join(parts)
+
+    if follow_up and options:
+        delta_summary = render_followup_delta(options[0])
+        if delta_summary:
+            return delta_summary
     if language == "en":
-        intro = f"I understood the goal: {goal}. " if goal else "I made a draft shopping plan. "
-        caveat = "Current store stock is not verified. " if not inventory_verified else ""
+        intro = "" if follow_up else "Here's a draft plan: "
+        caveat = catalog_freshness_note("en") if not inventory_verified and not follow_up else ""
         if not options:
             if missing:
                 return (
                     intro
                     + caveat
-                    + "I couldn't verify suitable catalog items for: "
+                    + "I couldn't verify suitable catalog matches for "
                     + ", ".join(missing_labels)
-                    + "."
+                    + ". I haven't substituted a different item."
                 )
             if satisfied:
                 return (
@@ -1392,7 +1766,9 @@ def render_shopping_plan_summary(content: dict[str, Any], language: str = "vi") 
                 )
             if shortfall:
                 return (
-                    intro + f"The minimum required items exceed the budget by {shortfall:,} VND. "
+                    intro
+                    + "The minimum required items exceed the budget by "
+                    + f"{format_vnd(shortfall)}. "
                     "Which need should I prioritize?"
                     + quantity_guidance(use_catalog_candidates=True)
                 )
@@ -1421,31 +1797,32 @@ def render_shopping_plan_summary(content: dict[str, Any], language: str = "vi") 
                 else ""
             )
             + (
-                " The catalog couldn't verify suitable items for the required need: "
+                " The catalog couldn't verify a suitable item for the required need: "
                 + ", ".join(missing_labels)
-                + "."
+                + "; the total above includes only the items I could match."
                 if missing_labels
                 else ""
             )
-            + " I haven't added anything to the cart."
+            + (" I haven't added anything to the cart." if not follow_up else "")
         )
     if language == "zh":
-        intro = f"我理解你的目标是：{goal}。" if goal else "我先整理了一份购物方案。"
-        caveat = "当前门店库存尚未核实。" if not inventory_verified else ""
+        intro = "" if follow_up else "先给你一份参考方案："
+        caveat = catalog_freshness_note("zh") if not inventory_verified and not follow_up else ""
         if not options:
             if missing:
                 return (
                     intro
                     + caveat
-                    + "目录中无法核实这些需求："
+                    + "目录中暂时找不到能确认符合这些需求的商品："
                     + "、".join(missing_labels)
-                    + "。"
+                    + "。我没有用别的商品替代。"
                 )
             if satisfied:
                 return intro + caveat + "你已经有方案所需的物品，不需要额外购买。"
             if shortfall:
                 return (
-                    intro + f"满足必需需求至少还差 {shortfall:,} 越南盾预算。你想优先保留哪一项？"
+                    intro
+                    + f"满足必需需求至少还差 {format_vnd(shortfall)} 预算。你想优先保留哪一项？"
                     + quantity_guidance(use_catalog_candidates=True)
                 )
             return intro + caveat + "目前无法从目录核实完整方案。你愿意调整哪个条件？"
@@ -1463,31 +1840,34 @@ def render_shopping_plan_summary(content: dict[str, Any], language: str = "vi") 
             + already_have
             + ("目录没有信息确认这些商品是否辣。" if spicy_preference_unverified else "")
             + (
-                "目录尚无法核实这些必需需求：" + "、".join(missing_labels) + "。"
+                "目录尚无法核实这些必需需求："
+                + "、".join(missing_labels)
+                + "；上面的总价只包含已匹配到的商品。"
                 if missing_labels
                 else ""
             )
-            + "尚未加入购物车。"
+            + ("尚未加入购物车。" if not follow_up else "")
         )
 
-    intro = (
-        f"Mình hiểu mục tiêu là {goal}. " if goal else "Mình đã phác thảo một phương án mua sắm. "
-    )
-    caveat = "Tồn kho hiện tại chưa được xác minh. " if not inventory_verified else ""
+    # Follow-ups already begin with the requested-item section or the specific
+    # catalog limitation. Dropping the repeated canned lead-in sounds more
+    # conversational and keeps the answer focused on the actual change.
+    intro = "" if follow_up else "Mình gợi ý một phương án tham khảo: "
+    caveat = catalog_freshness_note("vi") if not inventory_verified and not follow_up else ""
     if not options:
         if missing:
             return (
                 intro
                 + caveat
-                + "Catalog chưa xác minh được mặt hàng phù hợp cho: "
+                + "Catalog hiện chưa giúp mình xác nhận được mặt hàng phù hợp cho: "
                 + ", ".join(missing_labels)
-                + "."
+                + ". Mình chưa tự chọn món khác để thay thế."
             )
         if satisfied:
             return intro + caveat + "Bạn đã có đủ các nhóm cần thiết nên chưa cần mua thêm món nào."
         if shortfall:
             return (
-                intro + f"Các nhu cầu bắt buộc rẻ nhất vẫn vượt ngân sách {shortfall:,}đ. "
+                intro + f"Các nhu cầu bắt buộc rẻ nhất vẫn vượt ngân sách {format_vnd(shortfall)}. "
                 "Bạn muốn ưu tiên nhu cầu nào?"
                 + quantity_guidance(use_catalog_candidates=True)
             )
@@ -1505,16 +1885,16 @@ def render_shopping_plan_summary(content: dict[str, Any], language: str = "vi") 
         )
     option = options[0]
     option_details, total_text = describe_option(option, language)
-    suffix = " Mình chưa thêm món nào vào giỏ."
+    suffix = " Mình chưa thêm món nào vào giỏ." if not follow_up else ""
     if satisfied:
         suffix = " Mình bỏ qua " + ", ".join(map(str, satisfied)) + " vì bạn đã có rồi." + suffix
-    if content.get("missing_optional_needs"):
-        suffix += " Chưa tìm thấy: " + ", ".join(map(str, content["missing_optional_needs"])) + "."
+    if missing_optional_labels:
+        suffix += " Chưa tìm thấy trong catalog: " + ", ".join(missing_optional_labels) + "."
     if missing_labels:
         suffix += (
-            " Catalog chưa xác minh được mặt hàng phù hợp cho nhu cầu bắt buộc: "
+            " Catalog chưa xác nhận được mặt hàng phù hợp cho nhu cầu bắt buộc: "
             + ", ".join(missing_labels)
-            + "."
+            + "; tổng trên chỉ tính các món đã tìm thấy."
         )
     if spicy_preference_unverified:
         suffix += " Catalog chưa có thuộc tính vị cay nên mình chưa xác minh được món không cay."
@@ -1524,6 +1904,7 @@ def render_shopping_plan_summary(content: dict[str, Any], language: str = "vi") 
         + option_details
         + " "
         + total_text
-        + quantity_guidance(option["items"])
+        + (quantity_guidance(option["items"]) if not follow_up else "")
+        + skincare_party_size_note()
         + suffix
     )

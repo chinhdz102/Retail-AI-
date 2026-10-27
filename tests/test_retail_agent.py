@@ -302,6 +302,219 @@ def test_broad_snack_intent_does_not_promote_inferred_candy_to_required() -> Non
     assert next(need for need in explicit_needs if need["need_id"] == "candy")["required"] is True
 
 
+def test_baby_context_does_not_turn_an_unmentioned_item_group_into_a_requirement() -> None:
+    text = (
+        "Em bé đi cùng gia đình trong chuyến thăm ông bà. "
+        "Có khoảng 3 người và ngân sách 220.000đ."
+    )
+    call = tool_call(
+        "plan_shopping_mission",
+        {
+            "needs": [
+                {
+                    "need_id": "baby_paper",
+                    "label": "Khăn giấy/chăm sóc bé",
+                    "category": "Phi thực phẩm > Hoá mỹ phẩm > "
+                    "Mỹ phẩm, chăm sóc cá nhân > Đồ dùng chăm sóc mẹ và bé",
+                    "product_query": "khăn giấy cho bé",
+                    "source": "EXPLICIT",
+                    "required": True,
+                }
+            ]
+        },
+    )
+
+    result = _enforce_shopping_mission_call_semantics([call], text, None)
+    need = json.loads(result[0]["function"]["arguments"])["needs"][0]
+
+    assert need["source"] == "INFERRED"
+    assert need["required"] is False
+
+
+def test_open_ended_routine_keeps_inferred_components_optional_but_named_group_required() -> None:
+    text = (
+        "Tư vấn chăm sóc da mặt cơ bản; mình chưa biết cần những nhóm nào. "
+        "Riêng bông tẩy trang thì mình xác nhận cần có."
+    )
+    needs = [
+        {
+            "need_id": "cleanser",
+            "label": "Sữa rửa mặt",
+            "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da",
+            "product_query": "sữa rửa mặt",
+            "source": "EXPLICIT",
+            "required": True,
+        },
+        {
+            "need_id": "moisturizer",
+            "label": "Kem dưỡng ẩm",
+            "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da",
+            "product_query": "kem dưỡng ẩm da mặt",
+            "source": "EXPLICIT",
+            "required": True,
+        },
+        {
+            "need_id": "cotton_pads",
+            "label": "Miếng bông tẩy trang",
+            "category": (
+                "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Phụ kiện > "
+                "Bông tẩy trang"
+            ),
+            "product_query": "bông tẩy trang",
+            "source": "INFERRED",
+            "required": False,
+        },
+    ]
+    result = _enforce_shopping_mission_call_semantics(
+        [tool_call("plan_shopping_mission", {"needs": needs})],
+        text,
+        None,
+    )
+    output = json.loads(result[0]["function"]["arguments"])["needs"]
+
+    assert {need["need_id"]: (need["source"], need["required"]) for need in output} == {
+        "cleanser": ("INFERRED", False),
+        "moisturizer": ("INFERRED", False),
+        "cotton_pads": ("EXPLICIT", True),
+    }
+
+
+def test_skincare_group_confirmation_does_not_make_sunscreen_required_until_named() -> None:
+    needs = [
+        {
+            "need_id": "need_face_wash",
+            "label": "Sữa rửa mặt",
+            "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da",
+            "product_query": "sữa rửa mặt",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "need_moisturizer",
+            "label": "Kem dưỡng ẩm",
+            "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da",
+            "product_query": "kem dưỡng ẩm da mặt",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "need_sunscreen",
+            "label": "Kem chống nắng",
+            "category": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da",
+            "product_query": "kem chống nắng da mặt",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "need_cotton_pads",
+            "label": "Miếng bông tẩy trang",
+            "category": "Phụ kiện > Bông tẩy trang",
+            "product_query": "bông tẩy trang",
+            "source": "INFERRED",
+            "required": False,
+        },
+    ]
+    previous = {"needs": [dict(need) for need in needs]}
+    confirmation = _enforce_shopping_mission_call_semantics(
+        [tool_call("plan_shopping_mission", {"needs": needs})],
+        (
+            "Mình xác nhận cần có đồ làm sạch da mặt, sản phẩm dưỡng da mặt và "
+            "miếng bông tẩy trang. Những nhóm này là bắt buộc; thứ gì bạn gợi ý thêm "
+            "thì cứ để tùy chọn."
+        ),
+        previous,
+    )
+    confirmed_needs = json.loads(confirmation[0]["function"]["arguments"])["needs"]
+    confirmed = {
+        need["need_id"]: (need["source"], need["required"]) for need in confirmed_needs
+    }
+    assert confirmed == {
+        "need_face_wash": ("EXPLICIT", True),
+        "need_moisturizer": ("EXPLICIT", True),
+        "need_sunscreen": ("INFERRED", False),
+        "need_cotton_pads": ("EXPLICIT", True),
+    }
+
+    sunscreen_addition = _enforce_shopping_mission_call_semantics(
+        confirmation,
+        "Thêm bảo vệ da khi ra ngoài ban ngày vào nữa; các phần trước vẫn cần. "
+        "Mức chi có thể tăng lên 240.000đ.",
+        {"needs": confirmed_needs, "total_budget_vnd": 220_000},
+    )
+    revised_arguments = json.loads(sunscreen_addition[0]["function"]["arguments"])
+    revised = {
+        need["need_id"]: (need["source"], need["required"])
+        for need in revised_arguments["needs"]
+    }
+    assert revised["need_sunscreen"] == ("EXPLICIT", True)
+    assert revised_arguments["total_budget_vnd"] == 240_000
+
+
+def test_group_size_does_not_imply_shared_use() -> None:
+    call = tool_call(
+        "plan_shopping_mission",
+        {
+            "party_size": 3,
+            "needs": [
+                {
+                    "need_id": "cleanser",
+                    "label": "Sữa rửa mặt",
+                    "category": (
+                        "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da"
+                    ),
+                    "product_query": "sữa rửa mặt",
+                    "rationale": "Bước làm sạch cơ bản; dùng chung cho cả nhóm.",
+                    "preference_terms": ["dùng được cho nhiều người"],
+                    "source": "INFERRED",
+                    "required": False,
+                }
+            ],
+        },
+    )
+
+    result = _enforce_shopping_mission_call_semantics(
+        [call], "Tư vấn chăm sóc da cho 3 người, ngân sách 220.000đ.", None
+    )
+    need = json.loads(result[0]["function"]["arguments"])["needs"][0]
+
+    assert "dùng chung" not in need["rationale"].casefold()
+    assert "dùng được cho nhiều người" not in need["preference_terms"]
+
+
+def test_routine_context_is_not_promoted_to_unverifiable_product_filter() -> None:
+    call = tool_call(
+        "plan_shopping_mission",
+        {
+            "needs": [
+                {
+                    "need_id": "cleanser",
+                    "label": "Sữa rửa mặt",
+                    "category": (
+                        "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da"
+                    ),
+                    "product_query": "sữa rửa mặt",
+                    "unverified_constraints": [
+                        "dùng cho da mặt",
+                        "dùng mỗi ngày",
+                        "không chứa paraben",
+                    ],
+                    "source": "INFERRED",
+                    "required": False,
+                }
+            ]
+        },
+    )
+
+    result = _enforce_shopping_mission_call_semantics(
+        [call], "Tư vấn chăm sóc da mặt cơ bản mỗi ngày.", None
+    )
+    need = json.loads(result[0]["function"]["arguments"])["needs"][0]
+
+    assert need["unverified_constraints"] == ["không chứa paraben"]
+    assert "dùng cho da mặt" in need["preference_terms"]
+    assert "dùng mỗi ngày" in need["preference_terms"]
+
+
 def test_optional_suggestions_instruction_works_in_english() -> None:
     call = tool_call(
         "plan_shopping_mission",
@@ -360,6 +573,52 @@ def test_lexically_named_catalog_need_becomes_required_even_without_intent_alias
         "Thêm vào kế hoạch giấy dùng khi đi đường; đây là nhu cầu mình muốn tính đến.",
         None,
     )
+    need = json.loads(result[0]["function"]["arguments"])["needs"][0]
+
+    assert need["source"] == "EXPLICIT"
+    assert need["required"] is True
+
+
+@pytest.mark.parametrize(
+    ("text", "label", "category", "product_query"),
+    [
+        (
+            "Mình xác nhận cần có miếng bông tẩy trang; nhóm này là bắt buộc.",
+            "Bông tẩy trang",
+            "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Phụ kiện > Bông tẩy trang",
+            "bông tẩy trang",
+        ),
+        (
+            "Mình xác nhận cần khăn lau miệng; nhóm này là bắt buộc.",
+            "Khăn lau miệng",
+            "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh",
+            "khăn lau miệng",
+        ),
+    ],
+)
+def test_exact_product_group_mentions_are_preserved_as_required(
+    text: str,
+    label: str,
+    category: str,
+    product_query: str,
+) -> None:
+    call = tool_call(
+        "plan_shopping_mission",
+        {
+            "needs": [
+                {
+                    "need_id": "requested-group",
+                    "label": label,
+                    "category": category,
+                    "product_query": product_query,
+                    "source": "INFERRED",
+                    "required": False,
+                }
+            ]
+        },
+    )
+
+    result = _enforce_shopping_mission_call_semantics([call], text, None)
     need = json.loads(result[0]["function"]["arguments"])["needs"][0]
 
     assert need["source"] == "EXPLICIT"
