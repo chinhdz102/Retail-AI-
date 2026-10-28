@@ -555,6 +555,7 @@ def test_product_knowledge_returns_status_and_provenance_per_attribute() -> None
     assert facts["price_vnd"]["status"] == "VERIFIED"
     assert facts["price_vnd"]["evidence_scope"] == "SOURCE_RECORD"
     assert facts["price_vnd"]["source"] == repository.source_name
+    assert facts["price_vnd"]["source_url"] == product.seo_url
     assert facts["price_vnd"]["observed_at"] is not None
     assert facts["price_vnd"]["verified_at"] is None
     assert "does not establish current store conditions" in facts["price_vnd"]["note"]
@@ -565,6 +566,29 @@ def test_product_knowledge_returns_status_and_provenance_per_attribute() -> None
     assert facts["shelf"]["status"] == "INFERRED"
     assert facts["shelf"]["evidence_scope"] == "RECOMMENDED_PLANOGRAM"
     assert observation.products == (product,)
+
+
+@pytest.mark.parametrize(
+    "source_url",
+    (
+        "javascript:alert(1)",
+        "https://user:password@catalog.example/item",
+        "https://catalog.example/item\nX-Injected: value",
+    ),
+)
+def test_product_knowledge_rejects_unsafe_source_urls(source_url: str) -> None:
+    product = ProductSnapshot(
+        product_id="URL-TEST",
+        name="URL test product",
+        category="food",
+        price_vnd=10000,
+        stock=1,
+        seo_url=source_url,
+    )
+
+    fact = product_knowledge_facts(product, ["price_vnd"], source="test_catalog")[0]
+
+    assert fact.source_url is None
 
 
 def test_product_knowledge_scopes_all_direct_fields_as_catalog_record_evidence() -> None:
