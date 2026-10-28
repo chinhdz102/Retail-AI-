@@ -1807,6 +1807,39 @@ def _localized_recommendation_candidates(
             "child suitability" in str(value).casefold()
             for value in observation.content.get("unverified_constraints", [])
         )
+        if len(products) == 1:
+            product = products[0]
+            if language == "en":
+                response = (
+                    f"I found one catalog option: {rendered_items}. The product title suggests "
+                    "the requested use, but the catalog does not independently verify its "
+                    "effectiveness. Would you like another option to compare?"
+                )
+                if include_price_caveat:
+                    response += " Store price may differ from the catalog."
+                if include_stock_caveat and not product.stock_is_current:
+                    response += " Current availability has not been verified."
+                return response
+            if language == "zh":
+                response = (
+                    f"目录中找到一个选择：{rendered_items}。商品名称提示了相关用途，但目录没有独立核实其效果。"
+                    "您想再看一个选择进行比较吗？"
+                )
+                if include_price_caveat:
+                    response += "门店价格可能与目录不同。"
+                if include_stock_caveat and not product.stock_is_current:
+                    response += "当前库存尚未核实。"
+                return response
+            response = (
+                f"Trong danh mục, mình tìm thấy một sản phẩm: {rendered_items}. "
+                "Tên hàng gợi ý đúng nhóm công dụng, nhưng catalog chưa có bằng chứng độc lập "
+                "để xác nhận hiệu quả. Bạn muốn xem thêm lựa chọn để so sánh không?"
+            )
+            if include_price_caveat:
+                response += " Giá tại cửa hàng có thể khác catalog."
+            if include_stock_caveat and not product.stock_is_current:
+                response += " Tồn hiện tại chưa được xác minh."
+            return response
         if language == "en":
             response = (
                 f"I found these items in the requested product family: {rendered_items}. "
@@ -7545,6 +7578,23 @@ async def agent_respond(
                             if product.product_id == knowledge_product_id
                         )
                         knowledge_product_name = knowledge_product.name
+                    else:
+                        names = "; ".join(
+                            product.name for product in candidate_observation.products[:3]
+                        )
+                        reply = _localized_product_knowledge_abstention(
+                            names,
+                            knowledge_attributes,
+                            request.language,
+                        )
+                        return _deterministic_tool_response(
+                            request,
+                            record.state,
+                            candidate_observation,
+                            reply,
+                            model="catalog-knowledge",
+                            tools_used=["search_products"],
+                        )
         if knowledge_product_id and knowledge_product_name:
             knowledge_observation = await lookup_product_knowledge(
                 knowledge_product_id,
@@ -9099,6 +9149,25 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
 
 def _fact_product_query(text: str) -> str:
     normalized = _normalize_request_text(text)
+    attribute_terms = (
+        r"(?:calo|kcal|calories?|duong|sugar|protein|caffeine|cafein|"
+        r"dinh duong|nutrition|nutritional)"
+    )
+    normalized = re.sub(
+        rf"\b(?:co|has|have|contain|contains)\s+"
+        rf"(?:(?:bao nhieu|how many|how much|luong|ham luong|muc)\s+)?"
+        rf"{attribute_terms}(?:\s+(?:voi|va|and|with)\s+{attribute_terms})*"
+        rf"(?:\s+(?:bao nhieu|how many|how much))?(?:\s+(?:khong|vay|nhi|a))?\b",
+        " ",
+        normalized,
+    )
+    normalized = re.sub(
+        rf"\b(?:bao nhieu|how many|how much|luong|ham luong|muc)\s+"
+        rf"{attribute_terms}(?:\s+(?:voi|va|and|with)\s+{attribute_terms})*"
+        rf"(?:\s+(?:bao nhieu|how many|how much))?\b",
+        " ",
+        normalized,
+    )
     normalized = re.sub(
         r"\b(?:what|where|who|when|how|it|that|there|he|she|let) s\b",
         " ",
@@ -9189,6 +9258,7 @@ def _fact_product_query(text: str) -> str:
         else:
             measure_terms.add(f"{whole}{normalized_unit}")
     has_front_loader_hint = bool(re.search(r"\bcua truoc\b", normalized))
+    preserve_dau_product_token = bool(re.search(r"(?<!\w)(?:đậu|dầu)(?!\w)", text, re.IGNORECASE))
     normalized_words = normalized.split()
     possessive_brand_phrases = {
         _normalize_request_text(match.group(1)).strip(): match.group(0)
@@ -9206,6 +9276,7 @@ def _fact_product_query(text: str) -> str:
         for index, word in enumerate(normalized_words)
         if (
             word not in _FACT_QUERY_STOP_WORDS
+            or (word == "dau" and preserve_dau_product_token)
             or index in pocket_phrase_tokens
             or word in possessive_brand_tokens
         )

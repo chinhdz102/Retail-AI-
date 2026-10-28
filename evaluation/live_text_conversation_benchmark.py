@@ -12,9 +12,14 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
+import importlib.metadata
 import json
 import os
+import platform
 import statistics
+import subprocess
+import sys
 import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,6 +37,43 @@ from backend.products.repository import get_product_repository
 from evaluation.live_groq_smoke import RecordingGroq, RequestPacer
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _git_output(*arguments: str) -> bytes | None:
+    try:
+        result = subprocess.run(
+            ["git", *arguments],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            timeout=3,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout if result.returncode == 0 else None
+
+
+def _reproducibility_metadata(case_payload: bytes) -> dict[str, Any]:
+    commit = _git_output("rev-parse", "HEAD")
+    status = _git_output("status", "--porcelain", "--untracked-files=no")
+    diff = _git_output("diff", "HEAD", "--binary")
+    package_versions: dict[str, str | None] = {}
+    for package in ("fastapi", "httpx", "groq", "pydantic", "uvicorn"):
+        try:
+            package_versions[package] = importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError:
+            package_versions[package] = None
+    return {
+        "git_commit": commit.decode("ascii", errors="replace").strip() if commit else None,
+        "tracked_worktree_clean": status == b"" if status is not None else None,
+        "tracked_diff_sha256": hashlib.sha256(diff).hexdigest() if diff is not None else None,
+        "case_payload_sha256": hashlib.sha256(case_payload).hexdigest(),
+        "runtime": {
+            "platform": platform.platform(),
+            "python": sys.version.split()[0],
+            "packages": package_versions,
+        },
+    }
 
 # Queries are intentionally conversational, colloquial, indirect, and multi-turn.
 # Exact facts are checked against the repository's demo catalog in the API.
@@ -317,6 +359,7 @@ def grade_turn(
     status_code: int | None,
     llm_trace: list[dict[str, Any]] | None = None,
     session_constraints: dict[str, Any] | None = None,
+    prior_turn_responses: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     response_text = str(body.get("text", ""))
     normalized = response_text.casefold()
@@ -340,12 +383,18 @@ def grade_turn(
         if isinstance(item, dict)
     }
     order = body.get("order")
+    product_id_relation = turn.get("expected_product_ids_relation")
 
     checks = {
         "http_200": status_code == 200,
         "expected_product_ids": all(product_id in product_ids for product_id in expected_ids),
         "expected_product_ids_any": not expected_any_ids
         or any(product_id in product_ids for product_id in expected_any_ids),
+        "expected_product_ids_relation": _product_id_relation_passes(
+            product_id_relation,
+            product_ids,
+            prior_turn_responses or [],
+        ),
         "expected_tools": all(
             name in all_tool_names for name in turn.get("expected_tools", [])
         ),
@@ -415,6 +464,65 @@ def grade_turn(
     return {"checks": checks, "passed": all(checks.values())}
 
 
+def _product_id_relation_passes(
+    expectation: dict[str, Any] | None,
+    actual_ids: list[Any],
+    prior_turn_responses: list[dict[str, Any]],
+) -> bool:
+    """Grade product identity across turns without encoding SKU-specific rules.
+
+    Turn numbers in case files are one-based. Supported operations compare the
+    currently visible product IDs with one or more earlier API responses.
+    """
+    if expectation is None:
+        return True
+    if not isinstance(expectation, dict):
+        return False
+
+    def ids_at(turn_number: Any) -> list[str] | None:
+        if not isinstance(turn_number, int) or isinstance(turn_number, bool):
+            return None
+        if turn_number < 1 or turn_number > len(prior_turn_responses):
+            return None
+        response_ids = prior_turn_responses[turn_number - 1].get("grounded_product_ids")
+        if not isinstance(response_ids, list) or any(
+            not isinstance(value, str) for value in response_ids
+        ):
+            return None
+        return response_ids
+
+    current = [str(product_id) for product_id in actual_ids]
+    operation = expectation.get("operation")
+    if operation == "equal_turn":
+        prior = ids_at(expectation.get("turn"))
+        return prior is not None and current == prior
+    if operation == "subset_of_turn":
+        prior = ids_at(expectation.get("turn"))
+        return (
+            prior is not None
+            and set(current).issubset(prior)
+            and (bool(current) or expectation.get("allow_empty") is True)
+        )
+    if operation == "disjoint_from_turns":
+        turns = expectation.get("turns")
+        if not isinstance(turns, list) or not turns:
+            return False
+        prior_id_groups = [ids_at(turn_number) for turn_number in turns]
+        if any(prior is None for prior in prior_id_groups):
+            return False
+        all_prior = {product_id for prior in prior_id_groups for product_id in prior or []}
+        return bool(current) and not (set(current) & all_prior)
+    if operation == "equal_difference":
+        base = ids_at(expectation.get("base_turn"))
+        removed = ids_at(expectation.get("subtract_turn"))
+        if base is None or removed is None or not removed:
+            return False
+        removed_ids = set(removed)
+        expected = [product_id for product_id in base if product_id not in removed_ids]
+        return bool(expected) and current == expected
+    return False
+
+
 def _contains_expected_values(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
     for key, expected_value in expected.items():
         if key not in actual:
@@ -463,7 +571,8 @@ async def run(
     settings = settings.model_copy(update={"groq_timeout_seconds": 12.0})
     case_set: dict[str, Any] = {}
     if case_file is not None:
-        case_set = json.loads(case_file.read_text(encoding="utf-8"))
+        case_payload = case_file.read_bytes()
+        case_set = json.loads(case_payload.decode("utf-8"))
         candidate_cases = tuple(case_set.get("cases", []))
         if case_set.get("language_scope") != "Vietnamese only":
             raise ValueError("The external case set must declare Vietnamese-only scope")
@@ -475,6 +584,12 @@ async def run(
             raise ValueError("Vietnamese-only case sets may not contain non-Vietnamese turns")
     else:
         candidate_cases = CASES
+        case_payload = json.dumps(
+            candidate_cases,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
     selected_cases = [
         case
         for case in candidate_cases
@@ -493,6 +608,7 @@ async def run(
     report: dict[str, Any] = {
         "kind": "live_text_conversation_benchmark",
         "generated_at_utc": datetime.now(UTC).isoformat(),
+        "reproducibility": _reproducibility_metadata(case_payload),
         "dataset_id": case_set.get("dataset_id", "built_in_legacy_cases"),
         "language_scope": case_set.get("language_scope", "mixed for legacy built-in cases"),
         "research_informed_by": case_set.get("research_informed_by", []),
@@ -589,6 +705,7 @@ async def run(
                     status_code,
                     service.trace,
                     session_constraints=session_constraints,
+                    prior_turn_responses=[item["response"] for item in turn_results],
                 )
                 turn_results.append({
                     "turn": turn_number,
