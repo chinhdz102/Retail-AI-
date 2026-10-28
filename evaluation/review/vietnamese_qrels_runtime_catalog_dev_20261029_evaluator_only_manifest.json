@@ -7,7 +7,7 @@
   "candidate_pool_policy": "rank_interleaved_union_from_all_supplied_artifacts",
   "max_candidates_per_query": 15,
   "candidate_artifact_sha256": [
-    "93091493421bf04065c4f9575ff5997769e21ba4da99d1b1e588b493621b0934"
+    "c753acec64d3cc9d8d87c072e37b90f446c7f7de840481bca35c9eedb6784203"
   ],
   "candidate_count_by_query": {
     "7ff37e38d7dda7e2": 7,

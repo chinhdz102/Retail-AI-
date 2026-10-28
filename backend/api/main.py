@@ -5411,7 +5411,8 @@ async def _handle_product_comparison(
             products=products,
         )
 
-    resolved: list[ProductSnapshot] = []
+    resolved: list[ProductSnapshot | None] = []
+    comparison_option_groups: list[tuple[str, list[ProductSnapshot]]] = []
     for query in queries:
         observation = await lookup_product_candidates(query)
         candidates = observation.products
@@ -5438,26 +5439,56 @@ async def _handle_product_comparison(
         )
         product = next((item for item in candidates if item.product_id == product_id), None)
         if product is None:
-            names = "; ".join(item.name for item in candidates[:4])
-            reply = (
-                f"Mình thấy vài sản phẩm gần với ‘{query}’: {names}. "
-                "Bạn cho mình đúng tên hoặc quy cách để so sánh nhé."
-                if request.language == "vi"
-                else (
-                    f"I found several products close to ‘{query}’: {names}. "
-                    "Please specify the exact name or size."
-                )
-            )
-            return _record_shopping_turn(
-                request,
-                reply,
-                model="comparison-clarification",
-                tools_used=["search_products"],
-                products=list(candidates[:4]),
-            )
+            comparison_option_groups.append((query, list(candidates[:3])))
+            resolved.append(None)
+            continue
         resolved.append(product)
+        comparison_option_groups.append((query, [product]))
 
-    if resolved[0].product_id == resolved[1].product_id:
+    if any(product is None for product in resolved):
+        lines = [
+            f"- {query}: " + "; ".join(item.name for item in options)
+            for query, options in comparison_option_groups
+        ]
+        if request.language == "vi":
+            reply = (
+                "Mình chưa chốt được một cặp sản phẩm cụ thể để so sánh. "
+                "Trong catalog mình tìm thấy:\n"
+                + "\n".join(lines)
+                + "\nBạn chọn tên hoặc quy cách một món ở mỗi bên nhé; "
+                "mình sẽ đối chiếu các thông tin có trong catalog."
+            )
+        elif request.language == "en":
+            reply = (
+                "I can't identify one exact product on each side yet. The catalog has:\n"
+                + "\n".join(lines)
+                + "\nPlease choose a name or size for each side, and I'll compare the facts "
+                "recorded in the catalog."
+            )
+        else:
+            reply = (
+                "我还无法确定双方各自对应的具体商品。目录中找到：\n"
+                + "\n".join(lines)
+                + "\n请为每一方选择具体名称或规格，我再比较目录中记录的信息。"
+            )
+        product_options = list(
+            {
+                product.product_id: product
+                for _query, options in comparison_option_groups
+                for product in options
+            }.values()
+        )[:6]
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="comparison-clarification",
+            tools_used=["search_products"],
+            products=product_options,
+        )
+
+    resolved_products = [product for product in resolved if product is not None]
+
+    if resolved_products[0].product_id == resolved_products[1].product_id:
         return _record_shopping_turn(
             request,
             "Hai tên bạn nêu đang khớp cùng một sản phẩm. Bạn cho mình tên món thứ hai nhé."
@@ -5467,10 +5498,12 @@ async def _handle_product_comparison(
             ),
             model="comparison-clarification",
             tools_used=["search_products"],
-            products=resolved,
+            products=resolved_products,
         )
 
-    products = await _comparison_snapshots_by_ids([item.product_id for item in resolved])
+    products = await _comparison_snapshots_by_ids(
+        [item.product_id for item in resolved_products]
+    )
     if products is None:
         return _record_shopping_turn(
             request,

@@ -1,13 +1,13 @@
 {
   "kind": "generalized_retrieval_variants",
-  "generated_at_utc": "2026-10-28T19:01:50.775447+00:00",
+  "generated_at_utc": "2026-10-28T19:27:10.401412+00:00",
   "mode": "offline_catalog_embedding_trial",
   "source_file": "data/winmart_products.json",
   "case_file": "evaluation/cases/generalized_catalog_consultation_dev_v1.jsonl",
-  "commit_sha": "4f9ac18eedbb9cdb09f8c98844ed57e89bce2d12",
+  "commit_sha": "1e992a8006c64dc01c54e41054b28617260e69e8",
   "working_tree": {
     "dirty_tracked_files": true,
-    "tracked_diff_sha256": "ec48b810e33963970d1eec1b3ecdb07db32d5fb2186f28db6025942a08744660"
+    "tracked_diff_sha256": "e76b69237f5f61841215bfff0277887e251f0bac604d85e5c41a57b86d2bf160"
   },
   "catalog": {
     "raw_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
@@ -15,7 +15,7 @@
     "runtime_accepted_products": 3081,
     "quarantined_products": 18,
     "searchable_product_documents": 3081,
-    "repository_load_ms": 675.977
+    "repository_load_ms": 663.786
   },
   "query_set": {
     "kind": "product_resolution",
@@ -36,40 +36,40 @@
     "fastembed_version": "0.9.1",
     "onnxruntime_version": "1.31.1"
   },
-  "index_build_ms_including_model_load": 73704.372,
+  "index_build_ms_including_model_load": 92093.316,
   "index_build_scope": "model initialization (including any cache-miss download) and embedding all accepted catalog products",
   "vector_payload_fp32_bytes": 4732416,
   "query_latency_ms": {
     "bm25_full_rank": {
-      "p50": 18.99,
-      "p95": 24.734,
-      "p99": 26.424,
-      "mean": 18.79,
-      "max": 26.747
+      "p50": 21.147,
+      "p95": 26.963,
+      "p99": 29.229,
+      "mean": 21.208,
+      "max": 31.568
     },
     "dense_embedding_only": {
-      "p50": 9.166,
-      "p95": 11.785,
-      "p99": 12.89,
-      "mean": 9.291,
-      "max": 12.975
+      "p50": 10.535,
+      "p95": 13.716,
+      "p99": 17.101,
+      "mean": 10.721,
+      "max": 26.077
     },
     "dense_embedding_scoring_and_sort": {
-      "p50": 21.619,
-      "p95": 25.886,
-      "p99": 26.641,
-      "mean": 21.294,
-      "max": 27.668
+      "p50": 24.281,
+      "p95": 27.931,
+      "p99": 31.047,
+      "mean": 24.191,
+      "max": 47.855
     },
     "rrf_fusion": {
-      "p50": 0.141,
-      "p95": 0.198,
-      "p99": 0.217,
-      "mean": 0.142,
-      "max": 0.227
+      "p50": 0.169,
+      "p95": 0.215,
+      "p99": 0.359,
+      "mean": 0.163,
+      "max": 0.361
     }
   },
-  "process_cpu_ms": 470125.0,
+  "process_cpu_ms": 549828.125,
   "memory_measurement": "not_measured",
   "environment": {
     "python": "3.13.15",
@@ -112,6 +112,155 @@
       "ndcg_at_5": 0.986
     }
   },
+  "paired_comparisons": {
+    "method": "paired product-cluster bootstrap percentile interval for mean metric delta",
+    "confidence_level": 0.95,
+    "resamples": 5000,
+    "seed": 20261029,
+    "resampling_unit": "connected component of queries sharing any gold product ID",
+    "cluster_count": 50,
+    "metric_note": "Recall@k is the fraction of all query-relevant product IDs retrieved; MRR@5 and binary nDCG@5 use the same validated relevance set.",
+    "candidate_minus_reference": {
+      "dense_e5_small_vs_bm25": {
+        "n_queries": 150,
+        "n_clusters": 50,
+        "metrics": {
+          "recall_at_1": {
+            "mean_delta_candidate_minus_reference": -0.013333,
+            "candidate_wins": 3,
+            "reference_wins": 5,
+            "ties": 142,
+            "bootstrap_95_percentile_ci": [
+              -0.06,
+              0.04
+            ]
+          },
+          "recall_at_5": {
+            "mean_delta_candidate_minus_reference": -0.02,
+            "candidate_wins": 0,
+            "reference_wins": 3,
+            "ties": 147,
+            "bootstrap_95_percentile_ci": [
+              -0.046667,
+              0.0
+            ]
+          },
+          "mrr_at_5": {
+            "mean_delta_candidate_minus_reference": -0.015556,
+            "candidate_wins": 3,
+            "reference_wins": 5,
+            "ties": 142,
+            "bootstrap_95_percentile_ci": [
+              -0.051111,
+              0.022222
+            ]
+          },
+          "ndcg_at_5": {
+            "mean_delta_candidate_minus_reference": -0.016667,
+            "candidate_wins": 3,
+            "reference_wins": 5,
+            "ties": 142,
+            "bootstrap_95_percentile_ci": [
+              -0.046667,
+              0.013333
+            ]
+          }
+        }
+      },
+      "rrf_bm25_dense_vs_bm25": {
+        "n_queries": 150,
+        "n_clusters": 50,
+        "metrics": {
+          "recall_at_1": {
+            "mean_delta_candidate_minus_reference": -0.006667,
+            "candidate_wins": 1,
+            "reference_wins": 2,
+            "ties": 147,
+            "bootstrap_95_percentile_ci": [
+              -0.026667,
+              0.013333
+            ]
+          },
+          "recall_at_5": {
+            "mean_delta_candidate_minus_reference": -0.006667,
+            "candidate_wins": 0,
+            "reference_wins": 1,
+            "ties": 149,
+            "bootstrap_95_percentile_ci": [
+              -0.02,
+              0.0
+            ]
+          },
+          "mrr_at_5": {
+            "mean_delta_candidate_minus_reference": -0.003333,
+            "candidate_wins": 3,
+            "reference_wins": 2,
+            "ties": 145,
+            "bootstrap_95_percentile_ci": [
+              -0.023333,
+              0.016667
+            ]
+          },
+          "ndcg_at_5": {
+            "mean_delta_candidate_minus_reference": -0.004048,
+            "candidate_wins": 3,
+            "reference_wins": 2,
+            "ties": 145,
+            "bootstrap_95_percentile_ci": [
+              -0.022302,
+              0.012777
+            ]
+          }
+        }
+      },
+      "rrf_bm25_dense_vs_dense_e5_small": {
+        "n_queries": 150,
+        "n_clusters": 50,
+        "metrics": {
+          "recall_at_1": {
+            "mean_delta_candidate_minus_reference": 0.006667,
+            "candidate_wins": 3,
+            "reference_wins": 2,
+            "ties": 145,
+            "bootstrap_95_percentile_ci": [
+              -0.033333,
+              0.04
+            ]
+          },
+          "recall_at_5": {
+            "mean_delta_candidate_minus_reference": 0.013333,
+            "candidate_wins": 2,
+            "reference_wins": 0,
+            "ties": 148,
+            "bootstrap_95_percentile_ci": [
+              0.0,
+              0.033333
+            ]
+          },
+          "mrr_at_5": {
+            "mean_delta_candidate_minus_reference": 0.012222,
+            "candidate_wins": 4,
+            "reference_wins": 2,
+            "ties": 144,
+            "bootstrap_95_percentile_ci": [
+              -0.01,
+              0.035556
+            ]
+          },
+          "ndcg_at_5": {
+            "mean_delta_candidate_minus_reference": 0.012619,
+            "candidate_wins": 4,
+            "reference_wins": 2,
+            "ties": 144,
+            "bootstrap_95_percentile_ci": [
+              -0.006509,
+              0.034206
+            ]
+          }
+        }
+      }
+    }
+  },
   "limitations": [
     "The case files are catalog-derived title variants, not human-authored semantic-fit queries.",
     "The prior heldout SKU split has been inspected and is no longer a blind heldout result.",
@@ -147,7 +296,27 @@
         "WIN_10164915",
         "WIN_10192537",
         "WIN_10193758"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_001_accentless",
@@ -175,7 +344,27 @@
         "WIN_10034000",
         "WIN_10315835",
         "WIN_10034487"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_001_single_typo",
@@ -203,7 +392,27 @@
         "WIN_10164915",
         "WIN_10193758",
         "WIN_10192537"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_002_conversational_exact",
@@ -231,7 +440,27 @@
         "WIN_10018958",
         "WIN_10161828",
         "WIN_10161005"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_002_accentless",
@@ -259,7 +488,27 @@
         "WIN_10018958",
         "WIN_10161828",
         "WIN_10018956"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_002_single_typo",
@@ -287,7 +536,27 @@
         "WIN_10161828",
         "WIN_10018956",
         "WIN_10018958"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_003_conversational_exact",
@@ -315,7 +584,27 @@
         "WIN_10141807",
         "WIN_10141826",
         "WIN_10141809"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_003_accentless",
@@ -343,7 +632,27 @@
         "WIN_10141807",
         "WIN_10141809",
         "WIN_10141826"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_003_single_typo",
@@ -371,7 +680,27 @@
         "WIN_10141807",
         "WIN_10141826",
         "WIN_10141809"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_004_conversational_exact",
@@ -399,7 +728,27 @@
         "WIN_10606345",
         "WIN_10008598",
         "WIN_10008600"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_004_accentless",
@@ -427,7 +776,27 @@
         "WIN_10606345",
         "WIN_10008600",
         "WIN_10008598"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_004_single_typo",
@@ -455,7 +824,27 @@
         "WIN_10606345",
         "WIN_10008566",
         "WIN_10008598"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_005_conversational_exact",
@@ -483,7 +872,27 @@
         "WIN_10141362",
         "WIN_10005043",
         "WIN_10005045"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_005_accentless",
@@ -511,7 +920,27 @@
         "WIN_10141364",
         "WIN_10162231",
         "WIN_10194809"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_005_single_typo",
@@ -539,7 +968,27 @@
         "WIN_10141362",
         "WIN_10141364",
         "WIN_10005043"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_006_conversational_exact",
@@ -567,7 +1016,27 @@
         "WIN_10281774",
         "WIN_10601514",
         "WIN_10620666"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_006_accentless",
@@ -595,7 +1064,27 @@
         "WIN_10281774",
         "WIN_10196623",
         "WIN_10306548"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_006_single_typo",
@@ -623,7 +1112,27 @@
         "WIN_10281774",
         "WIN_10601514",
         "WIN_10602176"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_007_conversational_exact",
@@ -651,7 +1160,27 @@
         "WIN_10017463",
         "WIN_10017461",
         "WIN_10171193"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_007_accentless",
@@ -679,7 +1208,27 @@
         "WIN_10017461",
         "WIN_10017463",
         "WIN_10171193"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_007_single_typo",
@@ -707,7 +1256,27 @@
         "WIN_10017461",
         "WIN_10017463",
         "WIN_10171193"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_008_conversational_exact",
@@ -735,7 +1304,27 @@
         "WIN_10008707",
         "WIN_10008708",
         "WIN_10141888"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_008_accentless",
@@ -763,7 +1352,27 @@
         "WIN_10008707",
         "WIN_10008708",
         "WIN_10227127"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_008_single_typo",
@@ -791,7 +1400,27 @@
         "WIN_10008707",
         "WIN_10008708",
         "WIN_10141888"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_009_conversational_exact",
@@ -819,7 +1448,27 @@
         "WIN_10623200",
         "WIN_10170362",
         "WIN_10623204"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_009_accentless",
@@ -847,7 +1496,27 @@
         "WIN_10623200",
         "WIN_10170363",
         "WIN_10623204"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_009_single_typo",
@@ -875,7 +1544,27 @@
         "WIN_10623200",
         "WIN_10170362",
         "WIN_10623204"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_010_conversational_exact",
@@ -903,7 +1592,27 @@
         "WIN_10006026",
         "WIN_10006030",
         "WIN_10326055"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_010_accentless",
@@ -931,7 +1640,27 @@
         "WIN_10006024",
         "WIN_10005259",
         "WIN_10266284"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_010_single_typo",
@@ -959,7 +1688,27 @@
         "WIN_10006026",
         "WIN_10006030",
         "WIN_10326055"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_011_conversational_exact",
@@ -987,7 +1736,27 @@
         "WIN_10316572",
         "WIN_10018479",
         "WIN_10640565"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_011_accentless",
@@ -1015,7 +1784,27 @@
         "WIN_10316572",
         "WIN_10018479",
         "WIN_10194859"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_011_single_typo",
@@ -1043,7 +1832,27 @@
         "WIN_10316572",
         "WIN_10018479",
         "WIN_10018477"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_012_conversational_exact",
@@ -1071,7 +1880,27 @@
         "WIN_10053382",
         "WIN_10628264",
         "WIN_10053601"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_012_accentless",
@@ -1099,7 +1928,27 @@
         "WIN_10225936",
         "WIN_10321638",
         "WIN_10054001"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "mrr_at_5": 0.0,
+          "ndcg_at_5": 0.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_012_single_typo",
@@ -1127,7 +1976,27 @@
         "WIN_10053382",
         "WIN_10628264",
         "WIN_10053541"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_013_conversational_exact",
@@ -1155,7 +2024,27 @@
         "WIN_10250119",
         "WIN_10250133",
         "WIN_10250134"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_013_accentless",
@@ -1183,7 +2072,27 @@
         "WIN_10250133",
         "WIN_10250134",
         "WIN_10250119"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_013_single_typo",
@@ -1211,7 +2120,27 @@
         "WIN_10250119",
         "WIN_10250133",
         "WIN_10250134"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_014_conversational_exact",
@@ -1239,7 +2168,27 @@
         "WIN_10062351",
         "WIN_10612256",
         "WIN_10160628"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_014_accentless",
@@ -1267,7 +2216,27 @@
         "WIN_10160628",
         "WIN_10062351",
         "WIN_10330216"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_014_single_typo",
@@ -1295,7 +2264,27 @@
         "WIN_10062351",
         "WIN_10160628",
         "WIN_10612256"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_015_conversational_exact",
@@ -1323,7 +2312,27 @@
         "WIN_10195572",
         "WIN_10607068",
         "WIN_10195194"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_015_accentless",
@@ -1351,7 +2360,27 @@
         "WIN_10195573",
         "WIN_10195572",
         "WIN_10600091"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_015_single_typo",
@@ -1379,7 +2408,27 @@
         "WIN_10195572",
         "WIN_10607068",
         "WIN_10195194"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_016_conversational_exact",
@@ -1407,7 +2456,27 @@
         "WIN_10011213",
         "WIN_10060861",
         "WIN_10197492"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_016_accentless",
@@ -1435,7 +2504,27 @@
         "WIN_10056551",
         "WIN_10060861",
         "WIN_10011549"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_016_single_typo",
@@ -1463,7 +2552,27 @@
         "WIN_10011213",
         "WIN_10060861",
         "WIN_10197492"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_017_conversational_exact",
@@ -1491,7 +2600,27 @@
         "WIN_10625513",
         "WIN_10131094",
         "WIN_10223984"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_017_accentless",
@@ -1519,7 +2648,27 @@
         "WIN_10013397",
         "WIN_10131094",
         "WIN_10223984"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 0.3333333333333333,
+          "ndcg_at_5": 0.5
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_017_single_typo",
@@ -1547,7 +2696,27 @@
         "WIN_10013397",
         "WIN_10625513",
         "WIN_10223984"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_018_conversational_exact",
@@ -1575,7 +2744,27 @@
         "WIN_10016763",
         "WIN_10016764",
         "WIN_10628559"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_018_accentless",
@@ -1603,7 +2792,27 @@
         "WIN_10016763",
         "WIN_10016764",
         "WIN_10628559"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_018_single_typo",
@@ -1631,7 +2840,27 @@
         "WIN_10016763",
         "WIN_10016764",
         "WIN_10628559"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_019_conversational_exact",
@@ -1659,7 +2888,27 @@
         "WIN_10014602",
         "WIN_10601160",
         "WIN_10322604"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_019_accentless",
@@ -1687,7 +2936,27 @@
         "WIN_10601160",
         "WIN_10150722",
         "WIN_10014602"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_019_single_typo",
@@ -1715,7 +2984,27 @@
         "WIN_10601160",
         "WIN_10322604",
         "WIN_10014602"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_020_conversational_exact",
@@ -1743,7 +3032,27 @@
         "WIN_10322798",
         "WIN_10010462",
         "WIN_10142082"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_020_accentless",
@@ -1771,7 +3080,27 @@
         "WIN_10010462",
         "WIN_10322798",
         "WIN_10010510"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_020_single_typo",
@@ -1799,7 +3128,27 @@
         "WIN_10010462",
         "WIN_10322798",
         "WIN_10142082"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_021_conversational_exact",
@@ -1827,7 +3176,27 @@
         "WIN_10006557",
         "WIN_10006560",
         "WIN_10170214"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_021_accentless",
@@ -1855,7 +3224,27 @@
         "WIN_10006557",
         "WIN_10006560",
         "WIN_10006558"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_021_single_typo",
@@ -1883,7 +3272,27 @@
         "WIN_10006563",
         "WIN_10006560",
         "WIN_10170214"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_022_conversational_exact",
@@ -1911,7 +3320,27 @@
         "WIN_10640563",
         "WIN_10622318",
         "WIN_10334912"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_022_accentless",
@@ -1939,7 +3368,27 @@
         "WIN_10640563",
         "WIN_10171191",
         "WIN_10622318"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_022_single_typo",
@@ -1967,7 +3416,27 @@
         "WIN_10640563",
         "WIN_10622318",
         "WIN_10334912"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_023_conversational_exact",
@@ -1995,7 +3464,27 @@
         "WIN_10012923",
         "WIN_10012924",
         "WIN_10314423"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_023_accentless",
@@ -2023,7 +3512,27 @@
         "WIN_10012923",
         "WIN_10012924",
         "WIN_10314423"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_023_single_typo",
@@ -2051,7 +3560,27 @@
         "WIN_10012923",
         "WIN_10012924",
         "WIN_10314423"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_024_conversational_exact",
@@ -2079,7 +3608,27 @@
         "WIN_10320939",
         "WIN_10308189",
         "WIN_10013650"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_024_accentless",
@@ -2107,7 +3656,27 @@
         "WIN_10025875",
         "WIN_10625997",
         "WIN_10005289"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 0.3333333333333333,
+          "ndcg_at_5": 0.5
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_024_single_typo",
@@ -2135,7 +3704,27 @@
         "WIN_10242478",
         "WIN_10308189",
         "WIN_10625997"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_025_conversational_exact",
@@ -2163,7 +3752,27 @@
         "WIN_10314274",
         "WIN_10026576",
         "WIN_10314271"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_025_accentless",
@@ -2191,7 +3800,27 @@
         "WIN_10314274",
         "WIN_10026576",
         "WIN_10314271"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_025_single_typo",
@@ -2219,7 +3848,27 @@
         "WIN_10314274",
         "WIN_10026576",
         "WIN_10314271"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_026_conversational_exact",
@@ -2247,7 +3896,27 @@
         "WIN_10265836",
         "WIN_10054890",
         "WIN_10054909"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_026_accentless",
@@ -2275,7 +3944,27 @@
         "WIN_10265836",
         "WIN_10054909",
         "WIN_10236508"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_026_single_typo",
@@ -2303,7 +3992,27 @@
         "WIN_10265836",
         "WIN_10054890",
         "WIN_10054909"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_027_conversational_exact",
@@ -2331,7 +4040,27 @@
         "WIN_10015643",
         "WIN_10617353",
         "WIN_10015645"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_027_accentless",
@@ -2359,7 +4088,27 @@
         "WIN_10620855",
         "WIN_10015643",
         "WIN_10167206"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_027_single_typo",
@@ -2387,7 +4136,27 @@
         "WIN_10015643",
         "WIN_10015645",
         "WIN_10617353"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_028_conversational_exact",
@@ -2415,7 +4184,27 @@
         "WIN_10006639",
         "WIN_10006608",
         "WIN_10006558"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 0.3333333333333333,
+          "ndcg_at_5": 0.5
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 0.5,
+          "ndcg_at_5": 0.6309297535714575
+        }
+      }
     },
     {
       "case_id": "dev_product_028_accentless",
@@ -2443,7 +4232,27 @@
         "WIN_10006639",
         "WIN_10006608",
         "WIN_10006558"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 0.3333333333333333,
+          "ndcg_at_5": 0.5
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_028_single_typo",
@@ -2471,7 +4280,27 @@
         "WIN_10006639",
         "WIN_10006608",
         "WIN_10006558"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 0.3333333333333333,
+          "ndcg_at_5": 0.5
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 0.5,
+          "ndcg_at_5": 0.6309297535714575
+        }
+      }
     },
     {
       "case_id": "dev_product_029_conversational_exact",
@@ -2499,7 +4328,27 @@
         "WIN_10027651",
         "WIN_10027650",
         "WIN_10191553"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_029_accentless",
@@ -2527,7 +4376,27 @@
         "WIN_10027651",
         "WIN_10027650",
         "WIN_10191553"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_029_single_typo",
@@ -2555,7 +4424,27 @@
         "WIN_10027651",
         "WIN_10027650",
         "WIN_10191553"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_030_conversational_exact",
@@ -2583,7 +4472,27 @@
         "WIN_10600869",
         "WIN_10240587",
         "WIN_10240585"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_030_accentless",
@@ -2611,7 +4520,27 @@
         "WIN_10240587",
         "WIN_10240585",
         "WIN_10401721"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_030_single_typo",
@@ -2639,7 +4568,27 @@
         "WIN_10600869",
         "WIN_10240585",
         "WIN_10401646"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_031_conversational_exact",
@@ -2667,7 +4616,27 @@
         "WIN_10617339",
         "WIN_10141785",
         "WIN_10008252"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_031_accentless",
@@ -2695,7 +4664,27 @@
         "WIN_10170208",
         "WIN_10170209",
         "WIN_10223993"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_031_single_typo",
@@ -2723,7 +4712,27 @@
         "WIN_10617339",
         "WIN_10141785",
         "WIN_10223996"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_032_conversational_exact",
@@ -2751,7 +4760,27 @@
         "WIN_10166024",
         "WIN_10600195",
         "WIN_10026587"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_032_accentless",
@@ -2779,7 +4808,27 @@
         "WIN_10251277",
         "WIN_10600195",
         "WIN_10026587"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_032_single_typo",
@@ -2807,7 +4856,27 @@
         "WIN_10600195",
         "WIN_10166024",
         "WIN_10251278"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_033_conversational_exact",
@@ -2835,7 +4904,27 @@
         "WIN_10005172",
         "WIN_10007957",
         "WIN_10006483"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_033_accentless",
@@ -2863,7 +4952,27 @@
         "WIN_10005172",
         "WIN_10006482",
         "WIN_10006483"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_033_single_typo",
@@ -2891,7 +5000,27 @@
         "WIN_10008783",
         "WIN_10005172",
         "WIN_10007957"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_034_conversational_exact",
@@ -2919,7 +5048,27 @@
         "WIN_10171203",
         "WIN_10162103",
         "WIN_10326675"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_034_accentless",
@@ -2947,7 +5096,27 @@
         "WIN_10171203",
         "WIN_10020564",
         "WIN_10326675"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_034_single_typo",
@@ -2975,7 +5144,27 @@
         "WIN_10162103",
         "WIN_10171203",
         "WIN_10326675"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_035_conversational_exact",
@@ -3003,7 +5192,27 @@
         "WIN_10013649",
         "WIN_10013652",
         "WIN_10013635"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_035_accentless",
@@ -3031,7 +5240,27 @@
         "WIN_10013650",
         "WIN_10013649",
         "WIN_10013635"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_035_single_typo",
@@ -3059,7 +5288,27 @@
         "WIN_10013650",
         "WIN_10013652",
         "WIN_10013635"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_036_conversational_exact",
@@ -3087,7 +5336,27 @@
         "WIN_10053947",
         "WIN_10053945",
         "WIN_10241437"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_036_accentless",
@@ -3115,7 +5384,27 @@
         "WIN_10007766",
         "WIN_10053939",
         "WIN_10005283"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "mrr_at_5": 0.0,
+          "ndcg_at_5": 0.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 0.5,
+          "ndcg_at_5": 0.6309297535714575
+        }
+      }
     },
     {
       "case_id": "dev_product_036_single_typo",
@@ -3143,7 +5432,27 @@
         "WIN_10053947",
         "WIN_10241437",
         "WIN_10241438"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_037_conversational_exact",
@@ -3171,7 +5480,27 @@
         "WIN_10315205",
         "WIN_10017550",
         "WIN_10017296"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_037_accentless",
@@ -3199,7 +5528,27 @@
         "WIN_10315205",
         "WIN_10601183",
         "WIN_10005777"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_037_single_typo",
@@ -3227,7 +5576,27 @@
         "WIN_10315205",
         "WIN_10017550",
         "WIN_10160991"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_038_conversational_exact",
@@ -3255,7 +5624,27 @@
         "WIN_10013652",
         "WIN_10195386",
         "WIN_10013635"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_038_accentless",
@@ -3283,7 +5672,27 @@
         "WIN_10197436",
         "WIN_10195985",
         "WIN_10197302"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_038_single_typo",
@@ -3311,7 +5720,27 @@
         "WIN_10195386",
         "WIN_10013652",
         "WIN_10013635"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_039_conversational_exact",
@@ -3339,7 +5768,27 @@
         "WIN_10270528",
         "WIN_10326153",
         "WIN_10022959"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_039_accentless",
@@ -3367,7 +5816,27 @@
         "WIN_10270528",
         "WIN_10613616",
         "WIN_10022959"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_039_single_typo",
@@ -3395,7 +5864,27 @@
         "WIN_10270528",
         "WIN_10022959",
         "WIN_10326153"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_040_conversational_exact",
@@ -3423,7 +5912,27 @@
         "WIN_10010324",
         "WIN_10015772",
         "WIN_10229150"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_040_accentless",
@@ -3451,7 +5960,27 @@
         "WIN_10010324",
         "WIN_10282326",
         "WIN_10008461"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_040_single_typo",
@@ -3479,7 +6008,27 @@
         "WIN_10010324",
         "WIN_10008461",
         "WIN_10015772"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_041_conversational_exact",
@@ -3507,7 +6056,27 @@
         "WIN_10053541",
         "WIN_10053604",
         "WIN_10081047"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_041_accentless",
@@ -3535,7 +6104,27 @@
         "WIN_10053601",
         "WIN_10214392",
         "WIN_10053604"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_041_single_typo",
@@ -3563,7 +6152,27 @@
         "WIN_10053541",
         "WIN_10081047",
         "WIN_10053604"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_042_conversational_exact",
@@ -3591,7 +6200,27 @@
         "WIN_10625523",
         "WIN_10617354",
         "WIN_10008252"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_042_accentless",
@@ -3619,7 +6248,27 @@
         "WIN_10019827",
         "WIN_10617354",
         "WIN_10150722"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_042_single_typo",
@@ -3647,7 +6296,27 @@
         "WIN_10625523",
         "WIN_10617354",
         "WIN_10223991"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_043_conversational_exact",
@@ -3675,7 +6344,27 @@
         "WIN_10311553",
         "WIN_10607104",
         "WIN_10314442"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_043_accentless",
@@ -3703,7 +6392,27 @@
         "WIN_10306548",
         "WIN_10015630",
         "WIN_10015835"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "mrr_at_5": 0.0,
+          "ndcg_at_5": 0.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "mrr_at_5": 0.0,
+          "ndcg_at_5": 0.0
+        }
+      }
     },
     {
       "case_id": "dev_product_043_single_typo",
@@ -3731,7 +6440,27 @@
         "WIN_10311553",
         "WIN_10607104",
         "WIN_10314442"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_044_conversational_exact",
@@ -3759,7 +6488,27 @@
         "WIN_10009161",
         "WIN_10009094",
         "WIN_10181052"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_044_accentless",
@@ -3787,7 +6536,27 @@
         "WIN_10009094",
         "WIN_10009161",
         "WIN_10181052"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_044_single_typo",
@@ -3815,7 +6584,27 @@
         "WIN_10009161",
         "WIN_10009094",
         "WIN_10181052"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_045_conversational_exact",
@@ -3843,7 +6632,27 @@
         "WIN_10006639",
         "WIN_10006621",
         "WIN_10214488"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_045_accentless",
@@ -3871,7 +6680,27 @@
         "WIN_10006639",
         "WIN_10006621",
         "WIN_10214488"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_045_single_typo",
@@ -3899,7 +6728,27 @@
         "WIN_10006639",
         "WIN_10006621",
         "WIN_10214488"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_046_conversational_exact",
@@ -3927,7 +6776,27 @@
         "WIN_10092744",
         "WIN_10023970",
         "WIN_10250011"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_046_accentless",
@@ -3955,7 +6824,27 @@
         "WIN_10270295",
         "WIN_10023970",
         "WIN_10092744"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_046_single_typo",
@@ -3983,7 +6872,27 @@
         "WIN_10092744",
         "WIN_10167126",
         "WIN_10250567"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_047_conversational_exact",
@@ -4011,7 +6920,27 @@
         "WIN_10160980",
         "WIN_10170744",
         "WIN_10170743"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_047_accentless",
@@ -4039,7 +6968,27 @@
         "WIN_10160010",
         "WIN_10160980",
         "WIN_10170743"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_047_single_typo",
@@ -4067,7 +7016,27 @@
         "WIN_10160980",
         "WIN_10170744",
         "WIN_10170743"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_048_conversational_exact",
@@ -4095,7 +7064,27 @@
         "WIN_10167097",
         "WIN_10167095",
         "WIN_10264882"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_048_accentless",
@@ -4123,7 +7112,27 @@
         "WIN_10330216",
         "WIN_10167095",
         "WIN_10264882"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_048_single_typo",
@@ -4151,7 +7160,27 @@
         "WIN_10167097",
         "WIN_10167095",
         "WIN_10264882"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_049_conversational_exact",
@@ -4179,7 +7208,27 @@
         "WIN_10141977",
         "WIN_10008587",
         "WIN_10009576"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_049_accentless",
@@ -4207,7 +7256,27 @@
         "WIN_10141977",
         "WIN_10009576",
         "WIN_10602832"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_049_single_typo",
@@ -4235,7 +7304,27 @@
         "WIN_10141977",
         "WIN_10008587",
         "WIN_10150738"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_050_conversational_exact",
@@ -4263,7 +7352,27 @@
         "WIN_10194712",
         "WIN_10011651",
         "WIN_10150435"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_050_accentless",
@@ -4291,7 +7400,27 @@
         "WIN_10194712",
         "WIN_10011651",
         "WIN_10150435"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     },
     {
       "case_id": "dev_product_050_single_typo",
@@ -4319,7 +7448,27 @@
         "WIN_10011651",
         "WIN_10194712",
         "WIN_10150435"
-      ]
+      ],
+      "query_metrics": {
+        "bm25": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "dense_e5_small": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        },
+        "rrf_bm25_dense": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
     }
   ]
 }

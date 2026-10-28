@@ -311,3 +311,61 @@ Benchmark parser/retrieval chạy trên 200 truy vấn tiếng Việt qua 20 lea
 Artifact có từng case đúng/sai: [independent consultation v2 dev benchmark](artifacts/independent_consultation_v2_dev_parallel_20261028.json).
 
 **Giới hạn:** bộ 200 câu do người phát triển tự soạn và đã dùng để phát hiện lỗi, không phải held-out độc lập hoặc chấm bởi annotator; benchmark đo parser và retrieval, không chấm câu trả lời có tự nhiên như hội thoại hay không, không đánh giá tính phù hợp ngoài dữ liệu snapshot, và không thay thế thử nghiệm end-to-end/live speech. 10/200 case chưa khớp exact vẫn cần xử lý—đặc biệt phủ định và phân biệt intent comparison/variant. Vì vậy không diễn giải các điểm số này thành “độ chính xác tư vấn” cho mọi tình huống.
+
+## 16. Tiếp tục đánh giá retrieval và sửa tuyến so sánh — 29/10/2026
+
+Đợt tiếp theo giữ nguyên branch `codex/retail-text-quality-v4-20261019`; không tạo branch mới. Audit phát hiện một mismatch: query-understanding đã nhận ra câu “Nước tinh khiết đóng chai với nước khoáng có gì khác theo nhãn?” là ý định so sánh với hai nhóm hàng, nhưng parser cũ của comparison route chỉ nhận một số mẫu câu so sánh viết sẵn. API vì vậy không đi vào luồng comparison có grounding.
+
+Đã bổ sung fallback dùng structured query IR chung sau parser mẫu câu. Khi mỗi bên là một category có nhiều SKU, API tìm ứng viên cho cả hai bên, trả lựa chọn lấy từ catalog và hỏi khách chốt đúng tên/quy cách trước khi so sánh. API không tự chọn hai đại diện bất kỳ để so, không tự khẳng định khác biệt về giá/thành phần. Câu “Nước tinh khiết đóng chai và nước khoáng có bán không?” là negative control và không bị biến thành yêu cầu so sánh. Unit/regression tests kiểm tra route, lựa chọn ở cả hai nhóm, product ID tồn tại trong runtime catalog, và không xuất hiện claim không có bằng chứng.
+
+### Đánh giá retrieval có xét các câu cùng SKU phụ thuộc nhau
+
+Sửa cách tính Recall@k thành tỷ lệ **toàn bộ product ID liên quan** được lấy vào top-k; trước đó phép tính tương đương hit rate nếu một query có nhiều gold ID. Bổ sung paired bootstrap 5.000 lần, seed cố định, so sánh candidate-minus-reference theo từng query. Do ba paraphrase của cùng một SKU không độc lập, khoảng tin cậy được bootstrap theo connected component của các query có chung gold product ID: 50 cụm dev và 120 cụm exploratory. Đây vẫn là đánh giá trên truy vấn sinh từ tên snapshot, không phải câu khách tự viết.
+
+| Tập / retriever | Recall@1 | Recall@5 | MRR@5 | nDCG@5 |
+| --- | ---: | ---: | ---: | ---: |
+| Dev — BM25 | **0,9800** | **1,0000** | **0,9867** | **0,9900** |
+| Dev — dense E5 small | 0,9667 | 0,9800 | 0,9711 | 0,9733 |
+| Dev — BM25 + dense RRF | 0,9733 | 0,9933 | 0,9833 | 0,9860 |
+| Exploratory — BM25 | **0,9889** | **1,0000** | **0,9944** | **0,9959** |
+| Exploratory — dense E5 small | 0,9389 | 0,9833 | 0,9595 | 0,9656 |
+| Exploratory — BM25 + dense RRF | 0,9722 | 0,9917 | 0,9819 | 0,9845 |
+
+Trên dev, chênh lệch RRF so với BM25 ở Recall@1 là −0,67 điểm phần trăm, CI 95% [−2,67; +1,33]; ở MRR@5 là −0,33 điểm, CI [−2,33; +1,67]. Trên tập exploratory đã được xem xét trước đó, BM25 hơn dense ở Recall@1 5 điểm, CI [3,06; 7,22], và hơn RRF 1,67 điểm, CI [0,28; 3,33]. RRF tốt hơn dense trên tập exploratory; điều này không đồng nghĩa RRF tốt hơn BM25. Kết quả hiện không ủng hộ đưa dense/RRF vào production.
+
+| Tập / latency mỗi query | BM25 full rank p50 / p95 | E5 embedding + scoring + sort p50 / p95 | RRF fusion p50 / p95 |
+| --- | ---: | ---: | ---: |
+| Dev | 21,15 / 26,96 ms | 24,28 / 27,93 ms | 0,17 / 0,22 ms |
+| Exploratory | 21,12 / 26,38 ms | 25,16 / 29,39 ms | 0,16 / 0,21 ms |
+
+E5 embedding-only p50/p95 là 10,54/13,72 ms trên dev và 10,67/13,71 ms trên exploratory; con số end-to-end retrieval phía E5 phải cộng scoring/sort như bảng trên. Cold build gồm tải model và tạo index khoảng 92,1–92,6 giây. Các số là benchmark local của script, không phải API/browser SLA; chưa đo peak RAM. Bộ exploratory gồm 360 truy vấn có paraphrase từ catalog, đã được xem xét trước đó, nên không được gọi là test độc lập hay human accuracy.
+
+### Kiểm tra và artifact mới
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Full suite `uv run pytest tests -q --tb=short` | **1.252 passed in 210,89s** |
+| Comparison + contextual regressions | **81 passed** ở lần chạy focused trước full suite |
+| Retrieval metric/bootstrap tests | Qua trong focused và full suite; gồm multi-gold Recall@k, deterministic paired bootstrap và cluster grouping |
+| Queue review blinded | 150 query; 1.134 candidate rows cho mỗi reviewer; 40 case không có retrieval result bị bỏ qua; tất cả nhãn còn `UNREVIEWED` |
+| `git diff --check` | Qua, chỉ có cảnh báo chuẩn hóa LF/CRLF của Git trên Windows |
+
+Queue được làm mới theo hash artifact candidate mới. Cả hai CSV đều ẩn nguồn/rank, ẩn nhãn gold và xáo query/candidate order riêng cho từng reviewer; chưa có người gán nhãn, vì vậy chưa có human qrels để kết luận độ phù hợp ngữ nghĩa. Không gửi evaluator-only manifest cho annotator.
+
+Artifact và queue:
+
+- [Retrieval runtime — dev](artifacts/generalized_retrieval_variants_runtime_dev_20261029.json)
+- [Retrieval runtime — exploratory, không phải blind test độc lập](artifacts/generalized_retrieval_variants_runtime_heldout_exploratory_20261029.json)
+- [Queue reviewer A](../../evaluation/review/vietnamese_qrels_runtime_catalog_dev_20261029_annotator_a.csv)
+- [Queue reviewer B](../../evaluation/review/vietnamese_qrels_runtime_catalog_dev_20261029_annotator_b.csv)
+- [Evaluator-only manifest — không phân phối cho reviewer](../../evaluation/review/vietnamese_qrels_runtime_catalog_dev_20261029_evaluator_only_manifest.json)
+
+Lệnh tái lập phần mới từ repository root:
+
+```powershell
+uv run python -m evaluation.generalized_retrieval_variants --cases evaluation/cases/generalized_catalog_consultation_dev_v1.jsonl --output docs/reports/artifacts/generalized_retrieval_variants_runtime_dev_20261029.json
+uv run python -m evaluation.generalized_retrieval_variants --cases evaluation/cases/generalized_catalog_consultation_heldout_v1.jsonl --output docs/reports/artifacts/generalized_retrieval_variants_runtime_heldout_exploratory_20261029.json
+uv run python -m evaluation.export_vietnamese_qrels_review --dataset evaluation/cases/generalized_catalog_consultation_dev_v1.jsonl --results docs/reports/artifacts/generalized_retrieval_variants_runtime_dev_20261029.json --output-prefix evaluation/review/vietnamese_qrels_runtime_catalog_dev_20261029 --catalog data/winmart_products.json --split development --seed 20261029 --max-candidates-per-query 15
+uv run pytest tests -q --tb=short
+uv run ruff check backend tests evaluation
+```

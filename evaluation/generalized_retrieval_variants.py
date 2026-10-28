@@ -14,6 +14,7 @@ import json
 import math
 import os
 import platform
+import random
 import re
 import statistics
 import subprocess
@@ -131,26 +132,127 @@ def _validated_product_cases(
     return cases
 
 
-def _metrics(ranked: list[list[str]], gold_ids: list[set[str]]) -> dict[str, float]:
-    recalls_1 = []
-    recalls_5 = []
-    reciprocal_ranks = []
-    ndcgs = []
-    for prediction, relevant in zip(ranked, gold_ids, strict=True):
-        recalls_1.append(float(bool(prediction[:1] and prediction[0] in relevant)))
-        recalls_5.append(float(bool(set(prediction[:5]) & relevant)))
-        ranks = [index + 1 for index, item_id in enumerate(prediction[:5]) if item_id in relevant]
-        reciprocal_ranks.append(1.0 / min(ranks) if ranks else 0.0)
-        dcg = sum(1.0 / math.log2(rank + 1) for rank in ranks)
-        ideal_count = min(len(relevant), 5)
-        idcg = sum(1.0 / math.log2(rank + 1) for rank in range(1, ideal_count + 1))
-        ndcgs.append(dcg / idcg if idcg else 0.0)
+_QUERY_METRIC_NAMES = ("recall_at_1", "recall_at_5", "mrr_at_5", "ndcg_at_5")
+
+
+def _query_metric_values(prediction: list[str], relevant: set[str]) -> dict[str, float]:
+    """Return standard binary-relevance metrics for one query.
+
+    Recall is the fraction of all relevant product IDs retrieved, not merely a
+    hit indicator. The distinction matters when a query has multiple acceptable
+    identities or variants in its relevance set.
+    """
+    if not relevant:
+        raise ValueError("Each retrieval query must have at least one relevant product")
+    retrieved_at_1 = set(prediction[:1]) & relevant
+    retrieved_at_5 = set(prediction[:5]) & relevant
+    ranks = [index + 1 for index, item_id in enumerate(prediction[:5]) if item_id in relevant]
+    dcg = sum(1.0 / math.log2(rank + 1) for rank in ranks)
+    ideal_count = min(len(relevant), 5)
+    idcg = sum(1.0 / math.log2(rank + 1) for rank in range(1, ideal_count + 1))
     return {
-        "recall_at_1": round(statistics.mean(recalls_1), 4),
-        "recall_at_5": round(statistics.mean(recalls_5), 4),
-        "mrr_at_5": round(statistics.mean(reciprocal_ranks), 4),
-        "ndcg_at_5": round(statistics.mean(ndcgs), 4),
+        "recall_at_1": len(retrieved_at_1) / len(relevant),
+        "recall_at_5": len(retrieved_at_5) / len(relevant),
+        "mrr_at_5": 1.0 / min(ranks) if ranks else 0.0,
+        "ndcg_at_5": dcg / idcg if idcg else 0.0,
     }
+
+
+def _metrics(ranked: list[list[str]], gold_ids: list[set[str]]) -> dict[str, float]:
+    query_metrics = [
+        _query_metric_values(prediction, relevant)
+        for prediction, relevant in zip(ranked, gold_ids, strict=True)
+    ]
+    if not query_metrics:
+        raise ValueError("Cannot compute retrieval metrics for an empty query set")
+    return {
+        metric: round(statistics.mean(row[metric] for row in query_metrics), 4)
+        for metric in _QUERY_METRIC_NAMES
+    }
+
+
+def _relevance_cluster_ids(gold_ids: list[set[str]]) -> list[str]:
+    """Group paraphrase queries connected to the same relevant product IDs."""
+    if not gold_ids or any(not product_ids for product_ids in gold_ids):
+        raise ValueError("Each query must have at least one relevant product ID")
+    parents = list(range(len(gold_ids)))
+
+    def find(index: int) -> int:
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        left_root = find(left)
+        right_root = find(right)
+        if left_root != right_root:
+            parents[max(left_root, right_root)] = min(left_root, right_root)
+
+    first_query_by_product: dict[str, int] = {}
+    for query_index, relevant_ids in enumerate(gold_ids):
+        for product_id in relevant_ids:
+            if product_id in first_query_by_product:
+                union(query_index, first_query_by_product[product_id])
+            else:
+                first_query_by_product[product_id] = query_index
+    return [f"product_cluster_{find(index)}" for index in range(len(gold_ids))]
+
+
+def _paired_bootstrap_comparison(
+    reference: list[dict[str, float]],
+    candidate: list[dict[str, float]],
+    *,
+    cluster_ids: list[str] | None = None,
+    seed: int = 20261029,
+    resamples: int = 5000,
+) -> dict[str, Any]:
+    """Compare systems with a paired percentile bootstrap over query clusters."""
+    if not reference or len(reference) != len(candidate):
+        raise ValueError("Paired comparisons require equally sized, nonempty query sets")
+    if resamples < 100:
+        raise ValueError("At least 100 bootstrap resamples are required")
+    if cluster_ids is not None and len(cluster_ids) != len(reference):
+        raise ValueError("Cluster IDs must align one-to-one with paired queries")
+    rng = random.Random(seed)
+    n_queries = len(reference)
+    if cluster_ids is None:
+        cluster_ids = [f"query_{index}" for index in range(n_queries)]
+    cluster_members: dict[str, list[int]] = {}
+    for index, cluster_id in enumerate(cluster_ids):
+        cluster_members.setdefault(cluster_id, []).append(index)
+    clusters = list(cluster_members.values())
+    n_clusters = len(clusters)
+    metrics: dict[str, Any] = {}
+    for metric in _QUERY_METRIC_NAMES:
+        deltas = [
+            candidate_row[metric] - reference_row[metric]
+            for reference_row, candidate_row in zip(reference, candidate, strict=True)
+        ]
+        bootstrap_means = []
+        for _ in range(resamples):
+            sampled_clusters = [clusters[rng.randrange(n_clusters)] for _ in range(n_clusters)]
+            sampled_query_count = sum(map(len, sampled_clusters))
+            sampled_delta_total = sum(
+                deltas[query_index]
+                for cluster in sampled_clusters
+                for query_index in cluster
+            )
+            bootstrap_means.append(sampled_delta_total / sampled_query_count)
+        bootstrap_means.sort()
+        lower_index = math.floor((resamples - 1) * 0.025)
+        upper_index = math.ceil((resamples - 1) * 0.975)
+        metrics[metric] = {
+            "mean_delta_candidate_minus_reference": round(statistics.mean(deltas), 6),
+            "candidate_wins": sum(delta > 1e-12 for delta in deltas),
+            "reference_wins": sum(delta < -1e-12 for delta in deltas),
+            "ties": sum(abs(delta) <= 1e-12 for delta in deltas),
+            "bootstrap_95_percentile_ci": [
+                round(bootstrap_means[lower_index], 6),
+                round(bootstrap_means[upper_index], 6),
+            ],
+        }
+    return {"n_queries": n_queries, "n_clusters": n_clusters, "metrics": metrics}
 
 
 def _bm25_rank(
@@ -245,6 +347,9 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
     dense_latencies = []
     dense_embedding_latencies = []
     hybrid_latencies = []
+    bm25_query_metrics = []
+    dense_query_metrics = []
+    hybrid_query_metrics = []
     gold_ids = []
     case_rows = []
     for case in cases:
@@ -275,6 +380,14 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
         hybrid_ranked.append(hybrid_ids)
         relevant = set(case["gold_product_ids"])
         gold_ids.append(relevant)
+        query_scores = {
+            "bm25": _query_metric_values(bm25_ids, relevant),
+            "dense_e5_small": _query_metric_values(dense_ids, relevant),
+            "rrf_bm25_dense": _query_metric_values(hybrid_ids, relevant),
+        }
+        bm25_query_metrics.append(query_scores["bm25"])
+        dense_query_metrics.append(query_scores["dense_e5_small"])
+        hybrid_query_metrics.append(query_scores["rrf_bm25_dense"])
         case_rows.append(
             {
                 "case_id": case["case_id"],
@@ -283,10 +396,12 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
                 "bm25_top5": bm25_ids[:5],
                 "dense_top5": dense_ids[:5],
                 "rrf_top5": hybrid_ids[:5],
+                "query_metrics": query_scores,
             }
         )
 
     process_cpu_ms = (time.process_time() - cpu_started) * 1000
+    relevance_clusters = _relevance_cluster_ids(gold_ids)
 
     diff = subprocess.run(
         ["git", "diff", "--binary", "HEAD"],
@@ -407,6 +522,38 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
             "bm25": _metrics(bm25_ranked, gold_ids),
             "dense_e5_small": _metrics(dense_ranked, gold_ids),
             "rrf_bm25_dense": _metrics(hybrid_ranked, gold_ids),
+        },
+        "paired_comparisons": {
+            "method": "paired product-cluster bootstrap percentile interval for mean metric delta",
+            "confidence_level": 0.95,
+            "resamples": 5000,
+            "seed": 20261029,
+            "resampling_unit": "connected component of queries sharing any gold product ID",
+            "cluster_count": len(set(relevance_clusters)),
+            "metric_note": (
+                "Recall@k is the fraction of all query-relevant product IDs retrieved; "
+                "MRR@5 and binary nDCG@5 use the same validated relevance set."
+            ),
+            "candidate_minus_reference": {
+                "dense_e5_small_vs_bm25": _paired_bootstrap_comparison(
+                    bm25_query_metrics,
+                    dense_query_metrics,
+                    cluster_ids=relevance_clusters,
+                    seed=20261029,
+                ),
+                "rrf_bm25_dense_vs_bm25": _paired_bootstrap_comparison(
+                    bm25_query_metrics,
+                    hybrid_query_metrics,
+                    cluster_ids=relevance_clusters,
+                    seed=20261030,
+                ),
+                "rrf_bm25_dense_vs_dense_e5_small": _paired_bootstrap_comparison(
+                    dense_query_metrics,
+                    hybrid_query_metrics,
+                    cluster_ids=relevance_clusters,
+                    seed=20261031,
+                ),
+            },
         },
         "limitations": [
             (
