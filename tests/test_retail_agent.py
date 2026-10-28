@@ -1,11 +1,13 @@
 import json
 import time
+from pathlib import Path
 
 import pytest
 
 import backend.services.retail_agent as retail_agent
 from backend.products.catalog import ProductSnapshot, get_product_snapshot
 from backend.products.repository import DemoProductRepository
+from backend.products.snapshot_repository import SnapshotProductRepository
 from backend.services.groq import GroqChatResult
 from backend.services.retail_agent import (
     _catalog_tool_timeout_policy,
@@ -236,10 +238,7 @@ def test_confirmed_groups_are_required_but_other_existing_suggestions_stay_optio
     result = _enforce_shopping_mission_call_semantics([call], text, previous)
     output = json.loads(result[0]["function"]["arguments"])
 
-    assert {
-        need["need_id"]: (need["source"], need["required"])
-        for need in output["needs"]
-    } == {
+    assert {need["need_id"]: (need["source"], need["required"]) for need in output["needs"]} == {
         "need-snack": ("EXPLICIT", True),
         "need-drink": ("EXPLICIT", True),
         "need-paper": ("EXPLICIT", True),
@@ -283,10 +282,7 @@ def test_broad_snack_intent_does_not_promote_inferred_candy_to_required() -> Non
     result = _enforce_shopping_mission_call_semantics([call], text, previous)
     output = json.loads(result[0]["function"]["arguments"])
 
-    assert {
-        need["need_id"]: (need["source"], need["required"])
-        for need in output["needs"]
-    } == {
+    assert {need["need_id"]: (need["source"], need["required"]) for need in output["needs"]} == {
         "snack": ("EXPLICIT", True),
         "drink": ("EXPLICIT", True),
         "candy": ("INFERRED", False),
@@ -304,8 +300,7 @@ def test_broad_snack_intent_does_not_promote_inferred_candy_to_required() -> Non
 
 def test_baby_context_does_not_turn_an_unmentioned_item_group_into_a_requirement() -> None:
     text = (
-        "Em bé đi cùng gia đình trong chuyến thăm ông bà. "
-        "Có khoảng 3 người và ngân sách 220.000đ."
+        "Em bé đi cùng gia đình trong chuyến thăm ông bà. Có khoảng 3 người và ngân sách 220.000đ."
     )
     call = tool_call(
         "plan_shopping_mission",
@@ -425,9 +420,7 @@ def test_skincare_group_confirmation_does_not_make_sunscreen_required_until_name
         previous,
     )
     confirmed_needs = json.loads(confirmation[0]["function"]["arguments"])["needs"]
-    confirmed = {
-        need["need_id"]: (need["source"], need["required"]) for need in confirmed_needs
-    }
+    confirmed = {need["need_id"]: (need["source"], need["required"]) for need in confirmed_needs}
     assert confirmed == {
         "need_face_wash": ("EXPLICIT", True),
         "need_moisturizer": ("EXPLICIT", True),
@@ -443,8 +436,7 @@ def test_skincare_group_confirmation_does_not_make_sunscreen_required_until_name
     )
     revised_arguments = json.loads(sunscreen_addition[0]["function"]["arguments"])
     revised = {
-        need["need_id"]: (need["source"], need["required"])
-        for need in revised_arguments["needs"]
+        need["need_id"]: (need["source"], need["required"]) for need in revised_arguments["needs"]
     }
     assert revised["need_sunscreen"] == ("EXPLICIT", True)
     assert revised_arguments["total_budget_vnd"] == 240_000
@@ -644,10 +636,7 @@ def test_activity_words_in_model_need_label_do_not_make_inferred_category_requir
 
     result = _enforce_shopping_mission_call_semantics(
         [call],
-        (
-            "Tư vấn giúp mình cho buổi xem bóng, khoảng 5 người; "
-            "mình chưa biết cần những nhóm gì."
-        ),
+        ("Tư vấn giúp mình cho buổi xem bóng, khoảng 5 người; mình chưa biết cần những nhóm gì."),
         None,
     )
     need = json.loads(result[0]["function"]["arguments"])["needs"][0]
@@ -1019,3 +1008,83 @@ async def test_lookup_tool_choice_is_not_overridden_by_message_substrings() -> N
     assert groq.calls == 2
     assert result.observations[0].tool_name == "search_products"
     assert [product.product_id for product in result.observations[0].products] == ["MILK01"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("tool_name", ["search_products", "recommend_products"])
+async def test_agent_passes_original_turn_so_tool_enforces_omitted_budget(
+    monkeypatch: pytest.MonkeyPatch,
+    tool_name: str,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    execute = retail_agent.execute_catalog_tool
+
+    def execute_with_test_snapshot(name, arguments, **kwargs):
+        return execute(name, arguments, repository=repository, **kwargs)
+
+    monkeypatch.setattr(retail_agent, "execute_catalog_tool", execute_with_test_snapshot)
+    query = "Mình cần hai chai nước rửa tay, tổng cộng không quá một trăm hai chục nghìn."
+    groq = ScriptedGroq(
+        GroqChatResult(
+            "",
+            "qwen/qwen3.8-27b",
+            [tool_call(tool_name, {"query": "nước rửa tay", "limit": 5})],
+        ),
+        GroqChatResult("Mình tìm thấy vài lựa chọn trong ngân sách.", "qwen/qwen3.8-27b"),
+    )
+
+    result = await run_retail_agent(
+        groq,
+        [{"role": "user", "content": query}],
+        SessionState.BROWSING,
+    )
+
+    observation = result.observations[-1]
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(product.price_vnd * 2 <= 120_000 for product in observation.products)
+    assert observation.content[
+        "budget_constraint" if tool_name == "search_products" else "constraints"
+    ]
+
+
+@pytest.mark.asyncio
+async def test_agent_stops_and_asks_when_multi_item_budget_scope_is_ambiguous(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    execute = retail_agent.execute_catalog_tool
+
+    def execute_with_test_snapshot(name, arguments, **kwargs):
+        return execute(name, arguments, repository=repository, **kwargs)
+
+    monkeypatch.setattr(retail_agent, "execute_catalog_tool", execute_with_test_snapshot)
+    groq = ScriptedGroq(
+        GroqChatResult(
+            "",
+            "qwen/qwen3.8-27b",
+            [tool_call("recommend_products", {"query": "nước rửa tay", "limit": 5})],
+        ),
+        GroqChatResult("This followup call should not happen.", "qwen/qwen3.8-27b"),
+    )
+
+    result = await run_retail_agent(
+        groq,
+        [
+            {
+                "role": "user",
+                "content": "Mình cần hai chai nước rửa tay dưới sáu chục nghìn.",
+            }
+        ],
+        SessionState.BROWSING,
+    )
+
+    assert groq.calls == 1
+    observation = result.observations[-1]
+    assert observation.status == "DATA_UNAVAILABLE"
+    assert observation.content["clarification_code"] == "budget_scope"
+    assert observation.products == ()

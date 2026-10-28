@@ -97,11 +97,7 @@ def _explicit_budget_amount(text: str) -> int | None:
         else:
             numeric = float(raw)
         multiplier = (
-            1_000_000
-            if unit == "trieu"
-            else 1_000
-            if unit in {"k", "nghin", "ngan"}
-            else 1
+            1_000_000 if unit == "trieu" else 1_000 if unit in {"k", "nghin", "ngan"} else 1
         )
         amount = round(numeric * multiplier)
         if 0 < amount <= 100_000_000:
@@ -169,12 +165,10 @@ def _specific_skincare_need_was_named(need_text: str, normalized_user_text: str)
     normalized_need = re.sub(r"[^\w\s]", " ", normalized_need)
     for cues in _SKINCARE_NEED_CUES.values():
         need_is_this_component = any(
-            re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized_need)
-            for cue in cues
+            re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized_need) for cue in cues
         )
         if need_is_this_component and any(
-            re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized_user_text)
-            for cue in cues
+            re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized_user_text) for cue in cues
         ):
             return True
     return False
@@ -430,9 +424,7 @@ def _enforce_shopping_mission_call_semantics(
                 if isinstance(need, dict) and need.get("need_id")
             }
             user_tokens = set(re.findall(r"[a-z0-9]+", normalized_text))
-            open_ended_need_discovery = bool(
-                _OPEN_ENDED_NEED_DISCOVERY_CUE.search(normalized_text)
-            )
+            open_ended_need_discovery = bool(_OPEN_ENDED_NEED_DISCOVERY_CUE.search(normalized_text))
             generic_need_tokens = {
                 "an",
                 "ban",
@@ -572,9 +564,7 @@ def _enforce_shopping_mission_call_semantics(
                         directly_named = False
                 if not directly_named:
                     if previous_need is not None and not explicit_needs_only:
-                        need["source"] = previous_need.get(
-                            "source", need.get("source", "INFERRED")
-                        )
+                        need["source"] = previous_need.get("source", need.get("source", "INFERRED"))
                         need["required"] = previous_need.get(
                             "required", need.get("required", False)
                         )
@@ -600,8 +590,7 @@ def _enforce_shopping_mission_call_semantics(
                     if not isinstance(need, dict):
                         continue
                     need_text = " ".join(
-                        str(need.get(key) or "")
-                        for key in ("label", "category", "product_query")
+                        str(need.get(key) or "") for key in ("label", "category", "product_query")
                     )
                     if _parse_recommendation_category(need_text) not in explicit_categories:
                         continue
@@ -632,7 +621,10 @@ async def lookup_followup_snapshot(product_id: str, fields: tuple[str, ...]) -> 
     return observation
 
 
-async def lookup_product_candidates(query: str) -> ToolObservation:
+async def lookup_product_candidates(
+    query: str,
+    current_user_text: str = "",
+) -> ToolObservation:
     """Search the active catalog through the same bounded tool gateway as the agent."""
     call = {
         "function": {
@@ -643,11 +635,19 @@ async def lookup_product_candidates(query: str) -> ToolObservation:
             ),
         }
     }
-    _, observation = await _execute_tool_call(call, calls_executed=0)
+    _, observation = await _execute_tool_call(
+        call,
+        calls_executed=0,
+        current_user_text=current_user_text,
+    )
     return observation
 
 
-async def lookup_recommendation_products(arguments: dict[str, Any]) -> ToolObservation:
+async def lookup_recommendation_products(
+    arguments: dict[str, Any],
+    previous_queries: tuple[str, ...] = (),
+    current_user_text: str = "",
+) -> ToolObservation:
     """Run a structured recommendation through the same bounded tool gateway."""
     call = {
         "function": {
@@ -655,7 +655,12 @@ async def lookup_recommendation_products(arguments: dict[str, Any]) -> ToolObser
             "arguments": json.dumps(arguments, ensure_ascii=False),
         }
     }
-    _, observation = await _execute_tool_call(call, calls_executed=0)
+    _, observation = await _execute_tool_call(
+        call,
+        calls_executed=0,
+        previous_queries=previous_queries,
+        current_user_text=current_user_text,
+    )
     return observation
 
 
@@ -736,6 +741,8 @@ async def _execute_tool_call(
     call: dict[str, Any],
     calls_executed: int,
     shopping_mission: dict[str, Any] | None = None,
+    previous_queries: tuple[str, ...] = (),
+    current_user_text: str = "",
 ) -> tuple[str, ToolObservation]:
     function = call.get("function") or {}
     name = str(function.get("name") or "")
@@ -756,12 +763,17 @@ async def _execute_tool_call(
     operation_timeout, retries = _catalog_tool_timeout_policy(name)
     for attempt in range(retries + 1):
         try:
+            tool_kwargs = {"previous_mission": shopping_mission}
+            if name in {"search_products", "recommend_products"}:
+                tool_kwargs["previous_queries"] = previous_queries
+                if current_user_text:
+                    tool_kwargs["current_user_text"] = current_user_text
             observation = await asyncio.wait_for(
                 asyncio.to_thread(
                     execute_catalog_tool,
                     name,
                     raw_arguments,
-                    previous_mission=shopping_mission,
+                    **tool_kwargs,
                 ),
                 timeout=operation_timeout,
             )
@@ -827,6 +839,12 @@ async def run_retail_agent(
     observations: list[ToolObservation] = []
     tools_used: list[str] = []
     calls_executed = 0
+    user_message_indexes = [
+        index for index, message in enumerate(messages) if message.get("role") == "user"
+    ]
+    previous_queries = tuple(
+        str(messages[index].get("content", ""))[:2000] for index in user_message_indexes[:-1]
+    )[-4:]
 
     for _ in range(MAX_AGENT_TOOL_ROUNDS):
         result = await groq.chat(messages, tools=tools, tool_choice=tool_choice)
@@ -903,10 +921,20 @@ async def run_retail_agent(
                     )
                 else:
                     name, observation = await _execute_tool_call(
-                        call, calls_executed, shopping_mission
+                        call,
+                        calls_executed,
+                        shopping_mission,
+                        previous_queries,
+                        latest_user_text,
                     )
             else:
-                name, observation = await _execute_tool_call(call, calls_executed, shopping_mission)
+                name, observation = await _execute_tool_call(
+                    call,
+                    calls_executed,
+                    shopping_mission,
+                    previous_queries,
+                    latest_user_text,
+                )
             calls_executed += 1
             observations.append(observation)
             terminal_observation = terminal_observation or observation.terminal

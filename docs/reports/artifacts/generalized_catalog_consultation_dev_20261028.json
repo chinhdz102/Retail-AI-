@@ -1,0 +1,5161 @@
+{
+  "kind": "generalized_catalog_consultation_benchmark",
+  "generated_at_utc": "2026-10-27T20:07:33.799422+00:00",
+  "mode": "offline_snapshot_and_deterministic_catalog_tool",
+  "source_file": "C:\\Users\\Chinhdz\\Desktop\\retail\\Retail-AI--main\\Retail-AI--main\\data\\winmart_products.json",
+  "dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "case_file": "evaluation\\cases\\generalized_catalog_consultation_dev_v1.jsonl",
+  "conversation_file": "evaluation\\cases\\generalized_catalog_conversations_dev_v1.json",
+  "metrics": {
+    "query_count": 190,
+    "product_resolution_count": 150,
+    "category_query_count": 40,
+    "product_recall_at_1": {
+      "baseline": 0.3133,
+      "query_compiler": 1.0
+    },
+    "product_recall_at_5": {
+      "baseline": 0.3267,
+      "query_compiler": 1.0
+    },
+    "category_precision_at_5": {
+      "baseline": 0.0,
+      "query_compiler": 1.0
+    },
+    "category_product_type_error_rate": {
+      "baseline": 0.0,
+      "query_compiler": 0.0
+    },
+    "use_case_context_marked_unverified_rate": 1.0,
+    "latency_ms": {
+      "baseline_p50": 186.9953,
+      "baseline_p95": 733.354,
+      "query_compiler_p50": 57.5889,
+      "query_compiler_p95": 96.534
+    }
+  },
+  "conversation_metrics": {
+    "conversation_count": 20,
+    "scope_retention_all_turns": 1.0,
+    "lowest_price_follow_up_sorted": 1.0,
+    "alternative_follow_up_scope_retention": 1.0
+  },
+  "limitations": [
+    "No LLM generation/provider latency measured; metrics cover parser and catalog tools.",
+    "Snapshot has no attributes to verify use-case suitability.",
+    "Catalog-name variants test retrieval, not human preference relevance.",
+    "Taxonomy labels come from source data; case generation is model-independent.",
+    "Baseline uses direct snapshot search; compiler uses parser and production tools."
+  ],
+  "cases": [
+    {
+      "case_id": "dev_product_001_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Bộ đồ chơi robot biến hình khủng long BKK-8285",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10330593"
+      ],
+      "baseline_latency_ms": 459.5236,
+      "new_latency_ms": 142.9643,
+      "gold_product_ids": [
+        "WIN_10330593"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_001_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Bo do choi robot bien hinh khung long BKK-8285",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10330593"
+      ],
+      "baseline_latency_ms": 193.1522,
+      "new_latency_ms": 59.0818,
+      "gold_product_ids": [
+        "WIN_10330593"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_001_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Bộ đồ chơi robot biến hình khủng long BKK-8285",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10330593"
+      ],
+      "new_top5": [
+        "WIN_10330593"
+      ],
+      "baseline_latency_ms": 373.5277,
+      "new_latency_ms": 62.002,
+      "gold_product_ids": [
+        "WIN_10330593"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_002_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Dao cạo râu Gillette Vector",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10018953"
+      ],
+      "baseline_latency_ms": 78.1439,
+      "new_latency_ms": 52.4645,
+      "gold_product_ids": [
+        "WIN_10018953"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_002_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Dao cao rau Gillette Vector",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10018953"
+      ],
+      "baseline_latency_ms": 47.2616,
+      "new_latency_ms": 51.0144,
+      "gold_product_ids": [
+        "WIN_10018953"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_002_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Dao cạo râu Gillette Vecor",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10018953",
+        "WIN_10018975",
+        "WIN_10018958"
+      ],
+      "new_top5": [
+        "WIN_10018953"
+      ],
+      "baseline_latency_ms": 55.1088,
+      "new_latency_ms": 51.8362,
+      "gold_product_ids": [
+        "WIN_10018953"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_003_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Miến khô Vifon gói 300g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10141804"
+      ],
+      "baseline_latency_ms": 505.0194,
+      "new_latency_ms": 50.702,
+      "gold_product_ids": [
+        "WIN_10141804"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_003_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Mien kho Vifon goi 300g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10141804"
+      ],
+      "baseline_latency_ms": 274.7737,
+      "new_latency_ms": 50.7244,
+      "gold_product_ids": [
+        "WIN_10141804"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_003_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Miến khô Vifon gói 300g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10141804",
+        "WIN_10622836"
+      ],
+      "new_top5": [
+        "WIN_10141804"
+      ],
+      "baseline_latency_ms": 368.0293,
+      "new_latency_ms": 45.2394,
+      "gold_product_ids": [
+        "WIN_10141804"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_004_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Mì chính Ajinomoto Plus gói 1kg",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10008603"
+      ],
+      "baseline_latency_ms": 457.8469,
+      "new_latency_ms": 46.8654,
+      "gold_product_ids": [
+        "WIN_10008603"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_004_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Mi chinh Ajinomoto Plus goi 1kg",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10008603"
+      ],
+      "baseline_latency_ms": 253.2835,
+      "new_latency_ms": 46.888,
+      "gold_product_ids": [
+        "WIN_10008603"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_004_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Mì chính Ajinmoto Plus gói 1kg",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10008603"
+      ],
+      "new_top5": [
+        "WIN_10008603"
+      ],
+      "baseline_latency_ms": 348.8283,
+      "new_latency_ms": 45.3806,
+      "gold_product_ids": [
+        "WIN_10008603"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_005_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Mứt dâu Bonne Maman  30g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10014985"
+      ],
+      "baseline_latency_ms": 13.9681,
+      "new_latency_ms": 45.5531,
+      "gold_product_ids": [
+        "WIN_10014985"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_005_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Mut dau Bonne Maman  30g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10014985"
+      ],
+      "baseline_latency_ms": 9.8949,
+      "new_latency_ms": 43.9332,
+      "gold_product_ids": [
+        "WIN_10014985"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_005_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Mứt dâu Bonne Maman  30g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10014985"
+      ],
+      "new_top5": [
+        "WIN_10014985"
+      ],
+      "baseline_latency_ms": 4.4862,
+      "new_latency_ms": 39.5605,
+      "gold_product_ids": [
+        "WIN_10014985"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_006_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Chanh có hạt 250g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10236467"
+      ],
+      "baseline_latency_ms": 47.1041,
+      "new_latency_ms": 41.8919,
+      "gold_product_ids": [
+        "WIN_10236467"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_006_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Chanh co hat 250g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10236467"
+      ],
+      "baseline_latency_ms": 38.0644,
+      "new_latency_ms": 42.2124,
+      "gold_product_ids": [
+        "WIN_10236467"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_006_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Chanh có hạt 250g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10236467",
+        "WIN_10241439"
+      ],
+      "new_top5": [
+        "WIN_10236467"
+      ],
+      "baseline_latency_ms": 25.2405,
+      "new_latency_ms": 36.8982,
+      "gold_product_ids": [
+        "WIN_10236467"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_007_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Nước rửa tay diệt khuẩn dưỡng da tinh chất dâu Dr. Clean Hand Wash Strawberry 500ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10017460"
+      ],
+      "baseline_latency_ms": 721.6507,
+      "new_latency_ms": 74.0002,
+      "gold_product_ids": [
+        "WIN_10017460"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_007_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Nuoc rua tay diet khuan duong da tinh chat dau Dr. Clean Hand Wash Strawberry 500ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10017460"
+      ],
+      "baseline_latency_ms": 292.0948,
+      "new_latency_ms": 72.7971,
+      "gold_product_ids": [
+        "WIN_10017460"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_007_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Nước rửa tay diệt khuẩn dưỡng da tinh chất dâu Dr. Clean Hand Wash Strawerry 500ml",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10017460"
+      ],
+      "new_top5": [
+        "WIN_10017460"
+      ],
+      "baseline_latency_ms": 729.4235,
+      "new_latency_ms": 76.0266,
+      "gold_product_ids": [
+        "WIN_10017460"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_008_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Dầu hào Maggi chai 820g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10008709"
+      ],
+      "baseline_latency_ms": 147.788,
+      "new_latency_ms": 51.4825,
+      "gold_product_ids": [
+        "WIN_10008709"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_008_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Dau hao Maggi chai 820g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10008709"
+      ],
+      "baseline_latency_ms": 100.3213,
+      "new_latency_ms": 51.7585,
+      "gold_product_ids": [
+        "WIN_10008709"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_008_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Dầu hào Maggi chai 820g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10141889",
+        "WIN_10008709"
+      ],
+      "new_top5": [
+        "WIN_10008709"
+      ],
+      "baseline_latency_ms": 101.8801,
+      "new_latency_ms": 49.2294,
+      "gold_product_ids": [
+        "WIN_10008709"
+      ],
+      "baseline_relevant_rank": 2,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_009_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Sữa chua ăn vị mật ong Farmers Union Greek Style Lốc 2 hộp x 140g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10623202"
+      ],
+      "baseline_latency_ms": 605.4903,
+      "new_latency_ms": 69.9682,
+      "gold_product_ids": [
+        "WIN_10623202"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_009_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Sua chua an vi mat ong Farmers Union Greek Style Loc 2 hop x 140g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10623202"
+      ],
+      "baseline_latency_ms": 320.7248,
+      "new_latency_ms": 71.0623,
+      "gold_product_ids": [
+        "WIN_10623202"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_009_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Sữa chua ăn vị mật ong Farers Union Greek Style Lốc 2 hộp x 140g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10623202"
+      ],
+      "new_top5": [
+        "WIN_10623202"
+      ],
+      "baseline_latency_ms": 575.5443,
+      "new_latency_ms": 69.8269,
+      "gold_product_ids": [
+        "WIN_10623202"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_010_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Trứng chim cút 729 Ba Vì hộp 30 quả",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10225936"
+      ],
+      "baseline_latency_ms": 471.1795,
+      "new_latency_ms": 58.8991,
+      "gold_product_ids": [
+        "WIN_10225936"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_010_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Trung chim cut 729 Ba Vi hop 30 qua",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10225936"
+      ],
+      "baseline_latency_ms": 234.3524,
+      "new_latency_ms": 51.8971,
+      "gold_product_ids": [
+        "WIN_10225936"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_010_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Trứng chim cút 729 Ba Vì hộp 30 quả",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10225936"
+      ],
+      "new_top5": [
+        "WIN_10225936"
+      ],
+      "baseline_latency_ms": 376.2592,
+      "new_latency_ms": 53.7615,
+      "gold_product_ids": [
+        "WIN_10225936"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_011_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Gel tẩy da chết trà xanh Benew Green Tea Whitening Natural Herb Peeling Gel 120ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10316566"
+      ],
+      "baseline_latency_ms": 229.9188,
+      "new_latency_ms": 71.9989,
+      "gold_product_ids": [
+        "WIN_10316566"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_011_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Gel tay da chet tra xanh Benew Green Tea Whitening Natural Herb Peeling Gel 120ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10316566"
+      ],
+      "baseline_latency_ms": 150.4251,
+      "new_latency_ms": 70.4582,
+      "gold_product_ids": [
+        "WIN_10316566"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_011_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Gel tẩy da chết trà xanh Benew Green Tea Whitening Natural Herb Peeing Gel 120ml",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10316566"
+      ],
+      "new_top5": [
+        "WIN_10316566"
+      ],
+      "baseline_latency_ms": 201.675,
+      "new_latency_ms": 70.9484,
+      "gold_product_ids": [
+        "WIN_10316566"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_012_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Cá chim trắng biển tươi",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10053300"
+      ],
+      "baseline_latency_ms": 394.6277,
+      "new_latency_ms": 45.7889,
+      "gold_product_ids": [
+        "WIN_10053300"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_012_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Ca chim trang bien tuoi",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10053300"
+      ],
+      "baseline_latency_ms": 178.5973,
+      "new_latency_ms": 45.1572,
+      "gold_product_ids": [
+        "WIN_10053300"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_012_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Cá chim trắng biển tươi",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10053300"
+      ],
+      "new_top5": [
+        "WIN_10053300"
+      ],
+      "baseline_latency_ms": 304.3622,
+      "new_latency_ms": 40.5158,
+      "gold_product_ids": [
+        "WIN_10053300"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_013_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Hộp thực phẩm tròn Hokkaido 1000ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10250121"
+      ],
+      "baseline_latency_ms": 893.3931,
+      "new_latency_ms": 53.8926,
+      "gold_product_ids": [
+        "WIN_10250121"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_013_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Hop thuc pham tron Hokkaido 1000ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10250121"
+      ],
+      "baseline_latency_ms": 507.2728,
+      "new_latency_ms": 52.2338,
+      "gold_product_ids": [
+        "WIN_10250121"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_013_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Hộp thực phẩm tròn Hokkido 1000ml",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10250121"
+      ],
+      "new_top5": [
+        "WIN_10250121"
+      ],
+      "baseline_latency_ms": 1060.2662,
+      "new_latency_ms": 52.359,
+      "gold_product_ids": [
+        "WIN_10250121"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_014_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Bông tẩy trang Ipek Cotton Pads 120 miếng",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10020414"
+      ],
+      "baseline_latency_ms": 67.2909,
+      "new_latency_ms": 73.7179,
+      "gold_product_ids": [
+        "WIN_10020414"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_014_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Bong tay trang Ipek Cotton Pads 120 mieng",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10020414"
+      ],
+      "baseline_latency_ms": 69.5915,
+      "new_latency_ms": 71.8388,
+      "gold_product_ids": [
+        "WIN_10020414"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_014_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Bông tẩy trang Ipek Coton Pads 120 miếng",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10020414"
+      ],
+      "new_top5": [
+        "WIN_10020414"
+      ],
+      "baseline_latency_ms": 126.0263,
+      "new_latency_ms": 71.9518,
+      "gold_product_ids": [
+        "WIN_10020414"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_015_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Kẹo Socola hạnh nhân Nga Ivan 400g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10229108"
+      ],
+      "baseline_latency_ms": 316.6022,
+      "new_latency_ms": 48.9934,
+      "gold_product_ids": [
+        "WIN_10229108"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_015_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Keo Socola hanh nhan Nga Ivan 400g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10229108"
+      ],
+      "baseline_latency_ms": 177.6205,
+      "new_latency_ms": 49.4705,
+      "gold_product_ids": [
+        "WIN_10229108"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_015_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Kẹo Socla hạnh nhân Nga Ivan 400g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10229108"
+      ],
+      "new_top5": [
+        "WIN_10229108"
+      ],
+      "baseline_latency_ms": 342.8505,
+      "new_latency_ms": 49.0674,
+      "gold_product_ids": [
+        "WIN_10229108"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_016_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Thùng 24 chai nước tăng lực Sting hương dâu tây đỏ 330ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10011214"
+      ],
+      "baseline_latency_ms": 647.159,
+      "new_latency_ms": 66.2856,
+      "gold_product_ids": [
+        "WIN_10011214"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_016_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Thung 24 chai nuoc tang luc Sting huong dau tay do 330ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10011214"
+      ],
+      "baseline_latency_ms": 243.9222,
+      "new_latency_ms": 66.2241,
+      "gold_product_ids": [
+        "WIN_10011214"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_016_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Thùng 24 chai nước tăng lực Sting hương dâu tây đỏ 330ml",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10011214"
+      ],
+      "new_top5": [
+        "WIN_10011214"
+      ],
+      "baseline_latency_ms": 547.5823,
+      "new_latency_ms": 60.8728,
+      "gold_product_ids": [
+        "WIN_10011214"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_017_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Ngũ cốc Xuân An yến mạch hạnh nhân hạt chia 400g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10194856"
+      ],
+      "baseline_latency_ms": 548.1547,
+      "new_latency_ms": 79.1976,
+      "gold_product_ids": [
+        "WIN_10194856"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_017_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Ngu coc Xuan An yen mach hanh nhan hat chia 400g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10194856"
+      ],
+      "baseline_latency_ms": 170.0192,
+      "new_latency_ms": 77.3567,
+      "gold_product_ids": [
+        "WIN_10194856"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_017_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Ngũ cốc Xuân An yến mạch hạnh nhân hạt chia 400g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10194856"
+      ],
+      "new_top5": [
+        "WIN_10194856"
+      ],
+      "baseline_latency_ms": 477.4257,
+      "new_latency_ms": 70.2616,
+      "gold_product_ids": [
+        "WIN_10194856"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_018_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Dầu gội Head&Shoulders bạc hà 600ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10170586"
+      ],
+      "baseline_latency_ms": 158.1667,
+      "new_latency_ms": 75.4858,
+      "gold_product_ids": [
+        "WIN_10170586"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_018_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Dau goi Head&Shoulders bac ha 600ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10170586"
+      ],
+      "baseline_latency_ms": 159.3069,
+      "new_latency_ms": 73.4532,
+      "gold_product_ids": [
+        "WIN_10170586"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_018_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Dầu gội Head&Shouders bạc hà 600ml",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10170586"
+      ],
+      "new_top5": [
+        "WIN_10170586"
+      ],
+      "baseline_latency_ms": 151.0795,
+      "new_latency_ms": 71.7798,
+      "gold_product_ids": [
+        "WIN_10170586"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_019_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Thạch trái cây tươi Vietfood Fruit Gel 850g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10195106"
+      ],
+      "baseline_latency_ms": 241.9607,
+      "new_latency_ms": 57.2337,
+      "gold_product_ids": [
+        "WIN_10195106"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_019_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Thach trai cay tuoi Vietfood Fruit Gel 850g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10195106"
+      ],
+      "baseline_latency_ms": 124.768,
+      "new_latency_ms": 57.9465,
+      "gold_product_ids": [
+        "WIN_10195106"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_019_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Thạch trái cây tươi Vietood Fruit Gel 850g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10195106"
+      ],
+      "new_top5": [
+        "WIN_10195106"
+      ],
+      "baseline_latency_ms": 263.8982,
+      "new_latency_ms": 58.2213,
+      "gold_product_ids": [
+        "WIN_10195106"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_020_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Creamer đặc sữa pha chế Nutimilk hộp 380g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10141580"
+      ],
+      "baseline_latency_ms": 492.8005,
+      "new_latency_ms": 57.5714,
+      "gold_product_ids": [
+        "WIN_10141580"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_020_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Creamer dac sua pha che Nutimilk hop 380g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10141580"
+      ],
+      "baseline_latency_ms": 249.2587,
+      "new_latency_ms": 57.3825,
+      "gold_product_ids": [
+        "WIN_10141580"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_020_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Creamer đặc sữa pha chế Nutiilk hộp 380g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10141580"
+      ],
+      "new_top5": [
+        "WIN_10141580"
+      ],
+      "baseline_latency_ms": 505.5051,
+      "new_latency_ms": 58.2744,
+      "gold_product_ids": [
+        "WIN_10141580"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_021_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Bò viên ngon Cầu Tre 500g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10170093"
+      ],
+      "baseline_latency_ms": 237.2875,
+      "new_latency_ms": 61.8201,
+      "gold_product_ids": [
+        "WIN_10170093"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_021_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Bo vien ngon Cau Tre 500g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10170093"
+      ],
+      "baseline_latency_ms": 119.6897,
+      "new_latency_ms": 46.2528,
+      "gold_product_ids": [
+        "WIN_10170093"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_021_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Bò viên ngon Cầu Tre 500g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10170093"
+      ],
+      "new_top5": [
+        "WIN_10170093"
+      ],
+      "baseline_latency_ms": 179.0921,
+      "new_latency_ms": 55.8613,
+      "gold_product_ids": [
+        "WIN_10170093"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_022_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Nước Rửa Chén Sunlight Thiên Nhiên Lô Hội Túi 2kg",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10640562"
+      ],
+      "baseline_latency_ms": 88.2273,
+      "new_latency_ms": 87.1774,
+      "gold_product_ids": [
+        "WIN_10640562"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_022_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Nuoc Rua Chen Sunlight Thien Nhien Lo Hoi Tui 2kg",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10640562"
+      ],
+      "baseline_latency_ms": 94.814,
+      "new_latency_ms": 80.3213,
+      "gold_product_ids": [
+        "WIN_10640562"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_022_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Nước Rửa Chén Sunlght Thiên Nhiên Lô Hội Túi 2kg",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10640562"
+      ],
+      "new_top5": [
+        "WIN_10640562"
+      ],
+      "baseline_latency_ms": 172.5187,
+      "new_latency_ms": 82.1838,
+      "gold_product_ids": [
+        "WIN_10640562"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_023_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Cà phê Sữa Highland lon 185ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10197241"
+      ],
+      "baseline_latency_ms": 364.5407,
+      "new_latency_ms": 53.2235,
+      "gold_product_ids": [
+        "WIN_10197241"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_023_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Ca phe Sua Highland lon 185ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10197241"
+      ],
+      "baseline_latency_ms": 189.1512,
+      "new_latency_ms": 53.1997,
+      "gold_product_ids": [
+        "WIN_10197241"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_023_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Cà phê Sữa Highand lon 185ml",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10197241"
+      ],
+      "new_top5": [
+        "WIN_10197241"
+      ],
+      "baseline_latency_ms": 349.0274,
+      "new_latency_ms": 52.5735,
+      "gold_product_ids": [
+        "WIN_10197241"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_024_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Dứa/khóm",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10054981"
+      ],
+      "baseline_latency_ms": 21.8033,
+      "new_latency_ms": 54.792,
+      "gold_product_ids": [
+        "WIN_10054981"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_024_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Dua/khom",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10054981"
+      ],
+      "baseline_latency_ms": 11.4762,
+      "new_latency_ms": 65.7758,
+      "gold_product_ids": [
+        "WIN_10054981"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_024_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Dứa/khóm",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10054981"
+      ],
+      "new_top5": [
+        "WIN_10054981"
+      ],
+      "baseline_latency_ms": 9.4947,
+      "new_latency_ms": 49.7239,
+      "gold_product_ids": [
+        "WIN_10054981"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_025_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Bao cao su Durex Fetherlite 3s",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10019000"
+      ],
+      "baseline_latency_ms": 23.7777,
+      "new_latency_ms": 52.8976,
+      "gold_product_ids": [
+        "WIN_10019000"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_025_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Bao cao su Durex Fetherlite 3s",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10019000"
+      ],
+      "baseline_latency_ms": 23.0049,
+      "new_latency_ms": 48.2251,
+      "gold_product_ids": [
+        "WIN_10019000"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_025_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Bao cao su Durex Fethelite 3s",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10019000"
+      ],
+      "new_top5": [
+        "WIN_10019000"
+      ],
+      "baseline_latency_ms": 21.8002,
+      "new_latency_ms": 52.6244,
+      "gold_product_ids": [
+        "WIN_10019000"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_026_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Táo xanh",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10054817"
+      ],
+      "baseline_latency_ms": 36.84,
+      "new_latency_ms": 35.2578,
+      "gold_product_ids": [
+        "WIN_10054817"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_026_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Tao xanh",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10054817"
+      ],
+      "baseline_latency_ms": 26.8742,
+      "new_latency_ms": 33.8104,
+      "gold_product_ids": [
+        "WIN_10054817"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_026_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Táo xanh",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10622362",
+        "WIN_10054817"
+      ],
+      "new_top5": [
+        "WIN_10054817"
+      ],
+      "baseline_latency_ms": 18.3506,
+      "new_latency_ms": 30.314,
+      "gold_product_ids": [
+        "WIN_10054817"
+      ],
+      "baseline_relevant_rank": 2,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_027_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Thập cẩm sấy WinMart Good gói 150g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10195887"
+      ],
+      "baseline_latency_ms": 572.4041,
+      "new_latency_ms": 48.1665,
+      "gold_product_ids": [
+        "WIN_10195887"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_027_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Thap cam say WinMart Good goi 150g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10195887"
+      ],
+      "baseline_latency_ms": 270.1024,
+      "new_latency_ms": 48.0249,
+      "gold_product_ids": [
+        "WIN_10195887"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_027_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Thập cẩm sấy Winart Good gói 150g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10195887"
+      ],
+      "new_top5": [
+        "WIN_10195887"
+      ],
+      "baseline_latency_ms": 473.8691,
+      "new_latency_ms": 48.3786,
+      "gold_product_ids": [
+        "WIN_10195887"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_028_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Cua đồng xay",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10053377"
+      ],
+      "baseline_latency_ms": 48.5072,
+      "new_latency_ms": 57.3507,
+      "gold_product_ids": [
+        "WIN_10053377"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_028_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Cua dong xay",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10053377"
+      ],
+      "baseline_latency_ms": 38.5618,
+      "new_latency_ms": 54.1335,
+      "gold_product_ids": [
+        "WIN_10053377"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_028_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Cua đồng xay",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10053377",
+        "WIN_10006654",
+        "WIN_10006639"
+      ],
+      "new_top5": [
+        "WIN_10053377"
+      ],
+      "baseline_latency_ms": 27.1847,
+      "new_latency_ms": 48.5628,
+      "gold_product_ids": [
+        "WIN_10053377"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_029_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Pin AAA Energizer max E92 BP4",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10027649"
+      ],
+      "baseline_latency_ms": 6.5193,
+      "new_latency_ms": 52.7212,
+      "gold_product_ids": [
+        "WIN_10027649"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_029_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Pin AAA Energizer max E92 BP4",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10027649"
+      ],
+      "baseline_latency_ms": 6.2081,
+      "new_latency_ms": 54.9638,
+      "gold_product_ids": [
+        "WIN_10027649"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_029_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Pin AAA Enerizer max E92 BP4",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10027649"
+      ],
+      "new_top5": [
+        "WIN_10027649"
+      ],
+      "baseline_latency_ms": 1.4314,
+      "new_latency_ms": 52.1117,
+      "gold_product_ids": [
+        "WIN_10027649"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_030_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Cá hồi Úc Fillet",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10628265"
+      ],
+      "baseline_latency_ms": 148.948,
+      "new_latency_ms": 42.9402,
+      "gold_product_ids": [
+        "WIN_10628265"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_030_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Ca hoi Uc Fillet",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10628265"
+      ],
+      "baseline_latency_ms": 94.9294,
+      "new_latency_ms": 45.1757,
+      "gold_product_ids": [
+        "WIN_10628265"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_030_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Cá hồi Úc Filet",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10628265"
+      ],
+      "baseline_latency_ms": 95.8844,
+      "new_latency_ms": 42.9608,
+      "gold_product_ids": [
+        "WIN_10628265"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_031_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Nước dùng cô đặc vị lẩu Thái SG Food gói 150g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10223991"
+      ],
+      "baseline_latency_ms": 865.5267,
+      "new_latency_ms": 63.2106,
+      "gold_product_ids": [
+        "WIN_10223991"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_031_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Nuoc dung co dac vi lau Thai SG Food goi 150g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10223991"
+      ],
+      "baseline_latency_ms": 377.9294,
+      "new_latency_ms": 63.0772,
+      "gold_product_ids": [
+        "WIN_10223991"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_031_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Nước dùng cô đặc vị lẩu Thái SG Food gói 150g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10223991"
+      ],
+      "new_top5": [
+        "WIN_10223991"
+      ],
+      "baseline_latency_ms": 733.3535,
+      "new_latency_ms": 58.5738,
+      "gold_product_ids": [
+        "WIN_10223991"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_032_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Màng bọc thực phẩm PE Greeneco 30cm x 100m",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10600194"
+      ],
+      "baseline_latency_ms": 1015.6323,
+      "new_latency_ms": 58.5911,
+      "gold_product_ids": [
+        "WIN_10600194"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_032_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Mang boc thuc pham PE Greeneco 30cm x 100m",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10600194"
+      ],
+      "baseline_latency_ms": 593.7474,
+      "new_latency_ms": 60.9339,
+      "gold_product_ids": [
+        "WIN_10600194"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_032_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Màng bọc thực phẩm PE Greeeco 30cm x 100m",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10600194"
+      ],
+      "new_top5": [
+        "WIN_10600194"
+      ],
+      "baseline_latency_ms": 1224.3506,
+      "new_latency_ms": 58.5719,
+      "gold_product_ids": [
+        "WIN_10600194"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_033_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Bột tàu hủ Singapore Thiên Ý  90g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10141154"
+      ],
+      "baseline_latency_ms": 127.1119,
+      "new_latency_ms": 71.4869,
+      "gold_product_ids": [
+        "WIN_10141154"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_033_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Bot tau hu Singapore Thien Y  90g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10141154"
+      ],
+      "baseline_latency_ms": 58.2528,
+      "new_latency_ms": 67.9979,
+      "gold_product_ids": [
+        "WIN_10141154"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_033_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Bột tàu hủ Singpore Thiên Ý  90g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10141154"
+      ],
+      "new_top5": [
+        "WIN_10141154"
+      ],
+      "baseline_latency_ms": 123.7404,
+      "new_latency_ms": 67.2375,
+      "gold_product_ids": [
+        "WIN_10141154"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_034_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Giấy vệ sinh Elene hồng 3 lớp 10 cuộn",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10020669"
+      ],
+      "baseline_latency_ms": 60.9824,
+      "new_latency_ms": 76.0389,
+      "gold_product_ids": [
+        "WIN_10020669"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_034_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Giay ve sinh Elene hong 3 lop 10 cuon",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10020669"
+      ],
+      "baseline_latency_ms": 62.7987,
+      "new_latency_ms": 72.3554,
+      "gold_product_ids": [
+        "WIN_10020669"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_034_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Giấy vệ sinh Elene hồng 3 lớp 10 cuộn",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10020669"
+      ],
+      "new_top5": [
+        "WIN_10020669"
+      ],
+      "baseline_latency_ms": 53.7978,
+      "new_latency_ms": 68.1213,
+      "gold_product_ids": [
+        "WIN_10020669"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_035_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Bánh quế Cosy xoài xí muội 126/117,6g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10197436"
+      ],
+      "baseline_latency_ms": 276.96,
+      "new_latency_ms": 58.2876,
+      "gold_product_ids": [
+        "WIN_10197436"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_035_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Banh que Cosy xoai xi muoi 126/117,6g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10197436"
+      ],
+      "baseline_latency_ms": 119.2034,
+      "new_latency_ms": 52.3304,
+      "gold_product_ids": [
+        "WIN_10197436"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_035_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Bánh quế Cosy xoài xí muội 126/117,6g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10197436"
+      ],
+      "new_top5": [
+        "WIN_10197436"
+      ],
+      "baseline_latency_ms": 228.2529,
+      "new_latency_ms": 53.244,
+      "gold_product_ids": [
+        "WIN_10197436"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_036_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Củ dền",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10053941"
+      ],
+      "baseline_latency_ms": 64.4844,
+      "new_latency_ms": 34.0466,
+      "gold_product_ids": [
+        "WIN_10053941"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_036_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Cu den",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10053941"
+      ],
+      "baseline_latency_ms": 38.0767,
+      "new_latency_ms": 34.2889,
+      "gold_product_ids": [
+        "WIN_10053941"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_036_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Củ dền",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10053941"
+      ],
+      "new_top5": [
+        "WIN_10053941"
+      ],
+      "baseline_latency_ms": 39.1933,
+      "new_latency_ms": 28.8221,
+      "gold_product_ids": [
+        "WIN_10053941"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_037_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Kem dưỡng ban đêm Pond's Age Miracle 45G",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10315206"
+      ],
+      "baseline_latency_ms": 163.1561,
+      "new_latency_ms": 74.6736,
+      "gold_product_ids": [
+        "WIN_10315206"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_037_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Kem duong ban dem Pond's Age Miracle 45G",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10315206"
+      ],
+      "baseline_latency_ms": 102.2334,
+      "new_latency_ms": 72.83,
+      "gold_product_ids": [
+        "WIN_10315206"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_037_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Kem dưỡng ban đêm Pond's Age Mircle 45G",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10315206"
+      ],
+      "new_top5": [
+        "WIN_10315206"
+      ],
+      "baseline_latency_ms": 163.8367,
+      "new_latency_ms": 70.871,
+      "gold_product_ids": [
+        "WIN_10315206"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_038_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Bánh Cosy Socola Yến Mạch 163.2g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10191623"
+      ],
+      "baseline_latency_ms": 202.9788,
+      "new_latency_ms": 54.9656,
+      "gold_product_ids": [
+        "WIN_10191623"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_038_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Banh Cosy Socola Yen Mach 163.2g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10191623"
+      ],
+      "baseline_latency_ms": 114.7834,
+      "new_latency_ms": 49.4714,
+      "gold_product_ids": [
+        "WIN_10191623"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_038_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Bánh Cosy Socla Yến Mạch 163.2g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10191623"
+      ],
+      "new_top5": [
+        "WIN_10191623"
+      ],
+      "baseline_latency_ms": 230.0247,
+      "new_latency_ms": 53.8056,
+      "gold_product_ids": [
+        "WIN_10191623"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_039_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Túi Lohas Hạ 43,5x39,5x22-85G",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10270526"
+      ],
+      "baseline_latency_ms": 28.3038,
+      "new_latency_ms": 49.5558,
+      "gold_product_ids": [
+        "WIN_10270526"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_039_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Tui Lohas Ha 43,5x39,5x22-85G",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10270526"
+      ],
+      "baseline_latency_ms": 21.4491,
+      "new_latency_ms": 49.7438,
+      "gold_product_ids": [
+        "WIN_10270526"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_039_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Túi Lohas Hạ 43,5x39,5x22-85G",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10270526",
+        "WIN_10270524"
+      ],
+      "new_top5": [
+        "WIN_10270526"
+      ],
+      "baseline_latency_ms": 14.7752,
+      "new_latency_ms": 42.8499,
+      "gold_product_ids": [
+        "WIN_10270526"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_040_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Hạt lạc nhân Thu Dung 500g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10010435"
+      ],
+      "baseline_latency_ms": 243.3535,
+      "new_latency_ms": 60.9075,
+      "gold_product_ids": [
+        "WIN_10010435"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_040_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Hat lac nhan Thu Dung 500g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10010435"
+      ],
+      "baseline_latency_ms": 129.0732,
+      "new_latency_ms": 61.7768,
+      "gold_product_ids": [
+        "WIN_10010435"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_040_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Hạt lạc nhân Thu Dung 500g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10010435"
+      ],
+      "new_top5": [
+        "WIN_10010435"
+      ],
+      "baseline_latency_ms": 184.8394,
+      "new_latency_ms": 56.2287,
+      "gold_product_ids": [
+        "WIN_10010435"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_041_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Khô cá cơm sữa An Vĩnh khay 200g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10053595"
+      ],
+      "baseline_latency_ms": 733.7243,
+      "new_latency_ms": 56.4598,
+      "gold_product_ids": [
+        "WIN_10053595"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_041_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Kho ca com sua An Vinh khay 200g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10053595"
+      ],
+      "baseline_latency_ms": 305.793,
+      "new_latency_ms": 55.8401,
+      "gold_product_ids": [
+        "WIN_10053595"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_041_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Khô cá cơm sữa An Vĩnh khay 200g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10053595"
+      ],
+      "new_top5": [
+        "WIN_10053595"
+      ],
+      "baseline_latency_ms": 646.7132,
+      "new_latency_ms": 52.2302,
+      "gold_product_ids": [
+        "WIN_10053595"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_042_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Nước lẩu nấm Icook Ashima gói 1L",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10006637"
+      ],
+      "baseline_latency_ms": 709.9151,
+      "new_latency_ms": 72.3664,
+      "gold_product_ids": [
+        "WIN_10006637"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_042_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Nuoc lau nam Icook Ashima goi 1L",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10006637"
+      ],
+      "baseline_latency_ms": 335.5911,
+      "new_latency_ms": 67.8079,
+      "gold_product_ids": [
+        "WIN_10006637"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_042_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Nước lẩu nấm Icook Ashma gói 1L",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10006637"
+      ],
+      "new_top5": [
+        "WIN_10006637"
+      ],
+      "baseline_latency_ms": 645.646,
+      "new_latency_ms": 69.208,
+      "gold_product_ids": [
+        "WIN_10006637"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_043_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Sầu riêng hạt lép",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10054831"
+      ],
+      "baseline_latency_ms": 74.5804,
+      "new_latency_ms": 65.0359,
+      "gold_product_ids": [
+        "WIN_10054831"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_043_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Sau rieng hat lep",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10054831"
+      ],
+      "baseline_latency_ms": 31.2572,
+      "new_latency_ms": 61.2311,
+      "gold_product_ids": [
+        "WIN_10054831"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_043_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Sầu riêng hạt lép",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10054831"
+      ],
+      "new_top5": [
+        "WIN_10054831"
+      ],
+      "baseline_latency_ms": 54.0331,
+      "new_latency_ms": 56.5649,
+      "gold_product_ids": [
+        "WIN_10054831"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_044_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Muối chấm hoa quả DHF lọ 110g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10140900"
+      ],
+      "baseline_latency_ms": 495.2336,
+      "new_latency_ms": 54.7647,
+      "gold_product_ids": [
+        "WIN_10140900"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_044_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Muoi cham hoa qua DHF lo 110g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10140900"
+      ],
+      "baseline_latency_ms": 209.3019,
+      "new_latency_ms": 48.668,
+      "gold_product_ids": [
+        "WIN_10140900"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_044_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Muối chấm hoa quả DHF lọ 110g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10140900"
+      ],
+      "new_top5": [
+        "WIN_10140900"
+      ],
+      "baseline_latency_ms": 400.6773,
+      "new_latency_ms": 50.1346,
+      "gold_product_ids": [
+        "WIN_10140900"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_045_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Cua đồng tinh chất Minh Tiến gói 200g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10006608"
+      ],
+      "baseline_latency_ms": 595.8065,
+      "new_latency_ms": 81.718,
+      "gold_product_ids": [
+        "WIN_10006608"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_045_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Cua dong tinh chat Minh Tien goi 200g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10006608"
+      ],
+      "baseline_latency_ms": 378.7026,
+      "new_latency_ms": 64.6407,
+      "gold_product_ids": [
+        "WIN_10006608"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_045_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Cua đồng tinh chất Minh Tiến gói 200g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10006608"
+      ],
+      "new_top5": [
+        "WIN_10006608"
+      ],
+      "baseline_latency_ms": 396.436,
+      "new_latency_ms": 76.8747,
+      "gold_product_ids": [
+        "WIN_10006608"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_046_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Gối Memory Foam 50D Lock&Lock HLW113",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10064937"
+      ],
+      "baseline_latency_ms": 318.3494,
+      "new_latency_ms": 54.7903,
+      "gold_product_ids": [
+        "WIN_10064937"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_046_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Goi Memory Foam 50D Lock&Lock HLW113",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10064937"
+      ],
+      "baseline_latency_ms": 259.9482,
+      "new_latency_ms": 48.5246,
+      "gold_product_ids": [
+        "WIN_10064937"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_046_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Gối Memry Foam 50D Lock&Lock HLW113",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10064937"
+      ],
+      "new_top5": [
+        "WIN_10064937"
+      ],
+      "baseline_latency_ms": 213.0837,
+      "new_latency_ms": 54.4348,
+      "gold_product_ids": [
+        "WIN_10064937"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_047_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Nước xả hương nắng mai Downy  4L",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10170745"
+      ],
+      "baseline_latency_ms": 314.2753,
+      "new_latency_ms": 55.9703,
+      "gold_product_ids": [
+        "WIN_10170745"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_047_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Nuoc xa huong nang mai Downy  4L",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10170745"
+      ],
+      "baseline_latency_ms": 142.9294,
+      "new_latency_ms": 55.0429,
+      "gold_product_ids": [
+        "WIN_10170745"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_047_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Nước xả hương nắng mai Downy  4L",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10170745"
+      ],
+      "new_top5": [
+        "WIN_10170745"
+      ],
+      "baseline_latency_ms": 244.2047,
+      "new_latency_ms": 51.7024,
+      "gold_product_ids": [
+        "WIN_10170745"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_048_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Khăn tay bamboo WinMart Home 28*42*60g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10167096"
+      ],
+      "baseline_latency_ms": 83.2696,
+      "new_latency_ms": 58.1714,
+      "gold_product_ids": [
+        "WIN_10167096"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_048_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Khan tay bamboo WinMart Home 28*42*60g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10167096"
+      ],
+      "baseline_latency_ms": 64.1911,
+      "new_latency_ms": 57.0735,
+      "gold_product_ids": [
+        "WIN_10167096"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_048_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Khăn tay bamboo Winart Home 28*42*60g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10167096"
+      ],
+      "new_top5": [
+        "WIN_10167096"
+      ],
+      "baseline_latency_ms": 89.9575,
+      "new_latency_ms": 61.3149,
+      "gold_product_ids": [
+        "WIN_10167096"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_049_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Gia vị wasabi neri S&B 43g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10009100"
+      ],
+      "baseline_latency_ms": 24.8942,
+      "new_latency_ms": 55.6037,
+      "gold_product_ids": [
+        "WIN_10009100"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_049_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Gia vi wasabi neri S&B 43g",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10009100"
+      ],
+      "baseline_latency_ms": 21.1424,
+      "new_latency_ms": 53.6707,
+      "gold_product_ids": [
+        "WIN_10009100"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_049_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Gia vị wasbi neri S&B 43g",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10009100"
+      ],
+      "new_top5": [
+        "WIN_10009100"
+      ],
+      "baseline_latency_ms": 9.7158,
+      "new_latency_ms": 53.1213,
+      "gold_product_ids": [
+        "WIN_10009100"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_050_conversational_exact",
+      "kind": "product_resolution",
+      "query": "Mình muốn tìm Nước Giải Khát Coca-Cola Zero Pet 600ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10194711"
+      ],
+      "baseline_latency_ms": 156.7089,
+      "new_latency_ms": 57.2977,
+      "gold_product_ids": [
+        "WIN_10194711"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_050_accentless",
+      "kind": "product_resolution",
+      "query": "cho mình xem Nuoc Giai Khat Coca-Cola Zero Pet 600ml",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10194711"
+      ],
+      "baseline_latency_ms": 88.3982,
+      "new_latency_ms": 57.4468,
+      "gold_product_ids": [
+        "WIN_10194711"
+      ],
+      "baseline_relevant_rank": null,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_product_050_single_typo",
+      "kind": "product_resolution",
+      "query": "tìm giúp Nước Giải Khát Coca-Cola Zero Pet 600ml",
+      "baseline_status": "SUCCESS",
+      "new_status": "SUCCESS",
+      "baseline_top5": [
+        "WIN_10194711"
+      ],
+      "new_top5": [
+        "WIN_10194711"
+      ],
+      "baseline_latency_ms": 141.1377,
+      "new_latency_ms": 58.0536,
+      "gold_product_ids": [
+        "WIN_10194711"
+      ],
+      "baseline_relevant_rank": 1,
+      "new_relevant_rank": 1
+    },
+    {
+      "case_id": "dev_category_001",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Bánh ngũ cốc",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10613670",
+        "WIN_10235029",
+        "WIN_10191623",
+        "WIN_10195891",
+        "WIN_10013682"
+      ],
+      "baseline_latency_ms": 222.8367,
+      "new_latency_ms": 58.8387,
+      "expected_category": "Bánh ngũ cốc",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Bánh ngũ cốc",
+        "product_reference": "nhóm Bánh ngũ cốc",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_002",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Bơ động vật",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10615014",
+        "WIN_10005780",
+        "WIN_10606685",
+        "WIN_10005781",
+        "WIN_10005778"
+      ],
+      "baseline_latency_ms": 240.8414,
+      "new_latency_ms": 72.6542,
+      "expected_category": "Bơ động vật",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Bơ động vật",
+        "product_reference": "nhóm Bơ động vật",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_003",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Cà phê nước",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10012923",
+        "WIN_10012924",
+        "WIN_10197241",
+        "WIN_10012920",
+        "WIN_10314423"
+      ],
+      "baseline_latency_ms": 362.1035,
+      "new_latency_ms": 52.8825,
+      "expected_category": "Cà phê nước",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Cà phê nước",
+        "product_reference": "nhóm Cà phê nước",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_004",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Củ khoai",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10053947",
+        "WIN_10053945",
+        "WIN_10053980",
+        "WIN_10240000"
+      ],
+      "baseline_latency_ms": 71.8842,
+      "new_latency_ms": 62.6539,
+      "expected_category": "Củ khoai",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Củ khoai",
+        "product_reference": "nhóm Củ khoai",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_005",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Dầu gội nam",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10601171",
+        "WIN_10016873",
+        "WIN_10016836",
+        "WIN_10016837",
+        "WIN_10629930"
+      ],
+      "baseline_latency_ms": 119.2172,
+      "new_latency_ms": 63.106,
+      "expected_category": "Dầu gội nam",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Dầu gội nam",
+        "product_reference": "nhóm Dầu gội nam",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_006",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Dụng cụ cọ rửa bếp",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10026855",
+        "WIN_10026853",
+        "WIN_10027131",
+        "WIN_10026854",
+        "WIN_10026852"
+      ],
+      "baseline_latency_ms": 150.244,
+      "new_latency_ms": 63.3972,
+      "expected_category": "Dụng cụ cọ rửa bếp",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Dụng cụ cọ rửa bếp",
+        "product_reference": "nhóm Dụng cụ cọ rửa bếp",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_007",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Giò chả",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10005941",
+        "WIN_10183518",
+        "WIN_10182350",
+        "WIN_10182351",
+        "WIN_10005928"
+      ],
+      "baseline_latency_ms": 26.4767,
+      "new_latency_ms": 55.5783,
+      "expected_category": "Giò chả",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Giò chả",
+        "product_reference": "nhóm Giò chả",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_008",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Kẹo gum",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10014541",
+        "WIN_10640267",
+        "WIN_10014525",
+        "WIN_10014528",
+        "WIN_10014526"
+      ],
+      "baseline_latency_ms": 98.7776,
+      "new_latency_ms": 57.6064,
+      "expected_category": "Kẹo gum",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Kẹo gum",
+        "product_reference": "nhóm Kẹo gum",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_009",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm P.mai mềm(khối)",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10005768",
+        "WIN_10005772",
+        "WIN_10005868"
+      ],
+      "baseline_latency_ms": 93.5419,
+      "new_latency_ms": 59.7441,
+      "expected_category": "P.mai mềm(khối)",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "P.mai mềm(khối)",
+        "product_reference": "nhóm P.mai mềm(khối)",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_010",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Phồng tôm đóng gói",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10141997",
+        "WIN_10141998",
+        "WIN_10007889",
+        "WIN_10007888",
+        "WIN_10141079"
+      ],
+      "baseline_latency_ms": 675.2897,
+      "new_latency_ms": 60.5099,
+      "expected_category": "Phồng tôm đóng gói",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Phồng tôm đóng gói",
+        "product_reference": "nhóm Phồng tôm đóng gói",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_011",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Pizza đông lạnh",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10183338",
+        "WIN_10006946",
+        "WIN_10006950"
+      ],
+      "baseline_latency_ms": 69.6536,
+      "new_latency_ms": 58.2443,
+      "expected_category": "Pizza đông lạnh",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Pizza đông lạnh",
+        "product_reference": "nhóm Pizza đông lạnh",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_012",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Sáp thơm",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10019819",
+        "WIN_10162297",
+        "WIN_10019726",
+        "WIN_10019732",
+        "WIN_10019728"
+      ],
+      "baseline_latency_ms": 22.2694,
+      "new_latency_ms": 56.5649,
+      "expected_category": "Sáp thơm",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Sáp thơm",
+        "product_reference": "nhóm Sáp thơm",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_013",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Sơ chế thịt heo",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10281333",
+        "WIN_10183101",
+        "WIN_10182788",
+        "WIN_10183389",
+        "WIN_10140306"
+      ],
+      "baseline_latency_ms": 159.958,
+      "new_latency_ms": 59.8547,
+      "expected_category": "Sơ chế thịt heo",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Sơ chế thịt heo",
+        "product_reference": "nhóm Sơ chế thịt heo",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_014",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Sữa d.dưỡng ngườilớn",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10196209",
+        "WIN_10325038",
+        "WIN_10317250"
+      ],
+      "baseline_latency_ms": 247.7202,
+      "new_latency_ms": 54.3057,
+      "expected_category": "Sữa d.dưỡng ngườilớn",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Sữa d.dưỡng ngườilớn",
+        "product_reference": "nhóm Sữa d.dưỡng ngườilớn",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_015",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Sữa rửa mặt nữ",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10017633",
+        "WIN_10017632",
+        "WIN_10161338",
+        "WIN_10161336",
+        "WIN_10600100"
+      ],
+      "baseline_latency_ms": 64.2244,
+      "new_latency_ms": 71.4152,
+      "expected_category": "Sữa rửa mặt nữ",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Sữa rửa mặt nữ",
+        "product_reference": "nhóm Sữa rửa mặt nữ",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_016",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Thịt bò đông lạnh",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10282507",
+        "WIN_10601378",
+        "WIN_10140199",
+        "WIN_10140201",
+        "WIN_10404843"
+      ],
+      "baseline_latency_ms": 337.3258,
+      "new_latency_ms": 61.1394,
+      "expected_category": "Thịt bò đông lạnh",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Thịt bò đông lạnh",
+        "product_reference": "nhóm Thịt bò đông lạnh",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_017",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Trái cây s.khô đgói",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10015647",
+        "WIN_10016343",
+        "WIN_10195887",
+        "WIN_10016342",
+        "WIN_10016344"
+      ],
+      "baseline_latency_ms": 376.113,
+      "new_latency_ms": 63.8909,
+      "expected_category": "Trái cây s.khô đgói",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Trái cây s.khô đgói",
+        "product_reference": "nhóm Trái cây s.khô đgói",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_018",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Trứng gà",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10006030",
+        "WIN_10006029",
+        "WIN_10195051",
+        "WIN_10006024",
+        "WIN_10006026"
+      ],
+      "baseline_latency_ms": 149.0152,
+      "new_latency_ms": 57.5533,
+      "expected_category": "Trứng gà",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Trứng gà",
+        "product_reference": "nhóm Trứng gà",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_019",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Tã quần trẻ em",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10161030",
+        "WIN_10071648",
+        "WIN_10020232",
+        "WIN_10020234"
+      ],
+      "baseline_latency_ms": 45.7009,
+      "new_latency_ms": 55.5567,
+      "expected_category": "Tã quần trẻ em",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Tã quần trẻ em",
+        "product_reference": "nhóm Tã quần trẻ em",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_category_020",
+      "kind": "category_browse",
+      "query": "Cho mình xem nhóm Váng sữa",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10005496",
+        "WIN_10005341",
+        "WIN_10005358",
+        "WIN_10005278",
+        "WIN_10005297"
+      ],
+      "baseline_latency_ms": 146.7466,
+      "new_latency_ms": 51.7732,
+      "expected_category": "Váng sữa",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "product_search",
+        "product_type": "Váng sữa",
+        "product_reference": "nhóm Váng sữa",
+        "brand_preference": null,
+        "use_case": null,
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": []
+      }
+    },
+    {
+      "case_id": "dev_use_case_001",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Bánh ngũ cốc để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10613670",
+        "WIN_10235029",
+        "WIN_10191623",
+        "WIN_10195891",
+        "WIN_10013682"
+      ],
+      "baseline_latency_ms": 514.059,
+      "new_latency_ms": 98.5621,
+      "expected_category": "Bánh ngũ cốc",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Bánh ngũ cốc",
+        "product_reference": "Mình cần nhóm Bánh ngũ cốc",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_002",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Bơ động vật để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10615014",
+        "WIN_10005780",
+        "WIN_10606685",
+        "WIN_10005781",
+        "WIN_10005778"
+      ],
+      "baseline_latency_ms": 536.6257,
+      "new_latency_ms": 96.4901,
+      "expected_category": "Bơ động vật",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Bơ động vật",
+        "product_reference": "Mình cần nhóm Bơ động vật",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_003",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Cà phê nước để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10012923",
+        "WIN_10012924",
+        "WIN_10197241",
+        "WIN_10012920",
+        "WIN_10314423"
+      ],
+      "baseline_latency_ms": 784.3663,
+      "new_latency_ms": 80.939,
+      "expected_category": "Cà phê nước",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Cà phê nước",
+        "product_reference": "Mình cần nhóm Cà phê nước",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_004",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Củ khoai để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10053947",
+        "WIN_10053945",
+        "WIN_10053980",
+        "WIN_10240000"
+      ],
+      "baseline_latency_ms": 227.9793,
+      "new_latency_ms": 93.9573,
+      "expected_category": "Củ khoai",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Củ khoai",
+        "product_reference": "Mình cần nhóm Củ khoai",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_005",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Dầu gội nam để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10601171",
+        "WIN_10016873",
+        "WIN_10016836",
+        "WIN_10016837",
+        "WIN_10629930"
+      ],
+      "baseline_latency_ms": 201.0719,
+      "new_latency_ms": 95.8484,
+      "expected_category": "Dầu gội nam",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Dầu gội nam",
+        "product_reference": "Mình cần nhóm Dầu gội nam",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_006",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Dụng cụ cọ rửa bếp để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10026855",
+        "WIN_10026853",
+        "WIN_10027131",
+        "WIN_10026854",
+        "WIN_10026852"
+      ],
+      "baseline_latency_ms": 352.7468,
+      "new_latency_ms": 100.0812,
+      "expected_category": "Dụng cụ cọ rửa bếp",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Dụng cụ cọ rửa bếp",
+        "product_reference": "Mình cần nhóm Dụng cụ cọ rửa bếp",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_007",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Giò chả để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10005941",
+        "WIN_10183518",
+        "WIN_10182350",
+        "WIN_10182351",
+        "WIN_10005928"
+      ],
+      "baseline_latency_ms": 112.8893,
+      "new_latency_ms": 96.5337,
+      "expected_category": "Giò chả",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Giò chả",
+        "product_reference": "Mình cần nhóm Giò chả",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_008",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Kẹo gum để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10014541",
+        "WIN_10640267",
+        "WIN_10014525",
+        "WIN_10014528",
+        "WIN_10014526"
+      ],
+      "baseline_latency_ms": 315.6151,
+      "new_latency_ms": 93.9075,
+      "expected_category": "Kẹo gum",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Kẹo gum",
+        "product_reference": "Mình cần nhóm Kẹo gum",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_009",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm P.mai mềm(khối) để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10005768",
+        "WIN_10005772",
+        "WIN_10005868"
+      ],
+      "baseline_latency_ms": 254.5792,
+      "new_latency_ms": 99.0866,
+      "expected_category": "P.mai mềm(khối)",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "P.mai mềm(khối)",
+        "product_reference": "Mình cần nhóm P.mai mềm(khối) y",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngà",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngà"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_010",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Phồng tôm đóng gói để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10141997",
+        "WIN_10141998",
+        "WIN_10007889",
+        "WIN_10007888",
+        "WIN_10141079"
+      ],
+      "baseline_latency_ms": 1305.3431,
+      "new_latency_ms": 98.1281,
+      "expected_category": "Phồng tôm đóng gói",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Phồng tôm đóng gói",
+        "product_reference": "Mình cần nhóm Phồng tôm đóng gói",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_011",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Pizza đông lạnh để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10183338",
+        "WIN_10006946",
+        "WIN_10006950"
+      ],
+      "baseline_latency_ms": 212.1623,
+      "new_latency_ms": 96.2389,
+      "expected_category": "Pizza đông lạnh",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Pizza đông lạnh",
+        "product_reference": "Mình cần nhóm Pizza đông lạnh",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_012",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Sáp thơm để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10019819",
+        "WIN_10162297",
+        "WIN_10019726",
+        "WIN_10019732",
+        "WIN_10019728"
+      ],
+      "baseline_latency_ms": 105.992,
+      "new_latency_ms": 93.1202,
+      "expected_category": "Sáp thơm",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Sáp thơm",
+        "product_reference": "Mình cần nhóm Sáp thơm",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_013",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Sơ chế thịt heo để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10281333",
+        "WIN_10183101",
+        "WIN_10182788",
+        "WIN_10183389",
+        "WIN_10140306"
+      ],
+      "baseline_latency_ms": 403.4452,
+      "new_latency_ms": 98.6977,
+      "expected_category": "Sơ chế thịt heo",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Sơ chế thịt heo",
+        "product_reference": "Mình cần nhóm Sơ chế thịt heo",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_014",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Sữa d.dưỡng ngườilớn để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10196209",
+        "WIN_10325038",
+        "WIN_10317250"
+      ],
+      "baseline_latency_ms": 549.6622,
+      "new_latency_ms": 84.272,
+      "expected_category": "Sữa d.dưỡng ngườilớn",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Sữa d.dưỡng ngườilớn",
+        "product_reference": "Mình cần nhóm Sữa d.dưỡng ngườilớn",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_015",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Sữa rửa mặt nữ để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10017633",
+        "WIN_10017632",
+        "WIN_10161338",
+        "WIN_10161336",
+        "WIN_10600100"
+      ],
+      "baseline_latency_ms": 108.1487,
+      "new_latency_ms": 101.092,
+      "expected_category": "Sữa rửa mặt nữ",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Sữa rửa mặt nữ",
+        "product_reference": "Mình cần nhóm Sữa rửa mặt nữ",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_016",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Thịt bò đông lạnh để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10282507",
+        "WIN_10601378",
+        "WIN_10140199",
+        "WIN_10140201",
+        "WIN_10404843"
+      ],
+      "baseline_latency_ms": 694.2178,
+      "new_latency_ms": 99.6233,
+      "expected_category": "Thịt bò đông lạnh",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Thịt bò đông lạnh",
+        "product_reference": "Mình cần nhóm Thịt bò đông lạnh",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_017",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Trái cây s.khô đgói để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10015647",
+        "WIN_10016343",
+        "WIN_10195887",
+        "WIN_10016342",
+        "WIN_10016344"
+      ],
+      "baseline_latency_ms": 764.7009,
+      "new_latency_ms": 103.7462,
+      "expected_category": "Trái cây s.khô đgói",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Trái cây s.khô đgói",
+        "product_reference": "Mình cần nhóm Trái cây s.khô đgói",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_018",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Trứng gà để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10006030",
+        "WIN_10006029",
+        "WIN_10195051",
+        "WIN_10006024",
+        "WIN_10006026"
+      ],
+      "baseline_latency_ms": 395.4313,
+      "new_latency_ms": 93.1691,
+      "expected_category": "Trứng gà",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Trứng gà",
+        "product_reference": "Mình cần nhóm Trứng gà",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_019",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Tã quần trẻ em để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10161030",
+        "WIN_10071648",
+        "WIN_10020232",
+        "WIN_10020234"
+      ],
+      "baseline_latency_ms": 89.1265,
+      "new_latency_ms": 88.4861,
+      "expected_category": "Tã quần trẻ em",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Tã quần trẻ em",
+        "product_reference": "Mình cần nhóm Tã quần trẻ em",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    },
+    {
+      "case_id": "dev_use_case_020",
+      "kind": "use_case_category",
+      "query": "Mình cần nhóm Váng sữa để phục vụ nhu cầu hằng ngày",
+      "baseline_status": "NOT_FOUND",
+      "new_status": "SUCCESS",
+      "baseline_top5": [],
+      "new_top5": [
+        "WIN_10005496",
+        "WIN_10005341",
+        "WIN_10005358",
+        "WIN_10005278",
+        "WIN_10005297"
+      ],
+      "baseline_latency_ms": 398.8381,
+      "new_latency_ms": 80.1559,
+      "expected_category": "Váng sữa",
+      "baseline_category_precision_at5": 0.0,
+      "new_category_precision_at5": 1.0,
+      "query_understanding": {
+        "intent": "recommendation",
+        "product_type": "Váng sữa",
+        "product_reference": "Mình cần nhóm Váng sữa",
+        "brand_preference": null,
+        "use_case": "phục vụ nhu cầu hằng ngày",
+        "ranking_criterion": "relevance",
+        "ranking_supported": true,
+        "unverified_constraints": [
+          "phục vụ nhu cầu hằng ngày"
+        ]
+      },
+      "expected_use_case": "phục vụ nhu cầu hằng ngày"
+    }
+  ],
+  "conversations": [
+    {
+      "conversation_id": "dev_conversation_001",
+      "expected_category": "Bánh ngũ cốc",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Bánh ngũ cốc",
+          "intent": "product_search",
+          "product_type": "Bánh ngũ cốc",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            15900,
+            16100,
+            21500,
+            50100,
+            72000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Bánh ngũ cốc",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            15900,
+            16100,
+            21500,
+            50100,
+            72000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Bánh ngũ cốc",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            15900,
+            16100,
+            21500,
+            50100,
+            72000
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_002",
+      "expected_category": "Bơ động vật",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Bơ động vật",
+          "intent": "product_search",
+          "product_type": "Bơ động vật",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            43900,
+            74900,
+            76900,
+            77900,
+            84500
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Bơ động vật",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            43900,
+            74900,
+            76900,
+            77900,
+            84500
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Bơ động vật",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            43900,
+            74900,
+            76900,
+            77900,
+            84500
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_003",
+      "expected_category": "Cà phê nước",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Cà phê nước",
+          "intent": "product_search",
+          "product_type": "Cà phê nước",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            12200,
+            12200,
+            13500,
+            15300,
+            16300
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Cà phê nước",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            12200,
+            12200,
+            13500,
+            15300,
+            16300
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Cà phê nước",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            12200,
+            12200,
+            13500,
+            15300,
+            16300
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_004",
+      "expected_category": "Củ khoai",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Củ khoai",
+          "intent": "product_search",
+          "product_type": "Củ khoai",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            22000,
+            34900,
+            37000,
+            44900
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Củ khoai",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            22000,
+            34900,
+            37000,
+            44900
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Củ khoai",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            22000,
+            34900,
+            37000,
+            44900
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_005",
+      "expected_category": "Dầu gội nam",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Dầu gội nam",
+          "intent": "product_search",
+          "product_type": "Dầu gội nam",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            80000,
+            127600,
+            149900,
+            149900,
+            165900
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Dầu gội nam",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            80000,
+            127600,
+            149900,
+            149900,
+            165900
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Dầu gội nam",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            80000,
+            127600,
+            149900,
+            149900,
+            165900
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_006",
+      "expected_category": "Dụng cụ cọ rửa bếp",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Dụng cụ cọ rửa bếp",
+          "intent": "product_search",
+          "product_type": "Dụng cụ cọ rửa bếp",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            22500,
+            29000,
+            34000,
+            35000,
+            39000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Dụng cụ cọ rửa bếp",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            22500,
+            29000,
+            34000,
+            35000,
+            39000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Dụng cụ cọ rửa bếp",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            22500,
+            29000,
+            34000,
+            35000,
+            39000
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_007",
+      "expected_category": "Giò chả",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Giò chả",
+          "intent": "product_search",
+          "product_type": "Giò chả",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            52500,
+            65300,
+            94600,
+            98000,
+            143300
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Giò chả",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            52500,
+            65300,
+            94600,
+            98000,
+            143300
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Giò chả",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            52500,
+            65300,
+            94600,
+            98000,
+            143300
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_008",
+      "expected_category": "Kẹo gum",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Kẹo gum",
+          "intent": "product_search",
+          "product_type": "Kẹo gum",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            26000,
+            29400,
+            30900,
+            30900,
+            30900
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Kẹo gum",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            26000,
+            29400,
+            30900,
+            30900,
+            30900
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Kẹo gum",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            26000,
+            29400,
+            30900,
+            30900,
+            30900
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_009",
+      "expected_category": "P.mai mềm(khối)",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm P.mai mềm(khối)",
+          "intent": "product_search",
+          "product_type": "P.mai mềm(khối)",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            67700,
+            118800,
+            148800
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "P.mai mềm(khối)",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            67700,
+            118800,
+            148800
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "P.mai mềm(khối)",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            67700,
+            118800,
+            148800
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_010",
+      "expected_category": "Phồng tôm đóng gói",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Phồng tôm đóng gói",
+          "intent": "product_search",
+          "product_type": "Phồng tôm đóng gói",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            10900,
+            11200,
+            12500,
+            19500,
+            86000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Phồng tôm đóng gói",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            10900,
+            11200,
+            12500,
+            19500,
+            86000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Phồng tôm đóng gói",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            10900,
+            11200,
+            12500,
+            19500,
+            86000
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_011",
+      "expected_category": "Pizza đông lạnh",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Pizza đông lạnh",
+          "intent": "product_search",
+          "product_type": "Pizza đông lạnh",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            39000,
+            92500,
+            102300
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Pizza đông lạnh",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            39000,
+            92500,
+            102300
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Pizza đông lạnh",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            39000,
+            92500,
+            102300
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_012",
+      "expected_category": "Sáp thơm",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Sáp thơm",
+          "intent": "product_search",
+          "product_type": "Sáp thơm",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            41600,
+            48600,
+            49000,
+            49000,
+            49000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Sáp thơm",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            41600,
+            48600,
+            49000,
+            49000,
+            49000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Sáp thơm",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            41600,
+            48600,
+            49000,
+            49000,
+            49000
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_013",
+      "expected_category": "Sơ chế thịt heo",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Sơ chế thịt heo",
+          "intent": "product_search",
+          "product_type": "Sơ chế thịt heo",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            39000,
+            40000,
+            49000,
+            59000,
+            196900
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Sơ chế thịt heo",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            39000,
+            40000,
+            49000,
+            59000,
+            196900
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Sơ chế thịt heo",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            39000,
+            40000,
+            49000,
+            59000,
+            196900
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_014",
+      "expected_category": "Sữa d.dưỡng ngườilớn",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Sữa d.dưỡng ngườilớn",
+          "intent": "product_search",
+          "product_type": "Sữa d.dưỡng ngườilớn",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            31700,
+            45500,
+            62500
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Sữa d.dưỡng ngườilớn",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            31700,
+            45500,
+            62500
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Sữa d.dưỡng ngườilớn",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            31700,
+            45500,
+            62500
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_015",
+      "expected_category": "Sữa rửa mặt nữ",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Sữa rửa mặt nữ",
+          "intent": "product_search",
+          "product_type": "Sữa rửa mặt nữ",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            54000,
+            54000,
+            56900,
+            56900,
+            63000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Sữa rửa mặt nữ",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            54000,
+            54000,
+            56900,
+            56900,
+            63000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Sữa rửa mặt nữ",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            54000,
+            54000,
+            56900,
+            56900,
+            63000
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_016",
+      "expected_category": "Thịt bò đông lạnh",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Thịt bò đông lạnh",
+          "intent": "product_search",
+          "product_type": "Thịt bò đông lạnh",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            68700,
+            79000,
+            87100,
+            148500,
+            165000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Thịt bò đông lạnh",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            68700,
+            79000,
+            87100,
+            148500,
+            165000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Thịt bò đông lạnh",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            68700,
+            79000,
+            87100,
+            148500,
+            165000
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_017",
+      "expected_category": "Trái cây s.khô đgói",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Trái cây s.khô đgói",
+          "intent": "product_search",
+          "product_type": "Trái cây s.khô đgói",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            27300,
+            30800,
+            32900,
+            40300,
+            42700
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Trái cây s.khô đgói",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            27300,
+            30800,
+            32900,
+            40300,
+            42700
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Trái cây s.khô đgói",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            27300,
+            30800,
+            32900,
+            40300,
+            42700
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_018",
+      "expected_category": "Trứng gà",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Trứng gà",
+          "intent": "product_search",
+          "product_type": "Trứng gà",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            34000,
+            38700,
+            53100,
+            60000,
+            61000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Trứng gà",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            34000,
+            38700,
+            53100,
+            60000,
+            61000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Trứng gà",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            34000,
+            38700,
+            53100,
+            60000,
+            61000
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_019",
+      "expected_category": "Tã quần trẻ em",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Tã quần trẻ em",
+          "intent": "product_search",
+          "product_type": "Tã quần trẻ em",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            263000,
+            347000,
+            349000,
+            440800
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Tã quần trẻ em",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            263000,
+            347000,
+            349000,
+            440800
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Tã quần trẻ em",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            263000,
+            347000,
+            349000,
+            440800
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    },
+    {
+      "conversation_id": "dev_conversation_020",
+      "expected_category": "Váng sữa",
+      "scope_retained_all_turns": true,
+      "lowest_price_turn_sorted": true,
+      "alternative_follow_up_retained_scope": true,
+      "turns": [
+        {
+          "query": "Mình muốn xem nhóm Váng sữa",
+          "intent": "product_search",
+          "product_type": "Váng sữa",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            34500,
+            52000,
+            55200,
+            55200,
+            63000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "loại nào rẻ nhất",
+          "intent": "variant",
+          "product_type": "Váng sữa",
+          "ranking_criterion": "price_ascending",
+          "status": "SUCCESS",
+          "prices": [
+            34500,
+            52000,
+            55200,
+            55200,
+            63000
+          ],
+          "category_precision_at5": 1.0
+        },
+        {
+          "query": "Có loại nào khác không?",
+          "intent": "alternative",
+          "product_type": "Váng sữa",
+          "ranking_criterion": "relevance",
+          "status": "SUCCESS",
+          "prices": [
+            34500,
+            52000,
+            55200,
+            55200,
+            63000
+          ],
+          "category_precision_at5": 1.0
+        }
+      ]
+    }
+  ]
+}

@@ -14,9 +14,12 @@ from backend.products.catalog import (
     QUERY_STOP_WORDS,
     PriceOperator,
     ProductSnapshot,
+    matches_explicit_product_audience,
     matches_price_constraint,
+    product_audience_evidence,
 )
 from backend.products.category_taxonomy import (
+    catalog_query_with_aliases,
     collect_category_hierarchies,
     diversify_by_category_leaf,
     normalize_category_text,
@@ -510,14 +513,7 @@ class SnapshotProductRepository:
             category_segment_texts = (
                 " ".join(_tokens(f"{category} {product.category}")),
             )
-        leaf = raw_hierarchy.split(">")[-1] if raw_hierarchy else product.category
-        baby_audience = bool(
-            re.search(
-                r"(?<!\w)(?:bé|trẻ em|bỉm|tã|t\.em)(?!\w)",
-                f"{leaf} {product.name}",
-                re.IGNORECASE,
-            )
-        )
+        baby_audience = product_audience_evidence(product) in {"child", "newborn"}
         words = tuple(
             dict.fromkeys(
                 (
@@ -581,10 +577,14 @@ class SnapshotProductRepository:
         price_value_vnd: int | None = None,
         diversify_by_subcategory: bool = False,
     ) -> list[ProductSnapshot]:
-        terms, comparison, _snack_slang = _query_terms(query)
         normalized = normalize_search_text(query).strip().casefold()
         exact_id = self._identifier_index.get(normalized)
         exact_title_ids = self._title_index.get(normalized)
+        retrieval_query = (
+            query if exact_id or exact_title_ids else catalog_query_with_aliases(query)
+        )
+        terms, comparison, _snack_slang = _query_terms(retrieval_query)
+        normalized = normalize_search_text(retrieval_query).strip().casefold()
         if exact_id:
             candidate_ids = {exact_id}
         elif exact_title_ids:
@@ -603,6 +603,8 @@ class SnapshotProductRepository:
                 category, candidate, self._known_category_keys
             ):
                 continue
+            if not matches_explicit_product_audience(query, product):
+                continue
             if normalized_brand and not all(
                 token in candidate.brand_words for token in normalized_brand
             ):
@@ -615,7 +617,7 @@ class SnapshotProductRepository:
                 continue
             if in_stock and product.sellable_stock <= 0:
                 continue
-            score = _score(query, candidate, self._known_words)
+            score = _score(retrieval_query, candidate, self._known_words)
             if terms and score <= 0:
                 continue
             results.append((score, product))

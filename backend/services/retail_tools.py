@@ -4,21 +4,34 @@ import json
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from difflib import SequenceMatcher
+from functools import lru_cache
 from itertools import product as cart_product
 from typing import Any, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from backend.products.catalog import DEMO_PRODUCTS, PriceOperator, ProductSnapshot
+from backend.products.catalog import (
+    DEMO_PRODUCTS,
+    PriceOperator,
+    ProductSnapshot,
+    explicit_product_audience,
+    has_household_child_context,
+    matches_explicit_product_audience,
+    product_audience_evidence,
+)
 from backend.products.category_taxonomy import (
     CatalogCategoryMatch,
+    catalog_category_alias_source_phrase,
     catalog_leaf_query_phrase,
+    category_alias_refines_explicit_audience,
     category_is_parent,
     category_leaf,
     normalize_category_text,
     query_names_catalog_leaf,
     resolve_catalog_category,
+    resolve_catalog_category_alias,
 )
 from backend.products.repository import ProductRepository, get_product_repository
 from backend.services.catalog_preferences import (
@@ -26,6 +39,11 @@ from backend.services.catalog_preferences import (
     preparation_terms,
     search_with_preferences,
     title_mentions_preparation,
+)
+from backend.services.query_understanding import (
+    QueryUnderstandingResult,
+    _budget_match,
+    understand_catalog_query,
 )
 from backend.services.retail_information import (
     RetailInformationKind,
@@ -52,6 +70,10 @@ from backend.shared.contracts import SessionState
 MAX_PRODUCT_RESULTS = 10
 MAX_RECOMMENDATION_CATEGORIES = 4
 MAX_RECOMMENDATION_RESULTS = 5
+_PRODUCT_IDENTITY_FILLER = frozenset(
+    "minh toi em anh chi ban muon can tim cho xem giup hang loai nhom san pham "
+    "mot vai nao nhe nha please find show looking for product products category type".split()
+)
 FactField = Literal[
     "price_vnd",
     "stock",
@@ -553,6 +575,46 @@ def _tool_error(
     )
 
 
+def _budget_scope_clarification(
+    name: str,
+    repository: ProductRepository,
+    understanding: QueryUnderstandingResult,
+) -> ToolObservation:
+    return _tool_error(
+        name,
+        "DATA_UNAVAILABLE",
+        "The customer's budget scope or quantity needs clarification before filtering products.",
+        source=repository.source_name,
+        extra={
+            "clarification_code": "budget_scope",
+            "clarification_needed": True,
+            "budget_vnd": understanding.budget_vnd,
+            "quantity": understanding.quantity,
+            "unavailable_fields": ["budget_scope", "quantity"],
+        },
+        response_mode="DETERMINISTIC_ERROR",
+        terminal=True,
+    )
+
+
+def _budget_unit_price_cap(understanding: QueryUnderstandingResult) -> int | None:
+    """Convert a clear item or total budget into a safe per-SKU price ceiling."""
+    budget = understanding.budget_vnd
+    if budget is None or understanding.budget_scope is None:
+        return None
+    exclusive = understanding.budget_operator == "LT"
+    if understanding.budget_scope == "total":
+        quantity = understanding.quantity
+        if quantity is None or quantity < 1:
+            return None
+        return (budget - 1) // quantity if exclusive else budget // quantity
+    return budget - 1 if exclusive else budget
+
+
+def _has_budget_scope_ambiguity(understanding: QueryUnderstandingResult) -> bool:
+    return any("budget" in ambiguity for ambiguity in understanding.ambiguity)
+
+
 def _candidate_content(products: tuple[ProductSnapshot, ...], matched: list[str]) -> dict[str, Any]:
     items = []
     for product in products:
@@ -580,6 +642,388 @@ def _candidate_content(products: tuple[ProductSnapshot, ...], matched: list[str]
             (item.data_timestamp for item in products), default=datetime.now(UTC)
         ).isoformat(),
     }
+
+
+def _negative_constraint_status(
+    query: str,
+    constraints: tuple[str, ...],
+    repository: ProductRepository,
+    selected_category: str | None = None,
+) -> tuple[tuple[str, ...], frozenset[str], bool | None, tuple[str, ...]]:
+    """Separate constraints the active catalog can enforce from unknown attributes."""
+    if not constraints:
+        return (), frozenset(), None, ()
+    products = getattr(repository, "products", ())
+    brands = [product.brand for product in products if getattr(product, "brand", None)]
+    if not brands:
+        list_brands = getattr(repository, "list_brand_names", None)
+        brands = list(list_brands(limit=1000)) if callable(list_brands) else []
+    excluded_brands = frozenset(excluded_catalog_brands(query, brands))
+    unsupported: list[str] = []
+    excluded_categories: list[str] = []
+    requested_spicy: bool | None = None
+    for constraint in constraints:
+        normalized = normalize_category_text(constraint)
+        if normalized == "duong" and re.search(
+            r"\bkhong\s+duong\b", normalize_category_text(query)
+        ):
+            # Treat ``không đường`` as a positive zero-sugar variant only when
+            # the selected catalog scope contains explicit matching titles.
+            # Broader beverage scopes with no such evidence still abstain.
+            try:
+                zero_sugar_candidates = repository.search(
+                    query="zero",
+                    category=selected_category,
+                    limit=20,
+                )
+            except (OSError, RuntimeError, TimeoutError, ValueError):
+                zero_sugar_candidates = ()
+            if any(
+                re.search(
+                    r"\bzero\b|\bkhong\s+duong\b",
+                    normalize_category_text(product.name),
+                )
+                for product in zero_sugar_candidates
+            ):
+                continue
+        brand_is_supported = any(
+            normalize_category_text(brand) in excluded_brands
+            and normalize_category_text(brand) in normalized
+            for brand in brands
+            if brand
+        )
+        if brand_is_supported:
+            continue
+        if normalized in {"cay", "spicy", "hot"}:
+            if getattr(repository, "supports_spicy_filter", False):
+                requested_spicy = False
+            else:
+                unsupported.append(constraint)
+            continue
+        excluded_category = (
+            _category_from_product_type(constraint, repository)
+            if len(normalized.split()) >= 2
+            else None
+        )
+        if selected_category and excluded_category and _taxonomy_categories_are_disjoint(
+            selected_category,
+            excluded_category,
+            repository,
+        ):
+            excluded_categories.append(excluded_category)
+            continue
+        if selected_category and excluded_category and _specific_category_covers_exclusion(
+            selected_category,
+            constraint,
+            excluded_category,
+            repository,
+        ):
+            # An explicitly named leaf already rules out a sibling subtype
+            # that the snapshot does not expose as its own taxonomy leaf.
+            continue
+        unsupported.append(constraint)
+    return (
+        tuple(dict.fromkeys(unsupported)),
+        excluded_brands,
+        requested_spicy,
+        tuple(dict.fromkeys(excluded_categories)),
+    )
+
+
+def _specific_category_covers_exclusion(
+    selected_category: str,
+    constraint: str,
+    excluded_category: str,
+    repository: ProductRepository,
+) -> bool:
+    list_hierarchies = getattr(repository, "list_category_hierarchies", None)
+    if not callable(list_hierarchies):
+        return False
+    try:
+        hierarchies = list_hierarchies()
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        return False
+    selected = normalize_category_text(selected_category)
+    selected_path = next(
+        (
+            path
+            for path in hierarchies
+            if path and normalize_category_text(path[-1]) == selected
+        ),
+        (),
+    )
+    if not selected_path or category_is_parent(selected_category, hierarchies):
+        return False
+    excluded = normalize_category_text(constraint)
+    selected_tokens = set(selected.split())
+    excluded_tokens = set(excluded.split())
+    common_tokens = selected_tokens & excluded_tokens
+    selected_specific = selected_tokens - excluded_tokens
+    excluded_specific = excluded_tokens - selected_tokens
+    excluded_is_broader_parent = category_is_parent(excluded_category, hierarchies)
+    return bool(
+        excluded_is_broader_parent
+        and common_tokens
+        and selected_specific
+        and excluded_specific
+    )
+
+
+def _taxonomy_categories_are_disjoint(
+    selected_category: str,
+    excluded_category: str,
+    repository: ProductRepository,
+) -> bool:
+    """Return true only when no catalog path places the categories together."""
+    if normalize_category_text(selected_category) == normalize_category_text(excluded_category):
+        return False
+    list_hierarchies = getattr(repository, "list_category_hierarchies", None)
+    if not callable(list_hierarchies):
+        return False
+    try:
+        hierarchies = list_hierarchies()
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        return False
+    selected = normalize_category_text(selected_category)
+    excluded = normalize_category_text(excluded_category)
+    return not any(
+        selected in {normalize_category_text(segment) for segment in path}
+        and excluded in {normalize_category_text(segment) for segment in path}
+        for path in hierarchies
+    )
+
+
+def _product_is_in_excluded_category(
+    product: ProductSnapshot,
+    excluded_categories: tuple[str, ...],
+) -> bool:
+    if not excluded_categories:
+        return False
+    product_categories = {
+        normalize_category_text(segment)
+        for segment in (product.category_hierarchy or "").split(">")
+        if segment.strip()
+    }
+    if not product_categories and product.category:
+        product_categories.add(normalize_category_text(product.category))
+    if any(
+        normalize_category_text(category) in product_categories
+        for category in excluded_categories
+    ):
+        return True
+    title = normalize_category_text(product.name)
+    for category in excluded_categories:
+        category_key = normalize_category_text(category)
+        # Catalogs sometimes place carbonated water under the mineral-water
+        # leaf. Preserve the user's explicit category exclusion using the
+        # product title's verified wording, including the common ``gas`` form.
+        if category_key == "nuoc ngot co ga" and re.search(r"\b(?:co\s+ga|gas)\b", title):
+            return True
+    return False
+
+
+def _supported_query_details_for_category(
+    query: str,
+    product_type: str | None,
+    use_case: str | None,
+    negative_constraints: tuple[str, ...],
+    brand: str | None,
+    category: str | None,
+    repository: ProductRepository,
+) -> str:
+    """Keep only positive detail words evidenced by product names in a category."""
+    if not category:
+        return ""
+    normalized = normalize_category_text(query)
+    # A package disjunction means either form is acceptable. Searching for
+    # both tokens would incorrectly turn that OR into an AND requirement.
+    normalized = re.sub(
+        r"\b(?:chai|lon|hop|goi|tui|bich|thung|loc)\s+(?:hoac|hay|or)\s+"
+        r"(?:chai|lon|hop|goi|tui|bich|thung|loc)\b",
+        " ",
+        normalized,
+    )
+    # A recognized budget is a structured filter, never a product-name token.
+    budget_match = _budget_match(_normalize_vietnamese(query))
+    if budget_match:
+        budget_phrase = normalize_category_text(budget_match.group())
+        if budget_phrase:
+            normalized = re.sub(
+                rf"(?<!\w){re.escape(budget_phrase)}(?!\w)", " ", normalized
+            )
+    # ``không đường`` is a positive catalog variant; the snapshot search uses
+    # its explicit product-title alias ``zero``.
+    normalized = re.sub(r"\bkhong\s+duong\b", "zero", normalized)
+    phrases = [
+        product_type,
+        use_case,
+        brand,
+        *negative_constraints,
+    ]
+    alias_phrase = catalog_category_alias_source_phrase(query)
+    alias_tokens = normalize_category_text(alias_phrase).split()
+    if len(alias_tokens) > 1 and len(set(alias_tokens)) == 1:
+        phrases.append(alias_phrase)
+    for phrase in phrases:
+        key = normalize_category_text(phrase)
+        if not key:
+            continue
+        normalized = re.sub(rf"(?<!\w){re.escape(key)}(?!\w)", " ", normalized)
+
+    ignored = _CATEGORY_QUERY_FILLER | _CATEGORY_NEED_CONTEXT | _CUSTOMER_GROUP_QUERY_WORDS
+    tokens = list(dict.fromkeys(token for token in normalized.split() if len(token) > 1))
+    supported: list[str] = []
+    for token in tokens:
+        if token in ignored:
+            continue
+        try:
+            candidates = repository.search(query=token, category=category, limit=20)
+        except (OSError, RuntimeError, TimeoutError, ValueError):
+            continue
+        if any(
+            token
+            in set(
+                normalize_category_text(
+                    " ".join(filter(None, (product.name, product.brand, product.description)))
+                ).split()
+            )
+            for product in candidates
+        ):
+            supported.append(token)
+    return " ".join(supported)
+
+
+def _supported_family_query(
+    query: str,
+    product_type: str | None,
+    use_case: str | None,
+    negative_constraints: tuple[str, ...],
+    brand: str | None,
+    repository: ProductRepository,
+) -> tuple[str, bool]:
+    """Search an unresolved product family using only title-backed modifiers.
+
+    Some everyday product families (such as shampoo) span several catalog
+    leaves. In that case, do not broaden the request to their common ancestor;
+    search the family itself and retain only modifiers present in family item
+    names. This keeps natural-language context (for example hair/scalp needs)
+    from turning into unsupported product filters.
+    """
+    family = normalize_category_text(product_type)
+    if not family:
+        return "", False
+    try:
+        family_products = repository.search(query=product_type or "", limit=500)
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        family_products = []
+    normalized_titles = [normalize_category_text(item.name) for item in family_products]
+    title_tokens = {token for title in normalized_titles for token in title.split()}
+    normalized = normalize_category_text(query)
+    budget_match = _budget_match(_normalize_vietnamese(query))
+    if budget_match:
+        budget_phrase = normalize_category_text(budget_match.group())
+        if budget_phrase:
+            normalized = re.sub(
+                rf"(?<!\w){re.escape(budget_phrase)}(?!\w)", " ", normalized
+            )
+    for phrase in (product_type, use_case, brand, *negative_constraints):
+        key = normalize_category_text(phrase)
+        if key:
+            normalized = re.sub(rf"(?<!\w){re.escape(key)}(?!\w)", " ", normalized)
+    # Keep this list conservative: the broad category filler set contains
+    # words such as ``nhanh`` and ``bết`` that can be the customer's actual
+    # suitability criteria. Treating those as conversational filler would
+    # silently turn a targeted request into a generic product browse.
+    fillers = frozenset(
+        "minh toi em anh chi ban muon can tim cho xem giup hang loai nhom san pham "
+        "mot vai nao dung duoc gioi thieu dau toc dao nay tao nhieu qua shop nhe nha "
+        "please show looking for product products type category"
+        .split()
+    )
+    runs: list[list[str]] = []
+    current_run: list[str] = []
+    family_tokens = set(family.split())
+    for token in normalized.split():
+        if len(token) <= 1 or token in fillers or token in family_tokens:
+            if current_run:
+                runs.append(current_run)
+                current_run = []
+            continue
+        current_run.append(token)
+    if current_run:
+        runs.append(current_run)
+
+    supported_details: list[str] = []
+    unverified_detail = False
+    for run in runs:
+        phrase = " ".join(run)
+        if any(
+            re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", title)
+            for title in normalized_titles
+        ) or (len(run) == 1 and run[0] in title_tokens):
+            supported_details.extend(run)
+        else:
+            unverified_detail = True
+    return " ".join((family, *dict.fromkeys(supported_details))), unverified_detail
+
+
+def _product_matches_unresolved_family(
+    product: ProductSnapshot,
+    product_type: str | None,
+) -> bool:
+    """Require the full family phrase in a product title or one taxonomy label."""
+    family = normalize_category_text(product_type)
+    if not family:
+        return False
+    sources = [product.name, product.category]
+    if product.category_hierarchy:
+        sources.extend(product.category_hierarchy.split(">"))
+    return any(
+        re.search(
+            rf"(?<!\w){re.escape(family)}(?!\w)",
+            normalize_category_text(source),
+        )
+        for source in sources
+        if source
+    )
+
+
+def _constraints_outside_catalog_title(
+    constraints: tuple[str, ...],
+    matched_title: str | None,
+) -> tuple[str, ...]:
+    """Keep user filters while ignoring negation tokens that are part of a matched title."""
+    if not matched_title:
+        return constraints
+    normalized_title = normalize_category_text(matched_title)
+    remaining: list[str] = []
+    for constraint in constraints:
+        tokens = normalize_category_text(constraint).split()
+        if tokens and f"khong {tokens[0]}" in normalized_title:
+            continue
+        remaining.append(constraint)
+    return tuple(remaining)
+
+
+def _unsupported_constraint_error(
+    name: str,
+    repository: ProductRepository,
+    constraints: tuple[str, ...],
+    product_type: str | None,
+) -> ToolObservation:
+    return _tool_error(
+        name,
+        "DATA_UNAVAILABLE",
+        "The catalog cannot verify one or more requested product attributes.",
+        source=repository.source_name,
+        extra={
+            "unavailable_fields": ["product_attributes"],
+            "unverified_constraints": list(constraints),
+            "product_type": product_type,
+        },
+        response_mode="DETERMINISTIC_ERROR",
+        terminal=True,
+    )
 
 
 def _whole_cart_recommendation(
@@ -763,8 +1207,10 @@ def _category_has_children(category: str | None, repository: ProductRepository) 
 
 _CATEGORY_QUERY_FILLER = frozenset(
     "a an ban biet can cho co con cua dang de gi giup hang hoi la loai mat minh muon mua nao "
-    "nha nhe noi thoi tui di "
+    "nha nhe noi thoi tui di gia bao nhieu tien nhiu bn "
     "um uhm neu thi chon nen goi so vai phim nhanh y gioi thieu de xuat "
+    "may trong tam nay "
+    "uong hoc di tre em be "
     "nhom san tim toi tu van voi xem the nao phu hop khong duoc do mot san pham "
     "em anh chi ay minh vay va nhu co the cac nhung hay bat ky thu nao type products product "
     "some any please find looking for recommend recommend me suggest show me want need "
@@ -853,14 +1299,96 @@ def _query_matches_catalog_title(
     )
 
 
-def _catalog_brand_tokens_in_query(query: str, repository: ProductRepository) -> set[str]:
+def _catalog_product_title_match(
+    query: str,
+    repository: ProductRepository,
+) -> str | None:
+    """Avoid turning title words into hard category filters.
+
+    The taxonomy can contain common words that also appear in product names
+    (for example ``trà`` or ``thực phẩm``). Treat a sufficiently specific
+    catalog-backed title/brand phrase as product identity, unless the customer
+    explicitly asks to browse a group.
+    """
+    normalized = normalize_category_text(query)
+    if re.search(r"\b(?:nhom|danh muc|category|department)\b", normalized):
+        return None
+    products = getattr(repository, "products", None)
+    if products is None and repository.source_name == "demo_product_catalog":
+        products = DEMO_PRODUCTS
+    if not products:
+        return None
+    query_tokens = set(normalized.split()) - _PRODUCT_IDENTITY_FILLER
+    if len(query_tokens) < 3:
+        return None
+    query_size_tokens = {
+        token
+        for token in query_tokens
+        if not re.fullmatch(r"\d+(?:g|kg|ml|l|cm|mm|m|pack|pcs)?", token)
+    }
+    if len(query_size_tokens) < 3:
+        return None
+    matches: list[tuple[float, str]] = []
+    for product in products:
+        normalized_title = normalize_category_text(product.name)
+        title_tokens = set(normalized_title.split())
+        title_tokens.update(normalize_category_text(product.brand).split())
+        exact_tokens = query_size_tokens & title_tokens
+        if len(exact_tokens) < len(query_size_tokens) - 1:
+            continue
+        missing_tokens = query_size_tokens - exact_tokens
+        token_match = all(
+            len(token) >= 5
+            and any(
+                SequenceMatcher(None, token, candidate).ratio() >= 0.82
+                for candidate in title_tokens
+                if len(candidate) >= 5
+            )
+            for token in missing_tokens
+        )
+        if not token_match:
+            continue
+        similarity = SequenceMatcher(None, normalized, normalized_title).ratio()
+        if similarity >= 0.78:
+            matches.append((similarity, product.name))
+    if not matches:
+        return None
+    matches.sort(key=lambda item: item[0], reverse=True)
+    if len(matches) > 1 and matches[0][0] - matches[1][0] < 0.035:
+        return None
+    return matches[0][1]
+
+
+def _exact_product_title(query: str, repository: ProductRepository) -> bool:
     normalized = normalize_category_text(query)
     products = getattr(repository, "products", None)
     if products is None and repository.source_name == "demo_product_catalog":
         products = DEMO_PRODUCTS
+    return bool(normalized and products) and any(
+        normalized == normalize_category_text(product.name) for product in products
+    )
+
+
+@lru_cache(maxsize=8)
+def _catalog_brand_index(repository: ProductRepository) -> tuple[tuple[str, str], ...]:
+    products = getattr(repository, "products", None)
+    if products is None and repository.source_name == "demo_product_catalog":
+        products = DEMO_PRODUCTS
     if products is None:
+        return ()
+    brands = {
+        normalize_category_text(product.brand): product.brand.strip()
+        for product in products
+        if product.brand and product.brand.strip()
+    }
+    return tuple(brands.items())
+
+
+def _catalog_brand_tokens_in_query(query: str, repository: ProductRepository) -> set[str]:
+    normalized = normalize_category_text(query)
+    brands = dict(_catalog_brand_index(repository))
+    if not brands:
         return set()
-    brands = {normalize_category_text(product.brand) for product in products if product.brand}
     excluded_brands = excluded_catalog_brands(query, list(brands))
     # A token from a multiword brand is not a brand mention. In particular,
     # Vietnamese pronouns must not match MINH HAO, TAO KAE NOI, or M&M.
@@ -870,6 +1398,72 @@ def _catalog_brand_tokens_in_query(query: str, repository: ProductRepository) ->
         if brand and brand not in excluded_brands and f" {brand} " in f" {normalized} "
         for token in brand.split()
     }
+
+
+def _mentioned_candidate_brand(
+    query: str,
+    candidates: tuple[ProductSnapshot, ...] | list[ProductSnapshot],
+    excluded_brands: frozenset[str] = frozenset(),
+) -> str | None:
+    """Resolve a clearly mentioned brand only from brands on retrieved candidates."""
+    normalized_query = f" {normalize_category_text(query)} "
+    matches: dict[str, str] = {}
+    for product in candidates:
+        brand = (product.brand or "").strip()
+        normalized_brand = normalize_category_text(brand)
+        if (
+            normalized_brand
+            and normalized_brand not in excluded_brands
+            and f" {normalized_brand} " in normalized_query
+        ):
+            matches[normalized_brand] = brand
+    return next(iter(matches.values())) if len(matches) == 1 else None
+
+
+def _catalog_brand_from_query(query: str, repository: ProductRepository) -> str | None:
+    """Find one exact catalog brand phrase without treating it as a full SKU title."""
+    normalized_query = f" {normalize_category_text(query)} "
+    brands = dict(_catalog_brand_index(repository))
+    if not brands:
+        return None
+    matches = {
+        normalized: brand
+        for normalized, brand in brands.items()
+        if normalized
+        and f" {normalized} " in normalized_query
+        and not (
+            all(
+                token in _CATEGORY_QUERY_FILLER | _CATEGORY_NEED_CONTEXT
+                for token in normalized.split()
+            )
+            and not re.search(rf"(?<!\w){re.escape(brand.casefold())}(?!\w)", query.casefold())
+        )
+    }
+    if len(matches) != 1:
+        return None
+    brand_key, brand = next(iter(matches.items()))
+    ambiguous_brand = all(
+        token in _CATEGORY_QUERY_FILLER | _CATEGORY_NEED_CONTEXT for token in brand_key.split()
+    )
+    if ambiguous_brand:
+        query_category, _category_only = _query_category_hint(query, repository)
+        if query_category and _is_category_only_request(query, query_category, repository):
+            return None
+    return None if brand_key in excluded_catalog_brands(query, list(brands)) else brand
+
+
+def _query_is_only_catalog_brand(query: str, brand: str) -> bool:
+    normalized_query = normalize_category_text(query)
+    normalized_brand = normalize_category_text(brand)
+    if not normalized_query or not normalized_brand:
+        return False
+    remaining = re.sub(
+        rf"(?<!\w){re.escape(normalized_brand)}(?!\w)",
+        " ",
+        normalized_query,
+    )
+    tokens = set(remaining.split()) - _CATEGORY_QUERY_FILLER - _CATEGORY_NEED_CONTEXT
+    return not tokens
 
 
 def _remove_category_phrases(query: str, category: str | None) -> set[str]:
@@ -905,7 +1499,37 @@ def _query_category_hint(
         if callable(list_hierarchies):
             try:
                 hierarchies = list_hierarchies()
-                match = resolve_catalog_category(taxonomy_query, hierarchies)
+                exact_leaf = catalog_leaf_query_phrase(query, hierarchies)
+                direct_match = resolve_catalog_category(taxonomy_query, hierarchies)
+                if direct_match is None and exact_leaf:
+                    direct_match = resolve_catalog_category(exact_leaf, hierarchies)
+                alias_match = resolve_catalog_category_alias(query, hierarchies) or (
+                    resolve_catalog_category_alias(taxonomy_query, hierarchies)
+                )
+                exact_leaf_is_named = bool(
+                    direct_match is not None
+                    and exact_leaf
+                    and normalize_category_text(exact_leaf)
+                    == normalize_category_text(direct_match.category)
+                    and not category_is_parent(direct_match.category, hierarchies)
+                )
+                alias_refines_audience = bool(
+                    direct_match is not None
+                    and alias_match is not None
+                    and category_alias_refines_explicit_audience(
+                        query,
+                        direct_match.category,
+                        alias_match.category,
+                    )
+                )
+                match = (
+                    direct_match
+                    if direct_match is not None
+                    and (
+                        alias_match is None or (exact_leaf_is_named and not alias_refines_audience)
+                    )
+                    else alias_match or direct_match
+                )
             except (OSError, RuntimeError, TimeoutError, ValueError):
                 match = None
                 hierarchies = ()
@@ -927,7 +1551,8 @@ def _query_category_hint(
         )
         if related_match:
             match_is_explicit_leaf = not category_is_parent(match.category, hierarchies) and (
-                bool(
+                match.exact_phrase
+                or bool(
                     re.search(
                         rf"(?<!\w){re.escape(normalize_category_text(match.category))}(?!\w)",
                         normalize_category_text(taxonomy_query),
@@ -966,11 +1591,172 @@ def _query_category_hint(
             continue
         for segment in path[: normalized_path.index(parent_key) + 1]:
             residual.difference_update(normalize_category_text(segment).split())
-    if query_names_catalog_leaf(taxonomy_query, hierarchies) or (
-        repository is not None and _query_matches_catalog_title(taxonomy_query, repository)
-    ):
+    if repository is not None and _query_matches_catalog_title(taxonomy_query, repository):
         return category, False
     return category, not residual
+
+
+def _category_from_product_type(
+    product_type: str | None,
+    repository: ProductRepository,
+) -> str | None:
+    """Resolve the parsed product type against labels in the active catalog.
+
+    The intent parser and the older category-cue router can see different
+    phrases in one utterance. Prefer the parsed type when it resolves to an
+    actual catalog segment, so a nearby cue such as "nước ngọt" cannot route
+    a request for "cá nước ngọt" into beverages.
+    """
+    if not product_type:
+        return None
+    list_hierarchies = getattr(repository, "list_category_hierarchies", None)
+    if not callable(list_hierarchies):
+        return None
+    try:
+        hierarchies = list_hierarchies()
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        return None
+    if not hierarchies:
+        return None
+
+    labels: dict[str, tuple[str, tuple[str, ...]]] = {}
+    for path in hierarchies:
+        for index, label in enumerate(path):
+            key = normalize_category_text(label)
+            if key:
+                labels.setdefault(key, (label, path[: index + 1]))
+
+    direct = resolve_catalog_category(product_type, hierarchies)
+    direct_key = normalize_category_text(direct.category) if direct else ""
+    if direct_key in labels:
+        return labels[direct_key][0]
+
+    # A type can be a catalog-backed prefix whose closest exact segment is
+    # longer (for example a parent label followed by a preparation subtype).
+    # Resolve that relationship from taxonomy paths rather than a SKU map.
+    query_tokens = normalize_category_text(product_type).split()
+    candidates: list[tuple[int, str, tuple[str, ...]]] = []
+    if len(query_tokens) >= 2:
+        for key, (label, path) in labels.items():
+            label_tokens = key.split()
+            if len(label_tokens) < len(query_tokens):
+                continue
+            if any(
+                label_tokens[start : start + len(query_tokens)] == query_tokens
+                for start in range(len(label_tokens) - len(query_tokens) + 1)
+            ):
+                candidates.append((len(label_tokens) - len(query_tokens), label, path))
+    if candidates:
+        minimum_extra = min(item[0] for item in candidates)
+        closest = [item for item in candidates if item[0] == minimum_extra]
+        distinct = {normalize_category_text(item[1]): item for item in closest}
+        if len(distinct) == 1:
+            return next(iter(distinct.values()))[1]
+        # Multiple sibling leaves (for example men's and women's shampoo)
+        # do not justify searching their broad common department. The caller
+        # can search the family phrase across the catalog instead.
+
+    alias = resolve_catalog_category_alias(product_type, hierarchies)
+    if alias and normalize_category_text(alias.category) in labels:
+        return labels[normalize_category_text(alias.category)][0]
+    return None
+
+
+def _explicit_query_leaf_category(
+    query: str,
+    repository: ProductRepository,
+) -> str | None:
+    """Resolve a complete catalog leaf named in the utterance, when present."""
+    list_hierarchies = getattr(repository, "list_category_hierarchies", None)
+    if not callable(list_hierarchies):
+        return None
+    try:
+        hierarchies = list_hierarchies()
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        return None
+    leaf_phrase = catalog_leaf_query_phrase(query, hierarchies)
+    if not leaf_phrase:
+        return None
+    match = resolve_catalog_category(leaf_phrase, hierarchies)
+    if match is None or category_is_parent(match.category, hierarchies):
+        return None
+    normalized_query = normalize_category_text(query)
+    normalized_label = normalize_category_text(match.category)
+    # Do not turn a near taxonomy alias into an explicit override. For
+    # example, a query for "Lăn khử mùi Nam" must not be redirected to the
+    # catalog's similarly named women's branch. Override parser output only
+    # when the utterance actually names the complete leaf label.
+    if len(normalized_label.split()) < 2 or not re.search(
+        rf"(?<!\w){re.escape(normalized_label)}(?!\w)", normalized_query
+    ):
+        return None
+    return match.category
+
+
+def _is_category_only_request(
+    query: str,
+    category: str | None,
+    repository: ProductRepository,
+) -> bool:
+    if not category:
+        return False
+    list_hierarchies = getattr(repository, "list_category_hierarchies", None)
+    if not callable(list_hierarchies):
+        return False
+    try:
+        hierarchies = list_hierarchies()
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        return False
+    category_key = normalize_category_text(category)
+    if not any(
+        normalize_category_text(segment) == category_key for path in hierarchies for segment in path
+    ):
+        return False
+    query_category, category_only = _query_category_hint(query, repository)
+    return bool(
+        category_only
+        and query_category
+        and normalize_category_text(query_category) == category_key
+        and _query_names_a_specific_category(query, category, repository)
+    )
+
+
+def _category_query_unmatched_details(
+    query: str,
+    category: str | None,
+    repository: ProductRepository,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Split category-query details by whether the snapshot contains evidence."""
+    if not category:
+        return (), ()
+    resolved_category, _category_only = _query_category_hint(query, repository)
+    if not resolved_category or normalize_category_text(
+        resolved_category
+    ) != normalize_category_text(category):
+        return (), ()
+    normalized_query = normalize_category_text(query)
+    correction = re.search(r"\bkhong phai\b", normalized_query)
+    if correction and not re.search(
+        r"\b(?:ma|nhung|hay|chu|instead|rather than|but)\b",
+        normalized_query[correction.end() :],
+    ):
+        # In speech, "không phải ..." often repairs the preceding phrase. The
+        # correction tail is not reliable product-title evidence; the response
+        # will still mark any fallback details as unverified.
+        normalized_query = normalized_query[: correction.start()]
+    remaining = _remove_category_phrases(normalized_query, category)
+    remaining.difference_update(normalize_category_text(category).split())
+    remaining.difference_update(_CATEGORY_QUERY_FILLER | _CATEGORY_NEED_CONTEXT)
+    remaining = {token for token in remaining if len(token) > 1}
+    supported = tuple(
+        sorted(
+            token
+            for token in remaining
+            if repository.search(query=token, category=category, limit=1)
+        )
+    )
+    unsupported = tuple(sorted(remaining - set(supported)))
+    return supported, unsupported
 
 
 def _query_names_a_specific_category(
@@ -987,7 +1773,41 @@ def _query_names_a_specific_category(
         return False
     try:
         hierarchies = list_hierarchies()
-        match = resolve_catalog_category(_normalize_catalog_query(query), hierarchies)
+        normalized_query = _normalize_catalog_query(query)
+        match = resolve_catalog_category(normalized_query, hierarchies)
+        if match is None:
+            exact_leaf = catalog_leaf_query_phrase(query, hierarchies)
+            if exact_leaf:
+                match = resolve_catalog_category(exact_leaf, hierarchies)
+        alias_match = resolve_catalog_category_alias(normalized_query, hierarchies)
+        exact_leaf = catalog_leaf_query_phrase(query, hierarchies)
+        exact_leaf_is_named = bool(
+            match is not None
+            and exact_leaf
+            and normalize_category_text(exact_leaf) == normalize_category_text(match.category)
+            and not category_is_parent(match.category, hierarchies)
+        )
+        alias_refines_audience = bool(
+            match is not None
+            and alias_match is not None
+            and category_alias_refines_explicit_audience(
+                query,
+                match.category,
+                alias_match.category,
+            )
+        )
+        if (
+            match is not None
+            and alias_match
+            and (not exact_leaf_is_named or alias_refines_audience)
+        ):
+            match = alias_match
+        elif match is None:
+            match = alias_match
+        if match is not None:
+            content_tokens = set(normalize_category_text(_normalize_catalog_query(query)).split())
+            content_tokens.difference_update(_CATEGORY_QUERY_FILLER | _CATEGORY_NEED_CONTEXT)
+            return bool(content_tokens) and content_tokens <= match.matched_tokens
     except (OSError, RuntimeError, TimeoutError, ValueError):
         return False
     if match is None:
@@ -1005,6 +1825,20 @@ def _effective_catalog_search_query(
     if category_only:
         return ""
     normalized_query = _normalize_catalog_query(query)
+    normalized_query = re.sub(
+        r"\b(?:minh|toi|em|anh|chi|ban)?\s*co\s+(?:(?:khoang|tam)\s+)?"
+        r"\d[\d.,]*(?:\s*(?:trieu|tr|k|ngan|nghin|dong|vnd|d))?\b",
+        " ",
+        normalized_query,
+    )
+    normalized_query = re.sub(
+        r"\b(?:duoi|under|less than|toi da|khong qua|dung qua|khoang|trong muc|"
+        r"trong tam|ngan sach(?: la| tam)?|up to|at most)\s+"
+        r"(?:\d[\d.,]*|khong|mot|hai|ba|bon|tu|nam|lam|sau|bay|tam|chin|muoi)"
+        r"(?:\s*(?:trieu|tr|k|ngan|nghin|dong|vnd|d))?\b",
+        " ",
+        normalized_query,
+    )
     explicit_query = _normalize_catalog_query(_explicit_query(query) or "")
     hierarchies: tuple[tuple[str, ...], ...] = ()
     if repository is not None:
@@ -1579,6 +2413,9 @@ def execute_catalog_tool(
     *,
     repository: ProductRepository | None = None,
     previous_mission: dict[str, Any] | None = None,
+    previous_query: str | None = None,
+    previous_queries: tuple[str, ...] = (),
+    current_user_text: str | None = None,
 ) -> ToolObservation:
     if name not in {
         "search_products",
@@ -1737,42 +2574,371 @@ def execute_catalog_tool(
                     response_mode="DETERMINISTIC_ERROR",
                     terminal=True,
                 )
-            query_category, category_only_query = _query_category_hint(parsed.query, repo)
+            list_hierarchies = getattr(repo, "list_category_hierarchies", None)
+            hierarchies = list_hierarchies() if callable(list_hierarchies) else ()
+            understanding = understand_catalog_query(
+                parsed.query,
+                hierarchies,
+                previous_query=previous_query,
+                previous_queries=previous_queries,
+            )
+            budget_understanding = understand_catalog_query(
+                current_user_text or parsed.query,
+                hierarchies,
+                previous_query=previous_query,
+                previous_queries=previous_queries,
+            )
+            if budget_understanding.budget_vnd is not None and _has_budget_scope_ambiguity(
+                budget_understanding
+            ):
+                return _budget_scope_clarification(name, repo, budget_understanding)
+            budget_cap = _budget_unit_price_cap(budget_understanding)
+            routing_query = understanding.product_reference or parsed.query
+            mentioned_brand = parsed.brand or _catalog_brand_from_query(routing_query, repo)
+            brand_only_query = bool(
+                mentioned_brand and _query_is_only_catalog_brand(routing_query, mentioned_brand)
+            )
+            matched_product_title = (
+                None if brand_only_query else _catalog_product_title_match(routing_query, repo)
+            )
+            product_identity = matched_product_title is not None
+            identity_query = matched_product_title or routing_query
+            category_context = parsed.query or routing_query
+            query_category, category_only_query = _query_category_hint(category_context, repo)
+            parsed_type_category = _category_from_product_type(understanding.product_type, repo)
+            explicit_leaf_category = _explicit_query_leaf_category(category_context, repo)
+            explicit_leaf_override = bool(
+                explicit_leaf_category
+                and understanding.product_type
+                and normalize_category_text(explicit_leaf_category)
+                != normalize_category_text(understanding.product_type)
+                and (
+                    not parsed_type_category
+                    or normalize_category_text(explicit_leaf_category)
+                    != normalize_category_text(parsed_type_category)
+                )
+                and not (
+                    explicit_product_audience(category_context) == "child"
+                    and parsed_type_category
+                    and explicit_product_audience(understanding.product_type) == "child"
+                )
+            )
+            if product_identity:
+                query_category = None
+                category_only_query = False
+            elif explicit_leaf_override:
+                query_category = explicit_leaf_category
+                category_only_query = True
+            elif parsed_type_category:
+                query_category = parsed_type_category
+                category_only_query = True
+            elif understanding.product_type:
+                # An unresolved family must not inherit a broad parser cue
+                # such as the whole personal-care department.
+                query_category = None
+                category_only_query = False
+            ambiguous_family = bool(
+                understanding.product_type
+                and not parsed_type_category
+                and not product_identity
+                and not explicit_leaf_override
+            )
             category_source = (
                 query_category
-                if _query_names_a_specific_category(parsed.query, query_category, repo)
+                if parsed_type_category or ambiguous_family or explicit_leaf_override
+                else query_category
+                if _query_names_a_specific_category(category_context, query_category, repo)
                 else parsed.category or query_category
             )
+            if product_identity:
+                category_source = None
             category = _category_for_repository(category_source, repo)
-            effective_query = _effective_catalog_search_query(
-                parsed.query,
-                category_only_query,
-                repo,
+            category_only_query = category_only_query or bool(category and not routing_query)
+            category_only_query = category_only_query or _is_category_only_request(
+                routing_query, category, repo
             )
+            title_safe_constraints = _constraints_outside_catalog_title(
+                understanding.negative_constraints,
+                matched_product_title if product_identity else None,
+            )
+            (
+                unsupported_constraints,
+                excluded_brands,
+                inferred_spicy,
+                excluded_categories,
+            ) = _negative_constraint_status(
+                parsed.query,
+                title_safe_constraints,
+                repo,
+                selected_category=category,
+            )
+            if unsupported_constraints:
+                return _unsupported_constraint_error(name, repo, unsupported_constraints, category)
+            requested_spicy = False if inferred_spicy is False else parsed.spicy
+            if requested_spicy is not None and not getattr(repo, "supports_spicy_filter", True):
+                return _tool_error(
+                    name,
+                    "DATA_UNAVAILABLE",
+                    "The active catalog does not contain verified spice data.",
+                    source=repo.source_name,
+                    extra={"unavailable_fields": ["spicy"]},
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
+            if understanding.ranking_criterion in {"sales_popularity", "customer_rating"}:
+                field = (
+                    "sales_count"
+                    if understanding.ranking_criterion == "sales_popularity"
+                    else "customer_rating"
+                )
+                return _tool_error(
+                    name,
+                    "DATA_UNAVAILABLE",
+                    "The catalog does not contain verified sales or customer-rating data.",
+                    source=repo.source_name,
+                    extra={
+                        "requested_ranking": understanding.ranking_criterion,
+                        "unavailable_fields": [field],
+                        "product_type": category,
+                        "alternative_sort": "price_ascending",
+                    },
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
+            family_details_unverified = False
+            effective_query = (
+                identity_query
+                if product_identity
+                else _effective_catalog_search_query(
+                    routing_query,
+                    category_only_query,
+                    repo,
+                )
+            )
+            if brand_only_query and mentioned_brand:
+                effective_query = mentioned_brand
+            elif mentioned_brand and not product_identity:
+                effective_query = "" if parsed_type_category else routing_query
+            if parsed_type_category and not product_identity and not explicit_leaf_override:
+                # The catalog segment is the hard product-type constraint.
+                # Do not feed negated phrases, question filler, or another
+                # mentioned category back as positive title-search tokens.
+                effective_query = _supported_query_details_for_category(
+                    routing_query,
+                    understanding.product_type,
+                    understanding.use_case,
+                    title_safe_constraints,
+                    mentioned_brand,
+                    category,
+                    repo,
+                )
+            elif ambiguous_family:
+                effective_query, family_details_unverified = _supported_family_query(
+                    routing_query,
+                    understanding.product_type,
+                    understanding.use_case,
+                    title_safe_constraints,
+                    mentioned_brand,
+                    repo,
+                )
+            elif explicit_leaf_override:
+                effective_query = _supported_query_details_for_category(
+                    routing_query,
+                    explicit_leaf_category,
+                    understanding.use_case,
+                    title_safe_constraints,
+                    mentioned_brand,
+                    category,
+                    repo,
+                )
+            if (
+                category
+                and not product_identity
+                and normalize_category_text(effective_query)
+                == normalize_category_text(category)
+            ):
+                # Once a recognized category is the only retrieval phrase,
+                # browse that category and apply budget/quantity constraints
+                # as structured filters instead of requiring those numbers in
+                # product titles.
+                effective_query = ""
+                category_only_query = True
+            if (
+                understanding.ranking_criterion in {"price_ascending", "price_descending"}
+                and category
+                and not _exact_product_title(identity_query, repo)
+            ):
+                effective_query = ""
             category_browse = bool(category and not effective_query)
-            diversify = category_browse and _category_has_children(category, repo)
+            diversify = (
+                category_browse
+                and _category_has_children(category, repo)
+                and understanding.ranking_criterion == "relevance"
+            )
+            effective_max_price = parsed.max_price_vnd
+            if budget_cap is not None:
+                effective_max_price = (
+                    budget_cap
+                    if effective_max_price is None
+                    else min(effective_max_price, budget_cap)
+                )
             search_criteria = {
                 "query": effective_query,
                 "category": category,
                 "brand": parsed.brand,
-                "max_price_vnd": parsed.max_price_vnd,
-                "spicy": parsed.spicy,
+                "max_price_vnd": effective_max_price,
+                "spicy": requested_spicy,
                 "in_stock": parsed.in_stock,
-                "limit": parsed.limit,
+                "limit": 20
+                if understanding.ranking_criterion in {"price_ascending", "price_descending"}
+                else parsed.limit,
                 "diversify_by_subcategory": diversify,
             }
+            category_fallback_used = False
             products = tuple(repo.search(**search_criteria))
-            if not products and category_only_query:
+            brand_filter = parsed.brand or _mentioned_candidate_brand(
+                parsed.query,
+                products,
+                excluded_brands,
+            )
+            if brand_filter:
+                search_criteria["brand"] = brand_filter
+                if not parsed.brand:
+                    products = tuple(repo.search(**search_criteria))
+            supported_details, unmatched_details = (
+                _category_query_unmatched_details(routing_query, category, repo)
+                if not products
+                else ((), ())
+            )
+            if not products and (
+                category_only_query
+                or (not product_identity and not brand_filter and unmatched_details)
+            ):
                 # Keep the product-name match when present (e.g. "Bim bim Poppedcorn");
-                # only broaden within the already-constrained snack category if absent.
-                search_criteria["query"] = ""
+                # keep details the snapshot can support, and broaden only within
+                # an explicit category when some remaining details are unverified.
+                search_criteria["query"] = " ".join(supported_details)
                 products = tuple(repo.search(**search_criteria))
+                category_fallback_used = bool(products and not category_only_query)
+            if ambiguous_family:
+                products = tuple(
+                    product
+                    for product in products
+                    if _product_matches_unresolved_family(
+                        product,
+                        understanding.product_type,
+                    )
+                )
+            audience_unverified = False
+            requested_audience = explicit_product_audience(parsed.query)
+            products = tuple(
+                product
+                for product in products
+                if matches_explicit_product_audience(parsed.query, product)
+                and not _product_is_in_excluded_category(product, excluded_categories)
+            )
+            if excluded_brands:
+                products = tuple(
+                    product
+                    for product in products
+                    if normalize_category_text(product.brand) not in excluded_brands
+                )
+            if not products and requested_audience == "child" and category and not product_identity:
+                fallback_criteria = {
+                    **search_criteria,
+                    "query": "",
+                    "category": category,
+                    "limit": max(parsed.limit, 20),
+                }
+                fallback_candidates = tuple(repo.search(**fallback_criteria))
+                fallback_candidates = tuple(
+                    product
+                    for product in fallback_candidates
+                    if normalize_category_text(product.brand) not in excluded_brands
+                    and not _product_is_in_excluded_category(product, excluded_categories)
+                )
+                labelled = tuple(
+                    product
+                    for product in fallback_candidates
+                    if matches_explicit_product_audience(parsed.query, product)
+                )
+                if labelled:
+                    products = labelled[: parsed.limit]
+                else:
+                    # When the catalog has no child-specific evidence, offer
+                    # only generic candidates with an explicit label-check
+                    # caveat; never imply they are child-safe or child-specific.
+                    unverified = tuple(
+                        product
+                        for product in fallback_candidates
+                        if product_audience_evidence(product) is None
+                    )
+                    products = unverified[: parsed.limit]
+                    audience_unverified = bool(products)
+            if understanding.ranking_criterion == "price_ascending":
+                products = tuple(
+                    sorted(products, key=lambda item: (item.price_vnd, item.name.casefold()))
+                )[: parsed.limit]
+            elif understanding.ranking_criterion == "price_descending":
+                products = tuple(
+                    sorted(products, key=lambda item: (-item.price_vnd, item.name.casefold()))
+                )[: parsed.limit]
+            if requested_audience == "adult" and any(
+                product_audience_evidence(product) is None for product in products
+            ):
+                audience_unverified = True
             matched = [
                 key
-                for key in ("category", "brand", "max_price_vnd", "spicy", "in_stock")
-                if key in parsed.model_fields_set
+                for key, requested in (
+                    ("category", "category" in parsed.model_fields_set),
+                    ("brand", "brand" in parsed.model_fields_set or bool(brand_filter)),
+                    (
+                        "max_price_vnd",
+                        "max_price_vnd" in parsed.model_fields_set or budget_cap is not None,
+                    ),
+                    ("spicy", "spicy" in parsed.model_fields_set),
+                    ("in_stock", "in_stock" in parsed.model_fields_set),
+                )
+                if requested
             ]
             content = _candidate_content(products, matched)
+            if family_details_unverified:
+                content["family_details_unverified"] = True
+            if budget_cap is not None:
+                content["budget_constraint"] = {
+                    "budget_vnd": budget_understanding.budget_vnd,
+                    "budget_scope": budget_understanding.budget_scope,
+                    "budget_operator": budget_understanding.budget_operator,
+                    "quantity": budget_understanding.quantity,
+                    "max_unit_price_vnd": budget_cap,
+                }
+            content["query_understanding"] = {
+                "intent": understanding.intent,
+                "product_type": None
+                if product_identity
+                else understanding.product_type or category,
+                "product_reference": understanding.product_reference,
+                "brand_preference": brand_filter,
+                "use_case": understanding.use_case,
+                "ranking_criterion": understanding.ranking_criterion,
+                "ranking_supported": understanding.ranking_criterion
+                not in {"sales_popularity", "customer_rating"},
+                "unverified_constraints": [
+                    *([understanding.use_case] if understanding.use_case else []),
+                    *(
+                        ["Remaining product details could not be matched to catalog evidence"]
+                        if category_fallback_used
+                        else []
+                    ),
+                    *(
+                        [
+                            "Catalog does not verify child suitability; check the product label"
+                        ]
+                        if audience_unverified or has_household_child_context(parsed.query)
+                        else []
+                    ),
+                ],
+            }
             return ToolObservation(
                 content=content,
                 products=products,
@@ -1798,177 +2964,555 @@ def execute_catalog_tool(
                 return _whole_cart_recommendation(repo, parsed)
             price = parsed.price_constraint
             modifier = _product_type_attribute_modifier(parsed.preference_text)
+            list_hierarchies = getattr(repo, "list_category_hierarchies", None)
+            hierarchies = list_hierarchies() if callable(list_hierarchies) else ()
+            understanding = understand_catalog_query(
+                parsed.preference_text or parsed.query,
+                hierarchies,
+                previous_query=previous_query,
+                previous_queries=previous_queries,
+            )
+            budget_understanding = understand_catalog_query(
+                current_user_text or parsed.preference_text or parsed.query,
+                hierarchies,
+                previous_query=previous_query,
+                previous_queries=previous_queries,
+            )
+            if budget_understanding.budget_vnd is not None and _has_budget_scope_ambiguity(
+                budget_understanding
+            ):
+                return _budget_scope_clarification(name, repo, budget_understanding)
+            budget_cap = _budget_unit_price_cap(budget_understanding)
+            query_understanding = understand_catalog_query(
+                parsed.query,
+                hierarchies,
+                previous_query=previous_query,
+                previous_queries=previous_queries,
+            )
+            routing_query = (
+                query_understanding.product_reference
+                if parsed.query
+                else ""
+                if parsed.category
+                else understanding.product_reference
+            )
+            mentioned_brand = parsed.brand or _catalog_brand_from_query(routing_query, repo)
+            brand_only_query = bool(
+                mentioned_brand and _query_is_only_catalog_brand(routing_query, mentioned_brand)
+            )
+            matched_product_title = (
+                None if brand_only_query else _catalog_product_title_match(routing_query, repo)
+            )
+            product_identity = matched_product_title is not None
+            identity_query = matched_product_title or routing_query
             category_context = (
-                parsed.preference_text if modifier else parsed.query or parsed.preference_text
+                parsed.preference_text if modifier else routing_query or parsed.preference_text
             )
             query_category, category_only_query = _query_category_hint(category_context, repo)
+            parsed_type_category = _category_from_product_type(understanding.product_type, repo)
+            explicit_leaf_category = _explicit_query_leaf_category(category_context, repo)
+            explicit_leaf_override = bool(
+                explicit_leaf_category
+                and understanding.product_type
+                and normalize_category_text(explicit_leaf_category)
+                != normalize_category_text(understanding.product_type)
+                and (
+                    not parsed_type_category
+                    or normalize_category_text(explicit_leaf_category)
+                    != normalize_category_text(parsed_type_category)
+                )
+                and not (
+                    explicit_product_audience(category_context) == "child"
+                    and parsed_type_category
+                    and explicit_product_audience(understanding.product_type) == "child"
+                )
+            )
+            if product_identity:
+                query_category = None
+                category_only_query = False
+            elif explicit_leaf_override:
+                query_category = explicit_leaf_category
+                category_only_query = True
+            elif parsed_type_category:
+                query_category = parsed_type_category
+                category_only_query = True
+            elif understanding.product_type:
+                query_category = None
+                category_only_query = False
+            ambiguous_family = bool(
+                understanding.product_type
+                and not parsed_type_category
+                and not product_identity
+                and not explicit_leaf_override
+            )
             category_source = (
                 query_category
+                if parsed_type_category or ambiguous_family or explicit_leaf_override
+                else query_category
                 if _query_names_a_specific_category(category_context, query_category, repo)
                 else parsed.category or query_category
             )
+            if product_identity:
+                category_source = None
             category = _category_for_repository(category_source, repo)
-            list_hierarchies = getattr(repo, "list_category_hierarchies", None)
-            named_type = bool(
-                callable(list_hierarchies)
-                and query_names_catalog_leaf(parsed.query, list_hierarchies())
+            category_only_query = category_only_query or _is_category_only_request(
+                routing_query, category, repo
             )
-            effective_query = _effective_catalog_search_query(
-                parsed.query,
-                category_only_query and not named_type,
+            title_safe_constraints = _constraints_outside_catalog_title(
+                understanding.negative_constraints,
+                matched_product_title if product_identity else None,
+            )
+            (
+                unsupported_constraints,
+                excluded_brands,
+                inferred_spicy,
+                excluded_categories,
+            ) = _negative_constraint_status(
+                parsed.preference_text or parsed.query,
+                title_safe_constraints,
                 repo,
+                selected_category=category,
             )
+            if unsupported_constraints:
+                return _unsupported_constraint_error(name, repo, unsupported_constraints, category)
+            requested_spicy = False if inferred_spicy is False else parsed.spicy
+            if requested_spicy is not None and not getattr(repo, "supports_spicy_filter", True):
+                return _tool_error(
+                    name,
+                    "DATA_UNAVAILABLE",
+                    "The active catalog does not contain verified spice data.",
+                    source=repo.source_name,
+                    extra={"unavailable_fields": ["spicy"]},
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
+            family_details_unverified = False
+            effective_query = (
+                identity_query
+                if product_identity
+                else _effective_catalog_search_query(
+                    routing_query,
+                    category_only_query,
+                    repo,
+                )
+            )
+            if brand_only_query and mentioned_brand:
+                effective_query = mentioned_brand
+            elif mentioned_brand and not product_identity:
+                effective_query = "" if parsed_type_category else routing_query
+            if parsed_type_category and not product_identity and not explicit_leaf_override:
+                effective_query = _supported_query_details_for_category(
+                    routing_query,
+                    understanding.product_type,
+                    understanding.use_case,
+                    title_safe_constraints,
+                    mentioned_brand,
+                    category,
+                    repo,
+                )
+            elif ambiguous_family:
+                effective_query, family_details_unverified = _supported_family_query(
+                    routing_query,
+                    understanding.product_type,
+                    understanding.use_case,
+                    title_safe_constraints,
+                    mentioned_brand,
+                    repo,
+                )
+            elif explicit_leaf_override:
+                effective_query = _supported_query_details_for_category(
+                    routing_query,
+                    explicit_leaf_category,
+                    understanding.use_case,
+                    title_safe_constraints,
+                    mentioned_brand,
+                    category,
+                    repo,
+                )
+            if (
+                understanding.ranking_criterion in {"price_ascending", "price_descending"}
+                and category
+                and not _exact_product_title(identity_query, repo)
+            ):
+                effective_query = ""
+            named_type = bool(
+                callable(list_hierarchies) and query_names_catalog_leaf(routing_query, hierarchies)
+            )
+            if (
+                category_only_query
+                and named_type
+                and not parsed_type_category
+                and not _is_category_only_request(routing_query, category, repo)
+            ):
+                effective_query = _effective_catalog_search_query(routing_query, False, repo)
             category_browse = bool(category and not effective_query)
-            diversify = category_browse and _category_has_children(category, repo)
+            diversify = (
+                category_browse
+                and _category_has_children(category, repo)
+                and understanding.ranking_criterion == "relevance"
+            )
             search_criteria = {
                 "query": effective_query,
                 "category": category,
                 "brand": parsed.brand,
-                "spicy": parsed.spicy,
+                "max_price_vnd": budget_cap,
+                "spicy": requested_spicy,
                 "in_stock": bool(getattr(repo, "supports_current_stock", False)),
-                "limit": parsed.limit,
+                "limit": 20
+                if understanding.ranking_criterion in {"price_ascending", "price_descending"}
+                else parsed.limit,
                 "price_operator": price.operator if price else None,
                 "price_value_vnd": price.value_vnd if price else None,
                 "diversify_by_subcategory": diversify,
             }
+            preference_text_for_ranking = (
+                understanding.product_reference
+                if understanding.use_case or understanding.ranking_criterion != "relevance"
+                else parsed.preference_text
+            )
+            category_fallback_used = False
             products, preference_matches = search_with_preferences(
                 repo,
                 search_criteria,
-                parsed.preference_text,
+                preference_text_for_ranking,
+            )
+            supported_details, unmatched_details = (
+                _category_query_unmatched_details(routing_query, category, repo)
+                if not products
+                else ((), ())
             )
             if not products and category_only_query and not parsed.query:
                 search_criteria["query"] = ""
                 products, preference_matches = search_with_preferences(
                     repo,
                     search_criteria,
-                    parsed.preference_text,
+                    preference_text_for_ranking,
                 )
-            # A category label can itself contain cooking words (e.g. cookware).
-            # Interpret only the remaining request as a preparation constraint.
-            preference_without_category = parsed.preference_text
-            if category:
-                preference_without_category = re.sub(
-                    re.escape(category), " ", preference_without_category, flags=re.IGNORECASE
+            elif (
+                not products and not product_identity and not mentioned_brand and unmatched_details
+            ):
+                search_criteria["query"] = " ".join(supported_details)
+                products, preference_matches = search_with_preferences(
+                    repo,
+                    search_criteria,
+                    preference_text_for_ranking,
                 )
-            preparation = preparation_terms(preference_without_category)
-            if parsed.alternative_requested and not preparation and parsed.exclude_product_ids:
-                candidates = list(products) + list(repo.search(**{**search_criteria, "limit": 20}))
-                excluded_brands = excluded_catalog_brands(
-                    parsed.preference_text, [p.brand for p in candidates if p.brand]
-                )
-                products = tuple({
-                    p.product_id: p for p in candidates
-                    if p.product_id not in parsed.exclude_product_ids
-                    and normalize_category_text(p.brand) not in excluded_brands
-                }.values())[:parsed.limit]
-            alternatives_unverified = False
+                category_fallback_used = bool(products)
+            brand_query = " ".join((parsed.query, parsed.preference_text)).strip()
+            brand_filter = parsed.brand or _mentioned_candidate_brand(
+                brand_query,
+                products,
+                excluded_brands,
+            )
+            if brand_filter:
+                search_criteria["brand"] = brand_filter
+                if not parsed.brand:
+                    products, preference_matches = search_with_preferences(
+                        repo,
+                        search_criteria,
+                        preference_text_for_ranking,
+                    )
+            preparation = frozenset().union(
+                preparation_terms(understanding.use_case or ""),
+                preparation_terms(parsed.preference_text),
+            )
+            if category and title_mentions_preparation(category, preparation):
+                preparation = frozenset()
+            preparation_alternatives_unverified = False
             if preparation:
-                # A broad category match alone does not establish that an item
-                # is suitable for the customer's stated preparation method.
                 products = tuple(
                     product
                     for product in products
                     if title_mentions_preparation(product.name, preparation)
-                    and product.product_id not in parsed.exclude_product_ids
                 )
-                if not products and category and not effective_query:
-                    # The same kind of product can occur under different catalog
-                    # branches (for example, fresh and frozen goods). Search the
-                    # method across branches, then require the requested category
-                    # words in the actual hierarchy and the method in the title.
+                preparation_title_match = bool(products)
+                if not products and category and not product_identity:
                     category_words = normalize_category_text(category).split()
-                    candidate_pool = []
-                    for method in sorted(preparation):
+                    candidates: dict[str, ProductSnapshot] = {}
+                    for method in preparation:
                         probe = {
                             **search_criteria,
                             "query": method,
                             "category": None,
-                            "limit": 20,
+                            "limit": 100,
                             "diversify_by_subcategory": False,
                         }
-                        candidate_pool.extend(repo.search(**probe))
+                        candidates.update(
+                            (product.product_id, product) for product in repo.search(**probe)
+                        )
                     excluded = excluded_catalog_brands(
                         parsed.preference_text,
-                        [p.brand for p in candidate_pool if p.brand],
+                        [product.brand for product in candidates.values() if product.brand],
                     )
                     products = tuple(
-                        {
-                            p.product_id: p
-                            for p in candidate_pool
-                            if all(
-                                word
-                                in normalize_category_text(
-                                    p.category_hierarchy or p.category
-                                ).split()
-                                for word in category_words
-                            )
-                            and title_mentions_preparation(p.name, preparation)
-                            and p.product_id not in parsed.exclude_product_ids
-                            and normalize_category_text(p.brand) not in excluded
-                        }.values()
-                    )[: parsed.limit]
-                if (
-                    not products and parsed.alternative_requested
-                    and "lau" in preparation and category
-                ):
-                    # Offer sliced products as possible options, with suitability unverified.
-                    probe = {**search_criteria, "query": "cat lat", "category": None,
-                             "limit": 20, "diversify_by_subcategory": False}
-                    category_words = normalize_category_text(category).split()
-                    pool = repo.search(**probe)
-                    excluded = excluded_catalog_brands(
-                        parsed.preference_text, [p.brand for p in pool if p.brand]
-                    )
-                    products = tuple(
-                        p for p in pool
+                        product
+                        for product in candidates.values()
                         if all(
-                            word in normalize_category_text(
-                                p.category_hierarchy or p.category
+                            word
+                            in normalize_category_text(
+                                product.category_hierarchy or product.category
                             ).split()
                             for word in category_words
                         )
-                        and {"cat", "lat"}.issubset(set(normalize_category_text(p.name).split()))
-                        and p.product_id not in parsed.exclude_product_ids
-                        and normalize_category_text(p.brand) not in excluded
-                    )[:parsed.limit]
-                    alternatives_unverified = bool(products)
-                preference_matches = {
-                    product.product_id: preference_matches[product.product_id]
-                    for product in products
-                    if product.product_id in preference_matches
+                        and title_mentions_preparation(product.name, preparation)
+                        and product.product_id not in parsed.exclude_product_ids
+                        and normalize_category_text(product.brand) not in excluded
+                    )[: parsed.limit]
+                    preparation_title_match = bool(products)
+                    preference_matches = {}
+                if not products and parsed.alternative_requested and category:
+                    candidates = tuple(
+                        repo.search(
+                            **{
+                                **search_criteria,
+                                "query": "",
+                                "category": category,
+                                "limit": 100,
+                                "diversify_by_subcategory": False,
+                            }
+                        )
+                    )
+                    previous_items = tuple(
+                        item
+                        for product_id in parsed.exclude_product_ids
+                        if (item := repo.get_product_snapshot(product_id)) is not None
+                    )
+                    previous_terms = set().union(
+                        *(
+                            set(normalize_category_text(item.name).split())
+                            for item in previous_items
+                        )
+                    )
+                    candidates = tuple(
+                        product
+                        for product in candidates
+                        if product.product_id not in parsed.exclude_product_ids
+                    )
+                    if previous_terms:
+                        candidates = tuple(
+                            sorted(
+                                candidates,
+                                key=lambda product: (
+                                    -len(
+                                        previous_terms
+                                        & set(normalize_category_text(product.name).split())
+                                    ),
+                                    product.price_vnd,
+                                    product.name.casefold(),
+                                ),
+                            )
+                        )
+                    products = candidates[: parsed.limit]
+                    preparation_alternatives_unverified = bool(products)
+                    preference_matches = {}
+            else:
+                preparation_title_match = False
+            audience_unverified = False
+            if not products and parsed_type_category and category and not product_identity:
+                fallback_criteria = {
+                    **search_criteria,
+                    "query": "",
+                    "category": category,
+                    "limit": max(parsed.limit, 20),
                 }
+                fallback_products = repo.search(**fallback_criteria)
+                audience_query = " ".join(
+                    part for part in (parsed.query, parsed.preference_text) if part
+                )
+                products = tuple(
+                    product
+                    for product in fallback_products
+                    if product.product_id not in parsed.exclude_product_ids
+                    and normalize_category_text(product.brand) not in excluded_brands
+                    and matches_explicit_product_audience(audience_query, product)
+                    and not _product_is_in_excluded_category(product, excluded_categories)
+                )[: parsed.limit]
+                preference_matches = {}
+                category_fallback_used = bool(products)
+                if preparation and products:
+                    preparation_alternatives_unverified = True
+            if excluded_brands:
+                products = tuple(
+                    product
+                    for product in products
+                    if normalize_category_text(product.brand) not in excluded_brands
+                )
+            if understanding.ranking_criterion in {"sales_popularity", "customer_rating"}:
+                field = (
+                    "sales_count"
+                    if understanding.ranking_criterion == "sales_popularity"
+                    else "customer_rating"
+                )
+                return _tool_error(
+                    name,
+                    "DATA_UNAVAILABLE",
+                    "The catalog does not contain verified sales or customer-rating data.",
+                    source=repo.source_name,
+                    extra={
+                        "requested_ranking": understanding.ranking_criterion,
+                        "unavailable_fields": [field],
+                        "product_type": category,
+                        "alternative_sort": "price_ascending",
+                    },
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
+            if understanding.ranking_criterion == "price_ascending":
+                products = tuple(
+                    sorted(products, key=lambda item: (item.price_vnd, item.name.casefold()))
+                )[: parsed.limit]
+            elif understanding.ranking_criterion == "price_descending":
+                products = tuple(
+                    sorted(products, key=lambda item: (-item.price_vnd, item.name.casefold()))
+                )[: parsed.limit]
+            if parsed.alternative_requested and parsed.exclude_product_ids:
+                candidates = list(products) + list(repo.search(**{**search_criteria, "limit": 20}))
+                excluded_brands = excluded_catalog_brands(
+                    parsed.preference_text, [p.brand for p in candidates if p.brand]
+                )
+                products = tuple(
+                    {
+                        p.product_id: p
+                        for p in candidates
+                        if p.product_id not in parsed.exclude_product_ids
+                        and normalize_category_text(p.brand) not in excluded_brands
+                    }.values()
+                )[: parsed.limit]
+            if ambiguous_family:
+                products = tuple(
+                    product
+                    for product in products
+                    if _product_matches_unresolved_family(
+                        product,
+                        understanding.product_type,
+                    )
+                )
+            audience_query = " ".join(
+                part for part in (parsed.query, parsed.preference_text) if part
+            )
+            products = tuple(
+                product
+                for product in products
+                if matches_explicit_product_audience(audience_query, product)
+                and not _product_is_in_excluded_category(product, excluded_categories)
+            )
+            requested_audience = explicit_product_audience(audience_query)
+            if (
+                not products
+                and explicit_product_audience(audience_query) == "child"
+                and category
+                and not product_identity
+            ):
+                fallback_candidates = tuple(
+                    repo.search(
+                        **{
+                            **search_criteria,
+                            "query": "",
+                            "category": category,
+                            "limit": max(parsed.limit, 20),
+                        }
+                    )
+                )
+                fallback_candidates = tuple(
+                    product
+                    for product in fallback_candidates
+                    if product.product_id not in parsed.exclude_product_ids
+                    and normalize_category_text(product.brand) not in excluded_brands
+                    and not _product_is_in_excluded_category(product, excluded_categories)
+                )
+                labelled = tuple(
+                    product
+                    for product in fallback_candidates
+                    if matches_explicit_product_audience(audience_query, product)
+                )
+                if labelled:
+                    products = labelled[: parsed.limit]
+                else:
+                    products = tuple(
+                        product
+                        for product in fallback_candidates
+                        if product_audience_evidence(product) is None
+                    )[: parsed.limit]
+                    audience_unverified = bool(products)
+            if requested_audience == "adult" and any(
+                product_audience_evidence(product) is None for product in products
+            ):
+                audience_unverified = True
+            preference_matches = {
+                product.product_id: preference_matches[product.product_id]
+                for product in products
+                if product.product_id in preference_matches
+            }
             matched = [
                 "sellable_only"
                 if getattr(repo, "supports_current_stock", False)
                 else "current_availability_unverified"
             ]
             matched.extend(
-                key for key in ("category", "brand", "spicy") if key in parsed.model_fields_set
+                key
+                for key in ("category", "brand", "spicy")
+                if key in parsed.model_fields_set
+                or (key == "brand" and brand_filter)
+                or (key == "spicy" and requested_spicy is not None)
             )
             if price:
                 matched.append(f"price_{price.operator.lower()}_{price.value_vnd}")
+            if budget_cap is not None:
+                matched.append("budget_vnd")
             content = _candidate_content(products, matched)
             content["alternative_requested"] = parsed.alternative_requested
-            if alternatives_unverified:
+            if family_details_unverified:
+                content["family_details_unverified"] = True
+            if category_fallback_used:
+                content["unverified_constraints"] = [
+                    "Remaining product details could not be matched to catalog evidence"
+                ]
+            if audience_unverified or has_household_child_context(audience_query):
+                content["unverified_constraints"] = list(
+                    dict.fromkeys(
+                        [
+                            *content.get("unverified_constraints", []),
+                            "Catalog does not verify child suitability; check the product label",
+                        ]
+                    )
+                )
+            if understanding.use_case:
+                content["use_case"] = understanding.use_case
+                content["use_case_verified"] = False
+                content["unverified_constraints"] = list(
+                    dict.fromkeys(
+                        [*content.get("unverified_constraints", []), understanding.use_case]
+                    )
+                )
+                content["recommendation_evidence"] = "CATALOG_CATEGORY_ONLY"
+                if preparation and not preparation_title_match:
+                    content["preparation_unverified"] = True
+                    current_turn = understand_catalog_query(parsed.query, hierarchies)
+                    content["preparation_followup"] = bool(
+                        previous_queries and current_turn.use_case is None
+                    )
+            if preparation_alternatives_unverified:
                 content["preparation_alternatives_unverified"] = True
+            if preparation_title_match:
+                content["use_case_title_match"] = True
             content["constraints"] = {
                 "category": category,
                 "brand": parsed.brand,
                 "spicy": parsed.spicy,
                 "price_operator": price.operator if price else None,
                 "price_value_vnd": price.value_vnd if price else None,
+                "budget_vnd": budget_understanding.budget_vnd,
+                "budget_scope": budget_understanding.budget_scope,
+                "budget_operator": budget_understanding.budget_operator,
+                "quantity": budget_understanding.quantity,
+                "max_unit_price_vnd": budget_cap,
             }
             content["current_stock_verified"] = bool(getattr(repo, "supports_current_stock", False))
-            if preparation and not products:
-                content["preparation_unverified"] = True
-                content["preparation_followup"] = "\n" in parsed.preference_text
             if preference_matches:
                 content["preference_matches"] = preference_matches
                 content["preference_evidence"] = "PRODUCT_TITLE_ONLY"
-            if preparation and products:
-                content["preference_evidence"] = "PRODUCT_TITLE_ONLY"
             subcategories = list(dict.fromkeys(category_leaf(product) for product in products))
-            if category_browse and len(subcategories) > 1 and not preparation:
+            if category_browse and len(subcategories) > 1:
                 content["browse_mode"] = "CATEGORY_OVERVIEW"
                 content["category_label"] = category
                 content["subcategories"] = subcategories

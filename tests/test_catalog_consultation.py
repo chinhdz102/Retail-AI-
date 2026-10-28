@@ -213,7 +213,11 @@ async def test_actual_customer_request_returns_grounded_titles_and_prices(snapsh
                 assert card["name"] == original.name
                 assert card["price_vnd"] == original.price_vnd
                 assert original.name in payload["text"]
-            assert "trong tên hàng" in payload["text"]
+            assert "tên hàng" in payload["text"]
+            assert any(
+                phrase in payload["text"]
+                for phrase in ("chưa xác nhận", "cần kiểm tra thêm trên nhãn")
+            )
             assert "chắc chắn hết" not in payload["text"]
     finally:
         api.app.dependency_overrides.pop(api.get_groq_service, None)

@@ -108,6 +108,80 @@ _SINGLE_WORD_CATEGORY_CONTEXT_WORDS = frozenset(
     }
 )
 _CATEGORY_QUERY_SYNONYMS: dict[str, tuple[str, ...]] = {
+    # Common shopper wording that differs lexically from this catalog's labels.
+    # Each target is resolved against the active taxonomy at runtime.
+    "mi goi": ("mi an lien",),
+    "mi tom": ("mi an lien",),
+    "dau goi": ("dau goi",),
+    "do an": ("thuc pham",),
+    "do uong": ("do uong thuoc la",),
+    "xa phong tam": ("xa bong tam",),
+    "sua hop": ("sua tuoi tiet trung",),
+    "gao thuong": ("gao te",),
+    "gao nau com thuong": ("gao te",),
+    "lau nha": ("nuoc lau san nha",),
+    "lau san": ("nuoc lau san nha",),
+    "rua bat": ("nuoc rua chen bat",),
+    "rua chen": ("nuoc rua chen bat",),
+    "nuoc rua bat": ("nuoc rua chen bat",),
+    "nuoc rua chen": ("nuoc rua chen bat",),
+    "nuoc rua chen dia": ("nuoc rua chen bat",),
+    "khan giay bo tui": ("khan giay goi",),
+    "giay an bo tui": ("khan giay goi",),
+    "khan an bo tui": ("khan giay goi",),
+    "ta bim so sinh": ("ta dan tre em",),
+    "ta dan": ("ta dan tre em",),
+    # Keep the reduplicated snack wording separate from diapers. A bare
+    # ``bỉm`` is ambiguous without a diaper form (dán/quần) or audience cue.
+    "bim bim": ("snack",),
+    "bim bim khoai tay": ("snack kh tay chien",),
+    "bim bim lat khoai tay": ("snack kh tay chien",),
+    "bim dan": ("ta dan tre em",),
+    "bim quan nguoi lon": ("ta quan ta dan nlon",),
+    "bim nguoi lon": ("ta quan ta dan nlon",),
+    "bim quan": ("ta quan tre em",),
+    "ta cho be so sinh": ("ta dan tre em",),
+    "ta bim cho be so sinh": ("ta dan tre em",),
+    "ta cho tre so sinh": ("ta dan tre em",),
+    "bim cho tre so sinh": ("ta dan tre em",),
+    "thuoc xit muoi": ("thuoc diet con trung",),
+    "kem chong nang cho be": ("kem chong nangtre em",),
+    "kem chong nang cho tre em": ("kem chong nangtre em",),
+    "kem chong nang tre em": ("kem chong nangtre em",),
+    "giay uot em be": ("giay uot tre em",),
+    "giay uot cho be": ("giay uot tre em",),
+    "hop dung com": ("do dung thuc an",),
+    "hop com": ("do dung thuc an",),
+    "binh giu nhiet": ("ly va do dung u nuoc",),
+    "gao thom": ("gao nong san kho",),
+    "do co rua bep": ("dung cu co rua bep",),
+    "coc giay dung mot lan": ("do dung mot lan",),
+    "dung mot lan": ("do dung mot lan",),
+    "do choi be trai": ("do choi be trai",),
+    "do choi hop cho be trai": ("do choi be trai",),
+    "goi om": ("gối",),
+    "nuoc ngot": ("nuoc ngot co ga",),
+    "nuoc suoi": ("nuoc khoang",),
+    "yaourt": ("sua chua an",),
+    "cai ngot": ("rau cai",),
+    "cai thia": ("rau cai",),
+    "cai xanh": ("rau cai",),
+    "ca dong": ("ca nuoc ngot tuoi",),
+    "giay cuon": ("giay ve sinh",),
+    "giay an mini": ("khan giay goi",),
+    "chong nang": ("kem chong nang",),
+    "thuoc danh rang": ("kem danh rang",),
+    "ca do": ("ca chua",),
+    # The source snapshot abbreviates ``khoai`` as ``kh.`` in this leaf.
+    "snack khoai tay": ("snack kh tay chien",),
+    "banh quy": ("banh biscuit",),
+    "giay ve sinh": ("giay ve sinh",),
+    "giay an": ("khan giay goi",),
+    "vo hoc sinh": ("vo",),
+    "vo cho hoc sinh": ("vo",),
+    "giay nu": ("giay dep nu",),
+    "dau xa": ("dau xa duong toc",),
+    "newborn diapers": ("ta dan tre em",),
     # Resolve everyday napkin wording through the active catalog rather than
     # selecting a fabric-towel category on a literal "khăn lau" overlap.
     "khan lau mieng": ("khan giay", "giay an", "giay lua", "khan rut"),
@@ -159,6 +233,46 @@ def catalog_category_query_aliases(query: str) -> tuple[str, ...]:
     )
 
 
+def catalog_category_alias_source_phrase(query: str) -> str | None:
+    """Return the longest spoken synonym phrase present in a query."""
+    normalized_query = normalize_category_text(query)
+    if normalized_query in _CATEGORY_QUERY_SYNONYMS:
+        return normalized_query
+    embedded_phrases = [
+        phrase
+        for phrase in _CATEGORY_QUERY_SYNONYMS
+        if re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized_query)
+    ]
+    if not embedded_phrases:
+        return None
+    return max(embedded_phrases, key=lambda phrase: (len(phrase.split()), len(phrase)))
+
+
+def catalog_query_with_aliases(query: str) -> str:
+    """Rewrite the longest known shopper synonym to its taxonomy wording."""
+    normalized_query = normalize_category_text(query)
+    # Keep the reduplicated everyday word intact for lexical scoring: the
+    # catalog contains a product title with this phrase, while the parser's
+    # separate category route already understands it as a snack request.
+    if normalized_query == "bim bim":
+        return query
+    matches = [
+        (phrase, aliases)
+        for phrase, aliases in _CATEGORY_QUERY_SYNONYMS.items()
+        if re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized_query)
+    ]
+    if not matches:
+        return query
+    phrase, aliases = max(matches, key=lambda item: (len(item[0].split()), len(item[0])))
+    rewritten = re.sub(
+        rf"(?<!\w){re.escape(phrase)}(?!\w)",
+        aliases[0],
+        normalized_query,
+        count=1,
+    )
+    return " ".join(rewritten.split())
+
+
 @dataclass(frozen=True)
 class CatalogCategoryMatch:
     category: str
@@ -175,6 +289,19 @@ def resolve_catalog_category_alias(
     for alias in catalog_category_query_aliases(query):
         match = resolve_catalog_category(alias, paths)
         if match is not None:
+            direct_match = resolve_catalog_category(query, paths)
+            source_phrase = catalog_category_alias_source_phrase(query)
+            source_tokens = set(normalize_category_text(source_phrase).split())
+            if (
+                direct_match is not None
+                and direct_match.exact_phrase
+                and source_tokens
+                and source_tokens <= direct_match.matched_tokens
+            ):
+                # Prefer a longer phrase that is itself a catalog category
+                # over an alias found only inside it (e.g. ``cá nước ngọt``
+                # must not collapse to the embedded ``nước ngọt`` alias).
+                return direct_match
             return match
     return None
 
@@ -190,15 +317,156 @@ def normalize_category_text(value: str | None) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", unaccented))
 
 
+def category_alias_refines_explicit_audience(
+    query: str,
+    direct_category: str,
+    alias_category: str,
+) -> bool:
+    """Prefer a taxonomy alias when it adds an audience the shopper stated."""
+    audience_cues = (
+        "tre em",
+        "em be",
+        "so sinh",
+        "baby",
+        "child",
+        "children",
+        "kids",
+        "nam",
+        "nu",
+        "dan ong",
+        "phu nu",
+        "nguoi lon",
+        "adult",
+        "men",
+        "women",
+    )
+    normalized_query = f" {normalize_category_text(query)} "
+    normalized_direct = normalize_category_text(direct_category)
+    normalized_alias = normalize_category_text(alias_category)
+    query_names_audience = any(f" {cue} " in normalized_query for cue in audience_cues) or (
+        " be " in normalized_query
+    )
+    alias_names_audience = any(cue in normalized_alias for cue in audience_cues)
+    direct_names_audience = any(cue in normalized_direct for cue in audience_cues)
+    return query_names_audience and alias_names_audience and not direct_names_audience
+
+
+def resolve_catalog_category_with_explicit_audience(
+    query: str,
+    hierarchies: Iterable[tuple[str, ...]],
+    base_match: CatalogCategoryMatch | None,
+) -> CatalogCategoryMatch | None:
+    """Refine a broad product phrase only when the shopper names an audience.
+
+    For example, ``dầu gội dành cho nữ`` contains a broad alias for shampoo
+    plus an explicit audience. This resolves against actual catalog leaves and
+    stays conservative when no unique leaf represents that combination.
+    """
+    if base_match is None or not base_match.matched_tokens:
+        return None
+
+    normalized_query = f" {normalize_category_text(query)} "
+    audience_forms: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("nu", ("nu", "phu nu", "chi em", "dan ba", "women", "female")),
+        ("nam", ("nam", "dan ong", "men", "male")),
+        ("tre em", ("tre em", "em be", "be", "be nho", "kids", "children")),
+        ("nguoi lon", ("nguoi lon", "adult", "adults")),
+    )
+    stated_audience = next(
+        (
+            canonical
+            for canonical, forms in audience_forms
+            if any(f" {normalize_category_text(form)} " in normalized_query for form in forms)
+        ),
+        None,
+    )
+    if stated_audience is None:
+        return None
+
+    base_tokens = set(base_match.matched_tokens)
+    audience_tokens = set(stated_audience.split())
+    candidates: dict[str, tuple[str, ...]] = {}
+    for path in tuple(hierarchies):
+        if not path:
+            continue
+        label = path[-1]
+        label_tokens = set(normalize_category_text(label).split())
+        if base_tokens <= label_tokens and audience_tokens <= label_tokens:
+            candidates[normalize_category_text(label)] = path
+    if len(candidates) != 1:
+        return None
+
+    label_key, path = next(iter(candidates.items()))
+    label = path[-1]
+    return CatalogCategoryMatch(
+        category=label,
+        matched_tokens=frozenset(base_tokens | audience_tokens),
+        exact_phrase=False,
+    )
+
+
 def _native_category_words(value: str) -> list[str]:
     normalized = unicodedata.normalize("NFC", value.casefold())
     return re.findall(r"[^\W_]+", normalized, flags=re.UNICODE)
 
 
+def _category_query_words(
+    normalized_query: str,
+    stop_words: frozenset[str],
+    native_query: str | None = None,
+) -> list[str]:
+    words = normalized_query.split()
+    native_words = _native_category_words(native_query or "")
+    return [
+        word
+        for index, word in enumerate(words)
+        if word not in stop_words
+        or (word == "goi" and index > 0 and words[index - 1] == "dau")
+        or (word == "an" and index < len(native_words) and native_words[index] == "ăn")
+        or (index < len(native_words) and native_words[index] == "gối")
+    ]
+
+
 def _has_category_diacritic(value: str) -> bool:
     return "đ" in value or any(
-        unicodedata.category(character) == "Mn"
-        for character in unicodedata.normalize("NFD", value)
+        unicodedata.category(character) == "Mn" for character in unicodedata.normalize("NFD", value)
+    )
+
+
+def _resolve_native_exact_single_word_category(
+    query: str,
+    paths: tuple[tuple[str, ...], ...],
+) -> CatalogCategoryMatch | None:
+    """Keep accent-bearing one-word category labels distinct from folded fillers."""
+    native_words = _native_category_words(query)
+    request_fillers = _CATEGORY_QUERY_STOP_WORDS | _SINGLE_WORD_CATEGORY_CONTEXT_WORDS | {"xem"}
+    matches: dict[str, str] = {}
+    native_query_words = {word.casefold() for word in native_words}
+    for path in paths:
+        for label in path:
+            label_words = _native_category_words(label)
+            normalized_label = normalize_category_text(label)
+            other_content = [
+                normalize_category_text(word)
+                for word in native_words
+                if normalize_category_text(word) != normalized_label
+                and normalize_category_text(word) not in request_fillers
+            ]
+            if (
+                len(normalized_label.split()) == 1
+                and len(label_words) == 1
+                and _has_category_diacritic(label_words[0])
+                and label_words[0].casefold() in native_query_words
+                and not other_content
+            ):
+                matches.setdefault(normalized_label, label)
+    if len(matches) != 1:
+        return None
+    normalized_label, label = next(iter(matches.items()))
+    return CatalogCategoryMatch(
+        category=label,
+        matched_tokens=frozenset({normalized_label}),
+        exact_phrase=True,
     )
 
 
@@ -237,12 +505,44 @@ def resolve_catalog_category(
     query: str,
     hierarchies: Iterable[tuple[str, ...]],
 ) -> CatalogCategoryMatch | None:
-    return _resolve_catalog_category_cached(query, tuple(hierarchies))
+    paths = tuple(hierarchies)
+    native_match = _resolve_native_exact_single_word_category(query, paths)
+    if native_match is not None:
+        return native_match
+    match = _resolve_catalog_category_cached(query, paths)
+    if match is None or not category_is_parent(match.category, paths):
+        return match
+
+    # A broad parent can match more words than a specific item explicitly
+    # named earlier in a location or comparison question (e.g. ``cà chua ở
+    # khu rau ăn quả``). Refine only when exactly one descendant leaf is fully
+    # represented by the utterance; otherwise retain the broad parent.
+    query_tokens = set(normalize_category_text(query).split())
+    parent_key = normalize_category_text(match.category)
+    leaf_candidates: dict[str, str] = {}
+    for path in paths:
+        if len(path) < 2 or not any(
+            normalize_category_text(segment) == parent_key for segment in path[:-1]
+        ):
+            continue
+        leaf = path[-1]
+        leaf_tokens = set(normalize_category_text(leaf).split())
+        if len(leaf_tokens) >= 2 and leaf_tokens <= query_tokens:
+            leaf_candidates[normalize_category_text(leaf)] = leaf
+    if len(leaf_candidates) == 1:
+        leaf = next(iter(leaf_candidates.values()))
+        return CatalogCategoryMatch(
+            category=leaf,
+            matched_tokens=frozenset(normalize_category_text(leaf).split()),
+            exact_phrase=False,
+        )
+    return match
 
 
 @lru_cache(maxsize=512)
 def _resolve_catalog_category_cached(
-    query: str, hierarchies: tuple[tuple[str, ...], ...],
+    query: str,
+    hierarchies: tuple[tuple[str, ...], ...],
 ) -> CatalogCategoryMatch | None:
     """Match a generic product-type phrase to the active catalog taxonomy.
 
@@ -251,17 +551,13 @@ def _resolve_catalog_category_cached(
     their nearest shared parent and keep the phrase available to product search.
     """
     normalized_query = normalize_category_text(query)
-    query_tokens = frozenset(
-        token for token in normalized_query.split() if token not in _CATEGORY_QUERY_STOP_WORDS
+    query_words = _category_query_words(normalized_query, _CATEGORY_QUERY_STOP_WORDS, query)
+    query_tokens = frozenset(query_words)
+    category_query_words = _category_query_words(
+        re.sub(r"\bgoi\s+y\b", " ", normalized_query),
+        _SINGLE_WORD_CATEGORY_CONTEXT_WORDS,
+        query,
     )
-    query_words = [
-        token for token in normalized_query.split() if token not in _CATEGORY_QUERY_STOP_WORDS
-    ]
-    category_query_words = [
-        word
-        for word in re.sub(r"\bgoi\s+y\b", " ", normalized_query).split()
-        if word not in _SINGLE_WORD_CATEGORY_CONTEXT_WORDS
-    ]
     native_category_query_words = [
         word
         for word in _native_category_words(query)
@@ -302,8 +598,7 @@ def _resolve_catalog_category_cached(
                 and native_label_words[0] in _native_category_words(query)
             )
             if label_words[0] in {"khac", "other", "others"} or (
-                label_words[0] in _SINGLE_WORD_CATEGORY_CONTEXT_WORDS
-                and not native_label_is_stated
+                label_words[0] in _SINGLE_WORD_CATEGORY_CONTEXT_WORDS and not native_label_is_stated
             ):
                 continue
             # Accent folding makes Vietnamese homonyms collide inside longer
@@ -313,10 +608,16 @@ def _resolve_catalog_category_cached(
             # after conversational stop words are removed.
             exact_single_word = category_query_words == label_words
             native_label_words = _native_category_words(label)
-            if native_label_words and native_label_words[0] in _native_category_words(query):
-                # Preserve accents when recognizing a named one-word type in a
-                # sentence: "gạo", "muối", "nồi", etc. Folded homonyms such as
-                # "dầu"/"đậu" must never establish a category by themselves.
+            if (
+                native_label_words
+                and native_label_words[0] in _native_category_words(query)
+                and category_query_words
+                and category_query_words[0] == label_words[0]
+            ):
+                # Preserve accents for a named one-word type when it is the
+                # leading product phrase ("gạo", "muối", "nồi"). Do not turn
+                # a trailing material/accessory mention ("cốc giấy", "đèn pin")
+                # into the requested product category.
                 exact_single_word = True
             if exact_single_word and len(native_category_query_words) == 1:
                 native_label_words = _native_category_words(label)
@@ -359,9 +660,7 @@ def _resolve_catalog_category_cached(
                 exact_phrase=all(bool(item[1]) for item in best),
             )
         matched_paths = [
-            path
-            for item in best
-            for path in labels[normalize_category_text(item[3])][1]
+            path for item in best for path in labels[normalize_category_text(item[3])][1]
         ]
         common = _common_path(matched_paths)
         if common:
@@ -474,7 +773,7 @@ def _catalog_leaf_query_phrase_cached(query: str, hierarchies: tuple[tuple[str, 
             ):
                 continue
             for start in range(len(words) - size + 1):
-                if words[start:start + size] == prefix:
+                if words[start : start + size] == prefix:
                     matches.append((size, -start, " ".join(prefix)))
     return max(matches, default=(0, 0, ""))[2]
 

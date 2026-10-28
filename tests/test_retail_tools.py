@@ -40,6 +40,11 @@ def test_recommendation_observation_preserves_applied_hard_constraints() -> None
         "spicy": False,
         "price_operator": None,
         "price_value_vnd": None,
+        "budget_vnd": None,
+        "budget_scope": None,
+        "budget_operator": None,
+        "quantity": None,
+        "max_unit_price_vnd": None,
     }
     assert observation.products
     assert all(product.spicy is False for product in observation.products)
@@ -242,7 +247,7 @@ def test_search_tool_returns_candidate_metadata_without_product_facts() -> None:
             "product_id": "COKE_ZERO_330",
             "name": "Coca-Cola Zero 330ml",
             "category": "drink",
-                "subcategory": "drink",
+            "subcategory": "drink",
             "brand": None,
             "matched_constraints": ["in_stock"],
         }
@@ -611,3 +616,417 @@ def test_snack_flavor_modifier_does_not_route_cheese_snacks_to_dairy() -> None:
     assert len(observation.products) == 5
     assert all("snack" in product.category_hierarchy.casefold() for product in observation.products)
     assert all("pho mai" in normalize_vietnamese(product.name) for product in observation.products)
+
+
+@pytest.mark.parametrize("tool_name", ["search_products", "recommend_products"])
+@pytest.mark.parametrize(
+    ("query", "expected_category"),
+    [
+        ("Cho mình xem nhóm Các loại bột khác", "Các loại bột khác"),
+        (
+            "Mình cần nhóm Các loại bột khác để phục vụ nhu cầu hằng ngày",
+            "Các loại bột khác",
+        ),
+        ("Cho mình xem nhóm Đồ ăn vặt từ thịt", "Đồ ăn vặt từ thịt"),
+    ],
+)
+def test_explicit_catalog_leaf_browse_returns_category_products(
+    tool_name: str, query: str, expected_category: str
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+
+    observation = execute_catalog_tool(
+        tool_name,
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        expected_category
+        in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+        for product in observation.products
+    )
+
+
+def test_unaccented_category_browse_does_not_match_short_catalog_brand() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+
+    observation = execute_catalog_tool(
+        "recommend_products",
+        json.dumps(
+            {"query": "khan mat cac", "category": "Khăn mặt", "limit": 5},
+            ensure_ascii=False,
+        ),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        "Khăn mặt" in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+        for product in observation.products
+    )
+
+
+@pytest.mark.parametrize("tool_name", ["search_products", "recommend_products"])
+@pytest.mark.parametrize(
+    ("query", "budget_vnd", "quantity", "exclusive"),
+    [
+        (
+            "Mình cần hai chai nước rửa tay, tổng cộng không quá một trăm hai chục nghìn.",
+            120_000,
+            2,
+            False,
+        ),
+        (
+            "Mình cần hai chai nước rửa tay, tổng cộng dưới một trăm hai chục nghìn.",
+            120_000,
+            2,
+            True,
+        ),
+        (
+            "Mình cần hai chai nước rửa tay, dưới sáu chục nghìn mỗi chai.",
+            60_000,
+            1,
+            True,
+        ),
+    ],
+)
+def test_natural_language_budget_is_enforced_even_when_tool_args_omit_it(
+    tool_name: str,
+    query: str,
+    budget_vnd: int,
+    quantity: int,
+    exclusive: bool,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    arguments = {"query": "nước rửa tay", "limit": 10}
+    if tool_name == "recommend_products":
+        arguments["limit"] = 5
+
+    observation = execute_catalog_tool(
+        tool_name,
+        json.dumps(arguments, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        product.price_vnd * quantity < budget_vnd
+        if exclusive and quantity > 1
+        else product.price_vnd < budget_vnd
+        if exclusive
+        else product.price_vnd * quantity <= budget_vnd
+        for product in observation.products
+    )
+    assert observation.content[
+        "constraints" if tool_name == "recommend_products" else "budget_constraint"
+    ]
+
+
+@pytest.mark.parametrize("tool_name", ["search_products", "recommend_products"])
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Mình cần hai chai nước rửa tay, dưới sáu chục nghìn.",
+        "Mình cần nước rửa tay, tổng cộng dưới sáu chục nghìn.",
+    ],
+)
+def test_ambiguous_budget_scope_stops_before_returning_candidates(
+    tool_name: str,
+    query: str,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    observation = execute_catalog_tool(
+        tool_name,
+        json.dumps({"query": "nước rửa tay", "limit": 5}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+
+    assert observation.status == "DATA_UNAVAILABLE"
+    assert observation.terminal is True
+    assert observation.content["clarification_code"] == "budget_scope"
+    assert observation.content["clarification_needed"] is True
+    assert observation.products == ()
+
+
+@pytest.mark.parametrize("tool_name", ["search_products", "recommend_products"])
+@pytest.mark.parametrize(
+    ("query", "expected_category"),
+    [
+        ("Có kem đánh răng cho bé loại nhỏ không?", "Kem đánh răng trẻ em"),
+        ("Rau cải nằm khu rau củ phía nào?", "Rau cải"),
+        ("Có quả cà đỏ chín để làm sốt không?", "Cà chua"),
+        ("Loại giấy ăn mini để trong túi xách có không?", "Khăn giấy gói"),
+        ("Cho mình xem Dầu hướng dương", "Dầu hướng dương"),
+    ],
+)
+def test_natural_product_type_routes_to_exact_catalog_segment(
+    tool_name: str,
+    query: str,
+    expected_category: str,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    observation = execute_catalog_tool(
+        tool_name,
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        expected_category
+        in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+        for product in observation.products
+    )
+
+
+def test_ambiguous_product_family_stays_with_title_backed_products() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    observation = execute_catalog_tool(
+        "recommend_products",
+        json.dumps(
+            {
+                "query": "Tóc mình nhanh bết, dầu gội nào dùng được?",
+                "limit": 5,
+            },
+            ensure_ascii=False,
+        ),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all("dầu gội" in product.name.casefold() for product in observation.products)
+    assert observation.content["family_details_unverified"] is True
+
+
+@pytest.mark.parametrize("tool_name", ["search_products", "recommend_products"])
+def test_package_disjunction_does_not_require_both_package_forms(tool_name: str) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    observation = execute_catalog_tool(
+        tool_name,
+        json.dumps(
+            {"query": "Nước ngọt có ga chai hoặc lon", "limit": 5},
+            ensure_ascii=False,
+        ),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        "Nước ngọt có ga"
+        in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+        for product in observation.products
+    )
+
+
+@pytest.mark.parametrize("tool_name", ["search_products", "recommend_products"])
+def test_explicitly_excluded_sibling_category_is_enforced_from_taxonomy(
+    tool_name: str,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    query = "Mình cần tã dán chứ không lấy tã quần."
+    observation = execute_catalog_tool(
+        tool_name,
+        json.dumps(
+            {"query": query, "limit": 10 if tool_name == "search_products" else 5},
+            ensure_ascii=False,
+        ),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        "Tã dán trẻ em"
+        in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+        for product in observation.products
+    )
+    assert all(
+        "Tã quần trẻ em" not in (product.category_hierarchy or "")
+        for product in observation.products
+    )
+
+
+@pytest.mark.parametrize(
+    ("query", "expected_category"),
+    [
+        (
+            "Nước giặt với bột giặt khác nhau gì? Trước mắt cho mình xem nước giặt.",
+            "Nước giặt",
+        ),
+        (
+            "Gạo tẻ với gạo nếp khác nhau thế nào? Mình đang cần gạo tẻ.",
+            "Gạo tẻ",
+        ),
+        (
+            "Sữa thanh trùng với tiệt trùng khác gì? Giới thiệu nhóm tiệt trùng trước.",
+            "Sữa tươi tiệt trùng",
+        ),
+    ],
+)
+def test_search_returns_only_the_explicitly_selected_comparison_category(
+    query: str, expected_category: str
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        expected_category
+        in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+        for product in observation.products
+    )
+
+
+@pytest.mark.parametrize(
+    ("query", "expected_category"),
+    [
+        ("Mình có 30 nghìn, chọn giúp mấy gói mì ăn liền trong tầm này.", "Mì ăn liền"),
+        ("Có bịch giấy cuộn nào to, dùng được lâu không shop?", "Giấy vệ sinh"),
+        ("Có lon nước ngọt loại không đường không?", "Nước ngọt có ga"),
+        ("Mình cần trứng gà, không tìm trứng vịt.", "Trứng gà"),
+    ],
+)
+def test_retrieval_honors_budget_vocative_variant_and_leaf_scope(
+    query: str, expected_category: str
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        expected_category
+        in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+        for product in observation.products
+    )
+    if "30 nghìn" in query:
+        assert all(product.price_vnd <= 30_000 for product in observation.products)
+    if "không đường" in query:
+        assert all(
+            "zero" in normalize_vietnamese(product.name)
+            or "khong duong" in normalize_vietnamese(product.name)
+            for product in observation.products
+        )
+    if "trứng vịt" in query:
+        assert all("trứng gà" in product.name.casefold() for product in observation.products)
+
+
+def test_household_child_mention_keeps_generic_products_but_marks_suitability_unverified() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    query = "Tư vấn cho mình nước rửa chén dễ tráng, nhà có em bé."
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert any(
+        "child suitability" in value
+        for value in observation.content["query_understanding"]["unverified_constraints"]
+    )
+
+
+def test_child_product_request_shows_unverified_candidates_with_a_label_caveat() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    query = "Sữa chua ăn loại hộp nhỏ cho bé"
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert any(
+        "child suitability" in value
+        for value in observation.content["query_understanding"]["unverified_constraints"]
+    )
+
+
+def test_adult_product_request_allows_generic_items_but_marks_age_unverified() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    query = "Đi biển cuối tuần, tìm kem chống nắng cho người lớn giúp mình."
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all("trẻ em" not in product.name.casefold() for product in observation.products)
+    assert any(
+        "child suitability" in value
+        for value in observation.content["query_understanding"]["unverified_constraints"]
+    )
+
+
+def test_household_child_context_does_not_hide_yogurt_but_does_not_claim_age_fit() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    query = "Nhà có trẻ nhỏ thích ăn sữa chua, tư vấn loại phù hợp theo thông tin sản phẩm."
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        "Sữa chua ăn"
+        in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+        for product in observation.products
+    )
+    assert any(
+        "child suitability" in value
+        for value in observation.content["query_understanding"]["unverified_constraints"]
+    )

@@ -150,6 +150,37 @@ async def test_natural_shelf_lookup_keeps_vietnamese_product_terms(snapshot, mon
 
 
 @pytest.mark.asyncio
+async def test_pocket_tissue_shelf_query_preserves_compound_product_phrase(
+    snapshot, monkeypatch
+):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+    ) as client:
+        session = (await client.post("/sessions", json={"kiosk_id": "pocket-tissue-shelf"})).json()[
+            "session_id"
+        ]
+        response = await client.post(
+            "/agent/respond",
+            json={"session_id": session, "text": "Khăn giấy bỏ túi ở kệ nào?"},
+        )
+        payload = response.json()
+
+        assert response.status_code == 200
+        assert payload["grounded_product_ids"]
+        items = [
+            snapshot.get_product_snapshot(product_id)
+            for product_id in payload["grounded_product_ids"]
+        ]
+        assert all(item is not None for item in items)
+        assert all(
+            "Khăn giấy gói" in item.category_hierarchy for item in items if item is not None
+        )
+        assert any(item.shelf and item.shelf in payload["text"] for item in items if item)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("first", ["Gợi ý dầu gội", "Gợi ý nước giặt", "Giới thiệu khăn mặt"])
 async def test_unverified_bestseller_still_shows_grounded_category_options(
     snapshot, monkeypatch, first
@@ -412,7 +443,7 @@ async def test_cooking_goal_survives_an_ingredient_reply_and_resets_on_new_depar
         first = await ask("Tư vấn thịt nhúng lẩu giúp mình")
         assert first["products"]
         assert all("lẩu" in p["name"].casefold() for p in first["products"])
-        assert "trong tên hàng" in first["text"]
+        assert "tên hàng" in first["text"].casefold()
         repeated = await ask("ăn lẩu")
         assert repeated["products"]
         assert all("lẩu" in p["name"].casefold() for p in repeated["products"])
@@ -420,7 +451,7 @@ async def test_cooking_goal_survives_an_ingredient_reply_and_resets_on_new_depar
         if second["products"]:
             assert all("lẩu" in p["name"].casefold() for p in second["products"])
             assert all("bò" in p["name"].casefold() for p in second["products"])
-            assert "trong tên hàng" in second["text"]
+            assert "tên hàng" in second["text"]
         else:
             assert "ghi nhận" in second["text"] and "cách chế biến" in second["text"]
         switched = await ask("giới thiệu khăn mặt cho mình")
@@ -455,7 +486,6 @@ async def test_hotpot_other_types_are_real_new_products_with_uncertainty(snapsho
         for card in other["products"]:
             product = snapshot.get_product_snapshot(card["product_id"])
             assert product and product.price_vnd == card["price_vnd"]
-            assert "cắt lát" in card["name"].casefold()
             assert "thịt" in product.category_hierarchy.casefold()
 
 

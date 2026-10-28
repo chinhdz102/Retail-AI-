@@ -9,7 +9,12 @@ import pytest
 from backend.api import main as api_main
 from backend.api.main import app
 from backend.config import Settings
-from backend.products.catalog import ProductSnapshot
+from backend.products.catalog import (
+    ProductSnapshot,
+    explicit_product_audience,
+    matches_explicit_product_audience,
+    product_audience_evidence,
+)
 from backend.products.category_taxonomy import (
     normalize_category_text,
     resolve_catalog_category,
@@ -76,11 +81,7 @@ def test_snapshot_prices_and_stock_are_never_presented_as_current(
 def test_exact_taxonomy_categories_never_match_unrelated_catalog_paths(
     snapshot_repo: SnapshotProductRepository,
 ) -> None:
-    labels = {
-        segment
-        for path in snapshot_repo.list_category_hierarchies()
-        for segment in path
-    }
+    labels = {segment for path in snapshot_repo.list_category_hierarchies() for segment in path}
     candidates = snapshot_repo._candidates
     for label in labels:
         alias_key = _category_alias_key(_category_key(label))
@@ -90,9 +91,7 @@ def test_exact_taxonomy_categories_never_match_unrelated_catalog_paths(
         returned_ids = {
             candidate.product.product_id
             for candidate in candidates
-            if _category_matches(
-                label, candidate, snapshot_repo._known_category_keys
-            )
+            if _category_matches(label, candidate, snapshot_repo._known_category_keys)
         }
         expected_ids = {
             candidate.product.product_id
@@ -161,9 +160,7 @@ def test_runtime_catalog_resolves_all_heldout_product_queries_at_top_five(
     ]
     misses = []
     for case in cases:
-        returned = {
-            product.product_id for product in snapshot_repo.search(case["query"], limit=5)
-        }
+        returned = {product.product_id for product in snapshot_repo.search(case["query"], limit=5)}
         if not returned.intersection(case["gold_product_ids"]):
             misses.append(case["case_id"])
 
@@ -208,6 +205,125 @@ def test_taxonomy_aliases_cover_common_household_and_personal_care_requests(
     assert expected_id in {product.product_id for product in returned}
 
 
+@pytest.mark.parametrize(
+    ("query", "expected_leaf"),
+    [
+        ("Mì gói có những loại nào?", "Mì ăn liền"),
+        ("Muốn mua đồ để lau nhà", "Nước lau sàn nhà"),
+        ("Cho mình đồ để rửa bát", "Nước rửa chén bát"),
+        ("Khăn giấy bỏ túi ở kệ nào?", "Khăn giấy gói"),
+        ("Tã bỉm cho bé sơ sinh", "Tã dán trẻ em"),
+        ("Tìm kem chống nắng cho bé đi biển.", "Kem chống nắngtrẻ em"),
+        ("Mua giấy ướt em bé gói nhỏ có không?", "Giấy ướt trẻ em"),
+        ("Sữa hộp cho trẻ uống đi học", "Sữa tươi tiệt trùng"),
+    ],
+)
+def test_everyday_product_wording_resolves_within_the_matching_catalog_leaf(
+    snapshot_repo: SnapshotProductRepository,
+    query: str,
+    expected_leaf: str,
+) -> None:
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 10}, ensure_ascii=False),
+        repository=snapshot_repo,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        normalize_category_text(product.category_hierarchy.split(">")[-1].strip())
+        == normalize_category_text(expected_leaf)
+        for product in observation.products
+    )
+
+
+def test_explicit_possessive_brand_query_does_not_return_lexical_neighbors(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    brand_results = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": "Lay's", "limit": 5}, ensure_ascii=False),
+        repository=snapshot_repo,
+    )
+    colloquial_neighbor = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": "măng lay", "limit": 5}, ensure_ascii=False),
+        repository=snapshot_repo,
+    )
+    exact_variant = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": "Lay's Stax 110g", "limit": 5}, ensure_ascii=False),
+        repository=snapshot_repo,
+    )
+
+    assert brand_results.products
+    assert all(product.brand == "LAY'S" for product in brand_results.products)
+    assert any(product.name.startswith("Măng lay") for product in colloquial_neighbor.products)
+    assert all(product.brand != "LAY'S" for product in colloquial_neighbor.products)
+    assert [product.product_id for product in exact_variant.products] == ["WIN_10015924"]
+
+
+def test_newborn_diaper_search_excludes_adult_products_and_returns_only_newborn_evidence(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    query = "Tã bỉm cho bé sơ sinh"
+    products = snapshot_repo.search(query, category="Tã bỉm", limit=20)
+
+    assert products
+    assert all(
+        "sơ sinh" in product.name.casefold() or "newborn" in product.name.casefold()
+        for product in products
+    )
+    assert not any(
+        "người lớn" in (product.category_hierarchy or "").casefold() for product in products
+    )
+
+
+def test_explicit_adult_age_range_is_not_recommended_for_a_child_school_request(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    query = "Sữa hộp cho trẻ mang đi học"
+    product = snapshot_repo.get_product_snapshot("WIN_10327472")
+    assert product is not None
+    assert product_audience_evidence(product) == "adult"
+    assert explicit_product_audience(query) == "child"
+    assert not matches_explicit_product_audience(query, product)
+
+    products = snapshot_repo.search(
+        query,
+        category="Sữa tươi tiệt trùng",
+        limit=20,
+    )
+    assert product.product_id not in {item.product_id for item in products}
+    assert all(product_audience_evidence(item) != "adult" for item in products)
+
+
+def test_catalog_taxonomy_labels_resolve_without_cross_branch_product_leaks(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    leaf_labels = sorted({path[-1] for path in snapshot_repo.list_category_hierarchies() if path})
+    assert len(leaf_labels) >= 300
+
+    for label in leaf_labels:
+        observation = execute_catalog_tool(
+            "search_products",
+            json.dumps({"query": f"Cho mình xem {label}", "limit": 5}, ensure_ascii=False),
+            repository=snapshot_repo,
+        )
+        expected_segment = normalize_category_text(label)
+        assert observation.status == "SUCCESS", label
+        assert observation.products, label
+        assert all(
+            expected_segment
+            in {
+                normalize_category_text(segment.strip())
+                for segment in (product.category_hierarchy or product.category).split(">")
+            }
+            for product in observation.products
+        ), (label, [product.category_hierarchy for product in observation.products])
+
+
 def test_snapshot_tools_abstain_on_unknown_spice_and_current_stock(
     snapshot_repo: SnapshotProductRepository,
 ) -> None:
@@ -241,9 +357,10 @@ def test_snapshot_recommendations_and_promotions_disclose_unverified_inventory(
     )
 
     assert recommendation.status == "SUCCESS"
-    assert "current_availability_unverified" in recommendation.content["items"][0][
-        "matched_constraints"
-    ]
+    assert (
+        "current_availability_unverified"
+        in recommendation.content["items"][0]["matched_constraints"]
+    )
     assert recommendation.content["items"][0]["stock_is_current"] is False
     assert "reference_price_vnd" in recommendation.content["items"][0]
     assert promotions.status == "SUCCESS"
@@ -265,8 +382,8 @@ async def test_product_search_api_returns_snapshot_products_without_current_stoc
     snapshot_repo: SnapshotProductRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(api_main, "get_product_repository", lambda: snapshot_repo)
-    monkeypatch.setattr(retail_tools, "get_product_repository", lambda: snapshot_repo)
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: snapshot_repo)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda settings=None: snapshot_repo)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/products/search", params={"q": "coca zero 600ml"})
@@ -283,7 +400,7 @@ async def test_product_search_api_refuses_explicit_current_stock_filter_for_snap
     snapshot_repo: SnapshotProductRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(api_main, "get_product_repository", lambda: snapshot_repo)
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: snapshot_repo)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         unavailable = await client.get(
@@ -303,8 +420,8 @@ async def test_snapshot_api_keeps_price_freshness_shelf_and_stock_claims_grounde
     snapshot_repo: SnapshotProductRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(api_main, "get_product_repository", lambda: snapshot_repo)
-    monkeypatch.setattr(retail_tools, "get_product_repository", lambda: snapshot_repo)
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: snapshot_repo)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda settings=None: snapshot_repo)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         created = await client.post("/sessions", json={"kiosk_id": "snapshot-grounding"})
@@ -372,8 +489,8 @@ async def test_unavailable_product_alternatives_use_catalog_and_retain_category(
     snapshot_repo: SnapshotProductRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(api_main, "get_product_repository", lambda: snapshot_repo)
-    monkeypatch.setattr(retail_tools, "get_product_repository", lambda: snapshot_repo)
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: snapshot_repo)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda settings=None: snapshot_repo)
 
     async def unexpected_llm_call(*_args, **_kwargs):
         raise AssertionError("Grounded unavailable-product recovery should not call the LLM")
@@ -447,9 +564,13 @@ async def test_snapshot_api_refuses_to_add_unverified_inventory_to_demo_cart(
 ) -> None:
     from backend.services import shopping as shopping_module
 
-    monkeypatch.setattr(api_main, "get_product_repository", lambda: snapshot_repo)
-    monkeypatch.setattr(retail_tools, "get_product_repository", lambda: snapshot_repo)
-    monkeypatch.setattr(shopping_module, "get_product_repository", lambda: snapshot_repo)
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: snapshot_repo)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda settings=None: snapshot_repo)
+    monkeypatch.setattr(
+        shopping_module,
+        "get_product_repository",
+        lambda settings=None: snapshot_repo,
+    )
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         created = await client.post("/sessions", json={"kiosk_id": "snapshot-cart-guard"})
@@ -473,8 +594,8 @@ async def test_snapshot_unavailable_attribute_keeps_selected_product_for_followu
     snapshot_repo: SnapshotProductRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(api_main, "get_product_repository", lambda: snapshot_repo)
-    monkeypatch.setattr(retail_tools, "get_product_repository", lambda: snapshot_repo)
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: snapshot_repo)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda settings=None: snapshot_repo)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         created = await client.post("/sessions", json={"kiosk_id": "snapshot-context"})
@@ -517,8 +638,8 @@ async def test_snapshot_product_search_resolves_variants_and_refinements_without
     snapshot_repo: SnapshotProductRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(api_main, "get_product_repository", lambda: snapshot_repo)
-    monkeypatch.setattr(retail_tools, "get_product_repository", lambda: snapshot_repo)
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: snapshot_repo)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda settings=None: snapshot_repo)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         created = await client.post("/sessions", json={"kiosk_id": "snapshot-refinement"})
@@ -550,9 +671,7 @@ async def test_snapshot_product_search_resolves_variants_and_refinements_without
             json={"session_id": session_id, "text": "Còn hàng hiện nay không?"},
         )
 
-    assert all(
-        response.status_code == 200 for response in (found, price, dosage, promotion, stock)
-    )
+    assert all(response.status_code == 200 for response in (found, price, dosage, promotion, stock))
     assert "Nước giặt Omo" in found.json()["text"]
     assert "Ariel" not in found.json()["text"]
     assert price.json()["grounded_product_ids"] == ["WIN_10161177"]
@@ -572,8 +691,8 @@ async def test_snapshot_candidate_code_selects_the_exact_huggies_pack(
     snapshot_repo: SnapshotProductRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(api_main, "get_product_repository", lambda: snapshot_repo)
-    monkeypatch.setattr(retail_tools, "get_product_repository", lambda: snapshot_repo)
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: snapshot_repo)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda settings=None: snapshot_repo)
 
     class UnexpectedGroqService:
         async def chat(self, *args, **kwargs):
@@ -614,8 +733,8 @@ async def test_snapshot_comparison_keeps_product_context_across_size_and_promoti
     snapshot_repo: SnapshotProductRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(api_main, "get_product_repository", lambda: snapshot_repo)
-    monkeypatch.setattr(retail_tools, "get_product_repository", lambda: snapshot_repo)
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: snapshot_repo)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda settings=None: snapshot_repo)
 
     class UnexpectedGroqService:
         async def chat(self, *args, **kwargs):

@@ -1,0 +1,1098 @@
+{
+  "kind": "independent_vietnamese_consultation_parse_benchmark",
+  "generated_at_utc": "2026-10-27T20:02:22.756978+00:00",
+  "dataset_id": "independent_consultation_pilot_v1",
+  "authoring_method": "Manually authored Vietnamese retail utterances and labels, frozen before running this evaluator; expected categories are grounded in the catalog taxonomy. This is not an external human panel or a 200-query acceptance set.",
+  "catalog_file": "data\\winmart_products.json",
+  "case_count": 50,
+  "case_exact_match_rate": 1.0,
+  "field_accuracy": {
+    "budget_vnd": {
+      "passed": 5,
+      "total": 5,
+      "rate": 1.0
+    },
+    "clarification_needed": {
+      "passed": 3,
+      "total": 3,
+      "rate": 1.0
+    },
+    "intent": {
+      "passed": 11,
+      "total": 11,
+      "rate": 1.0
+    },
+    "negative_constraints": {
+      "passed": 7,
+      "total": 7,
+      "rate": 1.0
+    },
+    "product_type": {
+      "passed": 42,
+      "total": 42,
+      "rate": 1.0
+    },
+    "quantity": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "ranking_criterion": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "use_case": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    }
+  },
+  "dimension_exact_match_rate": {
+    "adult_product_type": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "ambiguous_need": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "attribute_question": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "audience_and_category": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "audience_constraint": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "avoid_false_brand_intent": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "baby_product_type": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "brand_and_category": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "brand_size_and_price": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "budget": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "budget_and_package": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "budget_and_unverified_attribute": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "category_and_attribute": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "category_and_context": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "category_and_intent": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "category_and_package": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "category_and_quantity": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "category_and_size": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "category_and_specification": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "category_and_unverified_attribute": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "category_and_variant": {
+      "passed": 3,
+      "total": 3,
+      "rate": 1.0
+    },
+    "colloquial_category": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "location": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "location_and_category": {
+      "passed": 3,
+      "total": 3,
+      "rate": 1.0
+    },
+    "multi_category_ambiguity": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "need_with_missing_product_type": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "negative_and_budget": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "negative_attribute": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "negative_constraint": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "non_requirement_not_exclusion": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "price_question_not_negation": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "primary_product_vs_accessory": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "purpose_and_category": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "quantity_and_total_budget": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "ranking_and_category": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "ranking_scope": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "safety_and_missing_evidence": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "semantic_category": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "semantic_category_and_preference": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "size_and_audience": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "specific_product_search": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    }
+  },
+  "failures": [],
+  "results": [
+    {
+      "case_id": "I001",
+      "dimension": "category_and_intent",
+      "query": "Bên mình còn giấy vệ sinh cuộn lớn cho gia đình không?",
+      "expected": {
+        "intent": "product_search",
+        "product_type": "Giấy vệ sinh"
+      },
+      "actual": {
+        "intent": "product_search",
+        "product_type": "Giấy vệ sinh"
+      },
+      "field_checks": {
+        "intent": true,
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I002",
+      "dimension": "category_and_variant",
+      "query": "Nhà hết nước rửa chén rồi, lấy giúp loại nào nhiều một chút.",
+      "expected": {
+        "product_type": "Nước rửa chén bát"
+      },
+      "actual": {
+        "product_type": "Nước rửa chén bát"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I003",
+      "dimension": "purpose_and_category",
+      "query": "Có khăn giấy bỏ túi để mang đi làm không?",
+      "expected": {
+        "product_type": "Khăn giấy gói",
+        "use_case": "mang đi làm"
+      },
+      "actual": {
+        "product_type": "Khăn giấy gói",
+        "use_case": "mang đi làm"
+      },
+      "field_checks": {
+        "product_type": true,
+        "use_case": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I004",
+      "dimension": "baby_product_type",
+      "query": "Mình cần tã dán cho bé mới sinh, có loại nào?",
+      "expected": {
+        "product_type": "Tã dán trẻ em"
+      },
+      "actual": {
+        "product_type": "Tã dán trẻ em"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I005",
+      "dimension": "adult_product_type",
+      "query": "Bỉm quần người lớn có không?",
+      "expected": {
+        "product_type": "Tã quần tã dán nlớn"
+      },
+      "actual": {
+        "product_type": "Tã quần tã dán nlớn"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I006",
+      "dimension": "category_and_context",
+      "query": "Cho xem nước giặt, nhà có trẻ nhỏ.",
+      "expected": {
+        "product_type": "Nước giặt"
+      },
+      "actual": {
+        "product_type": "Nước giặt"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I007",
+      "dimension": "category_and_attribute",
+      "query": "Có loại nước lau sàn mùi nhẹ không?",
+      "expected": {
+        "product_type": "Nước lau sàn nhà"
+      },
+      "actual": {
+        "product_type": "Nước lau sàn nhà"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I008",
+      "dimension": "colloquial_category",
+      "query": "Cửa hàng có thuốc xịt muỗi không?",
+      "expected": {
+        "product_type": "Thuốc diệt côn trùng"
+      },
+      "actual": {
+        "product_type": "Thuốc diệt côn trùng"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I009",
+      "dimension": "audience_constraint",
+      "query": "Tìm kem chống nắng cho bé đi biển.",
+      "expected": {
+        "product_type": "Kem chống nắngtrẻ em"
+      },
+      "actual": {
+        "product_type": "Kem chống nắngtrẻ em"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I010",
+      "dimension": "negative_attribute",
+      "query": "Tôi muốn một chai sữa rửa mặt không làm khô da.",
+      "expected": {
+        "product_type": "Sữa rửa mặt",
+        "negative_constraints": [
+          "làm khô da"
+        ]
+      },
+      "actual": {
+        "product_type": "sua rua mat",
+        "negative_constraints": [
+          "lam kho da"
+        ]
+      },
+      "field_checks": {
+        "product_type": true,
+        "negative_constraints": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I011",
+      "dimension": "avoid_false_brand_intent",
+      "query": "Cần loại dầu gội cho tóc nhuộm, hàng nào ổn?",
+      "expected": {
+        "intent": "recommendation"
+      },
+      "actual": {
+        "intent": "recommendation"
+      },
+      "field_checks": {
+        "intent": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I012",
+      "dimension": "category_and_variant",
+      "query": "Có lăn khử mùi nam loại nhỏ không?",
+      "expected": {
+        "product_type": "Lăn khử mùi Nam"
+      },
+      "actual": {
+        "product_type": "Lăn khử mùi Nam"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I013",
+      "dimension": "baby_product_type",
+      "query": "Mua giấy ướt em bé gói nhỏ có không?",
+      "expected": {
+        "product_type": "Giấy ướt trẻ em"
+      },
+      "actual": {
+        "product_type": "Giấy ướt trẻ em"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I014",
+      "dimension": "semantic_category",
+      "query": "Mình tìm hộp đựng cơm mang đi làm.",
+      "expected": {
+        "product_type": "Đồ đựng thức ăn"
+      },
+      "actual": {
+        "product_type": "Đồ đựng thức ăn"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I015",
+      "dimension": "multi_category_ambiguity",
+      "query": "Có bình giữ nhiệt hoặc ly đem đi học không?",
+      "expected": {
+        "product_type": "Ly và đồ dùng u.nước"
+      },
+      "actual": {
+        "product_type": "Ly và đồ dùng u.nước"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I016",
+      "dimension": "category_and_package",
+      "query": "Gạo thơm loại túi 5kg có không?",
+      "expected": {
+        "product_type": "Gạo & Nông sản khô"
+      },
+      "actual": {
+        "product_type": "Gạo & Nông sản khô"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I017",
+      "dimension": "ranking_scope",
+      "query": "Trong mấy loại nước rửa chén, loại nào rẻ nhất?",
+      "expected": {
+        "product_type": "Nước rửa chén bát",
+        "ranking_criterion": "price_ascending"
+      },
+      "actual": {
+        "product_type": "Nước rửa chén bát",
+        "ranking_criterion": "price_ascending"
+      },
+      "field_checks": {
+        "product_type": true,
+        "ranking_criterion": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I018",
+      "dimension": "budget",
+      "query": "Tìm giúp mình xà phòng tắm dưới 30k.",
+      "expected": {
+        "product_type": "Xà bông tắm",
+        "budget_vnd": 30000
+      },
+      "actual": {
+        "product_type": "Xà bông tắm",
+        "budget_vnd": 30000
+      },
+      "field_checks": {
+        "product_type": true,
+        "budget_vnd": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I019",
+      "dimension": "budget_and_package",
+      "query": "Có nước giặt nào tầm 100 nghìn, chai 2 lít?",
+      "expected": {
+        "product_type": "Nước giặt",
+        "budget_vnd": 100000
+      },
+      "actual": {
+        "product_type": "Nước giặt",
+        "budget_vnd": 100000
+      },
+      "field_checks": {
+        "product_type": true,
+        "budget_vnd": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I020",
+      "dimension": "budget_and_unverified_attribute",
+      "query": "Cho xem sữa hộp dưới 50 nghìn, loại ít đường.",
+      "expected": {
+        "product_type": "Sữa tươi tiệt trùng",
+        "budget_vnd": 50000
+      },
+      "actual": {
+        "product_type": "Sữa tươi tiệt trùng",
+        "budget_vnd": 50000
+      },
+      "field_checks": {
+        "product_type": true,
+        "budget_vnd": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I021",
+      "dimension": "negative_and_budget",
+      "query": "Mì gói cay quá, có gói nào không cay dưới 10 nghìn không?",
+      "expected": {
+        "product_type": "Mì ăn liền",
+        "budget_vnd": 10000,
+        "negative_constraints": [
+          "cay"
+        ]
+      },
+      "actual": {
+        "product_type": "Mì ăn liền",
+        "budget_vnd": 10000,
+        "negative_constraints": [
+          "cay"
+        ]
+      },
+      "field_checks": {
+        "product_type": true,
+        "budget_vnd": true,
+        "negative_constraints": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I022",
+      "dimension": "negative_constraint",
+      "query": "Bánh ăn vặt cho bé, tránh loại có hạt.",
+      "expected": {
+        "negative_constraints": [
+          "loai co hat"
+        ]
+      },
+      "actual": {
+        "negative_constraints": [
+          "loai co hat"
+        ]
+      },
+      "field_checks": {
+        "negative_constraints": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I023",
+      "dimension": "price_question_not_negation",
+      "query": "Sữa chua ít đường còn không, giá bao nhiêu?",
+      "expected": {
+        "intent": "price",
+        "product_type": "Sữa chua",
+        "negative_constraints": []
+      },
+      "actual": {
+        "intent": "price",
+        "product_type": "Sữa chua",
+        "negative_constraints": []
+      },
+      "field_checks": {
+        "intent": true,
+        "product_type": true,
+        "negative_constraints": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I024",
+      "dimension": "category_and_attribute",
+      "query": "Trà túi lọc nào ít ngọt?",
+      "expected": {
+        "product_type": "Trà túi lọc"
+      },
+      "actual": {
+        "product_type": "Trà túi lọc"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I025",
+      "dimension": "quantity_and_total_budget",
+      "query": "Mình cần hai chai nước rửa tay, tổng cộng đừng quá sáu chục nghìn.",
+      "expected": {
+        "product_type": "Nước rửa tay",
+        "quantity": 2,
+        "budget_vnd": 60000
+      },
+      "actual": {
+        "product_type": "Nước rửa tay",
+        "quantity": 2,
+        "budget_vnd": 60000
+      },
+      "field_checks": {
+        "product_type": true,
+        "quantity": true,
+        "budget_vnd": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I026",
+      "dimension": "non_requirement_not_exclusion",
+      "query": "Lấy loại dầu ăn một lít, không cần thương hiệu cụ thể.",
+      "expected": {
+        "product_type": "Dầu ăn",
+        "intent": "product_search",
+        "negative_constraints": []
+      },
+      "actual": {
+        "product_type": "Dầu ăn",
+        "intent": "product_search",
+        "negative_constraints": []
+      },
+      "field_checks": {
+        "product_type": true,
+        "intent": true,
+        "negative_constraints": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I027",
+      "dimension": "brand_size_and_price",
+      "query": "Có Coca Zero lon không, báo giá theo lốc nhé.",
+      "expected": {
+        "intent": "price",
+        "negative_constraints": []
+      },
+      "actual": {
+        "intent": "price",
+        "negative_constraints": []
+      },
+      "field_checks": {
+        "intent": true,
+        "negative_constraints": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I028",
+      "dimension": "size_and_audience",
+      "query": "Bỉm size M cho bé khoảng 7 ký có loại nào?",
+      "expected": {
+        "product_type": "Tã bỉm"
+      },
+      "actual": {
+        "product_type": "Tã bỉm"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I029",
+      "dimension": "semantic_category_and_preference",
+      "query": "Cho mình xem đồ cọ rửa bếp loại dễ cầm.",
+      "expected": {
+        "product_type": "Dụng cụ cọ rửa bếp"
+      },
+      "actual": {
+        "product_type": "Dụng cụ cọ rửa bếp"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I030",
+      "dimension": "primary_product_vs_accessory",
+      "query": "Mình cần đèn pin, dùng loại pin AA ấy.",
+      "expected": {
+        "product_type": null
+      },
+      "actual": {
+        "product_type": null
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I031",
+      "dimension": "semantic_category",
+      "query": "Cốc giấy để dùng một lần ở văn phòng có không?",
+      "expected": {
+        "product_type": "Đồ dùng một lần"
+      },
+      "actual": {
+        "product_type": "Đồ dùng một lần"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I032",
+      "dimension": "category_and_specification",
+      "query": "Tôi muốn mua ổ cắm điện ba chấu.",
+      "expected": {
+        "product_type": "Ổ cắm điện"
+      },
+      "actual": {
+        "product_type": "Ổ cắm điện"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I033",
+      "dimension": "audience_and_category",
+      "query": "Tìm đồ chơi hợp cho bé trai khoảng năm tuổi.",
+      "expected": {
+        "product_type": "Đồ chơi bé trai"
+      },
+      "actual": {
+        "product_type": "Đồ chơi bé trai"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I034",
+      "dimension": "category_and_specification",
+      "query": "Khẩu trang y tế loại bốn lớp còn hàng không?",
+      "expected": {
+        "product_type": "Khẩu trang y tế"
+      },
+      "actual": {
+        "product_type": "Khẩu trang y tế"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I035",
+      "dimension": "attribute_question",
+      "query": "Dầu xả có giúp tóc đỡ xơ không?",
+      "expected": {
+        "intent": "attribute",
+        "product_type": "Dầu xả & dưỡng tóc"
+      },
+      "actual": {
+        "intent": "attribute",
+        "product_type": "Dầu xả & dưỡng tóc"
+      },
+      "field_checks": {
+        "intent": true,
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I036",
+      "dimension": "specific_product_search",
+      "query": "Có bán mắm tôm không?",
+      "expected": {
+        "intent": "product_search"
+      },
+      "actual": {
+        "intent": "product_search"
+      },
+      "field_checks": {
+        "intent": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I037",
+      "dimension": "location",
+      "query": "Thịt thăn bò nằm ở dãy nào vậy?",
+      "expected": {
+        "intent": "location"
+      },
+      "actual": {
+        "intent": "location"
+      },
+      "field_checks": {
+        "intent": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I038",
+      "dimension": "location_and_category",
+      "query": "Kệ nào có nước ngọt vậy?",
+      "expected": {
+        "intent": "location",
+        "product_type": "Nước ngọt có ga"
+      },
+      "actual": {
+        "intent": "location",
+        "product_type": "Nước ngọt có ga"
+      },
+      "field_checks": {
+        "intent": true,
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I039",
+      "dimension": "location_and_category",
+      "query": "Nước rửa tay ở đâu, có gần khu xà phòng không?",
+      "expected": {
+        "intent": "location",
+        "product_type": "Nước rửa tay"
+      },
+      "actual": {
+        "intent": "location",
+        "product_type": "Nước rửa tay"
+      },
+      "field_checks": {
+        "intent": true,
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I040",
+      "dimension": "brand_and_category",
+      "query": "Nhà mình đang dùng OMO, cửa hàng có bột giặt đó không?",
+      "expected": {
+        "product_type": "Bột giặt"
+      },
+      "actual": {
+        "product_type": "Bột giặt"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I041",
+      "dimension": "ranking_and_category",
+      "query": "Nồi cơm điện nào đang có giá thấp nhất?",
+      "expected": {
+        "product_type": "Nồi cơm điện",
+        "ranking_criterion": "price_ascending"
+      },
+      "actual": {
+        "product_type": "Nồi cơm điện",
+        "ranking_criterion": "price_ascending"
+      },
+      "field_checks": {
+        "product_type": true,
+        "ranking_criterion": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I042",
+      "dimension": "category_and_variant",
+      "query": "Có gối ôm cho người lớn không?",
+      "expected": {
+        "product_type": "Gối"
+      },
+      "actual": {
+        "product_type": "Gối"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I043",
+      "dimension": "location_and_category",
+      "query": "Chỗ bán khăn mặt ở khu nào?",
+      "expected": {
+        "intent": "location",
+        "product_type": "Khăn mặt"
+      },
+      "actual": {
+        "intent": "location",
+        "product_type": "Khăn mặt"
+      },
+      "field_checks": {
+        "intent": true,
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I044",
+      "dimension": "category_and_quantity",
+      "query": "Mình muốn xem vài quyển vở cho học sinh cấp hai.",
+      "expected": {
+        "product_type": "Vở"
+      },
+      "actual": {
+        "product_type": "Vở"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I045",
+      "dimension": "category_and_size",
+      "query": "Giày nữ size 38 còn đôi nào không?",
+      "expected": {
+        "product_type": "Giày/ dép nữ"
+      },
+      "actual": {
+        "product_type": "Giày/ dép nữ"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I046",
+      "dimension": "category_and_unverified_attribute",
+      "query": "Bánh quy loại nào không ngọt gắt?",
+      "expected": {
+        "product_type": "Bánh biscuit"
+      },
+      "actual": {
+        "product_type": "Bánh biscuit"
+      },
+      "field_checks": {
+        "product_type": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I047",
+      "dimension": "negative_attribute",
+      "query": "Có chocolate nào không có hạt không?",
+      "expected": {
+        "product_type": "Chocolate",
+        "negative_constraints": [
+          "hat"
+        ]
+      },
+      "actual": {
+        "product_type": "Chocolate",
+        "negative_constraints": [
+          "hat"
+        ]
+      },
+      "field_checks": {
+        "product_type": true,
+        "negative_constraints": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I048",
+      "dimension": "need_with_missing_product_type",
+      "query": "Mình tập thể thao buổi tối, muốn mua đồ uống bù nước.",
+      "expected": {
+        "clarification_needed": true
+      },
+      "actual": {
+        "clarification_needed": true
+      },
+      "field_checks": {
+        "clarification_needed": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I049",
+      "dimension": "ambiguous_need",
+      "query": "Sáng mai đi làm sớm, mua đồ ăn gì tiện cầm theo nhỉ?",
+      "expected": {
+        "clarification_needed": true
+      },
+      "actual": {
+        "clarification_needed": true
+      },
+      "field_checks": {
+        "clarification_needed": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "I050",
+      "dimension": "safety_and_missing_evidence",
+      "query": "Da mình dễ dị ứng, loại nào chắc chắn an toàn để bôi?",
+      "expected": {
+        "clarification_needed": true
+      },
+      "actual": {
+        "clarification_needed": true
+      },
+      "field_checks": {
+        "clarification_needed": true
+      },
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "This is an authored pilot, not a study with independent external annotators.",
+    "It evaluates structured query parsing only, not response naturalness or end-to-end tool correctness.",
+    "Some product attributes are absent from the source snapshot and cannot be judged for suitability."
+  ]
+}
