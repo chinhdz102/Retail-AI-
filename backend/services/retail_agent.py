@@ -753,15 +753,18 @@ async def lookup_product_knowledge(
 async def lookup_product_candidates(
     query: str,
     current_user_text: str = "",
+    *,
+    category: str | None = None,
+    limit: int = 5,
 ) -> ToolObservation:
     """Search the active catalog through the same bounded tool gateway as the agent."""
+    arguments: dict[str, Any] = {"query": query, "limit": limit}
+    if category:
+        arguments["category"] = category
     call = {
         "function": {
             "name": "search_products",
-            "arguments": json.dumps(
-                {"query": query, "limit": 5},
-                ensure_ascii=False,
-            ),
+            "arguments": json.dumps(arguments, ensure_ascii=False),
         }
     }
     _, observation = await _execute_tool_call(

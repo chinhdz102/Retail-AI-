@@ -58,6 +58,7 @@ from backend.services.azure_speech import (
     AzureSpeechProviderError,
     AzureSpeechService,
 )
+from backend.services.catalog_browse import explicit_catalog_category_pair
 from backend.services.catalog_preferences import preparation_terms
 from backend.services.catalog_transcription import correct_catalog_words
 from backend.services.elevenlabs import (
@@ -5541,6 +5542,108 @@ async def _handle_product_comparison(
     )
 
 
+async def _handle_multi_category_browse(
+    request: AgentRespondRequest,
+    categories: tuple[str, str],
+) -> AgentRespondResponse:
+    """List grounded products from two explicitly named catalog categories."""
+    observations = await asyncio.gather(
+        *(
+            lookup_product_candidates(
+                category,
+                current_user_text=category,
+                category=category,
+                limit=5,
+            )
+            for category in categories
+        )
+    )
+    groups = [
+        (category, tuple(observation.products[:5]))
+        for category, observation in zip(categories, observations, strict=True)
+    ]
+    products = list(
+        {
+            product.product_id: product
+            for _category, group_products in groups
+            for product in group_products
+        }.values()
+    )
+    if products:
+        session_store.update_shopping(
+            request.session_id,
+            current_intent=IntentType.PRODUCT_LOOKUP,
+            active_product_id=None,
+            active_category=None,
+            selected_product_ids=[product.product_id for product in products],
+        )
+        session_store.set_last_grounded_product(request.session_id, None)
+
+    def render_product(product: ProductSnapshot) -> str:
+        price = f"{product.price_vnd:,}"
+        if request.language == "vi":
+            return f"{product.name} (giá tham khảo {price.replace(',', '.')}đ)"
+        if request.language == "zh":
+            return f"{product.name}（参考价格 {price} 越南盾）"
+        return f"{product.name} (reference price {price} VND)"
+
+    if request.language == "vi":
+        lines = [
+            f"- {category}: "
+            + (
+                "; ".join(render_product(product) for product in group_products)
+                if group_products
+                else "snapshot hiện chưa ghi nhận mặt hàng phù hợp"
+            )
+            for category, group_products in groups
+        ]
+        reply = (
+            "Trong catalog snapshot, mình tìm thấy:\n"
+            + "\n".join(lines)
+            + "\nTồn kho thực tế tại cửa hàng chưa được xác minh. Bạn muốn mình lọc theo giá "
+            "hay xem vị trí kệ của món nào?"
+        )
+    elif request.language == "zh":
+        lines = [
+            f"- {category}："
+            + (
+                "；".join(render_product(product) for product in group_products)
+                if group_products
+                else "当前目录快照中没有记录到匹配商品"
+            )
+            for category, group_products in groups
+        ]
+        reply = (
+            "目录快照中记录了以下商品：\n"
+            + "\n".join(lines)
+            + "\n门店实时库存尚未核实。您想按价格筛选，还是查询某件商品的货架位置？"
+        )
+    else:
+        lines = [
+            f"- {category}: "
+            + (
+                "; ".join(render_product(product) for product in group_products)
+                if group_products
+                else "no matching item is recorded in the current catalog snapshot"
+            )
+            for category, group_products in groups
+        ]
+        reply = (
+            "The catalog snapshot lists:\n"
+            + "\n".join(lines)
+            + "\nCurrent in-store stock has not been verified. Would you like me to filter by "
+            "price or check a product's shelf location?"
+        )
+
+    return _record_shopping_turn(
+        request,
+        reply,
+        model="catalog-category-browse",
+        tools_used=["search_products"],
+        products=products,
+    )
+
+
 @app.post("/agent/respond", response_model=AgentRespondResponse)
 async def agent_respond(
     request: AgentRespondRequest,
@@ -6261,6 +6364,16 @@ async def agent_respond(
         and _comparison_stock_followup_requested(request.text)
     ):
         return await _handle_product_comparison(request, record, None, "stock")
+
+    if not mission_preemption_requested:
+        try:
+            repository = get_product_repository(settings)
+            hierarchies = repository.list_category_hierarchies()
+            category_pair = explicit_catalog_category_pair(request.text, hierarchies)
+        except (OSError, RuntimeError, TimeoutError, ValueError):
+            category_pair = None
+        if category_pair is not None:
+            return await _handle_multi_category_browse(request, category_pair)
 
     try:
         explicit_catalog_category = resolve_catalog_request_category(

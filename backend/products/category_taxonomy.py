@@ -167,6 +167,8 @@ _CATEGORY_QUERY_SYNONYMS: dict[str, tuple[str, ...]] = {
     "cai thia": ("rau cai",),
     "cai xanh": ("rau cai",),
     "ca dong": ("ca nuoc ngot tuoi",),
+    "ca bien": ("ca nuoc man tuoi",),
+    "thit bo": ("thit bo be",),
     "giay cuon": ("giay ve sinh",),
     "giay an mini": ("khan giay goi",),
     "chong nang": ("kem chong nang",),
