@@ -104,7 +104,12 @@ def test_review_queue_pools_retrievers_and_independently_blinds_reviewers(tmp_pa
                         "case_id": "secret-case-1",
                         "query": "Tìm giúp mình một món cùng nhóm.",
                         "expected": {"gold_product_id": "DO_NOT_SHOW"},
-                    }
+                    },
+                    {
+                        "case_id": "case-without-retrieval-result",
+                        "query": "This query was not run by a retrieval system.",
+                        "expected": {"gold_product_id": "ALSO_DO_NOT_SHOW"},
+                    },
                 ],
             },
             ensure_ascii=False,
@@ -170,6 +175,7 @@ def test_review_queue_pools_retrievers_and_independently_blinds_reviewers(tmp_pa
     manifest = json.loads(Path(str(exported["evaluator_manifest"])).read_text(encoding="utf-8"))
     assert manifest["candidate_count_by_query"] == {rows_a[0]["query_id"]: 4}
     assert manifest["reviewer_queues"]["source_and_rank_hidden"] is True
+    assert exported["skipped_dataset_cases_without_retrieval_results"] == 1
 
     repeated = export_review_queues(
         dataset,

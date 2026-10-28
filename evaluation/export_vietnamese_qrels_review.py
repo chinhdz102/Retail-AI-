@@ -13,6 +13,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
+from backend.data.catalog_import import canonical_dataset_sha256
 from backend.products.snapshot_repository import SnapshotProductRepository
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -156,19 +157,33 @@ def export_review_queues(
         raise ValueError("max_candidates_per_query must be between 1 and 200")
     candidates_by_case = _load_candidates(results_paths, max_candidates_per_query)
     repository = SnapshotProductRepository(catalog_path)
-    dataset_sha256 = hashlib.sha256(dataset_path.read_bytes()).hexdigest()
-    catalog_sha256 = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
+    dataset_sha256 = canonical_dataset_sha256(dataset_path.read_bytes())
+    catalog_sha256 = canonical_dataset_sha256(catalog_path.read_bytes())
     review_rows: list[dict[str, Any]] = []
+    skipped_unmatched_cases = 0
 
     for case in dataset["cases"]:
         case_id = str(case.get("case_id") or "")
         query = str(case.get("query") or "").strip()
         if not case_id or not query:
             continue
+        if case_id not in candidates_by_case:
+            skipped_unmatched_cases += 1
+            continue
         query_id = hashlib.sha256(f"{dataset_sha256}:{case_id}".encode()).hexdigest()[:16]
         product_ids = candidates_by_case.get(case_id, [])
         if not product_ids:
             product_ids = [""]
+        unknown_candidate_ids = [
+            product_id
+            for product_id in product_ids
+            if product_id and repository.get_product_snapshot(product_id) is None
+        ]
+        if unknown_candidate_ids:
+            raise ValueError(
+                f"Candidate artifact for case {case_id} contains IDs outside the validated "
+                f"catalog: {unknown_candidate_ids}"
+            )
         for candidate_id, product_id in enumerate(product_ids, 1):
             product = repository.get_product_snapshot(product_id) if product_id else None
             evidence = (
@@ -217,6 +232,7 @@ def export_review_queues(
     written: dict[str, str | int] = {
         "row_count": len(review_rows),
         "query_count": len({row["query_id"] for row in review_rows}),
+        "skipped_dataset_cases_without_retrieval_results": skipped_unmatched_cases,
         "max_candidates_per_query": max_candidates_per_query,
     }
     fields = list(review_rows[0])
@@ -284,7 +300,7 @@ def export_review_queues(
         "candidate_pool_policy": "rank_interleaved_union_from_all_supplied_artifacts",
         "max_candidates_per_query": max_candidates_per_query,
         "candidate_artifact_sha256": [
-            hashlib.sha256(path.read_bytes()).hexdigest() for path in results_paths
+            canonical_dataset_sha256(path.read_bytes()) for path in results_paths
         ],
         "candidate_count_by_query": candidate_counts,
         "reviewer_queues": {

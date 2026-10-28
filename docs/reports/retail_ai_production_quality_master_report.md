@@ -10,9 +10,9 @@ This report separates deterministic regressions, synthetic evaluation, live prov
 
 ## 1. Executive summary
 
-The current implementation improves exact product/category retrieval, multi-turn scope retention, alternative pagination, runtime hot paths, and explicit soft-preference retention. This continuation fixes alternative lookup truncation beyond the repository's 20-row page, ties session novelty to products actually shown, and adds per-attribute catalog evidence (`VERIFIED` / `INFERRED` / `UNKNOWN`) with provenance. Simulated and demo shelf coordinates are no longer described as physically verified.
+The current implementation improves exact product/category retrieval, multi-turn scope retention, alternative pagination, runtime hot paths, and explicit soft-preference retention. This continuation fixes alternative lookup truncation beyond the repository's 20-row page, ties session novelty to products actually shown, and adds per-attribute catalog evidence (`VERIFIED` / `INFERRED` / `UNKNOWN`) with provenance. Simulated and demo shelf coordinates are no longer described as physically verified. The retrieval comparison now uses the exact 3,081-product corpus accepted by the runtime repository for BM25, E5-small, and RRF; the old 3,099-row raw-corpus comparison is retained only as historical evidence. A blinded two-reviewer queue now pools all three systems on the same 150 development queries.
 
-The frozen development benchmark reports 100% on its generated exact-product, category, and hard-constraint checks. These scores are provisional because queries are templated from the same catalog, labels have not been independently reviewed, and they do not grade semantic suitability or naturalness. A live, manually written Groq probe returned HTTP 200 on all five turns. In the post-fix run, Qwen included “dễ chia” in its tool arguments and the response acknowledged it while leaving the plan items unchanged. Because the model itself emitted the preference on this repeat, the live run does not prove that the semantic guard rescued an omitted field; the focused unit test covers that path. This is one successful probe, not a statistical quality estimate. The latest local full suite passes 1,241 tests; its added cross-platform regression covers a Linux/Windows catalog-hash mismatch that had caused three failures in the previous GitHub run.
+The frozen development benchmark reports 100% on its generated exact-product, category, and hard-constraint checks. These scores are provisional because queries are templated from the same catalog, labels have not been independently reviewed, and they do not grade semantic suitability or naturalness. A live, manually written Groq probe returned HTTP 200 on all five turns. In the post-fix run, Qwen included “dễ chia” in its tool arguments and the response acknowledged it while leaving the plan items unchanged. Because the model itself emitted the preference on this repeat, the live run does not prove that the semantic guard rescued an omitted field; the focused unit test covers that path. This is one successful probe, not a statistical quality estimate. The latest local full suite passes 1,245 tests; an earlier pushed revision passed 1,241 on Linux CI, and this continuation will trigger CI for the new tests and retrieval changes.
 
 **Decision:** do not release as a production retail advisor. Keep demo-only until there is a human-authored, blind held-out set, independent qrels review, multi-user API load testing, and real attribute-level catalog evidence. The new evidence tool prevents missing attributes from being guessed; it does not add currently absent product facts. Current latency at concurrency 5–20 is also too high for a production conversational target.
 
@@ -20,7 +20,7 @@ The frozen development benchmark reports 100% on its generated exact-product, ca
 
 - Work stays on `codex/retail-text-quality-v4-20261019`; no branch was created for this continuation.
 - The 2026-10-29 semantic V2 rerun used base commit `7eeaa179d0ca0753a9759e67df3e4b2bf494a0ae` with a dirty working tree; its artifact records the tracked diff hash. It is not a clean release-commit result. Historical probes listed below may use earlier base commits.
-- Baseline full suite on `7eeaa17`: 1,222 passed in 299.31 s. A previous continuation passed 1,233 tests in 217.86 s. The seeded-invariant run based on `af1f979b7c4ce01b1f7aef3f19523ababcb3a6b4` passed 1,238 in 248.48 s. After the qrels exporter and branch-CI changes, a full suite passed 1,238 tests in 250.70 s based on `b5d46c9`. The current code passes locally with 1,241 tests in 157.31 s and on GitHub Actions run `40748503030` for commit `42479e7` with 1,241 tests in 151.11 s; remote Ruff and compileall also pass.
+- Baseline full suite on `7eeaa17`: 1,222 passed in 299.31 s. A previous continuation passed 1,233 tests in 217.86 s. The seeded-invariant run based on `af1f979b7c4ce01b1f7aef3f19523ababcb3a6b4` passed 1,238 in 248.48 s. After the qrels exporter and branch-CI changes, a full suite passed 1,238 tests in 250.70 s based on `b5d46c9`. The preceding pushed code passed 1,241 tests locally in 157.31 s and on GitHub Actions run `40748503030` for commit `42479e7` in 151.11 s. This continuation passes 1,245 tests locally in 160.61 s; remote CI for the new retrieval/exporter changes is pending push.
 - New deterministic regression suite: 5/5 tests passed in 14.66 s using seed `20261029` and the catalog hash below. It sampled 64 SKUs for title variants, checked 17 retrievable price-filter scopes, exercised 32 brand-exclusion scopes, tried 32 unseen query tokens, and rebuilt an index from one synthetic new catalog row. Artifact: [`catalog_metamorphic_invariants_20261029.json`](artifacts/catalog_metamorphic_invariants_20261029.json).
 - Local environment: Windows, Python 3.13+, `uv`; runtime catalog is the WinMart JSON snapshot. The imported dataset has 3,099 raw rows, 3,081 accepted products, and 18 quarantined rows.
 - Provider configuration was present for the live probe. No API key or credential value is written to reports or artifacts. Voice was not evaluated in this task.
@@ -98,6 +98,9 @@ Do not promote LLM structured extraction to the every-request fast path: its rec
 - `.github/workflows/retail-backend-quality.yml`: run locked-dependency Ruff, offline backend tests, and Python compile checks on `main` and the requested text-quality branch. The initial run failed on cross-platform shelf/hash assertions; run `40748503030` passes all three CI steps on commit `42479e7`.
 - `evaluation/api_runtime_load_sanity.py`: exercise at least 20 requests at each C1/C5/C20 level, report observed in-flight concurrency and p99/max samples, capture environment and tracked-diff hash, and keep warm-up/heap probes separate from timed latency.
 - `evaluation/vietnamese_parser_hot_path_benchmark.py`: compare current parser functions against pinned base `295133b`; artifact [`vietnamese_parser_hot_path_20261029.json`](artifacts/vietnamese_parser_hot_path_20261029.json) reports 150/150 output parity and 8.846× repeated-path speedup. This is a development microbenchmark, not a human semantic-quality score.
+- `evaluation/generalized_retrieval_variants.py`: compare BM25, multilingual E5-small, and reciprocal-rank fusion on the runtime-validated catalog; validate gold product IDs before scoring and record catalog/query/commit hashes, full query latency, CPU, environment, and index-build time. The temporary `fastembed` environment is not added to project dependencies.
+- `evaluation/export_vietnamese_qrels_review.py`: only export query cases present in a retrieval artifact, reject candidates outside the validated runtime catalog, preserve explicit no-candidate queries, and normalize content hashes across Windows/Linux line endings.
+- `tests/test_generalized_retrieval_variants.py`: cover runtime-catalog parity, quarantined rows, held-in catalog IDs, and invalid gold IDs; benchmark/export regressions also cover missing-run cases.
 - Added qrels schema/annotation guide/export workflow and regression coverage for state, alternative turns, injection protections, and the newly recovered soft preference.
 
 The preference guard requires an explicit preference cue and an existing parser-supported soft preference. It does not infer arbitrary product suitability from the utterance, alter need requiredness, or assert that candidates satisfy the preference. The post-fix live run returned the expected acknowledgement, but did not change the drink-only plan because the required snack attribute remains unverified. The raw trace shows Qwen emitted the preference itself, so this live run is not evidence that the backend guard rescued a missing tool field.
@@ -105,6 +108,8 @@ The preference guard requires an explicit preference cue and an existing parser-
 ## 8. Dataset provenance
 
 Primary catalog: `data/winmart_products.json`, 3,081 accepted products from 3,099 rows; catalog SHA-256 `a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6`.
+
+The runtime-validated repository accepts 3,081 products from 3,099 rows and quarantines 18. Raw catalog SHA-256 is `a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6`; LF-normalized content SHA-256 is `8f2ee3771be548b85a8d8981127b2518b8e8e5868584491df36b96317476cbbc`. New retrieval artifacts use only the accepted products, and every gold ID is validated against that corpus before retrieval.
 
 The semantic-intelligence V2 benchmark includes frozen variants. The 2026-10-29 rerun used 300 generated query cases (100 exact product, 100 category, 100 hard-constraint) and 50 generated conversations / 200 turns from `retail_ai_semantic_intelligence_v2_frozen_20261028.json`, SHA-256 `d030d8f860f426a0ffcba7d44b542f8f7b23e9d361a51d8810c052670ba8b1e9`. Earlier `dev_rev1` / `dev_rev2` artifacts use a separate file/hash (`8f129beecee14b7c8ff1bbba106fae154a3321a55ef2efaad718e3493de27d3b`); they remain historical and are not interchangeable with this rerun. All variants are catalog-derived synthetic development data, not blind or human-reviewed.
 
@@ -144,12 +149,13 @@ Post-pagination rerun: [`semantic_intelligence_v2_postfix_20261029.json`](artifa
 | --- | --- | --- |
 | Deterministic parser + catalog | Dev product R@1/R@5 and category P@5 are 1.00 on generated cases. | Keep as low-latency/evidence-grounded path; do not infer human quality. |
 | LLM structured extraction | 20/60 pass; 34 provider errors; 6 schema/parse/incomplete responses. | Keep model as conversational tool agent; do not call structured extraction for every query. |
-| BM25 vs E5-small vs RRF, title-derived dev n=150 | BM25 R@1/R@5 .9800/1.0000; E5 .9667/.9800; RRF .9733/.9933. | BM25 remains competitive for explicit title search. |
-| BM25 vs E5-small vs RRF, generated SKU-held-out title variants n=360 | BM25 .9889/1.0000; E5 .9389/.9833; RRF .9722/.9917. | Does not settle semantic-query retrieval; no model promoted. |
+| BM25 vs E5-small vs RRF, runtime-catalog title-derived dev n=150 | On the same 3,081 accepted products: BM25 R@1/R@5 .9800/1.0000, MRR@5 .9867, nDCG@5 .9900; E5 .9667/.9800, MRR .9711, nDCG .9733; RRF .9733/.9933, MRR .9833, nDCG .9860. | BM25 leads this explicit title-resolution set; dense/RRF do not justify a default change. |
+| BM25 vs E5-small vs RRF, previously inspected SKU-separated title variants n=360 | Same runtime catalog: BM25 R@1/R@5 .9889/1.0000, MRR@5 .9944, nDCG@5 .9959; E5 .9389/.9833, MRR .9595, nDCG .9656; RRF .9722/.9917, MRR .9819, nDCG .9845. | Exploratory only: this split is exposed and is not a blind or semantic-fit test. |
+| Retrieval latency, local Windows CPU | Dev p50/p95 ms: BM25 full rank 18.990/24.734; E5 embedding only 9.166/11.785; E5 full embedding+score+sort 21.619/25.886; RRF fusion 0.141/0.198. Exploratory n=360 p50/p95: 13.744/18.991; 7.502/9.388; 16.497/20.645; 0.101/0.154 respectively. | Compare full E5 against full BM25; embedding-only timing is not an end-to-end retrieval comparison. Machine-specific, not API/LLM latency. |
 | Bounded in-memory caches | Deterministic ASGI p50 improved vs prior same-script run: approx 1,354→707 ms at C1, 7,541→3,855 ms at C5, 7,878→4,871 ms at C20. | Retain bounded caches, but remeasure on server deployment and real query traffic. |
 | Soft-preference recovery | New unit tests prove explicit parser-supported preference survives an omitted LLM field and budget-only revision is not treated as preference. | Keep as a narrow generic state guard; post-fix live run passed but the model emitted the preference itself. |
 
-BM25/dense comparison used title-derived paraphrase variants, not human semantic need queries. Cross-encoder and large embedding reranking were not implemented because qrels, hardware profile, and expected benefit are missing.
+Artifacts: [`generalized_retrieval_variants_runtime_dev_20261029.json`](artifacts/generalized_retrieval_variants_runtime_dev_20261029.json) and [`generalized_retrieval_variants_runtime_heldout_exploratory_20261029.json`](artifacts/generalized_retrieval_variants_runtime_heldout_exploratory_20261029.json). Both use the same validated runtime corpus per run, but the generated queries are catalog-title variants, not human semantic-need queries. FastEmbed 0.9.1 / ONNX Runtime 1.31.1 were installed into a one-off `uv run --with fastembed` environment; no project dependency/lockfile was changed. Cold index build including model initialization and embedding all 3,081 items took 73.7 s for dev and 65.0 s for the exploratory run; the FP32 vector payload was 4,732,416 bytes. RSS/peak memory and model-download time were not measured. Cross-encoder and large embedding reranking were not implemented because reviewed qrels, hardware profile, and expected benefit are missing.
 
 ## 12. Error analysis
 
@@ -174,10 +180,10 @@ See [`live_snapshot_provider_probe_after_preference_fix_20261028.json`](artifact
 
 | Gate | Result | Status |
 | --- | --- | --- |
-| Full backend/evaluation pytest suite | `uv run pytest tests -q --tb=short`: 1,241 passed in 157.31 s locally; GitHub run `40748503030` on `42479e7`: 1,241 passed in 151.11 s. | Pass locally and on Linux CI. |
+| Full backend/evaluation pytest suite | `uv run pytest tests -q --tb=short`: 1,245 passed in 160.61 s locally. Previous pushed baseline `42479e7` passed 1,241 tests in 151.11 s on GitHub run `40748503030`; CI for this continuation is pending push. | Pass locally; current revision awaits Linux CI. |
 | Ruff, compileall, and `git diff --check` | `uv run ruff check backend tests evaluation scripts`, `uv run python -m compileall -q backend tests evaluation scripts`, and `git diff --check` all pass. Git emits only expected Windows line-ending conversion warnings. | Pass locally. |
 | Seeded catalog metamorphic invariants | 5/5 passed: punctuation/accent variants preserve 64 sampled SKUs; budget caps held across 17 retrievable scopes; brand exclusions held across 32 scopes; 32 unseen tokens returned no product; a newly added synthetic SKU was indexed without product-specific code. | Pass for deterministic catalog regressions only; not a relevance or human-quality score. |
-| Qrels candidate-pool exporter | 8 benchmark/export tests passed; a temporary export from the 300-query dev set emitted 1,466 rows. Multi-artifact fixture verified a four-SKU interleaved union, source/rank hiding, independent reviewer order, and reproducibility. | Pass for tooling; current real review queues remain unjudged and the real dataset export used one retrieval artifact. |
+| Runtime-catalog multi-system qrels exporter | Fresh export pooled BM25/E5/RRF for the same 150 development queries; two reviewer files contain 1,134 rows each, 5–14 candidates/query, all products in the accepted catalog, identical candidate membership with independent order, no source/rank leakage, and all grades/rationales blank with status `UNREVIEWED`. Forty dataset cases absent from the retrieval artifact were correctly skipped. | Pass for queue integrity only. Human relevance has not been judged; this is not an accuracy result. |
 | Branch CI workflow | Prior run `40744779694` failed 3/1,238 tests on Linux because the committed planogram only matched the Windows raw-byte catalog hash. Commit `42479e7` adds a canonical-hash path and LF-checkout integration regression; run `40748503030` passes Ruff, all 1,241 tests, and compileall on Ubuntu 24.04. | Pass on the pushed code commit. |
 | Vietnamese parser hot path | 50 authored development queries × 3 functions; baseline 564.280 ms first pass / 1,684.934 ms repeated; optimized 64.310 ms / 190.479 ms; 150/150 outputs identical. | 8.846× repeated-path speedup on this machine only; not an end-to-end latency or blind semantic-accuracy score. |
 | Synthetic product/category/constraint checks | 100/100 within each generated dimension; zero encoded-constraint violations. | Pass for development regression only. |
@@ -218,9 +224,9 @@ The checks run in the full suite; they do not establish resistance to every prom
 
 ## 18. Human review status
 
-**No independent human qrels or conversation-quality review was completed.** The 300 query / 50 conversation semantic benchmark is synthetic and development-facing. The two-case live probe was manually authored by the implementer and inspected by the implementer, so it is diagnostic only. The review exporter can now pool candidate artifacts from several retrieval systems and independently shuffle reviewer queues, but the checked-in queues are still `UNREVIEWED`; no human relevance score is available. The real 300-query export smoke used one retrieval artifact, so multi-system fair pooling is verified by fixtures, not yet by a matched real-system run.
+**No independent human qrels or conversation-quality review was completed.** The 300-query / 50-conversation semantic benchmark is synthetic and development-facing. The two-case live probe was manually authored by the implementer and inspected by the implementer, so it is diagnostic only. A new matched retrieval run now pools BM25, E5-small, and RRF over the same 150 development queries and the exact runtime-accepted catalog. The two blinded reviewer queues each contain 1,134 ungraded rows; candidate membership matches while ordering differs. Every label and rationale remains blank and `UNREVIEWED`. This is a review-ready queue, not completed human evaluation or a relevance score.
 
-Annotation schema, guidance, and exporter are present under `evaluation/schemas/`, `evaluation/review/`, and `evaluation/vietnamese_product_qrels_annotation_guide.md`. The next review should use at least two annotators for ambiguous Exact/Substitute/Complement/Irrelevant labels, adjudicate disagreements, and freeze a separately authored blind set before tuning against it.
+Annotation schema, guidance, and exporter are present under `evaluation/schemas/`, `evaluation/review/`, and `evaluation/vietnamese_product_qrels_annotation_guide.md`. Queue files: [`annotator A`](../../evaluation/review/vietnamese_qrels_runtime_catalog_dev_20261029_annotator_a.csv), [`annotator B`](../../evaluation/review/vietnamese_qrels_runtime_catalog_dev_20261029_annotator_b.csv), with evaluator-only metadata in [`manifest`](../../evaluation/review/vietnamese_qrels_runtime_catalog_dev_20261029_evaluator_only_manifest.json). The next review should use two independent annotators for Exact/Substitute/Complement/Irrelevant labels, adjudicate disagreements, and freeze a separately authored blind set before tuning against it.
 
 ## 19. Remaining limitations
 
@@ -229,6 +235,8 @@ Annotation schema, guidance, and exporter are present under `evaluation/schemas/
 - No verified sales, rating, or popularity data; bestseller/tastiest claims must abstain.
 - Shelf planogram is synthetic/recommended and not proof of physical placement.
 - Search metrics do not validate suitability for implicit needs, accepted substitutes, complements, or multi-product tasks.
+- Both new retrieval query sets are catalog-derived title variants. The 360-case exploratory set has previously been inspected; neither retrieval artifact is a blind holdout or human relevance benchmark.
+- CPU-only E5 indexing has a material cold-start cost (~65–74 s in these runs); model download time and peak RSS were not measured. The retrieval experiment is not integrated into production runtime.
 - The seeded metamorphic suite verifies repeatable repository/tool invariants against this snapshot; it does not measure semantic relevance, naturalness, or recommendation suitability. Its one synthetic catalog row is only a generic index-rebuild check.
 - Synthetic development cases have leakage risk and narrow language coverage; accentless text, typos, dialects, ASR errors, and long multi-intent conversations need independent review.
 - Alternative SKU novelty is not measured by the parser benchmark; current load test is too small for capacity estimates.
@@ -263,6 +271,20 @@ uv run python -m evaluation.api_runtime_load_sanity `
   --output docs/reports/artifacts/api_runtime_load_sanity_20261029.json
 uv run python -m evaluation.vietnamese_parser_hot_path_benchmark `
   --output docs/reports/artifacts/vietnamese_parser_hot_path_20261029.json
+uv run --with fastembed python -m evaluation.generalized_retrieval_variants `
+  --cases evaluation/cases/generalized_catalog_consultation_dev_v1.jsonl `
+  --output docs/reports/artifacts/generalized_retrieval_variants_runtime_dev_20261029.json
+uv run --with fastembed python -m evaluation.generalized_retrieval_variants `
+  --cases evaluation/cases/generalized_catalog_consultation_heldout_v1.jsonl `
+  --output docs/reports/artifacts/generalized_retrieval_variants_runtime_heldout_exploratory_20261029.json
+uv run python -m evaluation.export_vietnamese_qrels_review `
+  --dataset evaluation/cases/generalized_catalog_consultation_dev_v1.jsonl `
+  --results docs/reports/artifacts/generalized_retrieval_variants_runtime_dev_20261029.json `
+  --output-prefix evaluation/review/vietnamese_qrels_runtime_catalog_dev_20261029 `
+  --catalog data/winmart_products.json `
+  --split development `
+  --seed 20261029 `
+  --max-candidates-per-query 15
 uv run python -m evaluation.live_text_conversation_benchmark `
   --case-file evaluation/cases/vietnamese_snapshot_provider_probe_20261028.json `
   --pace-seconds 2.5 `
