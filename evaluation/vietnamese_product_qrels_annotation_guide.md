@@ -42,6 +42,6 @@ uv run python -m evaluation.export_vietnamese_qrels_review `
   --output-prefix evaluation/review/retail_ai_v2_dev_rev1
 ```
 
-Repeat `--results` for each retrieval variant only when it was run against the same dataset and carries matching `case_id` values. Do not pool artifacts from unrelated query sets.
+Repeat `--results` for each retrieval variant only when it was run against the same dataset and carries matching `case_id` values. The exporter includes only dataset cases present in at least one supplied result artifact; when a system ran a case but returned no candidates, that case remains reviewable as an explicit no-candidate row. Candidate IDs absent from the validated runtime catalog stop the export. Do not pool artifacts from unrelated query sets.
 
 The CSVs are a queue, not completed judgments. After review, normalize rows to JSONL matching `schemas/vietnamese_product_qrel_v1.schema.json` and retain dataset/catalog hashes and each reviewer's independent labels.
