@@ -19,8 +19,8 @@ The frozen development benchmark reports 100% on its generated exact-product, ca
 ## 2. Commit & environment
 
 - Work stays on `codex/retail-text-quality-v4-20261019`; no branch was created for this continuation.
-- The 2026-10-29 synthetic rerun used base commit `7eeaa179d0ca0753a9759e67df3e4b2bf494a0ae` with a dirty working tree; its artifact records the tracked diff hash. It is not a clean release-commit result. Historical probes listed below may use earlier base commits.
-- Baseline full suite on that base commit: 1,222 passed in 299.31 s. The previous continuation passed 1,233 tests in 217.86 s. The current seeded-invariant run, based on `af1f979b7c4ce01b1f7aef3f19523ababcb3a6b4` with the test file uncommitted, passed 1,238 tests in 248.48 s. It includes the earlier pagination, knowledge provenance, grounded API/agent tool-flow, and visible-card session regressions, plus the new catalog invariant suite. The exact committed revision is rechecked before push.
+- The 2026-10-29 semantic V2 rerun used base commit `7eeaa179d0ca0753a9759e67df3e4b2bf494a0ae` with a dirty working tree; its artifact records the tracked diff hash. It is not a clean release-commit result. Historical probes listed below may use earlier base commits.
+- Baseline full suite on `7eeaa17`: 1,222 passed in 299.31 s. A previous continuation passed 1,233 tests in 217.86 s. The seeded-invariant run based on `af1f979b7c4ce01b1f7aef3f19523ababcb3a6b4` passed 1,238 in 248.48 s. After the qrels exporter and branch-CI changes, the full suite passed 1,238 tests in 250.70 s on a dirty tree based on `b5d46c91b66322db8c5da3a2e01a0ffa040f838c`; this run includes the updated reviewer-queue tests. The exact commit is rechecked before push.
 - New deterministic regression suite: 5/5 tests passed in 14.66 s using seed `20261029` and the catalog hash below. It sampled 64 SKUs for title variants, checked 17 retrievable price-filter scopes, exercised 32 brand-exclusion scopes, tried 32 unseen query tokens, and rebuilt an index from one synthetic new catalog row. Artifact: [`catalog_metamorphic_invariants_20261029.json`](artifacts/catalog_metamorphic_invariants_20261029.json).
 - Local environment: Windows, Python 3.13+, `uv`; runtime catalog is the WinMart JSON snapshot. The imported dataset has 3,099 raw rows, 3,081 accepted products, and 18 quarantined rows.
 - Provider configuration was present for the live probe. No API key or credential value is written to reports or artifacts. Voice was not evaluated in this task.
@@ -91,6 +91,8 @@ Do not promote LLM structured extraction to the every-request fast path: its rec
 - `backend/services/smalltalk.py`: broaden wellbeing detection for the local response path.
 - `backend/products/category_taxonomy.py`, `snapshot_repository.py`, `postgres_repository.py`: bounded caches for repeated taxonomy, token, and normalization work.
 - `evaluation/semantic_intelligence_v2_benchmark.py`, `build_semantic_intelligence_v2_frozen.py`: fix alternative metric semantics, inclusive budget language, and deterministic frozen-dataset generation.
+- `evaluation/export_vietnamese_qrels_review.py`: accept multiple same-query retrieval artifacts, form a rank-interleaved/deduplicated candidate union, hide retrieval sources and ranks, and independently randomize query/candidate order for reviewer A/B. An evaluator-only manifest records dataset/catalog/artifact hashes and candidate counts.
+- `.github/workflows/retail-backend-quality.yml`: run locked-dependency Ruff, offline backend tests, and Python compile checks on `main` and the requested text-quality branch. Local YAML parse passes; the first GitHub Actions run is pending push.
 - `evaluation/api_runtime_load_sanity.py`: add in-process deterministic catalog load/heap probe, separating heap instrumentation from latency measurement.
 - Added qrels schema/annotation guide/export workflow and regression coverage for state, alternative turns, injection protections, and the newly recovered soft preference.
 
@@ -168,9 +170,11 @@ See [`live_snapshot_provider_probe_after_preference_fix_20261028.json`](artifact
 
 | Gate | Result | Status |
 | --- | --- | --- |
-| Full backend/evaluation pytest suite | `uv run pytest tests -q --tb=short`: 1,238 passed in 248.48 s on the working-tree run based on `af1f979`; previous post-change run had 1,233 passed in 217.86 s; baseline on `7eeaa17` had 1,222 passed in 299.31 s. | Pass; exact commit is rechecked before push. |
+| Full backend/evaluation pytest suite | `uv run pytest tests -q --tb=short`: 1,238 passed in 250.70 s on the working-tree run based on `b5d46c9`; earlier runs: 1,238 passed in 248.48 s on `af1f979`, 1,233 passed in 217.86 s, and baseline 1,222 passed in 299.31 s on `7eeaa17`. | Pass on working tree; exact commit is rechecked before push. |
 | Ruff and `git diff --check` | `uv run ruff check backend tests evaluation`: all checks passed; `git diff --check` clean (Git emitted only line-ending conversion warnings). | Pass. |
 | Seeded catalog metamorphic invariants | 5/5 passed: punctuation/accent variants preserve 64 sampled SKUs; budget caps held across 17 retrievable scopes; brand exclusions held across 32 scopes; 32 unseen tokens returned no product; a newly added synthetic SKU was indexed without product-specific code. | Pass for deterministic catalog regressions only; not a relevance or human-quality score. |
+| Qrels candidate-pool exporter | 8 benchmark/export tests passed; a temporary export from the 300-query dev set emitted 1,466 rows. Multi-artifact fixture verified a four-SKU interleaved union, source/rank hiding, independent reviewer order, and reproducibility. | Pass for tooling; current real review queues remain unjudged and the real dataset export used one retrieval artifact. |
+| Branch CI workflow | Workflow YAML parses; locked offline checks are configured for the target branch. | Pending first GitHub Actions execution; no remote CI result claimed yet. |
 | Synthetic product/category/constraint checks | 100/100 within each generated dimension; zero encoded-constraint violations. | Pass for development regression only. |
 | Post-pagination frozen benchmark | 300 generated queries + 50 synthetic dialogues; candidate R@5 0.98, zero encoded-constraint violations, novelty status not evaluated. | Pass for development regression only; see artifact and limitations. |
 | Live API grounding invariants | Post-fix run: 5/5 turns HTTP 200; 5/5 automated grounding checks passed; no fallback used. | HTTP/grounding gate only; not human-graded. |
@@ -209,7 +213,7 @@ The checks run in the full suite; they do not establish resistance to every prom
 
 ## 18. Human review status
 
-**No independent human qrels or conversation-quality review was completed.** The 300 query / 50 conversation semantic benchmark is synthetic and development-facing. The two-case live probe was manually authored by the implementer and inspected by the implementer, so it is diagnostic only.
+**No independent human qrels or conversation-quality review was completed.** The 300 query / 50 conversation semantic benchmark is synthetic and development-facing. The two-case live probe was manually authored by the implementer and inspected by the implementer, so it is diagnostic only. The review exporter can now pool candidate artifacts from several retrieval systems and independently shuffle reviewer queues, but the checked-in queues are still `UNREVIEWED`; no human relevance score is available. The real 300-query export smoke used one retrieval artifact, so multi-system fair pooling is verified by fixtures, not yet by a matched real-system run.
 
 Annotation schema, guidance, and exporter are present under `evaluation/schemas/`, `evaluation/review/`, and `evaluation/vietnamese_product_qrels_annotation_guide.md`. The next review should use at least two annotators for ambiguous Exact/Substitute/Complement/Irrelevant labels, adjudicate disagreements, and freeze a separately authored blind set before tuning against it.
 
@@ -242,6 +246,7 @@ Run from repository root:
 uv run pytest tests -q --tb=short
 uv run ruff check backend tests evaluation
 uv run pytest tests/test_catalog_metamorphic_invariants.py -q --tb=short
+uv run pytest tests/test_semantic_intelligence_v2_benchmark.py -q --tb=short
 uv run pytest tests/test_retail_agent.py tests/test_shopping_mission.py -q --tb=short
 uv run python -m evaluation.semantic_intelligence_v2_benchmark `
   --dataset evaluation/cases/retail_ai_semantic_intelligence_v2_dev_rev1_20261028.json `

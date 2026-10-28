@@ -7,6 +7,9 @@ import csv
 import hashlib
 import json
 import random
+import re
+from collections import defaultdict
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -45,28 +48,113 @@ def _load_dataset(path: Path) -> dict[str, Any]:
     return value
 
 
-def _load_candidates(path: Path) -> dict[str, list[str]]:
-    artifact = json.loads(path.read_text(encoding="utf-8"))
-    rows = artifact.get("deterministic_parser_and_catalog", {}).get("case_results", [])
-    if not isinstance(rows, list):
-        raise ValueError("Benchmark artifact has no deterministic case_results list")
-    return {
-        str(row["case_id"]): [str(value) for value in row.get("product_ids", [])]
-        for row in rows
-        if isinstance(row, dict) and row.get("case_id")
-    }
+def _case_rows(container: Any) -> Iterable[dict[str, Any]]:
+    if not isinstance(container, dict):
+        return
+    for key in ("case_results", "cases"):
+        rows = container.get(key)
+        if isinstance(rows, list):
+            yield from (row for row in rows if isinstance(row, dict) and row.get("case_id"))
+
+
+def _candidate_sequences(row: dict[str, Any]) -> list[list[str]]:
+    sequences = []
+    for field, values in row.items():
+        normalized_field = str(field).casefold()
+        is_candidate_field = normalized_field in {
+            "product_ids",
+            "candidate_ids",
+            "candidate_product_ids",
+            "retrieved_product_ids",
+        } or bool(re.search(r"_top(?:[1-9][0-9]*)$", normalized_field))
+        if not is_candidate_field or not isinstance(values, list):
+            continue
+        sequences.append(list(dict.fromkeys(str(value) for value in values if value)))
+    return sequences
+
+
+def _load_candidates(
+    paths: Sequence[Path], max_candidates_per_query: int
+) -> dict[str, list[str]]:
+    """Build a rank-interleaved candidate union without exposing source ranks."""
+    source_sequences: dict[str, list[list[str]]] = defaultdict(list)
+    found_results = False
+    for path in paths:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        containers = [artifact]
+        deterministic = artifact.get("deterministic_parser_and_catalog")
+        if isinstance(deterministic, dict):
+            containers.append(deterministic)
+        variants = artifact.get("variants")
+        if isinstance(variants, dict):
+            containers.extend(value for value in variants.values() if isinstance(value, dict))
+        elif isinstance(variants, list):
+            containers.extend(value for value in variants if isinstance(value, dict))
+
+        for container in containers:
+            for row in _case_rows(container):
+                case_id = str(row["case_id"])
+                sequences = _candidate_sequences(row)
+                if sequences:
+                    found_results = True
+                    source_sequences[case_id].extend(sequences)
+
+    if not found_results:
+        raise ValueError("Benchmark artifacts contain no supported candidate result lists")
+
+    candidates_by_case: dict[str, list[str]] = {}
+    for case_id, sequences in source_sequences.items():
+        candidates: list[str] = []
+        seen: set[str] = set()
+        for rank in range(max(map(len, sequences), default=0)):
+            for sequence in sequences:
+                if rank >= len(sequence):
+                    continue
+                product_id = sequence[rank]
+                if product_id not in seen:
+                    seen.add(product_id)
+                    candidates.append(product_id)
+                    if len(candidates) >= max_candidates_per_query:
+                        break
+            if len(candidates) >= max_candidates_per_query:
+                break
+        candidates_by_case[case_id] = candidates
+    return candidates_by_case
+
+
+def _independently_shuffle_review_rows(
+    rows: list[dict[str, Any]], seed: int, reviewer: str
+) -> list[dict[str, Any]]:
+    by_query: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        by_query[str(row["query_id"])].append(dict(row))
+    query_ids = list(by_query)
+    random.Random(f"{seed}:{reviewer}:queries").shuffle(query_ids)
+
+    shuffled: list[dict[str, Any]] = []
+    for query_id in query_ids:
+        group = by_query[query_id]
+        random.Random(f"{seed}:{reviewer}:{query_id}").shuffle(group)
+        shuffled.extend(group)
+    return shuffled
 
 
 def export_review_queues(
     dataset_path: Path,
-    results_path: Path,
+    results_path: Path | Sequence[Path],
     output_prefix: Path,
     catalog_path: Path = DEFAULT_CATALOG,
     split: str = "development",
     seed: int = 20261028,
+    max_candidates_per_query: int = 50,
 ) -> dict[str, str | int]:
     dataset = _load_dataset(dataset_path)
-    candidates_by_case = _load_candidates(results_path)
+    results_paths = [results_path] if isinstance(results_path, Path) else list(results_path)
+    if not results_paths:
+        raise ValueError("At least one benchmark results artifact is required")
+    if not 1 <= max_candidates_per_query <= 200:
+        raise ValueError("max_candidates_per_query must be between 1 and 200")
+    candidates_by_case = _load_candidates(results_paths, max_candidates_per_query)
     repository = SnapshotProductRepository(catalog_path)
     dataset_sha256 = hashlib.sha256(dataset_path.read_bytes()).hexdigest()
     catalog_sha256 = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
@@ -79,7 +167,6 @@ def export_review_queues(
             continue
         query_id = hashlib.sha256(f"{dataset_sha256}:{case_id}".encode()).hexdigest()[:16]
         product_ids = candidates_by_case.get(case_id, [])
-        random.Random(f"{seed}:{query_id}").shuffle(product_ids)
         if not product_ids:
             product_ids = [""]
         for candidate_id, product_id in enumerate(product_ids, 1):
@@ -127,22 +214,104 @@ def export_review_queues(
     if not review_rows:
         raise ValueError("No reviewable query cases were found")
     output_prefix.parent.mkdir(parents=True, exist_ok=True)
-    written: dict[str, str | int] = {"row_count": len(review_rows)}
+    written: dict[str, str | int] = {
+        "row_count": len(review_rows),
+        "query_count": len({row["query_id"] for row in review_rows}),
+        "max_candidates_per_query": max_candidates_per_query,
+    }
     fields = list(review_rows[0])
+    reviewer_orders: dict[str, dict[str, list[str]]] = {}
     for reviewer in ("annotator_a", "annotator_b"):
         output_path = output_prefix.with_name(f"{output_prefix.name}_{reviewer}.csv")
         with output_path.open("w", encoding="utf-8-sig", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=fields)
             writer.writeheader()
-            writer.writerows(review_rows)
+            reviewer_rows = _independently_shuffle_review_rows(review_rows, seed, reviewer)
+            writer.writerows(reviewer_rows)
+        orders: dict[str, list[str]] = defaultdict(list)
+        for row in reviewer_rows:
+            orders[str(row["query_id"])].append(str(row["candidate_key"]))
+        reviewer_orders[reviewer] = dict(orders)
         written[reviewer] = str(output_path)
+
+    # If the independent seeds happen to create an identical order for every
+    # multi-candidate query, rotate one reviewer's first matching query. This keeps
+    # reviewers from receiving aligned row positions while remaining repeatable.
+    same_order_group = next(
+        (
+            query_id
+            for query_id, candidate_keys in reviewer_orders["annotator_a"].items()
+            if len(candidate_keys) > 1
+            and reviewer_orders["annotator_b"].get(query_id) == candidate_keys
+        ),
+        None,
+    )
+    if same_order_group is not None:
+        reviewer_b_path = Path(str(written["annotator_b"]))
+        with reviewer_b_path.open(encoding="utf-8-sig", newline="") as handle:
+            reviewer_b_rows = list(csv.DictReader(handle))
+        group_indexes = [
+            index
+            for index, row in enumerate(reviewer_b_rows)
+            if row["query_id"] == same_order_group
+        ]
+        if len(group_indexes) > 1:
+            rotated = [reviewer_b_rows[index] for index in group_indexes[1:]] + [
+                reviewer_b_rows[group_indexes[0]]
+            ]
+            for index, row in zip(group_indexes, rotated, strict=True):
+                reviewer_b_rows[index] = row
+            with reviewer_b_path.open("w", encoding="utf-8-sig", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=fields)
+                writer.writeheader()
+                writer.writerows(reviewer_b_rows)
+
+    candidate_counts = {
+        str(row["query_id"]): 0
+        for row in review_rows
+    }
+    for row in review_rows:
+        if row["product_id"]:
+            candidate_counts[str(row["query_id"])] += 1
+
+    manifest_path = output_prefix.with_name(f"{output_prefix.name}_evaluator_only_manifest.json")
+    manifest = {
+        "dataset_id": str(dataset.get("dataset_id", dataset_path.stem)),
+        "dataset_sha256": dataset_sha256,
+        "catalog_sha256": catalog_sha256,
+        "split": split,
+        "seed": seed,
+        "candidate_pool_policy": "rank_interleaved_union_from_all_supplied_artifacts",
+        "max_candidates_per_query": max_candidates_per_query,
+        "candidate_artifact_sha256": [
+            hashlib.sha256(path.read_bytes()).hexdigest() for path in results_paths
+        ],
+        "candidate_count_by_query": candidate_counts,
+        "reviewer_queues": {
+            "source_and_rank_hidden": True,
+            "query_and_candidate_order_randomized_per_reviewer": True,
+            "gold_labels_hidden": True,
+            "do_not_distribute_manifest_to_annotators": True,
+        },
+    }
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    written["evaluator_manifest"] = str(manifest_path)
     return written
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, required=True)
-    parser.add_argument("--results", type=Path, required=True)
+    parser.add_argument(
+        "--results",
+        type=Path,
+        action="append",
+        required=True,
+        help="Benchmark results artifact; repeat this flag to pool multiple retrieval systems.",
+    )
     parser.add_argument("--output-prefix", type=Path, required=True)
     parser.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG)
     parser.add_argument(
@@ -152,6 +321,7 @@ def main() -> None:
         help="Only label as blind_test after an independently authored split is frozen.",
     )
     parser.add_argument("--seed", type=int, default=20261028)
+    parser.add_argument("--max-candidates-per-query", type=int, default=50)
     args = parser.parse_args()
     print(
         json.dumps(
@@ -162,6 +332,7 @@ def main() -> None:
                 args.catalog,
                 args.split,
                 args.seed,
+                args.max_candidates_per_query,
             ),
             ensure_ascii=False,
             indent=2,
