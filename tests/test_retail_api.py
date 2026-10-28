@@ -35,6 +35,7 @@ from backend.api.main import (
     _promotion_list_tool_arguments,
     _prompt_override_requested,
     _recommendation_constraint_updates,
+    _recommendation_list_removal_requested,
     _recommendation_tool_arguments,
     _render_verified_snapshot,
     _requested_snapshot_fields,
@@ -294,6 +295,22 @@ async def test_colloquial_cheap_soap_query_uses_catalog_instead_of_best_seller_c
 )
 def test_product_query_ignores_conversational_greeting(text: str, expected: str) -> None:
     assert _fact_product_query(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Bỏ loại thứ hai khỏi danh sách.", True),
+        ("Remove the second item from the list.", True),
+        ("Đừng bỏ loại đó khỏi danh sách.", False),
+        ("Tôi không muốn bỏ loại đó khỏi danh sách.", False),
+    ],
+)
+def test_recommendation_list_removal_requires_positive_intent(
+    text: str,
+    expected: bool,
+) -> None:
+    assert _recommendation_list_removal_requested(text) is expected
 
 
 @pytest.mark.parametrize(
@@ -2369,6 +2386,160 @@ async def test_first_item_price_followup_resolves_from_same_session(
     assert follow_up_payload["grounded_product_ids"] == [first_product_id]
     assert len(follow_up_payload["products"]) == 1
     assert first_price_text in follow_up_payload["text"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("category", ["Bánh bao", "Khăn mặt", "Nước suối", "Dầu gội"])
+async def test_second_list_item_details_and_list_removal_preserve_cart(
+    client: httpx.AsyncClient,
+    monkeypatch,
+    category: str,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    monkeypatch.setattr("backend.api.main.get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post(
+        "/sessions",
+        json={"kiosk_id": f"second-item-list-removal-{category.casefold().replace(' ', '-')}"},
+    )
+    session_id = created.json()["session_id"]
+
+    added = await client.post(
+        f"/sessions/{session_id}/cart/items",
+        json={"product_id": "WATER01", "quantity": 1},
+    )
+    assert added.status_code == 200, added.text
+    cart_before = (await client.get(f"/sessions/{session_id}/cart")).json()
+    assert cart_before["items"]
+
+    initial = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": f"Mình đang cần {category}, cho mình xem vài loại.",
+            "language": "vi",
+        },
+    )
+    assert initial.status_code == 200, initial.text
+    initial_ids = initial.json()["grounded_product_ids"]
+    assert len(initial_ids) >= 3
+    second_id = initial_ids[1]
+    second_product = repository.get_product_snapshot(second_id)
+    assert second_product is not None
+    second_price = f"{second_product.price_vnd:,}".replace(",", ".")
+
+    details = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Giá của loại thứ hai là bao nhiêu?",
+            "language": "vi",
+        },
+    )
+    assert details.status_code == 200, details.text
+    assert details.json()["grounded_product_ids"] == [second_id]
+    assert second_price in details.json()["text"]
+
+    removed = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Bỏ loại đó khỏi danh sách.",
+            "language": "vi",
+        },
+    )
+    assert removed.status_code == 200, removed.text
+    assert removed.json()["grounded_product_ids"] == [
+        product_id for product_id in initial_ids if product_id != second_id
+    ]
+    assert second_product.name in removed.json()["text"]
+    assert "danh sách" in removed.json()["text"].casefold()
+
+    updated_session = session_store.get(UUID(session_id))
+    assert updated_session.shopping.selected_product_ids == removed.json()["grounded_product_ids"]
+    assert second_id not in updated_session.shopping.selected_product_ids
+    cart_after = (await client.get(f"/sessions/{session_id}/cart")).json()
+    assert cart_after == cart_before
+
+    second_remaining_id = removed.json()["grounded_product_ids"][1]
+    second_remaining_product = repository.get_product_snapshot(second_remaining_id)
+    assert second_remaining_product is not None
+    removed_by_ordinal = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Bỏ loại thứ hai khỏi danh sách.",
+            "language": "vi",
+        },
+    )
+    expected_ids = [
+        product_id
+        for product_id in removed.json()["grounded_product_ids"]
+        if product_id != second_remaining_id
+    ]
+    assert removed_by_ordinal.status_code == 200, removed_by_ordinal.text
+    assert removed_by_ordinal.json()["grounded_product_ids"] == expected_ids
+    assert second_remaining_product.name in removed_by_ordinal.json()["text"]
+    assert session_store.get(UUID(session_id)).shopping.selected_product_ids == expected_ids
+    assert (await client.get(f"/sessions/{session_id}/cart")).json() == cart_before
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_list_removal_clarifies_without_changing_cart_or_candidates(
+    client: httpx.AsyncClient,
+    monkeypatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    monkeypatch.setattr("backend.api.main.get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "ambiguous-list-removal"})
+    session_id = created.json()["session_id"]
+    await client.post(
+        f"/sessions/{session_id}/cart/items",
+        json={"product_id": "WATER01", "quantity": 1},
+    )
+    cart_before = (await client.get(f"/sessions/{session_id}/cart")).json()
+
+    initial = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Mình đang cần Khăn mặt, cho mình xem vài loại.",
+            "language": "vi",
+        },
+    )
+    selected_before = initial.json()["grounded_product_ids"]
+    assert len(selected_before) >= 2
+    removed = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Bỏ loại đó khỏi danh sách.",
+            "language": "vi",
+        },
+    )
+
+    assert removed.status_code == 200, removed.text
+    assert "Bạn muốn bỏ sản phẩm nào" in removed.json()["text"]
+    assert removed.json()["grounded_product_ids"] == []
+    assert session_store.get(UUID(session_id)).shopping.selected_product_ids == selected_before
+    assert (await client.get(f"/sessions/{session_id}/cart")).json() == cart_before
     assert service.calls == 0
 
 

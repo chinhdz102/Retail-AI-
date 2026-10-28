@@ -2954,6 +2954,19 @@ def _pending_candidate_index(text: str) -> int | None:
     normalized = " ".join(_normalize_request_text(text).split())
     if re.search(r"\b(?:dau tien|first(?: item| product| one)?)\b", normalized):
         return 0
+    english_ordinals = {
+        "second": 1,
+        "third": 2,
+        "fourth": 3,
+        "fifth": 4,
+        "sixth": 5,
+    }
+    for word, index in english_ordinals.items():
+        if re.search(rf"\b(?:the\s+)?{word}(?:\s+(?:item|product|option|one))?\b", normalized):
+            return index
+    numeric_ordinal = re.search(r"\b(\d+)(?:st|nd|rd|th)\b", normalized)
+    if numeric_ordinal:
+        return int(numeric_ordinal.group(1)) - 1
     ordinals = {
         "nhat": 0,
         "mot": 0,
@@ -2973,6 +2986,209 @@ def _pending_candidate_index(text: str) -> int | None:
         ):
             return index
     return None
+
+
+def _recommendation_list_removal_requested(text: str) -> bool:
+    normalized = " ".join(_normalize_request_text(text).split())
+    if re.search(
+        r"\b(?:dung|khong|do not|don't|never)\s+"
+        r"(?:(?:co|muon|can|nen|phai|want to|need to)\s+)?"
+        r"(?:bo|xoa|remove|exclude|drop)\b",
+        normalized,
+    ):
+        return False
+    return bool(
+        re.search(
+            r"\b(?:bo|xoa|loai|remove|exclude|drop)\b.{0,100}"
+            r"\b(?:khoi|ra khoi|from|off)\b.{0,32}"
+            r"\b(?:danh sach|lua chon|goi y|ket qua|list|options?|recommendations?)\b",
+            normalized,
+        )
+    )
+
+
+def _recommendation_page_for_list_removal(record) -> list[str]:
+    selected_ids = [
+        str(product_id)
+        for product_id in record.shopping.selected_product_ids
+        if product_id
+    ]
+    if len(selected_ids) > 1:
+        return selected_ids
+
+    reference_id = selected_ids[0] if selected_ids else record.last_grounded_product_id
+    if reference_id:
+        for page in reversed(record.shopping.displayed_product_pages):
+            normalized_page = [str(product_id) for product_id in page if product_id]
+            if reference_id in normalized_page:
+                return normalized_page
+
+    original_ids = [
+        str(product_id)
+        for product_id in record.shopping.original_displayed_product_ids
+        if product_id
+    ]
+    if reference_id and reference_id in original_ids:
+        return original_ids
+    return selected_ids or original_ids
+
+
+def _list_removal_target_id(
+    text: str,
+    page_ids: list[str],
+    record,
+) -> str | None:
+    if not page_ids:
+        return None
+    normalized_text = " ".join(_normalize_request_text(text).split())
+    ordinal = _pending_candidate_index(text)
+    if ordinal is not None:
+        return page_ids[ordinal] if ordinal < len(page_ids) else None
+
+    repository = get_product_repository()
+    candidates = [
+        product
+        for product_id in page_ids
+        if (product := repository.get_product_snapshot(product_id)) is not None
+    ]
+    code = _pending_candidate_code(text)
+    if code:
+        code_matches = [
+            product
+            for product in candidates
+            if re.search(
+                rf"(?<!\w){re.escape(code)}(?!\w)",
+                _normalize_request_text(f"{product.product_id} {product.name}"),
+            )
+        ]
+        if len(code_matches) == 1:
+            return code_matches[0].product_id
+
+    named_matches = [
+        product
+        for product in candidates
+        if _normalize_request_text(product.name)
+        and _normalize_request_text(product.name) in normalized_text
+    ]
+    if len(named_matches) == 1:
+        return named_matches[0].product_id
+
+    last_grounded_id = record.last_grounded_product_id
+    reference_cues = re.search(
+        r"\b(?:do|nay|kia|no|it|that one|this one|the one)\b",
+        normalized_text,
+    )
+    if reference_cues and last_grounded_id in page_ids:
+        return last_grounded_id
+    if len(page_ids) == 1:
+        return page_ids[0]
+    return None
+
+
+def _localized_list_removal_reply(
+    language: LanguageCode,
+    *,
+    target_name: str | None = None,
+    remaining_names: list[str] | None = None,
+    needs_clarification: bool = False,
+) -> str:
+    if needs_clarification:
+        return {
+            "vi": (
+                "Bạn muốn bỏ sản phẩm nào khỏi danh sách? Nói tên món hoặc số thứ tự nhé; "
+                "mình chưa thay đổi danh sách hay giỏ hàng."
+            ),
+            "en": (
+                "Which product should I remove from the list? Tell me its name or number; "
+                "I have not changed the list or your cart."
+            ),
+            "zh": "您想从列表中移除哪件商品？请告诉我商品名称或序号；列表和购物车均未更改。",
+        }[language]
+    remaining = remaining_names or []
+    if language == "en":
+        reply = (
+            f"Removed {target_name} from the current recommendation list. "
+            "Your cart is unchanged."
+        )
+        if remaining:
+            return reply + f" Remaining options: {', '.join(remaining)}."
+        return reply + " No options remain."
+    if language == "zh":
+        reply = f"已将{target_name}从当前推荐列表移除，购物车未更改。"
+        if remaining:
+            return reply + "剩余选择：" + "、".join(remaining) + "。"
+        return reply + "列表中已没有其他选择。"
+    reply = f"Mình đã bỏ {target_name} khỏi danh sách gợi ý hiện tại; giỏ hàng không thay đổi."
+    if remaining:
+        return reply + " Còn lại: " + ", ".join(remaining) + "."
+    return reply + " Danh sách hiện không còn lựa chọn nào."
+
+
+def _handle_recommendation_list_removal(
+    request: AgentRespondRequest,
+    record,
+) -> AgentRespondResponse | None:
+    if not _recommendation_list_removal_requested(request.text):
+        return None
+
+    page_ids = _recommendation_page_for_list_removal(record)
+    target_id = _list_removal_target_id(request.text, page_ids, record)
+    page_products = [
+        product
+        for product_id in page_ids
+        if (product := get_product_repository().get_product_snapshot(product_id)) is not None
+    ]
+    if (
+        target_id is None
+        or target_id not in page_ids
+        or len(page_products) != len(page_ids)
+    ):
+        return _record_shopping_turn(
+            request,
+            _localized_list_removal_reply(
+                request.language,
+                needs_clarification=True,
+            ),
+            model="local-clarification",
+        )
+
+    removed_product = next(
+        (product for product in page_products if product.product_id == target_id),
+        None,
+    )
+    if removed_product is None:
+        return _record_shopping_turn(
+            request,
+            _localized_list_removal_reply(
+                request.language,
+                needs_clarification=True,
+            ),
+            model="local-clarification",
+        )
+
+    remaining_products = [product for product in page_products if product.product_id != target_id]
+    remaining_ids = [product.product_id for product in remaining_products]
+    session_store.update_shopping(
+        request.session_id,
+        current_intent=IntentType.RECOMMENDATION,
+        active_product_id=None,
+        selected_product_ids=remaining_ids,
+        pending_action="SELECT_RECOMMENDATION" if len(remaining_ids) > 1 else None,
+        pending_clarification=None,
+    )
+    if record.last_grounded_product_id == target_id:
+        session_store.set_last_grounded_product(request.session_id, None)
+
+    return _record_shopping_turn(
+        request,
+        _localized_list_removal_reply(
+            request.language,
+            target_name=removed_product.name,
+            remaining_names=[product.name for product in remaining_products],
+        ),
+        model="product-selection",
+        products=remaining_products,
+    )
 
 
 def _localized_product_dosage_unavailable(
@@ -5793,6 +6009,9 @@ async def agent_respond(
                 ),
             }[request.language]
             return _record_shopping_turn(request, reply, model="catalog")
+    list_removal_response = _handle_recommendation_list_removal(request, record)
+    if list_removal_response is not None:
+        return list_removal_response
     if prior_product_page_reference_kind(request.text) == "original":
         displayed_pages = record.shopping.displayed_product_pages
         original_page = record.shopping.original_displayed_product_ids or (

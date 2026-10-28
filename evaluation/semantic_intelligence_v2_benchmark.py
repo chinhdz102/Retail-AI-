@@ -74,6 +74,19 @@ def _budget_is_satisfied(price_vnd: int, query: str, maximum: int) -> bool:
     return price_vnd < maximum if strict_upper_bound else price_vnd <= maximum
 
 
+def _recall_at_k(retrieved_ids: list[str], relevant_ids: set[str], k: int) -> float | None:
+    """Compute recall using every relevant ID and the actual top-k result window.
+
+    Return ``None`` when a query has no relevant items; an empty gold set is not
+    a recall score of zero and is measured separately as a correct abstention.
+    """
+    if k < 1:
+        raise ValueError("k must be positive")
+    if not relevant_ids:
+        return None
+    return len(set(retrieved_ids[:k]) & relevant_ids) / len(relevant_ids)
+
+
 def _asks_for_alternative(query: str, expected_category: str) -> bool:
     """Detect a conversational alternative request, not ``khác`` in a label.
 
@@ -220,21 +233,20 @@ def _run_deterministic(
                 )
                 and normalize_category_text(product.brand) != excluded_key
             ]
-            returned_valid = all_valid_results[:5]
             eligible_ids = {product.product_id for product in eligible}
+            top5_ids = [product.product_id for product in products[:5]]
+            valid_top5 = set(top5_ids) & eligible_ids
             violations = len(products) - len(all_valid_results)
-            recall = len(
-                {product.product_id for product in returned_valid} & eligible_ids
-            ) / max(1, min(5, len(eligible)))
+            recall = _recall_at_k(top5_ids, eligible_ids, 5)
             row.update(
                 {
                     "hard_constraint_pass": (bool(products) and violations == 0)
                     or (not eligible and not products),
                     "violations": violations,
                     "eligible_product_count": len(eligible),
-                    "valid_results_at_5": len(returned_valid),
+                    "valid_results_at_5": len(valid_top5),
                     "correct_abstention": not eligible and not products,
-                    "candidate_recall_at_5": round(recall, 4),
+                    "candidate_recall_at_5": round(recall, 4) if recall is not None else None,
                     "parsed_category": parsed.product_type if parsed else None,
                     "parsed_budget_vnd": parsed.budget_vnd if parsed else None,
                     "parsed_negative_constraints": (
@@ -246,7 +258,11 @@ def _run_deterministic(
                 (bool(products) and violations == 0) or (not eligible and not products)
             )
             metric["constraint_violations"] += violations
-            metric["candidate_recall_at_5"] += recall
+            metric.setdefault("candidate_recall_at_5", 0)
+            metric.setdefault("candidate_recall_at_5_evaluable_count", 0)
+            if recall is not None:
+                metric["candidate_recall_at_5"] += recall
+                metric["candidate_recall_at_5_evaluable_count"] += 1
             metric["nonempty_result"] += int(bool(products))
             metric["parser_error_count"] += int(parser_error is not None)
         rows.append(row)
@@ -257,6 +273,13 @@ def _run_deterministic(
         summarized[kind] = {"count": count}
         for key, value in values.items():
             if key == "count":
+                continue
+            if key == "candidate_recall_at_5_evaluable_count":
+                summarized[kind][key] = int(value)
+                continue
+            if key == "candidate_recall_at_5":
+                denominator = int(values["candidate_recall_at_5_evaluable_count"])
+                summarized[kind][key] = round(value / denominator, 4) if denominator else None
                 continue
             summarized[kind][key] = (
                 round(value / max(1, count), 4)
