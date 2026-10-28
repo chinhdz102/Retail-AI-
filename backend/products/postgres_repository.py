@@ -4,6 +4,7 @@ import asyncio
 import re
 import unicodedata
 from datetime import UTC, datetime
+from functools import lru_cache
 
 import asyncpg
 
@@ -13,6 +14,7 @@ from backend.products.planogram import recommended_shelf
 from backend.products.repository import CatalogAdditions
 
 
+@lru_cache(maxsize=32768)
 def normalize_search_text(value: str | None) -> str:
     if not value:
         return ""

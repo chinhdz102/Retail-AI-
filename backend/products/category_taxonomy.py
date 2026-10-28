@@ -506,6 +506,22 @@ def resolve_catalog_category(
     hierarchies: Iterable[tuple[str, ...]],
 ) -> CatalogCategoryMatch | None:
     paths = tuple(hierarchies)
+    return _resolve_catalog_category_for_snapshot(query, paths)
+
+
+@lru_cache(maxsize=1024)
+def _resolve_catalog_category_for_snapshot(
+    query: str,
+    paths: tuple[tuple[str, ...], ...],
+) -> CatalogCategoryMatch | None:
+    """Cache the full pure resolution, including native-word disambiguation.
+
+    The inner matcher was already cached, but callers still rescanned every
+    taxonomy label for accent-aware matching and descendant refinement.
+    Keeping the complete result keyed by the immutable taxonomy snapshot avoids
+    repeating that work while naturally invalidating when catalog categories
+    change.
+    """
     native_match = _resolve_native_exact_single_word_category(query, paths)
     if native_match is not None:
         return native_match

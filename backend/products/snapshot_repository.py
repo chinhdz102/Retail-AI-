@@ -83,6 +83,7 @@ class _Candidate:
     baby_audience: bool
 
 
+@lru_cache(maxsize=32768)
 def _tokens(value: str | None) -> tuple[str, ...]:
     if not value:
         return ()
@@ -91,6 +92,7 @@ def _tokens(value: str | None) -> tuple[str, ...]:
     return tuple(_TOKEN_PATTERN.findall(normalized))
 
 
+@lru_cache(maxsize=32768)
 def _native_tokens(value: str | None) -> tuple[str, ...]:
     if not value:
         return ()
@@ -164,7 +166,8 @@ def _category_phrase_tokens(normalized: str) -> tuple[tuple[str, ...], ...]:
     )
 
 
-def _query_terms(query: str) -> tuple[list[str], bool, bool]:
+@lru_cache(maxsize=4096)
+def _query_terms(query: str) -> tuple[tuple[str, ...], bool, bool]:
     normalized = normalize_search_text(query).strip()
     normalized = re.sub(r"\b(?:less|more)\s+than\b", " ", normalized)
     explicit_diaper = bool(re.search(r"\b(?:bỉm|tã\s+quần)\b", query.casefold()))
@@ -186,7 +189,7 @@ def _query_terms(query: str) -> tuple[list[str], bool, bool]:
     else:
         normalized = re.sub(r"\bbim\s+bim\b|\bbimbim\b", "snack", normalized)
     terms = [token for token in _tokens(normalized) if token not in _FILLER_WORDS]
-    return terms, comparison, snack_slang
+    return tuple(terms), comparison, snack_slang
 
 
 def _word_matches(token: str, words: frozenset[str]) -> bool:

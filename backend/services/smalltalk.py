@@ -37,11 +37,13 @@ _JOKE_PATTERNS = (
 
 _WELLBEING_PATTERNS = (
     r"\bban (?:khoe|the nao)\b",
+    r"\b(?:ban|sky) (?:co )?(?:met|khoe|on|vui|buon|chan|ap luc|stress)\s+(?:khong|khum|a|nhi)\b",
     r"\bhom nay ban the nao\b",
     r"\bban khoe khong\b",
     r"\bhow are you\b",
     r"\bhow is it going\b",
     r"\bhow are things\b",
+    r"\b(?:are you|do you feel) (?:okay|well|tired|sad|bored|stressed)\b",
     r"今天怎么样",
 )
 

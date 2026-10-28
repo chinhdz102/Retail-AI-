@@ -19,6 +19,8 @@ from backend.services.smalltalk import (
         ),
         ("Hôm nay nóng thật đấy nhỉ.", "weather"),
         ("Chào bạn, hôm nay bạn thế nào?", "wellbeing"),
+        ("Bạn có mệt không?", "wellbeing"),
+        ("Are you tired?", "wellbeing"),
         ("Bạn nói chuyện dễ thương ghê, cảm ơn nha.", "compliment"),
         (
             "Bạn là ai, có phải người thật đang tư vấn cho mình không?",

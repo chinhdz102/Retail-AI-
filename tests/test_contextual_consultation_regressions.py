@@ -522,3 +522,142 @@ async def test_other_products_do_not_repeat_previous_candidates(
             assert (
                 product and card["name"] == product.name and card["price_vnd"] == product.price_vnd
             )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "first,followup,category",
+    [
+        ("Gợi ý dầu gội", "có loại dầu gội khác không", "dầu gội"),
+        ("Giới thiệu nước giặt", "có loại nước giặt khác ko", "nước giặt"),
+    ],
+)
+async def test_repeated_alternatives_exclude_every_previously_shown_product(
+    snapshot, monkeypatch, first, followup, category
+):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    available = snapshot.search(
+        query="", category=category, limit=100, diversify_by_subcategory=False
+    )
+    assert len(available) >= 10
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+    ) as client:
+        session_response = await client.post(
+            "/sessions", json={"kiosk_id": "alternative-pagination"}
+        )
+        session = session_response.json()["session_id"]
+
+        async def ask(text):
+            response = await client.post(
+                "/agent/respond", json={"session_id": session, "text": text}
+            )
+            assert response.status_code == 200, response.text
+            return response.json()
+
+        pages = [await ask(first)]
+        for _ in range(3):
+            pages.append(await ask(followup))
+
+        # The pagination state is scoped to the current category/query and
+        # must not turn into a cross-category deny-list.
+        switched = await ask("Gợi ý khăn mặt")
+        assert switched["products"]
+        state = api.session_store.get(api.UUID(session)).shopping
+        assert state.seen_product_scope
+        assert set(state.seen_product_ids) == set(switched["grounded_product_ids"])
+        cart = await client.get(f"/sessions/{session}/cart")
+        assert cart.status_code == 200
+        assert cart.json()["item_count"] == 0
+        assert api.session_store.get(api.UUID(session)).shopping.cart_reference is None
+
+    page_ids = [set(page["grounded_product_ids"]) for page in pages]
+    assert all(page_ids)
+    for index, current_ids in enumerate(page_ids[1:], start=1):
+        previously_shown = set().union(*page_ids[:index])
+        assert not previously_shown & current_ids
+    assert len(set().union(*page_ids)) == sum(map(len, page_ids))
+
+
+@pytest.mark.asyncio
+async def test_exhausted_alternatives_are_explained_without_claiming_catalog_failure(
+    snapshot, monkeypatch
+):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    towel_count = len(
+        snapshot.search(query="", category="khăn mặt", limit=100, diversify_by_subcategory=False)
+    )
+    assert 3 < towel_count < 100
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+    ) as client:
+        session_response = await client.post(
+            "/sessions", json={"kiosk_id": "alternative-exhaustion"}
+        )
+        session = session_response.json()["session_id"]
+
+        async def ask(text):
+            response = await client.post(
+                "/agent/respond", json={"session_id": session, "text": text}
+            )
+            assert response.status_code == 200, response.text
+            return response.json()
+
+        pages = [await ask("Gợi ý khăn mặt")]
+        while (
+            len(set().union(*(set(page["grounded_product_ids"]) for page in pages)))
+            < towel_count
+        ):
+            page = await ask("các loại khăn mặt khác không")
+            if not page["grounded_product_ids"]:
+                break
+            pages.append(page)
+        exhausted = await ask("các loại khăn mặt khác không")
+
+    assert not exhausted["grounded_product_ids"]
+    assert "chưa tìm thấy thêm sản phẩm mới" in exhausted["text"].casefold()
+
+
+@pytest.mark.asyncio
+async def test_ordinal_product_reference_is_isolated_between_sessions(snapshot, monkeypatch):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+    ) as client:
+        session_a = (
+            await client.post("/sessions", json={"kiosk_id": "ordinal-isolation-a"})
+        ).json()["session_id"]
+        session_b = (
+            await client.post("/sessions", json={"kiosk_id": "ordinal-isolation-b"})
+        ).json()["session_id"]
+        listed = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session_a,
+                "text": "Mình đang cần Bánh bao, cho mình xem vài loại.",
+            },
+        )
+        assert listed.status_code == 200, listed.text
+        first_id = listed.json()["grounded_product_ids"][0]
+        product = snapshot.get_product_snapshot(first_id)
+        assert product is not None
+
+        foreign_reference = await client.post(
+            "/agent/respond",
+            json={"session_id": session_b, "text": "Giá của loại đầu tiên là bao nhiêu?"},
+        )
+        own_reference = await client.post(
+            "/agent/respond",
+            json={"session_id": session_a, "text": "Giá của loại đầu tiên là bao nhiêu?"},
+        )
+
+    assert foreign_reference.status_code == 200, foreign_reference.text
+    assert foreign_reference.json()["grounded_product_ids"] == []
+    assert own_reference.status_code == 200, own_reference.text
+    assert own_reference.json()["grounded_product_ids"] == [first_id]
+    assert f"{product.price_vnd:,}".replace(",", ".") in own_reference.json()["text"]

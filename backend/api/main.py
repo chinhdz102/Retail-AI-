@@ -3417,6 +3417,22 @@ def _grounded_reply(
                 include_stock_caveat=include_stock_caveat,
             )
         if last_recommendation.content.get("count") == 0:
+            if last_recommendation.content.get("alternative_exhausted"):
+                return {
+                    "vi": (
+                        "Mình chưa tìm thấy thêm sản phẩm mới trong các lựa chọn khớp với yêu cầu "
+                        "hiện tại. Bạn muốn nới ngân sách, đổi hãng hoặc xem nhóm gần đó không?"
+                    ),
+                    "en": (
+                        "I couldn't find another new item among the catalog results matching "
+                        "your current request. Would you like to widen the budget, change brands, "
+                        "or look at a nearby category?"
+                    ),
+                    "zh": (
+                        "按当前条件，我没有找到新的匹配商品。您想放宽预算、更换品牌，"
+                        "还是看看相近类别？"
+                    ),
+                }[language]
             if last_recommendation.content.get("preparation_unverified"):
                 if last_recommendation.content.get("alternative_requested"):
                     return {
@@ -5482,6 +5498,7 @@ async def agent_respond(
     settings: Settings = Depends(get_settings),
 ) -> AgentRespondResponse:
     record = _session_or_http_error(request.session_id)
+    recommendation_scope_key: list[str] | None = None
     record = _refresh_terminal_order_session(request.session_id, record)
     if record.state in {SessionState.CLOSED, SessionState.EXPIRED}:
         raise HTTPException(status_code=409, detail="Session is closed")
@@ -6129,7 +6146,10 @@ async def agent_respond(
             localized_identity_response(request.language),
             model="local-identity",
         )
-    if smalltalk_intent in {"greeting", "farewell"} and not mission_preemption_requested:
+    if (
+        smalltalk_intent in {"greeting", "farewell", "wellbeing"}
+        and not mission_preemption_requested
+    ):
         return _record_shopping_turn(
             request,
             localized_smalltalk_fallback(smalltalk_intent, request.language),
@@ -6159,21 +6179,11 @@ async def agent_respond(
                 reply = localized_smalltalk_fallback(smalltalk_intent, request.language)
                 model = "local-smalltalk-fallback"
         except GroqConfigurationError as exc:
-            logger.warning(
-                "Small-talk model unavailable intent=%s error_type=%s",
-                smalltalk_intent,
-                type(exc).__name__,
-            )
             raise HTTPException(
                 status_code=503,
                 detail="Groq chat provider is not configured",
             ) from exc
         except GroqProviderError as exc:
-            logger.warning(
-                "Small-talk model unavailable intent=%s error_type=%s",
-                smalltalk_intent,
-                type(exc).__name__,
-            )
             raise HTTPException(
                 status_code=502,
                 detail="Groq chat provider unavailable",
@@ -7277,10 +7287,7 @@ async def agent_respond(
             category_words = set(
                 _normalize_request_text(str(recommendation_arguments.get("category") or "")).split()
             )
-            if _explicit_recommendation_category(request.text) and not (
-                query_words
-                - category_words
-                - {
+            alternative_filler_words = {
                     "co",
                     "cac",
                     "nhung",
@@ -7293,16 +7300,52 @@ async def agent_respond(
                     "ko",
                     "khong",
                     "nao",
+                    "another",
+                    "different",
+                    "other",
+                    "alternatives",
+                    "alternative",
                 }
-            ):
+            meaningful_query_words = query_words - alternative_filler_words
+            if (
+                _explicit_recommendation_category(request.text)
+                and meaningful_query_words
+                and meaningful_query_words <= category_words
+            ) or (is_alternative_product_request(request.text) and not meaningful_query_words):
                 recommendation_arguments.pop("query", None)
         scope = [
             str(recommendation_arguments.get("category") or ""),
             str(recommendation_arguments.get("query") or ""),
         ]
+        recommendation_scope_key = [
+            normalized
+            for value in scope
+            if (normalized := normalize_category_text(value))
+        ]
+        stored_seen_scope = record.shopping.seen_product_scope
+        if not stored_seen_scope:
+            previous_scope = record.shopping.constraints.get("preference_scope")
+            if isinstance(previous_scope, list):
+                stored_seen_scope = [
+                    normalized
+                    for value in previous_scope
+                    if (normalized := normalize_category_text(str(value)))
+                ]
+        same_seen_scope = bool(
+            recommendation_scope_key
+            and (
+                stored_seen_scope == recommendation_scope_key
+                or _recommendation_scopes_are_related(
+                    stored_seen_scope,
+                    recommendation_scope_key,
+                )
+            )
+        )
         constraints = record.shopping.constraints
         previous_scope = constraints.get("preference_scope")
         prior_text = str(constraints.get("preference_text") or "")
+        if is_alternative_product_request(request.text):
+            prior_text = _clean_saved_alternative_preferences(prior_text, scope)
         same_scope_family = _recommendation_scopes_are_related(previous_scope, scope)
         previous_preparation = preparation_terms(prior_text)
         current_preparation = preparation_terms(request.text)
@@ -7330,10 +7373,36 @@ async def agent_respond(
             )
             else ""
         )
-        preference_text = "\n".join(part for part in (previous_preference, request.text) if part)[
-            -2000:
-        ]
+        current_preference_text = (
+            _alternative_preference_fragment(request.text, scope)
+            if is_alternative_product_request(request.text)
+            else request.text
+        )
+        preference_text = "\n".join(
+            part for part in (previous_preference, current_preference_text) if part
+        )[-2000:]
         recommendation_arguments["preference_text"] = preference_text
+        if is_alternative_product_request(request.text):
+            # Exclude every grounded item previously shown for this exact
+            # category/query scope, not just the most recent result page.
+            previous_ids = (
+                record.shopping.seen_product_ids or record.shopping.selected_product_ids
+                if same_seen_scope
+                else []
+            )
+            if same_seen_scope and record.last_grounded_product_id:
+                previous_ids = [*previous_ids, record.last_grounded_product_id]
+            recommendation_arguments["exclude_product_ids"] = list(
+                dict.fromkeys(str(product_id) for product_id in previous_ids if product_id)
+            )[:300]
+        else:
+            # A fresh recommendation starts a fresh pagination history, even
+            # when the shopper asks for the same category again.
+            session_store.update_shopping(
+                request.session_id,
+                seen_product_ids=[],
+                seen_product_scope=recommendation_scope_key,
+            )
         session_store.update_constraints(
             request.session_id,
             [
@@ -7790,16 +7859,36 @@ async def agent_respond(
             "list_new_catalog_products",
         }:
             is_candidate_list = len(candidate_ids) > 1
-            session_store.update_shopping(
-                request.session_id,
-                active_product_id=remembered_product.product_id if remembered_product else None,
-                selected_product_ids=candidate_ids,
-                pending_action="SELECT_RECOMMENDATION" if is_candidate_list else None,
-                pending_clarification=(
+            shopping_updates = {
+                "active_product_id": remembered_product.product_id if remembered_product else None,
+                "selected_product_ids": candidate_ids,
+                "pending_action": "SELECT_RECOMMENDATION" if is_candidate_list else None,
+                "pending_clarification": (
                     "Select a product by name or number before reading its details."
                     if is_candidate_list
                     else None
                 ),
+            }
+            if recommendation_scope_key is not None and candidate_ids:
+                current_shopping = session_store.get(request.session_id).shopping
+                previous_seen = (
+                    current_shopping.seen_product_ids
+                    if current_shopping.seen_product_scope == recommendation_scope_key
+                    or _recommendation_scopes_are_related(
+                        current_shopping.seen_product_scope,
+                        recommendation_scope_key,
+                    )
+                    else []
+                )
+                shopping_updates.update(
+                    seen_product_ids=list(
+                        dict.fromkeys([*previous_seen, *candidate_ids])
+                    )[-300:],
+                    seen_product_scope=recommendation_scope_key,
+                )
+            session_store.update_shopping(
+                request.session_id,
+                **shopping_updates,
             )
     session_store.add_message(request.session_id, "user", model_request_text)
     session_store.add_message(request.session_id, "assistant", reply)
@@ -9660,6 +9749,41 @@ def _recommendation_tool_arguments(
     if not has_recommendation_signal:
         return None
     return arguments
+
+
+def _alternative_preference_fragment(text: str, scope: list[str]) -> str:
+    """Keep requested constraints while removing generic "show another" wording."""
+    normalized = _normalize_request_text(text)
+    for value in sorted(
+        (normalize_category_text(item) for item in scope if item),
+        key=len,
+        reverse=True,
+    ):
+        if value:
+            normalized = re.sub(rf"\b{re.escape(value)}\b", " ", normalized)
+    normalized = re.sub(
+        r"\b(?:co|cac|nhung|vai|loai|san pham|mat hang|mon|nao|khac|khac nua|"
+        r"another|different|other|alternative|alternatives|show|find|recommend|"
+        r"suggest|please|cho|minh|toi|ban|xem|gioi thieu|giup)\b",
+        " ",
+        normalized,
+    )
+    normalized = re.sub(r"\b(?:khong|ko|nhe|a|please)\b\s*$", " ", normalized)
+    return " ".join(normalized.split())
+
+
+def _clean_saved_alternative_preferences(text: str, scope: list[str]) -> str:
+    """Remove old pagination wording from persisted preferences in active sessions."""
+    cleaned_lines = []
+    for line in text.splitlines():
+        fragment = (
+            _alternative_preference_fragment(line, scope)
+            if is_alternative_product_request(line)
+            else line.strip()
+        )
+        if fragment:
+            cleaned_lines.append(fragment)
+    return "\n".join(cleaned_lines)[-2000:]
 
 
 def _recommendation_scopes_are_related(

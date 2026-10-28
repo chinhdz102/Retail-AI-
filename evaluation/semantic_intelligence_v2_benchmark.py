@@ -374,7 +374,14 @@ def _run_conversation_evaluation(
                 "price_order_pass": price_ordered
                 if parsed.ranking_criterion == "price_ascending"
                 else None,
-                "alternative_intent_pass": alternative_understood if asks_for_alternative else None,
+                "alternative_parser_intent_pass": (
+                    alternative_understood if asks_for_alternative else None
+                ),
+                "alternative_novelty_status": (
+                    "not_evaluated_without_session_visible_candidate_history"
+                    if asks_for_alternative
+                    else None
+                ),
                 "first_item_reference_pass": first_item_reference_understood
                 if asks_for_first_item
                 else None,
@@ -394,7 +401,7 @@ def _run_conversation_evaluation(
                 totals["price_order_pass"] += int(price_ordered)
             if asks_for_alternative:
                 totals["alternative_cases"] += 1
-                totals["alternative_intent_pass"] += int(alternative_understood)
+                totals["alternative_parser_intent_pass"] += int(alternative_understood)
             if asks_for_first_item:
                 totals["first_item_reference_cases"] += 1
                 totals["first_item_reference_pass"] += int(first_item_reference_understood)
@@ -425,9 +432,11 @@ def _run_conversation_evaluation(
             "cases": totals["price_order_cases"],
             "pass_rate": rate("price_order_pass", "price_order_cases"),
         },
-        "alternative_intent": {
+        "alternative_intent_recognition": {
             "cases": totals["alternative_cases"],
-            "pass_rate": rate("alternative_intent_pass", "alternative_cases"),
+            "parser_pass_rate": rate("alternative_parser_intent_pass", "alternative_cases"),
+            "candidate_novelty_evaluated_cases": 0,
+            "candidate_novelty_status": "NOT_EVALUATED_REQUIRES_STATEFUL_API_SESSION",
         },
         "first_item_reference": {
             "cases": totals["first_item_reference_cases"],
@@ -438,6 +447,7 @@ def _run_conversation_evaluation(
             "assistant messages or selected-item state.",
             "Alternative and first-item-reference metrics check parsed intent/reference only; "
             "they do not prove that a new SKU or the selected first SKU was returned.",
+            "Alternative metrics measure parser intent recognition, not unseen-product novelty.",
             (
                 "First-item references are excluded from tool-scope metrics because this "
                 "harness has no assistant-visible ordering; the live session API smoke "

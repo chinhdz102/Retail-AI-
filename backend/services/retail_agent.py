@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from backend.products.catalog import PRODUCT_ALIASES, ProductSnapshot
 from backend.services.groq import GroqProviderError, GroqService
+from backend.services.query_understanding import understand_catalog_query
 from backend.services.retail_tools import (
     ToolObservation,
     execute_catalog_tool,
@@ -41,6 +42,12 @@ _OPEN_ENDED_NEED_DISCOVERY_CUE = re.compile(
     r"chua ro can (?:nhung )?nhom (?:gi|nao)|"
     r"chua biet can gi|chua biet nen mua gi|chua biet ten (?:mon|hang|san pham)|"
     r"what should i buy|what do i need|help me (?:shop|choose|plan|prepare))\b"
+)
+_EXPLICIT_SOFT_PREFERENCE_CUE = re.compile(
+    r"\b(?:uu tien|thich|prefer|preferably|if possible|would rather)\b"
+)
+_CLEAR_PREFERENCE_CUE = re.compile(
+    r"\b(?:bo|xoa|huy|clear|remove|forget)\s+(?:uu tien|preference|preferences)\b"
 )
 
 
@@ -107,6 +114,39 @@ def _explicit_budget_amount(text: str) -> int | None:
         if 0 < amount <= 100_000_000:
             amounts.append(amount)
     return amounts[-1] if amounts else None
+
+
+def _explicit_soft_preferences(user_text: str) -> list[str]:
+    """Extract only parser-supported preferences the user explicitly stated.
+
+    The LLM tool call can omit a newly stated preference during a follow-up.
+    Reuse the catalog query parser as a bounded backstop; never promote these
+    preferences into hard requirements or verified product attributes.
+    """
+    normalized = _normalize_vietnamese(user_text)
+    if not _EXPLICIT_SOFT_PREFERENCE_CUE.search(normalized) or _CLEAR_PREFERENCE_CUE.search(
+        normalized
+    ):
+        return []
+
+    parsed = understand_catalog_query(user_text)
+    if parsed.hard_constraints or parsed.negative_constraints:
+        return []
+
+    preferences: list[str] = []
+    for value in parsed.soft_preferences:
+        preference = _normalize_vietnamese(str(value)).strip(" ,.!?;:")
+        # Budget language is already handled by the structured budget field. Do
+        # not let it become a product-name ranking signal in the preference.
+        preference = re.split(
+            r"\b(?:voi|va|while|and)\s+(?:(?:giu|keep|stay|remain)\s+)?"
+            r"(?:trong|within|inside)\s+(?:muc\s+)?(?:ngan sach|budget)\b",
+            preference,
+            maxsplit=1,
+        )[0].strip(" ,.!?;:")
+        if preference and preference not in preferences:
+            preferences.append(preference[:160])
+    return preferences[:4]
 
 
 def _explicit_party_size(text: str) -> int | None:
@@ -283,6 +323,22 @@ def _enforce_shopping_mission_call_semantics(
         if not isinstance(arguments, dict):
             normalized_calls.append(copied_call)
             continue
+
+        if not arguments.get("reset_mission"):
+            explicit_preferences = _explicit_soft_preferences(user_text)
+            if explicit_preferences:
+                supplied_preferences = arguments.get("preferences")
+                if not isinstance(supplied_preferences, list):
+                    supplied_preferences = []
+                supplied_preferences = [
+                    str(value).strip() for value in supplied_preferences if str(value).strip()
+                ]
+                arguments["preferences"] = list(
+                    dict.fromkeys(
+                        [*supplied_preferences, *explicit_preferences]
+                    )
+                )[:12]
+                arguments["clear_preferences"] = False
 
         if previous and not arguments.get("reset_mission"):
             explicit_budget = _explicit_budget_amount(user_text)
