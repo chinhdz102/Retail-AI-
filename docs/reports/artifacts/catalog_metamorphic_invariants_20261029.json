@@ -1,0 +1,42 @@
+{
+  "run_date": "2026-10-29",
+  "base_commit": "af1f979b7c4ce01b1f7aef3f19523ababcb3a6b4",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "working_tree_dirty": true,
+  "dataset": "data/winmart_products.json",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "environment": {
+    "platform": "Windows",
+    "python": "3.13.15",
+    "pytest": "9.1.1",
+    "dependency_runner": "uv"
+  },
+  "command": "uv run pytest tests/test_catalog_metamorphic_invariants.py -q --tb=short",
+  "seed": 20261029,
+  "test_summary": {
+    "tests_passed": 5,
+    "tests_failed": 0,
+    "duration_seconds": 14.66,
+    "sampled_title_skus": 64,
+    "price_filter_scopes_checked": 17,
+    "brand_exclusion_scopes_checked": 32,
+    "nonempty_brand_exclusion_scopes_minimum": 8,
+    "unseen_query_tokens_checked": 32,
+    "synthetic_new_catalog_rows_checked": 1
+  },
+  "full_suite": {
+    "command": "uv run pytest tests -q --tb=short",
+    "tests_passed": 1238,
+    "tests_failed": 0,
+    "duration_seconds": 248.48
+  },
+  "static_checks": {
+    "ruff": "passed: uv run ruff check backend tests evaluation",
+    "git_diff_check": "passed"
+  },
+  "limitations": [
+    "Seeded regression checks use the local catalog and do not establish human relevance, recommendation suitability, conversational naturalness, or blind-set accuracy.",
+    "The synthetic row validates generic snapshot index rebuilding only; it is not a real retail product.",
+    "The run used a dirty working tree based on the recorded commit; media assets were untracked and were not part of the test inputs."
+  ]
+}

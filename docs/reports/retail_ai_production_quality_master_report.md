@@ -20,7 +20,8 @@ The frozen development benchmark reports 100% on its generated exact-product, ca
 
 - Work stays on `codex/retail-text-quality-v4-20261019`; no branch was created for this continuation.
 - The 2026-10-29 synthetic rerun used base commit `7eeaa179d0ca0753a9759e67df3e4b2bf494a0ae` with a dirty working tree; its artifact records the tracked diff hash. It is not a clean release-commit result. Historical probes listed below may use earlier base commits.
-- Baseline full suite on that base commit: 1,222 passed in 299.31 s. Post-change full suite: 1,233 passed in 217.86 s. The post-change run includes pagination, knowledge provenance, grounded API/agent tool-flow, and visible-card session regressions.
+- Baseline full suite on that base commit: 1,222 passed in 299.31 s. The previous continuation passed 1,233 tests in 217.86 s. The current seeded-invariant run, based on `af1f979b7c4ce01b1f7aef3f19523ababcb3a6b4` with the test file uncommitted, passed 1,238 tests in 248.48 s. It includes the earlier pagination, knowledge provenance, grounded API/agent tool-flow, and visible-card session regressions, plus the new catalog invariant suite. The exact committed revision is rechecked before push.
+- New deterministic regression suite: 5/5 tests passed in 14.66 s using seed `20261029` and the catalog hash below. It sampled 64 SKUs for title variants, checked 17 retrievable price-filter scopes, exercised 32 brand-exclusion scopes, tried 32 unseen query tokens, and rebuilt an index from one synthetic new catalog row. Artifact: [`catalog_metamorphic_invariants_20261029.json`](artifacts/catalog_metamorphic_invariants_20261029.json).
 - Local environment: Windows, Python 3.13+, `uv`; runtime catalog is the WinMart JSON snapshot. The imported dataset has 3,099 raw rows, 3,081 accepted products, and 18 quarantined rows.
 - Provider configuration was present for the live probe. No API key or credential value is written to reports or artifacts. Voice was not evaluated in this task.
 - The snapshot date is 2026-09-15. Price and stock must be presented as snapshot evidence, not guaranteed live store values.
@@ -167,8 +168,9 @@ See [`live_snapshot_provider_probe_after_preference_fix_20261028.json`](artifact
 
 | Gate | Result | Status |
 | --- | --- | --- |
-| Full backend/evaluation pytest suite | `uv run pytest tests -q --tb=short`: 1,233 passed in 217.86 s (post-change); baseline on commit `7eeaa17`: 1,222 passed in 299.31 s. | Pass. |
+| Full backend/evaluation pytest suite | `uv run pytest tests -q --tb=short`: 1,238 passed in 248.48 s on the working-tree run based on `af1f979`; previous post-change run had 1,233 passed in 217.86 s; baseline on `7eeaa17` had 1,222 passed in 299.31 s. | Pass; exact commit is rechecked before push. |
 | Ruff and `git diff --check` | `uv run ruff check backend tests evaluation`: all checks passed; `git diff --check` clean (Git emitted only line-ending conversion warnings). | Pass. |
+| Seeded catalog metamorphic invariants | 5/5 passed: punctuation/accent variants preserve 64 sampled SKUs; budget caps held across 17 retrievable scopes; brand exclusions held across 32 scopes; 32 unseen tokens returned no product; a newly added synthetic SKU was indexed without product-specific code. | Pass for deterministic catalog regressions only; not a relevance or human-quality score. |
 | Synthetic product/category/constraint checks | 100/100 within each generated dimension; zero encoded-constraint violations. | Pass for development regression only. |
 | Post-pagination frozen benchmark | 300 generated queries + 50 synthetic dialogues; candidate R@5 0.98, zero encoded-constraint violations, novelty status not evaluated. | Pass for development regression only; see artifact and limitations. |
 | Live API grounding invariants | Post-fix run: 5/5 turns HTTP 200; 5/5 automated grounding checks passed; no fallback used. | HTTP/grounding gate only; not human-graded. |
@@ -218,6 +220,7 @@ Annotation schema, guidance, and exporter are present under `evaluation/schemas/
 - No verified sales, rating, or popularity data; bestseller/tastiest claims must abstain.
 - Shelf planogram is synthetic/recommended and not proof of physical placement.
 - Search metrics do not validate suitability for implicit needs, accepted substitutes, complements, or multi-product tasks.
+- The seeded metamorphic suite verifies repeatable repository/tool invariants against this snapshot; it does not measure semantic relevance, naturalness, or recommendation suitability. Its one synthetic catalog row is only a generic index-rebuild check.
 - Synthetic development cases have leakage risk and narrow language coverage; accentless text, typos, dialects, ASR errors, and long multi-intent conversations need independent review.
 - Alternative SKU novelty is not measured by the parser benchmark; current load test is too small for capacity estimates.
 - No actual browser/network E2E or voice/STT/TTS benchmark is part of this report.
@@ -238,6 +241,7 @@ Run from repository root:
 ```powershell
 uv run pytest tests -q --tb=short
 uv run ruff check backend tests evaluation
+uv run pytest tests/test_catalog_metamorphic_invariants.py -q --tb=short
 uv run pytest tests/test_retail_agent.py tests/test_shopping_mission.py -q --tb=short
 uv run python -m evaluation.semantic_intelligence_v2_benchmark `
   --dataset evaluation/cases/retail_ai_semantic_intelligence_v2_dev_rev1_20261028.json `
