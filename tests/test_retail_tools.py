@@ -553,15 +553,110 @@ def test_product_knowledge_returns_status_and_provenance_per_attribute() -> None
     assert observation.status == "SUCCESS"
     facts = {fact["attribute"]: fact for fact in observation.content["facts"]}
     assert facts["price_vnd"]["status"] == "VERIFIED"
+    assert facts["price_vnd"]["evidence_scope"] == "SOURCE_RECORD"
     assert facts["price_vnd"]["source"] == repository.source_name
-    assert datetime.fromisoformat(
-        facts["price_vnd"]["verified_at"].replace("Z", "+00:00")
-    ) == product.data_timestamp
+    assert facts["price_vnd"]["observed_at"] is not None
+    assert facts["price_vnd"]["verified_at"] is None
+    assert "does not establish current store conditions" in facts["price_vnd"]["note"]
     assert facts["price_vnd"]["catalog_version"] == repository.dataset_sha256
     assert facts["availability"]["status"] == "UNKNOWN"
+    assert facts["availability"]["evidence_scope"] == "UNKNOWN"
     assert facts["benefits"]["status"] == "UNKNOWN"
     assert facts["shelf"]["status"] == "INFERRED"
+    assert facts["shelf"]["evidence_scope"] == "RECOMMENDED_PLANOGRAM"
     assert observation.products == (product,)
+
+
+def test_product_knowledge_scopes_all_direct_fields_as_catalog_record_evidence() -> None:
+    timestamp = datetime(2026, 10, 29, 12, tzinfo=UTC)
+    product = ProductSnapshot(
+        product_id="TEST-123",
+        name="Test item",
+        brand="Test brand",
+        category="food",
+        category_hierarchy="Food > Packaged food",
+        price_vnd=42000,
+        stock=7,
+        stock_is_current=False,
+        promotion="Recorded promotion",
+        expiry_at="2027-01-15",
+        ingredients="Recorded ingredients",
+        spicy=False,
+        shelf="A02-L03",
+        shelf_source="RECOMMENDED_PLANOGRAM",
+        description="Retailer listing copy",
+        data_timestamp=timestamp,
+    )
+    facts = {
+        fact.attribute: fact
+        for fact in product_knowledge_facts(
+            product,
+            [
+                "name",
+                "brand",
+                "category",
+                "price_vnd",
+                "stock",
+                "promotion",
+                "expiry_at",
+                "ingredients",
+                "spicy",
+                "availability",
+                "shelf",
+                "description",
+                "benefits",
+            ],
+            source="snapshot_test",
+        )
+    }
+
+    for attribute in (
+        "name",
+        "brand",
+        "category",
+        "price_vnd",
+        "stock",
+        "promotion",
+        "expiry_at",
+        "ingredients",
+        "spicy",
+    ):
+        fact = facts[attribute]
+        assert fact.status.value == "VERIFIED"
+        assert fact.evidence_scope.value == "SOURCE_RECORD"
+        assert fact.observed_at == timestamp
+        assert fact.verified_at is None
+        assert "source record" in fact.note
+
+    assert facts["availability"].status.value == "UNKNOWN"
+    assert facts["shelf"].status.value == "INFERRED"
+    assert facts["shelf"].evidence_scope.value == "RECOMMENDED_PLANOGRAM"
+    assert facts["description"].status.value == "INFERRED"
+    assert facts["description"].evidence_scope.value == "RETAILER_LISTING"
+    assert facts["benefits"].status.value == "UNKNOWN"
+    assert facts["benefits"].evidence_scope.value == "UNKNOWN"
+
+
+def test_product_knowledge_current_availability_is_scoped_to_operational_catalog() -> None:
+    product = ProductSnapshot(
+        product_id="LIVE-123",
+        name="Operational test item",
+        category="food",
+        price_vnd=10000,
+        stock=3,
+        stock_is_current=True,
+    )
+    fact = product_knowledge_facts(
+        product,
+        ["availability"],
+        source="operational_test",
+    )[0]
+
+    assert fact.status.value == "VERIFIED"
+    assert fact.evidence_scope.value == "CURRENT_OPERATIONAL"
+    assert fact.value is True
+    assert fact.observed_at == product.data_timestamp
+    assert fact.verified_at is None
 
 
 def test_product_knowledge_does_not_upgrade_retailer_copy_to_verified_benefits() -> None:
@@ -579,8 +674,14 @@ def test_product_knowledge_does_not_upgrade_retailer_copy_to_verified_benefits()
     assert observation.status == "SUCCESS"
     facts = {fact["attribute"]: fact for fact in observation.content["facts"]}
     assert facts["description"]["status"] != "VERIFIED"
+    if facts["description"]["status"] == "INFERRED":
+        assert facts["description"]["evidence_scope"] == "RETAILER_LISTING"
+    else:
+        assert facts["description"]["evidence_scope"] == "UNKNOWN"
     assert facts["benefits"]["status"] == "UNKNOWN"
     assert facts["ingredients"]["status"] == "VERIFIED"
+    assert facts["ingredients"]["evidence_scope"] == "SOURCE_RECORD"
+    assert facts["ingredients"]["verified_at"] is None
 
 
 def test_product_knowledge_requires_explicit_physical_verification_for_shelf() -> None:
@@ -595,6 +696,7 @@ def test_product_knowledge_requires_explicit_physical_verification_for_shelf() -
 
     demo_fact = demo_observation.content["facts"][0]
     assert demo_fact["status"] == "INFERRED"
+    assert demo_fact["evidence_scope"] == "RECOMMENDED_PLANOGRAM"
     assert demo_fact["verified_at"] is None
 
     physically_verified = demo_product.model_copy(
@@ -606,6 +708,8 @@ def test_product_knowledge_requires_explicit_physical_verification_for_shelf() -
         source="test_catalog",
     )[0]
     assert verified_fact.status.value == "VERIFIED"
+    assert verified_fact.evidence_scope.value == "PHYSICAL_STORE"
+    assert verified_fact.verified_at is None
 
 
 def test_search_tool_returns_candidate_metadata_without_product_facts() -> None:

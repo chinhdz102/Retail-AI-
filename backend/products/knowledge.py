@@ -15,8 +15,24 @@ class EvidenceStatus(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class EvidenceScope(StrEnum):
+    """What a fact's evidence actually establishes."""
+
+    SOURCE_RECORD = "SOURCE_RECORD"
+    CURRENT_OPERATIONAL = "CURRENT_OPERATIONAL"
+    PHYSICAL_STORE = "PHYSICAL_STORE"
+    RETAILER_LISTING = "RETAILER_LISTING"
+    RECOMMENDED_PLANOGRAM = "RECOMMENDED_PLANOGRAM"
+    UNKNOWN = "UNKNOWN"
+
+
 class ProductKnowledgeFact(BaseModel):
-    """One product attribute with source and time/version provenance."""
+    """One product attribute with source, scope, and time/version provenance.
+
+    ``observed_at`` is when the source record was captured. ``verified_at`` is
+    reserved for an actual independent verification date; a crawl timestamp is
+    not a verification event.
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -24,6 +40,7 @@ class ProductKnowledgeFact(BaseModel):
     attribute: str
     value: Any | None = None
     status: EvidenceStatus
+    evidence_scope: EvidenceScope = EvidenceScope.UNKNOWN
     source: str | None = None
     source_field: str | None = None
     observed_at: datetime | None = None
@@ -84,12 +101,16 @@ def product_knowledge_facts(
                         attribute=requested,
                         value=product.sellable_stock > 0,
                         status=EvidenceStatus.VERIFIED,
+                        evidence_scope=EvidenceScope.CURRENT_OPERATIONAL,
                         source=source,
                         source_field="sellable_stock",
                         observed_at=product.data_timestamp,
-                        verified_at=product.data_timestamp,
                         catalog_version=version,
                         confidence=1.0,
+                        note=(
+                            "Current operational stock as represented by the active catalog "
+                            "at observed_at; this is not a separate verification event."
+                        ),
                     )
                 )
             else:
@@ -98,6 +119,7 @@ def product_knowledge_facts(
                         product_id=product.product_id,
                         attribute=requested,
                         status=EvidenceStatus.UNKNOWN,
+                        evidence_scope=EvidenceScope.UNKNOWN,
                         source=source,
                         catalog_version=version,
                         note="The stored stock is a dated snapshot, not current availability.",
@@ -113,6 +135,7 @@ def product_knowledge_facts(
                         attribute=requested,
                         value=product.shelf,
                         status=EvidenceStatus.INFERRED,
+                        evidence_scope=EvidenceScope.RECOMMENDED_PLANOGRAM,
                         source=source,
                         source_field="shelf",
                         observed_at=product.data_timestamp,
@@ -131,12 +154,16 @@ def product_knowledge_facts(
                         attribute=requested,
                         value=product.shelf,
                         status=EvidenceStatus.VERIFIED,
+                        evidence_scope=EvidenceScope.PHYSICAL_STORE,
                         source=source,
                         source_field="shelf",
                         observed_at=product.data_timestamp,
-                        verified_at=product.data_timestamp,
                         catalog_version=version,
                         confidence=1.0,
+                        note=(
+                            "The catalog source marks this location as physically verified; "
+                            "a separate verification timestamp is not available."
+                        ),
                     )
                 )
             else:
@@ -151,6 +178,7 @@ def product_knowledge_facts(
                         attribute=requested,
                         value=product.description,
                         status=EvidenceStatus.INFERRED,
+                        evidence_scope=EvidenceScope.RETAILER_LISTING,
                         source=source,
                         source_field="description",
                         observed_at=product.data_timestamp,
@@ -173,24 +201,29 @@ def product_knowledge_facts(
         else:
             value = getattr(product, source_field, None) if source_field else None
         if value is not None:
-            note = None
+            qualifier = None
             if requested == "stock" and not product.stock_is_current:
-                note = "Verified only as a dated snapshot; current stock is unknown."
+                qualifier = "Current stock is unknown."
             elif requested == "promotion":
-                note = "Recorded in the snapshot; current campaign terms/validity are unverified."
+                qualifier = "Current campaign terms and validity are unverified."
             result.append(
                 ProductKnowledgeFact(
                     product_id=product.product_id,
                     attribute=requested,
                     value=value,
                     status=EvidenceStatus.VERIFIED,
+                    evidence_scope=EvidenceScope.SOURCE_RECORD,
                     source=source,
                     source_field=source_field,
                     observed_at=product.data_timestamp,
-                    verified_at=product.data_timestamp,
                     catalog_version=version,
                     confidence=1.0,
-                    note=note,
+                    note=(
+                        "Verified only as a value present in the active catalog source "
+                        "record. observed_at is the record capture time; this does not "
+                        "establish current store conditions or independent product-label "
+                        "verification." + (f" {qualifier}" if qualifier else "")
+                    ),
                 )
             )
         elif requested in _DIRECT_FIELDS or requested in _UNSUPPORTED_ATTRIBUTES:
@@ -210,6 +243,7 @@ def _unknown_fact(
         product_id=product.product_id,
         attribute=attribute,
         status=EvidenceStatus.UNKNOWN,
+        evidence_scope=EvidenceScope.UNKNOWN,
         source=source,
         catalog_version=catalog_version,
         note="The active catalog has no attribute-level evidence; do not infer this fact.",

@@ -1,0 +1,80 @@
+{
+  "dataset_id": "retail_ai_live_text_vietnamese_dev_20261029",
+  "language_scope": "Vietnamese only",
+  "authoring_method": "Small manually authored live development probe grounded in the 2026-09-15 WinMart snapshot. Not blind, not human-validated, and not a population accuracy estimate.",
+  "source_catalog": "data/winmart_products.json",
+  "source_catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "manual_review_required": true,
+  "cases": [
+    {
+      "case_id": "natural_location_beef_tenderloin",
+      "tags": ["development", "natural_vietnamese", "location", "snapshot_provenance"],
+      "turns": [
+        {
+          "text": "Thịt thăn bò nằm ở đâu vậy?",
+          "expected_product_ids": ["WIN_10053675"],
+          "must_contain": ["A13-B05-L03-P05", "đề xuất"],
+          "must_not_contain": ["vị trí đã xác minh tại cửa hàng", "đã xác minh vị trí thực tế"]
+        }
+      ]
+    },
+    {
+      "case_id": "dandruff_shampoo_budget",
+      "tags": ["development", "product_consultation", "budget", "category"],
+      "turns": [
+        {
+          "text": "Mình cần dầu gội trị gàu, loại nào dưới 100 nghìn?",
+          "expected_product_ids": ["WIN_10016912"],
+          "must_contain": ["95.200", "một sản phẩm", "chưa có bằng chứng độc lập"],
+          "must_not_include_product_ids": ["WIN_10601173", "WIN_10162324", "WIN_10171173", "WIN_10601177"]
+        }
+      ]
+    },
+    {
+      "case_id": "unknown_sales_ranking_abstention",
+      "tags": ["development", "unsupported_evidence", "abstention"],
+      "turns": [
+        {
+          "text": "Trong cửa hàng món nào bán chạy nhất vậy?",
+          "must_not_have_product_ids": true
+        }
+      ]
+    },
+    {
+      "case_id": "unknown_coca_zero_nutrition",
+      "tags": ["development", "unsupported_attribute", "grounding"],
+      "turns": [
+        {
+          "text": "Coca Zero có bao nhiêu calo với đường vậy?",
+          "expected_product_ids": ["WIN_10194711"],
+          "must_not_contain": ["0 calo", "0 kcal", "0g đường", "0 g đường", "không đường"]
+        }
+      ]
+    },
+    {
+      "case_id": "towel_list_detail_remove_multi_turn",
+      "tags": ["development", "multi_turn", "ordinal_reference", "list_mutation"],
+      "turns": [
+        {
+          "text": "Cho mình xem vài loại khăn mặt trong danh mục với.",
+          "expected_product_ids_any": ["WIN_10330217", "WIN_10264881", "WIN_10601537", "WIN_10167097"]
+        },
+        {
+          "text": "Giá loại thứ hai là bao nhiêu?",
+          "expected_product_ids_relation": {
+            "operation": "subset_of_turn",
+            "turn": 1
+          }
+        },
+        {
+          "text": "Bỏ loại đó khỏi danh sách nhé.",
+          "expected_product_ids_relation": {
+            "operation": "equal_difference",
+            "base_turn": 1,
+            "subtract_turn": 2
+          }
+        }
+      ]
+    }
+  ]
+}

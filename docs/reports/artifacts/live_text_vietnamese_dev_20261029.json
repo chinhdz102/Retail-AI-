@@ -1,0 +1,741 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-28T21:29:33.153236+00:00",
+  "reproducibility": {
+    "git_commit": "25e9498497d5fb18526b84dae37cd08c7bb64bf1",
+    "tracked_worktree_clean": false,
+    "tracked_diff_sha256": "d4f9c0e2c05ce9c0162cdb2b0b1633ae2a7cd6f6b14b0f84b2fdbcd45118d20d",
+    "case_payload_sha256": "73008ea81725e9ace82ddd579ae96eaee661c74eb34ef54202888d89527f66b5",
+    "runtime": {
+      "platform": "Windows-10-10.0.19045-SP0",
+      "python": "3.13.15",
+      "packages": {
+        "fastapi": "0.141.1",
+        "httpx": "0.28.1",
+        "groq": null,
+        "pydantic": "2.13.5",
+        "uvicorn": "0.52.4"
+      }
+    }
+  },
+  "dataset_id": "retail_ai_live_text_vietnamese_dev_20261029",
+  "language_scope": "Vietnamese only",
+  "research_informed_by": [],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "credential_failover_enabled": true,
+  "credential_slots": [
+    "primary",
+    "fallback_1",
+    "fallback_2"
+  ],
+  "provider_timeout_seconds": 12.0,
+  "minimum_model_request_interval_seconds": 9.0,
+  "response_timeout_seconds": 105.0,
+  "catalog_scope": {
+    "runtime_repository": "snapshot",
+    "case_catalog_preflight": {
+      "status": "PASSED",
+      "catalog_repository": "snapshot",
+      "checked_product_ids": 11
+    },
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false,
+    "postgres_search_tool_turns": 0
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "natural_location_beef_tenderloin",
+      "turn": 1,
+      "prompt": "Thịt thăn bò nằm ở đâu vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 235,
+      "response": {
+        "session_id": "0d71e41d-52fb-48f7-822b-69e299b4b2d5",
+        "text": "Theo sơ đồ kệ đề xuất, Thịt Thăn bò ở vị trí A13-B05-L03-P05 (dãy A13, khoang B05, tầng L03, ô P05) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10053675"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:54.366057Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10053675",
+            "name": "Thịt Thăn bò",
+            "category": "Thịt",
+            "brand": "NOBRAND",
+            "price_vnd": 399000,
+            "stock": 60,
+            "stock_is_current": false,
+            "uom": "Kg",
+            "data_timestamp": "2026-09-15T13:53:54.366057Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WIN_10053675"
+        ],
+        "must_contain": [
+          "A13-B05-L03-P05",
+          "đề xuất"
+        ],
+        "must_not_contain": [
+          "vị trí đã xác minh tại cửa hàng",
+          "đã xác minh vị trí thực tế"
+        ]
+      },
+      "conversation_tags": [
+        "development",
+        "natural_vietnamese",
+        "location",
+        "snapshot_provenance"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_product_ids_relation": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "dandruff_shampoo_budget",
+      "turn": 1,
+      "prompt": "Mình cần dầu gội trị gàu, loại nào dưới 100 nghìn?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 349,
+      "response": {
+        "session_id": "93341698-3c3f-4500-a140-d744ac64ea2b",
+        "text": "Trong danh mục, mình tìm thấy một sản phẩm: Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml (giá tham khảo 95.200đ). Tên hàng gợi ý đúng nhóm công dụng, nhưng catalog chưa có bằng chứng độc lập để xác nhận hiệu quả. Bạn muốn xem thêm lựa chọn để so sánh không? Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10016912"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:33.773419Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10016912",
+            "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "SELSUN",
+            "price_vnd": 95200,
+            "stock": 31,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:33.773419Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {
+        "category": "haircare",
+        "query": "dau goi",
+        "price_constraint": {
+          "operator": "LT",
+          "value_vnd": 100000
+        },
+        "preference_text": "Mình cần dầu gội trị gàu, loại nào dưới 100 nghìn?",
+        "preference_scope": [
+          "haircare",
+          "dau goi tri"
+        ]
+      },
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WIN_10016912"
+        ],
+        "must_contain": [
+          "95.200",
+          "một sản phẩm",
+          "chưa có bằng chứng độc lập"
+        ]
+      },
+      "conversation_tags": [
+        "development",
+        "product_consultation",
+        "budget",
+        "category"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_product_ids_relation": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "unknown_sales_ranking_abstention",
+      "turn": 1,
+      "prompt": "Trong cửa hàng món nào bán chạy nhất vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 49,
+      "response": {
+        "session_id": "b2d6b458-f3d1-458a-ab13-df4ec56531e6",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại nào bán chạy nhất. Bạn muốn mình tra vài lựa chọn trong nhóm để bạn so sánh theo giá không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "must_not_have_product_ids": true
+      },
+      "conversation_tags": [
+        "development",
+        "unsupported_evidence",
+        "abstention"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_product_ids_relation": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "unknown_coca_zero_nutrition",
+      "turn": 1,
+      "prompt": "Coca Zero có bao nhiêu calo với đường vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 111,
+      "response": {
+        "session_id": "778e7040-937e-4316-b444-bbd7903d2bc4",
+        "text": "Mình tìm thấy Nước giải khát Coca-Cola Zero chai nhựa 1,5lít; Nước Giải Khát Coca-Cola Zero Pet 600ml; COCA-COLA Nc Zero SS.pet 390ml trong danh mục, nhưng chưa có dữ liệu xác minh về lượng calo, thông tin dinh dưỡng, nên mình chưa thể xác nhận phần này; mình không đoán. Nếu bạn cần, mình có thể tra các thông tin khác đang được ghi trong danh mục như giá hoặc thành phần.",
+        "model": "catalog-knowledge",
+        "grounded_product_ids": [
+          "WIN_10307381",
+          "WIN_10194711",
+          "WIN_10194712",
+          "WIN_10011651"
+        ],
+        "tools_used": [
+          "search_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.149864Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10307381",
+            "name": "Nước giải khát Coca-Cola Zero chai nhựa 1,5lít",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 15900,
+            "stock": 18,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:40.205206Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10194711",
+            "name": "Nước Giải Khát Coca-Cola Zero Pet 600ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 9900,
+            "stock": 232,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:41.149864Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10194712",
+            "name": "COCA-COLA Nc Zero SS.pet 390ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 179800,
+            "stock": 6,
+            "stock_is_current": false,
+            "uom": "Thùng",
+            "data_timestamp": "2026-09-15T13:53:40.205139Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10011651",
+            "name": "Thùng 24 lon nước giải khát Zero Coca Cola không đường 330ml",
+            "category": "Nước Ngọt",
+            "brand": "COCA-COLA",
+            "price_vnd": 254000,
+            "stock": 22,
+            "stock_is_current": false,
+            "uom": "Thùng",
+            "data_timestamp": "2026-09-15T13:53:41.148448Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WIN_10194711"
+        ],
+        "must_not_contain": [
+          "0 calo",
+          "0 kcal",
+          "0g đường",
+          "0 g đường",
+          "không đường"
+        ]
+      },
+      "conversation_tags": [
+        "development",
+        "unsupported_attribute",
+        "grounding"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_product_ids_relation": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "towel_list_detail_remove_multi_turn",
+      "turn": 1,
+      "prompt": "Cho mình xem vài loại khăn mặt trong danh mục với.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 233,
+      "response": {
+        "session_id": "e3216e4d-8f11-46b3-a273-282e16835b89",
+        "text": "Mình gợi ý Khăn mặt cotton  WinMart Home 32*65*90g (giá tham khảo 29.000đ), Khăn mặt Cotton 32x65x73gr Winmart Home (giá tham khảo 29.000đ), Khăn mặt 2 lớp Mollis FM5A 40*80*87g (giá tham khảo 59.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10330217",
+          "WIN_10264881",
+          "WIN_10601537"
+        ],
+        "tools_used": [
+          "recommend_products"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.677561Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10330217",
+            "name": "Khăn mặt cotton  WinMart Home 32*65*90g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 29000,
+            "stock": 69,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.354585Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10264881",
+            "name": "Khăn mặt Cotton 32x65x73gr Winmart Home",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 29000,
+            "stock": 187,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.355175Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10601537",
+            "name": "Khăn mặt 2 lớp Mollis FM5A 40*80*87g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "MOLLIS",
+            "price_vnd": 59000,
+            "stock": 75,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.677561Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {
+        "query": "khan mat",
+        "category": "Khăn mặt",
+        "preference_text": "Cho mình xem vài loại khăn mặt trong danh mục với.",
+        "preference_scope": [
+          "Khăn mặt",
+          "khan mat"
+        ]
+      },
+      "evaluation_expectations": {
+        "expected_product_ids_any": [
+          "WIN_10330217",
+          "WIN_10264881",
+          "WIN_10601537",
+          "WIN_10167097"
+        ]
+      },
+      "conversation_tags": [
+        "development",
+        "multi_turn",
+        "ordinal_reference",
+        "list_mutation"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_product_ids_relation": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "towel_list_detail_remove_multi_turn",
+      "turn": 2,
+      "prompt": "Giá loại thứ hai là bao nhiêu?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 10,
+      "response": {
+        "session_id": "e3216e4d-8f11-46b3-a273-282e16835b89",
+        "text": "Khăn mặt Cotton 32x65x73gr Winmart Home có giá tham khảo 29.000đ/Cái nhé.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10264881"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:38.355175Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10264881",
+            "name": "Khăn mặt Cotton 32x65x73gr Winmart Home",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 29000,
+            "stock": 187,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.355175Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {
+        "query": "khan mat",
+        "category": "Khăn mặt",
+        "preference_text": "Cho mình xem vài loại khăn mặt trong danh mục với.",
+        "preference_scope": [
+          "Khăn mặt",
+          "khan mat"
+        ]
+      },
+      "evaluation_expectations": {},
+      "conversation_tags": [
+        "development",
+        "multi_turn",
+        "ordinal_reference",
+        "list_mutation"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_product_ids_relation": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "towel_list_detail_remove_multi_turn",
+      "turn": 3,
+      "prompt": "Bỏ loại đó khỏi danh sách nhé.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 7,
+      "response": {
+        "session_id": "e3216e4d-8f11-46b3-a273-282e16835b89",
+        "text": "Mình đã bỏ Khăn mặt Cotton 32x65x73gr Winmart Home khỏi danh sách gợi ý hiện tại; giỏ hàng không thay đổi. Còn lại: Khăn mặt cotton  WinMart Home 32*65*90g, Khăn mặt 2 lớp Mollis FM5A 40*80*87g.",
+        "model": "product-selection",
+        "grounded_product_ids": [
+          "WIN_10330217",
+          "WIN_10601537"
+        ],
+        "tools_used": [],
+        "data_timestamp": "2026-09-15T13:53:38.677561Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10330217",
+            "name": "Khăn mặt cotton  WinMart Home 32*65*90g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "WMHOME",
+            "price_vnd": 29000,
+            "stock": 69,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.354585Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10601537",
+            "name": "Khăn mặt 2 lớp Mollis FM5A 40*80*87g",
+            "category": "Đồ Dùng Phòng Ngủ",
+            "brand": "MOLLIS",
+            "price_vnd": 59000,
+            "stock": 75,
+            "stock_is_current": false,
+            "uom": "Cái",
+            "data_timestamp": "2026-09-15T13:53:38.677561Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {
+        "query": "khan mat",
+        "category": "Khăn mặt",
+        "preference_text": "Cho mình xem vài loại khăn mặt trong danh mục với.",
+        "preference_scope": [
+          "Khăn mặt",
+          "khan mat"
+        ]
+      },
+      "evaluation_expectations": {},
+      "conversation_tags": [
+        "development",
+        "multi_turn",
+        "ordinal_reference",
+        "list_mutation"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_product_ids_relation": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    }
+  ],
+  "summary": {
+    "case_count": 5,
+    "turn_count": 7,
+    "http_200_count": 7,
+    "automated_grounding_safety_passes": 7,
+    "automated_grounding_safety_failures": 0,
+    "expected_model_tool_selection_passes": 0,
+    "expected_model_tool_selection_count": 0,
+    "no_tool_decision_passes": 0,
+    "no_tool_decision_count": 0,
+    "tool_argument_passes": 0,
+    "tool_argument_check_count": 0,
+    "median_turn_latency_ms": 111,
+    "total_llm_calls": 0,
+    "total_tool_calls": 0
+  }
+}

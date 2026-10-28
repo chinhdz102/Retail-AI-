@@ -1,0 +1,82 @@
+{
+  "artifact_id": "vietnamese_answer_quality_review_packet",
+  "schema_version": "1.0",
+  "generated_at_utc": "2026-10-28T21:22:11.609289+00:00",
+  "seed": 20261029,
+  "source_artifacts": [
+    {
+      "source_label": "probe_20261028",
+      "mode": null,
+      "artifact_name": "live_snapshot_provider_probe_after_preference_fix_20261028.json",
+      "artifact_sha256": "a26d0dceb957252744078bb24e70c73243e5da814b49e6c7210e95a127158310",
+      "artifact_id": "live_text_conversation_benchmark",
+      "dataset_id": "vietnamese_snapshot_provider_probe_20261028",
+      "dataset_sha256": null,
+      "dataset_authoring_method": null,
+      "split": null,
+      "prompt_set_sha256": "dace8e4023b396ba2814becff9d33b6d9099c72ebbe42de6c5ce01ffa63d1fe7",
+      "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+      "provider": "Groq live; fallback configuration from .env",
+      "model_primary": "qwen/qwen3.8-27b",
+      "commit_sha": null,
+      "generated_at_utc": "2026-10-28T16:48:31.392848+00:00",
+      "turn_count": 5
+    }
+  ],
+  "assignments": [
+    {
+      "review_item_id": "review-7a2251149554d825",
+      "conversation_id": "conv-7503b47af0d872bc",
+      "source_label": "probe_20261028",
+      "artifact_sha256": "a26d0dceb957252744078bb24e70c73243e5da814b49e6c7210e95a127158310",
+      "original_case_id": "natural_picnic_multigroup_consultation",
+      "turn_index": 1,
+      "model": "qwen/qwen3.8-27b"
+    },
+    {
+      "review_item_id": "review-0f0b9233aeecc111",
+      "conversation_id": "conv-7503b47af0d872bc",
+      "source_label": "probe_20261028",
+      "artifact_sha256": "a26d0dceb957252744078bb24e70c73243e5da814b49e6c7210e95a127158310",
+      "original_case_id": "natural_picnic_multigroup_consultation",
+      "turn_index": 2,
+      "model": "qwen/qwen3.8-27b"
+    },
+    {
+      "review_item_id": "review-856b8f15a5d5de9f",
+      "conversation_id": "conv-d83f8c73fe75d750",
+      "source_label": "probe_20261028",
+      "artifact_sha256": "a26d0dceb957252744078bb24e70c73243e5da814b49e6c7210e95a127158310",
+      "original_case_id": "pantene_exact_price_shelf_and_sales_abstention",
+      "turn_index": 1,
+      "model": "catalog"
+    },
+    {
+      "review_item_id": "review-aabd372035a8254b",
+      "conversation_id": "conv-d83f8c73fe75d750",
+      "source_label": "probe_20261028",
+      "artifact_sha256": "a26d0dceb957252744078bb24e70c73243e5da814b49e6c7210e95a127158310",
+      "original_case_id": "pantene_exact_price_shelf_and_sales_abstention",
+      "turn_index": 2,
+      "model": "catalog"
+    },
+    {
+      "review_item_id": "review-9f674a6542f94052",
+      "conversation_id": "conv-d83f8c73fe75d750",
+      "source_label": "probe_20261028",
+      "artifact_sha256": "a26d0dceb957252744078bb24e70c73243e5da814b49e6c7210e95a127158310",
+      "original_case_id": "pantene_exact_price_shelf_and_sales_abstention",
+      "turn_index": 3,
+      "model": "local-clarification"
+    }
+  ],
+  "reviewer_queues": {
+    "model_provider_and_source_hidden": true,
+    "case_ids_and_grader_expectations_hidden": true,
+    "response_rank_and_system_metadata_hidden": true,
+    "conversation_context_preserved": true,
+    "rows_randomized_independently": true,
+    "do_not_distribute_manifest_to_annotators": true
+  },
+  "annotation_status": "UNREVIEWED; no human labels are present"
+}

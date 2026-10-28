@@ -6,12 +6,13 @@ from pathlib import Path
 import pytest
 
 from backend.api.main import _localized_recommendation_candidates
+from backend.products.catalog import ProductSnapshot
 from backend.products.snapshot_repository import SnapshotProductRepository
 from backend.services.query_understanding import (
     prior_product_page_reference_kind,
     understand_catalog_query,
 )
-from backend.services.retail_tools import execute_catalog_tool
+from backend.services.retail_tools import ToolObservation, execute_catalog_tool
 from backend.services.vietnamese_intent import normalize_vietnamese
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -821,6 +822,30 @@ def test_unverified_need_is_not_rendered_as_a_suitability_recommendation() -> No
     assert "phù hợp với nhu cầu này" in answer
     assert "Da đầu mình nhanh bết" not in answer
     assert "Mình gợi ý" not in answer
+
+
+def test_single_unverified_catalog_match_is_described_as_one_option() -> None:
+    product = ProductSnapshot(
+        product_id="SAMPLE-1",
+        name="Dầu gội chống gàu 100ml",
+        category="Chăm sóc tóc",
+        price_vnd=95_200,
+        stock=5,
+        stock_is_current=False,
+        uom="Chai",
+    )
+    observation = ToolObservation(
+        content={"family_details_unverified": True, "current_stock_verified": False},
+        products=(product,),
+        tool_name="recommend_products",
+    )
+
+    answer = _localized_recommendation_candidates(observation, "vi")
+
+    assert "một sản phẩm" in answer
+    assert "Dầu gội chống gàu 100ml" in answer
+    assert "chưa có bằng chứng độc lập" in answer
+    assert "một số món cùng nhóm" not in answer
 
 
 def test_total_budget_collocation_is_not_misread_as_a_product_benefit_question() -> None:

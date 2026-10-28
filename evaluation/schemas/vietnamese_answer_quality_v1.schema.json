@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://retail-ai.local/schemas/vietnamese_answer_quality_v1.schema.json",
+  "title": "Vietnamese retail conversation answer-quality judgment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_item_id",
+    "conversation_id",
+    "turn_index",
+    "dialogue_context",
+    "user_message",
+    "assistant_response",
+    "visible_recommendations",
+    "user_need_understanding_1_5",
+    "product_choice_1_5",
+    "explanation_quality_1_5",
+    "evidence_grounding_1_5",
+    "naturalness_1_5",
+    "helpfulness_1_5",
+    "critical_wrong_product_type",
+    "critical_hard_constraint_violation",
+    "critical_price_or_unit_error",
+    "critical_invented_use_or_benefit",
+    "critical_false_stock_claim",
+    "critical_unintended_purchase_action",
+    "critical_session_data_leakage",
+    "critical_other",
+    "critical_other_note",
+    "reviewer_id",
+    "reviewed_at",
+    "confidence_1_5",
+    "rationale",
+    "annotation_status"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "review_item_id": { "type": "string", "minLength": 1 },
+    "conversation_id": { "type": "string", "minLength": 1 },
+    "turn_index": { "type": "integer", "minimum": 1 },
+    "dialogue_context": { "type": "string" },
+    "user_message": { "type": "string", "minLength": 1 },
+    "assistant_response": { "type": "string" },
+    "visible_recommendations": { "type": "string" },
+    "user_need_understanding_1_5": { "$ref": "#/$defs/rating" },
+    "product_choice_1_5": { "$ref": "#/$defs/rating" },
+    "explanation_quality_1_5": { "$ref": "#/$defs/rating" },
+    "evidence_grounding_1_5": { "$ref": "#/$defs/rating" },
+    "naturalness_1_5": { "$ref": "#/$defs/rating" },
+    "helpfulness_1_5": { "$ref": "#/$defs/rating" },
+    "critical_wrong_product_type": { "$ref": "#/$defs/critical_flag" },
+    "critical_hard_constraint_violation": { "$ref": "#/$defs/critical_flag" },
+    "critical_price_or_unit_error": { "$ref": "#/$defs/critical_flag" },
+    "critical_invented_use_or_benefit": { "$ref": "#/$defs/critical_flag" },
+    "critical_false_stock_claim": { "$ref": "#/$defs/critical_flag" },
+    "critical_unintended_purchase_action": { "$ref": "#/$defs/critical_flag" },
+    "critical_session_data_leakage": { "$ref": "#/$defs/critical_flag" },
+    "critical_other": { "$ref": "#/$defs/critical_flag" },
+    "critical_other_note": { "type": "string", "maxLength": 2000 },
+    "reviewer_id": { "type": ["string", "null"] },
+    "reviewed_at": { "type": ["string", "null"], "format": "date-time" },
+    "confidence_1_5": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+    "rationale": { "type": "string", "maxLength": 3000 },
+    "annotation_status": {
+      "enum": ["UNREVIEWED", "INDEPENDENT_A", "INDEPENDENT_B", "ADJUDICATED"]
+    },
+    "adjudication": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["reviewer_id", "reviewed_at", "decision", "rationale"],
+      "properties": {
+        "reviewer_id": { "type": "string", "minLength": 1 },
+        "reviewed_at": { "type": "string", "format": "date-time" },
+        "decision": {
+          "enum": ["AGREE", "KEEP_A", "KEEP_B", "NEW_JUDGMENT", "UNRESOLVED"]
+        },
+        "rationale": { "type": "string", "maxLength": 3000 }
+      }
+    }
+  },
+  "$defs": {
+    "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+    "critical_flag": { "type": ["boolean", "null"] }
+  }
+}

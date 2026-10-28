@@ -227,8 +227,10 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "function": {
             "name": "get_product_snapshot",
             "description": (
-                "Read verified facts for one product ID returned by search_products. "
-                "Set fields to exactly those requested: price_vnd, stock, shelf, "
+                "Read values recorded in the active catalog for one product ID returned by "
+                "search_products; do not treat a source-record value as independently "
+                "verified or necessarily current. Set fields to exactly those requested: "
+                "price_vnd, stock, shelf, "
                 "promotion, expiry_at, ingredients, spicy, data_timestamp. Treat stock as "
                 "unverified when stock_is_current is false; treat null spicy/ingredients as "
                 "unknown. For shelf, preserve "
@@ -270,10 +272,17 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "name": "get_product_knowledge",
             "description": (
                 "Read per-attribute evidence for a catalog product already found by search. "
-                "Each fact is VERIFIED, INFERRED, or UNKNOWN and includes source/date/version. "
-                "Only state VERIFIED facts as facts. Treat INFERRED as qualified listing or "
-                "planogram evidence. For UNKNOWN benefits, taste, use, or suitability, say the "
-                "catalog cannot verify it; never infer it from product name, brand, or category."
+                "Each fact is VERIFIED, INFERRED, or UNKNOWN and includes evidence_scope, "
+                "source, observation time and catalog version. VERIFIED with SOURCE_RECORD "
+                "means only that the value appears in that catalog record; qualify it as "
+                "catalog-record information and do not present it as current store truth or "
+                "independently verified product-label information. observed_at is capture time; "
+                "verified_at is null unless a separate verification date exists. "
+                "CURRENT_OPERATIONAL "
+                "is the active catalog's operational value at observed_at. Treat INFERRED as "
+                "qualified listing or planogram evidence. For UNKNOWN benefits, taste, use, or "
+                "suitability, say the catalog cannot verify it; never infer it from product name, "
+                "brand, or category."
             ),
             "parameters": {
                 "type": "object",

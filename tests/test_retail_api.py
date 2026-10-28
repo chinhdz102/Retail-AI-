@@ -1387,6 +1387,14 @@ def test_unsupported_catalog_attributes_are_rejected_without_model_claims(text: 
             "coca zero",
         ),
         (
+            "Coca Zero có bao nhiêu calo với đường vậy?",
+            "coca zero",
+        ),
+        (
+            "Sữa đậu nành Fami có bao nhiêu protein?",
+            "sua dau nanh fami",
+        ),
+        (
             "Sản phẩm này giá bao nhiêu và dùng để làm gì?",
             "",
         ),
@@ -1476,6 +1484,44 @@ async def test_named_product_unsupported_question_uses_knowledge_and_stays_groun
     assert payload["tools_used"] == ["search_products", "get_product_knowledge"]
     assert product.name in payload["text"]
     assert "chưa có dữ liệu xác minh về công dụng" in payload["text"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_unsupported_nutrition_for_ambiguous_named_product_shows_grounded_variants(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "nutrition-product-variants"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Coca Zero có bao nhiêu calo với đường vậy?",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "WIN_10194711" in payload["grounded_product_ids"]
+    assert payload["products"]
+    assert "Coca-Cola Zero" in payload["text"]
+    assert "chưa có dữ liệu xác minh" in payload["text"]
+    assert not any(
+        claim in payload["text"].casefold()
+        for claim in ("0 calo", "0 kcal", "0g đường", "0 g đường")
+    )
     assert service.calls == 0
 
 
@@ -2336,6 +2382,116 @@ async def test_validated_agent_response_can_be_delivered_as_server_sent_events(
     assert events[-1][1]["response"]["session_id"] == session_id
     assert events[-1][1]["response"]["state"] == "BROWSING"
     assert events[-1][1]["response"]["tools_used"] == []
+
+
+@pytest.mark.asyncio
+async def test_catalog_followups_stream_validated_sse_once_per_turn_without_cart_drift(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    monkeypatch.setattr("backend.api.main.get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+
+    validated_responses = []
+    original_agent_respond = api_main.agent_respond
+
+    async def capture_validated_response(request, groq, settings):
+        response = await original_agent_respond(request, groq, settings)
+        validated_responses.append((request.text, response))
+        return response
+
+    original_chunker = api_main._validated_text_chunks
+    chunk_calls = []
+
+    def split_only_after_validation(text: str, target_chars: int = 28) -> list[str]:
+        assert validated_responses, (
+            "SSE text chunking began before policy/tool validation completed"
+        )
+        assert text == validated_responses[-1][1].text
+        chunk_calls.append(text)
+        return original_chunker(text, target_chars)
+
+    monkeypatch.setattr(api_main, "agent_respond", capture_validated_response)
+    monkeypatch.setattr(api_main, "_validated_text_chunks", split_only_after_validation)
+
+    created = await client.post("/sessions", json={"kiosk_id": "catalog-stream-followups"})
+    session_id = created.json()["session_id"]
+    added_to_cart = await client.post(
+        f"/sessions/{session_id}/cart/items",
+        json={"product_id": "WATER01", "quantity": 1},
+    )
+    assert added_to_cart.status_code == 200, added_to_cart.text
+    cart_before = (await client.get(f"/sessions/{session_id}/cart")).json()
+
+    turns = [
+        "Mình đang cần Bánh bao, cho mình xem vài loại.",
+        "Giá của loại thứ hai là bao nhiêu?",
+        "Bỏ loại đó khỏi danh sách.",
+    ]
+    for turn_number, text in enumerate(turns, start=1):
+        response = await client.post(
+            "/agent/respond/stream",
+            json={"session_id": session_id, "text": text, "language": "vi"},
+        )
+        assert response.status_code == 200, response.text
+        assert response.headers["content-type"].startswith("text/event-stream")
+        frames = [frame for frame in response.text.split("\n\n") if frame.strip()]
+        events = []
+        for frame in frames:
+            event_name = next(
+                line[7:] for line in frame.splitlines() if line.startswith("event: ")
+            )
+            data = next(line[6:] for line in frame.splitlines() if line.startswith("data: "))
+            events.append((event_name, json.loads(data)))
+
+        names = [event_name for event_name, _payload in events]
+        assert names[0] == "start"
+        assert names[-1] == "complete"
+        assert names.count("start") == names.count("complete") == 1
+        assert all(name == "delta" for name in names[1:-1])
+        assert events[1:-1]
+
+        stream_text = "".join(payload["text"] for name, payload in events if name == "delta")
+        metadata = events[0][1]["response"]
+        assert "text" not in metadata
+        assert metadata == events[-1][1]["response"]
+        assert metadata["session_id"] == session_id
+        assert stream_text == validated_responses[-1][1].text
+        assert validated_responses[-1][0] == text
+        assert len(validated_responses) == turn_number
+        assert len(chunk_calls) == turn_number
+
+        product_ids = metadata["grounded_product_ids"]
+        cards = metadata["products"]
+        assert len(product_ids) == len(set(product_ids))
+        assert [card["product_id"] for card in cards] == product_ids
+        for card in cards:
+            snapshot = repository.get_product_snapshot(card["product_id"])
+            assert snapshot is not None
+            assert card["name"] == snapshot.name
+            assert card["price_vnd"] == snapshot.price_vnd
+            assert card["data_source"] == repository.source_name
+
+        stored = session_store.get(UUID(session_id))
+        assert stored.state.value == metadata["state"]
+        assert stored.shopping.selected_product_ids == product_ids
+        messages = session_store.messages_for_model(UUID(session_id))
+        assert len(messages) == turn_number * 2
+        assert messages[-2:] == [
+            {"role": "user", "content": text},
+            {"role": "assistant", "content": stream_text},
+        ]
+        assert (await client.get(f"/sessions/{session_id}/cart")).json() == cart_before
+
+    assert service.calls == 0
 
 
 @pytest.mark.asyncio
