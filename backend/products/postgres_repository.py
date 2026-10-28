@@ -206,6 +206,7 @@ class PostgresProductRepository:
             prefix = bind(f"{_escape_like_literal(query)}%") if query else "NULL"
             diversify = bind(bool(criteria.get("diversify_by_subcategory", False)))
             limit = bind(max(1, min(int(criteria.get("limit", 10)), 20)))
+            offset = bind(max(0, min(int(criteria.get("offset", 0)), 100_000)))
             sql = f"""
                 WITH latest AS (
                     SELECT DISTINCT ON (product_id) *
@@ -260,8 +261,10 @@ class PostgresProductRepository:
                          ELSE word_similarity({exact}, p.search_title) END DESC,
                     CASE WHEN {exact} IS NULL THEN 0
                          ELSE similarity(p.search_title, {exact}) END DESC,
-                    p.name
+                    p.name,
+                    p.product_id
                 LIMIT {limit}
+                OFFSET {offset}
             """
             async with conn.transaction():
                 if fuzzy_tokens:
@@ -285,6 +288,7 @@ class PostgresProductRepository:
         price_operator: PriceOperator | None = None,
         price_value_vnd: int | None = None,
         diversify_by_subcategory: bool = False,
+        offset: int = 0,
     ) -> list[ProductSnapshot]:
         return self._run(
             self._search(
@@ -294,6 +298,7 @@ class PostgresProductRepository:
                 spicy=spicy,
                 in_stock=in_stock,
                 limit=limit,
+                offset=offset,
                 brand=brand,
                 price_operator=price_operator,
                 price_value_vnd=price_value_vnd,
@@ -660,4 +665,5 @@ class PostgresProductRepository:
             sale_price_vnd=row["sale_price_vnd"],
             price_quality_status=row["price_quality_status"],
             shelf_source="RECOMMENDED_PLANOGRAM" if shelf else "SIMULATED",
+            catalog_version=row["dataset_version"],
         )

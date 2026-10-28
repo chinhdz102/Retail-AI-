@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from difflib import SequenceMatcher
@@ -34,6 +35,7 @@ from backend.products.category_taxonomy import (
     resolve_catalog_category,
     resolve_catalog_category_alias,
 )
+from backend.products.knowledge import product_knowledge_facts
 from backend.products.repository import ProductRepository, get_product_repository
 from backend.services.catalog_preferences import (
     excluded_catalog_brands,
@@ -258,6 +260,58 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     },
                 },
                 "required": ["product_id", "fields"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_product_knowledge",
+            "description": (
+                "Read per-attribute evidence for a catalog product already found by search. "
+                "Each fact is VERIFIED, INFERRED, or UNKNOWN and includes source/date/version. "
+                "Only state VERIFIED facts as facts. Treat INFERRED as qualified listing or "
+                "planogram evidence. For UNKNOWN benefits, taste, use, or suitability, say the "
+                "catalog cannot verify it; never infer it from product name, brand, or category."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "product_id": {"type": "string", "minLength": 1, "maxLength": 64},
+                    "attributes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "name",
+                                "brand",
+                                "category",
+                                "price_vnd",
+                                "stock",
+                                "availability",
+                                "shelf",
+                                "promotion",
+                                "expiry_at",
+                                "ingredients",
+                                "spicy",
+                                "description",
+                                "benefits",
+                                "taste",
+                                "usage",
+                                "suitability",
+                                "nutrition",
+                                "calories",
+                                "caffeine",
+                                "allergens",
+                            ],
+                        },
+                        "minItems": 1,
+                        "maxItems": 8,
+                        "uniqueItems": True,
+                    },
+                },
+                "required": ["product_id", "attributes"],
                 "additionalProperties": False,
             },
         },
@@ -510,6 +564,37 @@ class GetProductSnapshotArguments(BaseModel):
     fields: list[FactField] = Field(min_length=1, max_length=8)
 
 
+KnowledgeAttribute = Literal[
+    "name",
+    "brand",
+    "category",
+    "price_vnd",
+    "stock",
+    "availability",
+    "shelf",
+    "promotion",
+    "expiry_at",
+    "ingredients",
+    "spicy",
+    "description",
+    "benefits",
+    "taste",
+    "usage",
+    "suitability",
+    "nutrition",
+    "calories",
+    "caffeine",
+    "allergens",
+]
+
+
+class GetProductKnowledgeArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    product_id: str = Field(min_length=1, max_length=64)
+    attributes: list[KnowledgeAttribute] = Field(min_length=1, max_length=8)
+
+
 class ListProductPromotionsArguments(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -602,6 +687,55 @@ def _budget_scope_clarification(
         response_mode="DETERMINISTIC_ERROR",
         terminal=True,
     )
+
+
+def _search_alternative_candidates(
+    repository: ProductRepository,
+    criteria: dict[str, Any],
+    initial_products: tuple[ProductSnapshot, ...],
+    *,
+    excluded_ids: set[str],
+    limit: int,
+    retain: Callable[[ProductSnapshot], bool],
+) -> tuple[tuple[ProductSnapshot, ...], bool]:
+    """Return unseen alternatives across repository pages and whether search ended.
+
+    Repositories cap one search call to 20 rows. Alternatives can therefore
+    live beyond the first result window when a session has already seen those
+    rows. The stable offset is advanced by the actual page length; exhaustion
+    is only reported after the repository returns a short or empty page.
+    """
+    page_size = 20
+    candidates: dict[str, ProductSnapshot] = {}
+
+    def add(product: ProductSnapshot) -> None:
+        if product.product_id in excluded_ids or product.product_id in candidates:
+            return
+        if retain(product):
+            candidates[product.product_id] = product
+
+    for product in initial_products:
+        add(product)
+
+    offset = 0
+    exhausted = False
+    while len(candidates) < limit:
+        page = repository.search(
+            **{**criteria, "limit": page_size, "offset": offset}
+        )
+        if not page:
+            exhausted = True
+            break
+        for product in page:
+            add(product)
+        offset += len(page)
+        if len(candidates) >= limit:
+            break
+        if len(page) < page_size:
+            exhausted = True
+            break
+
+    return tuple(candidates.values())[:limit], exhausted
 
 
 def _budget_unit_price_cap(understanding: QueryUnderstandingResult) -> int | None:
@@ -2636,6 +2770,7 @@ def execute_catalog_tool(
         "recommend_products",
         "plan_shopping_mission",
         "get_product_snapshot",
+        "get_product_knowledge",
         "list_product_promotions",
         "list_new_catalog_products",
     }:
@@ -3039,7 +3174,6 @@ def execute_catalog_tool(
                 else parsed.limit,
                 "diversify_by_subcategory": diversify,
             }
-            alternative_candidate_ids: set[str] = set()
             category_fallback_used = False
             products = tuple(repo.search(**search_criteria))
             brand_filter = search_criteria["brand"] or _mentioned_candidate_brand(
@@ -3197,6 +3331,7 @@ def execute_catalog_tool(
 
         if name == "recommend_products":
             parsed = RecommendProductsArguments.model_validate(arguments)
+            alternative_exhausted = False
             if parsed.spicy is not None and not getattr(repo, "supports_spicy_filter", True):
                 return _tool_error(
                     name,
@@ -3621,24 +3756,52 @@ def execute_catalog_tool(
                     sorted(products, key=lambda item: (-item.price_vnd, item.name.casefold()))
                 )[: parsed.limit]
             if parsed.alternative_requested and parsed.exclude_product_ids:
-                alternative_candidates = list(
-                    repo.search(**{**search_criteria, "limit": 100})
+                excluded_ids = set(parsed.exclude_product_ids)
+                audience_query = " ".join(
+                    part for part in (parsed.query, parsed.preference_text) if part
                 )
-                alternative_candidate_ids = {
-                    product.product_id for product in alternative_candidates
-                }
-                candidates = list(products) + alternative_candidates
+                list_brands = getattr(repo, "list_brand_names", None)
+                known_brands = (
+                    list(list_brands(limit=1000))
+                    if callable(list_brands)
+                    else [product.brand for product in products if product.brand]
+                )
                 excluded_brands = excluded_catalog_brands(
-                    parsed.preference_text, [p.brand for p in candidates if p.brand]
+                    parsed.preference_text,
+                    [*known_brands, *(product.brand for product in products if product.brand)],
                 )
-                products = tuple(
-                    {
-                        p.product_id: p
-                        for p in candidates
-                        if p.product_id not in parsed.exclude_product_ids
-                        and normalize_category_text(p.brand) not in excluded_brands
-                    }.values()
-                )[: parsed.limit]
+                def retain_alternative(product: ProductSnapshot) -> bool:
+                    if product.product_id in excluded_ids:
+                        return False
+                    if normalize_category_text(product.brand) in excluded_brands:
+                        return False
+                    if ambiguous_family and not _product_matches_unresolved_family(
+                        product, understanding.product_type
+                    ):
+                        return False
+                    if not matches_explicit_product_audience(audience_query, product):
+                        return False
+                    if _product_is_in_excluded_category(product, excluded_categories):
+                        return False
+                    return True
+
+                # Keep the preference-ranked results from this turn, then walk
+                # every bounded repository page if the visible alternatives
+                # are still covered by the session's exclusion list.
+                alternatives, alternative_exhausted = _search_alternative_candidates(
+                    repo,
+                    {**search_criteria, "diversify_by_subcategory": False},
+                    tuple(products),
+                    excluded_ids=excluded_ids,
+                    limit=parsed.limit,
+                    retain=retain_alternative,
+                )
+                alternatives = list(alternatives)
+                if understanding.ranking_criterion == "price_ascending":
+                    alternatives.sort(key=lambda item: (item.price_vnd, item.name.casefold()))
+                elif understanding.ranking_criterion == "price_descending":
+                    alternatives.sort(key=lambda item: (-item.price_vnd, item.name.casefold()))
+                products = tuple(alternatives[: parsed.limit])
             if ambiguous_family:
                 products = tuple(
                     product
@@ -3725,8 +3888,7 @@ def execute_catalog_tool(
             content["alternative_exhausted"] = bool(
                 parsed.alternative_requested
                 and parsed.exclude_product_ids
-                and alternative_candidate_ids
-                and alternative_candidate_ids.issubset(set(parsed.exclude_product_ids))
+                and alternative_exhausted
                 and not products
             )
             if family_details_unverified:
@@ -3791,6 +3953,46 @@ def execute_catalog_tool(
                 source=repo.source_name,
                 response_mode="DETERMINISTIC_RECOMMENDATION",
                 terminal=True,
+            )
+
+        if name == "get_product_knowledge":
+            parsed_knowledge = GetProductKnowledgeArguments.model_validate(arguments)
+            product = repo.get_product_snapshot(parsed_knowledge.product_id)
+            if product is None:
+                return _tool_error(
+                    name,
+                    "NOT_FOUND",
+                    "Product not found in the catalog.",
+                    source=repo.source_name,
+                    extra={"product_id": parsed_knowledge.product_id},
+                    response_mode="DETERMINISTIC_ERROR",
+                    terminal=True,
+                )
+            facts = product_knowledge_facts(
+                product,
+                parsed_knowledge.attributes,
+                source=repo.source_name,
+                catalog_version=getattr(repo, "dataset_sha256", None)
+                or getattr(repo, "catalog_version", None),
+            )
+            return ToolObservation(
+                content={
+                    "product_id": product.product_id,
+                    "product_name": product.name,
+                    "facts": [fact.model_dump(mode="json") for fact in facts],
+                    "unknown_attributes": [
+                        fact.attribute for fact in facts if fact.status.value == "UNKNOWN"
+                    ],
+                    "catalog_version": product.catalog_version
+                    or getattr(repo, "dataset_sha256", None)
+                    or getattr(repo, "catalog_version", None),
+                },
+                products=(product,),
+                tool_name=name,
+                source=repo.source_name,
+                requested_fields=tuple(parsed_knowledge.attributes),
+                response_mode="DETERMINISTIC_FACT",
+                terminal=False,
             )
 
         parsed = GetProductSnapshotArguments.model_validate(arguments)

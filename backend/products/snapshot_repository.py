@@ -449,6 +449,7 @@ class SnapshotProductRepository:
                     price_quality_status=(
                         "SALE" if row.sale_price_vnd < row.price_vnd else "NORMAL"
                     ),
+                    catalog_version=dataset_version,
                 )
             )
         self.products = tuple(products)
@@ -579,6 +580,7 @@ class SnapshotProductRepository:
         price_operator: PriceOperator | None = None,
         price_value_vnd: int | None = None,
         diversify_by_subcategory: bool = False,
+        offset: int = 0,
     ) -> list[ProductSnapshot]:
         normalized = normalize_search_text(query).strip().casefold()
         exact_id = self._identifier_index.get(normalized)
@@ -626,14 +628,23 @@ class SnapshotProductRepository:
             results.append((score, product))
 
         if not terms:
-            results.sort(key=lambda pair: (pair[1].price_vnd, pair[1].name.casefold()))
+            results.sort(
+                key=lambda pair: (
+                    pair[1].price_vnd,
+                    pair[1].name.casefold(),
+                    pair[1].product_id,
+                )
+            )
         else:
-            results.sort(key=lambda pair: (-pair[0], pair[1].name.casefold()))
+            results.sort(
+                key=lambda pair: (-pair[0], pair[1].name.casefold(), pair[1].product_id)
+            )
         products = [product for _score_value, product in results]
         bounded_limit = max(1, min(limit, 20))
+        bounded_offset = max(0, min(int(offset), 100_000))
         if diversify_by_subcategory:
-            return diversify_by_category_leaf(products, bounded_limit)
-        return products[:bounded_limit]
+            products = diversify_by_category_leaf(products, bounded_offset + bounded_limit)
+        return products[bounded_offset : bounded_offset + bounded_limit]
 
     def catalog_terms_evidenced(
         self,

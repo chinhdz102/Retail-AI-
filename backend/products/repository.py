@@ -44,6 +44,7 @@ class ProductRepository(Protocol):
         price_operator: PriceOperator | None = None,
         price_value_vnd: int | None = None,
         diversify_by_subcategory: bool = False,
+        offset: int = 0,
     ) -> list[ProductSnapshot]: ...
 
     def list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]: ...
@@ -65,17 +66,19 @@ class ProductRepository(Protocol):
 
 class DemoProductRepository:
     source_name = "demo_product_catalog"
+    catalog_version = "demo-seed-v1"
     supports_current_stock = True
     supports_spicy_filter = True
 
     def search(self, **criteria) -> list[ProductSnapshot]:
         diversify = bool(criteria.pop("diversify_by_subcategory", False))
+        offset = max(0, int(criteria.pop("offset", 0)))
+        limit = max(1, int(criteria.get("limit", 10)))
+        criteria["limit"] = offset + limit
         products = search_products(**criteria)
-        return (
-            diversify_by_category_leaf(products, int(criteria.get("limit", 10)))
-            if diversify
-            else products
-        )
+        if diversify:
+            products = diversify_by_category_leaf(products, offset + limit)
+        return products[offset : offset + limit]
 
     def list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]:
         return collect_category_hierarchies(DEMO_PRODUCTS)

@@ -1,25 +1,26 @@
 # Retail-AI Production Quality Master Report
 
-**Assessment date:** 2026-10-28
+**Assessment date:** 2026-10-29
 **Release decision:** `NOT READY` for production; suitable for controlled demo only
 **Working branch:** `codex/retail-text-quality-v4-20261019` (kept as-is; no new branch created)
-**Benchmark base commit:** `1b1a9b55ba6d0e7d6e3f04c55f7e197c87c905e6`
+**Benchmark base commit:** `7eeaa179d0ca0753a9759e67df3e4b2bf494a0ae`
 **Catalog snapshot:** WinMart JSON, dated 2026-09-15; SHA-256 `a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6`
 
 This report separates deterministic regressions, synthetic evaluation, live provider probes, and human review. None of the synthetic scores below should be read as real-world consultation accuracy.
 
 ## 1. Executive summary
 
-The current implementation improves exact product/category retrieval, multi-turn scope retention, alternative pagination state, runtime hot paths, and explicit soft-preference retention. It keeps catalog facts as the source of truth and does not convert unverified attributes into hard filters or claims.
+The current implementation improves exact product/category retrieval, multi-turn scope retention, alternative pagination, runtime hot paths, and explicit soft-preference retention. This continuation fixes alternative lookup truncation beyond the repository's 20-row page, ties session novelty to products actually shown, and adds per-attribute catalog evidence (`VERIFIED` / `INFERRED` / `UNKNOWN`) with provenance. Simulated and demo shelf coordinates are no longer described as physically verified.
 
 The frozen development benchmark reports 100% on its generated exact-product, category, and hard-constraint checks. These scores are provisional because queries are templated from the same catalog, labels have not been independently reviewed, and they do not grade semantic suitability or naturalness. A live, manually written Groq probe returned HTTP 200 on all five turns. In the post-fix run, Qwen included “dễ chia” in its tool arguments and the response acknowledged it while leaving the plan items unchanged. Because the model itself emitted the preference on this repeat, the live run does not prove that the semantic guard rescued an omitted field; the focused unit test covers that path. This is one successful probe, not a statistical quality estimate.
 
-**Decision:** do not release as a production retail advisor. Keep demo-only until there is a human-authored, blind held-out set, independent qrels review, multi-user API load testing, and a documented catalog knowledge/provenance path for product attributes. Current latency at concurrency 5–20 is also too high for a production conversational target.
+**Decision:** do not release as a production retail advisor. Keep demo-only until there is a human-authored, blind held-out set, independent qrels review, multi-user API load testing, and real attribute-level catalog evidence. The new evidence tool prevents missing attributes from being guessed; it does not add currently absent product facts. Current latency at concurrency 5–20 is also too high for a production conversational target.
 
 ## 2. Commit & environment
 
 - Work stays on `codex/retail-text-quality-v4-20261019`; no branch was created for this continuation.
-- Benchmark artifacts were generated from base commit `1b1a9b55ba6d0e7d6e3f04c55f7e197c87c905e6` with a dirty working tree. Artifacts explicitly record this state; they are not artifacts from a clean release commit.
+- The 2026-10-29 synthetic rerun used base commit `7eeaa179d0ca0753a9759e67df3e4b2bf494a0ae` with a dirty working tree; its artifact records the tracked diff hash. It is not a clean release-commit result. Historical probes listed below may use earlier base commits.
+- Baseline full suite on that base commit: 1,222 passed in 299.31 s. Post-change full suite: 1,233 passed in 217.86 s. The post-change run includes pagination, knowledge provenance, grounded API/agent tool-flow, and visible-card session regressions.
 - Local environment: Windows, Python 3.13+, `uv`; runtime catalog is the WinMart JSON snapshot. The imported dataset has 3,099 raw rows, 3,081 accepted products, and 18 quarantined rows.
 - Provider configuration was present for the live probe. No API key or credential value is written to reports or artifacts. Voice was not evaluated in this task.
 - The snapshot date is 2026-09-15. Price and stock must be presented as snapshot evidence, not guaranteed live store values.
@@ -32,6 +33,9 @@ The frozen development benchmark reports 100% on its generated exact-product, ca
 | “Below” price boundary labels | H-037/H-082 expected equality under “dưới”. | Dataset generator used a strict phrase with an inclusive boundary. Dev cases now say “tối đa”; historic artifacts remain unchanged. |
 | LLM omitted a newly stated preference | Live picnic follow-up “ưu tiên món dễ chia…” returned an empty `preferences` field. | Tool-call semantic guard now uses the shared parser to recover only explicitly cued, parser-supported soft preferences. It does not make them hard constraints. |
 | Unsupported snack attribute | Snapshot had no verified spice field; snack need had zero candidates. | Correct data insufficiency, not a retrieval bug. System abstained from saying a snack was non-spicy and excluded it from totals. |
+| Alternative search stopped after seen products filled page one | Repository caps results at 20; asking for 100 still returned 20, which could be mistaken for catalog exhaustion. | Added stable `offset` pagination for demo, JSON snapshot, and Postgres repositories. Alternative lookup now advances page-by-page and reports exhaustion only at the last page. |
+| Session remembered filtered-out candidates | Candidate state was captured before audience/hard filtering while the UI showed a narrower product list. | Session selected/seen IDs now come from the final visible product cards, so the next turn tracks what the customer actually saw. |
+| Demo shelf looked verified | `DEMO`, `SIMULATED`, and planogram sources are not proof of physical placement. | Shelf evidence is `VERIFIED` only when explicitly marked `PHYSICALLY_VERIFIED`; other stored coordinates are qualified as inferred. |
 | High concurrency latency | In-process catalog endpoint p50 rose from about 0.71 s at 1 request to 3.86 s at 5 and 4.87 s at 20. | CPU-bound normalization, fuzzy scoring, and taxonomy work remain a bottleneck. Bounded caches helped, but current profile is not a capacity test or production pass. |
 | Recommendation quality is under-measured | Generated exact-SKU tests select a catalog-derived gold item. | Exact name resolution is being measured, not whether a product is suitable for an indirect human need. Human qrels are still required. |
 
@@ -69,6 +73,7 @@ Keep a hybrid, evidence-bounded architecture:
 4. Rank with supported exact/lexical/catalog evidence and session state.
 5. Use the agent model for conversational tool selection and explanation, with a semantic guard correcting bounded state omissions.
 6. Abstain or ask a focused follow-up if a required attribute is unknown; never invent a SKU, price, stock fact, sales rank, or use claim.
+7. For a selected product's requested attributes, preserve value, evidence status, source, observation/verification date, catalog version, and confidence. Do not promote inferred retailer copy or simulated placement to verified evidence.
 
 Do not promote LLM structured extraction to the every-request fast path: its recorded ablation passed 20/60 cases, with 34 provider errors and 6 invalid/incomplete extraction outputs. Do not promote dense retrieval: it did not improve the measured catalog-title queries and has not been measured against independently labeled semantic needs.
 
@@ -77,6 +82,9 @@ Do not promote LLM structured extraction to the every-request fast path: its rec
 - `backend/api/main.py`: preserve cumulative alternative IDs/scope in session, clean pagination language, clarify exhaustion, and keep local smalltalk fallback bounded to greetings/farewells/wellbeing.
 - `backend/services/sessions.py`: backward-compatible per-scope seen-product state.
 - `backend/services/retail_tools.py`: bounded alternative exclusions and explicit exhaustion behavior.
+- `backend/products/knowledge.py` and `get_product_knowledge`: per-attribute evidence envelope with provenance and explicit unknowns; the agent can call it only for a uniquely grounded product candidate.
+- `backend/products/repository.py`, `snapshot_repository.py`, and `postgres_repository.py`: stable bounded offset pagination used to walk beyond page one.
+- `backend/api/main.py`: for an explicitly identified product, retrieve attribute evidence before abstaining on benefits, taste, usage, nutrition, allergen, and suitability questions; responses name the grounded product and state the missing evidence. Unknown product references still trigger clarification/abstention. Session state remembers only products actually rendered to the customer.
 - `backend/services/retail_agent.py`: preserve explicit soft preferences omitted by a model tool call; keep budget, party size, rejected items, and hard constraints intact.
 - `backend/services/shopping_mission.py`: acknowledge a newly recorded preference without claiming the catalog proves product fit.
 - `backend/services/smalltalk.py`: broaden wellbeing detection for the local response path.
@@ -91,7 +99,7 @@ The preference guard requires an explicit preference cue and an existing parser-
 
 Primary catalog: `data/winmart_products.json`, 3,081 accepted products from 3,099 rows; catalog SHA-256 `a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6`.
 
-The semantic-intelligence V2 frozen development set contains 300 generated query cases (100 exact product, 100 category, 100 hard-constraint) and 50 generated conversations / 200 turns. It is generated from catalog titles, taxonomy, and fields. Dataset SHA-256: `8f129beecee14b7c8ff1bbba106fae154a3321a55ef2efaad718e3493de27d3b`.
+The semantic-intelligence V2 benchmark includes frozen variants. The 2026-10-29 rerun used 300 generated query cases (100 exact product, 100 category, 100 hard-constraint) and 50 generated conversations / 200 turns from `retail_ai_semantic_intelligence_v2_frozen_20261028.json`, SHA-256 `d030d8f860f426a0ffcba7d44b542f8f7b23e9d361a51d8810c052670ba8b1e9`. Earlier `dev_rev1` / `dev_rev2` artifacts use a separate file/hash (`8f129beecee14b7c8ff1bbba106fae154a3321a55ef2efaad718e3493de27d3b`); they remain historical and are not interchangeable with this rerun. All variants are catalog-derived synthetic development data, not blind or human-reviewed.
 
 The live Groq probe has two manually written cases and five turns (picnic and Pantene). The author was also the evaluator; it is a diagnostic example set, not independent human evaluation. The earlier Vietnamese 200-query set remains development/regression because its cases were reviewed while fixing code. No true held-out human set is available in this run.
 
@@ -102,7 +110,7 @@ An additional manually authored parser/retrieval development set has 200 queries
 - Product identity, category, price and brand in generated cases are derived from snapshot rows. This supports deterministic identity checks, not semantic suitability.
 - Generated category precision checks category membership, not fit to an intended use.
 - Hard-constraint checks cover encoded fields and empty-result behavior. They cannot validate absent attributes such as “ngon”, “không cay”, “dễ chia”, efficacy, or suitability.
-- The former alternative measure counted parser intent only. Its labels allowed 48/50 repeated prior SKUs and 42/50 exact repeated lists. It is now labeled intent-only; candidate novelty is `NOT_EVALUATED_REQUIRES_STATEFUL_API_SESSION` in the parser benchmark.
+- The former alternative measure counted parser intent only. Its labels allowed 48/50 repeated prior SKUs and 42/50 exact repeated lists. It is now labeled intent-only; candidate novelty is `NOT_EVALUATED_REQUIRES_STATEFUL_API_SESSION` in the parser benchmark. The implementation has a deterministic page-walk regression, but this benchmark still does not grade end-to-end session novelty.
 - H-037/H-082 wording was corrected in the development generator; old JSON artifacts were retained for audit.
 - Annotation schema and review tooling are scaffolding only. No annotator-completed qrels were available; labels requiring judgment must remain `needs_review`.
 
@@ -120,6 +128,8 @@ An additional manually authored parser/retrieval development set has 200 queries
 | Manually authored parser/retrieval dev set, n=200 | Direct-search relevant@1/.@5 .075/.090 | Tool relevant@1/.@5 .91/.93; product type 98%; intent 95.31%; negation 76.92%; comparison exact match 80% | Exposed development set, not blind; distinct from generated exact-match cases. |
 
 Latest artifact: [`retail_ai_semantic_intelligence_v2_dev_rev2_20261028.json`](artifacts/retail_ai_semantic_intelligence_v2_dev_rev2_20261028.json). It uses the same synthetic dataset hash as rev1, so rev2 is not an independent holdout. Baseline and historical numbers are documented in [`retail_ai_semantic_intelligence_v2.md`](retail_ai_semantic_intelligence_v2.md).
+
+Post-pagination rerun: [`semantic_intelligence_v2_postfix_20261029.json`](artifacts/semantic_intelligence_v2_postfix_20261029.json). On its separate frozen synthetic dataset, exact product R@1/R@5 was 1.00/1.00; category P@5 was 1.00; encoded-constraint cases passed 100/100 with zero violations; candidate recall@5 was 0.98 and nonempty results were 0.98. Context retention, parser scope, category scope, price ordering, alternative-intent recognition, and first-item references passed their encoded checks. The artifact marks alternative candidate novelty as not evaluated. Deterministic end-to-end p50/p95 was 105.075/203.005 ms. These are regression diagnostics, not semantic-answer quality or LLM latency.
 
 ## 11. Ablation by dimension
 
@@ -157,9 +167,10 @@ See [`live_snapshot_provider_probe_after_preference_fix_20261028.json`](artifact
 
 | Gate | Result | Status |
 | --- | --- | --- |
-| Full backend/evaluation pytest suite | `uv run pytest tests -q --tb=short`: 1,222 passed in 241.30 s. | Pass. |
+| Full backend/evaluation pytest suite | `uv run pytest tests -q --tb=short`: 1,233 passed in 217.86 s (post-change); baseline on commit `7eeaa17`: 1,222 passed in 299.31 s. | Pass. |
 | Ruff and `git diff --check` | `uv run ruff check backend tests evaluation`: all checks passed; `git diff --check` clean (Git emitted only line-ending conversion warnings). | Pass. |
 | Synthetic product/category/constraint checks | 100/100 within each generated dimension; zero encoded-constraint violations. | Pass for development regression only. |
+| Post-pagination frozen benchmark | 300 generated queries + 50 synthetic dialogues; candidate R@5 0.98, zero encoded-constraint violations, novelty status not evaluated. | Pass for development regression only; see artifact and limitations. |
 | Live API grounding invariants | Post-fix run: 5/5 turns HTTP 200; 5/5 automated grounding checks passed; no fallback used. | HTTP/grounding gate only; not human-graded. |
 | Prompt-injection and unauthorized-write regressions | Covered by API/support tests for false price changes, secret requests, fake role/tool, payment, and ticket boundaries. | Regression coverage; not a penetration test or formal security certification. |
 | Human qrels, naturalness, helpfulness, abstention calibration | Not completed. | Fail release gate. |
@@ -179,6 +190,8 @@ Latest [`api_runtime_load_sanity_20261028.json`](artifacts/api_runtime_load_sani
 A separate single-request `tracemalloc` probe measured Python heap current 395,778 B and peak 818,295 B. It excludes native allocations and process RSS. CPU in the timed smoke was 3,328 ms (C1), 3,750 ms (C5), and 4,609 ms (C20). The harness excludes network, browser, TLS, reverse proxy, worker pool, provider calls, STT, and TTS. Five requests per level are insufficient for capacity or SLA claims.
 
 The caches lowered median latency relative to the same earlier smoke by about 48% at C1, 49% at C5, and 38% at C20, while absolute C5/C20 latency remains unsuitable for production chat.
+
+The separate deterministic V2 run measured p50 105.075 ms and p95 203.005 ms over 300 catalog-only cases. It excludes Groq and should not be compared with end-user or provider latency; it is separate from the five-request ASGI concurrency probe above.
 
 ## 16. Provider reliability
 
@@ -209,6 +222,8 @@ Annotation schema, guidance, and exporter are present under `evaluation/schemas/
 - Alternative SKU novelty is not measured by the parser benchmark; current load test is too small for capacity estimates.
 - No actual browser/network E2E or voice/STT/TTS benchmark is part of this report.
 - Post-fix preference handling now has focused unit coverage and one successful live provider re-run; repeated sessions and broader preference types still need independent coverage.
+- Product knowledge now models evidence/provenance, but the current catalog has no independently verified taste, efficacy, usage, or suitability facts. Knowledge-tool availability cannot fill those data gaps.
+- Alternative page-walking is unit and repository tested; actual novelty over multi-turn live API sessions remains ungraded by the frozen benchmark.
 
 ## 20. Release decision
 
@@ -227,6 +242,8 @@ uv run pytest tests/test_retail_agent.py tests/test_shopping_mission.py -q --tb=
 uv run python -m evaluation.semantic_intelligence_v2_benchmark `
   --dataset evaluation/cases/retail_ai_semantic_intelligence_v2_dev_rev1_20261028.json `
   --output docs/reports/artifacts/retail_ai_semantic_intelligence_v2_dev_rev2_20261028.json
+uv run python evaluation/semantic_intelligence_v2_benchmark.py `
+  --output docs/reports/artifacts/semantic_intelligence_v2_postfix_20261029.json
 uv run python -m evaluation.api_runtime_load_sanity `
   --output docs/reports/artifacts/api_runtime_load_sanity_20261028.json
 uv run python -m evaluation.live_text_conversation_benchmark `

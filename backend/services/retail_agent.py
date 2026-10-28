@@ -732,6 +732,24 @@ async def lookup_followup_snapshot(product_id: str, fields: tuple[str, ...]) -> 
     return observation
 
 
+async def lookup_product_knowledge(
+    product_id: str,
+    attributes: tuple[str, ...],
+) -> ToolObservation:
+    """Read provenance-aware facts for one product already resolved by the caller."""
+    call = {
+        "function": {
+            "name": "get_product_knowledge",
+            "arguments": json.dumps(
+                {"product_id": product_id, "attributes": list(attributes)},
+                ensure_ascii=False,
+            ),
+        }
+    }
+    _, observation = await _execute_tool_call(call, calls_executed=0)
+    return observation
+
+
 async def lookup_product_candidates(
     query: str,
     current_user_text: str = "",
@@ -1002,7 +1020,7 @@ async def run_retail_agent(
         for call_number, call in enumerate(tool_calls, start=1):
             function = call.get("function") or {}
             name = str(function.get("name") or "")
-            if name == "get_product_snapshot":
+            if name in {"get_product_snapshot", "get_product_knowledge"}:
                 raw_arguments = function.get("arguments", "{}")
                 try:
                     arguments = (

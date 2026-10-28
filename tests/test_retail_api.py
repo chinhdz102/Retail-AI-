@@ -1395,7 +1395,7 @@ def test_fact_query_extraction_removes_unverified_advice_request(text: str, expe
     ],
 )
 @pytest.mark.asyncio
-async def test_unsupported_use_and_health_questions_abstain_without_model_or_tools(
+async def test_unsupported_use_and_health_questions_abstain_without_model_claims(
     client: httpx.AsyncClient,
     text: str,
 ) -> None:
@@ -1409,9 +1409,56 @@ async def test_unsupported_use_and_health_questions_abstain_without_model_or_too
     )
 
     assert response.status_code == 200
-    assert "chưa có dữ liệu đã xác minh" in response.json()["text"]
-    assert response.json()["grounded_product_ids"] == []
-    assert response.json()["tools_used"] == []
+    assert "chưa có dữ liệu" in response.json()["text"]
+    assert not any(
+        claim in response.json()["text"].casefold()
+        for claim in ("giúp giảm cân", "trị tiểu đường", "chữa bệnh")
+    )
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_named_product_unsupported_question_uses_knowledge_and_stays_grounded(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    product = DEMO_PRODUCTS[0]
+
+    async def search_known_product(_query: str, current_user_text: str = "") -> ToolObservation:
+        return ToolObservation(
+            content={"count": 1},
+            products=(product,),
+            tool_name="search_products",
+            source="test_catalog",
+        )
+
+    async def read_product_knowledge(product_id: str, attributes: tuple[str, ...]):
+        return retail_tools.execute_catalog_tool(
+            "get_product_knowledge",
+            json.dumps({"product_id": product_id, "attributes": list(attributes)}),
+            repository=DemoProductRepository(),
+        )
+
+    monkeypatch.setattr(api_main, "lookup_product_candidates", search_known_product)
+    monkeypatch.setattr(api_main, "lookup_product_knowledge", read_product_knowledge)
+    created = await client.post("/sessions", json={"kiosk_id": "knowledge-abstention"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Coca Zero dùng để làm gì?",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["grounded_product_ids"] == [product.product_id]
+    assert payload["tools_used"] == ["search_products", "get_product_knowledge"]
+    assert product.name in payload["text"]
+    assert "chưa có dữ liệu xác minh về công dụng" in payload["text"]
     assert service.calls == 0
 
 
@@ -2178,6 +2225,48 @@ async def test_session_creation_and_isolation(client: httpx.AsyncClient) -> None
     assert session_b.status_code == 201
     assert session_a.json()["session_id"] != session_b.json()["session_id"]
     assert session_a.json()["state"] == "BROWSING"
+
+
+@pytest.mark.asyncio
+async def test_session_selection_matches_product_cards_after_hard_filtering(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    adult_candidate = DEMO_PRODUCTS[0]
+    child_candidate = ProductSnapshot(
+        product_id="JUICE_CHILD_180",
+        name="Nước ép dành cho trẻ em 180ml",
+        category="drink",
+        price_vnd=9000,
+        stock=8,
+    )
+    observation = ToolObservation(
+        content={"count": 2},
+        products=(adult_candidate, child_candidate),
+        tool_name="recommend_products",
+        source="test_catalog",
+    )
+
+    async def lookup_candidates(*_args, **_kwargs):
+        return observation
+
+    monkeypatch.setattr(api_main, "lookup_recommendation_products", lookup_candidates)
+    created = await client.post("/sessions", json={"kiosk_id": "visible-card-state"})
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Gợi ý đồ uống cho trẻ em",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    visible_ids = [card["product_id"] for card in response.json()["products"]]
+    session_id = UUID(response.json()["session_id"])
+    state = session_store.get(session_id).shopping
+    assert visible_ids == [child_candidate.product_id]
+    assert state.selected_product_ids == visible_ids
+    assert state.seen_product_ids == visible_ids
 
 
 @pytest.mark.asyncio
@@ -4688,7 +4777,7 @@ async def test_colloquial_catalog_questions_are_grounded_and_never_need_the_llm(
     assert taste.json()["grounded_product_ids"] == ["COFFEE01"]
     assert "cà phê sữa pha sẵn" in taste.json()["text"].casefold()
     assert "không đoán" in taste.json()["text"].casefold()
-    assert taste.json()["tools_used"] == []
+    assert taste.json()["tools_used"] == ["get_product_knowledge"]
     assert service.calls == 0
 
 

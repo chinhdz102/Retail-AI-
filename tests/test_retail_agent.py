@@ -26,9 +26,16 @@ class ScriptedGroq:
     def __init__(self, *results: GroqChatResult) -> None:
         self.results = list(results)
         self.calls = 0
+        self.offered_tool_names: list[tuple[str, ...]] = []
 
     async def chat(self, messages, model=None, tools=None, tool_choice=None):
         self.calls += 1
+        self.offered_tool_names.append(
+            tuple(
+                str(tool.get("function", {}).get("name", ""))
+                for tool in tools or []
+            )
+        )
         return self.results.pop(0)
 
 
@@ -963,6 +970,53 @@ async def test_timestamp_snapshot_round_trips_through_agent_tool_message() -> No
         "2026-08-31T00:00:00+00:00"
     )
     assert result.observations[-1].terminal is True
+
+
+@pytest.mark.asyncio
+async def test_agent_calls_product_knowledge_after_grounded_search() -> None:
+    groq = ScriptedGroq(
+        GroqChatResult(
+            "",
+            "qwen/qwen3.8-27b",
+            [tool_call("search_products", {"query": "Coca Zero"})],
+        ),
+        GroqChatResult(
+            "",
+            "qwen/qwen3.8-27b",
+            [
+                tool_call(
+                    "get_product_knowledge",
+                    {
+                        "product_id": "COKE_ZERO_330",
+                        "attributes": ["benefits", "ingredients"],
+                    },
+                )
+            ],
+        ),
+        GroqChatResult(
+            "Catalog verifies the ingredients; it does not verify benefits.",
+            "qwen/qwen3.8-27b",
+        ),
+    )
+
+    result = await run_retail_agent(
+        groq,
+        [{"role": "user", "content": "Coca Zero có công dụng gì, thành phần ra sao?"}],
+        SessionState.BROWSING,
+        candidate_query="coca zero",
+    )
+
+    assert groq.calls == 3
+    assert "get_product_knowledge" in groq.offered_tool_names[0]
+    assert [observation.tool_name for observation in result.observations] == [
+        "search_products",
+        "get_product_knowledge",
+    ]
+    facts = {fact["attribute"]: fact for fact in result.observations[-1].content["facts"]}
+    assert facts["benefits"]["status"] == "UNKNOWN"
+    assert facts["ingredients"]["status"] == "VERIFIED"
+    assert result.observations[-1].terminal is False
+    assert result.text == "Catalog verifies the ingredients; it does not verify benefits."
 
 
 def test_product_match_requires_specific_words_that_select_one_variant() -> None:

@@ -69,6 +69,19 @@ def test_snapshot_catalog_term_evidence_is_exact_and_category_scoped(
     assert not snapshot_repo.catalog_terms_evidenced((product_term,), "unknown category")
 
 
+def test_snapshot_search_offset_returns_a_stable_non_overlapping_next_page(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    first_page = snapshot_repo.search(query="", category="drink", limit=20, offset=0)
+    second_page = snapshot_repo.search(query="", category="drink", limit=20, offset=20)
+
+    assert len(first_page) == 20
+    assert second_page
+    assert not {product.product_id for product in first_page} & {
+        product.product_id for product in second_page
+    }
+
+
 def test_snapshot_prices_and_stock_are_never_presented_as_current(
     snapshot_repo: SnapshotProductRepository,
 ) -> None:

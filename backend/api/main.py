@@ -86,6 +86,7 @@ from backend.services.retail_agent import (
     lookup_catalog_additions,
     lookup_followup_snapshot,
     lookup_product_candidates,
+    lookup_product_knowledge,
     lookup_product_promotions,
     lookup_recommendation_products,
     run_retail_agent,
@@ -1490,6 +1491,13 @@ def _unsupported_catalog_fact_claim(
         if observation.status == "SUCCESS" and observation.tool_name == "get_product_snapshot"
         for field in observation.requested_fields
     }
+    verified_fields.update(
+        str(fact.get("attribute"))
+        for observation in observations
+        if observation.status == "SUCCESS" and observation.tool_name == "get_product_knowledge"
+        for fact in observation.content.get("facts", [])
+        if isinstance(fact, dict) and fact.get("status") == "VERIFIED"
+    )
     if any(
         observation.status == "SUCCESS"
         and observation.tool_name == "recommend_products"
@@ -3247,6 +3255,7 @@ def _latest_catalog_response_observation(
         "search_products",
         "recommend_products",
         "get_product_snapshot",
+        "get_product_knowledge",
         "list_product_promotions",
         "list_new_catalog_products",
     }
@@ -3566,6 +3575,10 @@ invent prices, stock, shelf locations, promotions, ingredients, expiry dates, or
 For product search or verified facts, use the catalog tools when available. Search first, then
 call `get_product_snapshot` with only the requested fields. A shelf marked
 `RECOMMENDED_PLANOGRAM` is proposed and has not been physically verified.
+For benefits, taste, use, or suitability questions about a known product, call
+`get_product_knowledge`. State only `VERIFIED` attributes as facts; qualify `INFERRED` as
+catalog/listing evidence, and say the catalog cannot verify `UNKNOWN` attributes. Never infer a
+benefit or suitability from the product name, brand, or category.
 For a broad question about recorded offers without a named product, call
 `list_product_promotions`; describe these as catalog snapshot records, never as guaranteed-active
 campaigns because start/end dates and terms are not provided.
@@ -3625,6 +3638,10 @@ Khi cần giá, tồn kho, vị trí kệ, hạn dùng, thành phần, độ cay
 catalog phù hợp nếu công cụ được cung cấp. `search_products` tìm sản phẩm để
 tra cứu, kể cả mặt hàng hết hàng. Gọi `get_product_snapshot` để lấy dữ kiện và
 đặt `fields` đúng theo thông tin khách hỏi. Trường `stock` là số lượng có thể bán.
+Nếu khách hỏi công dụng, mùi vị, cách dùng hoặc độ phù hợp của sản phẩm đã xác định, gọi
+`get_product_knowledge`. Chỉ nêu thuộc tính `VERIFIED` như sự thật; nói rõ `INFERRED` là dữ liệu
+ghi nhận trong catalog và `UNKNOWN` là catalog chưa xác minh. Không suy công dụng hoặc độ phù hợp
+từ tên sản phẩm, nhãn hàng hay nhóm hàng.
 Nếu khách hỏi chung về ưu đãi mà không nêu một sản phẩm cụ thể, gọi
 `list_product_promotions`; chỉ mô tả là ghi nhận trong snapshot catalog, không khẳng định
 chương trình còn hiệu lực vì dữ liệu chưa có thời hạn và điều kiện áp dụng.
@@ -7065,6 +7082,85 @@ async def agent_respond(
         )
     ):
         normalized_unsupported = _normalize_request_text(request.text)
+        knowledge_attributes = _product_knowledge_attributes_requested(request.text)
+        knowledge_product_id = None
+        knowledge_product_name = None
+        used_product_search = False
+        if record.last_grounded_product_id and record.last_grounded_product_name and (
+            _contextual_product_reference_requested(request.text)
+            or _text_mentions_product(request.text, record.last_grounded_product_name)
+        ):
+            knowledge_product_id = record.last_grounded_product_id
+            knowledge_product_name = record.last_grounded_product_name
+        elif _has_specific_product_reference(request.text):
+            product_query = _fact_product_query(request.text)
+            if product_query:
+                candidate_observation = await lookup_product_candidates(
+                    product_query,
+                    current_user_text=request.text,
+                )
+                if candidate_observation.status == "SUCCESS" and candidate_observation.products:
+                    knowledge_product_id = _unique_product_match_id(
+                        product_query,
+                        candidate_observation.products,
+                    )
+                    if (
+                        knowledge_product_id is None
+                        and len(candidate_observation.products) == 1
+                        and candidate_observation.content.get("count") == 1
+                    ):
+                        knowledge_product_id = candidate_observation.products[0].product_id
+                    if knowledge_product_id:
+                        used_product_search = True
+                        knowledge_product = next(
+                            product
+                            for product in candidate_observation.products
+                            if product.product_id == knowledge_product_id
+                        )
+                        knowledge_product_name = knowledge_product.name
+        if knowledge_product_id and knowledge_product_name:
+            knowledge_observation = await lookup_product_knowledge(
+                knowledge_product_id,
+                knowledge_attributes,
+            )
+            if knowledge_observation.status == "SUCCESS" and knowledge_observation.products:
+                knowledge_product = knowledge_observation.products[0]
+                facts = knowledge_observation.content.get("facts", [])
+                if any(
+                    not isinstance(fact, dict) or fact.get("status") != "VERIFIED"
+                    for fact in facts
+                ):
+                    session_store.set_last_grounded_product(
+                        request.session_id,
+                        knowledge_product.product_id,
+                        knowledge_product.name,
+                    )
+                    session_store.update_shopping(
+                        request.session_id,
+                        current_intent=IntentType.PRODUCT_LOOKUP,
+                        active_product_id=knowledge_product.product_id,
+                        active_category=knowledge_product.category,
+                        selected_product_ids=[knowledge_product.product_id],
+                        pending_action=None,
+                        pending_clarification=None,
+                    )
+                    reply = _localized_product_knowledge_abstention(
+                        knowledge_product.name,
+                        knowledge_attributes,
+                        request.language,
+                    )
+                    return _deterministic_tool_response(
+                        request,
+                        record.state,
+                        knowledge_observation,
+                        reply,
+                        model="catalog-knowledge",
+                        tools_used=(
+                            ["search_products", "get_product_knowledge"]
+                            if used_product_search
+                            else ["get_product_knowledge"]
+                        ),
+                    )
         if re.search(r"\b(?:caffeine|cafein)\b", normalized_unsupported):
             return await _handle_unverified_caffeine_question(request, record)
         if (
@@ -7785,6 +7881,10 @@ async def agent_respond(
         elif (
             _unsupported_catalog_attribute_requested(request.text)
             and not whole_cart_budget_followup
+            and not _product_knowledge_verifies_request(
+                request.text,
+                agent_result.observations,
+            )
         ):
             unverified = _localized_unverified_fact(request.language)
             has_recommendation_candidates = any(
@@ -7837,14 +7937,12 @@ async def agent_respond(
             and latest_catalog_observation.tool_name == "get_product_snapshot"
         )
         candidate_ids = (
-            [product.product_id for product in latest_catalog_observation.products]
-            if preserves_grounded_identity
-            else []
+            [product.product_id for product in products] if preserves_grounded_identity else []
         )
         remembered_product = (
-            latest_catalog_observation.products[0]
+            products[0]
             if preserves_grounded_identity
-            and len(latest_catalog_observation.products) == 1
+            and len(products) == 1
             and latest_catalog_observation.tool_name
             not in {"list_product_promotions", "list_new_catalog_products"}
             else None
@@ -10221,6 +10319,160 @@ def _implicit_followup_fields(text: str) -> tuple[str, ...]:
     }
     has_entity_or_topic = any(token not in followup_only_words for token in tokens)
     return () if has_entity_or_topic else fields
+
+
+def _product_knowledge_attributes_requested(text: str) -> tuple[str, ...]:
+    normalized = " ".join(_normalize_request_text(text).split())
+    attributes: list[str] = []
+    if _unsupported_sensory_attribute_requested(text):
+        attributes.append("taste")
+    if _usage_dosage_question_requested(text):
+        attributes.append("usage")
+    if any(
+        phrase in normalized
+        for phrase in (
+            "cong dung",
+            "tac dung",
+            "loi ich",
+            "what does it do",
+            "what is it for",
+            "dung de lam gi",
+            "purpose",
+            "benefit",
+        )
+    ):
+        attributes.append("benefits")
+    if (
+        explicit_product_audience(text) is not None
+        or any(
+            phrase in normalized
+            for phrase in (
+                "phu hop",
+                "tot cho suc khoe",
+                "nguoi tieu duong",
+                "dai thao duong",
+                "cao huyet ap",
+                "suitable",
+                "safe for",
+                "good for health",
+            )
+        )
+    ):
+        attributes.append("suitability")
+    if any(token in normalized.split() for token in ("calo", "kcal", "calorie", "calories")):
+        attributes.append("calories")
+    if any(
+        token in normalized.split()
+        for token in ("protein", "nutrition", "nutritional", "sugar", "duong")
+    ) or "dinh duong" in normalized:
+        attributes.append("nutrition")
+    if "caffeine" in normalized or "cafein" in normalized:
+        attributes.append("caffeine")
+    if any(
+        phrase in normalized
+        for phrase in (
+            "di ung",
+            "allergy",
+            "allergic",
+            "allergen",
+            "peanut",
+            "dau phong",
+            "gluten",
+            "lactose",
+            "tranh hat",
+        )
+    ):
+        attributes.append("allergens")
+    if not attributes:
+        attributes.append("suitability")
+    return tuple(dict.fromkeys(attributes))[:8]
+
+
+def _localized_product_knowledge_abstention(
+    product_name: str,
+    attributes: tuple[str, ...],
+    language: LanguageCode,
+) -> str:
+    labels = {
+        "en": {
+            "benefits": "benefits or intended effects",
+            "taste": "taste",
+            "usage": "how to use it",
+            "suitability": "suitability for your needs",
+            "nutrition": "nutrition information",
+            "calories": "calorie content",
+            "caffeine": "caffeine content",
+            "allergens": "allergens",
+        },
+        "zh": {
+            "benefits": "功效或用途",
+            "taste": "口味",
+            "usage": "使用方法",
+            "suitability": "是否适合您的需求",
+            "nutrition": "营养信息",
+            "calories": "热量",
+            "caffeine": "咖啡因含量",
+            "allergens": "过敏原",
+        },
+        "vi": {
+            "benefits": "công dụng hoặc lợi ích",
+            "taste": "mùi vị",
+            "usage": "cách sử dụng",
+            "suitability": "độ phù hợp với nhu cầu của bạn",
+            "nutrition": "thông tin dinh dưỡng",
+            "calories": "lượng calo",
+            "caffeine": "hàm lượng caffeine",
+            "allergens": "thành phần có thể gây dị ứng",
+        },
+    }[language]
+    attribute_text = ", ".join(dict.fromkeys(labels[attr] for attr in attributes if attr in labels))
+    if language == "en":
+        return (
+            f"I found {product_name} in the catalog, but it has no verified information about "
+            f"{attribute_text}. I won't guess. I can check other facts recorded in the catalog, "
+            "such as its listed price or ingredients."
+        )
+    if language == "zh":
+        return (
+            f"我在商品目录中找到了{product_name}，但没有经过核实的{attribute_text}信息，"
+            "所以我不会猜测。您想查目录中记录的价格或配料吗？"
+        )
+    return (
+        f"Mình tìm thấy {product_name} trong danh mục, nhưng chưa có dữ liệu xác minh về "
+        f"{attribute_text}, nên mình chưa thể xác nhận phần này; mình không đoán. "
+        "Nếu bạn cần, mình có thể tra các thông tin khác đang được ghi trong danh mục như giá "
+        "hoặc thành phần."
+    )
+
+
+def _product_knowledge_verifies_request(
+    text: str,
+    observations: tuple[ToolObservation, ...],
+) -> bool:
+    normalized = _normalize_request_text(text)
+    request_cues = {
+        "ingredients": ("thanh phan", "ingredient"),
+        "spicy": ("do cay", "cay khong", "spice level"),
+        "benefits": ("cong dung", "loi ich", "benefit"),
+        "taste": ("mui vi", "vi co ngon", "taste", "flavor"),
+        "usage": ("cach dung", "cach su dung", "how to use"),
+        "suitability": ("phu hop", "danh cho", "suitable", "safe for"),
+    }
+    requested = {
+        attribute
+        for attribute, cues in request_cues.items()
+        if any(cue in normalized for cue in cues)
+    }
+    if not requested:
+        return False
+    verified = {
+        str(fact.get("attribute"))
+        for observation in observations
+        if observation.status == "SUCCESS" and observation.tool_name == "get_product_knowledge"
+        for fact in observation.content.get("facts", [])
+        if isinstance(fact, dict) and fact.get("status") == "VERIFIED"
+    }
+    return requested.issubset(verified)
 
 
 def _unsupported_catalog_attribute_requested(text: str) -> bool:

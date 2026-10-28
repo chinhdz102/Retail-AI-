@@ -6,10 +6,15 @@ import pytest
 
 from backend.products.catalog import ProductSnapshot, search_products
 from backend.products.category_taxonomy import normalize_category_text
+from backend.products.knowledge import product_knowledge_facts
 from backend.products.repository import DemoProductRepository
 from backend.products.snapshot_repository import SnapshotProductRepository
 from backend.services.catalog_preferences import excluded_catalog_brands
-from backend.services.retail_tools import CATALOG_TOOL_DEFINITIONS, execute_catalog_tool
+from backend.services.retail_tools import (
+    CATALOG_TOOL_DEFINITIONS,
+    _search_alternative_candidates,
+    execute_catalog_tool,
+)
 from backend.services.vietnamese_intent import normalize_vietnamese
 
 
@@ -28,6 +33,156 @@ def test_demo_catalog_matches_packaging_unit_and_normalizes_central_vietnamese()
         "WATER01"
     ]
     assert normalize_vietnamese("Ở mô rứa?").strip() == "o dau vay"
+
+
+def test_demo_repository_offset_returns_the_next_matching_products() -> None:
+    repository = DemoProductRepository()
+    first_page = repository.search(query="", category="drink", limit=2, in_stock=False)
+    second_page = repository.search(
+        query="", category="drink", limit=2, offset=2, in_stock=False
+    )
+
+    assert first_page
+    assert second_page
+    assert not {product.product_id for product in first_page} & {
+        product.product_id for product in second_page
+    }
+
+
+def test_alternative_search_pages_past_the_first_twenty_seen_products() -> None:
+    class PagedRepository:
+        source_name = "paged_test_catalog"
+
+        def __init__(self) -> None:
+            self.products = tuple(
+                ProductSnapshot(
+                    product_id=f"SKU-{index:03}",
+                    name=f"Snack item {index:03}",
+                    category="snack",
+                    price_vnd=1000 + index,
+                    stock=1,
+                )
+                for index in range(45)
+            )
+            self.offsets: list[int] = []
+
+        def search(self, *, limit: int = 20, offset: int = 0, **_criteria):
+            self.offsets.append(offset)
+            return list(self.products[offset : offset + min(limit, 20)])
+
+    repository = PagedRepository()
+    seen_ids = {product.product_id for product in repository.products[:40]}
+    alternatives, exhausted = _search_alternative_candidates(
+        repository,
+        {"query": "", "category": "snack"},
+        repository.products[:5],
+        excluded_ids=seen_ids,
+        limit=5,
+        retain=lambda _product: True,
+    )
+
+    assert [product.product_id for product in alternatives] == [
+        "SKU-040",
+        "SKU-041",
+        "SKU-042",
+        "SKU-043",
+        "SKU-044",
+    ]
+    assert repository.offsets == [0, 20, 40]
+    assert exhausted is False
+
+
+def test_alternative_search_reports_exhaustion_only_after_the_last_page() -> None:
+    class PagedRepository:
+        source_name = "paged_test_catalog"
+
+        def __init__(self) -> None:
+            self.products = tuple(
+                ProductSnapshot(
+                    product_id=f"SKU-{index:03}",
+                    name=f"Snack item {index:03}",
+                    category="snack",
+                    price_vnd=1000 + index,
+                    stock=1,
+                )
+                for index in range(45)
+            )
+            self.offsets: list[int] = []
+
+        def search(self, *, limit: int = 20, offset: int = 0, **_criteria):
+            self.offsets.append(offset)
+            return list(self.products[offset : offset + min(limit, 20)])
+
+    repository = PagedRepository()
+    alternatives, exhausted = _search_alternative_candidates(
+        repository,
+        {"query": "", "category": "snack"},
+        (),
+        excluded_ids={product.product_id for product in repository.products},
+        limit=5,
+        retain=lambda _product: True,
+    )
+
+    assert alternatives == ()
+    assert repository.offsets == [0, 20, 40]
+    assert exhausted is True
+
+
+def test_recommendation_returns_unseen_products_after_the_first_snapshot_page() -> None:
+    class RecordingRepository:
+        source_name = "paged_test_catalog"
+        supports_current_stock = False
+
+        def __init__(self) -> None:
+            self.products = tuple(
+                ProductSnapshot(
+                    product_id=f"SKU-{index:03}",
+                    name=f"Snack item {index:03}",
+                    category="snack",
+                    category_hierarchy="Food > Snack",
+                    price_vnd=1000 + index,
+                    stock=1,
+                )
+                for index in range(45)
+            )
+            self.offsets: list[int] = []
+
+        def list_category_hierarchies(self):
+            return (("Food", "Snack"),)
+
+        def list_brand_names(self, limit: int = 300):
+            return ()
+
+        def search(self, **criteria):
+            offset = int(criteria.get("offset", 0))
+            self.offsets.append(offset)
+            limit = min(int(criteria.get("limit", 10)), 20)
+            return list(self.products[offset : offset + limit])
+
+    repository = RecordingRepository()
+    first_page = repository.products[:20]
+    observation = execute_catalog_tool(
+        "recommend_products",
+        json.dumps(
+            {
+                "query": "",
+                "category": "snack",
+                "alternative_requested": True,
+                "exclude_product_ids": [product.product_id for product in first_page],
+                "limit": 5,
+            },
+            ensure_ascii=False,
+        ),
+        repository=repository,
+        current_user_text="Cho mình xem vài loại bim bim khác.",
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert not {
+        product.product_id for product in first_page
+    } & {product.product_id for product in observation.products}
+    assert 20 in repository.offsets
 
 
 def test_recommendation_observation_preserves_applied_hard_constraints() -> None:
@@ -379,6 +534,80 @@ def test_snapshot_abstains_when_only_the_requested_field_is_missing() -> None:
     assert observation.content["unavailable_fields"] == ["ingredients"]
 
 
+def test_product_knowledge_returns_status_and_provenance_per_attribute() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    product = repository.products[0]
+    observation = execute_catalog_tool(
+        "get_product_knowledge",
+        json.dumps(
+            {
+                "product_id": product.product_id,
+                "attributes": ["price_vnd", "availability", "benefits", "shelf"],
+            }
+        ),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    facts = {fact["attribute"]: fact for fact in observation.content["facts"]}
+    assert facts["price_vnd"]["status"] == "VERIFIED"
+    assert facts["price_vnd"]["source"] == repository.source_name
+    assert datetime.fromisoformat(
+        facts["price_vnd"]["verified_at"].replace("Z", "+00:00")
+    ) == product.data_timestamp
+    assert facts["price_vnd"]["catalog_version"] == repository.dataset_sha256
+    assert facts["availability"]["status"] == "UNKNOWN"
+    assert facts["benefits"]["status"] == "UNKNOWN"
+    assert facts["shelf"]["status"] == "INFERRED"
+    assert observation.products == (product,)
+
+
+def test_product_knowledge_does_not_upgrade_retailer_copy_to_verified_benefits() -> None:
+    observation = execute_catalog_tool(
+        "get_product_knowledge",
+        json.dumps(
+            {
+                "product_id": "COKE_ZERO_330",
+                "attributes": ["description", "benefits", "ingredients"],
+            }
+        ),
+        repository=DemoProductRepository(),
+    )
+
+    assert observation.status == "SUCCESS"
+    facts = {fact["attribute"]: fact for fact in observation.content["facts"]}
+    assert facts["description"]["status"] != "VERIFIED"
+    assert facts["benefits"]["status"] == "UNKNOWN"
+    assert facts["ingredients"]["status"] == "VERIFIED"
+
+
+def test_product_knowledge_requires_explicit_physical_verification_for_shelf() -> None:
+    repository = DemoProductRepository()
+    demo_product = repository.get_product_snapshot("COKE_ZERO_330")
+    assert demo_product is not None and demo_product.shelf
+    demo_observation = execute_catalog_tool(
+        "get_product_knowledge",
+        json.dumps({"product_id": demo_product.product_id, "attributes": ["shelf"]}),
+        repository=repository,
+    )
+
+    demo_fact = demo_observation.content["facts"][0]
+    assert demo_fact["status"] == "INFERRED"
+    assert demo_fact["verified_at"] is None
+
+    physically_verified = demo_product.model_copy(
+        update={"shelf_source": "PHYSICALLY_VERIFIED"}
+    )
+    verified_fact = product_knowledge_facts(
+        physically_verified,
+        ["shelf"],
+        source="test_catalog",
+    )[0]
+    assert verified_fact.status.value == "VERIFIED"
+
+
 def test_search_tool_returns_candidate_metadata_without_product_facts() -> None:
     observation = execute_catalog_tool(
         "search_products",
@@ -563,6 +792,7 @@ def test_catalog_tool_registry_separates_recommendations_from_lookup() -> None:
         "search_products",
         "recommend_products",
         "get_product_snapshot",
+        "get_product_knowledge",
         "plan_shopping_mission",
         "list_product_promotions",
         "list_new_catalog_products",
