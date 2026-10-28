@@ -133,11 +133,55 @@ def test_redis_session_decoder_defaults_pagination_memory_for_existing_records()
     payload = json.loads(RedisSessionStore._encode(session))
     payload["shopping"].pop("seen_product_ids")
     payload["shopping"].pop("seen_product_scope")
+    payload["shopping"].pop("displayed_product_pages")
+    payload["shopping"].pop("original_displayed_product_ids")
 
     decoded = RedisSessionStore._decode(json.dumps(payload))
 
     assert decoded.shopping.seen_product_ids == []
     assert decoded.shopping.seen_product_scope == []
+    assert decoded.shopping.displayed_product_pages == []
+    assert decoded.shopping.original_displayed_product_ids == []
+
+
+def test_displayed_product_page_history_stays_with_its_browse_scope() -> None:
+    store = InMemorySessionStore()
+    session = store.create("displayed-page-history")
+
+    store.update_shopping(
+        session.session_id,
+        seen_product_ids=[],
+        seen_product_scope=["shampoo"],
+    )
+    store.update_shopping(session.session_id, selected_product_ids=["S1", "S2"])
+    store.update_shopping(
+        session.session_id,
+        selected_product_ids=["S3", "S4"],
+        seen_product_ids=["S1", "S2", "S3", "S4"],
+        seen_product_scope=["shampoo"],
+    )
+    paged = store.get(session.session_id).shopping
+    assert paged.displayed_product_pages == [["S1", "S2"]]
+    assert paged.original_displayed_product_ids == ["S1", "S2"]
+
+    for page_number in range(5, 17):
+        store.update_shopping(
+            session.session_id,
+            selected_product_ids=[f"S{page_number}A", f"S{page_number}B"],
+        )
+    long_browse = store.get(session.session_id).shopping
+    assert len(long_browse.displayed_product_pages) == 10
+    assert long_browse.original_displayed_product_ids == ["S1", "S2"]
+
+    store.update_shopping(
+        session.session_id,
+        seen_product_ids=[],
+        seen_product_scope=["milk"],
+    )
+    fresh = store.get(session.session_id).shopping
+    assert fresh.displayed_product_pages == []
+    assert fresh.original_displayed_product_ids == []
+    assert fresh.selected_product_ids == []
 
 
 def test_redis_snapshot_disclosure_claim_persists_atomically() -> None:
