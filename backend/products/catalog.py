@@ -177,6 +177,7 @@ class ProductSnapshot(BaseModel):
     sale_price_vnd: int | None = None
     price_quality_status: str = "NORMAL"
     shelf_source: str = "DEMO"
+    catalog_version: str | None = None
 
     @computed_field(return_type=int)
     @property
