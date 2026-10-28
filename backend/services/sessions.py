@@ -49,6 +49,12 @@ class ShoppingSessionState:
     unresolved_product_category: str | None = None
     constraints: dict[str, Any] = field(default_factory=dict)
     selected_product_ids: list[str] = field(default_factory=list)
+    # Prior displayed result pages are kept in order so explicit references such
+    # as "back to the original item" can resolve after the active page changes.
+    displayed_product_pages: list[list[str]] = field(default_factory=list)
+    # Keep the opening page separately so a long pagination session does not
+    # evict the item referred to as the original result.
+    original_displayed_product_ids: list[str] = field(default_factory=list)
     # Product IDs already shown in the active recommendation scope. Keeping this
     # separate from selected_product_ids lets ordinal selection use only the
     # latest page while "show me another" can avoid every previously shown item.
@@ -103,6 +109,76 @@ class SessionRecord:
     shopping: ShoppingSessionState = field(default_factory=ShoppingSessionState)
     state_version: int = 1
     snapshot_disclosures: list[str] = field(default_factory=list)
+
+
+def _remember_previous_displayed_page(
+    shopping: ShoppingSessionState,
+    updates: dict[str, Any],
+) -> None:
+    """Bounded history for resolving references to products shown earlier."""
+    fresh_recommendation = (
+        "seen_product_ids" in updates
+        and updates.get("seen_product_ids") == []
+    )
+    category_changed = (
+        "active_category" in updates
+        and updates.get("active_category") != shopping.active_category
+    )
+    intent_changed = (
+        "current_intent" in updates
+        and updates.get("current_intent") != shopping.current_intent
+    )
+    scope_changed = (
+        "seen_product_scope" in updates
+        and updates.get("seen_product_scope") != shopping.seen_product_scope
+    )
+    if fresh_recommendation or category_changed or intent_changed or scope_changed:
+        shopping.displayed_product_pages = []
+        shopping.original_displayed_product_ids = []
+        # A fresh browse replaces the old visible page. Clear it before the
+        # caller writes the first result page so that stale items cannot be
+        # captured as the new flow's "original" page.
+        if fresh_recommendation:
+            shopping.selected_product_ids = []
+
+    next_ids = updates.get("selected_product_ids")
+    next_product_ids = (
+        [str(product_id) for product_id in next_ids if product_id]
+        if isinstance(next_ids, list)
+        else []
+    )
+    if "original_displayed_product_ids" in updates:
+        requested_original_ids = updates.get("original_displayed_product_ids")
+        shopping.original_displayed_product_ids = (
+            [str(product_id) for product_id in requested_original_ids if product_id]
+            if isinstance(requested_original_ids, list)
+            else []
+        )
+    if not shopping.original_displayed_product_ids and next_product_ids:
+        shopping.original_displayed_product_ids = next_product_ids[:50]
+    if (
+        "selected_product_ids" not in updates
+        or "displayed_product_pages" in updates
+        or not isinstance(next_ids, list)
+        or fresh_recommendation
+        or category_changed
+        or intent_changed
+        or scope_changed
+    ):
+        return
+    previous_ids = [str(product_id) for product_id in shopping.selected_product_ids if product_id]
+    if not previous_ids or previous_ids == next_product_ids:
+        return
+
+    pages = [
+        [str(product_id) for product_id in page if product_id]
+        for page in shopping.displayed_product_pages
+        if isinstance(page, list) and page
+    ]
+    previous_page = previous_ids[:50]
+    if not pages or pages[-1] != previous_page:
+        pages.append(previous_page)
+    shopping.displayed_product_pages = pages[-10:]
 
 
 ALLOWED_TRANSITIONS: dict[SessionState, set[SessionState]] = {
@@ -226,6 +302,7 @@ class InMemorySessionStore:
             raise ValueError("Unsupported shopping session field")
         with self._lock:
             record = self._active_record(session_id)
+            _remember_previous_displayed_page(record.shopping, updates)
             for key, value in updates.items():
                 setattr(record.shopping, key, copy.deepcopy(value))
             record.state_version += 1
@@ -518,6 +595,7 @@ class RedisSessionStore:
             raise ValueError("Unsupported shopping session field")
 
         def apply(record: SessionRecord) -> None:
+            _remember_previous_displayed_page(record.shopping, updates)
             for key, value in updates.items():
                 setattr(record.shopping, key, copy.deepcopy(value))
 

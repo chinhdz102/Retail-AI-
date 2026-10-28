@@ -7,7 +7,10 @@ import pytest
 
 from backend.api.main import _localized_recommendation_candidates
 from backend.products.snapshot_repository import SnapshotProductRepository
-from backend.services.query_understanding import understand_catalog_query
+from backend.services.query_understanding import (
+    prior_product_page_reference_kind,
+    understand_catalog_query,
+)
 from backend.services.retail_tools import execute_catalog_tool
 from backend.services.vietnamese_intent import normalize_vietnamese
 
@@ -574,6 +577,37 @@ def test_dialogue_reference_keeps_scope_after_alternative_and_ranking_turns() ->
     assert result.intent == "price"
     assert result.conversation_reference == "loại đầu tiên"
     assert normalize_vietnamese(result.product_type) == normalize_vietnamese("BVS Chu kỳ")
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Quay lại món ban đầu, giá bao nhiêu?",
+        "Trở lại loại ban đầu nhé",
+        "Sản phẩm ban đầu",
+        "Back to the original item, please",
+    ],
+)
+def test_explicit_original_product_reference_is_detected(query: str) -> None:
+    assert prior_product_page_reference_kind(query) == "original"
+
+
+def test_original_product_reference_does_not_capture_unrelated_text() -> None:
+    assert prior_product_page_reference_kind("Món đầu tiên có vị gì?") is None
+
+
+def test_original_product_price_followup_keeps_conversation_reference() -> None:
+    repository = _snapshot()
+    result = understand_catalog_query(
+        "Quay lại món ban đầu, giá bao nhiêu?",
+        repository.list_category_hierarchies(),
+        previous_query="Gợi ý dầu gội",
+        previous_queries=("Gợi ý dầu gội",),
+    )
+
+    assert result.intent == "price"
+    assert result.conversation_reference == "Quay lại món ban đầu"
+    assert result.product_type is not None
 
 
 def test_normalized_location_spans_preserve_gendered_product_category() -> None:

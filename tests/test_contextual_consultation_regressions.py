@@ -626,6 +626,49 @@ async def test_repeated_alternatives_exclude_every_previously_shown_product(
 
 
 @pytest.mark.asyncio
+async def test_return_to_original_candidate_resolves_product_id_and_price(snapshot, monkeypatch):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+    ) as client:
+        session = (await client.post("/sessions", json={"kiosk_id": "return-original"})).json()[
+            "session_id"
+        ]
+
+        async def ask(text):
+            response = await client.post(
+                "/agent/respond", json={"session_id": session, "text": text}
+            )
+            assert response.status_code == 200, response.text
+            return response.json()
+
+        first_page = await ask("Gợi ý dầu gội")
+        assert len(first_page["grounded_product_ids"]) >= 2
+        original_product_id = first_page["grounded_product_ids"][0]
+        original_product = snapshot.get_product_snapshot(original_product_id)
+        assert original_product is not None
+
+        second_page = await ask("có loại dầu gội khác không")
+        assert second_page["grounded_product_ids"]
+        assert not set(first_page["grounded_product_ids"]) & set(
+            second_page["grounded_product_ids"]
+        )
+        browse_memory = api.session_store.get(api.UUID(session)).shopping
+        assert browse_memory.displayed_product_pages[0] == first_page["grounded_product_ids"]
+        assert browse_memory.original_displayed_product_ids == first_page["grounded_product_ids"]
+
+        restored = await ask("Quay lại món ban đầu, giá bao nhiêu?")
+        cart = await client.get(f"/sessions/{session}/cart")
+
+    assert restored["grounded_product_ids"] == [original_product_id]
+    assert len(restored["products"]) == 1
+    assert f"{original_product.price_vnd:,}".replace(",", ".") in restored["text"]
+    assert cart.status_code == 200
+    assert cart.json()["item_count"] == 0
+
+
+@pytest.mark.asyncio
 async def test_exhausted_alternatives_are_explained_without_claiming_catalog_failure(
     snapshot, monkeypatch
 ):

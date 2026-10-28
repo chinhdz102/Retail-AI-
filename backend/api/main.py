@@ -58,7 +58,7 @@ from backend.services.azure_speech import (
     AzureSpeechProviderError,
     AzureSpeechService,
 )
-from backend.services.catalog_browse import explicit_catalog_category_pair
+from backend.services.catalog_browse import explicit_catalog_category_list
 from backend.services.catalog_preferences import preparation_terms
 from backend.services.catalog_transcription import correct_catalog_words
 from backend.services.elevenlabs import (
@@ -79,6 +79,7 @@ from backend.services.product_comparison import (
     parse_comparison_queries,
     unsupported_comparison_dimension,
 )
+from backend.services.query_understanding import prior_product_page_reference_kind
 from backend.services.retail_agent import (
     RetailAgentResult,
     _explicit_recommendation_category,
@@ -5544,9 +5545,9 @@ async def _handle_product_comparison(
 
 async def _handle_multi_category_browse(
     request: AgentRespondRequest,
-    categories: tuple[str, str],
+    categories: tuple[str, ...],
 ) -> AgentRespondResponse:
-    """List grounded products from two explicitly named catalog categories."""
+    """List grounded products from multiple explicitly named categories."""
     observations = await asyncio.gather(
         *(
             lookup_product_candidates(
@@ -5576,6 +5577,8 @@ async def _handle_multi_category_browse(
             active_product_id=None,
             active_category=None,
             selected_product_ids=[product.product_id for product in products],
+            displayed_product_pages=[],
+            original_displayed_product_ids=[],
         )
         session_store.set_last_grounded_product(request.session_id, None)
 
@@ -5790,6 +5793,59 @@ async def agent_respond(
                 ),
             }[request.language]
             return _record_shopping_turn(request, reply, model="catalog")
+    if prior_product_page_reference_kind(request.text) == "original":
+        displayed_pages = record.shopping.displayed_product_pages
+        original_page = record.shopping.original_displayed_product_ids or (
+            displayed_pages[0] if displayed_pages else record.shopping.selected_product_ids
+        )
+        original_product_id = original_page[0] if original_page else None
+        original_product = (
+            get_product_repository().get_product_snapshot(original_product_id)
+            if original_product_id
+            else None
+        )
+        if original_product is not None:
+            fields = _requested_snapshot_fields(request.text) or ("price_vnd",)
+            observation = await lookup_followup_snapshot(original_product.product_id, fields)
+            if observation.status == "SUCCESS" and observation.products:
+                product = observation.products[0]
+                session_store.set_last_grounded_product(
+                    request.session_id,
+                    product.product_id,
+                    product.name,
+                )
+                session_store.update_shopping(
+                    request.session_id,
+                    active_product_id=product.product_id,
+                    selected_product_ids=[product.product_id],
+                    pending_action=None,
+                    pending_clarification=None,
+                )
+                reply = _render_snapshot_for_session(
+                    observation,
+                    request.language,
+                    fields,
+                    request.session_id,
+                )
+                return _record_shopping_turn(
+                    request,
+                    reply,
+                    model="catalog",
+                    tools_used=["get_product_snapshot"],
+                    products=[product],
+                )
+        reply = {
+            "vi": (
+                "Mình không còn xác định được món đầu tiên trong danh sách đang xem. "
+                "Bạn nhắc lại tên món giúp mình nhé."
+            ),
+            "en": (
+                "I can no longer identify the first item in the list we were viewing. "
+                "Please remind me of its name."
+            ),
+            "zh": "我无法再确定刚才列表中的第一件商品，请告诉我商品名称。",
+        }[request.language]
+        return _record_shopping_turn(request, reply, model="local-clarification")
     pending_selection = record.shopping.pending_action or ""
     candidate_code = _pending_candidate_code(request.text)
     candidate_index = _pending_candidate_index(request.text)
@@ -6375,11 +6431,11 @@ async def agent_respond(
         try:
             repository = get_product_repository(settings)
             hierarchies = repository.list_category_hierarchies()
-            category_pair = explicit_catalog_category_pair(request.text, hierarchies)
+            category_list = explicit_catalog_category_list(request.text, hierarchies)
         except (OSError, RuntimeError, TimeoutError, ValueError):
-            category_pair = None
-        if category_pair is not None:
-            return await _handle_multi_category_browse(request, category_pair)
+            category_list = None
+        if category_list is not None:
+            return await _handle_multi_category_browse(request, category_list)
 
     try:
         explicit_catalog_category = resolve_catalog_request_category(

@@ -8,7 +8,10 @@ import pytest
 import backend.api.main as api
 from backend.products.snapshot_repository import SnapshotProductRepository
 from backend.services import retail_tools
-from backend.services.catalog_browse import explicit_catalog_category_pair
+from backend.services.catalog_browse import (
+    explicit_catalog_category_list,
+    explicit_catalog_category_pair,
+)
 
 
 @pytest.fixture(scope="module")
@@ -46,6 +49,28 @@ def hierarchies(snapshot):
 )
 def test_category_enumeration_resolves_distinct_taxonomy_groups(hierarchies, text, expected):
     assert explicit_catalog_category_pair(text, hierarchies) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_categories"),
+    [
+        (
+            "Mì ăn liền, nước khoáng và dầu ăn có bán không?",
+            ("Mì ăn liền", "Nước khoáng", "Dầu ăn"),
+        ),
+        (
+            "Rau cải, thịt bò và nước khoáng đang bán gồm những loại nào?",
+            ("Rau cải", "Thịt Bò, Bê", "Nước khoáng"),
+        ),
+    ],
+)
+def test_category_enumeration_resolves_three_dynamic_taxonomy_groups(
+    hierarchies,
+    text,
+    expected_categories,
+):
+    assert explicit_catalog_category_list(text, hierarchies) == expected_categories
+    assert explicit_catalog_category_pair(text, hierarchies) is None
 
 
 @pytest.mark.parametrize(
@@ -116,6 +141,46 @@ async def test_multi_category_browse_returns_only_grounded_catalog_items(
         snapshot.get_product_snapshot(item_id) for item_id in payload["grounded_product_ids"]
     ]
     assert all(product is not None for product in products)
+    for category in expected_categories:
+        assert category in payload["text"]
+        assert any(
+            product is not None and category in product.category_hierarchy
+            for product in products
+        )
+
+
+@pytest.mark.asyncio
+async def test_multi_category_browse_groups_three_distinct_categories(
+    snapshot,
+    monkeypatch,
+):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+    ) as client:
+        created = await client.post(
+            "/sessions", json={"kiosk_id": "category-browse-three"}
+        )
+        session = created.json()["session_id"]
+        response = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session,
+                "text": "Mì ăn liền, nước khoáng và dầu ăn có bán không?",
+            },
+        )
+
+    payload = response.json()
+    expected_categories = ("Mì ăn liền", "Nước khoáng", "Dầu ăn")
+    assert response.status_code == 200, response.text
+    assert payload["model"] == "catalog-category-browse"
+    assert payload["tools_used"] == ["search_products"]
+    products = [
+        snapshot.get_product_snapshot(item_id)
+        for item_id in payload["grounded_product_ids"]
+    ]
+    assert products and all(product is not None for product in products)
     for category in expected_categories:
         assert category in payload["text"]
         assert any(

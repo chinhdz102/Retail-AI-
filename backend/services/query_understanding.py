@@ -178,7 +178,10 @@ _CONVERSATION_REFERENCE = re.compile(
     r"\b(?:loai nao khac|cai nao khac|mon nao khac|san pham nao khac|"
     r"loai khac|cai khac|mon khac|san pham khac|nho hon|re hon|"
     r"lua chon nao khac|phuong an nao khac|lua chon khac|phuong an khac|"
-    r"dat hon|cai do|mon do|san pham do|loai dau tien|mon dau tien|"
+    r"dat hon|quay lai (?:mon|cai|san pham|loai) ban dau|"
+    r"back to (?:the )?(?:original|initial) (?:item|product|one)|"
+    r"mon ban dau|cai ban dau|san pham ban dau|loai ban dau|"
+    r"cai do|mon do|san pham do|loai dau tien|mon dau tien|"
     r"san pham dau tien|no|cai ay|loai ay|that one|the other one|"
     r"first item|first product|first one|cheaper|more expensive|instead)\b"
 )
@@ -199,6 +202,17 @@ _GENERIC_REFERENCES = frozenset(
         "loai dau tien",
         "mon dau tien",
         "san pham dau tien",
+        "quay lai mon ban dau",
+        "quay lai cai ban dau",
+        "quay lai san pham ban dau",
+        "quay lai loai ban dau",
+        "mon ban dau",
+        "cai ban dau",
+        "san pham ban dau",
+        "loai ban dau",
+        "back to original item",
+        "back to original product",
+        "back to initial item",
         "first item",
         "first product",
         "first one",
@@ -218,6 +232,22 @@ _GENERIC_FOLLOW_UP = re.compile(
     r"re hon|dat hon|nho hon|cai do|mon do|san pham do|"
     r"that one|the other one|cheaper|more expensive)(?:\s+(?:khong|nua|khong a))?$"
 )
+
+
+def prior_product_page_reference_kind(text: str) -> str | None:
+    """Resolve explicit references to the first item in the active browse flow."""
+    normalized = " ".join(normalize_vietnamese(text).split())
+    if re.search(
+        r"\b(?:(?:quay|tro)\s+lai\s+)?(?:mon|cai|san\s+pham|loai)\s+ban\s+dau\b",
+        normalized,
+    ) or re.search(
+        r"\bback\s+to\s+(?:the\s+)?(?:original|initial)\s+(?:item|product|one)\b",
+        normalized,
+    ):
+        return "original"
+    return None
+
+
 _COMPARISON = re.compile(
     r"\b(?:so sanh|phan biet|co gi khac|khac gi|khac nhau|vs|versus|compare|difference)\b"
 )
