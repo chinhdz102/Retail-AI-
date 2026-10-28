@@ -273,7 +273,9 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "description": (
                 "Read per-attribute evidence for a catalog product already found by search. "
                 "Each fact is VERIFIED, INFERRED, or UNKNOWN and includes evidence_scope, "
-                "source, observation time and catalog version. VERIFIED with SOURCE_RECORD "
+                "source, source_url when available, observation time and catalog version. "
+                "source_url points to the retailer catalog record, not independent product "
+                "verification. VERIFIED with SOURCE_RECORD "
                 "means only that the value appears in that catalog record; qualify it as "
                 "catalog-record information and do not present it as current store truth or "
                 "independently verified product-label information. observed_at is capture time; "

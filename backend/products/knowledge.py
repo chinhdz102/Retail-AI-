@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -42,6 +43,7 @@ class ProductKnowledgeFact(BaseModel):
     status: EvidenceStatus
     evidence_scope: EvidenceScope = EvidenceScope.UNKNOWN
     source: str | None = None
+    source_url: str | None = None
     source_field: str | None = None
     observed_at: datetime | None = None
     verified_at: datetime | None = None
@@ -76,6 +78,27 @@ _UNSUPPORTED_ATTRIBUTES = frozenset(
     }
 )
 _PHYSICALLY_VERIFIED_SHELF_SOURCES = frozenset({"PHYSICALLY_VERIFIED"})
+
+
+def _safe_source_url(product: ProductSnapshot) -> str | None:
+    """Expose only absolute HTTP(S) catalog links as evidence locators."""
+    value = product.seo_url
+    if not value:
+        return None
+    if any(character.isspace() or ord(character) < 0x20 for character in value):
+        return None
+    try:
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme.casefold() in {"http", "https"}
+            and parsed.hostname
+            and parsed.username is None
+            and parsed.password is None
+        ):
+            return value
+    except ValueError:
+        pass
+    return None
 
 
 def product_knowledge_facts(
@@ -180,6 +203,7 @@ def product_knowledge_facts(
                         status=EvidenceStatus.INFERRED,
                         evidence_scope=EvidenceScope.RETAILER_LISTING,
                         source=source,
+                        source_url=_safe_source_url(product),
                         source_field="description",
                         observed_at=product.data_timestamp,
                         catalog_version=version,
@@ -214,6 +238,7 @@ def product_knowledge_facts(
                     status=EvidenceStatus.VERIFIED,
                     evidence_scope=EvidenceScope.SOURCE_RECORD,
                     source=source,
+                    source_url=_safe_source_url(product),
                     source_field=source_field,
                     observed_at=product.data_timestamp,
                     catalog_version=version,
