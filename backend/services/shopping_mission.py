@@ -11,7 +11,12 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from backend.products.catalog import ProductSnapshot
+from backend.products.catalog import (
+    ProductSnapshot,
+    explicit_product_audience,
+    matches_explicit_product_audience,
+    product_audience_evidence,
+)
 from backend.products.category_taxonomy import (
     catalog_category_query_aliases,
     normalize_category_text,
@@ -1107,6 +1112,14 @@ def build_shopping_mission_plan(
                     in_stock=inventory_verified,
                     limit=MAX_NEED_CANDIDATES,
                 )
+                audience_query = " ".join(
+                    part for part in (primary_query, str(need.get("label") or "")) if part
+                )
+                candidates = [
+                    item
+                    for item in candidates
+                    if matches_explicit_product_audience(audience_query, item)
+                ]
                 if (
                     candidates
                     and primary_query
@@ -1125,6 +1138,30 @@ def build_shopping_mission_plan(
                 if candidates:
                     need["retrieval_query_used"] = query
                     break
+            audience_query = " ".join(
+                part for part in (primary_query, str(need.get("label") or "")) if part
+            )
+            if not candidates and explicit_product_audience(audience_query) == "child":
+                # If the category has no age-labelled match, offer only
+                # audience-unknown items as conditional options. Known adult
+                # products remain excluded, and the response must disclose
+                # that child suitability is not verified by this catalog.
+                fallback_candidates = repository.search(
+                    query="",
+                    category=category,
+                    brand=need.get("brand"),
+                    max_price_vnd=need.get("max_price_vnd"),
+                    spicy=need.get("spicy"),
+                    in_stock=inventory_verified,
+                    limit=MAX_NEED_CANDIDATES,
+                )
+                candidates = [
+                    item
+                    for item in fallback_candidates
+                    if product_audience_evidence(item) is None
+                ]
+                if candidates:
+                    need["audience_unverified"] = True
             candidates = [
                 item
                 for item in candidates
@@ -1161,11 +1198,15 @@ def build_shopping_mission_plan(
                     in_stock=inventory_verified,
                     limit=MAX_NEED_CANDIDATES,
                 )
+                audience_query = " ".join(
+                    part for part in (primary_query, str(need.get("label") or "")) if part
+                )
                 alternative_items = _deduplicate_products(
                     [
                         item
                         for item in alternative_items
                         if item.product_id.casefold() not in rejected
+                        and matches_explicit_product_audience(audience_query, item)
                         and (
                             not inventory_verified
                             or item.sellable_stock >= _quantity_for_product(need, mission, item)[0]
@@ -1307,6 +1348,11 @@ def build_shopping_mission_plan(
         "occasion": mission["occasion"],
         "party_size": mission["party_size"],
         "needs": need_results,
+        "audience_unverified_needs": [
+            str(need.get("label") or need.get("need_id"))
+            for need in mission["needs"]
+            if need.get("audience_unverified")
+        ],
         "satisfied_needs": satisfied_needs,
         "options": options,
         "confirmed_needs": mission["confirmed_needs"],
@@ -1898,6 +1944,11 @@ def render_shopping_plan_summary(
         )
     if spicy_preference_unverified:
         suffix += " Catalog chưa có thuộc tính vị cay nên mình chưa xác minh được món không cay."
+    if content.get("audience_unverified_needs"):
+        suffix += (
+            " Catalog chưa xác nhận các mặt hàng gợi ý phù hợp cho bé; "
+            "bạn kiểm tra nhãn độ tuổi trên bao bì trước khi chọn nhé."
+        )
     return (
         intro
         + caveat

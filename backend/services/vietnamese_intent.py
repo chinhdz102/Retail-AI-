@@ -13,15 +13,30 @@ import unicodedata
 
 
 def normalize_vietnamese(text: str) -> str:
-    decomposed = unicodedata.normalize("NFD", text.casefold())
+    # Resolve genuinely accentless chat spellings before accent stripping.
+    # Doing this afterward turns valid words such as "hồng" into "không"
+    # (both collapse to ``hong``), which can create false negation filters.
+    source = text.casefold()
+    source = re.sub(r"\b(?:ko|khum)\b", "khong", source)
+    source = re.sub(
+        r"\b(?:nhiu|nhieu)\s+(?:zậy|dzậy)\b",
+        "bao nhieu vay",
+        source,
+    )
+    source = re.sub(r"\b(?:zậy|dzậy)\b", "vay", source)
+    source = re.sub(
+        r"\b(?:hong|hem)(?=\s+(?:cay|duong|man|ngot|muon|co|thich|can|biet|dung|lay|mua))",
+        "khong",
+        source,
+    )
+    source = re.sub(r"\b(?:z|dzay|zay)\b", "vay", source)
+    decomposed = unicodedata.normalize("NFD", source)
     normalized = "".join(
         character for character in decomposed if unicodedata.category(character) != "Mn"
     )
     normalized = normalized.replace("đ", "d").replace("_", " ")
     # Common keyboard/chat and speech-to-text spellings.
     replacements = (
-        (r"\b(?:ko|khum|hong|hem)\b", "khong"),
-        (r"\b(?:z|dzay|zay)\b", "vay"),
         # Common spoken and written regional variants, applied only where they
         # have a clear conversational meaning. Keep the rest of the utterance
         # intact so product names are not aggressively rewritten.

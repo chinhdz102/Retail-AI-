@@ -1,0 +1,422 @@
+[
+  {
+    "conversation_id": "dev_conversation_001",
+    "split": "dev",
+    "expected_category": "Bánh ngũ cốc",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Bánh ngũ cốc",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_002",
+    "split": "dev",
+    "expected_category": "Bơ động vật",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Bơ động vật",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_003",
+    "split": "dev",
+    "expected_category": "Cà phê nước",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Cà phê nước",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_004",
+    "split": "dev",
+    "expected_category": "Củ khoai",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Củ khoai",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_005",
+    "split": "dev",
+    "expected_category": "Dầu gội nam",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Dầu gội nam",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_006",
+    "split": "dev",
+    "expected_category": "Dụng cụ cọ rửa bếp",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Dụng cụ cọ rửa bếp",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_007",
+    "split": "dev",
+    "expected_category": "Giò chả",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Giò chả",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_008",
+    "split": "dev",
+    "expected_category": "Kẹo gum",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Kẹo gum",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_009",
+    "split": "dev",
+    "expected_category": "P.mai mềm(khối)",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm P.mai mềm(khối)",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_010",
+    "split": "dev",
+    "expected_category": "Phồng tôm đóng gói",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Phồng tôm đóng gói",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_011",
+    "split": "dev",
+    "expected_category": "Pizza đông lạnh",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Pizza đông lạnh",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_012",
+    "split": "dev",
+    "expected_category": "Sáp thơm",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Sáp thơm",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_013",
+    "split": "dev",
+    "expected_category": "Sơ chế thịt heo",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Sơ chế thịt heo",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_014",
+    "split": "dev",
+    "expected_category": "Sữa d.dưỡng ngườilớn",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Sữa d.dưỡng ngườilớn",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_015",
+    "split": "dev",
+    "expected_category": "Sữa rửa mặt nữ",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Sữa rửa mặt nữ",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_016",
+    "split": "dev",
+    "expected_category": "Thịt bò đông lạnh",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Thịt bò đông lạnh",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_017",
+    "split": "dev",
+    "expected_category": "Trái cây s.khô đgói",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Trái cây s.khô đgói",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_018",
+    "split": "dev",
+    "expected_category": "Trứng gà",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Trứng gà",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_019",
+    "split": "dev",
+    "expected_category": "Tã quần trẻ em",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Tã quần trẻ em",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  },
+  {
+    "conversation_id": "dev_conversation_020",
+    "split": "dev",
+    "expected_category": "Váng sữa",
+    "label_source": "catalog taxonomy segment",
+    "turns": [
+      {
+        "user": "Mình muốn xem nhóm Váng sữa",
+        "intent": "product_search"
+      },
+      {
+        "user": "loại nào rẻ nhất",
+        "intent": "product_search",
+        "ranking": "price_ascending"
+      },
+      {
+        "user": "Có loại nào khác không?",
+        "intent": "alternative"
+      }
+    ]
+  }
+]

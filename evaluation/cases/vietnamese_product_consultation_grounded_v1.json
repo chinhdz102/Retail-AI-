@@ -49,13 +49,13 @@
     },
     {
       "case_id": "ambiguous_lays_brand_price",
-      "tags": ["brand_only_query", "ambiguous_variant", "clarification", "no_unguarded_price"],
+      "tags": ["brand_only_query", "multiple_variants", "snapshot_price", "unit_grounding"],
       "turns": [
         {
           "text": "Lay's giá bao nhiêu vậy?",
           "expected_tools": ["search_products"],
-          "must_contain": ["muốn hỏi đúng vị hoặc khối lượng nào"],
-          "must_not_contain": ["21.600đ", "33.000đ", "35.000đ"]
+          "must_contain": ["giá tham khảo", "25.900đ/lon", "33.000đ/gói", "15/09/2026"],
+          "must_not_contain": ["giá tại cửa hàng đã xác minh"]
         }
       ]
     },

@@ -27,6 +27,126 @@ def matches_price_constraint(
     }[operator]
 
 
+def _normalize_audience_text(value: str | None) -> str:
+    decomposed = unicodedata.normalize("NFD", (value or "").casefold().replace("đ", "d"))
+    unaccented = "".join(
+        character for character in decomposed if unicodedata.category(character) != "Mn"
+    )
+    return " ".join(re.findall(r"[a-z0-9]+", unaccented))
+
+
+def explicit_product_audience(text: str | None) -> str | None:
+    """Return an age group only when it is a positive product target.
+
+    Household context (for example, ``nhà có em bé``) is not a request to
+    filter every product to child-labelled products, and a negated audience
+    (``không phải loại người lớn``) must not override a positive child target.
+    """
+    normalized = _normalize_audience_text(text)
+    normalized = re.sub(
+        r"\b(?:khong|ko|khum)\s+(?:phai\s+)?(?:loai\s+)?(?:nguoi lon|adults?)\b",
+        " ",
+        normalized,
+    )
+    normalized = re.sub(
+        r"\b(?:nha|gia dinh)(?: minh)?\s+(?:co|voi)\s+"
+        r"(?:tre nho|tre em|em be|be|con nho|baby|babies|kids?|children)\b",
+        " ",
+        normalized,
+    )
+    if re.search(
+        r"\b(?:so sinh|tre so sinh|newborn|new born|infant|0\s+(?:to\s+)?3\s+(?:thang|months?))\b",
+        normalized,
+    ):
+        return "newborn"
+    if re.search(
+        r"\b(?:cho|danh cho|phu hop cho|dung cho|for)\s+(?:nguoi lon|adults?)\b",
+        normalized,
+    ):
+        return "adult"
+    if re.search(
+        r"\b(?:kem chong nangtre em|kem danh rang tre em|ta dan tre em|ta quan tre em|"
+        r"tre em|tre nho|em be|cho be|cho con|cho tre(?: em)?|danh cho tre(?: em)?|"
+        r"phu hop cho tre(?: em)?|dung cho tre(?: em)?|"
+        r"tre (?:mang di hoc|di hoc|mang theo|an|uong|dung)|"
+        r"for (?:kids?|children|child|babies?|toddlers?)|"
+        r"kids|children|child|baby|babies|toddler)\b",
+        normalized,
+    ):
+        return "child"
+    return None
+
+
+def has_household_child_context(text: str | None) -> bool:
+    """Identify a child mentioned as household context, not a product filter."""
+    normalized = _normalize_audience_text(text)
+    return bool(
+        re.search(
+            r"\b(?:nha|gia dinh)(?: minh)?\s+(?:co|voi)\s+"
+            r"(?:tre nho|tre em|em be|be|con nho|baby|babies|kids?|children)\b",
+            normalized,
+        )
+    )
+
+
+def product_audience_evidence(product: ProductSnapshot) -> str | None:
+    """Infer age targeting from catalog fields, keeping adult hygiene items separate."""
+    raw_fields = tuple(
+        filter(
+            None,
+            (
+                product.name,
+                product.category,
+                product.category_hierarchy,
+                product.department,
+                product.sub_department,
+                product.description,
+            ),
+        )
+    )
+    raw_searchable = " ".join(raw_fields)
+    searchable = _normalize_audience_text(raw_searchable)
+    if re.search(r"\b(?:nguoi lon|nlon|adult|adults)\b", searchable):
+        return "adult"
+    if re.search(r"(?<!\d)(?:18|19|20|21|22|25|30)\s*\+", raw_searchable):
+        return "adult"
+    if re.search(
+        r"\b(?:so sinh|tre so sinh|newborn|new born|infant|0\s+(?:to\s+)?3\s+(?:thang|months?))\b",
+        searchable,
+    ):
+        return "newborn"
+    if re.search(
+        r"\b(?:tre em|tre nho|em be|kids|children|child|baby|babies|toddler)\b",
+        searchable,
+    ):
+        return "child"
+    return None
+
+
+def matches_explicit_product_audience(
+    query: str | None,
+    product: ProductSnapshot,
+    *,
+    allow_unverified: bool = False,
+) -> bool:
+    """Enforce explicit age constraints without guessing suitability from a brand."""
+    requested = explicit_product_audience(query)
+    if requested is None:
+        return True
+    evidence = product_audience_evidence(product)
+    if requested == "newborn":
+        return evidence == "newborn"
+    if requested == "adult":
+        # Generic products with no audience metadata can still be considered;
+        # the response must not claim they are adult-specific. Known child or
+        # newborn products are excluded from an adult-targeted request.
+        return evidence not in {"child", "newborn"}
+    # A newborn-labelled product is within the broader child audience. Unknown
+    # items remain excluded here and can only be surfaced through the tool's
+    # separately marked, label-unverified fallback.
+    return evidence in {"child", "newborn"} or (allow_unverified and evidence is None)
+
+
 class ProductSnapshot(BaseModel):
     model_config = ConfigDict(frozen=True)
 
