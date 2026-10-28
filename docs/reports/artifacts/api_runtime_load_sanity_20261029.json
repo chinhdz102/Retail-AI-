@@ -1,0 +1,188 @@
+{
+  "artifact_id": "retail_ai_api_runtime_load_sanity",
+  "generated_at_utc": "2026-10-28T18:40:31.846587+00:00",
+  "commit_sha": "295133bcd32e56e00fbbcf64ef5c7c8f75bef05b",
+  "mode": "in_process_asgi_deterministic_catalog_only",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "catalog_valid_product_count": 3081,
+  "run_config": {
+    "minimum_requests_per_concurrency": 20,
+    "concurrency_levels": [
+      1,
+      5,
+      20
+    ],
+    "request_timeout_seconds": 60,
+    "warmup_excluded_from_timed_levels": true,
+    "query_set_sha256": "35ad027d8ad671c7378a4df03134d0581ab5725672ce7b6ad2cc9b0378cefb85"
+  },
+  "working_tree": {
+    "dirty_tracked_files": true,
+    "tracked_diff_sha256": "60f160dbbffb824d500eb82d84de548914cabd40300df5b527aca847af82e94e"
+  },
+  "environment": {
+    "python": "3.13.15",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "logical_cpu_count": 12,
+    "dependencies": {
+      "fastapi": "0.141.1",
+      "httpx": "0.28.1",
+      "pydantic": "2.13.5",
+      "uvicorn": "0.52.4"
+    }
+  },
+  "repository_load_ms": 538.707,
+  "warmup": {
+    "http_status": 200,
+    "respond_latency_ms": 297.247
+  },
+  "levels": [
+    {
+      "concurrency": 1,
+      "configured_client_workers": 1,
+      "max_in_flight_requests_observed": 1,
+      "requests": 20,
+      "successful_responses": 20,
+      "http_errors": 0,
+      "identity_or_price_mismatches": 0,
+      "response_models": {
+        "catalog": 20
+      },
+      "latency_ms": {
+        "p50": 130.922,
+        "p95": 169.333,
+        "p99": 172.41,
+        "mean": 135.537,
+        "max": 172.41,
+        "samples": [
+          172.41,
+          162.229,
+          136.381,
+          148.919,
+          163.072,
+          130.301,
+          105.879,
+          120.683,
+          167.47,
+          130.922,
+          105.49,
+          119.259,
+          161.562,
+          129.442,
+          105.95,
+          121.637,
+          169.333,
+          131.021,
+          107.562,
+          121.21
+        ]
+      },
+      "wall_time_ms": 2734.518,
+      "process_cpu_ms": 2734.375,
+      "throughput_requests_per_second": 7.314,
+      "errors": []
+    },
+    {
+      "concurrency": 5,
+      "configured_client_workers": 5,
+      "max_in_flight_requests_observed": 5,
+      "requests": 20,
+      "successful_responses": 20,
+      "http_errors": 0,
+      "identity_or_price_mismatches": 0,
+      "response_models": {
+        "catalog": 20
+      },
+      "latency_ms": {
+        "p50": 515.055,
+        "p95": 672.084,
+        "p99": 679.909,
+        "mean": 506.903,
+        "max": 679.909,
+        "samples": [
+          326.522,
+          327.824,
+          646.983,
+          672.084,
+          679.909,
+          327.448,
+          442.736,
+          601.451,
+          644.957,
+          645.221,
+          397.115,
+          399.832,
+          401.034,
+          606.128,
+          634.664,
+          208.416,
+          515.055,
+          513.065,
+          513.702,
+          633.912
+        ]
+      },
+      "wall_time_ms": 2608.319,
+      "process_cpu_ms": 2593.75,
+      "throughput_requests_per_second": 7.668,
+      "errors": []
+    },
+    {
+      "concurrency": 20,
+      "configured_client_workers": 20,
+      "max_in_flight_requests_observed": 20,
+      "requests": 20,
+      "successful_responses": 20,
+      "http_errors": 0,
+      "identity_or_price_mismatches": 0,
+      "response_models": {
+        "catalog": 20
+      },
+      "latency_ms": {
+        "p50": 2552.342,
+        "p95": 2563.249,
+        "p99": 2563.859,
+        "mean": 2552.256,
+        "max": 2563.859,
+        "samples": [
+          2536.025,
+          2539.052,
+          2539.094,
+          2539.913,
+          2542.26,
+          2547.249,
+          2547.866,
+          2548.75,
+          2549.422,
+          2550.542,
+          2557.786,
+          2552.342,
+          2559.555,
+          2560.025,
+          2561.082,
+          2562.194,
+          2562.789,
+          2563.249,
+          2563.859,
+          2562.073
+        ]
+      },
+      "wall_time_ms": 2580.803,
+      "process_cpu_ms": 2593.75,
+      "throughput_requests_per_second": 7.75,
+      "errors": []
+    }
+  ],
+  "python_heap_probe_separate_from_latency": {
+    "http_status": 200,
+    "python_heap_current_bytes": 323238,
+    "python_heap_peak_bytes": 704006
+  },
+  "limitations": [
+    "ASGITransport is in-process and excludes sockets, browser, TLS, proxy, and server workers.",
+    "The path uses deterministic catalog turns and does not measure Groq, STT, or TTS.",
+    "Python heap is measured in a separate single-request probe to avoid distorting timed latency; native allocations and process resident memory are not measured.",
+    "This is a smoke load profile, not a capacity or SLA claim."
+  ]
+}

@@ -46,6 +46,12 @@ def is_complete_import(report: dict[str, Any]) -> bool:
     )
 
 
+def canonical_dataset_sha256(raw_bytes: bytes) -> str:
+    """Hash catalog contents consistently across Windows and Unix newlines."""
+    canonical_bytes = raw_bytes.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(canonical_bytes).hexdigest()
+
+
 def _is_aware_timestamp(value: str) -> bool:
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))

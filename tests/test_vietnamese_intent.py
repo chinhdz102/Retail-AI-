@@ -172,6 +172,7 @@ def test_supported_product_facts_are_not_mistaken_for_unsupported_attributes(tex
         ("Mình đói, ăn gì bây giờ?", "meal"),
         ("Mình muốn uống gì mát mát.", "drink"),
         ("Tôi muốn chăm sóc da mặt, có sản phẩm nào không?", "skincare"),
+        ("Tư vấn skin-care cho mình.", "skincare"),
         ("Gợi ý mỹ phẩm cho mình.", "cosmetic"),
     ],
 )
@@ -193,6 +194,7 @@ def test_recommendation_category_handles_natural_vietnamese_paraphrases(
         ("Mua nước với bim bim vị phô mai.", ["drink", "snack"]),
         ("Nước với snack, nhưng đừng lấy snack.", ["drink"]),
         ("Đồ ăn vặt, đừng lấy bữa chính.", ["snack"]),
+        ("Skin-care với paper-napkin.", ["skincare", "paper_goods"]),
     ],
 )
 def test_recommendation_categories_preserve_multiple_explicit_groups(

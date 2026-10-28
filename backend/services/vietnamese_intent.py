@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from functools import lru_cache
 
 
 def normalize_vietnamese(text: str) -> str:
@@ -62,8 +63,14 @@ def normalize_vietnamese(text: str) -> str:
     return re.sub(r"[^\w\s]", " ", normalized)
 
 
+@lru_cache(maxsize=2048)
+def _boundary_phrase_pattern(phrase: str) -> re.Pattern[str]:
+    """Compile reusable static phrase cues once instead of on every parser call."""
+    return re.compile(rf"(?<!\w){re.escape(phrase)}(?!\w)")
+
+
 def _has_phrase(text: str, phrases: tuple[str, ...]) -> bool:
-    return any(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", text) for phrase in phrases)
+    return any(_boundary_phrase_pattern(phrase).search(text) for phrase in phrases)
 
 
 def requested_snapshot_fields(text: str) -> tuple[str, ...]:
@@ -770,6 +777,34 @@ _CATEGORY_CUES: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# Category cue tables are static. Normalize and compile them once so each
+# request does not repeatedly normalize every cue and churn Python's regex
+# cache while scanning the same phrases in several parser stages.
+_CATEGORY_CUE_MATCHERS = tuple(
+    (
+        category,
+        cue,
+        " ".join(normalize_vietnamese(cue).split()),
+    )
+    for category, cues in _CATEGORY_CUES.items()
+    for cue in cues
+)
+_NORMALIZED_CATEGORY_CUE_MATCHERS = tuple(
+    (
+        category,
+        cue,
+        cue_text,
+        _boundary_phrase_pattern(cue_text),
+    )
+    for category, cue, cue_text in _CATEGORY_CUE_MATCHERS
+    if cue_text
+)
+_RAW_CATEGORY_CUE_MATCHERS = tuple(
+    (category, cue, _boundary_phrase_pattern(cue_text))
+    for category, cue, cue_text in _CATEGORY_CUE_MATCHERS
+    if cue_text
+)
+
 # These phrases describe the customer's use case or intended recipient. When a
 # product department is also named (for example, laundry for children), keep
 # the department as the hard catalog filter and retain the qualifier in the
@@ -806,26 +841,20 @@ def product_type_attribute_modifier(text: str) -> tuple[str, str, int, int] | No
         return None
 
     category_spans: list[tuple[int, int, str, int]] = []
-    for category, cues in _CATEGORY_CUES.items():
-        for cue in cues:
-            cue_text = " ".join(normalize_vietnamese(cue).split())
-            if not cue_text:
-                continue
-            if (
-                category == "dairy"
-                and cue in {"sua", "milk"}
-                and any(
-                    phrase in normalized
-                    for phrase in ("ca phe sua", "tra sua", "coffee milk", "milk tea")
-                )
-            ):
-                continue
-            for match in re.finditer(
-                rf"(?<!\w){re.escape(cue_text)}(?!\w)", normalized
-            ):
-                category_spans.append(
-                    (match.start(), match.end(), category, len(cue_text.split()))
-                )
+    for category, _cue, cue_text, pattern in _NORMALIZED_CATEGORY_CUE_MATCHERS:
+        if (
+            category == "dairy"
+            and _cue in {"sua", "milk"}
+            and any(
+                phrase in normalized
+                for phrase in ("ca phe sua", "tra sua", "coffee milk", "milk tea")
+            )
+        ):
+            continue
+        for match in pattern.finditer(normalized):
+            category_spans.append(
+                (match.start(), match.end(), category, len(cue_text.split()))
+            )
 
     marker_pattern = re.compile(
         r"(?<!\w)(?:vi|huong|mui|flavor|flavour|taste)(?!\w)"
@@ -862,23 +891,21 @@ def explicit_recommendation_category(text: str) -> str | None:
     if named_query:
         matching_categories = {
             category
-            for category, cues in _CATEGORY_CUES.items()
-            if any(
-                cue == named_query and _has_phrase(normalized, (cue,))
-                for cue in cues
-            )
+            for category, cue, pattern in _RAW_CATEGORY_CUE_MATCHERS
+            if cue == named_query and pattern.search(normalized)
         }
         if len(matching_categories) == 1:
             return next(iter(matching_categories))
     # Resolve overlapping broad phrases by the most specific phrase. An
     # explicit "đồ ăn vặt" therefore wins over the shorter "đồ ăn" cue.
     matches = [
-        (len(cue.split()), category, cue)
-        for category, cues in _CATEGORY_CUES.items()
-        for cue in cues
-        if _has_phrase(normalized, (cue,))
+        (len(cue_text.split()), category, cue)
+        for category, cue, cue_text, pattern in _NORMALIZED_CATEGORY_CUE_MATCHERS
+        if pattern.search(normalized)
         and not (
-            category == "snack" and cue == "qua vat" and _has_phrase(normalized, ("qua vat chat",))
+            category == "snack"
+            and cue == "qua vat"
+            and _has_phrase(normalized, ("qua vat chat",))
         )
     ]
     # Spoken Vietnamese often inserts a subject or verb between the need and
@@ -936,22 +963,21 @@ def explicit_recommendation_categories(text: str) -> list[str]:
             )
         )
 
-    for category, cues in _CATEGORY_CUES.items():
-        for cue in cues:
-            if (
-                category == "dairy"
-                and cue in {"sua", "milk"}
-                and any(
-                    phrase in normalized
-                    for phrase in ("ca phe sua", "tra sua", "coffee milk", "milk tea")
-                )
-            ):
-                continue
-            for match in re.finditer(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized):
-                if is_negated(match.start()):
-                    negated_matches.append((match.start(), category))
-                else:
-                    matches.append((match.start(), match.end(), category, cue))
+    for category, cue, cue_text, pattern in _NORMALIZED_CATEGORY_CUE_MATCHERS:
+        if (
+            category == "dairy"
+            and cue in {"sua", "milk"}
+            and any(
+                phrase in normalized
+                for phrase in ("ca phe sua", "tra sua", "coffee milk", "milk tea")
+            )
+        ):
+            continue
+        for match in pattern.finditer(normalized):
+            if is_negated(match.start()):
+                negated_matches.append((match.start(), category))
+            else:
+                matches.append((match.start(), match.end(), category, cue))
 
     modifier = product_type_attribute_modifier(normalized)
     if modifier is not None:
