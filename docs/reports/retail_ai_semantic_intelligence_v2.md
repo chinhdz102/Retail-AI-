@@ -262,3 +262,20 @@ Chạy từ root:
 - [Benchmark source](../../evaluation/semantic_intelligence_v2_benchmark.py)
 
 LLM ablation gọi provider và có thể tiêu quota/biến động theo availability; artifact hiện tại là kết quả của lần chạy đã ghi, không chạy lại chỉ để lấy số đẹp hơn.
+
+## Addendum — kiểm toán sau benchmark, 28/10/2026
+
+Đối chiếu 50 cuộc hội thoại với output lưu trong artifact cho thấy benchmark V2 chỉ chấm parser intent cho câu hỏi “loại khác”, không chấm tính mới của SKU trả về: 48/50 lượt có SKU trùng danh sách trước; 42/50 trả lại đúng cả 5 SKU. Vì vậy `50/50 alternative intent` ở trên chỉ là tỷ lệ parser nhận ra ý định, tuyệt đối không phải tỷ lệ tư vấn alternative thành công. API thật cũng tái hiện lỗi ở lượt alternative thứ ba do session chỉ nhớ trang gần nhất và preference text tích lũy câu “khác” thành constraint rác.
+
+Đã thêm `seen_product_ids` theo scope vào session, dọn phần câu chữ pagination khỏi preferences, tăng giới hạn loại trừ nội bộ, trả lời rõ khi hết lựa chọn mới, và thêm kiểm thử nhiều trang dầu gội/nước giặt, chuyển nhóm, hết lựa chọn, không tự thêm giỏ và cô lập tham chiếu ordinal giữa session. Các kiểm thử này chứng minh regression path cụ thể; chúng không biến bộ câu sinh thành human evaluation.
+
+Audit dataset cũng phát hiện H-037/H-082 dùng từ “dưới” trong khi generator chọn ngưỡng chỉ có sản phẩm bằng giá. Dataset dev sửa lại dùng ngưỡng “tối đa”, thêm SHA-256 catalog và bỏ timestamp biến đổi; xây lại hai lần cho cùng SHA-256 `8f129beecee14b7c8ff1bbba106fae154a3321a55ef2efaad718e3493de27d3b`. Dataset mới và benchmark mới được lưu riêng, không sửa artifact lịch sử. Kết quả vẫn provisional/synthetic; xem report production-quality master để biết đầy đủ giới hạn.
+
+## Addendum — preference follow-up và xác minh cuối, 28/10/2026
+
+- Bổ sung guard tổng quát cho tool `plan_shopping_mission`: nếu câu hiện tại có dấu hiệu sở thích rõ và parser dùng chung trả được soft preference, backend đưa preference vào state kể cả khi model bỏ sót; không đổi nó thành hard requirement. Ngân sách/party size vẫn lấy theo state và preference đổi ngân sách không bị ghi nhầm thành sở thích.
+- Thêm kiểm thử model bỏ sót preference, ngân sách chỉ đổi, và phần trả lời xác nhận preference mà không tuyên bố catalog đã xác minh độ phù hợp.
+- Sau thay đổi: `uv run pytest tests -q --tb=short` — **1.222 passed trong 241,30 giây**; `uv run ruff check backend tests evaluation` — pass; `git diff --check` sạch.
+- Live Groq probe sau patch: **5/5** HTTP 200, **5/5** kiểm tra grounding tự động pass, 2 lượt gọi Qwen, không fallback. Lượt follow-up có câu xác nhận preference. Raw trace cho thấy ở lượt chạy này Qwen tự đưa preference vào tool arguments, nên unit test mới là bằng chứng trực tiếp cho trường hợp backend phải khôi phục field bị model bỏ sót.
+- Danh sách picnic vẫn chưa có snack “không cay”: catalog không có thuộc tính xác minh độ cay; hệ thống giữ abstention, không bịa hoặc tính món thay thế vào tổng.
+- Đánh giá vẫn **demo-only / chưa sẵn sàng production** vì thiếu qrels và review con người độc lập, chưa benchmark công suất triển khai thật, và snapshot không có nhiều thuộc tính sản phẩm. Báo cáo đầy đủ: [`retail_ai_production_quality_master_report.md`](retail_ai_production_quality_master_report.md).

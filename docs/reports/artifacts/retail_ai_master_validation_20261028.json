@@ -1,0 +1,70 @@
+{
+  "artifact_id": "retail_ai_production_quality_master_validation",
+  "generated_at_utc": "2026-10-28T16:48:31.392848+00:00",
+  "base_commit_sha": "1b1a9b55ba6d0e7d6e3f04c55f7e197c87c905e6",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "working_tree_at_validation": "dirty; changes were evaluated from the stated base commit",
+  "environment": {
+    "os": "Windows",
+    "python": "3.13+",
+    "package_runner": "uv",
+    "catalog": "data/winmart_products.json",
+    "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "catalog_rows": 3099,
+    "accepted_products": 3081,
+    "quarantined_rows": 18,
+    "provider_secrets_recorded": false
+  },
+  "checks": [
+    {
+      "command": "uv run pytest tests/test_retail_agent.py tests/test_shopping_mission.py -q --tb=short",
+      "status": "passed",
+      "passed": 76,
+      "duration_seconds": 24.49
+    },
+    {
+      "command": "uv run pytest tests -q --tb=short",
+      "status": "passed",
+      "passed": 1222,
+      "duration_seconds": 241.30
+    },
+    {
+      "command": "uv run ruff check backend tests evaluation",
+      "status": "passed",
+      "result": "All checks passed"
+    },
+    {
+      "command": "git diff --check",
+      "status": "passed",
+      "result": "No whitespace errors; Git printed line-ending conversion warnings only"
+    }
+  ],
+  "live_provider_probe": {
+    "artifact": "live_snapshot_provider_probe_after_preference_fix_20261028.json",
+    "dataset_id": "vietnamese_snapshot_provider_probe_20261028",
+    "dataset_authoring": "manual diagnostic probe; not independent or human-graded",
+    "model": "qwen/qwen3.8-27b",
+    "llm_calls": 2,
+    "total_reported_tokens": 7599,
+    "primary_credential_successes": 2,
+    "fallback_calls": 0,
+    "turns": 5,
+    "http_200": 5,
+    "automated_grounding_passes": 5,
+    "automated_grounding_failures": 0,
+    "turn_latency_ms": [2830, 2303, 293, 222, 111],
+    "provider_call_latency_ms": [2443, 1968],
+    "followup_preference_acknowledged": true,
+    "live_run_exercised_model_omission_guard": false,
+    "limitation": "On this repeat Groq emitted the preference itself; the unit test directly covers the backend recovery path when it is omitted."
+  },
+  "release_decision": "NOT_READY_PRODUCTION_DEMO_ONLY",
+  "open_gates": [
+    "independent human-reviewed product qrels and conversational quality labels",
+    "blind held-out Vietnamese natural-language evaluation",
+    "deployment-level concurrency, RSS, latency, and error-rate benchmark",
+    "current authoritative catalog and verified product attributes",
+    "independent review of naturalness, usefulness, clarification, and unsupported-claim rate",
+    "voice/STT/TTS accuracy is not measured in this text-only run"
+  ]
+}

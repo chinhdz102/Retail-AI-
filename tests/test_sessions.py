@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -41,6 +42,8 @@ def test_structured_shopping_memory_applies_set_replace_remove_and_keep() -> Non
         current_intent=IntentType.CART_UPDATE,
         active_product_id="SNACK01",
         selected_product_ids=["SNACK01"],
+        seen_product_ids=["SNACK01", "SNACK02"],
+        seen_product_scope=["snack", "chips"],
     )
     saved = store.get(session.session_id)
 
@@ -48,6 +51,8 @@ def test_structured_shopping_memory_applies_set_replace_remove_and_keep() -> Non
     assert saved.shopping.current_intent == IntentType.CART_UPDATE
     assert saved.shopping.active_product_id == "SNACK01"
     assert saved.shopping.selected_product_ids == ["SNACK01"]
+    assert saved.shopping.seen_product_ids == ["SNACK01", "SNACK02"]
+    assert saved.shopping.seen_product_scope == ["snack", "chips"]
 
 
 def test_closed_and_expired_sessions_clear_customer_context() -> None:
@@ -56,13 +61,20 @@ def test_closed_and_expired_sessions_clear_customer_context() -> None:
     store.add_message(session.session_id, "user", "My last product was Coca Zero")
     store.set_last_grounded_product(session.session_id, "COKE_ZERO_330", "Coca-Cola Zero")
     store.claim_snapshot_disclosures(session.session_id, ("demo|COKE_ZERO_330|price",))
-    store.update_shopping(session.session_id, active_product_id="COKE_ZERO_330")
+    store.update_shopping(
+        session.session_id,
+        active_product_id="COKE_ZERO_330",
+        seen_product_ids=["COKE_ZERO_330"],
+        seen_product_scope=["drink"],
+    )
 
     closed = store.close(session.session_id)
     assert closed.state == SessionState.CLOSED
     assert closed.messages == []
     assert closed.last_grounded_product_id is None
     assert closed.shopping.active_product_id is None
+    assert closed.shopping.seen_product_ids == []
+    assert closed.shopping.seen_product_scope == []
     assert closed.snapshot_disclosures == []
     with pytest.raises(SessionClosedError):
         store.get(session.session_id)
@@ -105,11 +117,27 @@ def test_unresolved_product_category_round_trips_through_redis_encoding() -> Non
     store.update_shopping(
         session.session_id,
         unresolved_product_category="drink",
+        seen_product_ids=["WATER01"],
+        seen_product_scope=["drink", "water"],
     )
 
     decoded = RedisSessionStore._decode(RedisSessionStore._encode(store.get(session.session_id)))
 
     assert decoded.shopping.unresolved_product_category == "drink"
+    assert decoded.shopping.seen_product_ids == ["WATER01"]
+    assert decoded.shopping.seen_product_scope == ["drink", "water"]
+
+
+def test_redis_session_decoder_defaults_pagination_memory_for_existing_records() -> None:
+    session = InMemorySessionStore().create("legacy-session")
+    payload = json.loads(RedisSessionStore._encode(session))
+    payload["shopping"].pop("seen_product_ids")
+    payload["shopping"].pop("seen_product_scope")
+
+    decoded = RedisSessionStore._decode(json.dumps(payload))
+
+    assert decoded.shopping.seen_product_ids == []
+    assert decoded.shopping.seen_product_scope == []
 
 
 def test_redis_snapshot_disclosure_claim_persists_atomically() -> None:

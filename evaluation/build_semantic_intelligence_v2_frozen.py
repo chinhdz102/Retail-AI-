@@ -6,6 +6,7 @@ This is a development artifact, not independent human annotation.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 from collections import defaultdict
@@ -17,7 +18,7 @@ from backend.products.snapshot_repository import SnapshotProductRepository
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "data" / "winmart_products.json"
-OUTPUT = ROOT / "evaluation" / "cases" / "retail_ai_semantic_intelligence_v2_frozen_20261028.json"
+OUTPUT = ROOT / "evaluation" / "cases" / "retail_ai_semantic_intelligence_v2_dev_rev1_20261028.json"
 SEED = 2026102801
 
 
@@ -122,7 +123,7 @@ def _constraint_queries(groups: dict[str, list[Any]], rng: random.Random) -> lis
     rows = []
     prompts = (
         "Mình cần {category}, giá tối đa {budget} đồng và đừng lấy hãng {brand}.",
-        "Cho mình xem {category} dưới {budget}đ nhé, tránh thương hiệu {brand}.",
+        "Cho mình xem {category} tối đa {budget}đ nhé, tránh thương hiệu {brand}.",
         "Tìm giúp {category} tầm {budget} đồng trở xuống, không chọn {brand}.",
         "Có {category} nào không phải hãng {brand}, giá không quá {budget}đ không?",
         "Mình muốn mua {category}; loại {brand} thì bỏ qua, ngân sách tối đa {budget} đồng.",
@@ -207,11 +208,12 @@ def build() -> dict[str, Any]:
     if len(constraints) < 100:
         raise ValueError(f"Only {len(constraints)} usable multi-constraint cases found")
 
+    catalog_bytes = CATALOG.read_bytes()
     payload = {
-        "dataset_id": "retail_ai_semantic_intelligence_v2_frozen_20261028",
-        "created_at": datetime.now(UTC).isoformat(),
+        "dataset_id": "retail_ai_semantic_intelligence_v2_dev_rev1_20261028",
         "seed": SEED,
         "source_catalog": "data/winmart_products.json",
+        "source_catalog_sha256": hashlib.sha256(catalog_bytes).hexdigest(),
         "authoring_method": (
             "Provisional synthetic evaluation: templates applied to catalog rows and taxonomy. "
             "Not independently authored or human-validated. Freeze before tuning; review labels."
@@ -220,9 +222,12 @@ def build() -> dict[str, Any]:
         "conversations": _conversations(category_labels, groups),
         "human_review_required": True,
     }
-    OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    dataset_bytes = (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    OUTPUT.write_bytes(dataset_bytes)
     return {
         "output": str(OUTPUT),
+        "generated_at": datetime.now(UTC).isoformat(),
+        "dataset_sha256": hashlib.sha256(dataset_bytes).hexdigest(),
         "query_count": len(payload["cases"]),
         "by_kind": {
             kind: sum(row["expected"]["kind"] == kind for row in payload["cases"])

@@ -1,0 +1,39 @@
+{
+  "dataset_id": "vietnamese_snapshot_provider_probe_20261028",
+  "language_scope": "Vietnamese only",
+  "description": "Small live probe against the production WinMart snapshot. Cases are manually authored for this run and are not an independent or human-graded evaluation set.",
+  "cases": [
+    {
+      "case_id": "natural_picnic_multigroup_consultation",
+      "tags": ["implicit_need", "multi_category", "budget", "hard_negative", "multi_turn"],
+      "turns": [
+        {
+          "text": "Mình chuẩn bị picnic cho 4 người, ngân sách khoảng 200 nghìn, muốn mua đồ ăn vặt không cay với nước uống. Gợi ý giúp mình vài món nhé."
+        },
+        {
+          "text": "Ưu tiên món nào dễ chia cho mọi người với giữ trong ngân sách đó nha."
+        }
+      ]
+    },
+    {
+      "case_id": "pantene_exact_price_shelf_and_sales_abstention",
+      "tags": ["exact_product", "price", "shelf", "multi_turn", "unsupported_sales_claim"],
+      "turns": [
+        {
+          "text": "Dầu gội Pantene Nhật Bản mềm mượt chai 450ml giá bao nhiêu vậy?",
+          "expected_product_ids": ["WIN_10600115"],
+          "must_contain": ["169.900"]
+        },
+        {
+          "text": "Nó nằm ở kệ nào vậy bạn?",
+          "expected_product_ids": ["WIN_10600115"],
+          "must_contain": ["A03-B03-L03-P07", "vị trí gợi ý"]
+        },
+        {
+          "text": "Trong mấy loại dầu gội, loại này có bán chạy nhất không?",
+          "must_not_contain": ["bán chạy nhất là", "được nhiều người mua nhất", "doanh số cao nhất"]
+        }
+      ]
+    }
+  ]
+}

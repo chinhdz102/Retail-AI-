@@ -1,0 +1,275 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-28T16:11:49.249918+00:00",
+  "dataset_id": "retail_vietnamese_text_conversation_v1",
+  "language_scope": "Vietnamese only",
+  "research_informed_by": [
+    "Vietnamese e-commerce dialogue coverage: ProductInfo, OrderInfo, Shipping and Chatchit; dialogue acts and slot values.",
+    "ViWOZ coverage: multi-turn context, dialogue state, user paraphrases and clarification behavior.",
+    "BFCL coverage: tool choice, arguments, stateful multi-turn behavior and abstention."
+  ],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "credential_failover_enabled": true,
+  "credential_slots": [
+    "primary",
+    "fallback_1",
+    "fallback_2"
+  ],
+  "provider_timeout_seconds": 12.0,
+  "minimum_model_request_interval_seconds": 2.0,
+  "response_timeout_seconds": 70.0,
+  "catalog_scope": {
+    "runtime_repository": "snapshot",
+    "case_catalog_preflight": {
+      "status": "NOT_REQUIRED",
+      "catalog_repository": "snapshot",
+      "checked_product_ids": 0
+    },
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false,
+    "postgres_search_tool_turns": 0
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "vi_chitchat_start",
+      "turn": 1,
+      "prompt": "Chào bạn, mình ghé hỏi chút nha.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 193,
+      "response": {
+        "session_id": "dbf83e41-aad7-4ff1-8a2f-9568ac43e011",
+        "text": "Chào bạn, mình nghe đây. Bạn cứ nói tiếp nhé.",
+        "model": "local-smalltalk",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "chitchat",
+        "greeting",
+        "acknowledgement",
+        "tool_should_not_be_used"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "vi_chitchat_start",
+      "turn": 2,
+      "prompt": "Bạn có mệt không?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 1890,
+      "response": {
+        "session_id": "dbf83e41-aad7-4ff1-8a2f-9568ac43e011",
+        "text": "Mình là AI nên không biết mệt đâu. Bạn cứ thoải mái chia sẻ nhé.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "chitchat",
+        "greeting",
+        "acknowledgement",
+        "tool_should_not_be_used"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "996",
+                "x-ratelimit-remaining-tokens": "7648",
+                "x-ratelimit-reset-requests": "5m45.6s",
+                "x-ratelimit-reset-tokens": "2.639s"
+              },
+              "credential_slot": "primary"
+            }
+          ],
+          "latency_ms": 1769,
+          "pacing_wait_ms": 0,
+          "tool_calls": [],
+          "usage": {
+            "prompt_tokens": 272,
+            "completion_tokens": 19,
+            "total_tokens": 291
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "vi_chitchat_start",
+      "turn": 3,
+      "prompt": "Cảm ơn nhé.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 99,
+      "response": {
+        "session_id": "dbf83e41-aad7-4ff1-8a2f-9568ac43e011",
+        "text": "Không có gì, bạn cứ hỏi mình khi cần nhé.",
+        "model": "local-smalltalk",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "must_contain": [
+          "Không có gì"
+        ],
+        "no_tools_expected": true
+      },
+      "conversation_tags": [
+        "chitchat",
+        "greeting",
+        "acknowledgement",
+        "tool_should_not_be_used"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    }
+  ],
+  "summary": {
+    "case_count": 1,
+    "turn_count": 3,
+    "http_200_count": 3,
+    "automated_grounding_safety_passes": 3,
+    "automated_grounding_safety_failures": 0,
+    "expected_model_tool_selection_passes": 0,
+    "expected_model_tool_selection_count": 0,
+    "no_tool_decision_passes": 3,
+    "no_tool_decision_count": 3,
+    "tool_argument_passes": 0,
+    "tool_argument_check_count": 0,
+    "median_turn_latency_ms": 193,
+    "total_llm_calls": 1,
+    "total_tool_calls": 0
+  }
+}

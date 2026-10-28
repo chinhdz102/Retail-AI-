@@ -837,6 +837,44 @@ def test_plan_revision_preserves_budget_and_party_size_until_user_changes_them()
     assert changed_arguments["party_size"] == 9
 
 
+def test_explicit_soft_preference_is_recovered_when_model_omits_it() -> None:
+    previous = {
+        "total_budget_vnd": 200_000,
+        "party_size": 4,
+        "preferences": [],
+        "needs": [],
+    }
+    call = tool_call(
+        "plan_shopping_mission",
+        {"preferences": [], "needs": [], "hard_requirements": []},
+    )
+
+    result = _enforce_shopping_mission_call_semantics(
+        [call],
+        "Ưu tiên món nào dễ chia cho mọi người với giữ trong ngân sách đó nha.",
+        previous,
+    )
+    arguments = json.loads(result[0]["function"]["arguments"])
+
+    assert arguments["preferences"] == ["chia cho moi nguoi"]
+    assert arguments["total_budget_vnd"] == 200_000
+    assert arguments["party_size"] == 4
+    assert arguments["hard_requirements"] == []
+    assert arguments["needs"] == []
+
+
+def test_budget_revision_does_not_become_a_soft_product_preference() -> None:
+    call = tool_call("plan_shopping_mission", {"preferences": [], "needs": []})
+
+    result = _enforce_shopping_mission_call_semantics(
+        [call],
+        "Tăng ngân sách lên 180.000đ để có thêm lựa chọn.",
+        {"preferences": [], "needs": []},
+    )
+
+    assert json.loads(result[0]["function"]["arguments"])["preferences"] == []
+
+
 def test_explicit_alternative_request_rejects_prior_plan_skus() -> None:
     call = tool_call("plan_shopping_mission", {"needs": []})
     previous = {

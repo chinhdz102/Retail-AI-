@@ -1,0 +1,4512 @@
+{
+  "dataset_id": "retail_ai_semantic_intelligence_v2_dev_rev1_20261028",
+  "seed": 2026102801,
+  "source_catalog": "data/winmart_products.json",
+  "source_catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "authoring_method": "Provisional synthetic evaluation: templates applied to catalog rows and taxonomy. Not independently authored or human-validated. Freeze before tuning; review labels.",
+  "cases": [
+    {
+      "case_id": "V2-P-001",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Lốc 4 sữa tươi tiệt trùng vị tự nhiên TH true MILK Hilo 180ml, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10170474"
+        ],
+        "category": "Sữa tươi tiệt trùng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-002",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Kẹo thảo  mộc Ricola bạc hà Mountaint Mint 40g không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10324079"
+        ],
+        "category": "Kẹo cứng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-003",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Ướp thịt nướng Cholimex 600g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10617361"
+        ],
+        "category": "Các loại sốt"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-004",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Sữa đậu nành canxi Fami hộp 1L trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10232517"
+        ],
+        "category": "Sữa đậu nành"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-005",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Chả cá viên Thaibifood gói 500g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10007059"
+        ],
+        "category": "Chả cá đông lạnh"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-006",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Xúc xích ăn liền Đức Việt Handy vị heo gói 105g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10182354"
+        ],
+        "category": "Xúc xích tiệt trùng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-007",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Trà matcha gạo rang Blendy hộp 170g (10 gói x 17g) không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10327494"
+        ],
+        "category": "Trà sữa"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-008",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Nước gạo Morning Rice chai 500ml, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10011399"
+        ],
+        "category": "Nước uống dinh dưỡng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-009",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Socola trứng Kinder Joy bé trai hộp 20g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10081368"
+        ],
+        "category": "Kẹo đồ chơi"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-010",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Bộ 3 bàn chải đánh răng Sensodyne Deep Clean Soft làm sạch sâu kẽ răng.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10162305"
+        ],
+        "category": "Bàn chải đánh răng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-011",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Bánh pía sầu riêng Thiên Lương Đặc biệt Số 7-400g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10606923"
+        ],
+        "category": "Bánh ngọt"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-012",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Lăn Khử Mùi Romano Attitude 50ml không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10018793"
+        ],
+        "category": "Lăn khử mùi Nam"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-013",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Bánh ngon vị phô mai Nue 38g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10183496"
+        ],
+        "category": "Bánh bông lan tươi"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-014",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Măng trúc đặc sản gói 300g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10404853"
+        ],
+        "category": "Măng sơ chế"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-015",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Sữa rửa mặt dạng gel  Simple chai 150ml.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10161717"
+        ],
+        "category": "Sữa rửa mặt nữ"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-016",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Kẹo dẻo Playmore mì jajang 60g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10195353"
+        ],
+        "category": "Kẹo mềm"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-017",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Bộ xịt phòng tự động Glade hương oải hương không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10161867"
+        ],
+        "category": "Nước xịt phòng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-018",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Sữa chua hoa quả Hoff vị táo vỉ 4 hộp 55g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10170424"
+        ],
+        "category": "Sữa chua ăn"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-019",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Cháo gà Vifon gói 50g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10141805"
+        ],
+        "category": "Cháo ăn liền"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-020",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Kẹo hương bạc hà Dynamite socola Bigbang 120g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10014613"
+        ],
+        "category": "Kẹo cứng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-021",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Sữa tắm Lifebuoy bảo vệ vượt trội túi 850g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10018163"
+        ],
+        "category": "Sữa tắm nữ"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-022",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Ngũ cốc ăn sáng Corn Flakes Nestlé hộp 275g không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10011078"
+        ],
+        "category": "Ngũ cốc ăn sáng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-023",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Sữa tắm Tesori hương Hy lạp cổ đại 500ml, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10600449"
+        ],
+        "category": "Sữa tắm nữ"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-024",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Cà phê Trung Nguyên legend hộp 225g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10150518"
+        ],
+        "category": "Cà phê hòa tan"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-025",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Tàu hũ chiên Ichiban hộp 300g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10005171"
+        ],
+        "category": "Đậu hũ"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-026",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Rau Răm 50g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10282403"
+        ],
+        "category": "Rau gia vị ăn lá"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-027",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Khăn giấy lụa 2 lớp Elene gói 260 tờ không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10020501"
+        ],
+        "category": "Khăn giấy gói"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-028",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Café Trung Nguyên Legend Classic gói 850g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10165682"
+        ],
+        "category": "Cà phê hòa tan"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-029",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Bánh gạo vị ngọt Richy gói 315g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10013857"
+        ],
+        "category": "Bánh gạo"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-030",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Lốc 3 Miwon lá kim tảo biển cao cấp 5g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10141925"
+        ],
+        "category": "Rong biển cbiến đgói"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-031",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Thùng 24 gói mì vị gà Koreno Paldo 100g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10007836"
+        ],
+        "category": "Mì ăn liền"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-032",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Dầu đậu nành Simply chai 1 lít không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10010065"
+        ],
+        "category": "Dầu nành"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-033",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết GROWPLUS+ SPDDPS Sữa non 110ml*4, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10266351"
+        ],
+        "category": "Sữa d.dưỡng trẻ em"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-034",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Lốc 4 hộp sữa chua uống cam có thạch NUVI 170ml trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10195097"
+        ],
+        "category": "SCU tiệt trùng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-035",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Nước đào Vfresh Vinamilkhộp 1 lít.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10011177"
+        ],
+        "category": "Nước hoa quả"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-036",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Snack Swing Family Pack vị bò 152g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10195935"
+        ],
+        "category": "Snack kh.tây chiên"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-037",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Bột ngọt (mì chính) Miwon gói 454g không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10008562"
+        ],
+        "category": "Mỳ chính"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-038",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Bánh snack Swing vị gà Teriyali Osaka Orion gói 90g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10303866"
+        ],
+        "category": "Snack kh.tây chiên"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-039",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Bút chì Thiên Long 16 màu CP-C08 trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10227088"
+        ],
+        "category": "Bút"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-040",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Kẹo gum không đường hương Chanh Bạc Hà Xylitol Lotte hộp 58g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10014525"
+        ],
+        "category": "Kẹo gum"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-041",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Dầu gội Clear Men mát lạnh bạc hà 180g/170g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10601171"
+        ],
+        "category": "Dầu gội nam"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-042",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Bánh gạo ngọt vị phô mai bắp One One gói 118g không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10303026"
+        ],
+        "category": "Bánh gạo"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-043",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Trà đen hảo hạng túi lọc VINATEA hộp 50g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10194837"
+        ],
+        "category": "Trà túi lọc"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-044",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Tắm gội 2 in 1 X-men Boss Intense 650g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10162461"
+        ],
+        "category": "Sữa tắm nam"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-045",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Xịt khử mùi toàn thân Romano Classic 150ml.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10017736"
+        ],
+        "category": "Xịt khử mùi Nam"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-046",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Mùi tàu (Ngò gai) 50g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10282402"
+        ],
+        "category": "Rau gia vị ăn lá"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-047",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Lăn khử mùi Enchanteur charming 25ml không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10018728"
+        ],
+        "category": "Lăn khử mùi nữ"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-048",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Sữa tắm nước hoa dưỡng da Enchanteur deluxe charming chai 180g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10017420"
+        ],
+        "category": "Sữa tắm nữ"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-049",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Táo Cosmic Mỹ trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10265836"
+        ],
+        "category": "Táo NK"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-050",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Dầu hướng dương chai  Simply chai 1L.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10010073"
+        ],
+        "category": "Dầu hướng dương"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-051",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Bánh xếp Hàn Quốc Bibigo nhân thịt 350g (gói 10 cái), bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10324982"
+        ],
+        "category": "Há cảo sủi cảo xíu m"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-052",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Dầu xả Pantene  3MM  biotin chai 480ml không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10171092"
+        ],
+        "category": "Dầu xả & dưỡng tóc"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-053",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Ớt chuông đỏ Globalgap 400g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10241681"
+        ],
+        "category": "Ớt chuông"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-054",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Thùng 30 gói mì ăn liền khoai tây Cung Đình Micoem vị gà hầm 79g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10007768"
+        ],
+        "category": "Mì ăn liền"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-055",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Bánh trứng tươi sợi thịt gà Fasty túi 6gói x 26g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10281159"
+        ],
+        "category": "Bánh mặn khác"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-056",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Sữa uống lên men Betagen hương tự nhiên chai 400ml, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10005284"
+        ],
+        "category": "SCU lợi khuẩn"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-057",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Bánh mì chà bông Staff gói 60g không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10224919"
+        ],
+        "category": "Bánh mặn khác"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-058",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Sáp thơm mùi oải hương Ambipure 180g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10085523"
+        ],
+        "category": "Sáp thơm"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-059",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Mì ăn liền khoai tây Cung Đình Micoem vị lẩu tôm chua cay thùng 30 gói x 80g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10007770"
+        ],
+        "category": "Mì ăn liền"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-060",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Khăn ướt trẻ em Bobby 100 miếng không mùi hương.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10229088"
+        ],
+        "category": "Giấy ướt trẻ em"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-061",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Lưỡi dao Gillette Fusion Pro 1 chiếc, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10018972"
+        ],
+        "category": "Dao cạo râu"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-062",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Sữa uống dinh dưỡng Abbott Glucerna hương vani chai 220ml không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10317250"
+        ],
+        "category": "Sữa d.dưỡng ngườilớn"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-063",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Hạt phỉ phết cacao Nuttella 200g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10214665"
+        ],
+        "category": "Bơ đóng hộp"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-064",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Thạch  Zai Zai gói 210g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10197597"
+        ],
+        "category": "Thạch đóng gói"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-065",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Dầu gội X-men For Boss Perfumed Shampoo 650g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10016850"
+        ],
+        "category": "Dầu gội nam"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-066",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Thùng 30 gói mì ăn liền vị gà nấm Micoem 70g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10007779"
+        ],
+        "category": "Mì ăn liền"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-067",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Nước mắm Hạnh Phúc 40B chai 500ml không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10009610"
+        ],
+        "category": "Nước mắm"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-068",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Nước uống đóng chai Dasani chai 500ml, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10011220"
+        ],
+        "category": "Nước tinh khiết"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-069",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Rau mầm cải ngọt WinEco 100g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10281839"
+        ],
+        "category": "Rau mầm"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-070",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Nước rửa chén bát Sunlight thiên nhiên lô hội túi 3.4Kg.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10171191"
+        ],
+        "category": "Nước rửa chén bát"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-071",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Lốc 6 chai nước giải khát hương cam Fanta 390ml, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10011254"
+        ],
+        "category": "Nước ngọt có ga"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-072",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có DIANA SENSI BVS dạng quần M-L 5 miếng không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10162155"
+        ],
+        "category": "BVS Ban đêm"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-073",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Tôm viên Hoa Doanh gói 200g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10602470"
+        ],
+        "category": "Thủy hải sản sơ chế"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-074",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Ba rọi xông khói Le Gourmet gói 200g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10005600"
+        ],
+        "category": "Thịt xông khói"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-075",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Khoai lang sấy Vinamit gói 250g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10015650"
+        ],
+        "category": "Trái cây s.khô đgói"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-076",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Thùng 24 lon nước giải khát Zero Coca Cola không đường 330ml, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10011651"
+        ],
+        "category": "Nước ngọt có ga"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-077",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Snack Oishi cua sốt chua ngọt CrabMe gói  35/39g không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10015800"
+        ],
+        "category": "Snack rau, củ, quả"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-078",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Tôm thịt 31/40  Đôi Đũa Vàngkhay 252g, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10006470"
+        ],
+        "category": "Tôm đông lạnh đgói"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-079",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Sốt gia vị cá thịt kho Barona gói 80g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10009043"
+        ],
+        "category": "Các loại sốt"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-080",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Thịt lợn hun khói Tâm Hòa Cao bằng gói 500g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10639559"
+        ],
+        "category": "Thịt xông khói"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-081",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua ​​​​​​​Mì xào khô ăn liền vị gà cay Samyang 140g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10224005"
+        ],
+        "category": "Mì ăn liền"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-082",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Café xay Sáng Tạo 8 Trung Nguyên hộp 500g không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10012983"
+        ],
+        "category": "Cà phê rang xay"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-083",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Sữa hạt hạnh nhân Celano không đường hộp 1L, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10614968"
+        ],
+        "category": "Sữa hạt"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-084",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Snack khoai tây vị phô mai Slide lon 75g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10015708"
+        ],
+        "category": "Snack kh.tây chiên"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-085",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Ngũ cốc Kellogg's AS Corn Flaké 500g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10015532"
+        ],
+        "category": "Ngũ cốc ăn sáng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-086",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Sữa tắm Lashe dưỡng ẩm chuyên sâu chai 640g, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10170837"
+        ],
+        "category": "Sữa tắm nữ"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-087",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Váng sữa uống hương vani Zott Monte lốc 4 chai x 95ml không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10005278"
+        ],
+        "category": "Váng sữa"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-088",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Kiwi xanh Newzealand (4trái/hộp), mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10235280"
+        ],
+        "category": "Kiwi NK"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-089",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Nước tăng lực Monster Mango Loco lon 355ml trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10194713"
+        ],
+        "category": "Nước tăng lực"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-090",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Bánh Royal Family Mochi Đậu đỏ 180g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10013977"
+        ],
+        "category": "Bánh Mochi"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-091",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Sữa tiệt trùng Cô gái Hà Lan có đường lốc 4 hộp x 180ml, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10005418"
+        ],
+        "category": "Sữa tươi tiệt trùng"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-092",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Kéo rồng Cán vàng Hùng Phát Phát không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10025986"
+        ],
+        "category": "Dụng cụ nhà bếp"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-093",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Nước Giải Khát Có Gas Fanta Nho chai1.5L, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10196071"
+        ],
+        "category": "Nước ngọt có ga"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-094",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Macca Minh Việt 300g trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10325199"
+        ],
+        "category": "Hạt bí đóng gói"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-095",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Rong biển Miwon cuộn nướng vị mực 6g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10142169"
+        ],
+        "category": "Snack rong biển"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-096",
+      "dimension": "exact_product_identity",
+      "query": "Mình đang cần mua Tăm nhựa nha khoa 140 que OKAMURA, bên bạn tra giúp đúng mặt hàng này nhé.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10613768"
+        ],
+        "category": "Tăm chỉ nkhoa vslưỡi"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-097",
+      "dimension": "exact_product_identity",
+      "query": "Cho mình hỏi cửa hàng có Tẩy nhà tắm siêu sạch Gift chai 900ml không? Tìm đúng tên này giúp mình.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10019675"
+        ],
+        "category": "Nước t.rửa toilet nt"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-098",
+      "dimension": "exact_product_identity",
+      "query": "Nhà mình sắp hết Nĩa ăn lớn inox kim cương vỉ 2 Bếp Xinh, mình muốn xem sản phẩm đúng loại đó.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10626023"
+        ],
+        "category": "Phụ kiện bàn ăn"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-099",
+      "dimension": "exact_product_identity",
+      "query": "Bạn tìm giúp Nước giặt Ariel cửa trước downy oải hương túi 3.7kg trong danh mục hiện tại với.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10171091"
+        ],
+        "category": "Nước giặt"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-P-100",
+      "dimension": "exact_product_identity",
+      "query": "Mình cần xem giá và thông tin của Nước rửa tay Lifebuoy làm bếp  chai 180g.",
+      "expected": {
+        "kind": "product_resolution",
+        "product_ids": [
+          "WIN_10602567"
+        ],
+        "category": "Nước rửa tay"
+      },
+      "provisional_label": "exact catalog title; duplicate exact titles are all acceptable"
+    },
+    {
+      "case_id": "V2-C-001",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết BVS Chu kỳ, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "BVS Chu kỳ"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-002",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Bchải đrăng trẻ em để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bchải đrăng trẻ em"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-003",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Bia nội địa không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bia nội địa"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-004",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Bánh bao dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bánh bao"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-005",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Bánh bông lan hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bánh bông lan"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-006",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Bánh gạo, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bánh gạo"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-007",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Bánh pie để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bánh pie"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-008",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Bánh đa nem không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bánh đa nem"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-009",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Bò, Bê NK dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bò, Bê NK"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-010",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Bông tẩy trang hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bông tẩy trang"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-011",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Bún khô, Phở khô, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bún khô, Phở khô"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-012",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Bún, phở ăn liền để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bún, phở ăn liền"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-013",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Bút không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bút"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-014",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Bơ đóng hộp dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bơ đóng hộp"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-015",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Bơ động vật hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bơ động vật"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-016",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Bột canh, hạt nêm, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bột canh, hạt nêm"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-017",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Bột giặt để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Bột giặt"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-018",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Chocolate không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Chocolate"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-019",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Cháo ăn liền dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Cháo ăn liền"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-020",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Chả viên t.hợp đlạnh hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Chả viên t.hợp đlạnh"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-021",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Cà chua, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Cà chua"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-022",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Cà phê hòa tan để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Cà phê hòa tan"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-023",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Cà phê nước không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Cà phê nước"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-024",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Các loại bột gia vị dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Các loại bột gia vị"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-025",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Các loại bột khác hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Các loại bột khác"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-026",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Các loại sốt, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Các loại sốt"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-027",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Dung dịch vs nam nữ để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Dung dịch vs nam nữ"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-028",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Dầu gội nam không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Dầu gội nam"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-029",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Dầu gội nữ dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Dầu gội nữ"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-030",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Dầu hào hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Dầu hào"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-031",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Dầu hướng dương, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Dầu hướng dương"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-032",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Dầu hỗn hợp để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Dầu hỗn hợp"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-033",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Dầu nành không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Dầu nành"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-034",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Giáp xác,nh.thể tươi dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Giáp xác,nh.thể tươi"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-035",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Giò chả hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Giò chả"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-036",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Giấy vệ sinh, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Giấy vệ sinh"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-037",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Giấy ướt gia đình để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Giấy ướt gia đình"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-038",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Gạo tẻ không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Gạo tẻ"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-039",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Hải sản khô ăn liền dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Hải sản khô ăn liền"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-040",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Khoai đông lạnh hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Khoai đông lạnh"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-041",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Khăn tay, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Khăn tay"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-042",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Khăn tắm để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Khăn tắm"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-043",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Khẩu trang y tế không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Khẩu trang y tế"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-044",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Kẹo cứng dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Kẹo cứng"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-045",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Ly và đồ dùng u.nước hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Ly và đồ dùng u.nước"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-046",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Lăn khử mùi Nam, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Lăn khử mùi Nam"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-047",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Lạp xưởng khô để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Lạp xưởng khô"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-048",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Lợn (heo) nội địa không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Lợn (heo) nội địa"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-049",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Mayonnaise & S.salad dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Mayonnaise & S.salad"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-050",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Muối hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Muối"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-051",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Mì ăn liền, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Mì ăn liền"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-052",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Mứt & Ô mai để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Mứt & Ô mai"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-053",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Mực đông lạnh đgói không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Mực đông lạnh đgói"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-054",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Mỳ khô dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Mỳ khô"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-055",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Nui khô hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Nui khô"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-056",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Nước giặt, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Nước giặt"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-057",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Nước khoáng để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Nước khoáng"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-058",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Nước rửa tay không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Nước rửa tay"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-059",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Nước trà dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Nước trà"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-060",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Nước uống dinh dưỡng hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Nước uống dinh dưỡng"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-061",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Nước xả, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Nước xả"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-062",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại P.mai cứng để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "P.mai cứng"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-063",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán P.mai mềm(miếng/hộp) không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "P.mai mềm(miếng/hộp)"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-064",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua P.mai tráng miệng dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "P.mai tráng miệng"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-065",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Pin hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Pin"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-066",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Quà tặng, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Quà tặng"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-067",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Rau cải để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Rau cải"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-068",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Rau khác không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Rau khác"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-069",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua SCU tiệt trùng dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "SCU tiệt trùng"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-070",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Snack kh.tây chiên hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Snack kh.tây chiên"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-071",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Snack rau, củ, quả, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Snack rau, củ, quả"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-072",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Snack rong biển để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Snack rong biển"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-073",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Sơ chế thịt heo không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Sơ chế thịt heo"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-074",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Sữa chua ăn dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Sữa chua ăn"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-075",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Sữa d.dưỡng trẻ em hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Sữa d.dưỡng trẻ em"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-076",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Sữa hạt, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Sữa hạt"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-077",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Sữa rửa mặt nam để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Sữa rửa mặt nam"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-078",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Sữa tươi tiệt trùng không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Sữa tươi tiệt trùng"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-079",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Sữa đậu nành dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Sữa đậu nành"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-080",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Sữa đặc có đường hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Sữa đặc có đường"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-081",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Thịt bò đông lạnh, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Thịt bò đông lạnh"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-082",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Thịt khô ăn liền để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Thịt khô ăn liền"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-083",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Thịt muối không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Thịt muối"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-084",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Thịt xông khói dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Thịt xông khói"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-085",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Trà sữa hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Trà sữa"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-086",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Trái cây s.khô đgói, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Trái cây s.khô đgói"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-087",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Trứng gà để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Trứng gà"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-088",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Tã quần trẻ em không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Tã quần trẻ em"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-089",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Tôm khô dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Tôm khô"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-090",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Tôm đông lạnh đgói hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Tôm đông lạnh đgói"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-091",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Tăm chỉ nkhoa vslưỡi, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Tăm chỉ nkhoa vslưỡi"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-092",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Váng sữa để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Váng sữa"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-093",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Vở không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Vở"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-094",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Xôi bánh bún miến đl dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Xôi bánh bún miến đl"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-095",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Xúc xích thanh trùng hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Xúc xích thanh trùng"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-096",
+      "dimension": "natural_category_browse",
+      "query": "Nhà mình sắp hết Đường viên, bên bạn còn nhóm này không?",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Đường viên"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-097",
+      "dimension": "natural_category_browse",
+      "query": "Mình muốn xem vài loại Đậu hũ để chọn, chưa cần chốt món cụ thể.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Đậu hũ"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-098",
+      "dimension": "natural_category_browse",
+      "query": "Cửa hàng có bán Đồ bao gói thực phẩm không, tìm giúp mình với.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Đồ bao gói thực phẩm"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-099",
+      "dimension": "natural_category_browse",
+      "query": "Đang tính mua Đồ ch.đựng thực phẩm dùng ở nhà, cho mình xem danh mục nhé.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Đồ ch.đựng thực phẩm"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-C-100",
+      "dimension": "natural_category_browse",
+      "query": "Bạn cho mình xem nhóm hàng Đồ dùng nấu nướng hiện có trong catalog.",
+      "expected": {
+        "kind": "category_browse",
+        "category": "Đồ dùng nấu nướng"
+      },
+      "provisional_label": "taxonomy leaf; prompt wording is templated"
+    },
+    {
+      "case_id": "V2-H-001",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần [Block]Mắm đóng hộp, giá tối đa 20.800 đồng và đừng lấy hãng VIETCOCO.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "[Block]Mắm đóng hộp",
+        "max_price_vnd": 20800,
+        "excluded_brand": "VIETCOCO"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-002",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Rong biển cbiến đgói tối đa 46.600đ nhé, tránh thương hiệu GREEN WORLD.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Rong biển cbiến đgói",
+        "max_price_vnd": 46600,
+        "excluded_brand": "GREEN WORLD"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-003",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Tạo dáng tóc tầm 80.600 đồng trở xuống, không chọn GATSBY.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Tạo dáng tóc",
+        "max_price_vnd": 80600,
+        "excluded_brand": "GATSBY"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-004",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Thạch đóng gói nào không phải hãng DEEDO, giá không quá 38.500đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Thạch đóng gói",
+        "max_price_vnd": 38500,
+        "excluded_brand": "DEEDO"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-005",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Váng sữa; loại HOFF thì bỏ qua, ngân sách tối đa 63.000 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Váng sữa",
+        "max_price_vnd": 63000,
+        "excluded_brand": "HOFF"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-006",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Sữa tươi tiệt trùng, giá tối đa 38.300 đồng và đừng lấy hãng OVALTINE.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Sữa tươi tiệt trùng",
+        "max_price_vnd": 38300,
+        "excluded_brand": "OVALTINE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-007",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Bột canh, hạt nêm tối đa 39.900đ nhé, tránh thương hiệu HANUFOOD.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bột canh, hạt nêm",
+        "max_price_vnd": 39900,
+        "excluded_brand": "HANUFOOD"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-008",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Chả giò đông lạnh tầm 75.700 đồng trở xuống, không chọn NATUR FISH.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Chả giò đông lạnh",
+        "max_price_vnd": 75700,
+        "excluded_brand": "NATUR FISH"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-009",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Bột ngũ cốc trái cây nào không phải hãng XUÂN AN, giá không quá 79.000đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bột ngũ cốc trái cây",
+        "max_price_vnd": 79000,
+        "excluded_brand": "XUÂN AN"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-010",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Bông tẩy trang; loại AURA thì bỏ qua, ngân sách tối đa 41.000 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bông tẩy trang",
+        "max_price_vnd": 41000,
+        "excluded_brand": "AURA"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-011",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Nước trà, giá tối đa 22.300 đồng và đừng lấy hãng C2.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Nước trà",
+        "max_price_vnd": 22300,
+        "excluded_brand": "C2"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-012",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Mì ăn liền tối đa 84.000đ nhé, tránh thương hiệu KORENO.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Mì ăn liền",
+        "max_price_vnd": 84000,
+        "excluded_brand": "KORENO"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-013",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Sữa tươi tiệt trùng tầm 38.300 đồng trở xuống, không chọn SUSU.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Sữa tươi tiệt trùng",
+        "max_price_vnd": 38300,
+        "excluded_brand": "SUSU"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-014",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Dầu xả & dưỡng tóc nào không phải hãng LOREAL, giá không quá 199.000đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Dầu xả & dưỡng tóc",
+        "max_price_vnd": 199000,
+        "excluded_brand": "LOREAL"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-015",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Sữa tươi thanh trùng; loại ĐÀ LẠT MILK thì bỏ qua, ngân sách tối đa 77.000 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Sữa tươi thanh trùng",
+        "max_price_vnd": 77000,
+        "excluded_brand": "ĐÀ LẠT MILK"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-016",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Rau cải, giá tối đa 20.720 đồng và đừng lấy hãng NOBRAND.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Rau cải",
+        "max_price_vnd": 20720,
+        "excluded_brand": "NOBRAND"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-017",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Bông tai tối đa 31.000đ nhé, tránh thương hiệu JOMI.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bông tai",
+        "max_price_vnd": 31000,
+        "excluded_brand": "JOMI"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-018",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Các loại bột gia vị tầm 7.400 đồng trở xuống, không chọn OTOKI.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Các loại bột gia vị",
+        "max_price_vnd": 7400,
+        "excluded_brand": "OTOKI"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-019",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Sữa đặc có đường nào không phải hãng ÔNG THỌ, giá không quá 28.900đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Sữa đặc có đường",
+        "max_price_vnd": 28900,
+        "excluded_brand": "ÔNG THỌ"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-020",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Ngũ cốc ăn sáng; loại KELLOGG'S thì bỏ qua, ngân sách tối đa 103.900 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Ngũ cốc ăn sáng",
+        "max_price_vnd": 103900,
+        "excluded_brand": "KELLOGG'S"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-021",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Thạch đóng gói, giá tối đa 38.500 đồng và đừng lấy hãng VIET FOOD.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Thạch đóng gói",
+        "max_price_vnd": 38500,
+        "excluded_brand": "VIET FOOD"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-022",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Kem đánh răng tối đa 49.000đ nhé, tránh thương hiệu P/S.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Kem đánh răng",
+        "max_price_vnd": 49000,
+        "excluded_brand": "P/S"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-023",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Cà phê hòa tan tầm 87.200 đồng trở xuống, không chọn TRUNG NGUYÊN LEGEND.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Cà phê hòa tan",
+        "max_price_vnd": 87200,
+        "excluded_brand": "TRUNG NGUYÊN LEGEND"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-024",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Snack rau, củ, quả nào không phải hãng POCA, giá không quá 9.900đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Snack rau, củ, quả",
+        "max_price_vnd": 9900,
+        "excluded_brand": "POCA"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-025",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Bia nội địa; loại BIA SÀI GÒN thì bỏ qua, ngân sách tối đa 373.000 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bia nội địa",
+        "max_price_vnd": 373000,
+        "excluded_brand": "BIA SÀI GÒN"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-026",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Bánh biscuit, giá tối đa 25.900 đồng và đừng lấy hãng RICHY.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bánh biscuit",
+        "max_price_vnd": 25900,
+        "excluded_brand": "RICHY"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-027",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Sơ chế thịt heo tối đa 49.000đ nhé, tránh thương hiệu MEAT DELI.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Sơ chế thịt heo",
+        "max_price_vnd": 49000,
+        "excluded_brand": "MEAT DELI"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-028",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Đồ dùng nấu nướng tầm 559.000 đồng trở xuống, không chọn LOCK&LOCK.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Đồ dùng nấu nướng",
+        "max_price_vnd": 559000,
+        "excluded_brand": "LOCK&LOCK"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-029",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Xúc xích thanh trùng nào không phải hãng PONNIE, giá không quá 72.500đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Xúc xích thanh trùng",
+        "max_price_vnd": 72500,
+        "excluded_brand": "PONNIE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-030",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Bột ngũ cốc trái cây; loại OVALTINE thì bỏ qua, ngân sách tối đa 79.000 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bột ngũ cốc trái cây",
+        "max_price_vnd": 79000,
+        "excluded_brand": "OVALTINE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-031",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Nước ngọt có ga, giá tối đa 55.000 đồng và đừng lấy hãng AQUAFINA.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Nước ngọt có ga",
+        "max_price_vnd": 55000,
+        "excluded_brand": "AQUAFINA"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-032",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Sữa tắm nữ tối đa 159.000đ nhé, tránh thương hiệu BIORE.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Sữa tắm nữ",
+        "max_price_vnd": 159000,
+        "excluded_brand": "BIORE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-033",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Dầu gội nữ tầm 196.900 đồng trở xuống, không chọn ENCHANTEUR.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Dầu gội nữ",
+        "max_price_vnd": 196900,
+        "excluded_brand": "ENCHANTEUR"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-034",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Nước tẩy trang nào không phải hãng POND'S, giá không quá 189.000đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Nước tẩy trang",
+        "max_price_vnd": 189000,
+        "excluded_brand": "POND'S"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-035",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Rong biển cbiến đgói; loại PHÚC THỊNH thì bỏ qua, ngân sách tối đa 46.600 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Rong biển cbiến đgói",
+        "max_price_vnd": 46600,
+        "excluded_brand": "PHÚC THỊNH"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-036",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Gạo nếp, giá tối đa 90.900 đồng và đừng lấy hãng VINASEED.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Gạo nếp",
+        "max_price_vnd": 90900,
+        "excluded_brand": "VINASEED"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-037",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Thức uống tr.miệng tối đa 19.500đ nhé, tránh thương hiệu SG MILK.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Thức uống tr.miệng",
+        "max_price_vnd": 19500,
+        "excluded_brand": "SG MILK"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-038",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Dầu hào tầm 36.100 đồng trở xuống, không chọn LEE KUM KEE.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Dầu hào",
+        "max_price_vnd": 36100,
+        "excluded_brand": "LEE KUM KEE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-039",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có SCU thanh trùng nào không phải hãng ĐÀ LẠT MILK, giá không quá 58.000đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "SCU thanh trùng",
+        "max_price_vnd": 58000,
+        "excluded_brand": "ĐÀ LẠT MILK"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-040",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua P.mai mềm(khối); loại MOZZARELLA thì bỏ qua, ngân sách tối đa 148.800 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "P.mai mềm(khối)",
+        "max_price_vnd": 148800,
+        "excluded_brand": "MOZZARELLA"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-041",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Giấy bếp, giá tối đa 16.900 đồng và đừng lấy hãng ELENE.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Giấy bếp",
+        "max_price_vnd": 16900,
+        "excluded_brand": "ELENE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-042",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Bơ động vật tối đa 135.700đ nhé, tránh thương hiệu PRESIDENT.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bơ động vật",
+        "max_price_vnd": 135700,
+        "excluded_brand": "PRESIDENT"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-043",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Snack khác tầm 17.100 đồng trở xuống, không chọn NOBRAND.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Snack khác",
+        "max_price_vnd": 17100,
+        "excluded_brand": "NOBRAND"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-044",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Quà tặng nào không phải hãng XUYÊN Á, giá không quá 34.900đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Quà tặng",
+        "max_price_vnd": 34900,
+        "excluded_brand": "XUYÊN Á"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-045",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Mỳ khô; loại OTOKI thì bỏ qua, ngân sách tối đa 61.000 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Mỳ khô",
+        "max_price_vnd": 61000,
+        "excluded_brand": "OTOKI"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-046",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Thịt xông khói, giá tối đa 82.200 đồng và đừng lấy hãng ÔNG GIÀ IKA.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Thịt xông khói",
+        "max_price_vnd": 82200,
+        "excluded_brand": "ÔNG GIÀ IKA"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-047",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Nước lau sàn nhà tối đa 67.000đ nhé, tránh thương hiệu GIFT.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Nước lau sàn nhà",
+        "max_price_vnd": 67000,
+        "excluded_brand": "GIFT"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-048",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Nước mắm tầm 84.100 đồng trở xuống, không chọn CHIN-SU.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Nước mắm",
+        "max_price_vnd": 84100,
+        "excluded_brand": "CHIN-SU"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-049",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Mỳ khô nào không phải hãng MEIZAN, giá không quá 61.000đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Mỳ khô",
+        "max_price_vnd": 61000,
+        "excluded_brand": "MEIZAN"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-050",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Thạch đóng gói; loại ZAI ZAI thì bỏ qua, ngân sách tối đa 46.000 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Thạch đóng gói",
+        "max_price_vnd": 46000,
+        "excluded_brand": "ZAI ZAI"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-051",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Bánh Mochi, giá tối đa 73.200 đồng và đừng lấy hãng SAN SHU GONG.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bánh Mochi",
+        "max_price_vnd": 73200,
+        "excluded_brand": "SAN SHU GONG"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-052",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Bánh biscuit tối đa 25.900đ nhé, tránh thương hiệu ROMA.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bánh biscuit",
+        "max_price_vnd": 25900,
+        "excluded_brand": "ROMA"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-053",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Pizza đông lạnh tầm 102.300 đồng trở xuống, không chọn KITKOOL.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Pizza đông lạnh",
+        "max_price_vnd": 102300,
+        "excluded_brand": "KITKOOL"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-054",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Đậu hũ nào không phải hãng ABC, giá không quá 15.900đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Đậu hũ",
+        "max_price_vnd": 15900,
+        "excluded_brand": "ABC"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-055",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Xúc xích thanh trùng; loại LC FOOD thì bỏ qua, ngân sách tối đa 72.500 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Xúc xích thanh trùng",
+        "max_price_vnd": 72500,
+        "excluded_brand": "LC FOOD"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-056",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Dụng cụ giặt là, giá tối đa 59.000 đồng và đừng lấy hãng SCOTCH-BRITE.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Dụng cụ giặt là",
+        "max_price_vnd": 59000,
+        "excluded_brand": "SCOTCH-BRITE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-057",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Kẹo đồ chơi tối đa 43.900đ nhé, tránh thương hiệu KINDER JOY.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Kẹo đồ chơi",
+        "max_price_vnd": 43900,
+        "excluded_brand": "KINDER JOY"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-058",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Sữa tắm nữ tầm 151.200 đồng trở xuống, không chọn ENCHANTEUR.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Sữa tắm nữ",
+        "max_price_vnd": 151200,
+        "excluded_brand": "ENCHANTEUR"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-059",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Cà phê hòa tan nào không phải hãng MACCOFFEE, giá không quá 90.800đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Cà phê hòa tan",
+        "max_price_vnd": 90800,
+        "excluded_brand": "MACCOFFEE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-060",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Muối; loại VISACO thì bỏ qua, ngân sách tối đa 19.200 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Muối",
+        "max_price_vnd": 19200,
+        "excluded_brand": "VISACO"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-061",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Sữa đặc có đường, giá tối đa 30.000 đồng và đừng lấy hãng DUTCH LADY.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Sữa đặc có đường",
+        "max_price_vnd": 30000,
+        "excluded_brand": "DUTCH LADY"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-062",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Bia nội địa tối đa 372.000đ nhé, tránh thương hiệu HOEGAARDEN.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bia nội địa",
+        "max_price_vnd": 372000,
+        "excluded_brand": "HOEGAARDEN"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-063",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Đồ bao gói thực phẩm tầm 39.900 đồng trở xuống, không chọn KOKUSAI.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Đồ bao gói thực phẩm",
+        "max_price_vnd": 39900,
+        "excluded_brand": "KOKUSAI"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-064",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Nước mắm nào không phải hãng NAM NGƯ, giá không quá 91.900đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Nước mắm",
+        "max_price_vnd": 91900,
+        "excluded_brand": "NAM NGƯ"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-065",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Miến khô; loại PHÚ HƯƠNG thì bỏ qua, ngân sách tối đa 75.900 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Miến khô",
+        "max_price_vnd": 75900,
+        "excluded_brand": "PHÚ HƯƠNG"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-066",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Các loại dầu gạo, hạ, giá tối đa 99.400 đồng và đừng lấy hãng TƯỜNG AN.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Các loại dầu gạo, hạ",
+        "max_price_vnd": 99400,
+        "excluded_brand": "TƯỜNG AN"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-067",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Nước ngọt có ga tối đa 55.000đ nhé, tránh thương hiệu PEPSI.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Nước ngọt có ga",
+        "max_price_vnd": 55000,
+        "excluded_brand": "PEPSI"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-068",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Hạt bí đóng gói tầm 126.900 đồng trở xuống, không chọn MINH DƯƠNG.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Hạt bí đóng gói",
+        "max_price_vnd": 126900,
+        "excluded_brand": "MINH DƯƠNG"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-069",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Bánh đa nem nào không phải hãng THIÊN NHIÊN XANH, giá không quá 20.100đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bánh đa nem",
+        "max_price_vnd": 20100,
+        "excluded_brand": "THIÊN NHIÊN XANH"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-070",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Xôi bánh bún miến đl; loại LC FOOD thì bỏ qua, ngân sách tối đa 60.200 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Xôi bánh bún miến đl",
+        "max_price_vnd": 60200,
+        "excluded_brand": "LC FOOD"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-071",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần THS nhập khẩu tươi, giá tối đa 569.000 đồng và đừng lấy hãng WINMART.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "THS nhập khẩu tươi",
+        "max_price_vnd": 569000,
+        "excluded_brand": "WINMART"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-072",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Bánh bao tối đa 35.300đ nhé, tránh thương hiệu PHÚ MỸ BAKERY.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bánh bao",
+        "max_price_vnd": 35300,
+        "excluded_brand": "PHÚ MỸ BAKERY"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-073",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Ngũ cốc ăn sáng tầm 103.900 đồng trở xuống, không chọn FROOT LOOPS.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Ngũ cốc ăn sáng",
+        "max_price_vnd": 103900,
+        "excluded_brand": "FROOT LOOPS"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-074",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Bánh ngọt nào không phải hãng BẢO MINH, giá không quá 81.900đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bánh ngọt",
+        "max_price_vnd": 81900,
+        "excluded_brand": "BẢO MINH"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-075",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Trà túi lọc; loại PHÚC LONG thì bỏ qua, ngân sách tối đa 38.200 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Trà túi lọc",
+        "max_price_vnd": 38200,
+        "excluded_brand": "PHÚC LONG"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-076",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Cà phê rang xay, giá tối đa 140.800 đồng và đừng lấy hãng HIGHLANDS COFFEE.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Cà phê rang xay",
+        "max_price_vnd": 140800,
+        "excluded_brand": "HIGHLANDS COFFEE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-077",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Giấy ướt gia đình tối đa 38.000đ nhé, tránh thương hiệu ALL CARE.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Giấy ướt gia đình",
+        "max_price_vnd": 38000,
+        "excluded_brand": "ALL CARE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-078",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Nước tẩy rửa nhà bếp tầm 35.000 đồng trở xuống, không chọn MAXKLEEN.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Nước tẩy rửa nhà bếp",
+        "max_price_vnd": 35000,
+        "excluded_brand": "MAXKLEEN"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-079",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Kem dưỡng toàn thân nào không phải hãng NIVEA, giá không quá 209.000đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Kem dưỡng toàn thân",
+        "max_price_vnd": 209000,
+        "excluded_brand": "NIVEA"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-080",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Nước uống chức năng; loại C-VITT thì bỏ qua, ngân sách tối đa 56.400 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Nước uống chức năng",
+        "max_price_vnd": 56400,
+        "excluded_brand": "C-VITT"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-081",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Cà phê hòa tan, giá tối đa 90.800 đồng và đừng lấy hãng WAKE-UP.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Cà phê hòa tan",
+        "max_price_vnd": 90800,
+        "excluded_brand": "WAKE-UP"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-082",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Cua đông lạnh đgói tối đa 77.700đ nhé, tránh thương hiệu MINH TIẾN.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Cua đông lạnh đgói",
+        "max_price_vnd": 77700,
+        "excluded_brand": "MINH TIẾN"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-083",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp BVS Chu kỳ tầm 47.500 đồng trở xuống, không chọn KOTEX.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "BVS Chu kỳ",
+        "max_price_vnd": 47500,
+        "excluded_brand": "KOTEX"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-084",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Sữa tắm nữ nào không phải hãng OLIV, giá không quá 169.000đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Sữa tắm nữ",
+        "max_price_vnd": 169000,
+        "excluded_brand": "OLIV"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-085",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Tương ớt; loại HEINZ thì bỏ qua, ngân sách tối đa 34.300 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Tương ớt",
+        "max_price_vnd": 34300,
+        "excluded_brand": "HEINZ"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-086",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Mayonnaise & S.salad, giá tối đa 55.300 đồng và đừng lấy hãng AJI-MAYO.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Mayonnaise & S.salad",
+        "max_price_vnd": 55300,
+        "excluded_brand": "AJI-MAYO"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-087",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Các loại bột khác tối đa 17.100đ nhé, tránh thương hiệu JIM WILLIE.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Các loại bột khác",
+        "max_price_vnd": 17100,
+        "excluded_brand": "JIM WILLIE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-088",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Đồ bao gói thực phẩm tầm 83.000 đồng trở xuống, không chọn WMHOME.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Đồ bao gói thực phẩm",
+        "max_price_vnd": 83000,
+        "excluded_brand": "WMHOME"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-089",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Giấy ướt trẻ em nào không phải hãng BOBBY, giá không quá 45.000đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Giấy ướt trẻ em",
+        "max_price_vnd": 45000,
+        "excluded_brand": "BOBBY"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-090",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Bột canh, hạt nêm; loại NEPTUNE thì bỏ qua, ngân sách tối đa 38.400 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bột canh, hạt nêm",
+        "max_price_vnd": 38400,
+        "excluded_brand": "NEPTUNE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-091",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Bia nội địa, giá tối đa 372.000 đồng và đừng lấy hãng HUDA.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bia nội địa",
+        "max_price_vnd": 372000,
+        "excluded_brand": "HUDA"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-092",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Bột canh, hạt nêm tối đa 38.000đ nhé, tránh thương hiệu KNORR.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bột canh, hạt nêm",
+        "max_price_vnd": 38000,
+        "excluded_brand": "KNORR"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-093",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp Sữa chua ăn tầm 39.900 đồng trở xuống, không chọn FAMERS UNION.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Sữa chua ăn",
+        "max_price_vnd": 39900,
+        "excluded_brand": "FAMERS UNION"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-094",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Mỳ khô nào không phải hãng BARILLA, giá không quá 46.100đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Mỳ khô",
+        "max_price_vnd": 46100,
+        "excluded_brand": "BARILLA"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-095",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Đồ dùng nấu nướng; loại SUNHOUSE thì bỏ qua, ngân sách tối đa 492.000 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Đồ dùng nấu nướng",
+        "max_price_vnd": 492000,
+        "excluded_brand": "SUNHOUSE"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-096",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình cần Thủy hải sản sơ chế, giá tối đa 73.000 đồng và đừng lấy hãng KITKOOL.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Thủy hải sản sơ chế",
+        "max_price_vnd": 73000,
+        "excluded_brand": "KITKOOL"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-097",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Cho mình xem Bánh xốp và quế tối đa 22.400đ nhé, tránh thương hiệu AKIKO.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bánh xốp và quế",
+        "max_price_vnd": 22400,
+        "excluded_brand": "AKIKO"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-098",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Tìm giúp BVS Ban đêm tầm 39.700 đồng trở xuống, không chọn SENSI.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "BVS Ban đêm",
+        "max_price_vnd": 39700,
+        "excluded_brand": "SENSI"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-099",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Có Bánh biscuit nào không phải hãng BAHLSEN LEIBNIZ, giá không quá 24.500đ không?",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bánh biscuit",
+        "max_price_vnd": 24500,
+        "excluded_brand": "BAHLSEN LEIBNIZ"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    },
+    {
+      "case_id": "V2-H-100",
+      "dimension": "multi_constraint_hard_negative",
+      "query": "Mình muốn mua Bông tai; loại NIVA thì bỏ qua, ngân sách tối đa 33.000 đồng.",
+      "expected": {
+        "kind": "hard_constraint",
+        "category": "Bông tai",
+        "max_price_vnd": 33000,
+        "excluded_brand": "NIVA"
+      },
+      "provisional_label": "category/brand/price from catalog; language scope needs human review"
+    }
+  ],
+  "conversations": [
+    {
+      "conversation_id": "V2-D-001",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "BVS Chu kỳ",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần BVS Chu kỳ, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-002",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bchải đrăng trẻ em",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bchải đrăng trẻ em, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-003",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bia nội địa",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bia nội địa, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-004",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bánh bao",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bánh bao, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-005",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bánh bông lan",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bánh bông lan, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-006",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bánh gạo",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bánh gạo, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-007",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bánh pie",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bánh pie, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-008",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bánh đa nem",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bánh đa nem, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-009",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bò, Bê NK",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bò, Bê NK, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-010",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bông tẩy trang",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bông tẩy trang, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-011",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bún khô, Phở khô",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bún khô, Phở khô, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-012",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bún, phở ăn liền",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bún, phở ăn liền, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-013",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bút",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bút, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-014",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bơ đóng hộp",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bơ đóng hộp, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-015",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bơ động vật",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bơ động vật, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-016",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bột canh, hạt nêm",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bột canh, hạt nêm, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-017",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Bột giặt",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Bột giặt, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-018",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Chocolate",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Chocolate, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-019",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Cháo ăn liền",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Cháo ăn liền, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-020",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Chả viên t.hợp đlạnh",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Chả viên t.hợp đlạnh, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-021",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Cà chua",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Cà chua, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-022",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Cà phê hòa tan",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Cà phê hòa tan, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-023",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Cà phê nước",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Cà phê nước, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-024",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Các loại bột gia vị",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Các loại bột gia vị, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-025",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Các loại bột khác",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Các loại bột khác, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-026",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Các loại sốt",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Các loại sốt, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-027",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Dung dịch vs nam nữ",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Dung dịch vs nam nữ, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-028",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Dầu gội nam",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Dầu gội nam, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-029",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Dầu gội nữ",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Dầu gội nữ, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-030",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Dầu hào",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Dầu hào, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-031",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Dầu hướng dương",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Dầu hướng dương, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-032",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Dầu hỗn hợp",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Dầu hỗn hợp, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-033",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Dầu nành",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Dầu nành, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-034",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Giáp xác,nh.thể tươi",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Giáp xác,nh.thể tươi, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-035",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Giò chả",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Giò chả, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-036",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Giấy vệ sinh",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Giấy vệ sinh, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-037",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Giấy ướt gia đình",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Giấy ướt gia đình, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-038",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Gạo tẻ",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Gạo tẻ, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-039",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Hải sản khô ăn liền",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Hải sản khô ăn liền, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-040",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Khoai đông lạnh",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Khoai đông lạnh, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-041",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Khăn tay",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Khăn tay, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-042",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Khăn tắm",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Khăn tắm, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-043",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Khẩu trang y tế",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Khẩu trang y tế, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-044",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Kẹo cứng",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Kẹo cứng, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-045",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Ly và đồ dùng u.nước",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Ly và đồ dùng u.nước, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-046",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Lăn khử mùi Nam",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Lăn khử mùi Nam, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-047",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Lạp xưởng khô",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Lạp xưởng khô, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-048",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Lợn (heo) nội địa",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Lợn (heo) nội địa, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-049",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Mayonnaise & S.salad",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Mayonnaise & S.salad, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    },
+    {
+      "conversation_id": "V2-D-050",
+      "dimension": "multi_turn_scope_and_ranking",
+      "expected_category": "Muối",
+      "provisional_label": "taxonomy-based scope; dialogue quality requires human review",
+      "turns": [
+        {
+          "user": "Mình đang cần Muối, cho mình xem vài loại."
+        },
+        {
+          "user": "Trong mấy loại đó, loại nào rẻ nhất?"
+        },
+        {
+          "user": "Còn lựa chọn nào khác cùng nhóm không?"
+        },
+        {
+          "user": "Giá của loại đầu tiên là bao nhiêu?"
+        }
+      ]
+    }
+  ],
+  "human_review_required": true
+}

@@ -1,0 +1,856 @@
+{
+  "kind": "live_text_conversation_benchmark",
+  "generated_at_utc": "2026-10-28T16:36:20.894006+00:00",
+  "dataset_id": "vietnamese_snapshot_provider_probe_20261028",
+  "language_scope": "Vietnamese only",
+  "research_informed_by": [],
+  "provider": "Groq live; fallback configuration from .env",
+  "scope": "Text only; local API; active runtime catalog plus full dataset validation metadata",
+  "model_primary": "qwen/qwen3.8-27b",
+  "fallback_enabled": true,
+  "credential_failover_enabled": true,
+  "credential_slots": [
+    "primary",
+    "fallback_1",
+    "fallback_2"
+  ],
+  "provider_timeout_seconds": 12.0,
+  "minimum_model_request_interval_seconds": 2.5,
+  "response_timeout_seconds": 72.5,
+  "catalog_scope": {
+    "runtime_repository": "snapshot",
+    "case_catalog_preflight": {
+      "status": "PASSED",
+      "catalog_repository": "snapshot",
+      "checked_product_ids": 1
+    },
+    "runtime_demo_products": 6,
+    "winmart_dataset_rows": 3099,
+    "winmart_accepted_rows": 3081,
+    "winmart_quarantined_rows": 18,
+    "winmart_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "postgres_search_live_tested": false,
+    "postgres_search_tool_turns": 0
+  },
+  "human_conversation_review": {
+    "status": "manual_review_required",
+    "rubric": [
+      "directly answers the current turn",
+      "sounds natural in Vietnamese and fits the user's register",
+      "does not repeat unnecessary product details",
+      "asks a short clarification when the target is ambiguous",
+      "states uncertainty without inventing facts"
+    ]
+  },
+  "complete": true,
+  "results": [
+    {
+      "case_id": "natural_picnic_multigroup_consultation",
+      "turn": 1,
+      "prompt": "Mình chuẩn bị picnic cho 4 người, ngân sách khoảng 200 nghìn, muốn mua đồ ăn vặt không cay với nước uống. Gợi ý giúp mình vài món nhé.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 3160,
+      "response": {
+        "session_id": "de010120-5efd-4861-b16f-cd6928e0455f",
+        "text": "Mình gợi ý một phương án tham khảo: Dữ liệu catalog ghi ngày 15/09/2026; tồn kho tại cửa hàng chưa được xác nhận theo thời gian thực. Theo yêu cầu của bạn: Nước uống Aquafina chai 5L × 1 (26.900đ). Tổng: 26.900đ. Số lượng là ước tính (250 ml đồ uống/người), dựa trên quy cách ghi trong catalog. Mình chưa thêm món nào vào giỏ. Catalog chưa xác nhận được mặt hàng phù hợp cho nhu cầu bắt buộc: đồ ăn vặt không cay; tổng trên chỉ tính các món đã tìm thấy. Catalog chưa có thuộc tính vị cay nên mình chưa xác minh được món không cay.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "WIN_10011218",
+          "WIN_10011394",
+          "WIN_10196077"
+        ],
+        "tools_used": [
+          "plan_shopping_mission"
+        ],
+        "data_timestamp": "2026-09-15T13:53:41.150283Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10011218",
+            "name": "Nước uống Aquafina chai 5L",
+            "category": "Nước Suối",
+            "brand": "AQUAFINA",
+            "price_vnd": 26900,
+            "stock": 213,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:40.206575Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10011394",
+            "name": "Nước uống hương vị trái cây nhiệt đới Pororo chai 235ml",
+            "category": "Nước Ngọt",
+            "brand": "PORORO",
+            "price_vnd": 21700,
+            "stock": 81,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:41.146903Z",
+            "data_source": "winmart_json_snapshot"
+          },
+          {
+            "product_id": "WIN_10196077",
+            "name": "Nước uống ion Pocari chai 900ml",
+            "category": "Nước Ngọt",
+            "brand": "POCARI",
+            "price_vnd": 25300,
+            "stock": 115,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:41.150283Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": {
+          "mission_id": "afada34ddce442d8bd5dacb987ae5028",
+          "revision": 1,
+          "goal": "Mua đồ ăn vặt không cay và nước uống cho buổi picnic 4 người, ngân sách khoảng 200 nghìn.",
+          "use_case": "Picnic ngoài trời cho 4 người",
+          "occasion": "picnic",
+          "party_size": 4,
+          "budget_vnd": 200000,
+          "budget_exclusive": false,
+          "confirmed_needs": [
+            "đồ ăn vặt không cay",
+            "nước uống"
+          ],
+          "inferred_needs": [],
+          "satisfied_needs": [],
+          "needs": [
+            {
+              "need_id": "need-snack",
+              "label": "đồ ăn vặt không cay",
+              "rationale": "Khách muốn đồ ăn vặt cho picnic 4 người, không cay.",
+              "requested_category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack",
+              "resolved_category": "Snack",
+              "source": "EXPLICIT",
+              "required": true,
+              "quantity": 1,
+              "candidate_count": 0,
+              "candidate_product_ids": [],
+              "alternative_categories": [],
+              "blocked_reasons": [
+                "spice_attribute_not_available"
+              ],
+              "satisfied_by_existing": false
+            },
+            {
+              "need_id": "need-drink",
+              "label": "nước uống",
+              "rationale": "Khách muốn nước uống cho picnic 4 người.",
+              "requested_category": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả",
+              "resolved_category": "Nước uống không cồn và hoa quả",
+              "source": "EXPLICIT",
+              "required": true,
+              "quantity": 1,
+              "candidate_count": 5,
+              "candidate_product_ids": [
+                "WIN_10011394",
+                "WIN_10150448",
+                "WIN_10011393",
+                "WIN_10196077",
+                "WIN_10011218"
+              ],
+              "alternative_categories": [],
+              "blocked_reasons": [],
+              "satisfied_by_existing": false
+            }
+          ],
+          "options": [
+            {
+              "option_id": "option-1",
+              "label": "Tiết kiệm",
+              "items": [
+                {
+                  "need_id": "need-drink",
+                  "need_label": "nước uống",
+                  "category": "Nước uống không cồn và hoa quả",
+                  "rationale": "Khách muốn nước uống cho picnic 4 người.",
+                  "source": "EXPLICIT",
+                  "required": true,
+                  "product_id": "WIN_10011218",
+                  "name": "Nước uống Aquafina chai 5L",
+                  "brand": "AQUAFINA",
+                  "quantity": 1,
+                  "quantity_basis": "party_size_estimate",
+                  "quantity_estimate": {
+                    "party_size": 4,
+                    "target_per_person": 250,
+                    "measurement": "ml",
+                    "package_size": 5000
+                  },
+                  "quantity_needs_review": false,
+                  "unit_price_vnd": 26900,
+                  "line_total_vnd": 26900,
+                  "uom": "Chai",
+                  "stock_is_current": false,
+                  "data_timestamp": "2026-09-15T13:53:40.206575Z",
+                  "data_source": "winmart_json_snapshot",
+                  "budget_share_vnd": 26900
+                }
+              ],
+              "covered_need_ids": [
+                "need-drink"
+              ],
+              "total_vnd": 26900,
+              "remaining_budget_vnd": 173100,
+              "budget_fit": true
+            },
+            {
+              "option_id": "option-2",
+              "label": "Cân bằng",
+              "items": [
+                {
+                  "need_id": "need-drink",
+                  "need_label": "nước uống",
+                  "category": "Nước uống không cồn và hoa quả",
+                  "rationale": "Khách muốn nước uống cho picnic 4 người.",
+                  "source": "EXPLICIT",
+                  "required": true,
+                  "product_id": "WIN_10011394",
+                  "name": "Nước uống hương vị trái cây nhiệt đới Pororo chai 235ml",
+                  "brand": "PORORO",
+                  "quantity": 5,
+                  "quantity_basis": "party_size_estimate",
+                  "quantity_estimate": {
+                    "party_size": 4,
+                    "target_per_person": 250,
+                    "measurement": "ml",
+                    "package_size": 235
+                  },
+                  "quantity_needs_review": false,
+                  "unit_price_vnd": 21700,
+                  "line_total_vnd": 108500,
+                  "uom": "Chai",
+                  "stock_is_current": false,
+                  "data_timestamp": "2026-09-15T13:53:41.146903Z",
+                  "data_source": "winmart_json_snapshot",
+                  "budget_share_vnd": 108500
+                }
+              ],
+              "covered_need_ids": [
+                "need-drink"
+              ],
+              "total_vnd": 108500,
+              "remaining_budget_vnd": 91500,
+              "budget_fit": true
+            },
+            {
+              "option_id": "option-3",
+              "label": "Lựa chọn khác",
+              "items": [
+                {
+                  "need_id": "need-drink",
+                  "need_label": "nước uống",
+                  "category": "Nước uống không cồn và hoa quả",
+                  "rationale": "Khách muốn nước uống cho picnic 4 người.",
+                  "source": "EXPLICIT",
+                  "required": true,
+                  "product_id": "WIN_10196077",
+                  "name": "Nước uống ion Pocari chai 900ml",
+                  "brand": "POCARI",
+                  "quantity": 2,
+                  "quantity_basis": "party_size_estimate",
+                  "quantity_estimate": {
+                    "party_size": 4,
+                    "target_per_person": 250,
+                    "measurement": "ml",
+                    "package_size": 900
+                  },
+                  "quantity_needs_review": false,
+                  "unit_price_vnd": 25300,
+                  "line_total_vnd": 50600,
+                  "uom": "Chai",
+                  "stock_is_current": false,
+                  "data_timestamp": "2026-09-15T13:53:41.150283Z",
+                  "data_source": "winmart_json_snapshot",
+                  "budget_share_vnd": 50600
+                }
+              ],
+              "covered_need_ids": [
+                "need-drink"
+              ],
+              "total_vnd": 50600,
+              "remaining_budget_vnd": 149400,
+              "budget_fit": true
+            }
+          ],
+          "missing_required_needs": [
+            "đồ ăn vặt không cay"
+          ],
+          "missing_optional_needs": [],
+          "optional_needs_not_selected": [],
+          "budget_shortfall_vnd": null,
+          "pending_decision": "choose_a_plan_option",
+          "inventory_verified": false,
+          "quantity_estimation_measurements": [
+            "ml"
+          ],
+          "quantity_estimation_targets": [
+            {
+              "target_per_person": 250,
+              "measurement": "ml"
+            }
+          ],
+          "quantity_size_unknown": false,
+          "data_source": "winmart_json_snapshot",
+          "data_timestamp": "2026-09-15T13:53:41.150283Z",
+          "cart_mutated": false,
+          "unresolved_details": [
+            "preference_unverified:spicy",
+            "spice_attribute_not_available"
+          ],
+          "unknown_details": []
+        },
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {},
+      "conversation_tags": [
+        "implicit_need",
+        "multi_category",
+        "budget",
+        "hard_negative",
+        "multi_turn"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "998",
+                "x-ratelimit-remaining-tokens": "4916",
+                "x-ratelimit-reset-requests": "2m52.8s",
+                "x-ratelimit-reset-tokens": "23.13s"
+              },
+              "credential_slot": "primary"
+            }
+          ],
+          "latency_ms": 2782,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "plan_shopping_mission",
+              "arguments": "{\"goal\":\"Mua đồ ăn vặt không cay và nước uống cho buổi picnic 4 người, ngân sách khoảng 200 nghìn.\",\"needs\":[{\"category\":\"Thực phẩm \\u003e Thực phẩm công nghệ \\u003e Bánh kẹo \\u003e Snack\",\"label\":\"đồ ăn vặt không cay\",\"need_id\":\"need-snack\",\"preference_terms\":[\"không cay\"],\"product_query\":\"snack ăn vặt\",\"quantity\":1,\"quantity_is_explicit\":false,\"rationale\":\"Khách muốn đồ ăn vặt cho picnic 4 người, không cay.\",\"required\":true,\"source\":\"EXPLICIT\",\"spicy\":false},{\"category\":\"Thực phẩm \\u003e Thực phẩm công nghệ \\u003e Đồ uống, thuốc lá \\u003e Nước uống không cồn và hoa quả\",\"label\":\"nước uống\",\"need_id\":\"need-drink\",\"product_query\":\"nước uống\",\"quantity\":1,\"quantity_is_explicit\":false,\"rationale\":\"Khách muốn nước uống cho picnic 4 người.\",\"required\":true,\"source\":\"EXPLICIT\"}],\"occasion\":\"picnic\",\"party_size\":4,\"preferences\":[\"không cay\"],\"total_budget_vnd\":200000,\"use_case\":\"Picnic ngoài trời cho 4 người\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 2969,
+            "completion_tokens": 355,
+            "total_tokens": 3324
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "natural_picnic_multigroup_consultation",
+      "turn": 2,
+      "prompt": "Ưu tiên món nào dễ chia cho mọi người với giữ trong ngân sách đó nha.",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 1608,
+      "response": {
+        "session_id": "de010120-5efd-4861-b16f-cd6928e0455f",
+        "text": "Mình đã cộng lại theo phương án hiện tại. Tổng phương án hiện tại: 26.900đ. Còn 173.100đ trong mức dự trù. Catalog chưa xác nhận được mặt hàng phù hợp cho nhu cầu bắt buộc: đồ ăn vặt không cay; mình chưa tính nhóm này vào tổng. Nếu bạn cho biết loại cụ thể hơn hoặc điều kiện nào có thể nới, mình sẽ tra tiếp mà không tự đổi yêu cầu.",
+        "model": "qwen/qwen3.8-27b",
+        "grounded_product_ids": [
+          "WIN_10011218"
+        ],
+        "tools_used": [
+          "plan_shopping_mission"
+        ],
+        "data_timestamp": "2026-09-15T13:53:40.206575Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10011218",
+            "name": "Nước uống Aquafina chai 5L",
+            "category": "Nước Suối",
+            "brand": "AQUAFINA",
+            "price_vnd": 26900,
+            "stock": 213,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:40.206575Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": {
+          "mission_id": "afada34ddce442d8bd5dacb987ae5028",
+          "revision": 2,
+          "goal": "Mua đồ ăn vặt không cay và nước uống cho buổi picnic 4 người, ngân sách khoảng 200 nghìn.",
+          "use_case": "Picnic ngoài trời cho 4 người",
+          "occasion": "picnic",
+          "party_size": 4,
+          "budget_vnd": 200000,
+          "budget_exclusive": false,
+          "confirmed_needs": [
+            "đồ ăn vặt không cay",
+            "nước uống"
+          ],
+          "inferred_needs": [],
+          "satisfied_needs": [],
+          "needs": [
+            {
+              "need_id": "need-snack",
+              "label": "đồ ăn vặt không cay",
+              "rationale": "Khách muốn đồ ăn vặt cho picnic 4 người, không cay.",
+              "requested_category": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack",
+              "resolved_category": "Snack",
+              "source": "EXPLICIT",
+              "required": true,
+              "quantity": 1,
+              "candidate_count": 0,
+              "candidate_product_ids": [],
+              "alternative_categories": [],
+              "blocked_reasons": [
+                "spice_attribute_not_available"
+              ],
+              "satisfied_by_existing": false
+            },
+            {
+              "need_id": "need-drink",
+              "label": "nước uống",
+              "rationale": "Khách muốn nước uống cho picnic 4 người.",
+              "requested_category": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả",
+              "resolved_category": "Nước uống không cồn và hoa quả",
+              "source": "EXPLICIT",
+              "required": true,
+              "quantity": 1,
+              "candidate_count": 5,
+              "candidate_product_ids": [
+                "WIN_10011394",
+                "WIN_10150448",
+                "WIN_10011393",
+                "WIN_10196077",
+                "WIN_10011218"
+              ],
+              "alternative_categories": [],
+              "blocked_reasons": [],
+              "satisfied_by_existing": false
+            }
+          ],
+          "options": [
+            {
+              "option_id": "option-1",
+              "label": "Tiết kiệm",
+              "items": [
+                {
+                  "need_id": "need-drink",
+                  "need_label": "nước uống",
+                  "category": "Nước uống không cồn và hoa quả",
+                  "rationale": "Khách muốn nước uống cho picnic 4 người.",
+                  "source": "EXPLICIT",
+                  "required": true,
+                  "product_id": "WIN_10011218",
+                  "name": "Nước uống Aquafina chai 5L",
+                  "brand": "AQUAFINA",
+                  "quantity": 1,
+                  "quantity_basis": "party_size_estimate",
+                  "quantity_estimate": {
+                    "party_size": 4,
+                    "target_per_person": 250,
+                    "measurement": "ml",
+                    "package_size": 5000
+                  },
+                  "quantity_needs_review": false,
+                  "unit_price_vnd": 26900,
+                  "line_total_vnd": 26900,
+                  "uom": "Chai",
+                  "stock_is_current": false,
+                  "data_timestamp": "2026-09-15T13:53:40.206575Z",
+                  "data_source": "winmart_json_snapshot",
+                  "budget_share_vnd": 26900
+                }
+              ],
+              "covered_need_ids": [
+                "need-drink"
+              ],
+              "total_vnd": 26900,
+              "remaining_budget_vnd": 173100,
+              "budget_fit": true
+            }
+          ],
+          "missing_required_needs": [
+            "đồ ăn vặt không cay"
+          ],
+          "missing_optional_needs": [],
+          "optional_needs_not_selected": [],
+          "budget_shortfall_vnd": null,
+          "pending_decision": null,
+          "inventory_verified": false,
+          "quantity_estimation_measurements": [
+            "ml"
+          ],
+          "quantity_estimation_targets": [
+            {
+              "target_per_person": 250,
+              "measurement": "ml"
+            }
+          ],
+          "quantity_size_unknown": false,
+          "data_source": "winmart_json_snapshot",
+          "data_timestamp": "2026-09-15T13:53:40.206575Z",
+          "cart_mutated": false,
+          "unresolved_details": [
+            "preference_unverified:spicy",
+            "spice_attribute_not_available"
+          ],
+          "unknown_details": []
+        },
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {},
+      "conversation_tags": [
+        "implicit_need",
+        "multi_category",
+        "budget",
+        "hard_negative",
+        "multi_turn"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "fallback_trace": [
+            {
+              "model": "qwen/qwen3.8-27b",
+              "status": "success",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": "1000",
+                "x-ratelimit-limit-tokens": "8000",
+                "x-ratelimit-remaining-requests": "997",
+                "x-ratelimit-remaining-tokens": "1046",
+                "x-ratelimit-reset-requests": "4m19.2s",
+                "x-ratelimit-reset-tokens": "55.594s"
+              },
+              "credential_slot": "primary"
+            }
+          ],
+          "latency_ms": 1293,
+          "pacing_wait_ms": 0,
+          "tool_calls": [
+            {
+              "name": "plan_shopping_mission",
+              "arguments": "{\"goal\":\"Mua đồ ăn vặt không cay và nước uống cho buổi picnic 4 người, ngân sách khoảng 200 nghìn.\",\"needs\":[],\"party_size\":4,\"total_budget_vnd\":200000,\"use_case\":\"Picnic ngoài trời cho 4 người\"}"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 3776,
+            "completion_tokens": 122,
+            "total_tokens": 3898
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "pantene_exact_price_shelf_and_sales_abstention",
+      "turn": 1,
+      "prompt": "Dầu gội Pantene Nhật Bản mềm mượt chai 450ml giá bao nhiêu vậy?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 297,
+      "response": {
+        "session_id": "ba48003f-53b4-46db-ae7e-645a1bea7de1",
+        "text": "Dầu gội Pantene Nhật Bản mềm mượt chai 450ml có giá tham khảo 169.900đ/Chai nhé. Giá tại cửa hàng có thể khác.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10600115"
+        ],
+        "tools_used": [
+          "search_products",
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.397211Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10600115",
+            "name": "Dầu gội Pantene Nhật Bản mềm mượt chai 450ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "PANTENE",
+            "price_vnd": 169900,
+            "stock": 1,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.397211Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WIN_10600115"
+        ],
+        "must_contain": [
+          "169.900"
+        ]
+      },
+      "conversation_tags": [
+        "exact_product",
+        "price",
+        "shelf",
+        "multi_turn",
+        "unsupported_sales_claim"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "pantene_exact_price_shelf_and_sales_abstention",
+      "turn": 2,
+      "prompt": "Nó nằm ở kệ nào vậy bạn?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 220,
+      "response": {
+        "session_id": "ba48003f-53b4-46db-ae7e-645a1bea7de1",
+        "text": "Theo sơ đồ kệ đề xuất, Dầu gội Pantene Nhật Bản mềm mượt chai 450ml ở vị trí A03-B03-L03-P07 (dãy A03, khoang B03, tầng L03, ô P07) nhé. Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10600115"
+        ],
+        "tools_used": [
+          "get_product_snapshot"
+        ],
+        "data_timestamp": "2026-09-15T13:53:35.397211Z",
+        "data_source": "winmart_json_snapshot",
+        "state": "BROWSING",
+        "products": [
+          {
+            "product_id": "WIN_10600115",
+            "name": "Dầu gội Pantene Nhật Bản mềm mượt chai 450ml",
+            "category": "Chăm Sóc Tóc",
+            "brand": "PANTENE",
+            "price_vnd": 169900,
+            "stock": 1,
+            "stock_is_current": false,
+            "uom": "Chai",
+            "data_timestamp": "2026-09-15T13:53:35.397211Z",
+            "data_source": "winmart_json_snapshot"
+          }
+        ],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "expected_product_ids": [
+          "WIN_10600115"
+        ],
+        "must_contain": [
+          "A03-B03-L03-P07",
+          "vị trí gợi ý"
+        ]
+      },
+      "conversation_tags": [
+        "exact_product",
+        "price",
+        "shelf",
+        "multi_turn",
+        "unsupported_sales_claim"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    },
+    {
+      "case_id": "pantene_exact_price_shelf_and_sales_abstention",
+      "turn": 3,
+      "prompt": "Trong mấy loại dầu gội, loại này có bán chạy nhất không?",
+      "language": "vi",
+      "status_code": 200,
+      "latency_ms": 113,
+      "response": {
+        "session_id": "ba48003f-53b4-46db-ae7e-645a1bea7de1",
+        "text": "Mình chưa có số liệu bán đã xác minh nên chưa thể xác định loại nào bán chạy nhất. Bạn muốn mình tra vài lựa chọn trong nhóm để bạn so sánh theo giá không?",
+        "model": "local-clarification",
+        "grounded_product_ids": [],
+        "tools_used": [],
+        "data_timestamp": null,
+        "data_source": null,
+        "state": "BROWSING",
+        "products": [],
+        "shopping_plan": null,
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "observed_session_constraints": {},
+      "evaluation_expectations": {
+        "must_not_contain": [
+          "bán chạy nhất là",
+          "được nhiều người mua nhất",
+          "doanh số cao nhất"
+        ]
+      },
+      "conversation_tags": [
+        "exact_product",
+        "price",
+        "shelf",
+        "multi_turn",
+        "unsupported_sales_claim"
+      ],
+      "grade": {
+        "checks": {
+          "http_200": true,
+          "expected_product_ids": true,
+          "expected_product_ids_any": true,
+          "expected_tools": true,
+          "expected_model_tools": true,
+          "expected_tool_arguments": true,
+          "required_phrases": true,
+          "forbidden_phrases": true,
+          "no_unexpected_product_ids": true,
+          "excluded_product_ids": true,
+          "expected_state": true,
+          "expected_cart_items": true,
+          "expected_order_payment_status": true,
+          "expected_constraints": true,
+          "expected_support_ticket": true,
+          "expected_support_ticket_status": true,
+          "expected_support_ticket_issue_type": true,
+          "expected_support_ticket_demo": true,
+          "no_tools_when_expected": true
+        },
+        "passed": true
+      },
+      "llm_trace": []
+    }
+  ],
+  "summary": {
+    "case_count": 2,
+    "turn_count": 5,
+    "http_200_count": 5,
+    "automated_grounding_safety_passes": 5,
+    "automated_grounding_safety_failures": 0,
+    "expected_model_tool_selection_passes": 0,
+    "expected_model_tool_selection_count": 0,
+    "no_tool_decision_passes": 0,
+    "no_tool_decision_count": 0,
+    "tool_argument_passes": 0,
+    "tool_argument_check_count": 0,
+    "median_turn_latency_ms": 297,
+    "total_llm_calls": 2,
+    "total_tool_calls": 2
+  }
+}

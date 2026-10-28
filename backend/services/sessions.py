@@ -49,6 +49,11 @@ class ShoppingSessionState:
     unresolved_product_category: str | None = None
     constraints: dict[str, Any] = field(default_factory=dict)
     selected_product_ids: list[str] = field(default_factory=list)
+    # Product IDs already shown in the active recommendation scope. Keeping this
+    # separate from selected_product_ids lets ordinal selection use only the
+    # latest page while "show me another" can avoid every previously shown item.
+    seen_product_ids: list[str] = field(default_factory=list)
+    seen_product_scope: list[str] = field(default_factory=list)
     comparison_product_ids: list[str] = field(default_factory=list)
     shopping_mission: dict[str, Any] = field(default_factory=dict)
     cart_reference: str | None = None

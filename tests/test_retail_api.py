@@ -3268,6 +3268,27 @@ async def test_harmful_personal_joke_is_replaced_with_safe_local_reply(
 
 
 @pytest.mark.asyncio
+async def test_social_question_uses_local_fallback_when_groq_is_unavailable(
+    client: httpx.AsyncClient,
+) -> None:
+    app.dependency_overrides[get_groq_service] = lambda: UnavailableGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "smalltalk-fallback"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Bạn có mệt không?",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["model"] == "local-smalltalk"
+    assert "đang sẵn sàng trò chuyện" in response.json()["text"].casefold()
+    assert response.json()["tools_used"] == []
+
+
+@pytest.mark.asyncio
 async def test_search_candidate_is_followed_by_verified_snapshot_for_requested_fact(
     client: httpx.AsyncClient,
 ) -> None:

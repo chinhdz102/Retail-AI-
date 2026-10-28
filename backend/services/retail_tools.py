@@ -475,7 +475,7 @@ class RecommendProductsArguments(BaseModel):
     query: str = Field(default="", max_length=160)
     preference_text: str = Field(default="", max_length=2000)
     alternative_requested: bool = False
-    exclude_product_ids: list[str] = Field(default_factory=list, max_length=20)
+    exclude_product_ids: list[str] = Field(default_factory=list, max_length=300)
     category: str | None = Field(default=None, max_length=160)
     categories: list[str] | None = Field(
         default=None, min_length=2, max_length=MAX_RECOMMENDATION_CATEGORIES
@@ -3039,6 +3039,7 @@ def execute_catalog_tool(
                 else parsed.limit,
                 "diversify_by_subcategory": diversify,
             }
+            alternative_candidate_ids: set[str] = set()
             category_fallback_used = False
             products = tuple(repo.search(**search_criteria))
             brand_filter = search_criteria["brand"] or _mentioned_candidate_brand(
@@ -3620,7 +3621,13 @@ def execute_catalog_tool(
                     sorted(products, key=lambda item: (-item.price_vnd, item.name.casefold()))
                 )[: parsed.limit]
             if parsed.alternative_requested and parsed.exclude_product_ids:
-                candidates = list(products) + list(repo.search(**{**search_criteria, "limit": 20}))
+                alternative_candidates = list(
+                    repo.search(**{**search_criteria, "limit": 100})
+                )
+                alternative_candidate_ids = {
+                    product.product_id for product in alternative_candidates
+                }
+                candidates = list(products) + alternative_candidates
                 excluded_brands = excluded_catalog_brands(
                     parsed.preference_text, [p.brand for p in candidates if p.brand]
                 )
@@ -3715,6 +3722,13 @@ def execute_catalog_tool(
                 matched.append("budget_vnd")
             content = _candidate_content(products, matched)
             content["alternative_requested"] = parsed.alternative_requested
+            content["alternative_exhausted"] = bool(
+                parsed.alternative_requested
+                and parsed.exclude_product_ids
+                and alternative_candidate_ids
+                and alternative_candidate_ids.issubset(set(parsed.exclude_product_ids))
+                and not products
+            )
             if family_details_unverified:
                 content["family_details_unverified"] = True
             if category_fallback_used:

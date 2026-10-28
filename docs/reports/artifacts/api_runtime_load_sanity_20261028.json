@@ -1,0 +1,79 @@
+{
+  "artifact_id": "retail_ai_api_runtime_load_sanity",
+  "generated_at_utc": "2026-10-28T16:25:06.009796+00:00",
+  "commit_sha": "1b1a9b55ba6d0e7d6e3f04c55f7e197c87c905e6",
+  "mode": "in_process_asgi_deterministic_catalog_only",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "catalog_valid_product_count": 3081,
+  "requests_per_concurrency": 5,
+  "levels": [
+    {
+      "concurrency": 1,
+      "requests": 5,
+      "successful_responses": 5,
+      "http_errors": 0,
+      "identity_or_price_mismatches": 0,
+      "response_models": {
+        "catalog": 5
+      },
+      "latency_ms": {
+        "p50": 707.3,
+        "p95": 852.292,
+        "mean": 668.219
+      },
+      "wall_time_ms": 3370.64,
+      "process_cpu_ms": 3328.125,
+      "throughput_requests_per_second": 1.483,
+      "errors": []
+    },
+    {
+      "concurrency": 5,
+      "requests": 5,
+      "successful_responses": 5,
+      "http_errors": 0,
+      "identity_or_price_mismatches": 0,
+      "response_models": {
+        "catalog": 5
+      },
+      "latency_ms": {
+        "p50": 3855.158,
+        "p95": 3873.236,
+        "mean": 3858.476
+      },
+      "wall_time_ms": 3878.46,
+      "process_cpu_ms": 3750.0,
+      "throughput_requests_per_second": 1.289,
+      "errors": []
+    },
+    {
+      "concurrency": 20,
+      "requests": 5,
+      "successful_responses": 5,
+      "http_errors": 0,
+      "identity_or_price_mismatches": 0,
+      "response_models": {
+        "catalog": 5
+      },
+      "latency_ms": {
+        "p50": 4870.936,
+        "p95": 4947.815,
+        "mean": 4880.549
+      },
+      "wall_time_ms": 4954.15,
+      "process_cpu_ms": 4609.375,
+      "throughput_requests_per_second": 1.009,
+      "errors": []
+    }
+  ],
+  "python_heap_probe_separate_from_latency": {
+    "http_status": 200,
+    "python_heap_current_bytes": 395778,
+    "python_heap_peak_bytes": 818295
+  },
+  "limitations": [
+    "ASGITransport is in-process and excludes sockets, browser, TLS, proxy, and server workers.",
+    "The path uses deterministic catalog turns and does not measure Groq, STT, or TTS.",
+    "Python heap is measured in a separate single-request probe to avoid distorting timed latency; native allocations and process resident memory are not measured.",
+    "This is a smoke load profile, not a capacity or SLA claim."
+  ]
+}

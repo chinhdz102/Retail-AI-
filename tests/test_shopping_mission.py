@@ -281,6 +281,41 @@ def test_followup_summary_acknowledges_new_required_need_already_in_plan() -> No
     assert "Còn 171.200đ trong mức dự trù" in summary
 
 
+def test_followup_summary_acknowledges_new_preference_without_claiming_product_fit() -> None:
+    item = {
+        "product_id": "drink-sku",
+        "name": "Nước uống trong catalog",
+        "quantity": 1,
+        "line_total_vnd": 12_500,
+        "required": True,
+    }
+    previous = {
+        "revision": 1,
+        "total_budget_vnd": 200_000,
+        "preferences": [],
+        "needs": [],
+        "proposed_items": [item],
+    }
+    content = {
+        "mission": {
+            "revision": 2,
+            "total_budget_vnd": 200_000,
+            "preferences": ["chia cho moi nguoi"],
+            "needs": [],
+        },
+        "needs": [],
+        "options": [{"items": [item], "total_vnd": 12_500, "remaining_budget_vnd": 187_500}],
+        "missing_required_needs": [],
+        "inventory_verified": False,
+    }
+
+    summary = render_shopping_plan_summary(content, previous_mission=previous)
+
+    assert "Mình đã ghi nhận thêm ưu tiên bạn vừa nêu." in summary
+    assert "Danh sách mặt hàng hiện tại vẫn giữ nguyên." in summary
+    assert "đáp ứng ưu tiên" not in summary
+
+
 def test_product_query_does_not_cross_match_a_different_catalog_product_type() -> None:
     repository = SnapshotProductRepository(
         Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"

@@ -1572,8 +1572,27 @@ def render_shopping_plan_summary(
         previous_budget = previous_mission.get("total_budget_vnd")
         current_budget = current_mission.get("total_budget_vnd")
         budget_changed = previous_budget != current_budget and current_budget is not None
+        previous_preferences = previous_mission.get("preferences")
+        current_preferences = current_mission.get("preferences")
+        previous_preferences = (
+            previous_preferences if isinstance(previous_preferences, list) else []
+        )
+        current_preferences = current_preferences if isinstance(current_preferences, list) else []
+        previous_preference_keys = {
+            normalize_category_text(str(value))
+            for value in previous_preferences
+            if str(value).strip()
+        }
+        added_preferences = [
+            str(value).strip()
+            for value in current_preferences
+            if str(value).strip()
+            and normalize_category_text(str(value)) not in previous_preference_keys
+        ]
 
         parts: list[str] = []
+        if added_preferences:
+            parts.append("Mình đã ghi nhận thêm ưu tiên bạn vừa nêu.")
         if added_items:
             rendered = "; ".join(
                 f"{item.get('name', 'Mặt hàng trong catalog')} × "
@@ -1614,11 +1633,14 @@ def render_shopping_plan_summary(
                 )
                 parts.append("Nhóm vừa được chốt đã có trong phương án: " + rendered + ".")
         if not added_items and not removed_items and not changed_quantities and not promoted_needs:
-            parts.append(
-                "Mình giữ nguyên các mặt hàng trong phương án."
-                if budget_changed
-                else "Mình đã cộng lại theo phương án hiện tại."
-            )
+            if added_preferences:
+                parts.append("Danh sách mặt hàng hiện tại vẫn giữ nguyên.")
+            else:
+                parts.append(
+                    "Mình giữ nguyên các mặt hàng trong phương án."
+                    if budget_changed
+                    else "Mình đã cộng lại theo phương án hiện tại."
+                )
         if budget_changed:
             parts.append(f"Mức dự trù mới là {format_vnd(current_budget)}.")
 
