@@ -1,0 +1,45 @@
+{
+  "kind": "vietnamese_parser_hot_path_before_after",
+  "generated_at_utc": "2026-10-28T18:40:52.509064+00:00",
+  "baseline_ref": "295133bcd32e56e00fbbcf64ef5c7c8f75bef05b",
+  "current_commit_sha": "295133bcd32e56e00fbbcf64ef5c7c8f75bef05b",
+  "working_tree": {
+    "dirty_tracked_files": true,
+    "tracked_diff_sha256": "60f160dbbffb824d500eb82d84de548914cabd40300df5b527aca847af82e94e"
+  },
+  "dataset": {
+    "path": "C:\\Users\\Chinhdz\\Desktop\\retail\\Retail-AI--main\\Retail-AI--main\\evaluation\\cases\\independent_consultation_pilot_v1.json",
+    "case_count": 50,
+    "sha256": "5c2cab1445b367aee65ba90628a400b24fdecc9651496f77c07f504576f53aca"
+  },
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "environment": {
+    "python": "3.13.15",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "logical_cpu_count": 12
+  },
+  "configuration": {
+    "functions": [
+      "product_type_attribute_modifier",
+      "explicit_recommendation_category",
+      "explicit_recommendation_categories"
+    ],
+    "repeated_passes": 3,
+    "module_import_time_included": false
+  },
+  "metrics": {
+    "baseline_first_pass_ms": 564.28,
+    "current_first_pass_ms": 64.31,
+    "baseline_repeated_passes_ms": 1684.934,
+    "current_repeated_passes_ms": 190.479,
+    "repeated_path_speedup": 8.846,
+    "output_parity_case_function_pairs": 150,
+    "output_differences": []
+  },
+  "limitations": [
+    "This is a CPU microbenchmark of three parser functions, not end-to-end API latency.",
+    "Module import/startup cost is excluded; use the API load probe for warmed requests.",
+    "The authored pilot is development data, not an independently human-reviewed test set."
+  ]
+}

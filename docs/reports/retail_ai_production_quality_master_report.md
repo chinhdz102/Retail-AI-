@@ -3,8 +3,8 @@
 **Assessment date:** 2026-10-29
 **Release decision:** `NOT READY` for production; suitable for controlled demo only
 **Working branch:** `codex/retail-text-quality-v4-20261019` (kept as-is; no new branch created)
-**Benchmark base commit:** `7eeaa179d0ca0753a9759e67df3e4b2bf494a0ae`
-**Catalog snapshot:** WinMart JSON, dated 2026-09-15; SHA-256 `a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6`
+**Historical benchmark base commit:** `7eeaa179d0ca0753a9759e67df3e4b2bf494a0ae`
+**Catalog snapshot:** WinMart JSON, dated 2026-09-15; Windows raw-byte SHA-256 `a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6`; LF-normalized content SHA-256 `8f2ee3771be548b85a8d8981127b2518b8e8e5868584491df36b96317476cbbc`.
 
 This report separates deterministic regressions, synthetic evaluation, live provider probes, and human review. None of the synthetic scores below should be read as real-world consultation accuracy.
 
@@ -12,7 +12,7 @@ This report separates deterministic regressions, synthetic evaluation, live prov
 
 The current implementation improves exact product/category retrieval, multi-turn scope retention, alternative pagination, runtime hot paths, and explicit soft-preference retention. This continuation fixes alternative lookup truncation beyond the repository's 20-row page, ties session novelty to products actually shown, and adds per-attribute catalog evidence (`VERIFIED` / `INFERRED` / `UNKNOWN`) with provenance. Simulated and demo shelf coordinates are no longer described as physically verified.
 
-The frozen development benchmark reports 100% on its generated exact-product, category, and hard-constraint checks. These scores are provisional because queries are templated from the same catalog, labels have not been independently reviewed, and they do not grade semantic suitability or naturalness. A live, manually written Groq probe returned HTTP 200 on all five turns. In the post-fix run, Qwen included “dễ chia” in its tool arguments and the response acknowledged it while leaving the plan items unchanged. Because the model itself emitted the preference on this repeat, the live run does not prove that the semantic guard rescued an omitted field; the focused unit test covers that path. This is one successful probe, not a statistical quality estimate.
+The frozen development benchmark reports 100% on its generated exact-product, category, and hard-constraint checks. These scores are provisional because queries are templated from the same catalog, labels have not been independently reviewed, and they do not grade semantic suitability or naturalness. A live, manually written Groq probe returned HTTP 200 on all five turns. In the post-fix run, Qwen included “dễ chia” in its tool arguments and the response acknowledged it while leaving the plan items unchanged. Because the model itself emitted the preference on this repeat, the live run does not prove that the semantic guard rescued an omitted field; the focused unit test covers that path. This is one successful probe, not a statistical quality estimate. The latest local full suite passes 1,241 tests; its added cross-platform regression covers a Linux/Windows catalog-hash mismatch that had caused three failures in the previous GitHub run.
 
 **Decision:** do not release as a production retail advisor. Keep demo-only until there is a human-authored, blind held-out set, independent qrels review, multi-user API load testing, and real attribute-level catalog evidence. The new evidence tool prevents missing attributes from being guessed; it does not add currently absent product facts. Current latency at concurrency 5–20 is also too high for a production conversational target.
 
@@ -20,7 +20,7 @@ The frozen development benchmark reports 100% on its generated exact-product, ca
 
 - Work stays on `codex/retail-text-quality-v4-20261019`; no branch was created for this continuation.
 - The 2026-10-29 semantic V2 rerun used base commit `7eeaa179d0ca0753a9759e67df3e4b2bf494a0ae` with a dirty working tree; its artifact records the tracked diff hash. It is not a clean release-commit result. Historical probes listed below may use earlier base commits.
-- Baseline full suite on `7eeaa17`: 1,222 passed in 299.31 s. A previous continuation passed 1,233 tests in 217.86 s. The seeded-invariant run based on `af1f979b7c4ce01b1f7aef3f19523ababcb3a6b4` passed 1,238 in 248.48 s. After the qrels exporter and branch-CI changes, the full suite passed 1,238 tests in 250.70 s on a dirty tree based on `b5d46c91b66322db8c5da3a2e01a0ffa040f838c`; this run includes the updated reviewer-queue tests. The exact commit is rechecked before push.
+- Baseline full suite on `7eeaa17`: 1,222 passed in 299.31 s. A previous continuation passed 1,233 tests in 217.86 s. The seeded-invariant run based on `af1f979b7c4ce01b1f7aef3f19523ababcb3a6b4` passed 1,238 in 248.48 s. After the qrels exporter and branch-CI changes, a full suite passed 1,238 tests in 250.70 s based on `b5d46c9`. On the current dirty tree based on `295133b`, `uv run pytest tests -q --tb=short` passes 1,241 tests in 157.31 s; `ruff`, `compileall`, and `git diff --check` also pass. Exact post-push CI is still pending.
 - New deterministic regression suite: 5/5 tests passed in 14.66 s using seed `20261029` and the catalog hash below. It sampled 64 SKUs for title variants, checked 17 retrievable price-filter scopes, exercised 32 brand-exclusion scopes, tried 32 unseen query tokens, and rebuilt an index from one synthetic new catalog row. Artifact: [`catalog_metamorphic_invariants_20261029.json`](artifacts/catalog_metamorphic_invariants_20261029.json).
 - Local environment: Windows, Python 3.13+, `uv`; runtime catalog is the WinMart JSON snapshot. The imported dataset has 3,099 raw rows, 3,081 accepted products, and 18 quarantined rows.
 - Provider configuration was present for the live probe. No API key or credential value is written to reports or artifacts. Voice was not evaluated in this task.
@@ -37,7 +37,8 @@ The frozen development benchmark reports 100% on its generated exact-product, ca
 | Alternative search stopped after seen products filled page one | Repository caps results at 20; asking for 100 still returned 20, which could be mistaken for catalog exhaustion. | Added stable `offset` pagination for demo, JSON snapshot, and Postgres repositories. Alternative lookup now advances page-by-page and reports exhaustion only at the last page. |
 | Session remembered filtered-out candidates | Candidate state was captured before audience/hard filtering while the UI showed a narrower product list. | Session selected/seen IDs now come from the final visible product cards, so the next turn tracks what the customer actually saw. |
 | Demo shelf looked verified | `DEMO`, `SIMULATED`, and planogram sources are not proof of physical placement. | Shelf evidence is `VERIFIED` only when explicitly marked `PHYSICALLY_VERIFIED`; other stored coordinates are qualified as inferred. |
-| High concurrency latency | In-process catalog endpoint p50 rose from about 0.71 s at 1 request to 3.86 s at 5 and 4.87 s at 20. | CPU-bound normalization, fuzzy scoring, and taxonomy work remain a bottleneck. Bounded caches helped, but current profile is not a capacity test or production pass. |
+| Shelf lookup failed only on Linux CI | Run `40744779694` failed two natural shelf lookups and one inferred-shelf provenance assertion; all three passed locally. GitHub checked out the catalog as LF, while the planogram hash had been generated from Windows CRLF bytes. | Planogram metadata now carries both the legacy raw-byte hash and an LF-normalized content hash. Lookup accepts only one of those exact catalog fingerprints, preserving fail-closed behavior while making the same snapshot portable across operating systems. A regression test simulates the normalized hash; remote verification is pending.
+| High concurrency latency | The earlier five-request smoke reported p50 0.71/3.86/4.87 s at configured C1/C5/C20. The corrected 20-request run measures 0.131/0.515/2.552 s, with all 20 requests simultaneously in flight at C20. | Caching reduced the measured path, but catalog work still serializes under CPU load; C20 remains too slow. The corrected in-process profile is not a deployment capacity or production pass. |
 | Recommendation quality is under-measured | Generated exact-SKU tests select a catalog-derived gold item. | Exact name resolution is being measured, not whether a product is suitable for an indirect human need. Human qrels are still required. |
 
 ## 4. Research literature
@@ -90,10 +91,13 @@ Do not promote LLM structured extraction to the every-request fast path: its rec
 - `backend/services/shopping_mission.py`: acknowledge a newly recorded preference without claiming the catalog proves product fit.
 - `backend/services/smalltalk.py`: broaden wellbeing detection for the local response path.
 - `backend/products/category_taxonomy.py`, `snapshot_repository.py`, `postgres_repository.py`: bounded caches for repeated taxonomy, token, and normalization work.
+- `backend/services/vietnamese_intent.py`: cache compiled boundary/cue patterns and pre-normalize static category cues; a 50-query parser microbenchmark retains 150/150 outputs and cuts repeated-path CPU time by 8.85× on this Windows run.
+- `backend/data/catalog_import.py`, `scripts/generate_planogram.py`, `backend/products/planogram.py`, `data/winmart_planogram_assignments.json`: add a stable LF-normalized catalog fingerprint alongside the original raw hash so recommended shelf locations still resolve after Windows/Linux checkouts.
 - `evaluation/semantic_intelligence_v2_benchmark.py`, `build_semantic_intelligence_v2_frozen.py`: fix alternative metric semantics, inclusive budget language, and deterministic frozen-dataset generation.
 - `evaluation/export_vietnamese_qrels_review.py`: accept multiple same-query retrieval artifacts, form a rank-interleaved/deduplicated candidate union, hide retrieval sources and ranks, and independently randomize query/candidate order for reviewer A/B. An evaluator-only manifest records dataset/catalog/artifact hashes and candidate counts.
-- `.github/workflows/retail-backend-quality.yml`: run locked-dependency Ruff, offline backend tests, and Python compile checks on `main` and the requested text-quality branch. Local YAML parse passes; the first GitHub Actions run is pending push.
-- `evaluation/api_runtime_load_sanity.py`: add in-process deterministic catalog load/heap probe, separating heap instrumentation from latency measurement.
+- `.github/workflows/retail-backend-quality.yml`: run locked-dependency Ruff, offline backend tests, and Python compile checks on `main` and the requested text-quality branch. The first run failed on the three cross-platform shelf/hash assertions described above; the fix is locally verified and awaits a new remote run.
+- `evaluation/api_runtime_load_sanity.py`: exercise at least 20 requests at each C1/C5/C20 level, report observed in-flight concurrency and p99/max samples, capture environment and tracked-diff hash, and keep warm-up/heap probes separate from timed latency.
+- `evaluation/vietnamese_parser_hot_path_benchmark.py`: compare current parser functions against pinned base `295133b`; artifact [`vietnamese_parser_hot_path_20261029.json`](artifacts/vietnamese_parser_hot_path_20261029.json) reports 150/150 output parity and 8.846× repeated-path speedup. This is a development microbenchmark, not a human semantic-quality score.
 - Added qrels schema/annotation guide/export workflow and regression coverage for state, alternative turns, injection protections, and the newly recovered soft preference.
 
 The preference guard requires an explicit preference cue and an existing parser-supported soft preference. It does not infer arbitrary product suitability from the utterance, alter need requiredness, or assert that candidates satisfy the preference. The post-fix live run returned the expected acknowledgement, but did not change the drink-only plan because the required snack attribute remains unverified. The raw trace shows Qwen emitted the preference itself, so this live run is not evidence that the backend guard rescued a missing tool field.
@@ -170,11 +174,12 @@ See [`live_snapshot_provider_probe_after_preference_fix_20261028.json`](artifact
 
 | Gate | Result | Status |
 | --- | --- | --- |
-| Full backend/evaluation pytest suite | `uv run pytest tests -q --tb=short`: 1,238 passed in 250.70 s on the working-tree run based on `b5d46c9`; earlier runs: 1,238 passed in 248.48 s on `af1f979`, 1,233 passed in 217.86 s, and baseline 1,222 passed in 299.31 s on `7eeaa17`. | Pass on working tree; exact commit is rechecked before push. |
-| Ruff and `git diff --check` | `uv run ruff check backend tests evaluation`: all checks passed; `git diff --check` clean (Git emitted only line-ending conversion warnings). | Pass. |
+| Full backend/evaluation pytest suite | `uv run pytest tests -q --tb=short`: 1,241 passed in 157.31 s on the current dirty tree based on `295133b`; previous suite history is listed in section 2. | Pass locally; post-push Linux CI pending. |
+| Ruff, compileall, and `git diff --check` | `uv run ruff check backend tests evaluation scripts`, `uv run python -m compileall -q backend tests evaluation scripts`, and `git diff --check` all pass. Git emits only expected Windows line-ending conversion warnings. | Pass locally. |
 | Seeded catalog metamorphic invariants | 5/5 passed: punctuation/accent variants preserve 64 sampled SKUs; budget caps held across 17 retrievable scopes; brand exclusions held across 32 scopes; 32 unseen tokens returned no product; a newly added synthetic SKU was indexed without product-specific code. | Pass for deterministic catalog regressions only; not a relevance or human-quality score. |
 | Qrels candidate-pool exporter | 8 benchmark/export tests passed; a temporary export from the 300-query dev set emitted 1,466 rows. Multi-artifact fixture verified a four-SKU interleaved union, source/rank hiding, independent reviewer order, and reproducibility. | Pass for tooling; current real review queues remain unjudged and the real dataset export used one retrieval artifact. |
-| Branch CI workflow | Workflow YAML parses; locked offline checks are configured for the target branch. | Pending first GitHub Actions execution; no remote CI result claimed yet. |
+| Branch CI workflow | Prior run `40744779694` failed 3/1,238 tests on Linux because the committed planogram only matched the Windows raw-byte catalog hash. Added a canonical-hash path and explicit regression; local full suite now passes. | Fix awaits a new GitHub Actions run; do not treat local simulation as remote confirmation. |
+| Vietnamese parser hot path | 50 authored development queries × 3 functions; baseline 564.280 ms first pass / 1,684.934 ms repeated; optimized 64.310 ms / 190.479 ms; 150/150 outputs identical. | 8.846× repeated-path speedup on this machine only; not an end-to-end latency or blind semantic-accuracy score. |
 | Synthetic product/category/constraint checks | 100/100 within each generated dimension; zero encoded-constraint violations. | Pass for development regression only. |
 | Post-pagination frozen benchmark | 300 generated queries + 50 synthetic dialogues; candidate R@5 0.98, zero encoded-constraint violations, novelty status not evaluated. | Pass for development regression only; see artifact and limitations. |
 | Live API grounding invariants | Post-fix run: 5/5 turns HTTP 200; 5/5 automated grounding checks passed; no fallback used. | HTTP/grounding gate only; not human-graded. |
@@ -185,17 +190,17 @@ See [`live_snapshot_provider_probe_after_preference_fix_20261028.json`](artifact
 
 ## 15. Latency/RAM/CPU
 
-Latest [`api_runtime_load_sanity_20261028.json`](artifacts/api_runtime_load_sanity_20261028.json), deterministic catalog-only in-process ASGI; five requests submitted per concurrency level:
+Latest [`api_runtime_load_sanity_20261029.json`](artifacts/api_runtime_load_sanity_20261029.json), deterministic catalog-only in-process ASGI; 20 actual requests per level, warm-up excluded, and observed concurrency verified:
 
-| Concurrency | p50 | p95 | mean | throughput | HTTP errors / ID-price mismatches |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | 707.300 ms | 852.292 ms | 668.219 ms | 1.483 req/s | 0 / 0 |
-| 5 | 3,855.158 ms | 3,873.236 ms | 3,858.476 ms | 1.289 req/s | 0 / 0 |
-| 20 | 4,870.936 ms | 4,947.815 ms | 4,880.549 ms | 1.009 req/s | 0 / 0 |
+| Configured concurrency | Requests / observed in flight | p50 | p95 | p99 / max | Throughput | HTTP errors / identity-price mismatches |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 20 / 1 | 130.922 ms | 169.333 ms | 172.410 / 172.410 ms | 7.314 req/s | 0 / 0 |
+| 5 | 20 / 5 | 515.055 ms | 672.084 ms | 679.909 / 679.909 ms | 7.668 req/s | 0 / 0 |
+| 20 | 20 / 20 | 2,552.342 ms | 2,563.249 ms | 2,563.859 / 2,563.859 ms | 7.750 req/s | 0 / 0 |
 
-A separate single-request `tracemalloc` probe measured Python heap current 395,778 B and peak 818,295 B. It excludes native allocations and process RSS. CPU in the timed smoke was 3,328 ms (C1), 3,750 ms (C5), and 4,609 ms (C20). The harness excludes network, browser, TLS, reverse proxy, worker pool, provider calls, STT, and TTS. Five requests per level are insufficient for capacity or SLA claims.
+A separate single-request `tracemalloc` probe measured Python heap current 323,238 B and peak 704,006 B. Repository construction took 538.707 ms; excluded warm-up response took 297.247 ms. The harness excludes network, browser, TLS, reverse proxy, server worker pools, provider calls, STT, and TTS. Twenty requests per level are still a smoke profile, not a capacity or SLA claim. C20 p50 remains about 2.55 s, unsuitable for a responsive production chat target.
 
-The caches lowered median latency relative to the same earlier smoke by about 48% at C1, 49% at C5, and 38% at C20, while absolute C5/C20 latency remains unsuitable for production chat.
+The 2026-10-28 five-request run is retained for audit but is not directly compared: it did not send enough work to reach C20 and excluded neither a dedicated warm-up nor environment metadata. This run corrects those measurement limits.
 
 The separate deterministic V2 run measured p50 105.075 ms and p95 203.005 ms over 300 catalog-only cases. It excludes Groq and should not be compared with end-user or provider latency; it is separate from the five-request ASGI concurrency probe above.
 
@@ -254,7 +259,10 @@ uv run python -m evaluation.semantic_intelligence_v2_benchmark `
 uv run python evaluation/semantic_intelligence_v2_benchmark.py `
   --output docs/reports/artifacts/semantic_intelligence_v2_postfix_20261029.json
 uv run python -m evaluation.api_runtime_load_sanity `
-  --output docs/reports/artifacts/api_runtime_load_sanity_20261028.json
+  --requests-per-concurrency 20 `
+  --output docs/reports/artifacts/api_runtime_load_sanity_20261029.json
+uv run python -m evaluation.vietnamese_parser_hot_path_benchmark `
+  --output docs/reports/artifacts/vietnamese_parser_hot_path_20261029.json
 uv run python -m evaluation.live_text_conversation_benchmark `
   --case-file evaluation/cases/vietnamese_snapshot_provider_probe_20261028.json `
   --pace-seconds 2.5 `

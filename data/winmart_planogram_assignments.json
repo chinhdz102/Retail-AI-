@@ -3,6 +3,7 @@
   "planogram_version": "taxonomy-blocks-v1",
   "source_dataset": "winmart_products.json",
   "source_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "source_dataset_canonical_sha256": "8f2ee3771be548b85a8d8981127b2518b8e8e5868584491df36b96317476cbbc",
   "source_shelf_note": "The catalog's existing shelf values are crawler-generated placeholders (shelf_source=SIMULATED), not verified store locations.",
   "strategy": {
     "ordering": [

@@ -9,7 +9,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from backend.data.catalog_import import WinMartRow, analyze_dataset
+from backend.data.catalog_import import (
+    WinMartRow,
+    analyze_dataset,
+    canonical_dataset_sha256,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 PLANOGRAM_VERSION = "taxonomy-blocks-v1"
@@ -575,6 +579,9 @@ def generate(
         "planogram_version": PLANOGRAM_VERSION,
         "source_dataset": input_path.name,
         "source_dataset_sha256": report["dataset_version"],
+        "source_dataset_canonical_sha256": canonical_dataset_sha256(
+            input_path.read_bytes()
+        ),
         "source_shelf_note": (
             "The catalog's existing shelf values are crawler-generated placeholders "
             "(shelf_source=SIMULATED), not verified store locations."

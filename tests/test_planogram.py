@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from backend.products.snapshot_repository import SnapshotProductRepository
 from scripts.generate_planogram import aisle_sign_lines, generate, safe_text
 from scripts.generate_planogram_endcap_labels import generate_endcap_overlay
 
@@ -75,3 +77,34 @@ def test_planogram_generation_keeps_catalog_rows_and_labels_all_aisles(
     assert result["counts"]["assigned_products"] == 3081
     assert result["counts"]["excluded_quarantine_products"] == 18
     assert result["source_dataset_sha256"] in svg
+    assert result["source_dataset_canonical_sha256"] == hashlib.sha256(
+        ROOT.joinpath("data", "winmart_products.json")
+        .read_bytes()
+        .replace(b"\r\n", b"\n")
+        .replace(b"\r", b"\n")
+    ).hexdigest()
+
+
+def test_snapshot_resolves_planogram_for_lf_catalog_checkout(tmp_path: Path) -> None:
+    source_path = ROOT / "data" / "winmart_products.json"
+    linux_style_path = tmp_path / "winmart_products.json"
+    linux_style_path.write_bytes(
+        source_path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    )
+    repository = SnapshotProductRepository(linux_style_path)
+
+    payload = json.loads(
+        (ROOT / "data" / "winmart_planogram_assignments.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assignment = next(
+        item
+        for item in payload["assignments"]
+        if item["placement_status"] == "RECOMMENDED_SYNTHETIC_PLANOGRAM"
+    )
+    product = repository.get_product_snapshot(assignment["product_id"])
+
+    assert product is not None
+    assert product.shelf == assignment["location_code"]
+    assert product.shelf_source == "RECOMMENDED_PLANOGRAM"
