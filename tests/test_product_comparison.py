@@ -47,6 +47,23 @@ def test_comparison_parser_inherits_product_name_for_variant_followup() -> None:
     assert parse_comparison_queries(text) == ("coca zero 330", "coca zero chai 600")
 
 
+def test_natural_difference_question_uses_shared_query_understanding_operands() -> None:
+    text = "Nước tinh khiết đóng chai với nước khoáng có gì khác theo nhãn?"
+
+    assert is_comparison_request(text)
+    assert parse_comparison_queries(text) == (
+        "Nước tinh khiết đóng chai",
+        "nước khoáng",
+    )
+
+
+def test_conjoined_product_availability_question_is_not_a_comparison() -> None:
+    text = "Nước tinh khiết đóng chai và nước khoáng có bán không?"
+
+    assert not is_comparison_request(text)
+    assert parse_comparison_queries(text) is None
+
+
 @pytest.mark.parametrize(
     ("text", "expected"),
     [

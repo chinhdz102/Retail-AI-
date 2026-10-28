@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
+from backend.services.query_understanding import understand_catalog_query
 from backend.services.vietnamese_intent import normalize_vietnamese
 
 ComparisonMetric = Literal["price", "stock"]
@@ -35,7 +36,8 @@ _DIFFERENCE_TAIL = re.compile(
 def is_comparison_request(text: str) -> bool:
     normalized = " ".join(normalize_vietnamese(text).split())
     return bool(
-        re.search(r"\bso sanh\b|\bcompare\b|\bversus\b|\bvs\b", normalized)
+        parse_comparison_queries(text) is not None
+        or re.search(r"\bso sanh\b|\bcompare\b|\bversus\b|\bvs\b", normalized)
         or _FOLLOWUP_TAIL.search(normalized)
         or _COMPARISON_FOLLOWUP.search(normalized)
         or (
@@ -45,8 +47,8 @@ def is_comparison_request(text: str) -> bool:
     )
 
 
-def parse_comparison_queries(text: str) -> tuple[str, str] | None:
-    """Extract two explicitly named products from Vietnamese or English comparison text."""
+def _parse_comparison_queries_from_patterns(text: str) -> tuple[str, str] | None:
+    """Extract operands from known comparison forms before semantic fallback."""
     normalized = " ".join(normalize_vietnamese(text).split())
     prefix = re.match(r"^(?:so(?: sanh(?: giua)?)?|compare(?: between)?)\s+", normalized)
     has_followup_tail = bool(_FOLLOWUP_TAIL.search(normalized))
@@ -88,6 +90,30 @@ def parse_comparison_queries(text: str) -> tuple[str, str] | None:
         if shared_product:
             right = f"{shared_product} {right}"
     return left, right
+
+
+def parse_comparison_queries(text: str) -> tuple[str, str] | None:
+    """Extract comparison operands, falling back to the shared query IR.
+
+    The local comparison grammar handles price/stock wording. The shared
+    understanding parser covers natural difference questions such as
+    ``A với B có gì khác theo nhãn?`` without maintaining a second copy of
+    every comparison phrase and operand boundary.
+    """
+    pattern_operands = _parse_comparison_queries_from_patterns(text)
+    if pattern_operands is not None:
+        return pattern_operands
+
+    understanding = understand_catalog_query(text)
+    if understanding.intent != "comparison" or len(understanding.comparison_targets) != 2:
+        return None
+    targets = tuple(
+        " ".join(target.split()).strip(" ,.!?;:")
+        for target in understanding.comparison_targets
+    )
+    if any(not target for target in targets):
+        return None
+    return targets[0], targets[1]
 
 
 def comparison_metric(text: str) -> ComparisonMetric | None:

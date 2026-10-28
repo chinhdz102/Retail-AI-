@@ -150,6 +150,50 @@ async def test_natural_shelf_lookup_keeps_vietnamese_product_terms(snapshot, mon
 
 
 @pytest.mark.asyncio
+async def test_natural_category_comparison_routes_to_grounded_product_clarification(
+    snapshot, monkeypatch
+):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+    ) as client:
+        session = (await client.post("/sessions", json={"kiosk_id": "natural-comparison"})).json()[
+            "session_id"
+        ]
+        response = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session,
+                "text": "Nước tinh khiết đóng chai với nước khoáng có gì khác theo nhãn?",
+            },
+        )
+
+        payload = response.json()
+        assert response.status_code == 200, response.text
+        assert payload["model"] == "comparison-clarification"
+        assert payload["tools_used"] == ["search_products"]
+        assert payload["grounded_product_ids"]
+        products = [
+            snapshot.get_product_snapshot(product_id)
+            for product_id in payload["grounded_product_ids"]
+        ]
+        assert all(product is not None for product in products)
+        categories = {
+            product.category_hierarchy.split(" > ")[-1]
+            for product in products
+            if product is not None
+        }
+        assert "Nước tinh khiết" in categories
+        assert "Nước khoáng" in categories
+        assert "Aquafina" in payload["text"] or "Dasani" in payload["text"]
+        assert "LaVie" in payload["text"] or "Faith" in payload["text"]
+        assert "Bạn chọn tên hoặc quy cách một món ở mỗi bên" in payload["text"]
+        assert "rẻ hơn" not in payload["text"]
+        assert "thành phần khoáng" not in payload["text"]
+
+
+@pytest.mark.asyncio
 async def test_pocket_tissue_shelf_query_preserves_compound_product_phrase(
     snapshot, monkeypatch
 ):
