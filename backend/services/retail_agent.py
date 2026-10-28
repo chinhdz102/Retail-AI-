@@ -32,6 +32,7 @@ from backend.shared.contracts import SessionState
 MAX_AGENT_TOOL_ROUNDS = 2
 MAX_AGENT_TOOL_CALLS = 5
 CATALOG_TOOL_TIMEOUT_SECONDS = 2.0
+CATALOG_SEARCH_TIMEOUT_SECONDS = 4.0
 CATALOG_RECOMMENDATION_TIMEOUT_SECONDS = 5.0
 SHOPPING_MISSION_TOOL_TIMEOUT_SECONDS = 15.0
 TOOL_TIMEOUT_RETRIES = 1
@@ -44,16 +45,19 @@ _OPEN_ENDED_NEED_DISCOVERY_CUE = re.compile(
 
 
 def _catalog_tool_timeout_policy(tool_name: str) -> tuple[float, int]:
-    """Give deterministic multi-category planning a realistic execution budget.
+    """Give deterministic catalog work a bounded, single-attempt deadline.
 
     Mission planning searches several catalog groups and then evaluates bounded
-    combinations. Retrying that CPU-bound operation after a timeout would run a
-    duplicate worker in the background, so it gets one longer attempt.
+    combinations. Search and recommendation can also take several seconds on
+    imported snapshots. Retrying these CPU-bound calls after ``wait_for`` times
+    out would leave the first thread running while starting duplicate work.
     """
     if tool_name == "plan_shopping_mission":
         return SHOPPING_MISSION_TOOL_TIMEOUT_SECONDS, 0
     if tool_name == "recommend_products":
         return CATALOG_RECOMMENDATION_TIMEOUT_SECONDS, 0
+    if tool_name == "search_products":
+        return CATALOG_SEARCH_TIMEOUT_SECONDS, 0
     return CATALOG_TOOL_TIMEOUT_SECONDS, TOOL_TIMEOUT_RETRIES
 
 
@@ -133,45 +137,76 @@ def _only_explicit_needs_are_required(text: str) -> bool:
     return confirms_needs and keeps_suggestions_optional
 
 
-_SKINCARE_NEED_CUES: dict[str, tuple[str, ...]] = {
-    "cleanser": ("sua rua mat", "lam sach da mat", "lam sach mat"),
-    "moisturizer": (
-        "kem duong am",
-        "duong am da mat",
-        "kem duong da mat",
-        "duong da mat",
+_NEED_PHRASE_EQUIVALENTS = (
+    (
+        ("sua rua mat", "face wash", "facial cleanser", "cleanser"),
+        ("lam sach da mat", "do lam sach da mat", "cleanse the face", "clean facial skin"),
     ),
-    "sunscreen": (
-        "kem chong nang",
-        "chong nang",
-        "bao ve da khi ra ngoai",
-        "bao ve da ban ngay",
-        "bao ve da khi di ra ngoai",
-        "sun screen",
-        "sunscreen",
-        "sun protection",
+    (
+        ("kem duong am", "moisturizer", "moisturiser"),
+        ("san pham duong da mat", "duong da mat", "duong am da mat", "moisturize the face"),
     ),
-}
+    (
+        ("kem chong nang", "sunscreen", "sunblock"),
+        ("bao ve da khi ra ngoai ban ngay", "bao ve da ban ngay", "protect skin outdoors"),
+    ),
+)
+_SKINCARE_BROAD_NEED_LABELS = (
+    "cham soc da",
+    "cham soc da mat",
+    "skincare",
+    "skin care",
+    "skin-care",
+    "facial skin care",
+    "routine cham soc da",
+    "basic skincare",
+)
+_SKINCARE_LABEL_FILLER_TOKENS = frozenset(
+    "cham soc da mat skin care facial routine basic co ban san pham".split()
+)
 
 
-def _specific_skincare_need_was_named(need_text: str, normalized_user_text: str) -> bool:
-    """Only harden a skincare component when the user named that component.
-
-    Broad phrases like ``chăm sóc da`` must not make every model-decomposed
-    routine step mandatory. A few unambiguous Vietnamese paraphrases are kept
-    here for common spoken requests such as ``đồ làm sạch da mặt``.
-    """
+def _need_phrase_alias_is_named(need_text: str, user_text: str) -> bool:
+    """Recognize ordinary paraphrases of a specific shopping need."""
     normalized_need = _normalize_vietnamese(need_text)
-    normalized_need = re.sub(r"[^\w\s]", " ", normalized_need)
-    for cues in _SKINCARE_NEED_CUES.values():
-        need_is_this_component = any(
-            re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized_need) for cue in cues
+    normalized_user = _normalize_vietnamese(user_text)
+    for need_phrases, user_phrases in _NEED_PHRASE_EQUIVALENTS:
+        need_matches = any(
+            re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized_need)
+            for phrase in need_phrases
         )
-        if need_is_this_component and any(
-            re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized_user_text) for cue in cues
-        ):
+        user_matches = any(
+            re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized_user)
+            for phrase in user_phrases
+        )
+        if need_matches and user_matches:
             return True
     return False
+
+
+def _is_inferred_skincare_subgroup_label(
+    label: str,
+    need_category: str | None,
+    category_leaf: str = "",
+) -> bool:
+    """Detect a model-added skincare step beneath a broad skincare category.
+
+    The imported catalog uses the same ``Chăm sóc da`` leaf for several
+    different steps. A broad request for skincare must not make cleanser,
+    moisturizer, and sunscreen all mandatory just because they share that
+    leaf. This examines category vocabulary only; no product IDs are involved.
+    """
+    leaf_is_skincare = _normalize_vietnamese(category_leaf) == "cham soc da"
+    if need_category != "skincare" and not leaf_is_skincare:
+        return False
+    normalized = _normalize_vietnamese(label)
+    if not normalized or any(
+        re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized)
+        for phrase in _SKINCARE_BROAD_NEED_LABELS
+    ):
+        return False
+    label_tokens = set(re.findall(r"[a-z0-9]+", normalized))
+    return bool(label_tokens - _SKINCARE_LABEL_FILLER_TOKENS)
 
 
 def _explicit_recommendation_category(text: str) -> str | None:
@@ -465,28 +500,9 @@ def _enforce_shopping_mission_call_semantics(
                 "family",
                 "trip",
             }
-            user_need_tokens = user_tokens - generic_need_tokens
-            supported_categories = {
-                "snack",
-                "drink",
-                "dairy",
-                "meal",
-                "skincare",
-                "haircare",
-                "oral_care",
-                "home_cleaning",
-                "laundry",
-                "baby",
-                "cosmetic",
-                "paper_goods",
-            }
             for need in needs:
                 if not isinstance(need, dict):
                     continue
-                need_text = " ".join(
-                    str(need.get(key) or "") for key in ("label", "category", "product_query")
-                )
-                canonical_need = _parse_recommendation_category(need_text)
                 need_id = str(need.get("need_id") or "")
                 previous_need = previous_needs.get(need_id)
                 need_is_lexically_named = any(
@@ -498,6 +514,69 @@ def _enforce_shopping_mission_call_semantics(
                     )
                     for key in ("label", "product_query")
                 )
+                need_text = " ".join(
+                    str(need.get(key) or "") for key in ("label", "category", "product_query")
+                )
+                need_category = _parse_recommendation_category(need_text)
+                need_category_leaf = str(need.get("category") or "").split(">")[-1].strip()
+                if not need_is_lexically_named:
+                    need_is_lexically_named = _need_phrase_alias_is_named(
+                        need_text,
+                        normalized_text,
+                    )
+                product_query = _normalize_vietnamese(str(need.get("product_query") or ""))
+                query_tokens = set(re.findall(r"[a-z0-9]+", product_query))
+                query_context_tokens = generic_need_tokens | {
+                    "for",
+                    "the",
+                    "picnic",
+                    "outing",
+                    "party",
+                    "movie",
+                    "night",
+                    "watching",
+                    "football",
+                    "game",
+                    "camping",
+                    "hiking",
+                    "beach",
+                    "travel",
+                    "trip",
+                    "di",
+                    "choi",
+                    "xem",
+                    "bong",
+                    "da",
+                    "du lich",
+                }
+                specific_query_tokens = query_tokens - query_context_tokens
+                query_is_named = bool(specific_query_tokens) and all(
+                    token in user_tokens
+                    or token.endswith("s")
+                    and token[:-1] in user_tokens
+                    or f"{token}s" in user_tokens
+                    for token in specific_query_tokens
+                )
+                need_has_specific_query = bool(query_tokens) and not (
+                    query_is_named
+                    or need_is_lexically_named
+                    or (
+                        _is_inferred_skincare_subgroup_label(
+                            str(need.get("label") or ""), need_category, need_category_leaf
+                        )
+                        and not need_is_lexically_named
+                    )
+                )
+                if (
+                    _is_inferred_skincare_subgroup_label(
+                        str(need.get("label") or ""), need_category, need_category_leaf
+                    )
+                    and not need_is_lexically_named
+                ):
+                    need_has_specific_query = True
+                category_is_named = bool(
+                    need_category in explicit_categories and not need_has_specific_query
+                )
                 if previous_need is not None and re.search(
                     r"\b(?:giu nguyen|giu lai|nhu cau da chot|keep (?:the )?same needs?)\b",
                     normalized_text,
@@ -506,45 +585,22 @@ def _enforce_shopping_mission_call_semantics(
                     need["required"] = previous_need.get("required", need.get("required", False))
                     continue
                 category_leaf = str(need.get("category") or "").split(">")[-1]
-                category_leaf_intent = _parse_recommendation_category(category_leaf)
-                canonical_need = canonical_need or category_leaf_intent
-                # The model can echo occasion words into a need label (for
-                # example, "snack xem bóng"). Only the catalog leaf can make a
-                # lexical match explicit; the label may contain activity context.
-                direct_need_text = category_leaf or str(need.get("label") or "")
-                need_tokens = (
-                    set(re.findall(r"[a-z0-9]+", _normalize_vietnamese(direct_need_text)))
-                    - generic_need_tokens
+                category_phrase = re.sub(
+                    r"[^\w\s]", " ", _normalize_vietnamese(category_leaf)
+                ).strip()
+                category_phrase_is_verbatim = bool(
+                    category_phrase
+                    and not need_has_specific_query
+                    and re.search(rf"(?<!\w){re.escape(category_phrase)}(?!\w)", normalized_text)
                 )
-                if canonical_need == "skincare":
-                    directly_named = need_is_lexically_named or _specific_skincare_need_was_named(
-                        need_text,
-                        normalized_text,
-                    )
-                elif canonical_need in supported_categories:
-                    # A broad intent such as "snack" must not turn every
-                    # inferred child category (candy, sausage, chips, etc.)
-                    # into an explicit requirement. The canonical category
-                    # only counts when the catalog leaf itself names that
-                    # broad group; otherwise require a lexical mention of the
-                    # specific leaf by the customer.
-                    directly_named = (
-                        (
-                            canonical_need in explicit_categories
-                            and category_leaf_intent == canonical_need
-                        )
-                        or need_is_lexically_named
-                        or len(need_tokens & user_need_tokens) >= 1
-                    )
-                    if canonical_need == "baby" and not re.search(
-                        r"\b(?:do cho|do dung cho|cham soc|ta bim|baby care)\b",
-                        normalized_text,
-                    ):
-                        directly_named = False
-                else:
-                    directly_named = (
-                        need_is_lexically_named or len(need_tokens & user_need_tokens) >= 1
-                    )
+                # A need is required only when its actual category or a
+                # multiword product phrase appears in the user's words. This
+                # applies to every taxonomy branch, so broad intents (including
+                # skincare, food and household needs) cannot harden a model's
+                # inferred child categories into requirements.
+                directly_named = (
+                    need_is_lexically_named or category_phrase_is_verbatim or category_is_named
+                )
                 if open_ended_need_discovery and not need_is_lexically_named:
                     category_tokens = set(
                         re.findall(r"[a-z0-9]+", _normalize_vietnamese(category_leaf))
@@ -557,10 +613,9 @@ def _enforce_shopping_mission_call_semantics(
                     )
                     specific_query_tokens = query_tokens - category_tokens - generic_need_tokens
                     if specific_query_tokens - user_tokens:
-                        # A broad goal such as routine skincare can name the
-                        # context while leaving its component product groups
-                        # open for advice. Keep those inferred groups optional
-                        # until the customer names or confirms them.
+                        # A broad goal can leave its component product groups
+                        # open for advice. Keep inferred groups optional until
+                        # the customer names or confirms them.
                         directly_named = False
                 if not directly_named:
                     if previous_need is not None and not explicit_needs_only:

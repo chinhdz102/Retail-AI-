@@ -299,6 +299,80 @@ class PostgresProductRepository:
             )
         )
 
+    async def _catalog_terms_evidenced(
+        self,
+        terms: tuple[str, ...] | list[str],
+        category: str,
+    ) -> frozenset[str]:
+        requested = tuple(
+            dict.fromkeys(
+                token
+                for term in terms
+                for token in normalize_search_text(term).split()
+                if token
+            )
+        )
+        if not requested:
+            return frozenset()
+
+        args: list[object] = [list(requested)]
+        where = ["p.active IS TRUE"]
+        normalized_category = normalize_search_text(category).strip()
+        if normalized_category:
+            category_terms = {
+                "haircare": ("chăm sóc tóc", "dầu gội", "dầu xả"),
+                "oral_care": (
+                    "chăm sóc răng miệng",
+                    "kem đánh răng",
+                    "bàn chải đánh răng",
+                    "nước súc miệng",
+                    "chỉ nha khoa",
+                ),
+            }.get(normalized_category, (normalized_category,))
+            category_matches = []
+            for category_term in category_terms:
+                args.append(f"%{_escape_like_literal(normalize_search_text(category_term))}%")
+                category_matches.append(
+                    f"p.search_category ILIKE ${len(args)} ESCAPE '!'"
+                )
+            where.append("(" + " OR ".join(category_matches) + ")")
+
+        # `search_name` also contains identifiers and taxonomy; tokenize the
+        # three shopper-facing evidence fields so SKU codes and category words
+        # cannot count as product-attribute evidence.
+        normalized_evidence = "lower(unaccent(replace(replace("
+        normalized_evidence += (
+            "concat_ws(' ', p.name, p.brand, p.description), 'Đ', 'D'), 'đ', 'd'))))"
+        )
+        sql = f"""
+            WITH requested AS (
+                SELECT unnest($1::text[]) AS token
+            )
+            SELECT DISTINCT requested.token
+            FROM requested
+            WHERE EXISTS (
+                SELECT 1
+                FROM products p
+                WHERE {' AND '.join(where)}
+                  AND requested.token = ANY(
+                      regexp_split_to_array({normalized_evidence}, '[^a-z0-9]+')
+                  )
+            )
+        """
+        conn = await asyncpg.connect(self._dsn, timeout=2)
+        try:
+            rows = await conn.fetch(sql, *args)
+            return frozenset(str(row["token"]) for row in rows)
+        finally:
+            await conn.close()
+
+    def catalog_terms_evidenced(
+        self,
+        terms: tuple[str, ...] | list[str],
+        category: str,
+    ) -> frozenset[str]:
+        return self._run(self._catalog_terms_evidenced(terms, category))
+
     async def _list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]:
         conn = await asyncpg.connect(self._dsn, timeout=2)
         try:

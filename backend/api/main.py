@@ -507,7 +507,13 @@ def _filter_product_candidates_to_session_context(
 
     filtered = tuple(item for item in observation.products if item.product_id in allowed_ids)
     if not filtered:
-        return observation
+        # An explicit size/variant follow-up inside a known session context
+        # must not escape to unrelated products that merely share the size.
+        return replace(
+            observation,
+            products=(),
+            content={**observation.content, "count": 0, "session_context_match": False},
+        )
     return replace(
         observation,
         products=filtered,
@@ -1808,8 +1814,7 @@ def _localized_recommendation_candidates(
             return response
         if language == "zh":
             response = (
-                f"目录中的同类商品有：{rendered_items}。"
-                "目录没有核实它们是否符合你提到的其他条件。"
+                f"目录中的同类商品有：{rendered_items}。目录没有核实它们是否符合你提到的其他条件。"
             )
             if has_audience_caveat:
                 response += "请先查看包装上的适用年龄。"
@@ -2837,6 +2842,37 @@ def _deterministic_tool_response(
 ) -> AgentRespondResponse:
     session_store.add_message(request.session_id, "user", request.text)
     session_store.add_message(request.session_id, "assistant", reply)
+    if observation.tool_name in {"search_products", "recommend_products"}:
+        candidate_ids = [product.product_id for product in observation.products]
+        categories = {
+            product.category.strip()
+            for product in observation.products
+            if product.category and product.category.strip()
+        }
+        one_product = observation.products[0] if len(observation.products) == 1 else None
+        is_candidate_list = len(candidate_ids) > 1
+        session_store.set_last_grounded_product(
+            request.session_id,
+            one_product.product_id if one_product else None,
+            one_product.name if one_product else None,
+        )
+        session_store.update_shopping(
+            request.session_id,
+            current_intent=(
+                IntentType.RECOMMENDATION
+                if observation.tool_name == "recommend_products"
+                else IntentType.PRODUCT_LOOKUP
+            ),
+            active_product_id=one_product.product_id if one_product else None,
+            active_category=next(iter(categories)) if len(categories) == 1 else None,
+            selected_product_ids=candidate_ids,
+            pending_action="SELECT_RECOMMENDATION" if is_candidate_list else None,
+            pending_clarification=(
+                "Select a product by name or number before reading its details."
+                if is_candidate_list
+                else None
+            ),
+        )
     return AgentRespondResponse(
         session_id=request.session_id,
         text=reply,
@@ -2901,6 +2937,32 @@ def _localized_candidates(observation: ToolObservation, language: LanguageCode) 
 def _pending_candidate_code(text: str) -> str | None:
     match = re.search(r"\b[a-z]?\d{2,3}\b", _normalize_request_text(text))
     return match.group(0) if match else None
+
+
+def _pending_candidate_index(text: str) -> int | None:
+    """Resolve an ordinal reference against the last displayed candidate list."""
+    normalized = " ".join(_normalize_request_text(text).split())
+    if re.search(r"\b(?:dau tien|first(?: item| product| one)?)\b", normalized):
+        return 0
+    ordinals = {
+        "nhat": 0,
+        "mot": 0,
+        "hai": 1,
+        "ba": 2,
+        "tu": 3,
+        "bon": 3,
+        "nam": 4,
+        "sau": 5,
+    }
+    for word, index in ordinals.items():
+        if re.search(rf"\b(?:thu|so)\s+(?:{word}|{index + 1})\b", normalized):
+            return index
+        if re.search(
+            rf"\b(?:loai|mon|san pham|lua chon|item|product|option)\s+{index + 1}\b",
+            normalized,
+        ):
+            return index
+    return None
 
 
 def _localized_product_dosage_unavailable(
@@ -3616,7 +3678,10 @@ def _shopping_mission_planner_system_prompt(
         "Capture the goal/use case, occasion, party size, total budget, hard requirements, "
         "exclusions, preferences, existing items, and important unknowns. Decompose into at "
         "most six distinct needs. Only user-stated or confirmed needs are EXPLICIT and required; "
-        "include every explicitly named need or product group, even when the customer gives no "
+        "for each need, preserve the short user phrase that established that distinct need in "
+        "label; keep taxonomy category separate, and do not reuse a broad goal phrase as the label "
+        "for inferred child needs. "
+        "Include every explicitly named need or product group, even when the customer gives no "
         "SKU name or a group may be unavailable; never omit one just because the budget is tight. "
         "On revisions, add every newly requested group and preserve unrelated existing needs. "
         "Inferred suggestions stay optional and must be clearly useful for the stated goal; "
@@ -5557,24 +5622,54 @@ async def agent_respond(
             return _record_shopping_turn(request, reply, model="catalog")
     pending_selection = record.shopping.pending_action or ""
     candidate_code = _pending_candidate_code(request.text)
+    candidate_index = _pending_candidate_index(request.text)
     if (
-        candidate_code
+        (candidate_code or candidate_index is not None)
         and pending_selection.startswith(("LOOKUP_PRODUCT:", "SELECT_RECOMMENDATION"))
         and record.shopping.selected_product_ids
     ):
-        matching_products = [
-            product
-            for product_id in record.shopping.selected_product_ids
-            if (product := get_product_repository().get_product_snapshot(product_id)) is not None
-            and re.search(
-                rf"(?<!\w){re.escape(candidate_code)}(?!\w)",
-                _normalize_request_text(product.name),
+        if candidate_index is not None and pending_selection.startswith("SELECT_RECOMMENDATION"):
+            if candidate_index >= len(record.shopping.selected_product_ids):
+                return _record_shopping_turn(
+                    request,
+                    {
+                        "vi": (
+                            f"Mình vừa gợi ý {len(record.shopping.selected_product_ids)} "
+                            "lựa chọn. Bạn chọn số thứ tự trong danh sách giúp mình nhé."
+                        ),
+                        "en": (
+                            f"I just suggested {len(record.shopping.selected_product_ids)} "
+                            "options. Please choose a number from that list."
+                        ),
+                        "zh": (
+                            f"我刚才推荐了{len(record.shopping.selected_product_ids)}个选项，"
+                            "请从列表中选择。"
+                        ),
+                    }[request.language],
+                    model="local-clarification",
+                )
+            selected_product = get_product_repository().get_product_snapshot(
+                record.shopping.selected_product_ids[candidate_index]
             )
-        ]
+            matching_products = [selected_product] if selected_product is not None else []
+        else:
+            matching_products = [
+                product
+                for product_id in record.shopping.selected_product_ids
+                if (
+                    product := get_product_repository().get_product_snapshot(product_id)
+                )
+                is not None
+                and candidate_code
+                and re.search(
+                    rf"(?<!\w){re.escape(candidate_code)}(?!\w)",
+                    _normalize_request_text(product.name),
+                )
+            ]
         if len(matching_products) == 1:
             selected_product = matching_products[0]
-            fields = (
-                tuple(
+            if pending_selection.startswith("LOOKUP_PRODUCT:"):
+                fields = tuple(
                     field_name
                     for field_name in pending_selection.removeprefix("LOOKUP_PRODUCT:").split(",")
                     if field_name
@@ -5589,9 +5684,8 @@ async def agent_respond(
                         "data_timestamp",
                     }
                 )
-                if pending_selection.startswith("LOOKUP_PRODUCT:")
-                else ("price_vnd",)
-            )
+            else:
+                fields = _requested_snapshot_fields(request.text) or ("price_vnd",)
             if not fields:
                 fields = ("price_vnd",)
             observation = await lookup_followup_snapshot(
@@ -6424,8 +6518,9 @@ async def agent_respond(
                 campaign_observation,
                 reply,
             )
+    raw_fact_product_query = _fact_product_query(request.text)
     explicit_fact_query = _contextualize_variant_product_query(
-        _fact_product_query(request.text),
+        raw_fact_product_query,
         request.text,
         record,
     )
@@ -6554,7 +6649,6 @@ async def agent_respond(
     ):
         candidate_observation = await lookup_product_candidates(
             explicit_fact_query,
-            current_user_text=request.text,
         )
         candidate_observation = _filter_product_candidates_to_session_context(
             candidate_observation,
@@ -6713,7 +6807,6 @@ async def agent_respond(
                 base_observation = (
                     await lookup_product_candidates(
                         base_query,
-                        current_user_text=request.text,
                     )
                     if base_query and _fact_query_has_product_target(base_query)
                     else None
@@ -6792,7 +6885,6 @@ async def agent_respond(
     ):
         candidate_observation = await lookup_product_candidates(
             explicit_fact_query,
-            current_user_text=request.text,
         )
         if candidate_observation.status == "SUCCESS" and candidate_observation.products:
             candidates = tuple(candidate_observation.products)

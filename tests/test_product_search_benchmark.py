@@ -21,6 +21,7 @@ class _Connection:
         self.query = ""
         self.args: tuple[object, ...] = ()
         self.executed: list[str] = []
+        self.rows: list[dict] = []
 
     def transaction(self):
         return _Transaction()
@@ -32,7 +33,7 @@ class _Connection:
     async def fetch(self, query: str, *args: object) -> list[dict]:
         self.query = query
         self.args = args
-        return []
+        return self.rows
 
     async def close(self) -> None:
         return None
@@ -141,6 +142,28 @@ def test_diacritic_bim_word_keeps_the_regular_category_search_path(monkeypatch) 
     assert "%bim%" in connection.args
     assert "%bim bim%" not in connection.args
     assert connection.query.count("p.search_category ILIKE") >= 2
+
+
+def test_postgres_catalog_term_evidence_batches_exact_tokens_and_category(monkeypatch) -> None:
+    connection = _Connection()
+    connection.rows = [{"token": "coca"}, {"token": "zero"}]
+
+    async def connect(*args, **kwargs):
+        return connection
+
+    monkeypatch.setattr(postgres_repository.asyncpg, "connect", connect)
+    repository = postgres_repository.PostgresProductRepository("postgresql://unused")
+
+    assert repository.catalog_terms_evidenced(
+        ("coca", "zero", "unverified"), "Bánh snack"
+    ) == frozenset({"coca", "zero"})
+
+    assert len(connection.args) == 2
+    assert connection.args[0] == ["coca", "zero", "unverified"]
+    assert connection.args[1] == "%banh snack%"
+    assert "requested.token = ANY" in connection.query
+    assert "concat_ws(' ', p.name, p.brand, p.description)" in connection.query
+    assert "p.search_category ILIKE" in connection.query
 
 
 def test_expanded_product_resolution_cases_reference_the_checked_in_catalog() -> None:

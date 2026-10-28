@@ -24,9 +24,13 @@ _CONVERSATIONAL_WORDS = QUERY_STOP_WORDS | frozenset(
     "want need looking have help would should use buy choose avoid except".split()
 )
 _NEGATED_BRAND = re.compile(
-    r"\b(?:khong(?:\s+(?:thich|lay|mua|dung|chon))?|tranh|tru|bo|loai bo|"
+    r"\b(?:khong(?:\s+(?:phai|thich|lay|mua|dung|chon))?|tranh|tru|bo\s+qua|bo|loai bo|"
     r"dung\s+(?:lay|chon|mua)|no|avoid|without|except)\s+"
     r"(?:(?:san pham|thuong hieu|nhan hang|nhan|hang|loai|brand|cua)\s+)*$"
+)
+_NEGATED_BRAND_SUFFIX = re.compile(
+    r"^\s*(?:thi\s+)?(?:bo\s+qua|loai\s+bo|loai\s+tru|khong\s+(?:lay|chon|mua|dung)|"
+    r"dung\s+(?:lay|chon|mua)|avoid|except|without)\b"
 )
 
 
@@ -101,9 +105,35 @@ def excluded_catalog_brands(text: str, brands: list[str]) -> frozenset[str]:
         if not key or f" {key} " not in f" {normalized} ":
             continue
         for match in re.finditer(rf"(?<!\w){re.escape(key)}(?!\w)", normalized):
-            if _NEGATED_BRAND.search(normalized[max(0, match.start() - 100) : match.start()]):
+            prefix = normalized[max(0, match.start() - 100) : match.start()]
+            suffix = normalized[match.end() : match.end() + 48]
+            if _NEGATED_BRAND.search(prefix) or _NEGATED_BRAND_SUFFIX.search(suffix):
                 excluded.add(key)
     return frozenset(excluded)
+
+
+def remove_excluded_brand_phrases(text: str, brands: list[str]) -> str:
+    """Remove catalog-grounded negative brand clauses from positive retrieval text."""
+    normalized = normalize_category_text(text)
+    excluded = excluded_catalog_brands(text, brands)
+    for brand in sorted(excluded, key=len, reverse=True):
+        key = re.escape(brand)
+        prefix_clause = re.compile(
+            r"\b(?:khong(?:\s+(?:phai|thich|lay|mua|dung|chon))?|tranh|tru|"
+            r"bo(?:\s+qua)?|loai\s+(?:bo|tru)|dung\s+(?:lay|chon|mua)|"
+            r"no|avoid|without|except)\s+"
+            r"(?:(?:san pham|thuong hieu|nhan hang|nhan|hang|loai|brand|cua)\s+)*"
+            rf"{key}\b"
+        )
+        suffix_clause = re.compile(
+            r"\b(?:(?:san pham|thuong hieu|nhan hang|nhan|hang|loai|brand)\s+)*"
+            rf"{key}\s+(?:thi\s+)?"
+            r"(?:bo\s+qua|loai\s+(?:bo|tru)|khong\s+(?:lay|chon|mua|dung)|"
+            r"dung\s+(?:lay|chon|mua)|avoid|except|without)\b"
+        )
+        normalized = prefix_clause.sub(" ", normalized)
+        normalized = suffix_clause.sub(" ", normalized)
+    return " ".join(normalized.split())
 
 
 def search_with_preferences(

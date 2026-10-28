@@ -18,6 +18,7 @@ from backend.products.category_taxonomy import (
     catalog_leaf_query_phrase,
     category_alias_refines_explicit_audience,
     category_is_parent,
+    normalize_category_text,
     resolve_catalog_category,
     resolve_catalog_category_alias,
     resolve_catalog_category_with_explicit_audience,
@@ -54,7 +55,9 @@ class QueryUnderstandingResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     intent: QueryIntent
+    secondary_intents: tuple[QueryIntent, ...] = ()
     product_type: str | None = None
+    product_types: tuple[str, ...] = ()
     product_reference: str = ""
     use_case: str | None = None
     hard_constraints: tuple[str, ...] = ()
@@ -66,6 +69,7 @@ class QueryUnderstandingResult(BaseModel):
     quantity: int | None = Field(default=None, ge=1, le=10_000)
     brand_preference: str | None = None
     comparison_scope: str | None = None
+    comparison_targets: tuple[str, ...] = ()
     conversation_reference: str | None = None
     ranking_criterion: RankingCriterion = "relevance"
     ambiguity: tuple[str, ...] = ()
@@ -123,9 +127,9 @@ _NEGATION = re.compile(
 )
 _NEGATION_TAIL_STOP = re.compile(
     r"\b(?:truoc\s+tien|sau\s+do|va|nhung|con|hay|hoac|neu|if|doi\s+(?:thanh|sang)|but|and|or|please|nhe|nha|duoi|tren|"
-    r"toi\s+da|khong\s+qua|qua|under|up\s+to|less\s+than|budget|"
+    r"toi\s+da|khong\s+qua|ngan\s+sach|qua|under|up\s+to|less\s+than|budget|"
     r"cho\s+(?:minh|toi|em|anh|chi|ban)\s+(?:xem|hoi|biet)|"
-    r"cho\s+xem|xem\s+giup|minh|toi|em|anh|chi|ban|biet|noi|hoi)\b"
+    r"cho\s+xem|xem\s+giup|tim|minh|toi|em|anh|chi|ban|biet|noi|hoi)\b"
     r"|\b\d+(?:[.,]\d+)?\s*(?:trieu|tr|k|ngan|nghin|dong|vnd)\b"
 )
 _FINAL_SELECTION = re.compile(
@@ -137,7 +141,10 @@ _FINAL_SELECTION = re.compile(
     r"\b(?:gioi thieu|xem|tim|chon|mua|lay|tra cuu|goi y)\s+"
     r"(?:nhom\s+)?(.+?)\s+truoc$"
 )
-_COMPARISON_OPERAND_SEPARATOR = re.compile(r"\b(?:voi|vs|versus|hay)\b")
+_COMPARISON_OPERAND_SEPARATOR = re.compile(r"\b(?:voi|vs|versus|hay|hoac|va|and|or)\b")
+_COMPARISON_TARGET_QUESTION_TAIL = re.compile(
+    r"\s*,?\s*(?:(?:loai|cai|mon|san pham)\s+nao|which\s+(?:one|product))\b.*$"
+)
 _PRODUCT_ATTRIBUTE_MARKER = re.compile(r"\b(?:vi|huong|mui|mau|flavor|scent|color)\b")
 _NUMBER_WORD = (
     r"(?:khong|mot|hai|ba|bon|tu|nam|lam|sau|bay|tam|chin|muoi|"
@@ -170,8 +177,10 @@ _BUDGET_PER_ITEM_SCOPE = re.compile(
 _CONVERSATION_REFERENCE = re.compile(
     r"\b(?:loai nao khac|cai nao khac|mon nao khac|san pham nao khac|"
     r"loai khac|cai khac|mon khac|san pham khac|nho hon|re hon|"
-    r"dat hon|cai do|mon do|san pham do|no|cai ay|loai ay|that one|"
-    r"the other one|cheaper|more expensive|instead)\b"
+    r"lua chon nao khac|phuong an nao khac|lua chon khac|phuong an khac|"
+    r"dat hon|cai do|mon do|san pham do|loai dau tien|mon dau tien|"
+    r"san pham dau tien|no|cai ay|loai ay|that one|the other one|"
+    r"first item|first product|first one|cheaper|more expensive|instead)\b"
 )
 _GENERIC_REFERENCES = frozenset(
     {
@@ -180,9 +189,19 @@ _GENERIC_REFERENCES = frozenset(
         "mon nao",
         "san pham nao",
         "hang nao",
+        "lua chon nao khac",
+        "phuong an nao khac",
         "loai khac",
         "cai khac",
         "mon khac",
+        "lua chon khac",
+        "phuong an khac",
+        "loai dau tien",
+        "mon dau tien",
+        "san pham dau tien",
+        "first item",
+        "first product",
+        "first one",
         "re hon",
         "dat hon",
         "nho hon",
@@ -194,6 +213,8 @@ _GENERIC_REFERENCES = frozenset(
 _GENERIC_FOLLOW_UP = re.compile(
     r"^(?:co\s+)?(?:loai nao(?: khac)?|cai nao(?: khac)?|mon nao(?: khac)?|"
     r"san pham nao(?: khac)?|loai khac|cai khac|mon khac|san pham khac|"
+    r"lua chon nao khac|phuong an nao khac|lua chon khac|phuong an khac|"
+    r"loai dau tien|mon dau tien|san pham dau tien|first item|first product|first one|"
     r"re hon|dat hon|nho hon|cai do|mon do|san pham do|"
     r"that one|the other one|cheaper|more expensive)(?:\s+(?:khong|nua|khong a))?$"
 )
@@ -211,9 +232,7 @@ _LOCATION_REFERENCE_SUFFIX = re.compile(
     r"\b(?:nam\s+(?:o|trong|tren|gan|khu)\b|"
     r"(?:o|tai|trong|gan)\s+(?:khu|ke|day|ngan|quay|tu|tu\s+mat|tu\s+lanh))\b"
 )
-_EXPLICIT_NAMED_LOCATION_SUFFIX = re.compile(
-    r"\bnằm\s+(?:ở|trong|trên|gần|khu)\b", re.IGNORECASE
-)
+_EXPLICIT_NAMED_LOCATION_SUFFIX = re.compile(r"\bnằm\s+(?:ở|trong|trên|gần|khu)\b", re.IGNORECASE)
 _PRICE = re.compile(
     r"\b(?:gia(?!\s+dinh\b)|bao nhieu(?: tien)?|bao tien|may dong|price|how much|cost)\b"
 )
@@ -252,7 +271,7 @@ _BROAD_UNRESOLVED_REQUEST = re.compile(
 )
 _REQUEST_PREFIX = re.compile(
     r"^(?:(?:minh|toi|em|anh|chi|ban)\s+)?"
-    r"(?:muon\s+tim|can\s+tim|tim\s+giup(?:\s+(?:minh|toi|em|anh|chi))?|"
+    r"(?:dang\s+)?(?:muon(?:\s+tim)?|can(?:\s+tim)?|tim\s+giup(?:\s+(?:minh|toi|em|anh|chi))?|"
     r"tim|cho\s+(?:minh|toi|em|anh|chi)\s+(?:xem|tim|hoi(?:\s+ve)?)|"
     r"cho\s+xem|xem\s+giup|show\s+me|looking\s+for|"
     r"please\s+(?:find|show)|find\s+me|find)\b\s*"
@@ -311,8 +330,7 @@ def _raw_span_for_normalized_span(
     expanded: list[tuple[str, int]] = []
     for raw_index, raw_word in enumerate(raw_words):
         expanded.extend(
-            (word, raw_index)
-            for word in normalize_vietnamese(raw_word.group()).split()
+            (word, raw_index) for word in normalize_vietnamese(raw_word.group()).split()
         )
     targets = [word.group() for word in normalized_words]
     source_indices: list[int | None] = [None] * len(targets)
@@ -475,7 +493,13 @@ def _selected_focus_reference(
                 left_match = resolve_catalog_category_alias(operand_parts[0], category_hierarchies)
             if left_match is not None:
                 focus_tokens = set(normalize_vietnamese(focus).split()) - {
-                    "nhom", "loai", "hang", "san", "pham", "truoc", "nhe"
+                    "nhom",
+                    "loai",
+                    "hang",
+                    "san",
+                    "pham",
+                    "truoc",
+                    "nhe",
                 }
                 siblings: set[str] = set()
                 left_path = next(
@@ -607,8 +631,85 @@ def _is_brand_question(normalized: str, raw: str) -> bool:
     return bool(re.search(r"\b(?:cua|thuoc|from|made by)\s*$", prefix))
 
 
+def _comparison_targets(raw: str, normalized: str) -> tuple[str, ...]:
+    """Keep each explicit operand when a turn compares multiple entities."""
+    marker = _COMPARISON.search(normalized)
+    if marker is None:
+        return ()
+
+    comparison_verb = re.search(r"\b(?:so sanh|phan biet|compare|difference between)\b", normalized)
+    body_start = comparison_verb.end() if comparison_verb else 0
+    # In postposed comparisons ("A với B khác nhau thế nào"), the comparison
+    # marker follows the entities; with a leading verb, it precedes them.
+    if comparison_verb:
+        body_end = len(normalized)
+        trailing_comparison = re.search(
+            r"\b(?:co gi khac|khac gi|khac nhau|differ(?:ence)?|the nao)\b",
+            normalized[body_start:],
+        )
+        if trailing_comparison:
+            body_end = body_start + trailing_comparison.start()
+    elif marker.group() in {"vs", "versus"}:
+        body_end = len(normalized)
+    else:
+        body_end = marker.start()
+
+    body = normalized[body_start:body_end]
+    body = _COMPARISON_TARGET_QUESTION_TAIL.sub("", body)
+    body_end = body_start + len(body)
+    between_prefix = re.match(r"\s*(?:giua|between)\s+", body)
+    if between_prefix:
+        body_start += between_prefix.end()
+        body = normalized[body_start:body_end]
+
+    boundaries = [match for match in _COMPARISON_OPERAND_SEPARATOR.finditer(body)]
+    if not boundaries:
+        return ()
+    segments: list[tuple[int, int]] = []
+    cursor = body_start
+    for boundary in boundaries:
+        segments.append((cursor, body_start + boundary.start()))
+        cursor = body_start + boundary.end()
+    segments.append((cursor, body_end))
+
+    targets: list[str] = []
+    for start, end in segments:
+        segment = normalized[start:end]
+        left = len(segment) - len(segment.lstrip(" ,.!?;:"))
+        right = len(segment.rstrip(" ,.!?;:"))
+        start += left
+        end = min(end, start + max(0, right - left))
+        if end <= start:
+            continue
+        target_norm = normalized[start:end]
+        leading_filler = re.match(r"^(?:loai|mon|san pham|hang)\s+", target_norm)
+        if leading_filler:
+            start += leading_filler.end()
+            target_norm = target_norm[leading_filler.end() :]
+        for tail in (
+            r"\s+(?:khac nhau(?: nhu the nao)?|khac gi|co gi khac|the nao)$",
+            r"\s+(?:la|thi)$",
+            r"\s+(?:giup\s+(?:minh|toi|em|anh|chi)|nhe|nha|duoc\s+khong)$",
+        ):
+            target_norm = re.sub(tail, "", target_norm).strip()
+            end = start + len(target_norm)
+        if not target_norm:
+            continue
+        raw_start, raw_end = _raw_span_for_normalized_span(raw, normalized, start, end)
+        target = raw[raw_start:raw_end].strip(" ,.!?;:")
+        target = re.sub(
+            r"\s+(?:là|thì)$|\s+(?:giúp\s+(?:mình|tôi|em|anh|chị)|nhé|nha|được\s+không)$",
+            "",
+            target,
+            flags=re.IGNORECASE,
+        ).strip()
+        if target:
+            targets.append(target)
+    return tuple(dict.fromkeys(targets)) if len(targets) >= 2 else ()
+
+
 _PRIMARY_TYPE_FILLERS = frozenset(
-    "minh toi em anh chi ban can muon tim mua xem cho giup vay co khong a nhe nha "
+    "minh dang toi em anh chi ban can muon tim mua xem cho giup vay co khong cua hang a nhe nha "
     "loai nhom vai may mot quyen chai hop goi tui loc thung size kg g gam ml lit "
     "the nao giup voi please find show me some any a few couple".split()
 )
@@ -632,17 +733,47 @@ def _single_word_category_is_primary(product_type: str, query: str) -> bool:
     return not preceding
 
 
-def _negative_constraints(normalized: str) -> tuple[str, ...]:
+def _negative_constraints(normalized: str, raw: str | None = None) -> tuple[str, ...]:
     values: list[str] = []
     # A request not to claim an unverified fact is an epistemic instruction,
     # not a request to filter products by the last word in that sentence.
     constraint_text = re.sub(r"\b(?:nhung\s+)?dung\s+khang\s+dinh\b.*$", " ", normalized)
     for match in _NEGATION.finditer(constraint_text):
+        # A question particle such as ``không?`` asks whether a product exists;
+        # the words after it may start a separate request and are not a filter.
+        if raw and match.group().startswith("khong "):
+            _raw_start, raw_end = _raw_span_for_normalized_span(
+                raw,
+                normalized,
+                match.start(),
+                match.start() + len("khong"),
+            )
+            raw_tail = raw[raw_end:]
+            if re.match(r"\s*[?？]", raw_tail):
+                continue
+            # Vietnamese often places a follow-up request after a comma
+            # instead of a question mark: ``có bán X không, tìm giúp mình``.
+            # Treat that ``không`` as a yes/no particle when the next clause
+            # clearly asks us to search/check/show, not as a product filter.
+            post_particle = re.sub(r"^[\s,;]+", "", raw_tail)
+            normalized_post_particle = normalize_vietnamese(post_particle).strip()
+            if re.match(r"\s*[,;]", raw_tail) and re.match(
+                r"^(?:tim|kiem tra|tra cuu|xem|cho|gui|noi)\b",
+                normalized_post_particle,
+            ):
+                continue
         # ``không phải ...`` is commonly a correction or contrast in Vietnamese,
         # not a request to filter products by a missing catalog attribute.
         if re.match(r"khong\s+phai\b", match.group()):
             continue
         phrase = match.group(1).strip()
+        # ``không cần gợi ý`` and similar meta instructions control the
+        # assistant's response style; they do not describe a product filter.
+        if re.match(
+            r"^(?:goi y|de xuat|tu van|recommend(?:ation|ations)?|suggest(?:ion|ions)?|advice)\b",
+            phrase,
+        ):
+            continue
         prefix = constraint_text[max(0, match.start() - 24) : match.start()]
         if re.search(r"\b(?:neu|tru khi|unless)\s*$", prefix):
             continue
@@ -924,9 +1055,7 @@ def understand_catalog_query(
                 f"{normalized_reference[:suffix_start]} nam",
                 category_hierarchies,
             )
-            candidate_tokens = (
-                normalize_vietnamese(candidate.category).split() if candidate else []
-            )
+            candidate_tokens = normalize_vietnamese(candidate.category).split() if candidate else []
             if "nam" in candidate_tokens:
                 remainder_location = re.search(
                     r"\b(?:o|tai|trong|gan)\s+(?:khu|ke|day|ngan|quay|tu|tu\s+mat|tu\s+lanh)\b",
@@ -996,7 +1125,11 @@ def understand_catalog_query(
             )
         )
         attribute_marker = _PRODUCT_ATTRIBUTE_MARKER.search(normalized_reference)
-        if attribute_marker:
+        # Attribute words such as ``hương`` and ``mùi`` can also be part of a
+        # canonical taxonomy label (for example ``Dầu hướng dương`` or
+        # ``Lăn khử mùi Nam``). Preserve a complete named leaf instead of
+        # truncating it to a shorter alias before the marker.
+        if attribute_marker and not exact_leaf_is_named:
             primary_phrase = normalized_reference[: attribute_marker.start()].strip()
             # In colloquial Vietnamese, "dầu gội đầu" is simply shampoo;
             # the second "đầu" is not part of a catalog category name.
@@ -1014,14 +1147,11 @@ def understand_catalog_query(
                 and (
                     primary_exact is None
                     or category_is_parent(primary_exact.category, category_hierarchies)
-                    or len(primary_alias.matched_tokens)
-                    > len(primary_exact.matched_tokens)
+                    or len(primary_alias.matched_tokens) > len(primary_exact.matched_tokens)
                 )
             )
             primary_match = (
-                primary_alias
-                if primary_alias_refines_exact
-                else primary_exact or primary_alias
+                primary_alias if primary_alias_refines_exact else primary_exact or primary_alias
             )
             if primary_match is not None:
                 category_match = primary_match
@@ -1077,17 +1207,20 @@ def understand_catalog_query(
             context_product_type = prior.product_type
             if prior.use_case:
                 context_use_case = prior.use_case
-            if (
-                prior.ranking_criterion != "relevance"
-                and same_previous_type
-                and not prior.product_reference
-            ):
-                context_query = context_query or prior.product_type
+            if prior.conversation_reference and same_previous_type:
+                context_query = prior.product_type
+            elif prior.ranking_criterion != "relevance":
+                # A ranking follow-up such as "which one is cheapest?" often
+                # produces conversational filler as product_reference. Keep
+                # the resolved catalog type as scope instead of replacing it
+                # with that filler.
+                context_query = prior.product_type
             else:
                 context_query = prior.product_reference or prior.product_type
         elif context_query and (
             prior.ranking_criterion != "relevance"
             or prior.intent in {"alternative", "price", "comparison"}
+            or "alternative" in prior.secondary_intents
         ):
             # A short ranking/price/alternative turn often omits the category.
             # Keep the latest explicit product scope across that elliptical turn.
@@ -1112,27 +1245,21 @@ def understand_catalog_query(
         and (product_type is None or product_type == context_product_type)
     ):
         use_case = context_use_case
-    negative_constraints = list(_negative_constraints(normalized))
+    negative_constraints = list(_negative_constraints(normalized, raw))
     # Retain the user's original spelling/accents for taxonomy resolution and
     # diagnostics; matching still normalizes these values before comparison.
     for index, constraint in enumerate(negative_constraints):
         normalized_constraint = normalize_vietnamese(constraint)
-        spans = list(
-            re.finditer(rf"(?<!\w){re.escape(normalized_constraint)}(?!\w)", normalized)
-        )
+        spans = list(re.finditer(rf"(?<!\w){re.escape(normalized_constraint)}(?!\w)", normalized))
         if spans:
             match = spans[-1]
-            start, end = _raw_span_for_normalized_span(
-                raw, normalized, match.start(), match.end()
-            )
+            start, end = _raw_span_for_normalized_span(raw, normalized, match.start(), match.end())
             negative_constraints[index] = raw[start:end].strip(" ,.!?;:")
     # A taxonomy-resolvable ``không phải X`` after a positive category is a
     # real sibling exclusion (for example, mineral water but not fizzy water).
     # Keep ordinary correction phrases out of this field unless the live
     # taxonomy proves that X is a separate product category.
-    excluded_match = re.search(
-        r"\bkhong\s+phai\s+(?:loai\s+)?(.+?)(?:[,.!?;:]|$)", normalized
-    )
+    excluded_match = re.search(r"\bkhong\s+phai\s+(?:loai\s+)?(.+?)(?:[,.!?;:]|$)", normalized)
     if excluded_match and product_type:
         excluded_phrase = excluded_match.group(1).strip()
         excluded_type = resolve_catalog_category(excluded_phrase, category_hierarchies)
@@ -1159,7 +1286,11 @@ def understand_catalog_query(
         None,
     )
     quantity_value = _number_expression(quantity_match.group(1)) if quantity_match else None
-    quantity = int(quantity_value) if quantity_value is not None else None
+    # ``không`` also appears in ordinary exclusion and budget phrases. The
+    # quantity pattern can consequently match it before a unit (for example,
+    # "không ... chai"). Zero is not a valid purchase quantity; ignore that
+    # lexical match instead of constructing an invalid Pydantic result.
+    quantity = int(quantity_value) if quantity_value is not None and quantity_value >= 1 else None
     budget_vnd = _budget_vnd(normalized)
     budget_operator = _budget_operator(normalized)
     budget_scope: BudgetScope | None = None
@@ -1250,11 +1381,77 @@ def understand_catalog_query(
         clarification_needed = True
     hard_constraints = tuple(negative_constraints)
     soft_preferences = (use_case,) if use_case else ()
-    conversation_reference = reference_match.group(0) if reference_match else None
+    conversation_reference = None
+    if reference_match:
+        reference_start, reference_end = _raw_span_for_normalized_span(
+            raw, normalized, reference_match.start(), reference_match.end()
+        )
+        conversation_reference = raw[reference_start:reference_end]
+    comparison_targets = _comparison_targets(raw, normalized)
+    known_categories = {
+        normalize_category_text(category): category
+        for path in category_hierarchies
+        for category in path
+    }
+    comparison_product_types: list[str] = []
+    for target in comparison_targets:
+        target_category = resolve_catalog_category(target, category_hierarchies)
+        if target_category is None:
+            target_category = resolve_catalog_category_alias(target, category_hierarchies)
+        canonical_category = (
+            known_categories.get(normalize_category_text(target_category.category))
+            if target_category is not None
+            else None
+        )
+        if canonical_category and (
+            target_category.exact_phrase
+            or normalize_category_text(target_category.category) in known_categories
+        ):
+            comparison_product_types.append(canonical_category)
+    primary_product_type = (
+        known_categories.get(normalize_category_text(product_type)) if product_type else None
+    )
+    product_types = tuple(
+        dict.fromkeys(
+            comparison_product_types or ([primary_product_type] if primary_product_type else [])
+        )
+    )
+
+    detected_intents: list[QueryIntent] = []
+    if _PURCHASE_ACTION.search(normalized):
+        detected_intents.append("purchase_action")
+    if comparison:
+        detected_intents.append("comparison")
+    if _LOCATION.search(normalized):
+        detected_intents.append("location")
+    if (
+        _PRICE.search(normalized)
+        or re.search(r"\b(?:re hon|dat hon|cheaper|more expensive)\b", normalized)
+        or ranking in {"price_ascending", "price_descending"}
+    ):
+        detected_intents.append("price")
+    if strong_recommendation or _RECOMMEND.search(normalized) or use_case:
+        detected_intents.append("recommendation")
+    if _ATTRIBUTE_QUESTION.search(normalized):
+        detected_intents.append("attribute")
+    if _is_brand_question(normalized, raw):
+        detected_intents.append("brand")
+    if _VARIANT_QUESTION.search(normalized):
+        detected_intents.append("variant")
+    if reference_match:
+        detected_intents.append("alternative")
+    if product_type or product_reference.strip():
+        detected_intents.append("product_search")
+    primary_intent = intent
+    secondary_intents = tuple(
+        detected for detected in dict.fromkeys(detected_intents) if detected != primary_intent
+    )
 
     return QueryUnderstandingResult(
         intent=intent,
+        secondary_intents=secondary_intents,
         product_type=product_type,
+        product_types=product_types,
         product_reference=product_reference.strip(" ,.!?;:"),
         use_case=use_case,
         hard_constraints=hard_constraints,
@@ -1265,6 +1462,7 @@ def understand_catalog_query(
         budget_operator=budget_operator,
         quantity=quantity,
         comparison_scope=raw.strip(" ,.!?;:") if comparison else None,
+        comparison_targets=comparison_targets,
         conversation_reference=conversation_reference,
         ranking_criterion=ranking,
         ambiguity=tuple(ambiguities),
