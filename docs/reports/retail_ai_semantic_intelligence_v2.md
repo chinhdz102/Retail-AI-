@@ -279,3 +279,31 @@ Audit dataset cũng phát hiện H-037/H-082 dùng từ “dưới” trong khi 
 - Live Groq probe sau patch: **5/5** HTTP 200, **5/5** kiểm tra grounding tự động pass, 2 lượt gọi Qwen, không fallback. Lượt follow-up có câu xác nhận preference. Raw trace cho thấy ở lượt chạy này Qwen tự đưa preference vào tool arguments, nên unit test mới là bằng chứng trực tiếp cho trường hợp backend phải khôi phục field bị model bỏ sót.
 - Danh sách picnic vẫn chưa có snack “không cay”: catalog không có thuộc tính xác minh độ cay; hệ thống giữ abstention, không bịa hoặc tính món thay thế vào tổng.
 - Đánh giá vẫn **demo-only / chưa sẵn sàng production** vì thiếu qrels và review con người độc lập, chưa benchmark công suất triển khai thật, và snapshot không có nhiều thuộc tính sản phẩm. Báo cáo đầy đủ: [`retail_ai_production_quality_master_report.md`](retail_ai_production_quality_master_report.md).
+
+## Addendum — regression sweep tổng quát, 29/10/2026
+
+Đợt này xử lý các lỗi xuất hiện trên nhiều nhóm hàng và nhiều cách diễn đạt, không thêm rule theo SKU:
+
+- Tách query sản phẩm đã rút gọn khỏi câu nói đầy đủ: giữ nguyên ngữ cảnh câu gốc để nhận diện tên hàng/biến thể, nhưng tuyến tra cứu fact không dùng lại câu giá/tồn kho làm từ khóa tìm kiếm. Khi người dùng sửa câu bằng “ý mình là…”, phần đính chính không bị đọc thành thuộc tính phủ định.
+- Giữ số đo sản phẩm như `500 ml`, `1 lít`, `2,9 kg`; không chuyển số cân nặng/khối lượng thành ngân sách.
+- Không coi cụm danh mục chưa đầy đủ như “nước lau” là một lá taxonomy cứng. Tên danh mục chỉ được dùng làm bộ lọc cứng khi trùng một lá thật trong snapshot; từ khóa danh mục chỉ làm tín hiệu xếp hạng nếu có tên hàng hỗ trợ.
+- Với truy vấn biến thể theo thương hiệu nhưng chưa nêu quy cách cụ thể, trả các biến thể trong đúng nhóm để khách tự chọn thay vì chốt SKU đầu tiên; kiểm thử gói Huggies size L trả cả L38 và L68.
+- Tách “bỉm” khỏi “bim bim”, nhận diện lời nhắc bé kèm cân nặng là đối tượng trẻ em, lọc nhóm hàng phù hợp theo dữ liệu audience; đồng thời nói rõ catalog không xác minh dải cân nặng/kích cỡ trên bao bì.
+- Mở rộng cách nhận “nước uống” sang nhánh đồ uống trong taxonomy để truy vấn “không đường” chỉ trả món có bằng chứng trong tên hàng như “Zero”; nếu thuộc tính không có dữ liệu thì vẫn từ chối xác nhận.
+- Khôi phục sở thích mềm từ câu tự nhiên khi tool call bỏ sót, nhưng không nâng sở thích thành điều kiện bắt buộc. Ví dụ “ưu tiên món dễ chia cho mọi người” vẫn là gợi ý mềm.
+
+### Kết quả kiểm tra
+
+- Nhóm regression tập trung: **29 passed**.
+- Full suite hiện tại: `uv run pytest tests -q --tb=short` — **1.337 passed trong 176,22 giây**.
+- Ruff backend/tests/evaluation, `compileall` và `git diff --check`: pass sau khi xác minh cuối.
+- Toàn bộ thay đổi nằm trên nhánh `codex/retail-text-quality-v4-20261019`; không tạo nhánh mới.
+
+Đây là bằng chứng regression trên test suite của repo, không phải human evaluation. Điểm benchmark V2 trong các phần trên vẫn là synthetic/provisional; chưa có blind holdout, qrels độc lập, human grading hay thuộc tính catalog đủ để kết luận độ phù hợp sản phẩm. Trạng thái phát hành vẫn **demo-only / chưa sẵn sàng production**.
+
+### Benchmark xác minh lại
+
+- Chạy lại bộ frozen 300 câu / 50 hội thoại với catalog snapshot cùng SHA-256 `d030d8f860f426a0ffcba7d44b542f8f7b23e9d361a51d8810c052670ba8b1e9`.
+- Kết quả khớp artifact đã dùng grader sửa: product R@1/R@5 **1,00/1,00**; category P@5 **1,00**; hard-constraint pass **100/100**, **0** vi phạm; candidate Recall@5 **0,6878 trên 98 case có gold candidate**, nonempty **0,98**. Không có thay đổi output ở 100 case hard-constraint so với lần corrected run gần nhất.
+- Giá trị **0,98** trong artifact HEAD cũ là từ grader sai; báo cáo production-quality master đã ghi rõ cách sửa denominator/rank window và thay thế số đó. Không xem chênh lệch này là hồi quy của patch hiện tại.
+- Artifact chạy lại: [`retail_ai_semantic_intelligence_v2_post_regression_20261029.json`](artifacts/retail_ai_semantic_intelligence_v2_post_regression_20261029.json). Latency deterministic lần này p50/p95 **85,778/140,196 ms**; chỉ là benchmark cục bộ, không đại diện độ trễ LLM hay production.

@@ -159,7 +159,7 @@ _QUANTITY = re.compile(
 _BUDGET = re.compile(
     rf"\b(?:duoi|toi da|khong qua|dung qua|tam|khoang|trong muc|trong tam|"
     rf"ngan sach(?: la| tam)?|under|up to|less than)\s+"
-    rf"({_BUDGET_AMOUNT})\s*(trieu|tr|k|ngan|nghin|dong|vnd|d)?\b"
+    rf"({_BUDGET_AMOUNT})\s*(trieu|tr|k|ngan|nghin|dong|vnd|d)\b"
 )
 _BUDGET_WITH_MONEY = re.compile(
     rf"\b(?:minh|toi|em|anh|chi|ban)?\s*co\s+(?:(?:khoang|tam)\s+)?"
@@ -427,6 +427,42 @@ def _strip_matches(raw: str, normalized: str, pattern: re.Pattern[str]) -> tuple
             use_case = raw[capture_start:capture_end].strip(" ,.!?;:")
         else:
             use_case = None
+        cleaned = f"{raw[:start]} {raw[end:]}"
+        return " ".join(cleaned.split()).strip(" ,.!?;:"), use_case
+    return raw, None
+
+
+def _strip_purpose_clause(raw: str, normalized: str) -> tuple[str, str | None]:
+    """Separate an infinitive ``để`` clause without mistaking ``dễ`` for it."""
+    for match in _PURPOSE_MARKER.finditer(normalized):
+        if normalized.startswith("de", match.start()):
+            marker_start, marker_end = _raw_span_for_normalized_span(
+                raw,
+                normalized,
+                match.start(),
+                match.start() + 2,
+            )
+            raw_marker = raw[marker_start:marker_end].casefold()
+            captured = normalize_vietnamese(match.group(1)).strip()
+            if raw_marker == "dễ" or (raw_marker == "de" and captured.startswith("chiu")):
+                # Accent folding makes ``dễ chịu`` look like ``để chịu``.
+                # Preserve the preference as user text instead of deleting it
+                # from the product request or treating it as a preparation.
+                continue
+
+        start, end = _raw_span_for_normalized_span(
+            raw,
+            normalized,
+            match.start(),
+            match.end(),
+        )
+        capture_start, capture_end = _raw_span_for_normalized_span(
+            raw,
+            normalized,
+            match.start(1),
+            match.end(1),
+        )
+        use_case = raw[capture_start:capture_end].strip(" ,.!?;:")
         cleaned = f"{raw[:start]} {raw[end:]}"
         return " ".join(cleaned.split()).strip(" ,.!?;:"), use_case
     return raw, None
@@ -1032,8 +1068,9 @@ def understand_catalog_query(
     if purpose_is_catalog_type:
         use_case = None
     else:
-        product_reference, use_case = _strip_matches(
-            product_reference, normalized_reference, purpose_pattern
+        product_reference, use_case = _strip_purpose_clause(
+            product_reference,
+            normalized_reference,
         )
     normalized_reference = " ".join(normalize_vietnamese(product_reference).split())
     if use_case is None and not purpose_is_catalog_type:

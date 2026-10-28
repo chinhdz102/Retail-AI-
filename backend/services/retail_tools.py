@@ -1086,6 +1086,50 @@ def _supported_query_details_for_category(
     return " ".join(token for token in evidence_terms if token in supported)
 
 
+def _supported_category_search_phrase(
+    query: str,
+    product_type: str | None,
+    use_case: str | None,
+    negative_constraints: tuple[str, ...],
+    brand: str | None,
+    category: str | None,
+    repository: ProductRepository,
+) -> str:
+    """Retain category wording as a ranking cue only when titles support it."""
+    supported_details = _supported_query_details_for_category(
+        query,
+        product_type,
+        use_case,
+        negative_constraints,
+        brand,
+        category,
+        repository,
+    )
+    if supported_details:
+        return supported_details
+
+    if brand and _query_matches_catalog_title(brand, repository, category):
+        # A recognized brand plus an underspecified variant request (for
+        # example, "Huggies size L") should retrieve every matching pack in
+        # the family so the customer can choose, rather than treating the
+        # first lexical match as the exact variant.
+        return brand
+
+    # A family synonym can also be useful product-name evidence (for example,
+    # customers saying "bim bim" when the catalog has one item named that way).
+    # Keep it as a soft lexical query only if a product in the resolved category
+    # actually contains the phrase. Otherwise browse the category without
+    # narrowing candidates on unsupported use-case or attribute words.
+    category_phrase = _effective_catalog_search_query(query, False, repository)
+    if category_phrase and _query_matches_catalog_title(
+        category_phrase,
+        repository,
+        category,
+    ):
+        return category_phrase
+    return ""
+
+
 def _supported_family_query(
     query: str,
     product_type: str | None,
@@ -2011,6 +2055,16 @@ def _explicit_query_leaf_category(
     match = resolve_catalog_category(leaf_phrase, hierarchies)
     if match is None or category_is_parent(match.category, hierarchies):
         return None
+    actual_leaf_labels = {
+        normalize_category_text(path[-1])
+        for path in hierarchies
+        if path
+    }
+    if normalize_category_text(match.category) not in actual_leaf_labels:
+        # The taxonomy matcher can return a normalized query for an incomplete
+        # category phrase (for example "nước lau"). Only use a real leaf from
+        # the active snapshot as a hard category override.
+        return None
     normalized_query = normalize_category_text(query)
     normalized_label = normalize_category_text(match.category)
     # Do not turn a near taxonomy alias into an explicit override. For
@@ -2085,6 +2139,19 @@ def _category_query_unmatched_details(
     supported = tuple(sorted(supported_evidence & remaining))
     unsupported = tuple(sorted(remaining - set(supported)))
     return supported, unsupported
+
+
+def _child_age_or_weight_specification_requested(text: str) -> bool:
+    """Detect a numeric child-fit cue that needs package sizing guidance."""
+    if explicit_product_audience(text) not in {"child", "newborn"}:
+        return False
+    normalized = normalize_category_text(text)
+    return bool(
+        re.search(
+            r"(?<!\w)\d+(?:[.,]\d+)?\s*(?:kg|g|ky|thang|tuoi)\b",
+            normalized,
+        )
+    )
 
 
 def _query_names_a_specific_category(
@@ -2970,13 +3037,16 @@ def execute_catalog_tool(
             ):
                 return _budget_scope_clarification(name, repo, budget_understanding)
             budget_cap = _budget_unit_price_cap(budget_understanding)
-            routed_product_title = _catalog_product_title_match(request_text, repo)
-            routing_query = routed_product_title or (
-                _restore_query_surface(
-                    understanding.product_reference or parsed.query,
-                    request_text,
-                )
+            search_reference = _restore_query_surface(
+                understanding.product_reference or parsed.query,
+                request_text,
             )
+            # Match identity only against the product phrase after intent cues
+            # (such as "giá thấp nhất") and location/fact requests have been
+            # removed. Otherwise a superlative token can collide with a real
+            # SKU title and silently turn a category browse into an exact SKU.
+            routed_product_title = _catalog_product_title_match(search_reference, repo)
+            routing_query = routed_product_title or search_reference
             mentioned_brand = brand_preference or _catalog_brand_from_query(request_text, repo)
             brand_only_query = bool(
                 mentioned_brand and _query_is_only_catalog_brand(routing_query, mentioned_brand)
@@ -3113,7 +3183,7 @@ def execute_catalog_tool(
                 # The catalog segment is the hard product-type constraint.
                 # Do not feed negated phrases, question filler, or another
                 # mentioned category back as positive title-search tokens.
-                effective_query = _supported_query_details_for_category(
+                effective_query = _supported_category_search_phrase(
                     routing_query,
                     understanding.product_type,
                     understanding.use_case,
@@ -3132,7 +3202,7 @@ def execute_catalog_tool(
                     repo,
                 )
             elif explicit_leaf_override and not product_identity:
-                effective_query = _supported_query_details_for_category(
+                effective_query = _supported_category_search_phrase(
                     routing_query,
                     explicit_leaf_category,
                     understanding.use_case,
@@ -3902,18 +3972,50 @@ def execute_catalog_tool(
                 and alternative_exhausted
                 and not products
             )
-            if family_details_unverified:
+            _, unverified_query_details = (
+                _category_query_unmatched_details(
+                    understanding.product_reference or parsed.preference_text or parsed.query,
+                    category,
+                    repo,
+                )
+                if products and category and not product_identity
+                else ((), ())
+            )
+            child_fit_unverified = _child_age_or_weight_specification_requested(
+                parsed.preference_text or current_user_text or parsed.query
+            )
+            if family_details_unverified or unverified_query_details or child_fit_unverified:
                 content["family_details_unverified"] = True
-            if category_fallback_used:
+            if unverified_query_details:
                 content["unverified_constraints"] = [
-                    "Remaining product details could not be matched to catalog evidence"
+                    *content.get("unverified_constraints", []),
+                    "Catalog does not verify all requested product details",
                 ]
+            if category_fallback_used:
+                content["unverified_constraints"] = list(
+                    dict.fromkeys(
+                        [
+                            *content.get("unverified_constraints", []),
+                            "Remaining product details could not be matched to catalog evidence",
+                        ]
+                    )
+                )
             if audience_unverified or has_household_child_context(audience_query):
                 content["unverified_constraints"] = list(
                     dict.fromkeys(
                         [
                             *content.get("unverified_constraints", []),
                             "Catalog does not verify child suitability; check the product label",
+                        ]
+                    )
+                )
+            if child_fit_unverified:
+                content["unverified_constraints"] = list(
+                    dict.fromkeys(
+                        [
+                            *content.get("unverified_constraints", []),
+                            "Catalog does not verify child weight/size fit; "
+                            "check the product package",
                         ]
                     )
                 )

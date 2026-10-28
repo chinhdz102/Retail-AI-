@@ -1807,6 +1807,10 @@ def _localized_recommendation_candidates(
             "child suitability" in str(value).casefold()
             for value in observation.content.get("unverified_constraints", [])
         )
+        has_weight_size_caveat = any(
+            "weight/size fit" in str(value).casefold()
+            for value in observation.content.get("unverified_constraints", [])
+        )
         if len(products) == 1:
             product = products[0]
             if language == "en":
@@ -1815,6 +1819,11 @@ def _localized_recommendation_candidates(
                     "the requested use, but the catalog does not independently verify its "
                     "effectiveness. Would you like another option to compare?"
                 )
+                if has_weight_size_caveat:
+                    response += (
+                        " The catalog doesn't list a weight/size range; "
+                        "check the package before choosing."
+                    )
                 if include_price_caveat:
                     response += " Store price may differ from the catalog."
                 if include_stock_caveat and not product.stock_is_current:
@@ -1825,6 +1834,8 @@ def _localized_recommendation_candidates(
                     f"目录中找到一个选择：{rendered_items}。商品名称提示了相关用途，但目录没有独立核实其效果。"
                     "您想再看一个选择进行比较吗？"
                 )
+                if has_weight_size_caveat:
+                    response += "目录没有标明适用体重或尺码，请先查看包装。"
                 if include_price_caveat:
                     response += "门店价格可能与目录不同。"
                 if include_stock_caveat and not product.stock_is_current:
@@ -1835,6 +1846,11 @@ def _localized_recommendation_candidates(
                 "Tên hàng gợi ý đúng nhóm công dụng, nhưng catalog chưa có bằng chứng độc lập "
                 "để xác nhận hiệu quả. Bạn muốn xem thêm lựa chọn để so sánh không?"
             )
+            if has_weight_size_caveat:
+                response += (
+                    " Catalog chưa ghi dải cân nặng/kích cỡ; "
+                    "bạn kiểm tra trên bao bì trước khi chọn nhé."
+                )
             if include_price_caveat:
                 response += " Giá tại cửa hàng có thể khác catalog."
             if include_stock_caveat and not product.stock_is_current:
@@ -1845,7 +1861,12 @@ def _localized_recommendation_candidates(
                 f"I found these items in the requested product family: {rendered_items}. "
                 "The catalog doesn't verify that they meet the other criteria you mentioned."
             )
-            if has_audience_caveat:
+            if has_weight_size_caveat:
+                response += (
+                    " The catalog doesn't list a weight/size range; "
+                    "check the package before choosing."
+                )
+            elif has_audience_caveat:
                 response += " Please check the age guidance on the label."
             response += " Would you like to narrow them by price or brand?"
             if include_price_caveat:
@@ -1859,7 +1880,9 @@ def _localized_recommendation_candidates(
             response = (
                 f"目录中的同类商品有：{rendered_items}。目录没有核实它们是否符合你提到的其他条件。"
             )
-            if has_audience_caveat:
+            if has_weight_size_caveat:
+                response += "目录没有标明适用体重或尺码，请先查看包装。"
+            elif has_audience_caveat:
                 response += "请先查看包装上的适用年龄。"
             response += "您想按价格还是品牌继续筛选？"
             if include_price_caveat:
@@ -1870,10 +1893,15 @@ def _localized_recommendation_candidates(
                 response += "当前库存尚未核实。"
             return response
         response = (
-            f"Mình tìm được một số món cùng nhóm: {rendered_items}. "
+            f"Mình tìm thấy vài loại trong nhóm này: {rendered_items}. "
             "Catalog chưa xác nhận chúng đáp ứng các tiêu chí khác bạn vừa nêu."
         )
-        if has_audience_caveat:
+        if has_weight_size_caveat:
+            response += (
+                " Catalog chưa ghi dải cân nặng/kích cỡ; "
+                "bạn kiểm tra trên bao bì trước khi chọn nhé."
+            )
+        elif has_audience_caveat:
             response += " Bạn kiểm tra hướng dẫn độ tuổi trên nhãn nhé."
         response += " Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không?"
         if include_price_caveat:
@@ -7136,12 +7164,33 @@ async def agent_respond(
     ):
         candidate_observation = await lookup_product_candidates(
             explicit_fact_query,
+            current_user_text=(
+                request.text
+                if _unsupported_catalog_attribute_requested(request.text)
+                or requested_fields == ("spicy",)
+                else ""
+            ),
         )
         candidate_observation = _filter_product_candidates_to_session_context(
             candidate_observation,
             record,
             request.text,
         )
+        if (
+            candidate_observation.status == "DATA_UNAVAILABLE"
+            and (
+                _unsupported_catalog_attribute_requested(request.text)
+                or requested_fields == ("spicy",)
+            )
+        ):
+            return _deterministic_tool_response(
+                request,
+                record.state,
+                candidate_observation,
+                _localized_unverified_fact(request.language),
+                model="catalog",
+                tools_used=["search_products"],
+            )
         if candidate_observation.status == "SUCCESS" and candidate_observation.products:
             candidates = tuple(candidate_observation.products)
             reported_count = candidate_observation.content.get("count")
@@ -9178,6 +9227,11 @@ def _fact_product_query(text: str) -> str:
     normalized = re.sub(
         r"\b(\d+)\s+(\d+)\s+(ml|lit|l|kg|g|gram)\b",
         r"\1 \2\3",
+        normalized,
+    )
+    normalized = re.sub(
+        r"\b(\d+(?:[.,]\d+)?)\s+(ml|lit|l|kg|g|gram)\b",
+        r"\1\2",
         normalized,
     )
     normalized = re.sub(r"^(?:xin chao|chao(?: ban|anh|chi|em)?|hello|hi)\b", " ", normalized)

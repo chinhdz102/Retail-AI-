@@ -115,6 +115,7 @@ _CATEGORY_QUERY_SYNONYMS: dict[str, tuple[str, ...]] = {
     "dau goi": ("dau goi",),
     "do an": ("thuc pham",),
     "do uong": ("do uong thuoc la",),
+    "nuoc uong": ("do uong thuoc la",),
     "xa phong tam": ("xa bong tam",),
     "sua hop": ("sua tuoi tiet trung",),
     "gao thuong": ("gao te",),
@@ -131,8 +132,10 @@ _CATEGORY_QUERY_SYNONYMS: dict[str, tuple[str, ...]] = {
     "khan an bo tui": ("khan giay goi",),
     "ta bim so sinh": ("ta dan tre em",),
     "ta dan": ("ta dan tre em",),
-    # Keep the reduplicated snack wording separate from diapers. A bare
-    # ``bỉm`` is ambiguous without a diaper form (dán/quần) or audience cue.
+    # A single ``bỉm`` identifies the diaper family, while a baby/adult cue or
+    # a dán/quần form narrows its audience/type. Longest-match keeps ``bim bim``
+    # routed to snacks despite the shared first token.
+    "bim": ("ta bim",),
     "bim bim": ("snack",),
     "bim bim khoai tay": ("snack kh tay chien",),
     "bim bim lat khoai tay": ("snack kh tay chien",),
