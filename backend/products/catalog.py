@@ -68,6 +68,7 @@ def explicit_product_audience(text: str | None) -> str | None:
         r"\b(?:kem chong nangtre em|kem danh rang tre em|ta dan tre em|ta quan tre em|"
         r"tre em|tre nho|em be|cho be|cho con|cho tre(?: em)?|danh cho tre(?: em)?|"
         r"phu hop cho tre(?: em)?|dung cho tre(?: em)?|"
+        r"be\s+(?:(?:khoang|tam)\s+)?\d+(?:[.,]\d+)?\s*(?:kg|ky|thang|tuoi)\b|"
         r"tre (?:mang di hoc|di hoc|mang theo|an|uong|dung)|"
         r"for (?:kids?|children|child|babies?|toddlers?)|"
         r"kids|children|child|baby|babies|toddler)\b",

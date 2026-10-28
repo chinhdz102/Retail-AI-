@@ -56,6 +56,21 @@ def test_use_case_keeps_customer_need_and_drops_only_polite_request_closing(
     assert result.use_case == expected_use_case
 
 
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Bé khoảng 5 ký, nên chọn bỉm nào mềm và dễ chịu?",
+        "Be khoang 5 ky, nen chon bim nao mem va de chiu?",
+    ],
+)
+def test_vietnamese_easy_comfortable_is_not_misread_as_a_purpose_clause(query: str) -> None:
+    repository = _snapshot()
+    result = understand_catalog_query(query, repository.list_category_hierarchies())
+
+    assert result.use_case is None
+    assert "chiu" in normalize_vietnamese(result.product_reference)
+
+
 def test_catalog_category_wording_is_not_mistaken_for_a_preparation_request() -> None:
     repository = _snapshot()
     result = understand_catalog_query(
@@ -342,6 +357,120 @@ def test_category_lowest_price_query_returns_ascending_catalog_prices() -> None:
     assert prices == sorted(prices)
     assert observation.products[0].price_vnd == min(
         product.price_vnd for product in repository.search("", category="Thịt", limit=20)
+    )
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Bé khoảng 5 ký, nên chọn bỉm nào mềm và dễ chịu?",
+        "Mua giúp mình 2 kg thịt bò.",
+        "Mình cần nước giặt tầm 3 lít.",
+    ],
+)
+def test_physical_measurements_are_not_parsed_as_money_budgets(query: str) -> None:
+    repository = _snapshot()
+    result = understand_catalog_query(query, repository.list_category_hierarchies())
+
+    assert result.budget_vnd is None
+
+
+def test_informal_category_price_question_ranks_literal_catalog_evidence_first() -> None:
+    repository = _snapshot()
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": "Bim bim giá bao nhiêu", "limit": 5}, ensure_ascii=False),
+        repository=repository,
+        current_user_text="Bim bim giá bao nhiêu",
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert observation.products[0].name == "Bim bim Poppedcorn quẩy soắn 280g"
+    assert all(product.category == "Bánh Snack" for product in observation.products)
+
+
+@pytest.mark.parametrize("tool_name", ["search_products", "recommend_products"])
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Bé khoảng 5 ký, nên chọn bỉm nào mềm và dễ chịu?",
+        "Mua bỉm cho bé giúp mình.",
+        "Mua bỉm quần cho bé giúp mình.",
+    ],
+)
+def test_diaper_family_queries_do_not_leak_snacks_or_adult_products(
+    tool_name: str,
+    query: str,
+) -> None:
+    repository = _snapshot()
+    arguments = {"query": query, "limit": 5}
+    if tool_name == "recommend_products":
+        arguments["preference_text"] = query
+    observation = execute_catalog_tool(
+        tool_name,
+        json.dumps(arguments, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    leaves = {
+        (product.category_hierarchy or "").split(">")[-1].strip()
+        for product in observation.products
+    }
+    assert leaves <= {"Tã dán trẻ em", "Tã quần trẻ em"}
+    assert all("Bim bim" not in product.name for product in observation.products)
+
+
+@pytest.mark.parametrize("tool_name", ["search_products", "recommend_products"])
+def test_partial_cleaner_phrase_does_not_override_the_explicit_floor_leaf(
+    tool_name: str,
+) -> None:
+    repository = _snapshot()
+    query = "Mình muốn tìm nước lau sàn"
+    observation = execute_catalog_tool(
+        tool_name,
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        (product.category_hierarchy or "").split(">")[-1].strip() == "Nước lau sàn nhà"
+        for product in observation.products
+    )
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Giá thấp nhất nước rửa chén",
+        "Nước rửa chén giá thấp nhất",
+        "Nước rửa chén nào có giá thấp nhất?",
+    ],
+)
+def test_category_price_superlative_does_not_match_unrelated_catalog_title(
+    query: str,
+) -> None:
+    repository = _snapshot()
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert len(observation.products) == 5
+    assert all(
+        normalize_vietnamese(product.category) == normalize_vietnamese("Nước Rửa Chén")
+        for product in observation.products
+    )
+    assert [product.price_vnd for product in observation.products] == sorted(
+        product.price_vnd for product in observation.products
     )
 
 

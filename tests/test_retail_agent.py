@@ -870,6 +870,21 @@ def test_explicit_soft_preference_is_recovered_when_model_omits_it() -> None:
     assert arguments["needs"] == []
 
 
+def test_soft_preference_fallback_keeps_a_different_natural_preference() -> None:
+    call = tool_call(
+        "plan_shopping_mission",
+        {"preferences": [], "needs": [], "hard_requirements": []},
+    )
+
+    result = _enforce_shopping_mission_call_semantics(
+        [call],
+        "Mình thích loại gọn nhẹ nha.",
+        None,
+    )
+
+    assert json.loads(result[0]["function"]["arguments"])["preferences"] == ["gon nhe"]
+
+
 def test_budget_revision_does_not_become_a_soft_product_preference() -> None:
     call = tool_call("plan_shopping_mission", {"preferences": [], "needs": []})
 

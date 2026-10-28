@@ -310,6 +310,18 @@ def test_newborn_diaper_search_excludes_adult_products_and_returns_only_newborn_
     )
 
 
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Bé khoảng 5 ký, nên chọn bỉm nào?",
+        "Bé 5kg cần bỉm.",
+        "Bé nặng 5 kg, tìm loại bỉm cho bé.",
+    ],
+)
+def test_baby_subject_with_weight_is_a_child_audience_constraint(query: str) -> None:
+    assert explicit_product_audience(query) == "child"
+
+
 def test_explicit_adult_age_range_is_not_recommended_for_a_child_school_request(
     snapshot_repo: SnapshotProductRepository,
 ) -> None:

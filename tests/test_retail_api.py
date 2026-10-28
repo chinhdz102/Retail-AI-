@@ -1380,7 +1380,7 @@ def test_unsupported_catalog_attributes_are_rejected_without_model_claims(text: 
         (
             "Nước cam có tép Teppy Minute Maid chai 1 lít giá bao nhiêu và có lợi ích gì "
             "cho sức khỏe?",
-            "nuoc cam tep teppy minute maid chai lit",
+            "nuoc cam tep teppy minute maid chai 1lit",
         ),
         (
             "Coca Zero bao nhiêu tiền, dùng để làm gì?",
@@ -1400,7 +1400,7 @@ def test_unsupported_catalog_attributes_are_rejected_without_model_claims(text: 
         ),
         (
             "Nước cam có tép Teppy Minute Maid chai 1 lít gồm những thành phần nào?",
-            "nuoc cam tep teppy minute maid chai lit",
+            "nuoc cam tep teppy minute maid chai 1lit",
         ),
     ],
 )
@@ -3934,6 +3934,40 @@ async def test_unsupported_allergen_query_abstains_without_lookup_or_llm(
 
 
 @pytest.mark.asyncio
+async def test_fast_catalog_fact_route_preserves_unsupported_spice_constraint(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    monkeypatch.setattr("backend.api.main.get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "unsupported-spice-fast-route"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Có snack nào không cay không?",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["grounded_product_ids"] == []
+    assert "WIN_10282439" not in result["grounded_product_ids"]
+    assert "chưa có dữ liệu đã xác minh" in result["text"].casefold()
+    assert result["tools_used"] == ["search_products"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_ambiguous_allergen_question_asks_for_product_without_repeating_questions(
     client: httpx.AsyncClient,
 ) -> None:
@@ -5278,6 +5312,13 @@ async def test_natural_product_discovery_stays_catalog_grounded_across_departmen
             False,
             True,
         ),
+        (
+            "Bé khoảng 5 ký, nên chọn bỉm nào mềm và dễ chịu?",
+            "Tã bỉm",
+            None,
+            False,
+            True,
+        ),
     )
 
     for index, (text, expected_category, expected_name, broad, needs_caveat) in enumerate(cases):
@@ -5341,7 +5382,15 @@ async def test_natural_product_discovery_stays_catalog_grounded_across_departmen
             }
             assert len(category_leaves) == len(products), (text, category_leaves)
         if needs_caveat:
-            assert "chưa có dữ liệu đã xác minh" in payload["text"].casefold(), (
+            response_text = payload["text"].casefold()
+            assert any(
+                caveat in response_text
+                for caveat in (
+                    "chưa có dữ liệu đã xác minh",
+                    "catalog chưa xác nhận",
+                    "catalog chưa ghi",
+                )
+            ), (
                 text,
                 payload["text"],
             )

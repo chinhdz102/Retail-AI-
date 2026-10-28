@@ -144,8 +144,33 @@ def _explicit_soft_preferences(user_text: str) -> list[str]:
             preference,
             maxsplit=1,
         )[0].strip(" ,.!?;:")
+        preference = re.sub(
+            r"^(?:(?:mon|loai|san pham|item|dish|option|product)\s+nao\s+(?:de\s+)?|"
+            r"(?:mon|loai|san pham|item|dish|option|product)\s+)",
+            "",
+            preference,
+        ).strip(" ,.!?;:")
         if preference and preference not in preferences:
             preferences.append(preference[:160])
+    cue = _EXPLICIT_SOFT_PREFERENCE_CUE.search(normalized)
+    if cue is not None:
+        preference = re.split(r"[.!?;]", normalized[cue.end() :], maxsplit=1)[0]
+        preference = re.split(
+            r"\b(?:voi|va|with|and)\s+(?:(?:giu|keep|stay|remain)\s+)?"
+            r"(?:trong|within|inside)\s+(?:muc\s+)?(?:ngan sach|budget)\b",
+            preference,
+            maxsplit=1,
+        )[0]
+        preference = re.split(r"\b(?:nha|please|thanks)\b", preference, maxsplit=1)[0]
+        preference = preference.strip()
+        preference = re.sub(
+            r"^(?:(?:mon|loai|san pham|item|dish|option|product)\s+nao\s+(?:de\s+)?|"
+            r"(?:mon|loai|san pham|item|dish|option|product)\s+)",
+            "",
+            preference,
+        ).strip(" ,.!?;:")
+        if preference:
+            preferences = [preference[:160]]
     return preferences[:4]
 
 
