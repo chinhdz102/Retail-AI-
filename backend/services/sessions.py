@@ -116,6 +116,13 @@ def _remember_previous_displayed_page(
     updates: dict[str, Any],
 ) -> None:
     """Bounded history for resolving references to products shown earlier."""
+    previous_ids = [str(product_id) for product_id in shopping.selected_product_ids if product_id]
+    requested_ids = updates.get("selected_product_ids")
+    next_product_ids = (
+        [str(product_id) for product_id in requested_ids if product_id]
+        if isinstance(requested_ids, list)
+        else []
+    )
     fresh_recommendation = (
         "seen_product_ids" in updates
         and updates.get("seen_product_ids") == []
@@ -132,7 +139,18 @@ def _remember_previous_displayed_page(
         "seen_product_scope" in updates
         and updates.get("seen_product_scope") != shopping.seen_product_scope
     )
-    if fresh_recommendation or category_changed or intent_changed or scope_changed:
+    selecting_from_visible_page = bool(
+        previous_ids
+        and next_product_ids
+        and set(next_product_ids).issubset(previous_ids)
+        and len(next_product_ids) < len(previous_ids)
+    )
+    if (
+        fresh_recommendation
+        or category_changed
+        or scope_changed
+        or (intent_changed and not selecting_from_visible_page)
+    ):
         shopping.displayed_product_pages = []
         shopping.original_displayed_product_ids = []
         # A fresh browse replaces the old visible page. Clear it before the
@@ -141,12 +159,6 @@ def _remember_previous_displayed_page(
         if fresh_recommendation:
             shopping.selected_product_ids = []
 
-    next_ids = updates.get("selected_product_ids")
-    next_product_ids = (
-        [str(product_id) for product_id in next_ids if product_id]
-        if isinstance(next_ids, list)
-        else []
-    )
     if "original_displayed_product_ids" in updates:
         requested_original_ids = updates.get("original_displayed_product_ids")
         shopping.original_displayed_product_ids = (
@@ -159,14 +171,13 @@ def _remember_previous_displayed_page(
     if (
         "selected_product_ids" not in updates
         or "displayed_product_pages" in updates
-        or not isinstance(next_ids, list)
+        or not isinstance(requested_ids, list)
         or fresh_recommendation
         or category_changed
-        or intent_changed
+        or (intent_changed and not selecting_from_visible_page)
         or scope_changed
     ):
         return
-    previous_ids = [str(product_id) for product_id in shopping.selected_product_ids if product_id]
     if not previous_ids or previous_ids == next_product_ids:
         return
 

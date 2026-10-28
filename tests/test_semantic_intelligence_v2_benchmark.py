@@ -4,17 +4,158 @@ import csv
 import io
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from backend.products.catalog import ProductSnapshot
 from backend.products.category_taxonomy import normalize_category_text
 from backend.products.snapshot_repository import SnapshotProductRepository
 from evaluation import build_semantic_intelligence_v2_frozen as dataset_builder
+from evaluation import semantic_intelligence_v2_benchmark as benchmark
 from evaluation.export_vietnamese_qrels_review import export_review_queues
 from evaluation.semantic_intelligence_v2_benchmark import (
     _asks_for_alternative,
+    _recall_at_k,
     _run_conversation_evaluation,
 )
+
+
+def test_recall_at_k_uses_all_relevant_products_as_denominator() -> None:
+    assert _recall_at_k(["p1", "p2", "p3", "p4", "p5"], {"p1", "p6", "p7", "p8"}, 5) == 0.25
+
+
+def test_recall_at_k_uses_the_actual_top_k_window() -> None:
+    assert _recall_at_k(
+        [
+            "irrelevant-1",
+            "relevant-1",
+            "irrelevant-2",
+            "irrelevant-3",
+            "irrelevant-4",
+            "relevant-2",
+        ],
+        {"relevant-1", "relevant-2"},
+        5,
+    ) == 0.5
+
+
+def test_recall_at_k_marks_empty_gold_as_not_evaluable() -> None:
+    assert _recall_at_k(["p1", "p2"], set(), 5) is None
+
+
+def test_hard_constraint_recall_uses_full_gold_and_raw_top_five(monkeypatch) -> None:
+    eligible = [
+        ProductSnapshot(
+            product_id=f"eligible-{index}",
+            name=f"Eligible product {index}",
+            category="Meat",
+            category_hierarchy="Food > Meat",
+            price_vnd=50,
+            stock=1,
+            brand="Allowed",
+        )
+        for index in range(1, 9)
+    ]
+    excluded = [
+        ProductSnapshot(
+            product_id=f"excluded-{index}",
+            name=f"Excluded product {index}",
+            category="Meat",
+            category_hierarchy="Food > Meat",
+            price_vnd=50,
+            stock=1,
+            brand="Excluded",
+        )
+        for index in range(1, 5)
+    ]
+    actual_results = [eligible[0], *excluded, eligible[1], eligible[2]]
+    monkeypatch.setattr(
+        benchmark,
+        "understand_catalog_query",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            product_type="Meat", budget_vnd=100, negative_constraints=[]
+        ),
+    )
+    monkeypatch.setattr(
+        benchmark,
+        "execute_catalog_tool",
+        lambda *_args, **_kwargs: SimpleNamespace(status="OK", products=actual_results),
+    )
+    repository = SimpleNamespace(
+        products=eligible + excluded,
+        list_category_hierarchies=lambda: [],
+    )
+
+    result = benchmark._run_deterministic(
+        {
+            "cases": [
+                {
+                    "case_id": "multi-gold-hard-constraint",
+                    "dimension": "hard_constraint",
+                    "query": "find meat below 100",
+                    "expected": {
+                        "kind": "hard_constraint",
+                        "category": "Meat",
+                        "excluded_brand": "Excluded",
+                        "max_price_vnd": 100,
+                    },
+                }
+            ]
+        },
+        repository,
+    )
+
+    row = result["case_results"][0]
+    aggregate = result["aggregate"]["hard_constraint"]
+    assert row["valid_results_at_5"] == 1
+    assert row["violations"] == 4
+    assert row["candidate_recall_at_5"] == 0.125
+    assert aggregate["candidate_recall_at_5"] == 0.125
+    assert aggregate["candidate_recall_at_5_evaluable_count"] == 1
+
+
+def test_hard_constraint_recall_is_not_scored_when_no_products_are_eligible(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        benchmark,
+        "understand_catalog_query",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            product_type="No match", budget_vnd=None, negative_constraints=[]
+        ),
+    )
+    monkeypatch.setattr(
+        benchmark,
+        "execute_catalog_tool",
+        lambda *_args, **_kwargs: SimpleNamespace(status="OK", products=[]),
+    )
+    repository = SimpleNamespace(products=[], list_category_hierarchies=lambda: [])
+
+    result = benchmark._run_deterministic(
+        {
+            "cases": [
+                {
+                    "case_id": "no-eligible-products",
+                    "dimension": "hard_constraint",
+                    "query": "find nonexistent category",
+                    "expected": {
+                        "kind": "hard_constraint",
+                        "category": "No match",
+                        "excluded_brand": "Excluded",
+                        "max_price_vnd": 100,
+                    },
+                }
+            ]
+        },
+        repository,
+    )
+
+    aggregate = result["aggregate"]["hard_constraint"]
+    assert result["case_results"][0]["correct_abstention"] is True
+    assert result["case_results"][0]["candidate_recall_at_5"] is None
+    assert aggregate["candidate_recall_at_5"] is None
+    assert aggregate["candidate_recall_at_5_evaluable_count"] == 0
 
 
 @pytest.mark.parametrize(
