@@ -1,0 +1,38 @@
+name: Retail backend quality
+
+on:
+  push:
+    branches:
+      - main
+      - codex/retail-text-quality-v4-20261019
+  pull_request:
+    branches:
+      - main
+      - codex/retail-text-quality-v4-20261019
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CATALOG_REPOSITORY: demo
+      GROQ_API_KEY: ""
+      AZURE_SPEECH_KEY: ""
+      ELEVENLABS_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - name: Install locked dependencies
+        run: uv sync --frozen
+      - name: Lint backend, tests, and evaluations
+        run: uv run ruff check backend tests evaluation
+      - name: Run offline backend suite
+        run: uv run pytest tests -q --tb=short
+      - name: Compile Python sources
+        run: uv run python -m compileall -q backend tests evaluation

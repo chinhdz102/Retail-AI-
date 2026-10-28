@@ -21,7 +21,7 @@ For each pair, mark category, exact identity, brand, price, negation, and availa
 ## Independent review and adjudication
 
 1. Freeze the query set, candidate set, catalog SHA-256, and split manifest before annotation. Do not tune on validation or blind-test judgments.
-2. Give two reviewers separate files. Do not show `expected` labels, system rank, model answer, or the other reviewer's judgments. Randomize candidate order within each query using the exporter seed.
+2. Give two reviewers separate files. Do not show `expected` labels, retrieval system/source, rank, model answer, evaluator-only manifest, or the other reviewer's judgments. Candidate and query order are independently randomized per reviewer with the exporter seed.
 3. Each reviewer records a grade, each applicable constraint, whether clarification/abstention is expected, confidence from 1–5, evidence fields, and a short rationale.
 4. Compare reviewer agreement by grade and by hard-constraint field. Adjudicate disagreements without overwriting either original judgment; preserve both and record the adjudication.
 5. Keep reviewer identifiers pseudonymous. Never include customer data, credentials, or personal information.
@@ -32,13 +32,16 @@ For each pair, mark category, exact identity, brand, price, negation, and availa
 
 ## Export
 
-Run a benchmark first, then export its returned candidate IDs for review. The exporter creates separate annotator A/B CSVs and omits the benchmark's expected labels and ranking positions:
+Run the retrieval systems first, then export their candidate union for review. Pass one results artifact per retrieval system; the exporter interleaves candidates by rank, deduplicates IDs, and caps the pool per query. It creates separately randomized annotator A/B CSVs and omits expected labels, retrieval source, and ranking positions. It also writes an evaluator-only manifest with dataset/catalog and candidate-artifact hashes; do not distribute that manifest to annotators.
 
 ```powershell
 uv run python -m evaluation.export_vietnamese_qrels_review `
   --dataset evaluation/cases/retail_ai_semantic_intelligence_v2_dev_rev1_20261028.json `
   --results docs/reports/artifacts/retail_ai_semantic_intelligence_v2_dev_rev1.json `
+  --max-candidates-per-query 50 `
   --output-prefix evaluation/review/retail_ai_v2_dev_rev1
 ```
+
+Repeat `--results` for each retrieval variant only when it was run against the same dataset and carries matching `case_id` values. Do not pool artifacts from unrelated query sets.
 
 The CSVs are a queue, not completed judgments. After review, normalize rows to JSONL matching `schemas/vietnamese_product_qrel_v1.schema.json` and retain dataset/catalog hashes and each reviewer's independent labels.

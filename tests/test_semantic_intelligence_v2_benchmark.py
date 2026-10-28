@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import json
 from pathlib import Path
 
@@ -89,9 +91,9 @@ def test_revised_dev_dataset_build_is_deterministic_and_has_feasible_price_label
         assert eligible, case["case_id"]
 
 
-def test_review_queue_exports_separate_blinded_csvs_without_gold_or_rank(tmp_path) -> None:
+def test_review_queue_pools_retrievers_and_independently_blinds_reviewers(tmp_path) -> None:
     repository = SnapshotProductRepository(dataset_builder.CATALOG)
-    product = repository.products[0]
+    products = repository.products[:4]
     dataset = tmp_path / "dev.json"
     dataset.write_text(
         json.dumps(
@@ -115,9 +117,27 @@ def test_review_queue_exports_separate_blinded_csvs_without_gold_or_rank(tmp_pat
             {
                 "deterministic_parser_and_catalog": {
                     "case_results": [
-                        {"case_id": "secret-case-1", "product_ids": [product.product_id]}
+                        {
+                            "case_id": "secret-case-1",
+                            "product_ids": [products[0].product_id, products[1].product_id],
+                        }
                     ]
                 }
+            }
+        ),
+        encoding="utf-8",
+    )
+    alternate_results = tmp_path / "retrieval-variants.json"
+    alternate_results.write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "case_id": "secret-case-1",
+                        "bm25_top5": [products[1].product_id, products[2].product_id],
+                        "dense_top5": [products[3].product_id, products[2].product_id],
+                    }
+                ]
             }
         ),
         encoding="utf-8",
@@ -125,17 +145,59 @@ def test_review_queue_exports_separate_blinded_csvs_without_gold_or_rank(tmp_pat
 
     exported = export_review_queues(
         dataset,
-        results,
+        [results, alternate_results],
         tmp_path / "queue",
         catalog_path=dataset_builder.CATALOG,
     )
-    annotator_a = Path(str(exported["annotator_a"])).read_text(encoding="utf-8-sig")
-    annotator_b = Path(str(exported["annotator_b"])).read_text(encoding="utf-8-sig")
-    assert annotator_a == annotator_b
+    annotator_a_path = Path(str(exported["annotator_a"]))
+    annotator_b_path = Path(str(exported["annotator_b"]))
+    annotator_a = annotator_a_path.read_text(encoding="utf-8-sig")
+    annotator_b = annotator_b_path.read_text(encoding="utf-8-sig")
+    rows_a = list(csv.DictReader(io.StringIO(annotator_a)))
+    rows_b = list(csv.DictReader(io.StringIO(annotator_b)))
     assert "DO_NOT_SHOW" not in annotator_a
-    assert "rank" not in annotator_a.casefold()
+    assert "rank" not in rows_a[0]
+    assert "bm25" not in annotator_a.casefold()
+    assert "dense" not in annotator_a.casefold()
     assert "UNREVIEWED" in annotator_a
-    assert product.product_id in annotator_a
+    assert {row["product_id"] for row in rows_a} == {product.product_id for product in products}
+    assert {row["candidate_key"] for row in rows_a} == {
+        row["candidate_key"] for row in rows_b
+    }
+    order_a = [row["candidate_key"] for row in rows_a]
+    order_b = [row["candidate_key"] for row in rows_b]
+    assert order_a != order_b
+    manifest = json.loads(Path(str(exported["evaluator_manifest"])).read_text(encoding="utf-8"))
+    assert manifest["candidate_count_by_query"] == {rows_a[0]["query_id"]: 4}
+    assert manifest["reviewer_queues"]["source_and_rank_hidden"] is True
+
+    repeated = export_review_queues(
+        dataset,
+        [results, alternate_results],
+        tmp_path / "queue-repeat",
+        catalog_path=dataset_builder.CATALOG,
+    )
+    assert Path(str(repeated["annotator_a"])).read_bytes() == annotator_a_path.read_bytes()
+    assert Path(str(repeated["annotator_b"])).read_bytes() == annotator_b_path.read_bytes()
+
+    capped = export_review_queues(
+        dataset,
+        [results, alternate_results],
+        tmp_path / "queue-capped",
+        catalog_path=dataset_builder.CATALOG,
+        max_candidates_per_query=3,
+    )
+    capped_rows = list(
+        csv.DictReader(
+            io.StringIO(Path(str(capped["annotator_a"])).read_text(encoding="utf-8-sig"))
+        )
+    )
+    assert len(capped_rows) == 3
+    assert {row["product_id"] for row in capped_rows} == {
+        products[0].product_id,
+        products[1].product_id,
+        products[3].product_id,
+    }
 
 
 def test_parser_only_conversation_harness_does_not_claim_alternative_novelty() -> None:
