@@ -632,6 +632,38 @@ class SnapshotProductRepository:
             return diversify_by_category_leaf(products, bounded_limit)
         return products[:bounded_limit]
 
+    def catalog_terms_evidenced(
+        self,
+        terms: tuple[str, ...] | list[str],
+        category: str,
+    ) -> frozenset[str]:
+        """Find exact name/brand/description terms in one bounded catalog pass."""
+        requested = frozenset(
+            token
+            for term in terms
+            for token in normalize_category_text(term).split()
+            if token
+        )
+        if not requested:
+            return frozenset()
+
+        supported: set[str] = set()
+        for candidate in self._candidates:
+            if not _category_matches(category, candidate, self._known_category_keys):
+                continue
+            product = candidate.product
+            evidence = frozenset(
+                normalize_category_text(
+                    " ".join(
+                        filter(None, (product.name, product.brand, product.description))
+                    )
+                ).split()
+            )
+            supported.update(requested & evidence)
+            if supported == requested:
+                break
+        return frozenset(supported)
+
     def list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]:
         return self._category_hierarchies
 

@@ -227,7 +227,7 @@ def test_followup_summary_reports_only_added_catalog_items_and_recomputed_total(
     assert "Tổng phương án hiện tại: 161.800đ" in summary
     assert "Còn 58.200đ trong mức dự trù" in summary
     assert "Sản phẩm dưỡng da mặt" in summary
-    assert "Bạn muốn tìm cụ thể loại nào, chẳng hạn kem dưỡng ẩm" in summary
+    assert "Nếu bạn cho biết loại cụ thể hơn" in summary
     assert "Sữa rửa mặt × 1 (54.000đ)" not in summary
 
 
@@ -235,9 +235,7 @@ def test_followup_summary_acknowledges_new_required_need_already_in_plan() -> No
     previous = {
         "revision": 2,
         "total_budget_vnd": 220_000,
-        "needs": [
-            {"need_id": "sunscreen", "label": "Kem chống nắng", "required": False}
-        ],
+        "needs": [{"need_id": "sunscreen", "label": "Kem chống nắng", "required": False}],
         "proposed_items": [
             {
                 "product_id": "sunscreen-sku",
@@ -252,9 +250,7 @@ def test_followup_summary_acknowledges_new_required_need_already_in_plan() -> No
         "mission": {
             "revision": 3,
             "total_budget_vnd": 240_000,
-            "needs": [
-                {"need_id": "sunscreen", "label": "Kem chống nắng", "required": True}
-            ],
+            "needs": [{"need_id": "sunscreen", "label": "Kem chống nắng", "required": True}],
         },
         "needs": [{"need_id": "sunscreen", "label": "Kem chống nắng"}],
         "options": [
@@ -402,8 +398,7 @@ def test_product_query_does_not_cross_match_a_different_catalog_product_type() -
     )
     assert sunscreen.content["needs"][0]["candidate_count"] > 0
     assert all(
-        "chống nắng" in item["name"].casefold()
-        for item in sunscreen.content["options"][0]["items"]
+        "chống nắng" in item["name"].casefold() for item in sunscreen.content["options"][0]["items"]
     )
 
     face_cleanser = build_shopping_mission_plan(
@@ -478,12 +473,8 @@ def test_budget_and_party_paraphrases_are_not_treated_as_unverified_product_attr
     assert result.mission_state["hard_requirements"] == []
     assert result.mission_state["exclusions"] == []
     assert _is_structured_mission_metadata("đủ cho 7 người", {"party_size": 7})
-    assert _is_structured_mission_metadata(
-        "dễ chia sẻ cho khoảng 7 người", {"party_size": 7}
-    )
-    assert _is_structured_mission_metadata(
-        "dùng cho khoảng 7 người", {"party_size": 7}
-    )
+    assert _is_structured_mission_metadata("dễ chia sẻ cho khoảng 7 người", {"party_size": 7})
+    assert _is_structured_mission_metadata("dùng cho khoảng 7 người", {"party_size": 7})
     assert not _is_structured_mission_metadata("không cay cho 7 người", {"party_size": 7})
 
 
@@ -713,9 +704,7 @@ def test_party_size_does_not_scale_personal_care_and_unknown_pack_size_is_disclo
     skincare_paths = next(
         path for path in repository.list_category_hierarchies() if "Chăm sóc da" in path
     )
-    skincare_category = " > ".join(
-        skincare_paths[: skincare_paths.index("Chăm sóc da") + 1]
-    )
+    skincare_category = " > ".join(skincare_paths[: skincare_paths.index("Chăm sóc da") + 1])
     personal_care = build_shopping_mission_plan(
         {
             "goal": "Mua đồ chăm sóc da cho nhóm",
@@ -746,6 +735,30 @@ def test_party_size_does_not_scale_personal_care_and_unknown_pack_size_is_disclo
     assert quantity == 1
     assert basis == "catalog_size_unknown"
     assert estimate is None
+
+
+def test_specific_product_phrase_stays_narrow_for_non_skincare_categories() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    plan = build_shopping_mission_plan(
+        {
+            "goal": "Tìm thịt thăn bò",
+            "needs": [
+                _need(
+                    "beef_tenderloin",
+                    "Thịt",
+                    label="Thịt thăn bò",
+                    product_query="thịt thăn bò",
+                )
+            ],
+        },
+        repository,
+    )
+
+    items = plan.content["options"][0]["items"]
+    assert items
+    assert all("thăn bò" in item["name"].casefold() for item in items)
 
 
 def test_local_unverified_requirement_blocks_only_its_own_optional_need() -> None:

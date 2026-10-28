@@ -52,6 +52,23 @@ def test_configured_snapshot_repository_loads_validated_full_catalog() -> None:
     assert repo.rows_quarantined == 18
 
 
+def test_snapshot_catalog_term_evidence_is_exact_and_category_scoped(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    product = snapshot_repo.products[0]
+    leaf = product.category_hierarchy.split(">")[-1].strip()
+    product_term = normalize_category_text(product.name).split()[-1]
+
+    evidence = snapshot_repo.catalog_terms_evidenced(
+        (product_term, product.product_id, "term-that-is-not-in-the-snapshot"), leaf
+    )
+
+    assert product_term in evidence
+    assert product.product_id.casefold() not in evidence
+    assert "term-that-is-not-in-the-snapshot" not in evidence
+    assert not snapshot_repo.catalog_terms_evidenced((product_term,), "unknown category")
+
+
 def test_snapshot_prices_and_stock_are_never_presented_as_current(
     snapshot_repo: SnapshotProductRepository,
 ) -> None:

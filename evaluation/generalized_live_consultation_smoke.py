@@ -48,6 +48,7 @@ SCENARIOS = (
     },
     {
         "scenario_id": "meat_location",
+        "invariant": "shelf_location_answer",
         "turns": ["Thịt thăn bò ở đâu vậy?"],
     },
     {
@@ -168,6 +169,22 @@ def _scope_check(
             if product is not None and product.shelf
         ]
         return products_in_scope and any(shelf in answer for shelf in shelf_codes)
+    if invariant == "shelf_location_answer":
+        relevant_product = bool(cards) and all(
+            "thịt thăn bò" in value for value in names_and_paths
+        )
+        shelf_codes = [
+            product.shelf
+            for product in products
+            if product is not None and product.shelf
+        ]
+        has_provenance_caveat = any(
+            phrase in answer.casefold()
+            for phrase in ("vị trí gợi ý", "sơ đồ kệ đề xuất", "chưa xác minh")
+        )
+        return relevant_product and bool(shelf_codes) and any(
+            shelf in answer for shelf in shelf_codes
+        ) and has_provenance_caveat
     if invariant == "meat_with_unverified_use_case":
         is_meat = bool(cards) and all("thịt" in value for value in names_and_paths)
         has_uncertainty = any(
@@ -255,8 +272,8 @@ def run(output_path: Path = OUTPUT) -> dict[str, Any]:
                     if source is None:
                         source_checked = False
                         break
-                    price = card.get("reference_price_vnd")
-                    if price is not None and price != source.price_vnd:
+                    price = card.get("price_vnd")
+                    if price != source.price_vnd:
                         source_checked = False
                         break
                 scope_check = _scope_check(
@@ -282,6 +299,151 @@ def run(output_path: Path = OUTPUT) -> dict[str, Any]:
             results.append({"scenario_id": scenario["scenario_id"], "turns": turns})
             client.post(f"/sessions/{session_id}/close")
 
+        direct_created = client.post(
+            "/sessions", json={"kiosk_id": "consultation-direct-eval"}
+        )
+        direct_created.raise_for_status()
+        direct_session_id = direct_created.json()["session_id"]
+        direct_started = time.perf_counter_ns()
+        direct_response = client.post(
+            "/agent/respond",
+            json={
+                "session_id": direct_session_id,
+                "text": "Coca-Cola Zero giá bao nhiêu?",
+                "language": "vi",
+            },
+        )
+        direct_latency_ms = (time.perf_counter_ns() - direct_started) / 1_000_000
+        direct_payload: dict[str, Any] = {}
+        direct_source_checked = False
+        direct_error: str | None = None
+        if direct_response.status_code >= 400:
+            errors += 1
+            failed_invariants += 1
+            direct_error = direct_response.text[:1000]
+        else:
+            direct_payload = direct_response.json()
+            direct_cards = direct_payload.get("products") or []
+            direct_source_checked = bool(direct_cards)
+            for card in direct_cards:
+                product_id = card.get("product_id")
+                source = product_by_id.get(product_id)
+                if source is None:
+                    direct_source_checked = False
+                    break
+                price = card.get("price_vnd")
+                if price != source.price_vnd:
+                    direct_source_checked = False
+                    break
+            if not direct_source_checked:
+                failed_invariants += 1
+        direct_smoke = {
+            "endpoint": "/agent/respond",
+            "user": "Coca-Cola Zero giá bao nhiêu?",
+            "http_status": direct_response.status_code,
+            "model": direct_payload.get("model"),
+            "tools_used": direct_payload.get("tools_used") or [],
+            "product_ids": direct_payload.get("grounded_product_ids") or [],
+            "product_card_count": len(direct_payload.get("products") or []),
+            "catalog_identity_and_price_match": direct_source_checked,
+            "latency_ms": round(direct_latency_ms, 3),
+            "error": direct_error,
+        }
+        client.post(f"/sessions/{direct_session_id}/close")
+
+        reference_created = client.post(
+            "/sessions", json={"kiosk_id": "consultation-reference-eval"}
+        )
+        reference_created.raise_for_status()
+        reference_session_id = reference_created.json()["session_id"]
+        reference_opening = "Mình đang cần Bánh bao, cho mình xem vài loại."
+        reference_opening_response = client.post(
+            "/agent/respond",
+            json={
+                "session_id": reference_session_id,
+                "text": reference_opening,
+                "language": "vi",
+            },
+        )
+        reference_opening_payload: dict[str, Any] = {}
+        reference_follow_up_payload: dict[str, Any] = {}
+        reference_error: str | None = None
+        reference_source_checked = False
+        first_product_id: str | None = None
+        reference_follow_up_response = None
+        if reference_opening_response.status_code >= 400:
+            errors += 1
+            failed_invariants += 1
+            reference_error = reference_opening_response.text[:1000]
+        else:
+            reference_opening_payload = reference_opening_response.json()
+            opening_ids = reference_opening_payload.get("grounded_product_ids") or []
+            first_product_id = opening_ids[0] if opening_ids else None
+            if first_product_id is None:
+                failed_invariants += 1
+                reference_error = "The opening catalog turn returned no grounded products."
+            else:
+                first_product = product_by_id.get(first_product_id)
+                reference_follow_up_response = client.post(
+                    "/agent/respond",
+                    json={
+                        "session_id": reference_session_id,
+                        "text": "Giá của loại đầu tiên là bao nhiêu?",
+                        "language": "vi",
+                    },
+                )
+                if reference_follow_up_response.status_code >= 400:
+                    errors += 1
+                    failed_invariants += 1
+                    reference_error = reference_follow_up_response.text[:1000]
+                else:
+                    reference_follow_up_payload = reference_follow_up_response.json()
+                    follow_up_cards = reference_follow_up_payload.get("products") or []
+                    displayed_ids = reference_follow_up_payload.get("grounded_product_ids") or []
+                    price = first_product.price_vnd if first_product else None
+                    price_text = f"{price:,}".replace(",", ".") if price is not None else ""
+                    reference_source_checked = bool(
+                        first_product
+                        and displayed_ids == [first_product_id]
+                        and len(follow_up_cards) == 1
+                        and follow_up_cards[0].get("product_id") == first_product_id
+                        and follow_up_cards[0].get("price_vnd") == price
+                        and price_text in str(reference_follow_up_payload.get("text") or "")
+                    )
+                    if not reference_source_checked:
+                        failed_invariants += 1
+                        reference_error = (
+                            "The first-item follow-up did not return that item's verified price."
+                        )
+        stateful_reference_smoke = {
+            "endpoint": "/agent/respond",
+            "turns": [
+                {
+                    "user": reference_opening,
+                    "http_status": reference_opening_response.status_code,
+                    "grounded_product_ids": reference_opening_payload.get(
+                        "grounded_product_ids", []
+                    ),
+                },
+                {
+                    "user": "Giá của loại đầu tiên là bao nhiêu?",
+                    "http_status": (
+                        reference_follow_up_response.status_code
+                        if reference_follow_up_response is not None
+                        else None
+                    ),
+                    "model": reference_follow_up_payload.get("model"),
+                    "grounded_product_ids": reference_follow_up_payload.get(
+                        "grounded_product_ids", []
+                    ),
+                    "catalog_identity_and_price_match": reference_source_checked,
+                },
+            ],
+            "catalog_identity_and_price_match": reference_source_checked,
+            "error": reference_error,
+        }
+        client.post(f"/sessions/{reference_session_id}/close")
+
     turn_rows = [turn for result in results for turn in result["turns"]]
     configured_models = {
         settings.groq_model,
@@ -302,6 +464,8 @@ def run(output_path: Path = OUTPUT) -> dict[str, Any]:
         "configured_groq_credentials": len(settings.groq_api_credentials),
         "scenario_count": len(SCENARIOS),
         "turn_count": len(turn_rows),
+        "non_stream_smoke": direct_smoke,
+        "stateful_reference_smoke": stateful_reference_smoke,
         "http_error_count": errors,
         "hard_case_invariant_failures": failed_invariants,
         "provider_turn_count": len(provider_turns),
@@ -324,6 +488,14 @@ def run(output_path: Path = OUTPUT) -> dict[str, Any]:
             "Only responses using configured Groq models count as provider calls.",
             "Hard-case checks cover catalog scope and visible cards, not conversational quality.",
             "Latency excludes real browser and network overhead.",
+            (
+                "The direct /agent/respond smoke adds one synchronous product-price turn "
+                "separately from the SSE turn count."
+            ),
+            (
+                "The stateful /agent/respond smoke checks whether a first-item reference "
+                "resolves to its previously grounded product and price."
+            ),
         ],
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -335,13 +507,15 @@ def run(output_path: Path = OUTPUT) -> dict[str, Any]:
             {
                 "output": str(output_path.resolve()),
                 "provider_turn_count": output["provider_turn_count"],
+                "non_stream_smoke": direct_smoke,
+                "stateful_reference_smoke": stateful_reference_smoke,
                 "http_error_count": errors,
                 "hard_case_invariant_failures": failed_invariants,
                 "catalog_identity_and_price_match_rate": output[
                     "catalog_identity_and_price_match_rate"
                 ],
             },
-            ensure_ascii=False,
+            ensure_ascii=True,
             indent=2,
         )
     )

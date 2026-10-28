@@ -1,12 +1,56 @@
 {
   "kind": "generalized_live_consultation_smoke",
-  "generated_at_utc": "2026-10-27T18:53:47.941537+00:00",
+  "generated_at_utc": "2026-10-28T13:45:52.983211+00:00",
   "mode": "in_process_fastapi_testclient_and_sse_endpoint",
   "catalog_file": "data/winmart_products.json",
   "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
   "configured_groq_credentials": 3,
   "scenario_count": 16,
   "turn_count": 17,
+  "non_stream_smoke": {
+    "endpoint": "/agent/respond",
+    "user": "Coca-Cola Zero giá bao nhiêu?",
+    "http_status": 200,
+    "model": "catalog",
+    "tools_used": [
+      "search_products"
+    ],
+    "product_ids": [
+      "WIN_10307381",
+      "WIN_10194711",
+      "WIN_10194712",
+      "WIN_10011651"
+    ],
+    "product_card_count": 4,
+    "catalog_identity_and_price_match": true,
+    "latency_ms": 615.867,
+    "error": null
+  },
+  "stateful_reference_smoke": {
+    "endpoint": "/agent/respond",
+    "turns": [
+      {
+        "user": "Mình đang cần Bánh bao, cho mình xem vài loại.",
+        "http_status": 200,
+        "grounded_product_ids": [
+          "WIN_10007187",
+          "WIN_10005885",
+          "WIN_10170384"
+        ]
+      },
+      {
+        "user": "Giá của loại đầu tiên là bao nhiêu?",
+        "http_status": 200,
+        "model": "catalog",
+        "grounded_product_ids": [
+          "WIN_10007187"
+        ],
+        "catalog_identity_and_price_match": true
+      }
+    ],
+    "catalog_identity_and_price_match": true,
+    "error": null
+  },
   "http_error_count": 0,
   "hard_case_invariant_failures": 0,
   "provider_turn_count": 1,
@@ -60,7 +104,7 @@
             "complete"
           ],
           "delta_count": 17,
-          "latency_ms": 1240.509
+          "latency_ms": 3125.258
         }
       ]
     },
@@ -107,7 +151,7 @@
             "complete"
           ],
           "delta_count": 18,
-          "latency_ms": 177.78
+          "latency_ms": 515.73
         }
       ]
     },
@@ -151,7 +195,7 @@
             "complete"
           ],
           "delta_count": 17,
-          "latency_ms": 341.312
+          "latency_ms": 1625.504
         },
         {
           "user": "Loại nào rẻ nhất trong mấy loại đó?",
@@ -179,7 +223,7 @@
             "complete"
           ],
           "delta_count": 8,
-          "latency_ms": 10.984
+          "latency_ms": 25.936
         }
       ]
     },
@@ -188,7 +232,7 @@
       "turns": [
         {
           "user": "Cuối tuần nhà mình 4 người đi picnic, ngân sách khoảng 300 nghìn, gợi ý giúp một giỏ có đồ ăn và nước uống. Mình chưa biết nên mua món nào.",
-          "assistant": "Mình gợi ý một phương án tham khảo: Dữ liệu catalog ghi ngày 15/09/2026; tồn kho tại cửa hàng chưa được xác nhận theo thời gian thực. Theo yêu cầu của bạn: Nước uống Aquafina chai 5L × 1 (26.900đ). Nếu muốn mua thêm, bạn có thể chọn: Snack bí đỏ vị bò nướng Oishi gói 42g × 3 (16.500đ). Tổng: 43.400đ (phần mua thêm: 16.500đ). Số lượng là ước tính (250 ml đồ uống/người; 30 g đồ ăn nhẹ/người), dựa trên quy cách ghi trong catalog. Mình chưa thêm món nào vào giỏ.",
+          "assistant": "Mình gợi ý một phương án tham khảo: Dữ liệu catalog ghi ngày 15/09/2026; tồn kho tại cửa hàng chưa được xác nhận theo thời gian thực. Theo yêu cầu của bạn: Snack bí đỏ vị bò nướng Oishi gói 42g × 3 (16.500đ); Nước uống ion Pocari chai 900ml × 4 (101.200đ). Tổng: 117.700đ. Số lượng là ước tính (250 ml đồ uống/người; 30 g đồ ăn nhẹ/người), dựa trên quy cách ghi trong catalog. Mình chưa thêm món nào vào giỏ.",
           "http_status": 200,
           "model": "qwen/qwen3.8-27b",
           "tools_used": [
@@ -196,10 +240,10 @@
           ],
           "product_ids": [
             "WIN_10015798",
-            "WIN_10011218",
-            "WIN_10604925",
+            "WIN_10196077",
+            "WIN_10191598",
             "WIN_10011393",
-            "WIN_10191598"
+            "WIN_10150448"
           ],
           "catalog_identity_and_price_match": true,
           "scope_check": null,
@@ -222,12 +266,10 @@
             "delta",
             "delta",
             "delta",
-            "delta",
-            "delta",
             "complete"
           ],
-          "delta_count": 19,
-          "latency_ms": 2632.692
+          "delta_count": 17,
+          "latency_ms": 5777.873
         }
       ]
     },
@@ -247,7 +289,7 @@
             "WIN_10053675"
           ],
           "catalog_identity_and_price_match": true,
-          "scope_check": null,
+          "scope_check": true,
           "sse_events": [
             "start",
             "delta",
@@ -260,7 +302,7 @@
             "complete"
           ],
           "delta_count": 7,
-          "latency_ms": 184.047
+          "latency_ms": 767.081
         }
       ]
     },
@@ -286,7 +328,7 @@
             "complete"
           ],
           "delta_count": 5,
-          "latency_ms": 98.758
+          "latency_ms": 284.392
         }
       ]
     },
@@ -311,7 +353,7 @@
             "complete"
           ],
           "delta_count": 4,
-          "latency_ms": 44.624
+          "latency_ms": 128.887
         }
       ]
     },
@@ -347,7 +389,7 @@
             "complete"
           ],
           "delta_count": 11,
-          "latency_ms": 326.572
+          "latency_ms": 1254.233
         }
       ]
     },
@@ -356,7 +398,7 @@
       "turns": [
         {
           "user": "Mình muốn mua đồ để lau nhà, có loại nào?",
-          "assistant": "Mình tìm thấy vài loại trong danh mục: Nước lau sàn hương lily Gift  chai 1L (giá tham khảo 32.400đ); Nước lau nhà MaxKleen hương ban mai thanh mát chai 1.01 lít (giá tham khảo 34.400đ); Nước lau sàn Sunlight tinh dầu thiên nhiên hương hoa Lily chai 1kg (giá tham khảo 36.000đ). Catalog chưa có đủ thông tin để xác nhận loại nào phù hợp với nhu cầu này. Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không? Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+          "assistant": "Mình gợi ý Nước lau sàn hương lily Gift  chai 1L (giá tham khảo 32.400đ), Nước lau nhà MaxKleen hương ban mai thanh mát chai 1.01 lít (giá tham khảo 34.400đ), Nước lau sàn Sunlight tinh dầu thiên nhiên hương hoa Lily chai 1kg (giá tham khảo 36.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
           "http_status": 200,
           "model": "catalog",
           "tools_used": [
@@ -384,17 +426,10 @@
             "delta",
             "delta",
             "delta",
-            "delta",
-            "delta",
-            "delta",
-            "delta",
-            "delta",
-            "delta",
-            "delta",
             "complete"
           ],
-          "delta_count": 20,
-          "latency_ms": 331.19
+          "delta_count": 13,
+          "latency_ms": 1423.212
         }
       ]
     },
@@ -435,7 +470,7 @@
             "complete"
           ],
           "delta_count": 14,
-          "latency_ms": 360.25
+          "latency_ms": 1603.468
         }
       ]
     },
@@ -444,7 +479,7 @@
       "turns": [
         {
           "user": "Sữa hộp cho trẻ mang đi học có loại nào?",
-          "assistant": "Mình gợi ý Thức uống Susu  socola lúa mạch túi 110ml (giá tham khảo 5.500đ), Sữa lúa mạch socola KUN túi 110ml (giá tham khảo 5.900đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh. Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+          "assistant": "Mình gợi ý Thức uống Susu  socola lúa mạch túi 110ml (giá tham khảo 5.500đ), Sữa lúa mạch socola KUN túi 110ml (giá tham khảo 5.900đ), Sữa tươi tiệt trùng Cô gái Hà Lan có đường túi 180ml (giá tham khảo 6.000đ) nhé. Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh. Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
           "http_status": 200,
           "model": "catalog",
           "tools_used": [
@@ -452,7 +487,8 @@
           ],
           "product_ids": [
             "WIN_10197389",
-            "WIN_10326051"
+            "WIN_10326051",
+            "WIN_10005426"
           ],
           "catalog_identity_and_price_match": true,
           "scope_check": true,
@@ -470,10 +506,14 @@
             "delta",
             "delta",
             "delta",
+            "delta",
+            "delta",
+            "delta",
+            "delta",
             "complete"
           ],
-          "delta_count": 12,
-          "latency_ms": 333.513
+          "delta_count": 16,
+          "latency_ms": 1370.627
         }
       ]
     },
@@ -504,7 +544,7 @@
             "complete"
           ],
           "delta_count": 7,
-          "latency_ms": 371.57
+          "latency_ms": 1294.239
         }
       ]
     },
@@ -535,7 +575,7 @@
             "complete"
           ],
           "delta_count": 6,
-          "latency_ms": 342.061
+          "latency_ms": 1188.352
         }
       ]
     },
@@ -573,7 +613,7 @@
             "complete"
           ],
           "delta_count": 9,
-          "latency_ms": 234.006
+          "latency_ms": 755.733
         }
       ]
     },
@@ -615,7 +655,7 @@
             "complete"
           ],
           "delta_count": 13,
-          "latency_ms": 199.43
+          "latency_ms": 689.015
         }
       ]
     },
@@ -653,7 +693,7 @@
             "complete"
           ],
           "delta_count": 13,
-          "latency_ms": 334.359
+          "latency_ms": 1071.422
         }
       ]
     }
@@ -664,6 +704,8 @@
     "SSE emits deltas after grounding; provider token streaming is not measured.",
     "Only responses using configured Groq models count as provider calls.",
     "Hard-case checks cover catalog scope and visible cards, not conversational quality.",
-    "Latency excludes real browser and network overhead."
+    "Latency excludes real browser and network overhead.",
+    "The direct /agent/respond smoke adds one synchronous product-price turn separately from the SSE turn count.",
+    "The stateful /agent/respond smoke checks whether a first-item reference resolves to its previously grounded product and price."
   ]
 }

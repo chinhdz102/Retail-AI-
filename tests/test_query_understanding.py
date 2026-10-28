@@ -70,6 +70,25 @@ def test_catalog_category_wording_is_not_mistaken_for_a_preparation_request() ->
     assert with_purpose.use_case == "nấu nướng"
 
 
+@pytest.mark.parametrize(
+    ("query", "expected_category"),
+    [
+        ("Mình đang cần Bút, cho mình xem vài loại.", "Bút"),
+        ("Mình đang cần Muối, cho mình xem vài loại.", "Muối"),
+        ("Mình đang cần Dầu hướng dương, cho mình xem vài loại.", "Dầu hướng dương"),
+        ("Mình đang cần Lăn khử mùi Nam, cho mình xem vài loại.", "Lăn khử mùi Nam"),
+    ],
+)
+def test_natural_request_prefix_preserves_catalog_leaf(
+    query: str, expected_category: str
+) -> None:
+    repository = _snapshot()
+
+    result = understand_catalog_query(query, repository.list_category_hierarchies())
+
+    assert result.product_type == expected_category
+
+
 def test_package_size_is_not_misread_as_purchase_quantity() -> None:
     repository = _snapshot()
     result = understand_catalog_query(
@@ -78,6 +97,17 @@ def test_package_size_is_not_misread_as_purchase_quantity() -> None:
     )
 
     assert result.quantity is None
+
+
+def test_zero_quantity_like_negation_is_ignored_instead_of_rejecting_the_query() -> None:
+    repository = _snapshot()
+    result = understand_catalog_query(
+        "Tìm nước ngọt không chai, dưới 20 nghìn.",
+        repository.list_category_hierarchies(),
+    )
+
+    assert result.quantity is None
+    assert result.budget_vnd == 20_000
 
 
 def test_accented_hong_in_product_names_is_not_normalized_as_negation() -> None:
@@ -111,6 +141,88 @@ def test_product_name_words_that_overlap_category_do_not_filter_out_exact_item()
 
     assert "WIN_10250121" in {product.product_id for product in observation.products}
     assert observation.content["query_understanding"]["product_type"] is None
+
+
+def test_search_uses_the_original_utterance_when_the_tool_query_is_compacted() -> None:
+    repository = _snapshot()
+    user_text = "Nhà mình sắp hết Hộp thực phẩm tròn Hokkaido 1000ml, tìm giúp mình."
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": "Hộp thực phẩm", "limit": 5}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=user_text,
+    )
+
+    assert "WIN_10250121" in {product.product_id for product in observation.products}
+    assert observation.content["query_understanding"]["product_type"] is None
+
+
+@pytest.mark.parametrize(
+    "prompt_template",
+    [
+        "Có {name} không? Tìm đúng tên này giúp mình.",
+        "Bạn tìm giúp {name} trong danh mục hiện tại với.",
+    ],
+)
+def test_natural_wrappers_keep_exact_catalog_title_and_ignore_question_particle(
+    prompt_template: str,
+) -> None:
+    repository = _snapshot()
+    title_counts: dict[str, int] = {}
+    for product in repository.products:
+        key = product.name.casefold()
+        title_counts[key] = title_counts.get(key, 0) + 1
+    product = next(
+        item
+        for item in repository.products
+        if title_counts[item.name.casefold()] == 1 and len(item.name.split()) >= 4
+    )
+    query = prompt_template.format(name=product.name)
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert product.product_id in {item.product_id for item in observation.products}
+    assert observation.content["query_understanding"]["unverified_constraints"] == []
+
+
+def test_yes_no_particle_followed_by_comma_search_is_not_a_negative_filter() -> None:
+    repository = _snapshot()
+    query = "Cửa hàng có bán Bia nội địa không, tìm giúp mình với."
+    understanding = understand_catalog_query(query, repository.list_category_hierarchies())
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+
+    assert understanding.product_type == "Bia nội địa"
+    assert understanding.negative_constraints == ()
+    assert observation.status == "SUCCESS"
+    assert observation.products
+
+
+def test_single_word_catalog_type_survives_store_availability_wrapper() -> None:
+    repository = _snapshot()
+    query = "Cửa hàng có bán Bút không, tìm giúp mình với."
+    understanding = understand_catalog_query(query, repository.list_category_hierarchies())
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+
+    assert understanding.product_type == "Bút"
+    assert understanding.negative_constraints == ()
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all("Bút" in product.category_hierarchy for product in observation.products)
 
 
 def test_single_character_brand_typo_does_not_turn_title_word_into_wrong_category() -> None:
@@ -252,8 +364,7 @@ def test_unverified_negative_product_attribute_does_not_return_false_matches() -
 
     assert observation.status == "DATA_UNAVAILABLE"
     assert [
-        normalize_vietnamese(value)
-        for value in observation.content["unverified_constraints"]
+        normalize_vietnamese(value) for value in observation.content["unverified_constraints"]
     ] == ["caffeine"]
     assert observation.products == ()
 
@@ -419,6 +530,52 @@ def test_comparison_and_location_acts_take_priority_over_mentions_of_a_place() -
     assert normalize_vietnamese(location.product_type) == normalize_vietnamese("Kem đánh răng")
 
 
+def test_comparison_preserves_multiple_catalog_entities_instead_of_one_category() -> None:
+    repository = _snapshot()
+    result = understand_catalog_query(
+        "So sánh nước khoáng và nước ngọt, loại nào rẻ hơn?",
+        repository.list_category_hierarchies(),
+    )
+
+    assert result.intent == "comparison"
+    assert result.comparison_targets == ("nước khoáng", "nước ngọt")
+    assert result.product_types == ("Nước khoáng", "Nước ngọt có ga")
+    assert "price" in result.secondary_intents
+
+
+def test_postposed_comparison_keeps_both_entities_and_multi_intent_turns() -> None:
+    repository = _snapshot()
+    hierarchies = repository.list_category_hierarchies()
+    comparison = understand_catalog_query("Thịt bò với thịt heo khác nhau gì?", hierarchies)
+    multi_intent = understand_catalog_query(
+        "Tìm nước rửa chén, cho mình xem giá và ở kệ nào?", hierarchies
+    )
+
+    assert comparison.comparison_targets == ("Thịt bò", "thịt heo")
+    assert comparison.product_types == ("Thịt",)
+    assert multi_intent.intent == "location"
+    assert {"price", "product_search"} <= set(multi_intent.secondary_intents)
+
+
+def test_dialogue_reference_keeps_scope_after_alternative_and_ranking_turns() -> None:
+    repository = _snapshot()
+    history = [
+        "Mình đang cần BVS Chu kỳ, cho mình xem vài loại.",
+        "Trong mấy loại đó, loại nào rẻ nhất?",
+        "Còn lựa chọn nào khác cùng nhóm không?",
+    ]
+    result = understand_catalog_query(
+        "Giá của loại đầu tiên là bao nhiêu?",
+        repository.list_category_hierarchies(),
+        previous_query=history[-1],
+        previous_queries=history,
+    )
+
+    assert result.intent == "price"
+    assert result.conversation_reference == "loại đầu tiên"
+    assert normalize_vietnamese(result.product_type) == normalize_vietnamese("BVS Chu kỳ")
+
+
 def test_normalized_location_spans_preserve_gendered_product_category() -> None:
     repository = _snapshot()
     result = understand_catalog_query(
@@ -489,9 +646,7 @@ def test_zero_sugar_phrase_is_resolved_against_catalog_before_rejection() -> Non
     )
 
     assert result.product_type == "Nước ngọt có ga"
-    assert "duong" in {
-        normalize_vietnamese(value) for value in result.negative_constraints
-    }
+    assert "duong" in {normalize_vietnamese(value) for value in result.negative_constraints}
 
 
 def test_product_correction_does_not_become_a_zero_currency_budget() -> None:

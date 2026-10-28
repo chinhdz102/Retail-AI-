@@ -2233,6 +2233,57 @@ async def test_validated_agent_response_can_be_delivered_as_server_sent_events(
 
 
 @pytest.mark.asyncio
+async def test_first_item_price_followup_resolves_from_same_session(
+    client: httpx.AsyncClient,
+    monkeypatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    monkeypatch.setattr("backend.api.main.get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "first-item-follow-up"})
+    session_id = created.json()["session_id"]
+
+    initial = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Mình đang cần Bánh bao, cho mình xem vài loại.",
+            "language": "vi",
+        },
+    )
+    assert initial.status_code == 200, initial.text
+    initial_payload = initial.json()
+    assert len(initial_payload["grounded_product_ids"]) >= 2
+    first_product_id = initial_payload["grounded_product_ids"][0]
+    first_product = repository.get_product_snapshot(first_product_id)
+    assert first_product is not None
+    first_price_text = f"{first_product.price_vnd:,}".replace(",", ".")
+
+    follow_up = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Giá của loại đầu tiên là bao nhiêu?",
+            "language": "vi",
+        },
+    )
+
+    assert follow_up.status_code == 200, follow_up.text
+    follow_up_payload = follow_up.json()
+    assert follow_up_payload["grounded_product_ids"] == [first_product_id]
+    assert len(follow_up_payload["products"]) == 1
+    assert first_price_text in follow_up_payload["text"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_product_comparison_is_grounded_and_kept_for_followup(
     client: httpx.AsyncClient,
 ) -> None:

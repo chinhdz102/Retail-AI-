@@ -5,8 +5,10 @@ from pathlib import Path
 import pytest
 
 from backend.products.catalog import ProductSnapshot, search_products
+from backend.products.category_taxonomy import normalize_category_text
 from backend.products.repository import DemoProductRepository
 from backend.products.snapshot_repository import SnapshotProductRepository
+from backend.services.catalog_preferences import excluded_catalog_brands
 from backend.services.retail_tools import CATALOG_TOOL_DEFINITIONS, execute_catalog_tool
 from backend.services.vietnamese_intent import normalize_vietnamese
 
@@ -76,6 +78,149 @@ def test_snapshot_requires_fields_and_returns_provenance_envelope() -> None:
     assert envelope["response_mode"] == "DETERMINISTIC_FACT"
     assert envelope["terminal"] is True
     assert envelope["data"] == verified.content
+
+
+def test_full_request_keeps_excluded_brand_and_price_hard_filters() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    groups: dict[str, dict[str, list[ProductSnapshot]]] = {}
+    for product in repository.products:
+        category = (product.category_hierarchy or product.category or "").split(">")[-1].strip()
+        if category and product.brand:
+            groups.setdefault(category, {}).setdefault(product.brand, []).append(product)
+    selected = next(
+        (
+            (category, excluded_brand, alternatives)
+            for category, brands in sorted(groups.items())
+            if len(brands) > 1
+            for excluded_brand in sorted(brands)
+            if (
+                alternatives := [
+                    product
+                    for brand, products in brands.items()
+                    if brand != excluded_brand
+                    for product in products
+                    if product.price_vnd > 0
+                ]
+            )
+        ),
+        None,
+    )
+    assert selected is not None
+    category, excluded_brand, alternatives = selected
+    budget = min(product.price_vnd for product in alternatives)
+    user_text = f"Cho mình xem {category} dưới {budget} đồng, không lấy hãng {excluded_brand}."
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps(
+            {
+                "query": category,
+                "category": category,
+                # Simulate a structured extractor incorrectly copying the
+                # excluded brand into the positive brand slot.
+                "brand": excluded_brand,
+                "max_price_vnd": budget,
+                "limit": 10,
+            },
+            ensure_ascii=False,
+        ),
+        repository=repository,
+        current_user_text=user_text,
+    )
+
+    assert observation.products
+    assert all(product.price_vnd <= budget for product in observation.products)
+    assert all(product.brand != excluded_brand for product in observation.products)
+    assert all(
+        category in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+        for product in observation.products
+    )
+
+
+def test_coca_cola_zero_with_price_request_keeps_the_named_product_query() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    query = "Cửa hàng có Coca-Cola Zero không? Cho mình biết giá với."
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all("coca" in product.name.casefold() for product in observation.products)
+    assert all("zero" in product.name.casefold() for product in observation.products)
+
+
+def test_catalog_brand_exclusions_work_without_parser_negative_spans() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    groups: dict[str, dict[str, list[ProductSnapshot]]] = {}
+    for product in repository.products:
+        category = (product.category_hierarchy or product.category or "").split(">")[-1].strip()
+        if category and product.brand:
+            groups.setdefault(category, {}).setdefault(product.brand, []).append(product)
+    selected = next(
+        (
+            (category, excluded_brand, alternatives)
+            for category, brands in sorted(groups.items())
+            if len(brands) > 1
+            for excluded_brand in sorted(brands)
+            if (
+                alternatives := [
+                    product
+                    for brand, products in brands.items()
+                    if brand != excluded_brand
+                    for product in products
+                    if product.price_vnd > 0
+                ]
+            )
+        ),
+        None,
+    )
+    assert selected is not None
+    category, excluded_brand, alternatives = selected
+    budget = min(product.price_vnd for product in alternatives)
+    brands = [product.brand for product in repository.products if product.brand]
+    formatted_budget = f"{budget:,}".replace(",", ".")
+    exclusion_queries = (
+        f"Có {category} nào không phải hãng {excluded_brand}, "
+        f"giá không quá {formatted_budget} đồng không?",
+        f"Mình muốn mua {category}; loại {excluded_brand} thì bỏ qua, "
+        f"ngân sách tối đa {formatted_budget} đồng.",
+    )
+
+    for query in exclusion_queries:
+        assert normalize_category_text(excluded_brand) in excluded_catalog_brands(query, brands)
+        observation = execute_catalog_tool(
+            "search_products",
+            json.dumps(
+                {
+                    "query": category,
+                    "category": category,
+                    "max_price_vnd": budget,
+                    "limit": 10,
+                },
+                ensure_ascii=False,
+            ),
+            repository=repository,
+            current_user_text=query,
+        )
+
+        assert observation.status == "SUCCESS"
+        assert observation.products
+        assert all(product.price_vnd <= budget for product in observation.products)
+        assert all(product.brand != excluded_brand for product in observation.products)
+        assert all(
+            category
+            in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+            for product in observation.products
+        )
 
 
 def test_snapshot_can_verify_spice_attribute() -> None:
@@ -794,6 +939,50 @@ def test_natural_product_type_routes_to_exact_catalog_segment(
         expected_category
         in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
         for product in observation.products
+    )
+
+
+@pytest.mark.parametrize(
+    ("opening", "expected_category"),
+    [
+        ("Mình đang cần Bút, cho mình xem vài loại.", "Bút"),
+        ("Mình đang cần Muối, cho mình xem vài loại.", "Muối"),
+        ("Mình đang cần Dầu hướng dương, cho mình xem vài loại.", "Dầu hướng dương"),
+        ("Mình đang cần Lăn khử mùi Nam, cho mình xem vài loại.", "Lăn khử mùi Nam"),
+    ],
+)
+def test_elliptical_price_followup_keeps_exact_catalog_leaf(
+    opening: str, expected_category: str
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    opening_observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": opening, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=opening,
+    )
+    follow_up = "Trong mấy loại đó, loại nào rẻ nhất?"
+    follow_up_observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": follow_up, "limit": 5}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=follow_up,
+        previous_query=opening,
+        previous_queries=(opening,),
+    )
+
+    for observation in (opening_observation, follow_up_observation):
+        assert observation.status == "SUCCESS"
+        assert observation.products
+        assert all(
+            expected_category
+            in [segment.strip() for segment in (product.category_hierarchy or "").split(">")]
+            for product in observation.products
+        )
+    assert [product.price_vnd for product in follow_up_observation.products] == sorted(
+        product.price_vnd for product in follow_up_observation.products
     )
 
 

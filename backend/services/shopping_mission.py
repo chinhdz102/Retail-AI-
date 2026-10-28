@@ -164,9 +164,7 @@ def _is_structured_mission_metadata(value: str, mission: dict[str, Any]) -> bool
         return True
 
     party_size = mission.get("party_size")
-    party_cue = bool(
-        re.search(r"\b(?:nguoi|be|tre em|people|persons|guests)\b", normalized)
-    )
+    party_cue = bool(re.search(r"\b(?:nguoi|be|tre em|people|persons|guests)\b", normalized))
     party_context = bool(
         re.search(r"\b(?:du|cho|danh cho|phuc vu|nhom|party|group|for|people)\b", normalized)
     )
@@ -513,73 +511,6 @@ def _fallback_query_matches_candidate(query: str, product: ProductSnapshot) -> b
     return False
 
 
-def _specific_skincare_need_type(need: dict[str, Any]) -> str | None:
-    query = normalize_category_text(
-        " ".join(str(need.get(key) or "") for key in ("label", "product_query"))
-    )
-    if any(
-        phrase in query
-        for phrase in (
-            "kem chong nang",
-            "chong nang",
-            "sunscreen",
-            "sun screen",
-            "sunblock",
-        )
-    ):
-        return "sunscreen"
-    if any(
-        phrase in query
-        for phrase in (
-            "kem duong am",
-            "duong am da mat",
-            "kem duong da mat",
-            "facial moisturizer",
-            "face moisturizer",
-        )
-    ):
-        return "moisturizer"
-    if any(
-        phrase in query
-        for phrase in (
-            "sua rua mat",
-            "lam sach da mat",
-            "facial cleanser",
-            "face wash",
-        )
-    ):
-        return "cleanser"
-    return None
-
-
-def _candidate_matches_skincare_need(need: dict[str, Any], product: ProductSnapshot) -> bool:
-    """Reject near-matches from a different skincare product type."""
-    requested_type = _specific_skincare_need_type(need)
-    if requested_type is None:
-        return True
-    product_terms = normalize_category_text(
-        " ".join(
-            str(value or "")
-            for value in (product.name, product.category, product.category_hierarchy)
-        )
-    )
-    product_is_sunscreen = any(
-        phrase in product_terms
-        for phrase in ("kem chong nang", "chong nang", "sunscreen", "sun screen", "sunblock")
-    ) or bool(re.search(r"\bspf\b", product_terms))
-    product_is_cleanser = any(
-        phrase in product_terms
-        for phrase in ("sua rua mat", "facial cleanser", "face wash")
-    )
-    if requested_type == "moisturizer" and product_is_sunscreen:
-        return False
-    if requested_type == "cleanser" and product_is_sunscreen:
-        return False
-    if requested_type == "sunscreen" and product_is_cleanser:
-        return False
-    return True
-
-
 def _need_query_is_product_specific(
     need: dict[str, Any],
     mission: dict[str, Any],
@@ -701,9 +632,7 @@ def _deduplicate_products(products: list[ProductSnapshot]) -> list[ProductSnapsh
 def _pack_size(product: ProductSnapshot) -> tuple[int, str] | None:
     """Read only a clearly stated package volume or weight from the SKU name."""
     name = product.name.casefold().replace(",", ".")
-    volume = re.search(
-        r"(?<!\d)(\d+(?:\.\d+)?)\s*(ml|l[ií]t|liter|litre|l)\b", name
-    )
+    volume = re.search(r"(?<!\d)(\d+(?:\.\d+)?)\s*(ml|l[ií]t|liter|litre|l)\b", name)
     if volume:
         amount = float(volume.group(1))
         unit = volume.group(2)
@@ -890,14 +819,12 @@ def _choose_options(
         if not chosen or selected_required_count < available_required_count:
             continue
         total = sum(
-            choice_metrics[(str(need.get("need_id")), item.product_id)][1]
-            for need, item in chosen
+            choice_metrics[(str(need.get("need_id")), item.product_id)][1] for need, item in chosen
         )
         if budget is not None and not (total < budget if exclusive else total <= budget):
             continue
         preference = sum(
-            choice_metrics[(str(need.get("need_id")), item.product_id)][2]
-            for need, item in chosen
+            choice_metrics[(str(need.get("need_id")), item.product_id)][2] for need, item in chosen
         )
         preserved_count = sum(
             prior_product_by_need.get(str(need.get("need_id"))) == item.product_id
@@ -1130,11 +1057,6 @@ def build_shopping_mission_plan(
                         for item in candidates
                         if _fallback_query_matches_candidate(primary_query, item)
                     ]
-                candidates = [
-                    item
-                    for item in candidates
-                    if _candidate_matches_skincare_need(need, item)
-                ]
                 if candidates:
                     need["retrieval_query_used"] = query
                     break
@@ -1156,9 +1078,7 @@ def build_shopping_mission_plan(
                     limit=MAX_NEED_CANDIDATES,
                 )
                 candidates = [
-                    item
-                    for item in fallback_candidates
-                    if product_audience_evidence(item) is None
+                    item for item in fallback_candidates if product_audience_evidence(item) is None
                 ]
                 if candidates:
                     need["audience_unverified"] = True
@@ -1246,9 +1166,7 @@ def build_shopping_mission_plan(
         if not candidates:
             unresolved_details.extend(blockers or [f"no_candidate_for:{need['need_id']}"])
         for candidate in candidates:
-            _quantity, quantity_basis, estimate = _quantity_for_product(
-                need, mission, candidate
-            )
+            _quantity, quantity_basis, estimate = _quantity_for_product(need, mission, candidate)
             if estimate:
                 quantity_measurements.add(str(estimate["measurement"]))
                 quantity_estimation_targets.add(
@@ -1449,40 +1367,6 @@ def render_shopping_plan_summary(
         date_note = f"Dữ liệu catalog ghi ngày {snapshot_date}; " if snapshot_date else ""
         return date_note + "tồn kho tại cửa hàng chưa được xác nhận theo thời gian thực. "
 
-    def skincare_party_size_note() -> str:
-        if follow_up:
-            return ""
-        try:
-            party_size = int(mission.get("party_size") or 0)
-        except (TypeError, ValueError):
-            party_size = 0
-        if language != "vi" or party_size <= 1:
-            return ""
-        mission_needs = mission.get("needs") if isinstance(mission.get("needs"), list) else []
-        is_skincare_plan = any(
-            "cham soc da" in _normalize_category_words(need)
-            or "da mat" in _normalize_category_words(need)
-            for need in mission_needs
-            if isinstance(need, dict)
-        )
-        if not is_skincare_plan:
-            return ""
-        return (
-            " Mỗi mặt hàng hiện tính 1 đơn vị; mình chưa thể kết luận lượng này đủ cho "
-            f"{party_size} người nếu chưa biết dùng chung hay mỗi người dùng riêng. "
-            f"{party_size} người sẽ dùng chung sản phẩm hay mỗi người cần một bộ riêng?"
-        )
-
-    def _normalize_category_words(need: dict[str, Any]) -> str:
-        value = " ".join(
-            str(need.get(key) or "") for key in ("label", "category", "product_query")
-        )
-        decomposed = unicodedata.normalize("NFD", value.casefold())
-        unaccented = "".join(
-            char for char in decomposed if unicodedata.category(char) != "Mn"
-        ).replace("đ", "d")
-        return re.sub(r"[^\w\s]", " ", unaccented)
-
     def quantity_guidance(
         items: list[dict[str, Any]] | None = None, *, use_catalog_candidates: bool = False
     ) -> str:
@@ -1526,9 +1410,7 @@ def render_shopping_plan_summary(
             notes.append("100 g trái cây/người")
         if language == "en":
             text = (
-                " Counts are estimates ("
-                + "; ".join(notes)
-                + ") based on catalog pack sizes."
+                " Counts are estimates (" + "; ".join(notes) + ") based on catalog pack sizes."
                 if notes
                 else ""
             )
@@ -1555,9 +1437,7 @@ def render_shopping_plan_summary(
                     text += "目录缺少部分包装规格，请确认这些数量。"
             return text
         text = (
-            " Số lượng là ước tính ("
-            + "; ".join(notes)
-            + "), dựa trên quy cách ghi trong catalog."
+            " Số lượng là ước tính (" + "; ".join(notes) + "), dựa trên quy cách ghi trong catalog."
             if notes
             else ""
         )
@@ -1653,9 +1533,7 @@ def render_shopping_plan_summary(
             if isinstance(item, dict) and item.get("product_id")
         }
         current_by_id = {
-            str(item.get("product_id")): item
-            for item in current_items
-            if item.get("product_id")
+            str(item.get("product_id")): item for item in current_items if item.get("product_id")
         }
         if len(previous_by_id) != len(previous_items):
             return None
@@ -1725,8 +1603,7 @@ def render_shopping_plan_summary(
                 item
                 for item in current_items
                 if any(
-                    str(item.get("need_id")) == str(need.get("need_id"))
-                    for need in promoted_needs
+                    str(item.get("need_id")) == str(need.get("need_id")) for need in promoted_needs
                 )
             ]
             if promoted_items:
@@ -1760,26 +1637,10 @@ def render_shopping_plan_summary(
                 + ", ".join(missing_labels)
                 + "; mình chưa tính nhóm này vào tổng."
             )
-            current_needs_by_id = {
-                str(need.get("need_id")): need
-                for need in current_needs
-                if isinstance(need, dict) and need.get("need_id")
-            }
-            newly_missing_broad_skincare = any(
-                str(need.get("label") or "") in missing_labels
-                and normalize_category_text(str(need.get("label") or ""))
-                in {"san pham duong da mat", "san pham cham soc da", "duong da mat"}
-                and (
-                    str(need.get("need_id")) not in previous_needs_by_id
-                    or not previous_needs_by_id[str(need.get("need_id"))].get("required")
-                )
-                for need in current_needs_by_id.values()
+            parts.append(
+                "Nếu bạn cho biết loại cụ thể hơn hoặc điều kiện nào có thể nới, "
+                "mình sẽ tra tiếp mà không tự đổi yêu cầu."
             )
-            if newly_missing_broad_skincare:
-                parts.append(
-                    "Bạn muốn tìm cụ thể loại nào, chẳng hạn kem dưỡng ẩm, "
-                    "để mình tra đúng nhóm sản phẩm?"
-                )
         elif missing_optional_labels:
             parts.append(
                 "Catalog chưa tìm thấy sản phẩm phù hợp cho: "
@@ -1914,8 +1775,7 @@ def render_shopping_plan_summary(
         if shortfall:
             return (
                 intro + f"Các nhu cầu bắt buộc rẻ nhất vẫn vượt ngân sách {format_vnd(shortfall)}. "
-                "Bạn muốn ưu tiên nhu cầu nào?"
-                + quantity_guidance(use_catalog_candidates=True)
+                "Bạn muốn ưu tiên nhu cầu nào?" + quantity_guidance(use_catalog_candidates=True)
             )
         details = content.get("unresolved_details") or []
         if details:
@@ -1956,6 +1816,5 @@ def render_shopping_plan_summary(
         + " "
         + total_text
         + (quantity_guidance(option["items"]) if not follow_up else "")
-        + skincare_party_size_note()
         + suffix
     )

@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 from pathlib import Path
 
@@ -47,7 +48,8 @@ async def test_shopping_mission_planner_uses_one_extended_tool_attempt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     assert _catalog_tool_timeout_policy("plan_shopping_mission") == (15.0, 0)
-    assert _catalog_tool_timeout_policy("search_products") == (2.0, 1)
+    assert _catalog_tool_timeout_policy("search_products") == (4.0, 0)
+    assert _catalog_tool_timeout_policy("recommend_products") == (5.0, 0)
 
     monkeypatch.setattr(retail_agent, "SHOPPING_MISSION_TOOL_TIMEOUT_SECONDS", 0.01)
     calls = 0
@@ -70,6 +72,35 @@ async def test_shopping_mission_planner_uses_one_extended_tool_attempt(
     assert observation.content["failure_type"] == "TimeoutError"
 
 
+@pytest.mark.asyncio
+async def test_search_products_times_out_truthfully_without_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(retail_agent, "CATALOG_SEARCH_TIMEOUT_SECONDS", 0.01)
+    calls = 0
+    started = threading.Event()
+
+    def slow_search_tool(name, arguments, **kwargs):
+        nonlocal calls
+        calls += 1
+        started.set()
+        time.sleep(0.05)
+        return ToolObservation(content={"ok": True}, tool_name=name)
+
+    monkeypatch.setattr(retail_agent, "execute_catalog_tool", slow_search_tool)
+    name, observation = await _execute_tool_call(
+        tool_call("search_products", {"query": "nước rửa tay"}),
+        calls_executed=0,
+        current_user_text="Tìm nước rửa tay.",
+    )
+
+    assert started.wait(timeout=0.5)
+    assert name == "search_products"
+    assert calls == 1
+    assert observation.status == "TEMPORARY_FAILURE"
+    assert observation.content["failure_type"] == "TimeoutError"
+
+
 def test_mission_edit_preserves_existing_skus_and_softens_spice_preference() -> None:
     call = tool_call(
         "plan_shopping_mission",
@@ -83,6 +114,7 @@ def test_mission_edit_preserves_existing_skus_and_softens_spice_preference() -> 
                     "need_id": "snack",
                     "label": "Snack",
                     "category": "snack",
+                    "product_query": "snack",
                     "source": "EXPLICIT",
                     "required": True,
                     "spicy": False,
@@ -442,6 +474,101 @@ def test_skincare_group_confirmation_does_not_make_sunscreen_required_until_name
     assert revised_arguments["total_budget_vnd"] == 240_000
 
 
+@pytest.mark.parametrize("include_product_queries", [False, True])
+def test_confirming_broad_skincare_keeps_inferred_steps_optional(
+    include_product_queries: bool,
+) -> None:
+    category = (
+        "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da"
+    )
+    needs = [
+        {
+            "need_id": "broad",
+            "label": "Chăm sóc da mặt",
+            "category": category,
+            "product_query": "chăm sóc da mặt" if include_product_queries else "",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "cleanser",
+            "label": "Sữa rửa mặt",
+            "category": category,
+            "product_query": "sữa rửa mặt" if include_product_queries else "",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "moisturizer",
+            "label": "Kem dưỡng ẩm",
+            "category": category,
+            "product_query": "kem dưỡng ẩm da mặt" if include_product_queries else "",
+            "source": "INFERRED",
+            "required": False,
+        },
+        {
+            "need_id": "sunscreen",
+            "label": "Kem chống nắng",
+            "category": category,
+            "product_query": "kem chống nắng da mặt" if include_product_queries else "",
+            "source": "INFERRED",
+            "required": False,
+        },
+    ]
+
+    result = _enforce_shopping_mission_call_semantics(
+        [tool_call("plan_shopping_mission", {"needs": needs})],
+        "Mình xác nhận cần chăm sóc da mặt; các nhóm riêng bạn tự gợi ý thêm thì để tùy chọn.",
+        None,
+    )
+    output = json.loads(result[0]["function"]["arguments"])["needs"]
+
+    assert {need["need_id"]: need["required"] for need in output} == {
+        "broad": True,
+        "cleanser": False,
+        "moisturizer": False,
+        "sunscreen": False,
+    }
+
+
+def test_english_activity_only_plan_keeps_model_suggested_groups_optional() -> None:
+    needs = [
+        {
+            "need_id": "snack",
+            "label": "Picnic snacks",
+            "category": "Thực phẩm > Bánh kẹo > Snack",
+            "product_query": "snacks for picnic",
+            "source": "EXPLICIT",
+            "required": True,
+        },
+        {
+            "need_id": "drink",
+            "label": "Picnic drinks",
+            "category": "Thực phẩm > Nước uống không cồn",
+            "product_query": "drinks for picnic",
+            "source": "EXPLICIT",
+            "required": True,
+        },
+        {
+            "need_id": "paper",
+            "label": "Napkins for picnic",
+            "category": "Phi thực phẩm > Giấy ăn",
+            "product_query": "napkins for picnic",
+            "source": "EXPLICIT",
+            "required": True,
+        },
+    ]
+
+    result = _enforce_shopping_mission_call_semantics(
+        [tool_call("plan_shopping_mission", {"needs": needs})],
+        "Plan supplies for a family picnic for four.",
+        None,
+    )
+    output = json.loads(result[0]["function"]["arguments"])["needs"]
+
+    assert all(need["source"] == "INFERRED" and not need["required"] for need in output)
+
+
 def test_group_size_does_not_imply_shared_use() -> None:
     call = tool_call(
         "plan_shopping_mission",
@@ -523,6 +650,7 @@ def test_optional_suggestions_instruction_works_in_english() -> None:
                     "need_id": "fruit",
                     "label": "Fresh fruit",
                     "category": "fruit",
+                    "product_query": "fresh fruit",
                     "source": "EXPLICIT",
                     "required": True,
                 },

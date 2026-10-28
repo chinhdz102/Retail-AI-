@@ -1,0 +1,5265 @@
+{
+  "artifact_id": "retail_ai_semantic_intelligence_v2_benchmark",
+  "created_at_utc": "2026-10-28T06:01:48.086048+00:00",
+  "commit_sha": "f6403da9b59fa341440cd86dec00dc32d72f1bee",
+  "dataset_id": "retail_ai_semantic_intelligence_v2_frozen_20261028",
+  "dataset_authoring_method": "Provisional synthetic evaluation: conversational templates applied to catalog rows and taxonomy. Not independently authored or human-validated. Freeze before product-code tuning; review labels before acceptance.",
+  "dataset_sha256": "d030d8f860f426a0ffcba7d44b542f8f7b23e9d361a51d8810c052670ba8b1e9",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "query_count": 300,
+  "conversation_count": 50,
+  "evaluation_status": "provisional_requires_human_review",
+  "deterministic_parser_and_catalog": {
+    "aggregate": {
+      "product_resolution": {
+        "count": 100,
+        "recall_at_1": 0.32,
+        "recall_at_5": 0.37,
+        "mrr": 0.3461
+      },
+      "category_browse": {
+        "count": 100,
+        "precision_at_5": 0.8,
+        "parser_category_accuracy": 0.95,
+        "parser_error_count": 0
+      },
+      "hard_constraint": {
+        "count": 100,
+        "constraint_case_pass": 0.57,
+        "constraint_violations": 1,
+        "candidate_recall_at_5": 0.7628,
+        "nonempty_result": 0.58,
+        "parser_error_count": 20
+      }
+    },
+    "latency_ms": {
+      "p50": 131.084,
+      "p95": 484.533,
+      "mean": 181.942
+    },
+    "case_results": [
+      {
+        "case_id": "V2-P-001",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10170474"
+        ],
+        "latency_ms": 266.374,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-002",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 92.23,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-003",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 263.352,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-004",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10232517"
+        ],
+        "latency_ms": 124.5,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-005",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10007059"
+        ],
+        "latency_ms": 128.378,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-006",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005514",
+          "WIN_10005635",
+          "WIN_10005609",
+          "WIN_10005307",
+          "WIN_10005524",
+          "WIN_10005518",
+          "WIN_10005516",
+          "WIN_10182355",
+          "WIN_10182354",
+          "WIN_10005588"
+        ],
+        "latency_ms": 214.286,
+        "parser_error_type": null,
+        "gold_rank": 9,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-007",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 109.639,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-008",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 316.769,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-009",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 625.189,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-010",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10162305"
+        ],
+        "latency_ms": 158.784,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-011",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10054831"
+        ],
+        "latency_ms": 171.974,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-012",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 142.147,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-013",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005761",
+          "WIN_10170491",
+          "WIN_10060740",
+          "WIN_10194689",
+          "WIN_10194690",
+          "WIN_10005786",
+          "WIN_10005770",
+          "WIN_10170492",
+          "WIN_10005873",
+          "WIN_10005349"
+        ],
+        "latency_ms": 139.238,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-014",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10404853"
+        ],
+        "latency_ms": 104.897,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-015",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10161716",
+          "WIN_10161717",
+          "WIN_10170650"
+        ],
+        "latency_ms": 283.608,
+        "parser_error_type": null,
+        "gold_rank": 2,
+        "pass_at_1": false,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-016",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 680.005,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-017",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 109.499,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-018",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10170424"
+        ],
+        "latency_ms": 148.853,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-019",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 716.13,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-020",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 495.232,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-021",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10017476"
+        ],
+        "latency_ms": 224.429,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-022",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 124.421,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-023",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10017739",
+          "WIN_10017629",
+          "WIN_10162243",
+          "WIN_10018132",
+          "WIN_10017475",
+          "WIN_10162329",
+          "WIN_10170936",
+          "WIN_10170935",
+          "WIN_10170932",
+          "WIN_10170929"
+        ],
+        "latency_ms": 207.39,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-024",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10150518"
+        ],
+        "latency_ms": 139.569,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-025",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10006483",
+          "WIN_10006482",
+          "WIN_10006914"
+        ],
+        "latency_ms": 156.61,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-026",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 141.165,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-027",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 191.923,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-028",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 274.943,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-029",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10013857"
+        ],
+        "latency_ms": 150.778,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-030",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 570.272,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-031",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 280.975,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-032",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 107.593,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-033",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10266351"
+        ],
+        "latency_ms": 320.166,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-034",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10195097"
+        ],
+        "latency_ms": 132.057,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-035",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 392.008,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-036",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10195935"
+        ],
+        "latency_ms": 181.942,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-037",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 84.068,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-038",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10303866"
+        ],
+        "latency_ms": 285.821,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-039",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10227088"
+        ],
+        "latency_ms": 141.182,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-040",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10014525"
+        ],
+        "latency_ms": 198.632,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-041",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10601171"
+        ],
+        "latency_ms": 270.17,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-042",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 134.333,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-043",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 638.949,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-044",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10018995",
+          "WIN_10017376",
+          "WIN_10625583",
+          "WIN_10318801",
+          "WIN_10318803",
+          "WIN_10318805",
+          "WIN_10311520"
+        ],
+        "latency_ms": 152.049,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-045",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10017736",
+          "WIN_10017737"
+        ],
+        "latency_ms": 169.245,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-046",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 156.505,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-047",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 118.749,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-048",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10017739",
+          "WIN_10017629",
+          "WIN_10162243",
+          "WIN_10018132",
+          "WIN_10017475",
+          "WIN_10162329",
+          "WIN_10170936",
+          "WIN_10170935",
+          "WIN_10170932",
+          "WIN_10170929"
+        ],
+        "latency_ms": 179.964,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-049",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 149.667,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-050",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10010073"
+        ],
+        "latency_ms": 144.161,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-051",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 1980.827,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-052",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 170.625,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-053",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10241681"
+        ],
+        "latency_ms": 110.34,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-054",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10007768",
+          "WIN_10007767"
+        ],
+        "latency_ms": 197.186,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-055",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10183282"
+        ],
+        "latency_ms": 141.024,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-056",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005284"
+        ],
+        "latency_ms": 619.417,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-057",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 143.676,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-058",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10085523"
+        ],
+        "latency_ms": 140.181,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-059",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10007770"
+        ],
+        "latency_ms": 206.049,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-060",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 351.013,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-061",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 363.485,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-062",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 124.52,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-063",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 484.533,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-064",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 572.527,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-065",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10016963",
+          "WIN_10016850"
+        ],
+        "latency_ms": 231.892,
+        "parser_error_type": null,
+        "gold_rank": 2,
+        "pass_at_1": false,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-066",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10007779"
+        ],
+        "latency_ms": 187.296,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-067",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 103.538,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-068",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10011221",
+          "WIN_10011220",
+          "WIN_10011452",
+          "WIN_10056559"
+        ],
+        "latency_ms": 173.538,
+        "parser_error_type": null,
+        "gold_rank": 2,
+        "pass_at_1": false,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-069",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10281839",
+          "WIN_10281840"
+        ],
+        "latency_ms": 177.302,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-070",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10171191"
+        ],
+        "latency_ms": 224.609,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-071",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10011254"
+        ],
+        "latency_ms": 449.559,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-072",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 93.331,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-073",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 1290.578,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-074",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 989.457,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-075",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 624.59,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-076",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10011651"
+        ],
+        "latency_ms": 400.428,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-077",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 133.955,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-078",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 275.967,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-079",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 196.217,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-080",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 1647.299,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-081",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 1182.554,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-082",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 110.68,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-083",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10614968"
+        ],
+        "latency_ms": 146.608,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-084",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 318.134,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-085",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10015532"
+        ],
+        "latency_ms": 145.955,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-086",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10162243",
+          "WIN_10170936",
+          "WIN_10170935",
+          "WIN_10017376",
+          "WIN_10017476",
+          "WIN_10629947"
+        ],
+        "latency_ms": 217.946,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-087",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 136.106,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-088",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 107.83,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-089",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10194713"
+        ],
+        "latency_ms": 129.339,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-090",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10281714",
+          "WIN_10283521",
+          "WIN_10281755"
+        ],
+        "latency_ms": 220.16,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-091",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005419",
+          "WIN_10005418",
+          "WIN_10005420"
+        ],
+        "latency_ms": 456.911,
+        "parser_error_type": null,
+        "gold_rank": 2,
+        "pass_at_1": false,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-092",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 83.519,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-093",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10196071"
+        ],
+        "latency_ms": 285.89,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-094",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 172.646,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-095",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 228.869,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-096",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 408.352,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-097",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 86.153,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-098",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 403.31,
+        "parser_error_type": null,
+        "gold_rank": null,
+        "pass_at_1": false,
+        "pass_at_5": false
+      },
+      {
+        "case_id": "V2-P-099",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10171091"
+        ],
+        "latency_ms": 179.668,
+        "parser_error_type": null,
+        "gold_rank": 1,
+        "pass_at_1": true,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-P-100",
+        "dimension": "exact_product_identity",
+        "kind": "product_resolution",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10602569",
+          "WIN_10602567",
+          "WIN_10602568"
+        ],
+        "latency_ms": 140.985,
+        "parser_error_type": null,
+        "gold_rank": 2,
+        "pass_at_1": false,
+        "pass_at_5": true
+      },
+      {
+        "case_id": "V2-C-001",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10020131",
+          "WIN_10020157",
+          "WIN_10020159",
+          "WIN_10232581",
+          "WIN_10020239",
+          "WIN_10229087",
+          "WIN_10628248",
+          "WIN_10161757",
+          "WIN_10600112",
+          "WIN_10270308"
+        ],
+        "latency_ms": 86.559,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "BVS Chu kỳ"
+      },
+      {
+        "case_id": "V2-C-002",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10237334",
+          "WIN_10628562",
+          "WIN_10326626",
+          "WIN_10018378",
+          "WIN_10018681",
+          "WIN_10205726"
+        ],
+        "latency_ms": 110.709,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bchải đrăng trẻ em"
+      },
+      {
+        "case_id": "V2-C-003",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 80.648,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Bia nội địa"
+      },
+      {
+        "case_id": "V2-C-004",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10007187",
+          "WIN_10005885",
+          "WIN_10170384",
+          "WIN_10007184",
+          "WIN_10007185",
+          "WIN_10007204",
+          "WIN_10183843",
+          "WIN_10007199"
+        ],
+        "latency_ms": 101.93,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bánh bao"
+      },
+      {
+        "case_id": "V2-C-005",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10626548",
+          "WIN_10194734",
+          "WIN_10013504",
+          "WIN_10195918",
+          "WIN_10195036",
+          "WIN_10195916",
+          "WIN_10195216",
+          "WIN_10197682",
+          "WIN_10013503",
+          "WIN_10013615"
+        ],
+        "latency_ms": 121.559,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bánh bông lan"
+      },
+      {
+        "case_id": "V2-C-006",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10626550",
+          "WIN_10626549",
+          "WIN_10195895",
+          "WIN_10194776",
+          "WIN_10191018",
+          "WIN_10013531",
+          "WIN_10013881",
+          "WIN_10303026",
+          "WIN_10192803",
+          "WIN_10013857"
+        ],
+        "latency_ms": 80.249,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bánh gạo"
+      },
+      {
+        "case_id": "V2-C-007",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10056598",
+          "WIN_10324071",
+          "WIN_10197446",
+          "WIN_10197447",
+          "WIN_10194651",
+          "WIN_10197683",
+          "WIN_10197435",
+          "WIN_10013500",
+          "WIN_10324070",
+          "WIN_10197484"
+        ],
+        "latency_ms": 98.525,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bánh pie"
+      },
+      {
+        "case_id": "V2-C-008",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 87.483,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Bánh đa nem"
+      },
+      {
+        "case_id": "V2-C-009",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10240587",
+          "WIN_10181528",
+          "WIN_10240584",
+          "WIN_10240585"
+        ],
+        "latency_ms": 114.199,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bò, Bê NK"
+      },
+      {
+        "case_id": "V2-C-010",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10170800",
+          "WIN_10062150",
+          "WIN_10062351",
+          "WIN_10170845",
+          "WIN_10020413",
+          "WIN_10020414",
+          "WIN_10612256",
+          "WIN_10020891",
+          "WIN_10160628",
+          "WIN_10020408"
+        ],
+        "latency_ms": 160.852,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bông tẩy trang"
+      },
+      {
+        "case_id": "V2-C-011",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10007846",
+          "WIN_10007849",
+          "WIN_10008461",
+          "WIN_10007962"
+        ],
+        "latency_ms": 85.83,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bún khô, Phở khô"
+      },
+      {
+        "case_id": "V2-C-012",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10007938",
+          "WIN_10007939",
+          "WIN_10181026",
+          "WIN_10618197",
+          "WIN_10618198",
+          "WIN_10008475",
+          "WIN_10007958",
+          "WIN_10007959",
+          "WIN_10008474",
+          "WIN_10007943"
+        ],
+        "latency_ms": 107.591,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bún, phở ăn liền"
+      },
+      {
+        "case_id": "V2-C-013",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 65.424,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": null
+      },
+      {
+        "case_id": "V2-C-014",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005754",
+          "WIN_10005891",
+          "WIN_10005755",
+          "WIN_10010121",
+          "WIN_10007597",
+          "WIN_10007598",
+          "WIN_10007599",
+          "WIN_10214665",
+          "WIN_10602867"
+        ],
+        "latency_ms": 101.944,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bơ đóng hộp"
+      },
+      {
+        "case_id": "V2-C-015",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10615014",
+          "WIN_10005780",
+          "WIN_10606685",
+          "WIN_10005781",
+          "WIN_10005778",
+          "WIN_10005779",
+          "WIN_10005715",
+          "WIN_10005716",
+          "WIN_10170182",
+          "WIN_10170183"
+        ],
+        "latency_ms": 105.796,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bơ động vật"
+      },
+      {
+        "case_id": "V2-C-016",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10008620",
+          "WIN_10008621",
+          "WIN_10008663",
+          "WIN_10403296",
+          "WIN_10605925",
+          "WIN_10141401",
+          "WIN_10009041",
+          "WIN_10170268",
+          "WIN_10009185",
+          "WIN_10141530"
+        ],
+        "latency_ms": 93.749,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bột canh, hạt nêm"
+      },
+      {
+        "case_id": "V2-C-017",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10019562",
+          "WIN_10406728",
+          "WIN_10406729",
+          "WIN_10617635",
+          "WIN_10626464",
+          "WIN_10626465"
+        ],
+        "latency_ms": 99.418,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Bột giặt"
+      },
+      {
+        "case_id": "V2-C-018",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 86.296,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": null
+      },
+      {
+        "case_id": "V2-C-019",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10141805",
+          "WIN_10141806",
+          "WIN_10007985",
+          "WIN_10141346",
+          "WIN_10007984",
+          "WIN_10007983",
+          "WIN_10181053",
+          "WIN_10008240",
+          "WIN_10008239",
+          "WIN_10606067"
+        ],
+        "latency_ms": 113.85,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Cháo ăn liền"
+      },
+      {
+        "case_id": "V2-C-020",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10170214",
+          "WIN_10006509",
+          "WIN_10007062",
+          "WIN_10170093",
+          "WIN_10183494"
+        ],
+        "latency_ms": 118.915,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Chả viên t.hợp đlạnh"
+      },
+      {
+        "case_id": "V2-C-021",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10283522",
+          "WIN_10242929",
+          "WIN_10242930",
+          "WIN_10241675"
+        ],
+        "latency_ms": 82.501,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Cà chua"
+      },
+      {
+        "case_id": "V2-C-022",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10012824",
+          "WIN_10012913",
+          "WIN_10406966",
+          "WIN_10196217",
+          "WIN_10012928",
+          "WIN_10150518",
+          "WIN_10012785",
+          "WIN_10012978",
+          "WIN_10012784",
+          "WIN_10012783"
+        ],
+        "latency_ms": 110.666,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Cà phê hòa tan"
+      },
+      {
+        "case_id": "V2-C-023",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 79.231,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Cà phê nước"
+      },
+      {
+        "case_id": "V2-C-024",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10008785",
+          "WIN_10008784",
+          "WIN_10008783",
+          "WIN_10008611",
+          "WIN_10180836",
+          "WIN_10008906"
+        ],
+        "latency_ms": 125.899,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Các loại bột gia vị"
+      },
+      {
+        "case_id": "V2-C-025",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10622829",
+          "WIN_10170267",
+          "WIN_10014400",
+          "WIN_10014395",
+          "WIN_10141460",
+          "WIN_10009997",
+          "WIN_10009998",
+          "WIN_10009743"
+        ],
+        "latency_ms": 109.567,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Các loại bột khác"
+      },
+      {
+        "case_id": "V2-C-026",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10617360",
+          "WIN_10009184",
+          "WIN_10140852",
+          "WIN_10623459",
+          "WIN_10009046",
+          "WIN_10009043",
+          "WIN_10181091",
+          "WIN_10181093",
+          "WIN_10009084",
+          "WIN_10009085"
+        ],
+        "latency_ms": 85.18,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Các loại sốt"
+      },
+      {
+        "case_id": "V2-C-027",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10324173",
+          "WIN_10612566",
+          "WIN_10162322",
+          "WIN_10612534",
+          "WIN_10617596"
+        ],
+        "latency_ms": 117.63,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Dung dịch vs nam nữ"
+      },
+      {
+        "case_id": "V2-C-028",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 136.064,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Dầu gội nam"
+      },
+      {
+        "case_id": "V2-C-029",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10016912",
+          "WIN_10604719",
+          "WIN_10170560",
+          "WIN_10016730",
+          "WIN_10016719",
+          "WIN_10016782",
+          "WIN_10171076",
+          "WIN_10162215",
+          "WIN_10600115",
+          "WIN_10170586"
+        ],
+        "latency_ms": 166.088,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Dầu gội nữ"
+      },
+      {
+        "case_id": "V2-C-030",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10008707",
+          "WIN_10140855",
+          "WIN_10141888",
+          "WIN_10008708",
+          "WIN_10008709",
+          "WIN_10141889"
+        ],
+        "latency_ms": 102.934,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Dầu hào"
+      },
+      {
+        "case_id": "V2-C-031",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10010073",
+          "WIN_10010194",
+          "WIN_10619545",
+          "WIN_10141615",
+          "WIN_10405275",
+          "WIN_10141616"
+        ],
+        "latency_ms": 99.506,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Dầu hướng dương"
+      },
+      {
+        "case_id": "V2-C-032",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10010069",
+          "WIN_10142094",
+          "WIN_10010151",
+          "WIN_10010079",
+          "WIN_10170264",
+          "WIN_10600400",
+          "WIN_10010070",
+          "WIN_10010080",
+          "WIN_10170265",
+          "WIN_10010152"
+        ],
+        "latency_ms": 111.144,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Dầu hỗn hợp"
+      },
+      {
+        "case_id": "V2-C-033",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 71.071,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Dầu nành"
+      },
+      {
+        "case_id": "V2-C-034",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005597",
+          "WIN_10053469",
+          "WIN_10053467",
+          "WIN_10282371",
+          "WIN_10283789",
+          "WIN_10053380",
+          "WIN_10053377"
+        ],
+        "latency_ms": 121.117,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Giáp xác,nh.thể tươi"
+      },
+      {
+        "case_id": "V2-C-035",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005941",
+          "WIN_10183518",
+          "WIN_10182350",
+          "WIN_10182351",
+          "WIN_10005928",
+          "WIN_10006004"
+        ],
+        "latency_ms": 127.218,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Giò chả"
+      },
+      {
+        "case_id": "V2-C-036",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10171259",
+          "WIN_10170576",
+          "WIN_10020489",
+          "WIN_10613616",
+          "WIN_10252827",
+          "WIN_10162103",
+          "WIN_10170883",
+          "WIN_10020536",
+          "WIN_10020564",
+          "WIN_10020625"
+        ],
+        "latency_ms": 155.599,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Giấy vệ sinh"
+      },
+      {
+        "case_id": "V2-C-037",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10316598",
+          "WIN_10020649",
+          "WIN_10316597",
+          "WIN_10162437",
+          "WIN_10162436",
+          "WIN_10020648"
+        ],
+        "latency_ms": 130.289,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Giấy ướt gia đình"
+      },
+      {
+        "case_id": "V2-C-038",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 83.77,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Gạo tẻ"
+      },
+      {
+        "case_id": "V2-C-039",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10011145",
+          "WIN_10011147"
+        ],
+        "latency_ms": 107.405,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Hải sản khô ăn liền"
+      },
+      {
+        "case_id": "V2-C-040",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10006991",
+          "WIN_10182880",
+          "WIN_10182879",
+          "WIN_10006975",
+          "WIN_10006987"
+        ],
+        "latency_ms": 111.25,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Khoai đông lạnh"
+      },
+      {
+        "case_id": "V2-C-041",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10330216",
+          "WIN_10264882",
+          "WIN_10266098",
+          "WIN_10167096",
+          "WIN_10306387",
+          "WIN_10306388"
+        ],
+        "latency_ms": 85.853,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Khăn tay"
+      },
+      {
+        "case_id": "V2-C-042",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10264880",
+          "WIN_10330218",
+          "WIN_10266097",
+          "WIN_10266054",
+          "WIN_10266100",
+          "WIN_10194281",
+          "WIN_10167095"
+        ],
+        "latency_ms": 100.578,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Khăn tắm"
+      },
+      {
+        "case_id": "V2-C-043",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 84.802,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Khẩu trang y tế"
+      },
+      {
+        "case_id": "V2-C-044",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10195842",
+          "WIN_10014827",
+          "WIN_10014729",
+          "WIN_10192818",
+          "WIN_10014613",
+          "WIN_10196291",
+          "WIN_10303016",
+          "WIN_10405866",
+          "WIN_10014735",
+          "WIN_10014733"
+        ],
+        "latency_ms": 103.99,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Kẹo cứng"
+      },
+      {
+        "case_id": "V2-C-045",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10250339",
+          "WIN_10250340",
+          "WIN_10234677",
+          "WIN_10023987",
+          "WIN_10167127",
+          "WIN_10235247",
+          "WIN_10023988",
+          "WIN_10024464",
+          "WIN_10250447",
+          "WIN_10251228"
+        ],
+        "latency_ms": 123.047,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Ly và đồ dùng u.nước"
+      },
+      {
+        "case_id": "V2-C-046",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10018694",
+          "WIN_10018793",
+          "WIN_10018730",
+          "WIN_10018772",
+          "WIN_10018892",
+          "WIN_10162463",
+          "WIN_10018753",
+          "WIN_10018752",
+          "WIN_10018697",
+          "WIN_10018695"
+        ],
+        "latency_ms": 128.919,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Lăn khử mùi Nam"
+      },
+      {
+        "case_id": "V2-C-047",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10007401",
+          "WIN_10005643",
+          "WIN_10005949",
+          "WIN_10007405",
+          "WIN_10007402",
+          "WIN_10007409"
+        ],
+        "latency_ms": 120.243,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Lạp xưởng khô"
+      },
+      {
+        "case_id": "V2-C-048",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 85.482,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Lợn (heo) nội địa"
+      },
+      {
+        "case_id": "V2-C-049",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10327433",
+          "WIN_10008746",
+          "WIN_10140940",
+          "WIN_10008607",
+          "WIN_10009063",
+          "WIN_10008877",
+          "WIN_10141941",
+          "WIN_10009550",
+          "WIN_10008589",
+          "WIN_10008587"
+        ],
+        "latency_ms": 101.702,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Mayonnaise & S.salad"
+      },
+      {
+        "case_id": "V2-C-050",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10008651",
+          "WIN_10601703",
+          "WIN_10181052",
+          "WIN_10009160",
+          "WIN_10009161",
+          "WIN_10140900",
+          "WIN_10131071",
+          "WIN_10180846"
+        ],
+        "latency_ms": 168.478,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": null
+      },
+      {
+        "case_id": "V2-C-051",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10639853",
+          "WIN_10008254",
+          "WIN_10007820",
+          "WIN_10008344",
+          "WIN_10602825",
+          "WIN_10142035",
+          "WIN_10140922",
+          "WIN_10140923",
+          "WIN_10141374",
+          "WIN_10250282"
+        ],
+        "latency_ms": 80.624,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Mì ăn liền"
+      },
+      {
+        "case_id": "V2-C-052",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005039",
+          "WIN_10005071",
+          "WIN_10005083",
+          "WIN_10005087",
+          "WIN_10005043",
+          "WIN_10005045",
+          "WIN_10005048",
+          "WIN_10005050",
+          "WIN_10005100"
+        ],
+        "latency_ms": 105.118,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Mứt & Ô mai"
+      },
+      {
+        "case_id": "V2-C-053",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 91.831,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Mực đông lạnh đgói"
+      },
+      {
+        "case_id": "V2-C-054",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10327470",
+          "WIN_10180441",
+          "WIN_10327469",
+          "WIN_10306454",
+          "WIN_10401822",
+          "WIN_10007919",
+          "WIN_10008439",
+          "WIN_10008033",
+          "WIN_10140937",
+          "WIN_10141533"
+        ],
+        "latency_ms": 120.661,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Mỳ khô"
+      },
+      {
+        "case_id": "V2-C-055",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10008206",
+          "WIN_10622828",
+          "WIN_10622826",
+          "WIN_10007863",
+          "WIN_10327468"
+        ],
+        "latency_ms": 139.494,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Nui khô"
+      },
+      {
+        "case_id": "V2-C-056",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10161777",
+          "WIN_10161177"
+        ],
+        "latency_ms": 93.434,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Nước giặt"
+      },
+      {
+        "case_id": "V2-C-057",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10011695",
+          "WIN_10625446",
+          "WIN_10195098",
+          "WIN_10011222",
+          "WIN_10196077",
+          "WIN_10197397",
+          "WIN_10638673",
+          "WIN_10615687",
+          "WIN_10056559",
+          "WIN_10011639"
+        ],
+        "latency_ms": 127.23,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Nước khoáng"
+      },
+      {
+        "case_id": "V2-C-058",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 120.361,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Nước rửa tay"
+      },
+      {
+        "case_id": "V2-C-059",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10150497",
+          "WIN_10620676",
+          "WIN_10011276",
+          "WIN_10195597",
+          "WIN_10195598",
+          "WIN_10196621",
+          "WIN_10196620",
+          "WIN_10196848",
+          "WIN_10150532",
+          "WIN_10197076"
+        ],
+        "latency_ms": 131.084,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Nước trà"
+      },
+      {
+        "case_id": "V2-C-060",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10150448",
+          "WIN_10011395",
+          "WIN_10150449",
+          "WIN_10011394",
+          "WIN_10011393",
+          "WIN_10011392",
+          "WIN_10010686",
+          "WIN_10010687",
+          "WIN_10011399",
+          "WIN_10011289"
+        ],
+        "latency_ms": 123.442,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Nước uống dinh dưỡng"
+      },
+      {
+        "case_id": "V2-C-061",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10170827",
+          "WIN_10170828",
+          "WIN_10170826",
+          "WIN_10171195",
+          "WIN_10624435",
+          "WIN_10624436",
+          "WIN_10617627",
+          "WIN_10620827",
+          "WIN_10160008",
+          "WIN_10160010"
+        ],
+        "latency_ms": 97.818,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Nước xả"
+      },
+      {
+        "case_id": "V2-C-062",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005873",
+          "WIN_10196791",
+          "WIN_10170188",
+          "WIN_10005773",
+          "WIN_10005774",
+          "WIN_10613072",
+          "WIN_10605369",
+          "WIN_10005771"
+        ],
+        "latency_ms": 114.226,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "P.mai cứng"
+      },
+      {
+        "case_id": "V2-C-063",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 95.951,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "P.mai mềm(miếng/hộp)"
+      },
+      {
+        "case_id": "V2-C-064",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10194689",
+          "WIN_10194690",
+          "WIN_10005786",
+          "WIN_10005349",
+          "WIN_10005348",
+          "WIN_10005347",
+          "WIN_10266273",
+          "WIN_10005784",
+          "WIN_10266274",
+          "WIN_10005324"
+        ],
+        "latency_ms": 122.941,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "P.mai tráng miệng"
+      },
+      {
+        "case_id": "V2-C-065",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10027650",
+          "WIN_10027648",
+          "WIN_10027649",
+          "WIN_10027651"
+        ],
+        "latency_ms": 197.573,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": null
+      },
+      {
+        "case_id": "V2-C-066",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10022960"
+        ],
+        "latency_ms": 87.434,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Quà tặng"
+      },
+      {
+        "case_id": "V2-C-067",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10281708",
+          "WIN_10281825",
+          "WIN_10053860",
+          "WIN_10281704",
+          "WIN_10281809",
+          "WIN_10054020",
+          "WIN_10613019",
+          "WIN_10053857"
+        ],
+        "latency_ms": 111.358,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Rau cải"
+      },
+      {
+        "case_id": "V2-C-068",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 87.681,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Rau khác"
+      },
+      {
+        "case_id": "V2-C-069",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10195011",
+          "WIN_10195012",
+          "WIN_10010497",
+          "WIN_10010496",
+          "WIN_10010509",
+          "WIN_10005295",
+          "WIN_10010495",
+          "WIN_10010494",
+          "WIN_10170365",
+          "WIN_10266284"
+        ],
+        "latency_ms": 130.341,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "SCU tiệt trùng"
+      },
+      {
+        "case_id": "V2-C-070",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10056670",
+          "WIN_10056645",
+          "WIN_10015596",
+          "WIN_10015618",
+          "WIN_10013764",
+          "WIN_10303865",
+          "WIN_10015597",
+          "WIN_10194726",
+          "WIN_10015875",
+          "WIN_10015622"
+        ],
+        "latency_ms": 125.724,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Snack kh.tây chiên"
+      },
+      {
+        "case_id": "V2-C-071",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10639592",
+          "WIN_10320541",
+          "WIN_10015798",
+          "WIN_10015794",
+          "WIN_10015799",
+          "WIN_10015800",
+          "WIN_10015801",
+          "WIN_10015795",
+          "WIN_10015849",
+          "WIN_10015796"
+        ],
+        "latency_ms": 130.42,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Snack rau, củ, quả"
+      },
+      {
+        "case_id": "V2-C-072",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10016036",
+          "WIN_10016022",
+          "WIN_10016035",
+          "WIN_10016034",
+          "WIN_10056691",
+          "WIN_10142167",
+          "WIN_10142169",
+          "WIN_10142168",
+          "WIN_10016026",
+          "WIN_10016027"
+        ],
+        "latency_ms": 148.82,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Snack rong biển"
+      },
+      {
+        "case_id": "V2-C-073",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 99.797,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Sơ chế thịt heo"
+      },
+      {
+        "case_id": "V2-C-074",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005466",
+          "WIN_10229362",
+          "WIN_10229363",
+          "WIN_10195211",
+          "WIN_10234390",
+          "WIN_10197310",
+          "WIN_10194926",
+          "WIN_10318422",
+          "WIN_10606721",
+          "WIN_10326055"
+        ],
+        "latency_ms": 117.103,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Sữa chua ăn"
+      },
+      {
+        "case_id": "V2-C-075",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10266351",
+          "WIN_10010512",
+          "WIN_10010510",
+          "WIN_10170170",
+          "WIN_10010513",
+          "WIN_10010511",
+          "WIN_10195065",
+          "WIN_10600867",
+          "WIN_10195052",
+          "WIN_10170141"
+        ],
+        "latency_ms": 131.982,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Sữa d.dưỡng trẻ em"
+      },
+      {
+        "case_id": "V2-C-076",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10403695",
+          "WIN_10005491",
+          "WIN_10196807",
+          "WIN_10602893",
+          "WIN_10406993",
+          "WIN_10406992",
+          "WIN_10638100",
+          "WIN_10614961",
+          "WIN_10614963",
+          "WIN_10614965"
+        ],
+        "latency_ms": 96.999,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Sữa hạt"
+      },
+      {
+        "case_id": "V2-C-077",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10603750",
+          "WIN_10160080",
+          "WIN_10017353",
+          "WIN_10018301"
+        ],
+        "latency_ms": 174.672,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Sữa rửa mặt nam"
+      },
+      {
+        "case_id": "V2-C-078",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 89.878,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Sữa tươi tiệt trùng"
+      },
+      {
+        "case_id": "V2-C-079",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10628698",
+          "WIN_10010604",
+          "WIN_10628696",
+          "WIN_10005319",
+          "WIN_10232517",
+          "WIN_10232516",
+          "WIN_10195828",
+          "WIN_10195829",
+          "WIN_10628697",
+          "WIN_10005315"
+        ],
+        "latency_ms": 119.031,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Sữa đậu nành"
+      },
+      {
+        "case_id": "V2-C-080",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10142082",
+          "WIN_10141580",
+          "WIN_10141113",
+          "WIN_10010465",
+          "WIN_10603574",
+          "WIN_10616907",
+          "WIN_10010459",
+          "WIN_10010455",
+          "WIN_10603577",
+          "WIN_10603576"
+        ],
+        "latency_ms": 132.516,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Sữa đặc có đường"
+      },
+      {
+        "case_id": "V2-C-081",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10282507",
+          "WIN_10601378",
+          "WIN_10140199",
+          "WIN_10140201",
+          "WIN_10404843",
+          "WIN_10281255",
+          "WIN_10626463",
+          "WIN_10170321",
+          "WIN_10140200",
+          "WIN_10404845"
+        ],
+        "latency_ms": 98.444,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Thịt bò đông lạnh"
+      },
+      {
+        "case_id": "V2-C-082",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10193300",
+          "WIN_10182024",
+          "WIN_10182026",
+          "WIN_10182023",
+          "WIN_10193459"
+        ],
+        "latency_ms": 121.647,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Thịt khô ăn liền"
+      },
+      {
+        "case_id": "V2-C-083",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 87.275,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Thịt muối"
+      },
+      {
+        "case_id": "V2-C-084",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005548",
+          "WIN_10005620",
+          "WIN_10005600",
+          "WIN_10005599",
+          "WIN_10606615",
+          "WIN_10005539",
+          "WIN_10005530",
+          "WIN_10005533",
+          "WIN_10005527",
+          "WIN_10005534"
+        ],
+        "latency_ms": 101.733,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Thịt xông khói"
+      },
+      {
+        "case_id": "V2-C-085",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10197515",
+          "WIN_10327495",
+          "WIN_10327494",
+          "WIN_10237373",
+          "WIN_10197440"
+        ],
+        "latency_ms": 102.332,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Trà sữa"
+      },
+      {
+        "case_id": "V2-C-086",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10015647",
+          "WIN_10016343",
+          "WIN_10195887",
+          "WIN_10016342",
+          "WIN_10016344",
+          "WIN_10192659",
+          "WIN_10195885",
+          "WIN_10192986",
+          "WIN_10015642",
+          "WIN_10015893"
+        ],
+        "latency_ms": 96.185,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Trái cây s.khô đgói"
+      },
+      {
+        "case_id": "V2-C-087",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10006030",
+          "WIN_10006029",
+          "WIN_10195051",
+          "WIN_10006024",
+          "WIN_10006026",
+          "WIN_10006068",
+          "WIN_10006067"
+        ],
+        "latency_ms": 110.083,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Trứng gà"
+      },
+      {
+        "case_id": "V2-C-088",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 109.673,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Tã quần trẻ em"
+      },
+      {
+        "case_id": "V2-C-089",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10283802",
+          "WIN_10605775",
+          "WIN_10081043",
+          "WIN_10605776",
+          "WIN_10081047"
+        ],
+        "latency_ms": 121.285,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Tôm khô"
+      },
+      {
+        "case_id": "V2-C-090",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10006472",
+          "WIN_10006508",
+          "WIN_10214488",
+          "WIN_10006507",
+          "WIN_10006470",
+          "WIN_10006519",
+          "WIN_10006505"
+        ],
+        "latency_ms": 155.782,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Tôm đông lạnh đgói"
+      },
+      {
+        "case_id": "V2-C-091",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10018429",
+          "WIN_10612911",
+          "WIN_10613768",
+          "WIN_10018658",
+          "WIN_10018498",
+          "WIN_10018417"
+        ],
+        "latency_ms": 126.235,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Tăm chỉ nkhoa vslưỡi"
+      },
+      {
+        "case_id": "V2-C-092",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005496",
+          "WIN_10005341",
+          "WIN_10005358",
+          "WIN_10005278",
+          "WIN_10005297",
+          "WIN_10005234",
+          "WIN_10005279",
+          "WIN_10196202"
+        ],
+        "latency_ms": 103.994,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Váng sữa"
+      },
+      {
+        "case_id": "V2-C-093",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 79.724,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": null
+      },
+      {
+        "case_id": "V2-C-094",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10170209",
+          "WIN_10183829",
+          "WIN_10170208",
+          "WIN_10006984",
+          "WIN_10006880"
+        ],
+        "latency_ms": 108.026,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Xôi bánh bún miến đl"
+      },
+      {
+        "case_id": "V2-C-095",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005635",
+          "WIN_10184154",
+          "WIN_10005524",
+          "WIN_10183841",
+          "WIN_10005609",
+          "WIN_10005633",
+          "WIN_10005588",
+          "WIN_10005307",
+          "WIN_10005505",
+          "WIN_10005516"
+        ],
+        "latency_ms": 111.605,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Xúc xích thanh trùng"
+      },
+      {
+        "case_id": "V2-C-096",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10009244",
+          "WIN_10181127",
+          "WIN_10627913",
+          "WIN_10008755"
+        ],
+        "latency_ms": 81.873,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Đường viên"
+      },
+      {
+        "case_id": "V2-C-097",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10184007",
+          "WIN_10006085",
+          "WIN_10005172",
+          "WIN_10170044",
+          "WIN_10005171"
+        ],
+        "latency_ms": 113.794,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Đậu hũ"
+      },
+      {
+        "case_id": "V2-C-098",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 97.001,
+        "parser_error_type": null,
+        "category_precision_at_5": 0.0,
+        "parsed_category": "Đồ bao gói thực phẩm"
+      },
+      {
+        "case_id": "V2-C-099",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10250125",
+          "WIN_10250119",
+          "WIN_10025787",
+          "WIN_10300275",
+          "WIN_10250127",
+          "WIN_10250121",
+          "WIN_10250128",
+          "WIN_10250129",
+          "WIN_10250130",
+          "WIN_10250131"
+        ],
+        "latency_ms": 115.318,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Đồ ch.đựng thực phẩm"
+      },
+      {
+        "case_id": "V2-C-100",
+        "dimension": "natural_category_browse",
+        "kind": "category_browse",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10250567",
+          "WIN_10025835",
+          "WIN_10250986",
+          "WIN_10250987",
+          "WIN_10250984",
+          "WIN_10025834"
+        ],
+        "latency_ms": 143.362,
+        "parser_error_type": null,
+        "category_precision_at_5": 1.0,
+        "parsed_category": "Đồ dùng nấu nướng"
+      },
+      {
+        "case_id": "V2-H-001",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10009809"
+        ],
+        "latency_ms": 131.326,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "[Block]Mắm đóng hộp",
+        "parsed_budget_vnd": 20800,
+        "parsed_negative_constraints": [
+          "hãng VIETCOCO"
+        ]
+      },
+      {
+        "case_id": "V2-H-002",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10181042",
+          "WIN_10234338",
+          "WIN_10181044",
+          "WIN_10141102",
+          "WIN_10141103",
+          "WIN_10060831",
+          "WIN_10142170",
+          "WIN_10616887",
+          "WIN_10181043",
+          "WIN_10181045"
+        ],
+        "latency_ms": 124.126,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 2.0,
+        "parsed_category": "Rong biển cbiến đgói",
+        "parsed_budget_vnd": 46600,
+        "parsed_negative_constraints": [
+          "thương hiệu GREEN WORLD"
+        ]
+      },
+      {
+        "case_id": "V2-H-003",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10016795"
+        ],
+        "latency_ms": 95.3,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Tạo dáng tóc",
+        "parsed_budget_vnd": 80600,
+        "parsed_negative_constraints": [
+          "GATSBY"
+        ]
+      },
+      {
+        "case_id": "V2-H-004",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 44.448,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-005",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 127.61,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Váng sữa",
+        "parsed_budget_vnd": 63000,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-006",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10197389",
+          "WIN_10326051",
+          "WIN_10327472",
+          "WIN_10005426",
+          "WIN_10005425",
+          "WIN_10194798",
+          "WIN_10170470",
+          "WIN_10005502",
+          "WIN_10005504",
+          "WIN_10005503"
+        ],
+        "latency_ms": 144.937,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 2.0,
+        "parsed_category": "Sữa tươi tiệt trùng",
+        "parsed_budget_vnd": 38300,
+        "parsed_negative_constraints": [
+          "hãng OVALTINE"
+        ]
+      },
+      {
+        "case_id": "V2-H-007",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10008620",
+          "WIN_10008621",
+          "WIN_10008663",
+          "WIN_10403296",
+          "WIN_10141401",
+          "WIN_10009041",
+          "WIN_10170268",
+          "WIN_10009185"
+        ],
+        "latency_ms": 135.875,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.6,
+        "parsed_category": "Bột canh, hạt nêm",
+        "parsed_budget_vnd": 39900,
+        "parsed_negative_constraints": [
+          "thương hiệu HANUFOOD"
+        ]
+      },
+      {
+        "case_id": "V2-H-008",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10321761",
+          "WIN_10321760",
+          "WIN_10006887"
+        ],
+        "latency_ms": 114.132,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Chả giò đông lạnh",
+        "parsed_budget_vnd": 75700,
+        "parsed_negative_constraints": [
+          "NATUR FISH"
+        ]
+      },
+      {
+        "case_id": "V2-H-009",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 56.31,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-010",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 191.668,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Bông tẩy trang",
+        "parsed_budget_vnd": 41000,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-011",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10150497",
+          "WIN_10011276",
+          "WIN_10195597",
+          "WIN_10195598",
+          "WIN_10196848",
+          "WIN_10150532",
+          "WIN_10197076"
+        ],
+        "latency_ms": 118.969,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.4,
+        "parsed_category": "Nước trà",
+        "parsed_budget_vnd": 22300,
+        "parsed_negative_constraints": [
+          "hãng C2"
+        ]
+      },
+      {
+        "case_id": "V2-H-012",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10639853",
+          "WIN_10008254",
+          "WIN_10007820",
+          "WIN_10008344",
+          "WIN_10602825",
+          "WIN_10142035",
+          "WIN_10140922",
+          "WIN_10140923",
+          "WIN_10250282"
+        ],
+        "latency_ms": 117.3,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Mì ăn liền",
+        "parsed_budget_vnd": 84000,
+        "parsed_negative_constraints": [
+          "thương hiệu KORENO"
+        ]
+      },
+      {
+        "case_id": "V2-H-013",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10326051",
+          "WIN_10327472",
+          "WIN_10005426",
+          "WIN_10005425",
+          "WIN_10194798",
+          "WIN_10170470",
+          "WIN_10005502",
+          "WIN_10005504",
+          "WIN_10005503"
+        ],
+        "latency_ms": 93.028,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Sữa tươi tiệt trùng",
+        "parsed_budget_vnd": 38300,
+        "parsed_negative_constraints": [
+          "SUSU"
+        ]
+      },
+      {
+        "case_id": "V2-H-014",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 84.414,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-015",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 167.026,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Sữa tươi thanh trùng",
+        "parsed_budget_vnd": 77000,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-016",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10281825"
+        ],
+        "latency_ms": 134.738,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Rau cải",
+        "parsed_budget_vnd": 20720,
+        "parsed_negative_constraints": [
+          "hãng NOBRAND"
+        ]
+      },
+      {
+        "case_id": "V2-H-017",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10020358",
+          "WIN_10020359",
+          "WIN_10171169",
+          "WIN_10171168"
+        ],
+        "latency_ms": 114.85,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 0.8,
+        "parsed_category": "Bông tai",
+        "parsed_budget_vnd": 31000,
+        "parsed_negative_constraints": [
+          "thương hiệu JOMI"
+        ]
+      },
+      {
+        "case_id": "V2-H-018",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10008785",
+          "WIN_10008784",
+          "WIN_10008783"
+        ],
+        "latency_ms": 121.484,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Các loại bột gia vị",
+        "parsed_budget_vnd": 7400,
+        "parsed_negative_constraints": [
+          "OTOKI"
+        ]
+      },
+      {
+        "case_id": "V2-H-019",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 54.702,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-020",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 205.344,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Ngũ cốc ăn sáng",
+        "parsed_budget_vnd": 103900,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-021",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10142626",
+          "WIN_10197599",
+          "WIN_10197597",
+          "WIN_10197598",
+          "WIN_10320566",
+          "WIN_10014603",
+          "WIN_10601160",
+          "WIN_10322604"
+        ],
+        "latency_ms": 164.877,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.6,
+        "parsed_category": "Thạch đóng gói",
+        "parsed_budget_vnd": 38500,
+        "parsed_negative_constraints": [
+          "hãng VIET FOOD"
+        ]
+      },
+      {
+        "case_id": "V2-H-022",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10018581",
+          "WIN_10406495",
+          "WIN_10629912",
+          "WIN_10638270",
+          "WIN_10161795",
+          "WIN_10638268",
+          "WIN_10018351"
+        ],
+        "latency_ms": 177.488,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.4,
+        "parsed_category": "Kem đánh răng",
+        "parsed_budget_vnd": 49000,
+        "parsed_negative_constraints": [
+          "thương hiệu P/S"
+        ]
+      },
+      {
+        "case_id": "V2-H-023",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10012824",
+          "WIN_10012913",
+          "WIN_10406966",
+          "WIN_10196217",
+          "WIN_10012928",
+          "WIN_10012785",
+          "WIN_10012978",
+          "WIN_10012784",
+          "WIN_10012783"
+        ],
+        "latency_ms": 119.984,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Cà phê hòa tan",
+        "parsed_budget_vnd": 87200,
+        "parsed_negative_constraints": [
+          "TRUNG NGUYÊN LEGEND"
+        ]
+      },
+      {
+        "case_id": "V2-H-024",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 85.155,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-025",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 244.875,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Bia nội địa",
+        "parsed_budget_vnd": 373000,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-026",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10601155",
+          "WIN_10601154",
+          "WIN_10195389",
+          "WIN_10014782",
+          "WIN_10013463",
+          "WIN_10013462",
+          "WIN_10013811",
+          "WIN_10194740",
+          "WIN_10600091",
+          "WIN_10014788"
+        ],
+        "latency_ms": 141.963,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 2.0,
+        "parsed_category": "Bánh biscuit",
+        "parsed_budget_vnd": 25900,
+        "parsed_negative_constraints": [
+          "hãng RICHY"
+        ]
+      },
+      {
+        "case_id": "V2-H-027",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10183101"
+        ],
+        "latency_ms": 121.865,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 0.5,
+        "parsed_category": "Sơ chế thịt heo",
+        "parsed_budget_vnd": 49000,
+        "parsed_negative_constraints": [
+          "thương hiệu MEAT DELI"
+        ]
+      },
+      {
+        "case_id": "V2-H-028",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10250986",
+          "WIN_10250987"
+        ],
+        "latency_ms": 103.119,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Đồ dùng nấu nướng",
+        "parsed_budget_vnd": 559000,
+        "parsed_negative_constraints": [
+          "LOCK&LOCK"
+        ]
+      },
+      {
+        "case_id": "V2-H-029",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 53.028,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-030",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 162.059,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Bột ngũ cốc trái cây",
+        "parsed_budget_vnd": 79000,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-031",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10150435",
+          "WIN_10196070",
+          "WIN_10197580",
+          "WIN_10194711",
+          "WIN_10011249",
+          "WIN_10625457",
+          "WIN_10620866",
+          "WIN_10011250",
+          "WIN_10307381",
+          "WIN_10011252"
+        ],
+        "latency_ms": 189.651,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 2.0,
+        "parsed_category": "Nước ngọt có ga",
+        "parsed_budget_vnd": 55000,
+        "parsed_negative_constraints": [
+          "hãng AQUAFINA"
+        ]
+      },
+      {
+        "case_id": "V2-H-032",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10017420",
+          "WIN_10620797",
+          "WIN_10615641",
+          "WIN_10615642",
+          "WIN_10017423",
+          "WIN_10017857",
+          "WIN_10086768",
+          "WIN_10171180",
+          "WIN_10162312"
+        ],
+        "latency_ms": 119.999,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Sữa tắm nữ",
+        "parsed_budget_vnd": 159000,
+        "parsed_negative_constraints": [
+          "thương hiệu BIORE"
+        ]
+      },
+      {
+        "case_id": "V2-H-033",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10016912",
+          "WIN_10604719",
+          "WIN_10170560",
+          "WIN_10016730",
+          "WIN_10016719",
+          "WIN_10171076",
+          "WIN_10162215",
+          "WIN_10600115",
+          "WIN_10170586"
+        ],
+        "latency_ms": 139.049,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Dầu gội nữ",
+        "parsed_budget_vnd": 196900,
+        "parsed_negative_constraints": [
+          "ENCHANTEUR"
+        ]
+      },
+      {
+        "case_id": "V2-H-034",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 46.691,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-035",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 139.999,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Rong biển cbiến đgói",
+        "parsed_budget_vnd": 46600,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-036",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10308391"
+        ],
+        "latency_ms": 129.359,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Gạo nếp",
+        "parsed_budget_vnd": 90900,
+        "parsed_negative_constraints": [
+          "hãng VINASEED"
+        ]
+      },
+      {
+        "case_id": "V2-H-037",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [],
+        "latency_ms": 141.438,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Thức uống tr.miệng",
+        "parsed_budget_vnd": 19500,
+        "parsed_negative_constraints": [
+          "thương hiệu SG MILK"
+        ]
+      },
+      {
+        "case_id": "V2-H-038",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10008707",
+          "WIN_10141888",
+          "WIN_10008708"
+        ],
+        "latency_ms": 105.816,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Dầu hào",
+        "parsed_budget_vnd": 36100,
+        "parsed_negative_constraints": [
+          "LEE KUM KEE"
+        ]
+      },
+      {
+        "case_id": "V2-H-039",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 56.043,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-040",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 158.357,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "P.mai mềm(khối)",
+        "parsed_budget_vnd": 148800,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-041",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10020639"
+        ],
+        "latency_ms": 123.545,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Giấy bếp",
+        "parsed_budget_vnd": 16900,
+        "parsed_negative_constraints": [
+          "hãng ELENE"
+        ]
+      },
+      {
+        "case_id": "V2-H-042",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10615014",
+          "WIN_10606685"
+        ],
+        "latency_ms": 115.874,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 0.5,
+        "parsed_category": "Bơ động vật",
+        "parsed_budget_vnd": 135700,
+        "parsed_negative_constraints": [
+          "thương hiệu PRESIDENT"
+        ]
+      },
+      {
+        "case_id": "V2-H-043",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10013794",
+          "WIN_10013793",
+          "WIN_10270024",
+          "WIN_10195958",
+          "WIN_10013795",
+          "WIN_10013465"
+        ],
+        "latency_ms": 94.615,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.2,
+        "parsed_category": "Snack khác",
+        "parsed_budget_vnd": 17100,
+        "parsed_negative_constraints": [
+          "NOBRAND"
+        ]
+      },
+      {
+        "case_id": "V2-H-044",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 46.639,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-045",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 126.263,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Mỳ khô",
+        "parsed_budget_vnd": 61000,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-046",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005548",
+          "WIN_10005620",
+          "WIN_10005600",
+          "WIN_10005599"
+        ],
+        "latency_ms": 145.317,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Thịt xông khói",
+        "parsed_budget_vnd": 82200,
+        "parsed_negative_constraints": [
+          "hãng ÔNG GIÀ IKA"
+        ]
+      },
+      {
+        "case_id": "V2-H-047",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10170559",
+          "WIN_10170661",
+          "WIN_10170660",
+          "WIN_10170663"
+        ],
+        "latency_ms": 187.134,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 0.8,
+        "parsed_category": "Nước lau sàn nhà",
+        "parsed_budget_vnd": 67000,
+        "parsed_negative_constraints": [
+          "thương hiệu GIFT"
+        ]
+      },
+      {
+        "case_id": "V2-H-048",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10071897",
+          "WIN_10621537",
+          "WIN_10008683",
+          "WIN_10009176",
+          "WIN_10142201",
+          "WIN_10603567",
+          "WIN_10009174",
+          "WIN_10602829",
+          "WIN_10009164"
+        ],
+        "latency_ms": 99.91,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Nước mắm",
+        "parsed_budget_vnd": 84100,
+        "parsed_negative_constraints": [
+          "CHIN-SU"
+        ]
+      },
+      {
+        "case_id": "V2-H-049",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 44.133,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-050",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 133.193,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Thạch đóng gói",
+        "parsed_budget_vnd": 46000,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-051",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10013973",
+          "WIN_10013863",
+          "WIN_10013976",
+          "WIN_10013977"
+        ],
+        "latency_ms": 155.813,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Bánh Mochi",
+        "parsed_budget_vnd": 73200,
+        "parsed_negative_constraints": [
+          "hãng SAN SHU GONG"
+        ]
+      },
+      {
+        "case_id": "V2-H-052",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10601155",
+          "WIN_10601154",
+          "WIN_10195389",
+          "WIN_10014782",
+          "WIN_10013463",
+          "WIN_10013462",
+          "WIN_10013811",
+          "WIN_10194740",
+          "WIN_10600091",
+          "WIN_10014788"
+        ],
+        "latency_ms": 192.755,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 2.0,
+        "parsed_category": "Bánh biscuit",
+        "parsed_budget_vnd": 25900,
+        "parsed_negative_constraints": [
+          "thương hiệu ROMA"
+        ]
+      },
+      {
+        "case_id": "V2-H-053",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10006946",
+          "WIN_10006950"
+        ],
+        "latency_ms": 135.142,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Pizza đông lạnh",
+        "parsed_budget_vnd": 102300,
+        "parsed_negative_constraints": [
+          "KITKOOL"
+        ]
+      },
+      {
+        "case_id": "V2-H-054",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 57.016,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-055",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 177.934,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Xúc xích thanh trùng",
+        "parsed_budget_vnd": 72500,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-056",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10624333",
+          "WIN_10604939",
+          "WIN_10604938",
+          "WIN_10026631",
+          "WIN_10026651",
+          "WIN_10620290",
+          "WIN_10251222",
+          "WIN_10027092"
+        ],
+        "latency_ms": 168.596,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.6,
+        "parsed_category": "Dụng cụ giặt là",
+        "parsed_budget_vnd": 59000,
+        "parsed_negative_constraints": [
+          "hãng SCOTCH-BRITE"
+        ]
+      },
+      {
+        "case_id": "V2-H-057",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10193758",
+          "WIN_10193760",
+          "WIN_10195920",
+          "WIN_10197352",
+          "WIN_10193761"
+        ],
+        "latency_ms": 160.965,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Kẹo đồ chơi",
+        "parsed_budget_vnd": 43900,
+        "parsed_negative_constraints": [
+          "thương hiệu KINDER JOY"
+        ]
+      },
+      {
+        "case_id": "V2-H-058",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10620797",
+          "WIN_10615641",
+          "WIN_10615642",
+          "WIN_10017423",
+          "WIN_10017857",
+          "WIN_10086768",
+          "WIN_10017629",
+          "WIN_10171180",
+          "WIN_10162312"
+        ],
+        "latency_ms": 101.498,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Sữa tắm nữ",
+        "parsed_budget_vnd": 151200,
+        "parsed_negative_constraints": [
+          "ENCHANTEUR"
+        ]
+      },
+      {
+        "case_id": "V2-H-059",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 49.796,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-060",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 141.817,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Muối",
+        "parsed_budget_vnd": 19200,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-061",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10142082",
+          "WIN_10141580",
+          "WIN_10141113",
+          "WIN_10010465",
+          "WIN_10603574",
+          "WIN_10010459",
+          "WIN_10010455",
+          "WIN_10603577"
+        ],
+        "latency_ms": 180.138,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.6,
+        "parsed_category": "Sữa đặc có đường",
+        "parsed_budget_vnd": 30000,
+        "parsed_negative_constraints": [
+          "hãng DUTCH LADY"
+        ]
+      },
+      {
+        "case_id": "V2-H-062",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10150217",
+          "WIN_10197242",
+          "WIN_10167038",
+          "WIN_10011944",
+          "WIN_10195651",
+          "WIN_10150635",
+          "WIN_10195652",
+          "WIN_10196046",
+          "WIN_10301075"
+        ],
+        "latency_ms": 240.797,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Bia nội địa",
+        "parsed_budget_vnd": 372000,
+        "parsed_negative_constraints": [
+          "thương hiệu HOEGAARDEN"
+        ]
+      },
+      {
+        "case_id": "V2-H-063",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10197091",
+          "WIN_10167206",
+          "WIN_10311415",
+          "WIN_10250997",
+          "WIN_10250996",
+          "WIN_10250998",
+          "WIN_10166024",
+          "WIN_10251279",
+          "WIN_10300324"
+        ],
+        "latency_ms": 159.162,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Đồ bao gói thực phẩm",
+        "parsed_budget_vnd": 39900,
+        "parsed_negative_constraints": [
+          "KOKUSAI"
+        ]
+      },
+      {
+        "case_id": "V2-H-064",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 78.218,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-065",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 280.183,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Miến khô",
+        "parsed_budget_vnd": 75900,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-066",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10010140",
+          "WIN_10308404",
+          "WIN_10008903"
+        ],
+        "latency_ms": 301.03,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Các loại dầu gạo, hạ",
+        "parsed_budget_vnd": 99400,
+        "parsed_negative_constraints": [
+          "hãng TƯỜNG AN"
+        ]
+      },
+      {
+        "case_id": "V2-H-067",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10150435",
+          "WIN_10196070",
+          "WIN_10194711",
+          "WIN_10011249",
+          "WIN_10625457",
+          "WIN_10620866",
+          "WIN_10011250",
+          "WIN_10307381",
+          "WIN_10011252"
+        ],
+        "latency_ms": 313.183,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Nước ngọt có ga",
+        "parsed_budget_vnd": 55000,
+        "parsed_negative_constraints": [
+          "thương hiệu PEPSI"
+        ]
+      },
+      {
+        "case_id": "V2-H-068",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10016164"
+        ],
+        "latency_ms": 234.495,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 1,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Hạt bí đóng gói",
+        "parsed_budget_vnd": 126900,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-069",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 81.257,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-070",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 290.675,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Xôi bánh bún miến đl",
+        "parsed_budget_vnd": 60200,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-071",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10628264"
+        ],
+        "latency_ms": 216.7,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "THS nhập khẩu tươi",
+        "parsed_budget_vnd": 569000,
+        "parsed_negative_constraints": [
+          "hãng WINMART"
+        ]
+      },
+      {
+        "case_id": "V2-H-072",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005885",
+          "WIN_10007184"
+        ],
+        "latency_ms": 212.277,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 0.6667,
+        "parsed_category": "Bánh bao",
+        "parsed_budget_vnd": 35300,
+        "parsed_negative_constraints": [
+          "thương hiệu PHÚ MỸ BAKERY"
+        ]
+      },
+      {
+        "case_id": "V2-H-073",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10015557",
+          "WIN_10015554",
+          "WIN_10015555",
+          "WIN_10015542",
+          "WIN_10011078",
+          "WIN_10013397",
+          "WIN_10625513",
+          "WIN_10181143",
+          "WIN_10615404",
+          "WIN_10615401"
+        ],
+        "latency_ms": 188.798,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 2.0,
+        "parsed_category": "Ngũ cốc ăn sáng",
+        "parsed_budget_vnd": 103900,
+        "parsed_negative_constraints": [
+          "FROOT LOOPS"
+        ]
+      },
+      {
+        "case_id": "V2-H-074",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 59.155,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-075",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 244.389,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Trà túi lọc",
+        "parsed_budget_vnd": 38200,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-076",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10013158",
+          "WIN_10013159",
+          "WIN_10013160",
+          "WIN_10013161",
+          "WIN_10013173",
+          "WIN_10013011",
+          "WIN_10013214",
+          "WIN_10013012"
+        ],
+        "latency_ms": 156.324,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.6,
+        "parsed_category": "Cà phê rang xay",
+        "parsed_budget_vnd": 140800,
+        "parsed_negative_constraints": [
+          "hãng HIGHLANDS COFFEE"
+        ]
+      },
+      {
+        "case_id": "V2-H-077",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10316598",
+          "WIN_10020649"
+        ],
+        "latency_ms": 144.074,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 0.6667,
+        "parsed_category": "Giấy ướt gia đình",
+        "parsed_budget_vnd": 38000,
+        "parsed_negative_constraints": [
+          "thương hiệu ALL CARE"
+        ]
+      },
+      {
+        "case_id": "V2-H-078",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10019692",
+          "WIN_10314242",
+          "WIN_10171184",
+          "WIN_10171193"
+        ],
+        "latency_ms": 117.574,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.0,
+        "parsed_category": "Nước tẩy rửa nhà bếp",
+        "parsed_budget_vnd": 35000,
+        "parsed_negative_constraints": [
+          "MAXKLEEN"
+        ]
+      },
+      {
+        "case_id": "V2-H-079",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 52.944,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-080",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 160.748,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Nước uống chức năng",
+        "parsed_budget_vnd": 56400,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-081",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10012824",
+          "WIN_10406966",
+          "WIN_10196217",
+          "WIN_10012928",
+          "WIN_10150518",
+          "WIN_10012785",
+          "WIN_10012978",
+          "WIN_10012784",
+          "WIN_10012783"
+        ],
+        "latency_ms": 168.817,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Cà phê hòa tan",
+        "parsed_budget_vnd": 90800,
+        "parsed_negative_constraints": [
+          "hãng WAKE-UP"
+        ]
+      },
+      {
+        "case_id": "V2-H-082",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 242.504,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Cua đông lạnh đgói",
+        "parsed_budget_vnd": 77700,
+        "parsed_negative_constraints": [
+          "thương hiệu"
+        ]
+      },
+      {
+        "case_id": "V2-H-083",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10020157",
+          "WIN_10020159",
+          "WIN_10232581",
+          "WIN_10020239",
+          "WIN_10229087",
+          "WIN_10600112",
+          "WIN_10270308"
+        ],
+        "latency_ms": 157.038,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.4,
+        "parsed_category": "BVS Chu kỳ",
+        "parsed_budget_vnd": 47500,
+        "parsed_negative_constraints": [
+          "KOTEX"
+        ]
+      },
+      {
+        "case_id": "V2-H-084",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 61.017,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-085",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 191.301,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Tương ớt",
+        "parsed_budget_vnd": 34300,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-086",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10327433",
+          "WIN_10008746",
+          "WIN_10140940",
+          "WIN_10008877",
+          "WIN_10008589",
+          "WIN_10008587"
+        ],
+        "latency_ms": 149.723,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.2,
+        "parsed_category": "Mayonnaise & S.salad",
+        "parsed_budget_vnd": 55300,
+        "parsed_negative_constraints": [
+          "hãng AJI-MAYO"
+        ]
+      },
+      {
+        "case_id": "V2-H-087",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10622829",
+          "WIN_10170267",
+          "WIN_10014400"
+        ],
+        "latency_ms": 161.436,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 0.75,
+        "parsed_category": "Các loại bột khác",
+        "parsed_budget_vnd": 17100,
+        "parsed_negative_constraints": [
+          "thương hiệu JIM WILLIE"
+        ]
+      },
+      {
+        "case_id": "V2-H-088",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10197091",
+          "WIN_10311415",
+          "WIN_10250998",
+          "WIN_10251279",
+          "WIN_10026593",
+          "WIN_10300324"
+        ],
+        "latency_ms": 130.601,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.2,
+        "parsed_category": "Đồ bao gói thực phẩm",
+        "parsed_budget_vnd": 83000,
+        "parsed_negative_constraints": [
+          "WMHOME"
+        ]
+      },
+      {
+        "case_id": "V2-H-089",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 52.472,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-090",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 148.203,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Bột canh, hạt nêm",
+        "parsed_budget_vnd": 38400,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-091",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10150217",
+          "WIN_10197242",
+          "WIN_10167038",
+          "WIN_10197245",
+          "WIN_10195651",
+          "WIN_10150635",
+          "WIN_10195652",
+          "WIN_10196046",
+          "WIN_10301075"
+        ],
+        "latency_ms": 138.36,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.8,
+        "parsed_category": "Bia nội địa",
+        "parsed_budget_vnd": 372000,
+        "parsed_negative_constraints": [
+          "hãng HUDA"
+        ]
+      },
+      {
+        "case_id": "V2-H-092",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10008620",
+          "WIN_10008621",
+          "WIN_10008663",
+          "WIN_10403296",
+          "WIN_10605925",
+          "WIN_10141401",
+          "WIN_10009041"
+        ],
+        "latency_ms": 134.701,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.4,
+        "parsed_category": "Bột canh, hạt nêm",
+        "parsed_budget_vnd": 38000,
+        "parsed_negative_constraints": [
+          "thương hiệu KNORR"
+        ]
+      },
+      {
+        "case_id": "V2-H-093",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10005466",
+          "WIN_10229362",
+          "WIN_10229363",
+          "WIN_10195211",
+          "WIN_10234390",
+          "WIN_10197310",
+          "WIN_10194926",
+          "WIN_10318422",
+          "WIN_10606721",
+          "WIN_10326055"
+        ],
+        "latency_ms": 108.451,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 2.0,
+        "parsed_category": "Sữa chua ăn",
+        "parsed_budget_vnd": 39900,
+        "parsed_negative_constraints": [
+          "FAMERS UNION"
+        ]
+      },
+      {
+        "case_id": "V2-H-094",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 49.391,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-095",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 180.56,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Đồ dùng nấu nướng",
+        "parsed_budget_vnd": 492000,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      },
+      {
+        "case_id": "V2-H-096",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10602574"
+        ],
+        "latency_ms": 163.166,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 0.2,
+        "parsed_category": "Thủy hải sản sơ chế",
+        "parsed_budget_vnd": 73000,
+        "parsed_negative_constraints": [
+          "hãng KITKOOL"
+        ]
+      },
+      {
+        "case_id": "V2-H-097",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10014286",
+          "WIN_10197436",
+          "WIN_10013649",
+          "WIN_10013650",
+          "WIN_10013652",
+          "WIN_10327515",
+          "WIN_10327514"
+        ],
+        "latency_ms": 135.902,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.4,
+        "parsed_category": "Bánh xốp và quế",
+        "parsed_budget_vnd": 22400,
+        "parsed_negative_constraints": [
+          "thương hiệu AKIKO"
+        ]
+      },
+      {
+        "case_id": "V2-H-098",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "SUCCESS",
+        "product_ids": [
+          "WIN_10020161",
+          "WIN_10319560",
+          "WIN_10020162",
+          "WIN_10161028",
+          "WIN_10161024",
+          "WIN_10161026"
+        ],
+        "latency_ms": 105.457,
+        "parser_error_type": null,
+        "hard_constraint_pass": true,
+        "violations": 0,
+        "candidate_recall_at_5": 1.2,
+        "parsed_category": "BVS Ban đêm",
+        "parsed_budget_vnd": 39700,
+        "parsed_negative_constraints": [
+          "SENSI"
+        ]
+      },
+      {
+        "case_id": "V2-H-099",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "INVALID_ARGUMENT",
+        "product_ids": [],
+        "latency_ms": 49.908,
+        "parser_error_type": "ValidationError",
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": null,
+        "parsed_budget_vnd": null,
+        "parsed_negative_constraints": []
+      },
+      {
+        "case_id": "V2-H-100",
+        "dimension": "multi_constraint_hard_negative",
+        "kind": "hard_constraint",
+        "status": "DATA_UNAVAILABLE",
+        "product_ids": [],
+        "latency_ms": 137.948,
+        "parser_error_type": null,
+        "hard_constraint_pass": false,
+        "violations": 0,
+        "candidate_recall_at_5": 0.0,
+        "parsed_category": "Bông tai",
+        "parsed_budget_vnd": 33000,
+        "parsed_negative_constraints": [
+          "ngân sách"
+        ]
+      }
+    ]
+  },
+  "environment": {
+    "python_runtime": "3.13+",
+    "catalog_source": "winmart_json_snapshot",
+    "llm_credentials_configured": true,
+    "voice_evaluated": false
+  }
+}
