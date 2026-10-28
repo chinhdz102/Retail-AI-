@@ -125,6 +125,90 @@ async def test_multi_category_browse_returns_only_grounded_catalog_items(
 
 
 @pytest.mark.asyncio
+async def test_multi_category_browse_cheapest_followup_compares_only_displayed_items(
+    snapshot,
+    monkeypatch,
+):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+    ) as client:
+        session = (await client.post("/sessions", json={"kiosk_id": "category-cheapest"})).json()[
+            "session_id"
+        ]
+        browse = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session,
+                "text": "Nước tinh khiết đóng chai và nước khoáng có bán không?",
+            },
+        )
+        assert browse.status_code == 200, browse.text
+        shown_ids = set(browse.json()["grounded_product_ids"])
+        shown_products = [snapshot.get_product_snapshot(item_id) for item_id in shown_ids]
+        assert shown_products and all(product is not None for product in shown_products)
+        expected_min = min(product.price_vnd for product in shown_products if product is not None)
+
+        follow_up = await client.post(
+            "/agent/respond",
+            json={"session_id": session, "text": "loại nào rẻ nhất?"},
+        )
+
+    payload = follow_up.json()
+    assert follow_up.status_code == 200, follow_up.text
+    assert payload["tools_used"] == ["get_product_snapshot"]
+    assert payload["grounded_product_ids"]
+    assert set(payload["grounded_product_ids"]).issubset(shown_ids)
+    assert all(
+        snapshot.get_product_snapshot(item_id).price_vnd == expected_min
+        for item_id in payload["grounded_product_ids"]
+    )
+    assert "vừa hiển thị" in payload["text"]
+
+
+@pytest.mark.asyncio
+async def test_multi_category_browse_first_item_price_followup_uses_displayed_order(
+    snapshot,
+    monkeypatch,
+):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+    ) as client:
+        session = (await client.post("/sessions", json={"kiosk_id": "category-first-item"})).json()[
+            "session_id"
+        ]
+        browse = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session,
+                "text": "Nước tinh khiết đóng chai và nước khoáng có bán không?",
+            },
+        )
+        assert browse.status_code == 200, browse.text
+        shown_ids = browse.json()["grounded_product_ids"]
+        first_product = snapshot.get_product_snapshot(shown_ids[0])
+        assert first_product is not None
+        expected_price = f"{first_product.price_vnd:,}".replace(",", ".")
+
+        follow_up = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session,
+                "text": "Giá của sản phẩm đầu tiên là bao nhiêu?",
+            },
+        )
+
+    payload = follow_up.json()
+    assert follow_up.status_code == 200, follow_up.text
+    assert payload["grounded_product_ids"] == [shown_ids[0]]
+    assert len(payload["products"]) == 1
+    assert expected_price in payload["text"]
+
+
+@pytest.mark.asyncio
 async def test_same_category_flavors_continue_through_single_category_search(snapshot, monkeypatch):
     monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
     monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
