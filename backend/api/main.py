@@ -5793,23 +5793,29 @@ async def agent_respond(
     pending_selection = record.shopping.pending_action or ""
     candidate_code = _pending_candidate_code(request.text)
     candidate_index = _pending_candidate_index(request.text)
+    contextual_candidate_fact = bool(
+        candidate_index is not None and _requested_snapshot_fields(request.text)
+    )
     if (
         (candidate_code or candidate_index is not None)
-        and pending_selection.startswith(("LOOKUP_PRODUCT:", "SELECT_RECOMMENDATION"))
+        and (
+            pending_selection.startswith(("LOOKUP_PRODUCT:", "SELECT_RECOMMENDATION"))
+            or contextual_candidate_fact
+        )
         and record.shopping.selected_product_ids
     ):
-        if candidate_index is not None and pending_selection.startswith("SELECT_RECOMMENDATION"):
+        if candidate_index is not None:
             if candidate_index >= len(record.shopping.selected_product_ids):
                 return _record_shopping_turn(
                     request,
                     {
                         "vi": (
-                            f"Mình vừa gợi ý {len(record.shopping.selected_product_ids)} "
-                            "lựa chọn. Bạn chọn số thứ tự trong danh sách giúp mình nhé."
+                            f"Mình vừa hiển thị {len(record.shopping.selected_product_ids)} "
+                            "sản phẩm. Bạn chọn số thứ tự trong danh sách giúp mình nhé."
                         ),
                         "en": (
-                            f"I just suggested {len(record.shopping.selected_product_ids)} "
-                            "options. Please choose a number from that list."
+                            f"I just listed {len(record.shopping.selected_product_ids)} "
+                            "products. Please choose a number from that list."
                         ),
                         "zh": (
                             f"我刚才推荐了{len(record.shopping.selected_product_ids)}个选项，"
