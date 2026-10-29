@@ -457,3 +457,27 @@ git diff --check
 ```
 
 These are local deterministic regression checks against the catalog snapshot. They do not establish human-rated conversational quality, suitability, live stock, browser/network E2E, or production performance. No new branch was created; all work remains on `codex/retail-text-quality-v4-20261019`. Release status remains **demo-only / not production-ready**.
+
+## 30. Frozen semantic-intelligence baseline and metric interpretation — 29/10/2026
+
+Reran the frozen V2 parser/catalog benchmark at commit `df198eb441fedccc7b42f765bef7dd1b74aa7284`. The full machine-readable output is [`semantic_intelligence_v2_post_df198eb_20261029.json`](artifacts/semantic_intelligence_v2_post_df198eb_20261029.json). It covers 300 catalog/taxonomy-derived queries and 50 generated four-turn conversations (200 turns); the dataset is explicitly provisional, synthetic, and not human validated.
+
+Results in this harness:
+
+- Exact-title product resolution: **Recall@1 100%, Recall@5 100%, MRR 1.0** over 100 catalog-title variants. This measures name resolution, not semantic suitability.
+- Taxonomy browsing: **Precision@5 100%** and parser category accuracy **100%** over 100 taxonomy-derived requests. This measures category scope, not whether a product is a good recommendation.
+- Hard filters (category, maximum price, excluded brand): **100/100 cases passed**, **0 constraint violations**. There were 98 non-empty results and two correct abstentions where no matching product existed. For the 98 non-empty cases, all shown top-five items met the encoded constraints (**Precision@5 100%**).
+- The artifact's **Candidate Recall@5 68.78%** is the macro share of every eligible catalog item surfaced when the tool shows at most five results. It is a coverage measure over queries with 1–49 eligible products, not the proportion of shown recommendations that are correct. It must not be reported as “recommendation accuracy.”
+- Conversation harness: category scope **150/150**; context retention and parser scope **100/100 each**; price ordering, alternative-intent parsing, and first-item-reference parsing **50/50 each**. Alternative-item novelty was evaluated in **0** cases; first-item references checked parsing only. The harness does not simulate assistant-visible state for those two behaviors.
+- Local parser+catalog-tool latency: p50/p95 **82.651/133.018 ms** (parser p50/p95 **25.810/38.849 ms**, catalog-tool p50/p95 **59.370/102.743 ms**). These are in-process local measurements, not browser/API round-trip, Groq, speech, concurrent-load, or production SLO results.
+
+No code behavior changed in this benchmark rerun. The high exact-title/category scores come from generated queries built from the same catalog/taxonomy and cannot establish performance on natural customer language. The results still do not answer whether a recommendation is useful, suitable, natural, or factually complete; those require independent human qrels and answer-quality review. The 200-turn conversation dataset is exposed development data, not a blind set. Release remains **demo-only / not production-ready**.
+
+Reproduction command:
+
+```powershell
+uv run python evaluation/semantic_intelligence_v2_benchmark.py `
+  --output docs/reports/artifacts/semantic_intelligence_v2_post_df198eb_20261029.json
+```
+
+This update stays on `codex/retail-text-quality-v4-20261019`; no branch or worktree was created.
