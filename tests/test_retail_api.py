@@ -5558,6 +5558,7 @@ async def test_natural_product_discovery_stays_catalog_grounded_across_departmen
                     "chưa có dữ liệu đã xác minh",
                     "catalog chưa xác nhận",
                     "catalog chưa ghi",
+                    "catalog chưa có đủ thông tin xác minh",
                 )
             ), (
                 text,
