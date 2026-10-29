@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "run_type": "session_model_context_security_regression",
+  "recorded_at": "2026-10-29T20:03:31+07:00",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "code_head_sha": "0d6f628c4d3677d7781e80a28dc5ec398efd53ee",
+  "worktree": {
+    "tracked_files_dirty": false,
+    "code_files_match_head": true,
+    "untracked_artifact_count": 8,
+    "untracked_artifacts_staged": false
+  },
+  "environment": {
+    "os": "Windows",
+    "python": "3.13.15",
+    "uv": "0.12.19",
+    "catalog_snapshot": "data/winmart_products.json",
+    "catalog_snapshot_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6"
+  },
+  "security_change": {
+    "transcript_retained_for_display": true,
+    "model_context_projection": "user_turns_only",
+    "stores_covered": [
+      "InMemorySessionStore",
+      "RedisSessionStore"
+    ],
+    "assertions": [
+      "Untrusted assistant/catalog-derived text remains in display history.",
+      "Untrusted assistant/catalog-derived text is absent from the next model context.",
+      "Prior user turns remain available to the model."
+    ]
+  },
+  "commands": [
+    {
+      "command": "uv run pytest tests/test_sessions.py tests/test_retail_api.py::test_catalog_followups_stream_validated_sse_once_per_turn_without_cart_drift tests/test_retail_api.py::test_refused_injection_is_not_replayed_into_followup_model_context tests/test_retail_api.py::test_catalog_derived_assistant_text_is_not_replayed_to_the_llm -q --tb=short",
+      "result": "PASS",
+      "passed": 13,
+      "duration_seconds": 3.20
+    },
+    {
+      "command": "uv run pytest tests -q --tb=short",
+      "result": "PASS",
+      "passed": 1485,
+      "failed": 0,
+      "duration_seconds": 295.04
+    },
+    {
+      "command": "uv run ruff check backend tests evaluation",
+      "result": "PASS"
+    },
+    {
+      "command": "uv run python -m compileall -q backend evaluation tests",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "live_provider_red_team": "not run",
+  "limitations": [
+    "Catalog content returned in current-turn tool observations is still visible to the model and has not been sanitized by this change.",
+    "This regression does not prove resistance to all prompt-injection attacks or model/provider compromise.",
+    "No blind or independent human security evaluation was performed.",
+    "The 8 pre-existing untracked artifacts were preserved and not staged."
+  ]
+}
