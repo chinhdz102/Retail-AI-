@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 
 import pytest
@@ -19,6 +20,55 @@ def test_reproducibility_metadata_hashes_cases_without_exposing_them() -> None:
     assert metadata["tracked_diff_sha256"]
     assert metadata["runtime"]["python"]
     assert "private case payload" not in repr(metadata)
+
+
+def test_protected_case_file_is_rejected_before_any_live_benchmark_request(tmp_path) -> None:
+    repo_root = benchmark.ROOT
+    case_file = repo_root / "evaluation" / "cases" / "generalized_catalog_conversations_dev_v1.json"
+    output = tmp_path / "protected-result.json"
+
+    with pytest.raises(ValueError, match="development-only"):
+        asyncio.run(
+            benchmark.run(
+                Settings(_env_file=None),
+                output,
+                pace_seconds=0,
+                case_file=case_file,
+                split="blind_test",
+            )
+        )
+
+    assert not output.exists()
+
+
+def test_protected_benchmark_rejects_case_id_subset(tmp_path, monkeypatch) -> None:
+    dataset = tmp_path / "blind.json"
+    dataset.write_text(
+        '{"dataset_id":"blind-v1","language_scope":"Vietnamese only","cases":['
+        '{"case_id":"case-1","turns":[{"text":"Mình cần nước uống.","language":"vi"}]},'
+        '{"case_id":"case-2","turns":[{"text":"Mình cần đồ ăn.","language":"vi"}]}]}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        benchmark,
+        "authorize_dataset_split",
+        lambda _path, _split: {"dataset_sha256": "a" * 64},
+    )
+    output = tmp_path / "partial-result.json"
+
+    with pytest.raises(ValueError, match="must include every registered dataset case"):
+        asyncio.run(
+            benchmark.run(
+                Settings(_env_file=None),
+                output,
+                pace_seconds=0,
+                case_ids=["case-1"],
+                case_file=dataset,
+                split="blind_test",
+            )
+        )
+
+    assert not output.exists()
 
 
 class FakeCatalogRepository:

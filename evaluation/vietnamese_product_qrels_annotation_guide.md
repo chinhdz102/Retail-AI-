@@ -32,8 +32,12 @@ After both independent queues are complete, run the strict pair scorer. It check
 uv run python -m evaluation.score_vietnamese_qrels_review `
   --annotator-a evaluation/review/my_queue_annotator_a.csv `
   --annotator-b evaluation/review/my_queue_annotator_b.csv `
+  --dataset evaluation/cases/my_frozen_query_set.jsonl `
+  --evaluator-manifest evaluation/review/my_queue_evaluator_only_manifest.json `
   --output docs/reports/artifacts/my_queue_agreement.json
 ```
+
+Use the exact source dataset and evaluator-only manifest returned by the exporter for these queues. Both are required for development, validation, and blind-test scoring; the scorer validates queue rows against them before calculating agreement.
 
 For adjudication, add `--adjudication evaluation/review/my_queue_adjudication.csv`; that file must contain only disputed query/candidate pairs, use `reviewer_status=ADJUDICATED`, and identify a third reviewer. Preserve the original two files and never replace either queue with the scored output.
 

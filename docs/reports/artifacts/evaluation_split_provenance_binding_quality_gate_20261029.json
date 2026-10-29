@@ -1,0 +1,56 @@
+{
+  "artifact_id": "evaluation_split_provenance_binding_quality_gate",
+  "schema_version": "1.0",
+  "generated_at_utc": "2026-10-29T14:03:48.803118+00:00",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "base_commit": "f7390f45c0371bdf60557434589db3c2ce236f7d",
+  "scope": "qrels split authorization and assignment provenance; answer-quality source artifact and turn assignment provenance; protected text benchmark completeness and output path authorization",
+  "reproducibility": {
+    "python": "3.13.15",
+    "tracked_evaluation_and_test_diff_sha256": "dc8440f43fb7094295fefacacf716f9a24d5276334a1ebff5564282a0025b2e1",
+    "changed_evaluation_and_test_files": [
+      "evaluation/export_vietnamese_answer_quality_review.py",
+      "evaluation/export_vietnamese_qrels_review.py",
+      "evaluation/live_text_conversation_benchmark.py",
+      "evaluation/score_vietnamese_answer_quality_review.py",
+      "evaluation/score_vietnamese_qrels_retrieval.py",
+      "evaluation/score_vietnamese_qrels_review.py",
+      "evaluation/split_policy.py",
+      "tests/test_evaluation_split_policy.py",
+      "tests/test_live_text_conversation_benchmark.py",
+      "tests/test_vietnamese_answer_quality_review.py",
+      "tests/test_vietnamese_answer_quality_scoring.py",
+      "tests/test_vietnamese_qrels_agreement.py",
+      "tests/test_vietnamese_qrels_retrieval_scoring.py"
+    ]
+  },
+  "verification": {
+    "focused_command": ".venv/Scripts/python.exe -m pytest tests/test_evaluation_split_policy.py tests/test_live_text_conversation_benchmark.py tests/test_vietnamese_answer_quality_review.py tests/test_vietnamese_answer_quality_scoring.py tests/test_vietnamese_qrels_agreement.py tests/test_vietnamese_qrels_retrieval_scoring.py -q",
+    "focused_passed": 87,
+    "focused_failed": 0,
+    "focused_skipped": 1,
+    "full_suite_command": ".venv/Scripts/python.exe -m pytest -q",
+    "full_suite_passed": 1511,
+    "full_suite_failed": 0,
+    "full_suite_skipped": 1,
+    "full_suite_duration_seconds": 280.65,
+    "ruff_command": ".venv/Scripts/ruff.exe check backend tests evaluation",
+    "ruff": "passed",
+    "compileall_command": ".venv/Scripts/python.exe -m compileall -q backend evaluation tests",
+    "compileall": "passed",
+    "git_diff_check": "passed",
+    "skip_reason": "Windows symlink creation unavailable (WinError 1314: privilege not held)."
+  },
+  "independent_audit": {
+    "status": "completed_read_only",
+    "individual_split_hash_metadata_or_single_artifact_tampering": "rejected",
+    "coordinated_rewrite_residual": "A coordinated rewrite of all linked datasets, result artifacts, evaluator manifests, and reviewer queues is not detectable without an immutable or signed external trust anchor."
+  },
+  "evaluation_readiness": {
+    "registered_protected_validation_or_blind_datasets": 0,
+    "completed_human_qrels_or_answer_quality_labels": 0,
+    "live_provider_calls_in_this_quality_gate": false,
+    "production_readiness_claim": false,
+    "release_status": "demo-only / not production-ready"
+  }
+}

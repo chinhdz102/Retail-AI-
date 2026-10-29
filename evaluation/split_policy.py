@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CASE_ROOT = ROOT / "evaluation" / "cases"
 REGISTRY_PATH = Path(__file__).with_name("dataset_split_registry.json")
 ALLOWED_SPLITS = frozenset({"development", "validation", "blind_test"})
+PROTECTED_SPLITS = frozenset({"validation", "blind_test"})
 
 
 class SplitPolicyError(ValueError):
@@ -38,6 +39,42 @@ def _stable_text_sha256(raw: bytes) -> str:
     return hashlib.sha256(normalized).hexdigest()
 
 
+def authorize_evaluation_artifact_path(
+    artifact_path: Path,
+    requested_split: str,
+    *,
+    artifact_role: str,
+) -> dict[str, str | bool]:
+    """Prevent protected evaluation artifacts from leaking into the repository.
+
+    Check both the caller's lexical path and the resolved destination. This rejects
+    a repository symlink pointing outward as well as an external symlink pointing
+    back into the checkout. Missing output files are supported; existing parents
+    and the final path are still resolved before callers create directories/files.
+    """
+    if requested_split not in ALLOWED_SPLITS:
+        raise SplitPolicyError(f"Unsupported evaluation split: {requested_split!r}")
+
+    lexical_path = Path(os.path.abspath(artifact_path))
+    resolved_path = artifact_path.resolve()
+    repo_root = ROOT.resolve()
+    repository_visible = _is_within(lexical_path, repo_root) or _is_within(
+        resolved_path, repo_root
+    )
+    if requested_split in PROTECTED_SPLITS and repository_visible:
+        raise SplitPolicyError(
+            f"Protected {requested_split} {artifact_role} must stay outside the repository; "
+            "review packets, evaluator manifests, annotations, and scored outputs may contain "
+            "held-out queries or labels."
+        )
+    return {
+        "requested_split": requested_split,
+        "artifact_role": artifact_role,
+        "resolved_path": str(resolved_path),
+        "repository_visible": repository_visible,
+    }
+
+
 def _load_registry(path: Path = REGISTRY_PATH) -> tuple[dict[str, Any], str]:
     try:
         raw = path.read_bytes()
@@ -51,6 +88,38 @@ def _load_registry(path: Path = REGISTRY_PATH) -> tuple[dict[str, Any], str]:
     return registry, _stable_text_sha256(raw)
 
 
+def reject_protected_dataset_hash_downgrade(
+    dataset_sha256: str,
+    requested_split: str,
+    *,
+    registry_path: Path = REGISTRY_PATH,
+) -> None:
+    """Reject a protected dataset hash relabeled as development without its path.
+
+    Scorers sometimes receive review artifacts without the original dataset path.
+    They must still consult the registry so changing only the split field cannot
+    bypass the protected split's path and output restrictions.
+    """
+    if requested_split not in ALLOWED_SPLITS:
+        raise SplitPolicyError(f"Unsupported evaluation split: {requested_split!r}")
+    if requested_split != "development":
+        return
+    registry, _registry_sha256 = _load_registry(registry_path)
+    protected = next(
+        (
+            item
+            for item in registry["protected_datasets"]
+            if isinstance(item, dict) and item.get("sha256") == dataset_sha256
+        ),
+        None,
+    )
+    if protected is not None:
+        raise SplitPolicyError(
+            "A registered protected dataset cannot be downgraded to development; "
+            f"it is registered as {protected.get('split')!r}."
+        )
+
+
 def authorize_dataset_split(
     dataset_path: Path,
     requested_split: str,
@@ -61,24 +130,37 @@ def authorize_dataset_split(
     if requested_split not in ALLOWED_SPLITS:
         raise SplitPolicyError(f"Unsupported evaluation split: {requested_split!r}")
     path = dataset_path.resolve()
-    if requested_split == "blind_test":
+    if requested_split in PROTECTED_SPLITS:
         # Check both the lexical path (which may be a symlink into an external
         # directory) and the resolved path (which may point back into the repo).
-        # Either route makes the data discoverable from the checkout and therefore
-        # unsuitable for a blind-test claim.
+        # Either route makes protected data discoverable from the checkout.
         repo_root = ROOT.resolve()
         lexical_path = Path(os.path.abspath(dataset_path))
         if _is_within(lexical_path, repo_root) or _is_within(path, repo_root):
             raise SplitPolicyError(
-                "Repository-visible datasets are development-only and cannot be "
-                "used as blind_test."
+                f"Repository-visible datasets are development-only and cannot be "
+                f"used as {requested_split}."
             )
     if not path.is_file():
         raise SplitPolicyError(f"Evaluation dataset does not exist: {path}")
     dataset_sha256 = _stable_text_sha256(path.read_bytes())
     registry, registry_sha256 = _load_registry(registry_path)
 
+    protected_match = next(
+        (
+            item
+            for item in registry["protected_datasets"]
+            if isinstance(item, dict) and item.get("sha256") == dataset_sha256
+        ),
+        None,
+    )
+
     if requested_split == "development":
+        if protected_match is not None:
+            raise SplitPolicyError(
+                "A registered protected dataset cannot be downgraded to development; "
+                f"it is registered as {protected_match.get('split')!r}."
+            )
         in_repo = _is_within(path, ROOT.resolve())
         status = "repository_visible_development" if in_repo else "unregistered_development"
         known = next(
@@ -106,15 +188,10 @@ def authorize_dataset_split(
             "they cannot be exported as validation or blind_test."
         )
 
-    protected = next(
-        (
-            item
-            for item in registry["protected_datasets"]
-            if isinstance(item, dict)
-            and item.get("sha256") == dataset_sha256
-            and item.get("split") == requested_split
-        ),
-        None,
+    protected = (
+        protected_match
+        if protected_match is not None and protected_match.get("split") == requested_split
+        else None
     )
     if protected is None:
         raise SplitPolicyError(

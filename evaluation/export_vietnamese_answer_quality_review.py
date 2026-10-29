@@ -18,6 +18,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from evaluation.split_policy import (
+    PROTECTED_SPLITS,
+    SplitPolicyError,
+    authorize_dataset_split,
+    authorize_evaluation_artifact_path,
+    reject_protected_dataset_hash_downgrade,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 CSV_FIELDS = [
     "schema_version",
@@ -311,12 +319,146 @@ def _source_units(payload: Any, source_label: str) -> list[tuple[str, str | None
         mode = str(mode_result.get("mode") or f"mode_{index}")
         unit_payload = dict(payload)
         unit_payload.pop("mode_results", None)
+        for key in ("dataset_id", "dataset_sha256", "split", "evaluation_dataset"):
+            mode_value = mode_result.get(key)
+            outer_value = payload.get(key)
+            if mode_value is not None and outer_value is not None and mode_value != outer_value:
+                raise ValueError(
+                    f"Mode {mode!r} has {key} provenance that differs from its parent artifact"
+                )
+            if mode_value is not None:
+                unit_payload[key] = mode_value
         for key in ("cases", "results", "case_results"):
             if isinstance(mode_result.get(key), list):
                 unit_payload[key] = mode_result[key]
                 break
         units.append((f"{source_label}:{mode}", mode, unit_payload))
     return units or [(source_label, None, payload)]
+
+
+def _prompt_records_sha256(turns: Sequence[Mapping[str, Any]]) -> str:
+    prompt_records = [
+        {
+            "case_id": str(turn["case_id"]),
+            "turn_index": int(turn["turn_index"]),
+            "user_message": str(turn["user_message"]),
+        }
+        for turn in turns
+    ]
+    prompt_records.sort(
+        key=lambda item: (item["case_id"], item["turn_index"], item["user_message"])
+    )
+    canonical = json.dumps(
+        prompt_records, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return _sha256_bytes(canonical)
+
+
+def _dataset_prompt_set(dataset_path: Path) -> set[tuple[str, int, str]]:
+    if dataset_path.suffix.casefold() == ".jsonl":
+        payload: Any = [
+            json.loads(line)
+            for line in dataset_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+    else:
+        payload = json.loads(dataset_path.read_text(encoding="utf-8"))
+    if isinstance(payload, list):
+        cases = payload
+    elif isinstance(payload, Mapping):
+        cases = payload.get("cases", [])
+    else:
+        raise ValueError("Evaluation dataset must contain a cases list")
+    if not isinstance(cases, list):
+        raise ValueError("Evaluation dataset must contain a cases list")
+    prompts: set[tuple[str, int, str]] = set()
+    case_ids: set[str] = set()
+    prompt_identities: set[tuple[str, int]] = set()
+    for case in cases:
+        if not isinstance(case, Mapping):
+            raise ValueError("Evaluation dataset cases must be objects")
+        case_id = str(case.get("case_id") or "").strip()
+        if not case_id or case_id in case_ids:
+            raise ValueError("Evaluation dataset cases need unique, non-empty case_id values")
+        case_ids.add(case_id)
+        nested_turns = case.get("turns")
+        if isinstance(nested_turns, list):
+            if not nested_turns:
+                raise ValueError(f"Evaluation dataset case {case_id!r} has no turns")
+            for index, turn in enumerate(nested_turns, start=1):
+                if not isinstance(turn, Mapping):
+                    raise ValueError(f"Evaluation dataset case {case_id!r} has an invalid turn")
+                user_message = _text(_first_value(turn, USER_KEYS))
+                turn_index = _positive_int(turn.get("turn_index", turn.get("turn")), index)
+                if not user_message:
+                    raise ValueError(
+                        f"Evaluation dataset case {case_id!r} turn {turn_index} has no user text"
+                    )
+                identity = (case_id, turn_index)
+                if identity in prompt_identities:
+                    raise ValueError(
+                        f"Evaluation dataset has duplicate turn identity {case_id!r}/{turn_index}"
+                    )
+                prompt_identities.add(identity)
+                prompts.add((case_id, turn_index, user_message))
+        else:
+            query = _text(_first_value(case, USER_KEYS))
+            if not query:
+                query = str(case.get("query") or "").strip()
+            if not query:
+                raise ValueError(f"Evaluation dataset case {case_id!r} has no prompt text")
+            prompts.add((case_id, 1, query))
+    if not prompts:
+        raise ValueError("Evaluation dataset has no prompt records")
+    return prompts
+
+
+def _validate_turn_prompts_against_dataset(
+    turns: Sequence[Mapping[str, Any]],
+    dataset_path: Path,
+    *,
+    require_complete: bool = False,
+) -> None:
+    expected = _dataset_prompt_set(dataset_path)
+    observed_keys: set[tuple[str, int]] = set()
+    unexpected = sorted(
+        (
+            str(turn["case_id"]),
+            int(turn["turn_index"]),
+            str(turn["user_message"]),
+        )
+        for turn in turns
+        if (
+            str(turn["case_id"]),
+            int(turn["turn_index"]),
+            str(turn["user_message"]),
+        )
+        not in expected
+    )
+    for turn in turns:
+        identity = (str(turn["case_id"]), int(turn["turn_index"]))
+        if identity in observed_keys:
+            raise ValueError(
+                "Result artifact contains a duplicate case/turn identity absent from a "
+                "one-to-one evaluation record"
+            )
+        observed_keys.add(identity)
+    if unexpected:
+        raise ValueError(
+            "Result artifact contains case IDs or user prompts absent from its registered "
+            f"evaluation dataset: {unexpected[:3]}"
+        )
+    if require_complete:
+        observed = {
+            (str(turn["case_id"]), int(turn["turn_index"]), str(turn["user_message"]))
+            for turn in turns
+        }
+        missing = sorted(expected - observed)
+        if missing:
+            raise ValueError(
+                "Protected answer-quality source omits registered case/turn prompts; "
+                f"missing {len(missing)} records, including {missing[:3]}"
+            )
 
 
 def _opaque_id(prefix: str, seed: int, *parts: str) -> str:
@@ -356,6 +498,7 @@ def export_review_queues(
     output_prefix: Path,
     *,
     seed: int = 20261029,
+    split: str | None = None,
 ) -> dict[str, Any]:
     if not results_paths:
         raise ValueError("at least one --results artifact is required")
@@ -369,41 +512,122 @@ def export_review_queues(
     review_rows: list[dict[str, Any]] = []
     provenance_sources: list[dict[str, Any]] = []
     assignments: list[dict[str, Any]] = []
+    effective_splits: set[str] = set()
     for result_path, source_label in zip(results_paths, source_labels, strict=True):
-        artifact_path = Path(result_path).resolve()
+        artifact_path = Path(result_path)
         raw = artifact_path.read_bytes()
         payload = json.loads(raw.decode("utf-8-sig"))
         artifact_hash = _sha256_bytes(raw)
         for unit_label, mode, unit_payload in _source_units(payload, source_label):
             metadata = unit_payload if isinstance(unit_payload, Mapping) else {}
-            normalized_turns = _turn_records(unit_payload)
-            prompt_records = [
-                {
-                    "case_id": turn["case_id"],
-                    "turn_index": turn["turn_index"],
-                    "user_message": turn["user_message"],
-                }
-                for turn in normalized_turns
-            ]
-            prompt_set_sha256 = _sha256_bytes(
-                json.dumps(
-                    prompt_records,
-                    ensure_ascii=False,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ).encode("utf-8")
+            evaluation_dataset = metadata.get("evaluation_dataset")
+            if not isinstance(evaluation_dataset, Mapping):
+                evaluation_dataset = None
+            source_split_value = (
+                evaluation_dataset.get("split")
+                if evaluation_dataset is not None
+                else None
+            ) or metadata.get("split")
+            source_split = str(source_split_value or "development")
+            source_dataset_sha256 = str(
+                metadata.get("dataset_sha256")
+                or (
+                    evaluation_dataset.get("dataset_sha256")
+                    if evaluation_dataset is not None
+                    else ""
+                )
+                or ""
             )
+            if source_dataset_sha256:
+                try:
+                    reject_protected_dataset_hash_downgrade(
+                        source_dataset_sha256, source_split
+                    )
+                except SplitPolicyError as exc:
+                    raise ValueError(
+                        f"Source {unit_label!r} uses an unauthorized dataset split: {exc}"
+                    ) from exc
+            if split is not None and source_split != split:
+                raise ValueError(
+                    f"Requested split {split!r} does not match source {unit_label!r} "
+                    f"split {source_split!r}"
+                )
+            effective_splits.add(source_split)
+            split_authorization: dict[str, Any] | None = None
+            if evaluation_dataset is not None and evaluation_dataset.get("path"):
+                try:
+                    split_authorization = authorize_dataset_split(
+                        Path(str(evaluation_dataset["path"])), source_split
+                    )
+                except SplitPolicyError as exc:
+                    raise ValueError(
+                        f"Source dataset for {unit_label!r} is not authorized: {exc}"
+                    ) from exc
+                if evaluation_dataset.get("dataset_sha256") != split_authorization[
+                    "dataset_sha256"
+                ]:
+                    raise ValueError(
+                        f"Source dataset hash for {unit_label!r} differs from the split registry"
+                    )
+                expected_dataset_id = str(
+                    evaluation_dataset.get("dataset_id") or metadata.get("dataset_id") or ""
+                )
+                if str(metadata.get("dataset_id") or "") != expected_dataset_id:
+                    raise ValueError(
+                        f"Source dataset ID for {unit_label!r} does not match its artifact"
+                    )
+                if str(metadata.get("dataset_sha256") or "") != str(
+                    split_authorization["dataset_sha256"]
+                ):
+                    raise ValueError(
+                        f"Source result dataset hash for {unit_label!r} does not match the "
+                        "registered evaluation dataset"
+                    )
+            elif source_split in PROTECTED_SPLITS:
+                raise ValueError(
+                    f"Protected {source_split} answer-quality review requires an "
+                    "evaluation_dataset path and exact registered hash in the source artifact"
+                )
+            elif evaluation_dataset is not None and source_split in PROTECTED_SPLITS:
+                raise ValueError(
+                    f"Source {unit_label!r} declares an evaluation_dataset without a path"
+                )
+
+            if source_split in PROTECTED_SPLITS:
+                authorize_evaluation_artifact_path(
+                    artifact_path,
+                    source_split,
+                    artifact_role="answer-quality result input",
+                )
+            normalized_turns = _turn_records(unit_payload)
+            if evaluation_dataset is not None and evaluation_dataset.get("path"):
+                try:
+                    _validate_turn_prompts_against_dataset(
+                        normalized_turns,
+                        Path(str(evaluation_dataset["path"])),
+                        require_complete=source_split in PROTECTED_SPLITS,
+                    )
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    raise ValueError(
+                        f"Cannot validate source prompts for {unit_label!r}: {exc}"
+                    ) from exc
+            prompt_set_sha256 = _prompt_records_sha256(normalized_turns)
             provenance_sources.append(
                 {
                     "source_label": unit_label,
                     "mode": mode,
                     "artifact_name": artifact_path.name,
+                    "artifact_path": str(artifact_path.resolve()),
                     "artifact_sha256": artifact_hash,
                     "artifact_id": metadata.get("artifact_id") or metadata.get("kind"),
                     "dataset_id": metadata.get("dataset_id"),
                     "dataset_sha256": metadata.get("dataset_sha256"),
                     "dataset_authoring_method": metadata.get("authoring_method"),
-                    "split": metadata.get("split"),
+                    "split": source_split,
+                    "evaluation_dataset": dict(evaluation_dataset)
+                    if evaluation_dataset is not None
+                    else None,
+                    "split_authorization": split_authorization,
                     "prompt_set_sha256": prompt_set_sha256,
                     "catalog_sha256": _catalog_hash(metadata),
                     "provider": metadata.get("provider"),
@@ -467,7 +691,29 @@ def export_review_queues(
 
     if not review_rows:
         raise ValueError("no reviewable turns found")
+    if len(effective_splits) != 1:
+        raise ValueError("One answer-quality review packet cannot mix evaluation splits")
+    if len(provenance_sources) > 1:
+        comparison_fields = (
+            "dataset_id",
+            "dataset_sha256",
+            "catalog_sha256",
+            "prompt_set_sha256",
+        )
+        for field in comparison_fields:
+            observed = {source.get(field) for source in provenance_sources}
+            if len(observed) != 1:
+                raise ValueError(
+                    "Paired answer-quality comparisons require identical source "
+                    f"{field}; got {sorted(str(value) for value in observed)}"
+                )
+    effective_split = next(iter(effective_splits))
     output_prefix = Path(output_prefix)
+    authorize_evaluation_artifact_path(
+        output_prefix,
+        effective_split,
+        artifact_role="answer-quality review output prefix",
+    )
     output_prefix.parent.mkdir(parents=True, exist_ok=True)
     written: dict[str, Any] = {"row_count": len(review_rows)}
     queues: dict[str, list[dict[str, Any]]] = {}
@@ -483,6 +729,11 @@ def export_review_queues(
 
     for reviewer in ("annotator_a", "annotator_b"):
         output_path = output_prefix.with_name(f"{output_prefix.name}_{reviewer}.csv")
+        authorize_evaluation_artifact_path(
+            output_path,
+            effective_split,
+            artifact_role=f"answer-quality {reviewer} queue",
+        )
         with output_path.open("w", encoding="utf-8-sig", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS, extrasaction="raise")
             writer.writeheader()
@@ -490,11 +741,22 @@ def export_review_queues(
         written[reviewer] = str(output_path)
 
     manifest_path = output_prefix.with_name(f"{output_prefix.name}_evaluator_only_manifest.json")
+    authorize_evaluation_artifact_path(
+        manifest_path,
+        effective_split,
+        artifact_role="answer-quality evaluator-only manifest",
+    )
     manifest = {
         "artifact_id": "vietnamese_answer_quality_review_packet",
         "schema_version": "1.0",
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "seed": seed,
+        "split": effective_split,
+        "split_authorization": [
+            source["split_authorization"]
+            for source in provenance_sources
+            if source.get("split_authorization") is not None
+        ],
         "source_artifacts": provenance_sources,
         "assignments": assignments,
         "frozen_review_packet": {
@@ -536,9 +798,14 @@ def main() -> None:
     )
     parser.add_argument("--output-prefix", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=20261029)
+    parser.add_argument("--split", choices=("development", "validation", "blind_test"))
     args = parser.parse_args()
     result = export_review_queues(
-        args.results, args.source_label, args.output_prefix, seed=args.seed
+        args.results,
+        args.source_label,
+        args.output_prefix,
+        seed=args.seed,
+        split=args.split,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

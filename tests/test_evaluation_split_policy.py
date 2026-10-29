@@ -7,8 +7,14 @@ from pathlib import Path
 import pytest
 
 from evaluation import build_semantic_intelligence_v2_frozen as dataset_builder
+from evaluation import export_vietnamese_qrels_review as qrels_exporter
 from evaluation.export_vietnamese_qrels_review import REVIEW_FIELDS, export_review_queues
-from evaluation.split_policy import SplitPolicyError, authorize_dataset_split
+from evaluation.split_policy import (
+    SplitPolicyError,
+    authorize_dataset_split,
+    authorize_evaluation_artifact_path,
+    reject_protected_dataset_hash_downgrade,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -62,6 +68,13 @@ def test_repo_visible_heldout_case_cannot_be_promoted_to_blind_test() -> None:
 
     with pytest.raises(SplitPolicyError, match="(?i)repository-visible.*development-only"):
         authorize_dataset_split(dataset, "blind_test")
+
+
+def test_any_repo_visible_dataset_is_development_only_for_validation() -> None:
+    dataset = ROOT / "docs" / "reports" / "claimed-validation-set.json"
+
+    with pytest.raises(SplitPolicyError, match="cannot be used as validation"):
+        authorize_dataset_split(dataset, "validation")
 
 
 def test_any_repo_visible_file_cannot_be_blind_even_if_registry_claims_it(tmp_path: Path) -> None:
@@ -142,6 +155,68 @@ def test_external_blind_split_requires_exact_hash_and_provenance(tmp_path: Path)
     assert authorization["authorization_status"] == "registered_protected_split"
     assert authorization["effective_split"] == "blind_test"
     assert authorization["eligible_for_blind_claim"] is True
+    with pytest.raises(SplitPolicyError, match="cannot be downgraded to development"):
+        authorize_dataset_split(dataset, "development", registry_path=registry)
+
+
+def test_protected_hash_cannot_be_downgraded_without_the_dataset_path(tmp_path: Path) -> None:
+    dataset = tmp_path / "independent-blind.json"
+    dataset.write_text('{"cases": []}\n', encoding="utf-8")
+    digest = _stable_text_sha256(dataset)
+    registry = tmp_path / "split_registry.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "known_exposed_datasets": [],
+                "protected_datasets": [{"sha256": digest, "split": "blind_test"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SplitPolicyError, match="cannot be downgraded to development"):
+        reject_protected_dataset_hash_downgrade(
+            digest,
+            "development",
+            registry_path=registry,
+        )
+
+
+@pytest.mark.parametrize("split", ["validation", "blind_test"])
+def test_protected_evaluation_artifact_cannot_be_written_into_repository(split: str) -> None:
+    with pytest.raises(SplitPolicyError, match="must stay outside the repository"):
+        authorize_evaluation_artifact_path(
+            ROOT / "evaluation" / "review" / "leaked_labels.json",
+            split,
+            artifact_role="scored report",
+        )
+
+
+def test_development_artifacts_remain_allowed_inside_repository() -> None:
+    authorization = authorize_evaluation_artifact_path(
+        ROOT / "evaluation" / "results" / "development.json",
+        "development",
+        artifact_role="development report",
+    )
+
+    assert authorization["repository_visible"] is True
+
+
+def test_external_path_resolving_back_into_repository_is_rejected(tmp_path: Path) -> None:
+    target = ROOT / "evaluation" / "review" / "protected-labels.csv"
+    alias = tmp_path / "external-alias.csv"
+    try:
+        alias.symlink_to(target)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"symlink creation is unavailable: {exc}")
+
+    with pytest.raises(SplitPolicyError, match="must stay outside the repository"):
+        authorize_evaluation_artifact_path(
+            alias,
+            "blind_test",
+            artifact_role="review queue",
+        )
 
 
 def test_registered_blind_hash_does_not_authorize_modified_dataset(tmp_path: Path) -> None:
@@ -217,6 +292,29 @@ def test_qrels_exporter_cannot_mark_a_repo_visible_dataset_as_blind(tmp_path: Pa
             catalog_path=dataset_builder.CATALOG,
             split="blind_test",
         )
+
+
+def test_qrels_exporter_rejects_repository_visible_protected_output(
+    tmp_path: Path, monkeypatch
+) -> None:
+    dataset = tmp_path / "blind.json"
+    dataset.write_text('{"dataset_id":"blind-v1","cases":[]}\n', encoding="utf-8")
+    monkeypatch.setattr(
+        qrels_exporter,
+        "authorize_dataset_split",
+        lambda _path, _split: {"dataset_sha256": "a" * 64},
+    )
+    output_prefix = ROOT / "evaluation" / "review" / "blocked-blind-export"
+
+    with pytest.raises(SplitPolicyError, match="must stay outside the repository"):
+        qrels_exporter.export_review_queues(
+            dataset,
+            tmp_path / "candidate-results.json",
+            output_prefix,
+            split="blind_test",
+        )
+
+    assert not output_prefix.with_name(f"{output_prefix.name}_annotator_a.csv").exists()
 
 
 def test_qrels_review_fields_separate_suitability_and_hard_fit_dimensions() -> None:

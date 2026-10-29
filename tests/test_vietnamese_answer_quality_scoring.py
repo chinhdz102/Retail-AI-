@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import subprocess
 import sys
@@ -8,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from evaluation import score_vietnamese_answer_quality_review as scoring_module
 from evaluation.export_vietnamese_answer_quality_review import (
     ANNOTATION_FIELDS,
     CSV_FIELDS,
@@ -15,6 +17,9 @@ from evaluation.export_vietnamese_answer_quality_review import (
     FROZEN_REVIEW_FIELDS,
     RATING_FIELDS,
     _frozen_review_packet_sha256,
+    _opaque_id,
+    _prompt_records_sha256,
+    _turn_records,
 )
 from evaluation.score_vietnamese_answer_quality_review import (
     AnswerQualityScoringError,
@@ -22,7 +27,14 @@ from evaluation.score_vietnamese_answer_quality_review import (
 )
 
 
-def _fixture_rows() -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+def _read_queue_rows(path: Path) -> list[dict[str, str]]:
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def _fixture_rows(
+    *, based_on: tuple[Path, Path] | None = None
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     rows_a: list[dict[str, str]] = []
     rows_b: list[dict[str, str]] = []
     need_a = [1, 2, 3, 4, 5]
@@ -68,6 +80,22 @@ def _fixture_rows() -> tuple[list[dict[str, str]], list[dict[str, str]]]:
         )
         rows_a.append({**base, **annotations_a})
         rows_b.append({**base, **annotations_b})
+    if based_on is not None:
+        stored_a = _read_queue_rows(based_on[0])
+        stored_b = _read_queue_rows(based_on[1])
+        identity_fields = (
+            "review_item_id",
+            "conversation_id",
+            "turn_index",
+            "dialogue_context",
+            "user_message",
+            "assistant_response",
+            "visible_recommendations",
+        )
+        for rows, stored_rows in ((rows_a, stored_a), (rows_b, stored_b)):
+            for row, stored in zip(rows, stored_rows, strict=True):
+                for field in identity_fields:
+                    row[field] = stored[field]
     return rows_a, rows_b
 
 
@@ -78,7 +106,18 @@ def _write_queue(path: Path, rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
-def _write_manifest(path: Path, rows: list[dict[str, str]]) -> None:
+def _write_manifest(
+    path: Path,
+    rows: list[dict[str, str]],
+    *,
+    source_path: Path,
+    source_payload: dict[str, object],
+    source_label: str,
+    seed: int,
+) -> None:
+    artifact_sha256 = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    turns = _turn_records(source_payload)
+    source_label = str(source_label)
     frozen_rows = [
         {field: row[field] for field in FROZEN_REVIEW_FIELDS}
         | {"turn_index": int(row["turn_index"])}
@@ -88,12 +127,39 @@ def _write_manifest(path: Path, rows: list[dict[str, str]]) -> None:
     payload = {
         "artifact_id": "vietnamese_answer_quality_review_packet",
         "schema_version": "1.0",
-        "source_artifacts": [{"split": "development"}],
+        "seed": seed,
+        "split": "development",
+        "source_artifacts": [
+            {
+                "source_label": source_label,
+                "mode": None,
+                "artifact_name": source_path.name,
+                "artifact_path": str(source_path.resolve()),
+                "artifact_sha256": artifact_sha256,
+                "artifact_id": source_payload.get("kind"),
+                "dataset_id": source_payload.get("dataset_id"),
+                "dataset_sha256": source_payload.get("dataset_sha256"),
+                "dataset_authoring_method": None,
+                "split": "development",
+                "evaluation_dataset": None,
+                "split_authorization": None,
+                "prompt_set_sha256": _prompt_records_sha256(turns),
+                "catalog_sha256": None,
+                "provider": None,
+                "model_primary": None,
+                "commit_sha": None,
+                "generated_at_utc": None,
+                "turn_count": len(turns),
+            }
+        ],
         "assignments": [
             {
                 "review_item_id": row["review_item_id"],
                 "conversation_id": row["conversation_id"],
                 "turn_index": int(row["turn_index"]),
+                "source_label": source_label,
+                "artifact_sha256": artifact_sha256,
+                "original_case_id": "fixture-case",
             }
             for row in rows
         ],
@@ -108,17 +174,60 @@ def _write_manifest(path: Path, rows: list[dict[str, str]]) -> None:
 
 def _write_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
     rows_a, rows_b = _fixture_rows()
+    source_label = "fixture-source"
+    seed = 29
+    source_payload: dict[str, object] = {
+        "kind": "answer_quality_test_fixture",
+        "dataset_id": "answer_quality_fixture_v1",
+        "dataset_sha256": "a" * 64,
+        "split": "development",
+        "results": [
+            {
+                "case_id": "fixture-case",
+                "turn": int(row["turn_index"]),
+                "prompt": row["user_message"],
+                "response": row["assistant_response"],
+            }
+            for row in rows_a
+        ],
+    }
+    source_path = tmp_path / "result_artifact.json"
+    source_path.write_text(json.dumps(source_payload), encoding="utf-8")
+    artifact_sha256 = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    conversation_id = _opaque_id("conv", seed, artifact_sha256, source_label, "fixture-case")
+    for rows in (rows_a, rows_b):
+        occurrence_by_turn: dict[int, int] = {}
+        for row in rows:
+            turn_index = int(row["turn_index"])
+            occurrence_by_turn[turn_index] = occurrence_by_turn.get(turn_index, 0) + 1
+            row["conversation_id"] = conversation_id
+            row["review_item_id"] = _opaque_id(
+                "review",
+                seed,
+                artifact_sha256,
+                source_label,
+                "fixture-case",
+                str(turn_index),
+                str(occurrence_by_turn[turn_index]),
+            )
     path_a = tmp_path / "annotator_a.csv"
     path_b = tmp_path / "annotator_b.csv"
     manifest_path = tmp_path / "manifest.json"
     _write_queue(path_a, rows_a)
     _write_queue(path_b, rows_b)
-    _write_manifest(manifest_path, rows_a)
+    _write_manifest(
+        manifest_path,
+        rows_a,
+        source_path=source_path,
+        source_payload=source_payload,
+        source_label=source_label,
+        seed=seed,
+    )
     return path_a, path_b, manifest_path
 
 
-def _adjudication_rows() -> list[dict[str, str]]:
-    rows_a, rows_b = _fixture_rows()
+def _adjudication_rows(*, based_on: tuple[Path, Path] | None = None) -> list[dict[str, str]]:
+    rows_a, rows_b = _fixture_rows(based_on=based_on)
     rows: list[dict[str, str]] = []
     for row_a, row_b in zip(rows_a, rows_b, strict=True):
         disputed = [
@@ -175,7 +284,7 @@ def test_reports_per_dimension_ordinal_agreement_and_flag_agreement(tmp_path: Pa
 def test_distinct_adjudicator_resolves_only_independent_disagreements(tmp_path: Path) -> None:
     path_a, path_b, manifest_path = _write_fixture(tmp_path)
     adjudication_path = tmp_path / "adjudication.csv"
-    _write_queue(adjudication_path, _adjudication_rows())
+    _write_queue(adjudication_path, _adjudication_rows(based_on=(path_a, path_b)))
 
     report = score_vietnamese_answer_quality_review(
         path_a,
@@ -207,7 +316,7 @@ def test_adjudication_requires_a_distinct_reviewer_and_exact_dispute_fields(
     tmp_path: Path,
 ) -> None:
     path_a, path_b, manifest_path = _write_fixture(tmp_path)
-    rows = _adjudication_rows()
+    rows = _adjudication_rows(based_on=(path_a, path_b))
     adjudication_path = tmp_path / "adjudication.csv"
 
     for row in rows:
@@ -225,8 +334,8 @@ def test_adjudication_requires_a_distinct_reviewer_and_exact_dispute_fields(
 
 def test_keep_b_adjudication_must_match_reviewer_b_labels(tmp_path: Path) -> None:
     path_a, path_b, manifest_path = _write_fixture(tmp_path)
-    rows_a, rows_b = _fixture_rows()
-    rows = _adjudication_rows()
+    rows_a, rows_b = _fixture_rows(based_on=(path_a, path_b))
+    rows = _adjudication_rows(based_on=(path_a, path_b))
     by_item_b = {row["review_item_id"]: row for row in rows_b}
     for row in rows:
         row["adjudication_decision"] = "KEEP_B"
@@ -262,7 +371,7 @@ def test_keep_b_adjudication_must_match_reviewer_b_labels(tmp_path: Path) -> Non
 
 def test_new_judgment_records_a_third_reviewers_resolved_label(tmp_path: Path) -> None:
     path_a, path_b, manifest_path = _write_fixture(tmp_path)
-    rows = _adjudication_rows()
+    rows = _adjudication_rows(based_on=(path_a, path_b))
     rows[0]["adjudication_decision"] = "NEW_JUDGMENT"
     rows[0]["user_need_understanding_1_5"] = "5"
     adjudication_path = tmp_path / "adjudication.csv"
@@ -280,7 +389,7 @@ def test_new_judgment_records_a_third_reviewers_resolved_label(tmp_path: Path) -
     assert report["summary"]["adjudication_decisions"]["NEW_JUDGMENT"] == 1
     assert resolved["resolved_value_counts"]["5"] == 2
 
-    rows = _adjudication_rows()
+    rows = _adjudication_rows(based_on=(path_a, path_b))
     rows[0]["user_need_understanding_1_5"] = ""
     _write_queue(adjudication_path, rows)
     with pytest.raises(AnswerQualityScoringError, match="must resolve exactly"):
@@ -292,7 +401,7 @@ def test_new_judgment_records_a_third_reviewers_resolved_label(tmp_path: Path) -
             adjudication_path,
         )
 
-    rows = _adjudication_rows()
+    rows = _adjudication_rows(based_on=(path_a, path_b))
     rows[0]["critical_other"] = "false"
     _write_queue(adjudication_path, rows)
     with pytest.raises(AnswerQualityScoringError, match="must resolve exactly"):
@@ -307,7 +416,7 @@ def test_new_judgment_records_a_third_reviewers_resolved_label(tmp_path: Path) -
 
 def test_missing_and_not_applicable_ratings_are_excluded_and_counted(tmp_path: Path) -> None:
     path_a, path_b, manifest_path = _write_fixture(tmp_path)
-    rows_a, rows_b = _fixture_rows()
+    rows_a, rows_b = _fixture_rows(based_on=(path_a, path_b))
     rows_a[0]["naturalness_1_5"] = ""
     rows_b[1]["naturalness_1_5"] = ""
     _write_queue(path_a, rows_a)
@@ -331,7 +440,7 @@ def test_missing_and_not_applicable_ratings_are_excluded_and_counted(tmp_path: P
 
 def test_unreviewed_or_entirely_blank_queue_is_rejected(tmp_path: Path) -> None:
     path_a, path_b, manifest_path = _write_fixture(tmp_path)
-    rows_a, _ = _fixture_rows()
+    rows_a, _ = _fixture_rows(based_on=(path_a, path_b))
     rows_a[0]["annotation_status"] = "UNREVIEWED"
     _write_queue(path_a, rows_a)
     with pytest.raises(AnswerQualityScoringError, match="expected 'INDEPENDENT_A'"):
@@ -339,7 +448,7 @@ def test_unreviewed_or_entirely_blank_queue_is_rejected(tmp_path: Path) -> None:
             path_a, path_b, manifest_path, tmp_path / "agreement.json"
         )
 
-    rows_a, rows_b = _fixture_rows()
+    rows_a, rows_b = _fixture_rows(based_on=(path_a, path_b))
     for row in rows_a:
         for field in (*RATING_FIELDS, *FLAG_FIELDS):
             row[field] = ""
@@ -353,7 +462,7 @@ def test_unreviewed_or_entirely_blank_queue_is_rejected(tmp_path: Path) -> None:
 
 def test_visible_content_hash_detects_identical_packet_tampering(tmp_path: Path) -> None:
     path_a, path_b, manifest_path = _write_fixture(tmp_path)
-    rows_a, rows_b = _fixture_rows()
+    rows_a, rows_b = _fixture_rows(based_on=(path_a, path_b))
     rows_a[0]["assistant_response"] = "Đã sửa nội dung sau khi xuất hàng chờ."
     rows_b[0]["assistant_response"] = rows_a[0]["assistant_response"]
     _write_queue(path_a, rows_a)
@@ -367,7 +476,7 @@ def test_visible_content_hash_detects_identical_packet_tampering(tmp_path: Path)
 
 def test_reviewer_queues_must_match_manifest_and_each_other(tmp_path: Path) -> None:
     path_a, path_b, manifest_path = _write_fixture(tmp_path)
-    rows_a, rows_b = _fixture_rows()
+    rows_a, rows_b = _fixture_rows(based_on=(path_a, path_b))
     rows_b.pop()
     _write_queue(path_a, rows_a)
     _write_queue(path_b, rows_b)
@@ -376,7 +485,8 @@ def test_reviewer_queues_must_match_manifest_and_each_other(tmp_path: Path) -> N
             path_a, path_b, manifest_path, tmp_path / "agreement.json"
         )
 
-    rows_a, rows_b = _fixture_rows()
+    path_a, path_b, manifest_path = _write_fixture(tmp_path)
+    rows_a, rows_b = _fixture_rows(based_on=(path_a, path_b))
     rows_b[0]["user_message"] = "Nội dung lệch giữa hai người chấm?"
     _write_queue(path_a, rows_a)
     _write_queue(path_b, rows_b)
@@ -400,7 +510,7 @@ def test_manifest_must_have_new_frozen_packet_provenance(tmp_path: Path) -> None
 
 def test_invalid_ratings_flags_reviewers_and_timestamps_fail_closed(tmp_path: Path) -> None:
     path_a, path_b, manifest_path = _write_fixture(tmp_path)
-    rows_a, rows_b = _fixture_rows()
+    rows_a, rows_b = _fixture_rows(based_on=(path_a, path_b))
     rows_a[0]["product_choice_1_5"] = "6"
     _write_queue(path_a, rows_a)
     _write_queue(path_b, rows_b)
@@ -409,7 +519,7 @@ def test_invalid_ratings_flags_reviewers_and_timestamps_fail_closed(tmp_path: Pa
             path_a, path_b, manifest_path, tmp_path / "agreement.json"
         )
 
-    rows_a, rows_b = _fixture_rows()
+    rows_a, rows_b = _fixture_rows(based_on=(path_a, path_b))
     rows_a[0]["critical_other"] = "maybe"
     _write_queue(path_a, rows_a)
     _write_queue(path_b, rows_b)
@@ -418,7 +528,7 @@ def test_invalid_ratings_flags_reviewers_and_timestamps_fail_closed(tmp_path: Pa
             path_a, path_b, manifest_path, tmp_path / "agreement.json"
         )
 
-    rows_a, rows_b = _fixture_rows()
+    rows_a, rows_b = _fixture_rows(based_on=(path_a, path_b))
     rows_a[0]["critical_other"] = "yes"
     _write_queue(path_a, rows_a)
     _write_queue(path_b, rows_b)
@@ -427,7 +537,7 @@ def test_invalid_ratings_flags_reviewers_and_timestamps_fail_closed(tmp_path: Pa
             path_a, path_b, manifest_path, tmp_path / "agreement.json"
         )
 
-    rows_a, rows_b = _fixture_rows()
+    rows_a, rows_b = _fixture_rows(based_on=(path_a, path_b))
     rows_b[0]["reviewer_id"] = "reviewer-a"
     for row in rows_b:
         row["reviewer_id"] = "reviewer-a"
@@ -462,3 +572,63 @@ def test_cli_writes_machine_readable_agreement_report(tmp_path: Path) -> None:
     )
     assert completed.returncode == 0, completed.stderr
     assert json.loads(output.read_text(encoding="utf-8"))["review_packet"]["item_count"] == 5
+
+
+def test_answer_quality_scorer_rejects_unverified_blind_manifest(tmp_path: Path) -> None:
+    path_a, path_b, manifest_path = _write_fixture(tmp_path)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["split"] = "blind_test"
+    payload["source_artifacts"] = [{"split": "blind_test"}]
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+    output = tmp_path / "should-not-write.json"
+
+    with pytest.raises(AnswerQualityScoringError, match="lacks authorized dataset provenance"):
+        score_vietnamese_answer_quality_review(path_a, path_b, manifest_path, output)
+
+    assert not output.exists()
+
+
+def test_answer_quality_scorer_rejects_blind_manifest_without_sources(tmp_path: Path) -> None:
+    path_a, path_b, manifest_path = _write_fixture(tmp_path)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["split"] = "blind_test"
+    payload["source_artifacts"] = []
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+    output = tmp_path / "should-not-write.json"
+
+    with pytest.raises(
+        AnswerQualityScoringError,
+        match="must contain at least one authorized source",
+    ):
+        score_vietnamese_answer_quality_review(path_a, path_b, manifest_path, output)
+
+    assert not output.exists()
+
+
+def test_answer_quality_scorer_rejects_protected_hash_relabelled_as_development(
+    tmp_path: Path, monkeypatch
+) -> None:
+    path_a, path_b, manifest_path = _write_fixture(tmp_path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["source_artifacts"][0]["dataset_sha256"] = "c" * 64
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    def reject_registered_protected_hash(dataset_sha256: str, split: str) -> None:
+        if dataset_sha256 == "c" * 64 and split == "development":
+            from evaluation.split_policy import SplitPolicyError
+
+            raise SplitPolicyError("registered protected dataset cannot be downgraded")
+
+    monkeypatch.setattr(
+        scoring_module,
+        "reject_protected_dataset_hash_downgrade",
+        reject_registered_protected_hash,
+    )
+
+    with pytest.raises(AnswerQualityScoringError, match="cannot be downgraded"):
+        score_vietnamese_answer_quality_review(
+            path_a,
+            path_b,
+            manifest_path,
+            tmp_path / "blocked.json",
+        )

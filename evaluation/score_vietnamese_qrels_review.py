@@ -15,6 +15,15 @@ from typing import Any
 from evaluation.export_vietnamese_qrels_review import (
     REVIEW_FIELDS,
     REVIEW_METADATA_FIELDS,
+    _frozen_assignment_sha256,
+    _load_dataset,
+)
+from evaluation.split_policy import (
+    PROTECTED_SPLITS,
+    SplitPolicyError,
+    authorize_dataset_split,
+    authorize_evaluation_artifact_path,
+    reject_protected_dataset_hash_downgrade,
 )
 
 RELEVANCE_LABELS = ("EXACT", "SUBSTITUTE", "COMPLEMENT", "IRRELEVANT", "UNJUDGED")
@@ -295,11 +304,130 @@ def _field_agreement(
     }
 
 
+def _validate_protected_assignments(
+    manifest_path: Path,
+    dataset_path: Path,
+    authorization: dict[str, Any],
+    reviewer_a: dict[tuple[str, str], dict[str, Any]],
+    reviewer_b: dict[tuple[str, str], dict[str, Any]],
+) -> None:
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        dataset = _load_dataset(dataset_path)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ReviewScoringError(
+            f"Cannot read protected qrels manifest or source dataset: {exc}"
+        ) from exc
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("artifact_id") != "vietnamese_product_qrels_review_packet"
+        or manifest.get("schema_version") != "1.0"
+    ):
+        raise ReviewScoringError("Protected qrels require a supported frozen evaluator manifest")
+    if not isinstance(dataset, dict) or not isinstance(dataset.get("cases"), list):
+        raise ReviewScoringError("Protected qrels dataset must contain a cases array")
+
+    rows = [*reviewer_a.values(), *reviewer_b.values()]
+    metadata = rows[0]
+    expected_dataset_id = str(dataset.get("dataset_id", dataset_path.stem))
+    expected_dataset_sha256 = str(authorization.get("dataset_sha256") or "")
+    frozen_metadata = {
+        "dataset_id": expected_dataset_id,
+        "dataset_sha256": expected_dataset_sha256,
+        "catalog_sha256": str(metadata["catalog_sha256"]),
+        "split": str(metadata["split"]),
+    }
+    for field, expected in frozen_metadata.items():
+        if str(manifest.get(field) or "") != expected:
+            raise ReviewScoringError(
+                f"Frozen qrels manifest does not match protected {field}"
+            )
+
+    query_by_id: dict[str, tuple[str, str]] = {}
+    dataset_case_ids: set[str] = set()
+    for case in dataset.get("cases", []):
+        if not isinstance(case, dict):
+            raise ReviewScoringError("Protected qrels dataset cases must be objects")
+        case_id = str(case.get("case_id") or "").strip()
+        query_text = str(case.get("query") or "").strip()
+        if not case_id or not query_text:
+            raise ReviewScoringError("Protected qrels dataset cases need case_id and query")
+        if case_id in dataset_case_ids:
+            raise ReviewScoringError("Protected qrels dataset has duplicate case IDs")
+        dataset_case_ids.add(case_id)
+        query_id = hashlib.sha256(
+            f"{expected_dataset_sha256}:{case_id}".encode()
+        ).hexdigest()[:16]
+        if query_id in query_by_id:
+            raise ReviewScoringError("Protected qrels dataset has duplicate query identities")
+        query_by_id[query_id] = (case_id, query_text)
+
+    raw_assignments = manifest.get("candidate_assignments")
+    if not isinstance(raw_assignments, list) or not raw_assignments:
+        raise ReviewScoringError("Protected qrels manifest has no frozen candidate assignments")
+    expected_rows: dict[tuple[str, str], dict[str, Any]] = {}
+    for index, assignment in enumerate(raw_assignments, start=1):
+        if not isinstance(assignment, dict):
+            raise ReviewScoringError(f"Frozen qrels assignment {index} must be an object")
+        query_id = str(assignment.get("query_id") or "")
+        candidate_key = str(assignment.get("candidate_key") or "")
+        case_id = str(assignment.get("case_id") or "")
+        product_id = str(assignment.get("product_id") or "")
+        query_text = str(assignment.get("query_text") or "")
+        frozen_hash = str(assignment.get("frozen_row_sha256") or "")
+        if not query_id or not candidate_key or len(frozen_hash) != 64:
+            raise ReviewScoringError(f"Frozen qrels assignment {index} is incomplete")
+        if query_by_id.get(query_id) != (case_id, query_text):
+            raise ReviewScoringError(
+                f"Frozen qrels assignment {index} is not present in the protected dataset"
+            )
+        expected_candidate_key = hashlib.sha256(
+            f"{query_id}:{product_id or 'NO_CANDIDATE'}".encode()
+        ).hexdigest()[:20]
+        if candidate_key != expected_candidate_key:
+            raise ReviewScoringError(
+                f"Frozen qrels assignment {index} has an invalid candidate identity"
+            )
+        key = (query_id, candidate_key)
+        if key in expected_rows:
+            raise ReviewScoringError("Frozen qrels manifest contains duplicate assignments")
+        expected_rows[key] = assignment
+
+    assigned_case_ids = {
+        str(assignment.get("case_id") or "") for assignment in expected_rows.values()
+    }
+    if manifest.get("split") in PROTECTED_SPLITS and assigned_case_ids != dataset_case_ids:
+        missing = sorted(dataset_case_ids - assigned_case_ids)
+        extra = sorted(assigned_case_ids - dataset_case_ids)
+        raise ReviewScoringError(
+            "Frozen qrels assignments do not cover the complete protected dataset "
+            f"(missing cases: {missing[:5]}, unknown cases: {extra[:5]})"
+        )
+
+    for role, queue in (("annotator A", reviewer_a), ("annotator B", reviewer_b)):
+        if set(queue) != set(expected_rows):
+            raise ReviewScoringError(
+                f"{role} queue item set does not match the frozen candidate assignments"
+            )
+        for key, row in queue.items():
+            assignment = expected_rows[key]
+            if (
+                row["query_text"] != assignment["query_text"]
+                or row["product_id"] != assignment["product_id"]
+                or _frozen_assignment_sha256(row) != assignment["frozen_row_sha256"]
+            ):
+                raise ReviewScoringError(
+                    f"{role} queue frozen candidate content differs from the evaluator manifest"
+                )
+
+
 def score_product_qrels_review(
     annotator_a_path: Path,
     annotator_b_path: Path,
     output_path: Path,
     adjudication_path: Path | None = None,
+    dataset_path: Path | None = None,
+    evaluator_manifest_path: Path | None = None,
 ) -> dict[str, Any]:
     """Score blinded queues, retain both judgments, and resolve only agreement/adjudication."""
     reviewer_a = _read_queue(annotator_a_path, "annotator_a")
@@ -316,6 +444,63 @@ def score_product_qrels_review(
     reviewer_b_id = next(iter(reviewer_b.values()))["reviewer_id"]
     if reviewer_a_id == reviewer_b_id:
         raise ReviewScoringError("Independent reviewers must use different pseudonymous IDs")
+    queue_rows = [*reviewer_a.values(), *reviewer_b.values()]
+    split_values = {str(row["split"]) for row in queue_rows}
+    dataset_hashes = {str(row["dataset_sha256"]) for row in queue_rows}
+    if len(split_values) != 1 or len(dataset_hashes) != 1:
+        raise ReviewScoringError("Reviewer queues contain mixed dataset splits or hashes")
+    split = next(iter(split_values))
+    if split == "development":
+        try:
+            for dataset_sha256 in dataset_hashes:
+                reject_protected_dataset_hash_downgrade(dataset_sha256, split)
+        except SplitPolicyError as exc:
+            raise ReviewScoringError(f"Qrels split is not authorized: {exc}") from exc
+    if split in PROTECTED_SPLITS:
+        if dataset_path is None:
+            raise ReviewScoringError(
+                f"Scoring protected {split} qrels requires the registered source dataset path"
+            )
+        if evaluator_manifest_path is None:
+            raise ReviewScoringError(
+                f"Scoring protected {split} qrels requires the frozen evaluator manifest"
+            )
+        try:
+            authorization = authorize_dataset_split(dataset_path, split)
+            if authorization["dataset_sha256"] not in dataset_hashes:
+                raise ReviewScoringError(
+                    "Source dataset hash does not match the protected reviewer queues"
+                )
+            for artifact_path, role in (
+                (annotator_a_path, "annotator A queue"),
+                (annotator_b_path, "annotator B queue"),
+                (evaluator_manifest_path, "qrels evaluator-only manifest"),
+                (output_path, "qrels agreement report"),
+            ):
+                authorize_evaluation_artifact_path(artifact_path, split, artifact_role=role)
+            if adjudication_path is not None:
+                authorize_evaluation_artifact_path(
+                    adjudication_path,
+                    split,
+                    artifact_role="adjudication input",
+                )
+        except SplitPolicyError as exc:
+            raise ReviewScoringError(f"Protected qrels split is not authorized: {exc}") from exc
+    elif dataset_path is not None:
+        try:
+            authorization = authorize_dataset_split(dataset_path, split)
+        except SplitPolicyError as exc:
+            raise ReviewScoringError(f"Qrels split is not authorized: {exc}") from exc
+        if authorization["dataset_sha256"] not in dataset_hashes:
+            raise ReviewScoringError("Source dataset hash does not match the reviewer queues")
+    if dataset_path is not None and evaluator_manifest_path is not None:
+        _validate_protected_assignments(
+            evaluator_manifest_path,
+            dataset_path,
+            authorization,
+            reviewer_a,
+            reviewer_b,
+        )
     for key in sorted(keys_a):
         for field in SHARED_METADATA_FIELDS:
             if reviewer_a[key][field] != reviewer_b[key][field]:
@@ -338,6 +523,11 @@ def score_product_qrels_review(
                 raise ReviewScoringError(
                     f"Adjudication packet disagrees on frozen metadata for {key[0]}/{key[1]}"
                 )
+
+    if dataset_path is None or evaluator_manifest_path is None:
+        raise ReviewScoringError(
+            "Scoring qrels requires the frozen source dataset path and evaluator manifest"
+        )
 
     scored_items = []
     disagreement_count = 0
@@ -406,6 +596,11 @@ def score_product_qrels_review(
         "input_files": {
             "annotator_a_sha256": _sha256(annotator_a_path),
             "annotator_b_sha256": _sha256(annotator_b_path),
+            "evaluator_manifest_sha256": (
+                _sha256(evaluator_manifest_path)
+                if evaluator_manifest_path is not None
+                else None
+            ),
             "adjudication_sha256": _sha256(adjudication_path)
             if adjudication_path is not None
             else None,
@@ -460,6 +655,18 @@ def main() -> None:
     parser.add_argument("--annotator-a", type=Path, required=True)
     parser.add_argument("--annotator-b", type=Path, required=True)
     parser.add_argument("--adjudication", type=Path)
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        required=True,
+        help="Frozen source dataset used to create the reviewer queues.",
+    )
+    parser.add_argument(
+        "--evaluator-manifest",
+        type=Path,
+        required=True,
+        help="Frozen candidate assignment manifest used to create the reviewer queues.",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     report = score_product_qrels_review(
@@ -467,6 +674,8 @@ def main() -> None:
         args.annotator_b,
         args.output,
         args.adjudication,
+        args.dataset,
+        args.evaluator_manifest,
     )
     print(
         json.dumps(
