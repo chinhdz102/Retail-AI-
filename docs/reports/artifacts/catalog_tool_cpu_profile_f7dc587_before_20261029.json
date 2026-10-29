@@ -1,0 +1,543 @@
+{
+  "artifact_id": "retail_ai_deterministic_catalog_tool_cpu_profile",
+  "generated_at_utc": "2026-10-29T11:38:26.929721+00:00",
+  "commit_sha": "f7dc58710651ed5656f2f40183ec1a898c135f9a",
+  "working_tree": {
+    "dirty_tracked_files": false,
+    "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "mode": "direct_search_products_tool_local_snapshot_no_provider",
+  "catalog": {
+    "path": "data/winmart_products.json",
+    "sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "accepted_product_count": 3081,
+    "load_ms": 469.774
+  },
+  "run_config": {
+    "repeats_per_query": 10,
+    "total_profiled_calls": 40,
+    "query_set_sha256": "35ad027d8ad671c7378a4df03134d0581ab5725672ce7b6ad2cc9b0378cefb85",
+    "queries": [
+      "Gợi ý dầu gội",
+      "Giới thiệu nước giặt",
+      "Gợi ý khăn mặt",
+      "Tôi muốn tìm thịt để ăn lẩu"
+    ]
+  },
+  "environment": {
+    "python": "3.13.15",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "logical_cpu_count": 12,
+    "dependencies": {
+      "pydantic": "2.13.5",
+      "fastapi": "0.141.1",
+      "httpx": "0.28.1"
+    }
+  },
+  "profiled_run": {
+    "elapsed_seconds": 4.197168,
+    "total_calls": 9426302,
+    "primitive_calls": 9423997,
+    "result_counts": [
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5
+    ],
+    "top_functions_by_cumulative_time": [
+      {
+        "file": "evaluation/catalog_tool_cpu_profile.py",
+        "line": 61,
+        "function": "_run_one",
+        "primitive_calls": 40,
+        "total_calls": 40,
+        "self_seconds": 0.000785,
+        "cumulative_seconds": 4.19743
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 2974,
+        "function": "execute_catalog_tool",
+        "primitive_calls": 40,
+        "total_calls": 40,
+        "self_seconds": 0.007702,
+        "cumulative_seconds": 4.195902
+      },
+      {
+        "file": "backend/products/snapshot_repository.py",
+        "line": 572,
+        "function": "search",
+        "primitive_calls": 80,
+        "total_calls": 80,
+        "self_seconds": 0.132886,
+        "cumulative_seconds": 2.136051
+      },
+      {
+        "file": "backend/products/snapshot_repository.py",
+        "line": 205,
+        "function": "_score",
+        "primitive_calls": 30780,
+        "total_calls": 30780,
+        "self_seconds": 0.332355,
+        "cumulative_seconds": 1.250206
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 1171,
+        "function": "_supported_family_query",
+        "primitive_calls": 10,
+        "total_calls": 10,
+        "self_seconds": 0.007174,
+        "cumulative_seconds": 0.955015
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 1678,
+        "function": "_catalog_product_title_match",
+        "primitive_calls": 80,
+        "total_calls": 80,
+        "self_seconds": 0.397709,
+        "cumulative_seconds": 0.942198
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method builtins.any>",
+        "primitive_calls": 276624,
+        "total_calls": 276624,
+        "self_seconds": 0.203575,
+        "cumulative_seconds": 0.917744
+      },
+      {
+        "file": "backend/products/catalog.py",
+        "line": 127,
+        "function": "matches_explicit_product_audience",
+        "primitive_calls": 30970,
+        "total_calls": 30970,
+        "self_seconds": 0.010793,
+        "cumulative_seconds": 0.541031
+      },
+      {
+        "file": "backend/products/catalog.py",
+        "line": 38,
+        "function": "explicit_product_audience",
+        "primitive_calls": 31010,
+        "total_calls": 31010,
+        "self_seconds": 0.051036,
+        "cumulative_seconds": 0.531627
+      },
+      {
+        "file": "backend/products/snapshot_repository.py",
+        "line": 195,
+        "function": "_word_matches",
+        "primitive_calls": 142700,
+        "total_calls": 142700,
+        "self_seconds": 0.097297,
+        "cumulative_seconds": 0.442018
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 1945,
+        "function": "_query_category_hint",
+        "primitive_calls": 40,
+        "total_calls": 40,
+        "self_seconds": 0.012361,
+        "cumulative_seconds": 0.42028
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method builtins.max>",
+        "primitive_calls": 57758,
+        "total_calls": 57758,
+        "self_seconds": 0.024767,
+        "cumulative_seconds": 0.418428
+      },
+      {
+        "file": "backend/products/snapshot_repository.py",
+        "line": 254,
+        "function": "<genexpr>",
+        "primitive_calls": 68950,
+        "total_calls": 68950,
+        "self_seconds": 0.038595,
+        "cumulative_seconds": 0.393485
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 1601,
+        "function": "_query_matches_catalog_title",
+        "primitive_calls": 70,
+        "total_calls": 70,
+        "self_seconds": 0.000382,
+        "cumulative_seconds": 0.365981
+      },
+      {
+        "file": "backend/services/query_understanding.py",
+        "line": 1160,
+        "function": "understand_catalog_query",
+        "primitive_calls": 40,
+        "total_calls": 40,
+        "self_seconds": 0.013778,
+        "cumulative_seconds": 0.322313
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 1616,
+        "function": "<genexpr>",
+        "primitive_calls": 123340,
+        "total_calls": 123340,
+        "self_seconds": 0.241569,
+        "cumulative_seconds": 0.29434
+      },
+      {
+        "file": "backend/products/catalog.py",
+        "line": 30,
+        "function": "_normalize_audience_text",
+        "primitive_calls": 31050,
+        "total_calls": 31050,
+        "self_seconds": 0.05214,
+        "cumulative_seconds": 0.259881
+      },
+      {
+        "file": "backend/products/category_taxonomy.py",
+        "line": 509,
+        "function": "resolve_catalog_category",
+        "primitive_calls": 300,
+        "total_calls": 300,
+        "self_seconds": 0.002428,
+        "cumulative_seconds": 0.232424
+      },
+      {
+        "file": "backend/products/category_taxonomy.py",
+        "line": 517,
+        "function": "_resolve_catalog_category_for_snapshot",
+        "primitive_calls": 16,
+        "total_calls": 16,
+        "self_seconds": 0.000789,
+        "cumulative_seconds": 0.229995
+      },
+      {
+        "file": "backend/products/snapshot_repository.py",
+        "line": 199,
+        "function": "<genexpr>",
+        "primitive_calls": 692940,
+        "total_calls": 692940,
+        "self_seconds": 0.160227,
+        "cumulative_seconds": 0.228609
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 1655,
+        "function": "_contains_catalog_identifier",
+        "primitive_calls": 246480,
+        "total_calls": 246480,
+        "self_seconds": 0.100866,
+        "cumulative_seconds": 0.21067
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'join' of 'str' objects>",
+        "primitive_calls": 79663,
+        "total_calls": 79682,
+        "self_seconds": 0.073589,
+        "cumulative_seconds": 0.209548
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'split' of 'str' objects>",
+        "primitive_calls": 795854,
+        "total_calls": 795854,
+        "self_seconds": 0.208363,
+        "cumulative_seconds": 0.208363
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method builtins.sum>",
+        "primitive_calls": 113960,
+        "total_calls": 113960,
+        "self_seconds": 0.046887,
+        "cumulative_seconds": 0.159417
+      },
+      {
+        "file": "backend/products/category_taxonomy.py",
+        "line": 441,
+        "function": "_resolve_native_exact_single_word_category",
+        "primitive_calls": 16,
+        "total_calls": 16,
+        "self_seconds": 0.053807,
+        "cumulative_seconds": 0.158532
+      },
+      {
+        "file": "backend/products/snapshot_repository.py",
+        "line": 103,
+        "function": "_has_vietnamese_diacritic",
+        "primitive_calls": 56640,
+        "total_calls": 56640,
+        "self_seconds": 0.036442,
+        "cumulative_seconds": 0.150556
+      },
+      {
+        "file": "backend/services/query_understanding.py",
+        "line": 1028,
+        "function": "_implicit_need_before_catalog_type",
+        "primitive_calls": 30,
+        "total_calls": 30,
+        "self_seconds": 0.048102,
+        "cumulative_seconds": 0.14488
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 1127,
+        "function": "_supported_category_search_phrase",
+        "primitive_calls": 30,
+        "total_calls": 30,
+        "self_seconds": 0.000349,
+        "cumulative_seconds": 0.13579
+      },
+      {
+        "file": "backend/products/snapshot_repository.py",
+        "line": 351,
+        "function": "_category_matches",
+        "primitive_calls": 130320,
+        "total_calls": 130320,
+        "self_seconds": 0.091048,
+        "cumulative_seconds": 0.127826
+      },
+      {
+        "file": "backend/services/vietnamese_intent.py",
+        "line": 16,
+        "function": "normalize_vietnamese",
+        "primitive_calls": 2839,
+        "total_calls": 2839,
+        "self_seconds": 0.017399,
+        "cumulative_seconds": 0.120827
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'casefold' of 'str' objects>",
+        "primitive_calls": 623612,
+        "total_calls": 623612,
+        "self_seconds": 0.117431,
+        "cumulative_seconds": 0.117431
+      },
+      {
+        "file": "backend/products/snapshot_repository.py",
+        "line": 312,
+        "function": "<genexpr>",
+        "primitive_calls": 57030,
+        "total_calls": 57030,
+        "self_seconds": 0.014048,
+        "cumulative_seconds": 0.101175
+      },
+      {
+        "file": "backend/products/category_taxonomy.py",
+        "line": 413,
+        "function": "_native_category_words",
+        "primitive_calls": 29306,
+        "total_calls": 29306,
+        "self_seconds": 0.01672,
+        "cumulative_seconds": 0.094779
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 2082,
+        "function": "_category_from_product_type",
+        "primitive_calls": 40,
+        "total_calls": 40,
+        "self_seconds": 0.033306,
+        "cumulative_seconds": 0.087315
+      },
+      {
+        "file": "backend/products/catalog.py",
+        "line": 32,
+        "function": "<genexpr>",
+        "primitive_calls": 245960,
+        "total_calls": 245960,
+        "self_seconds": 0.05867,
+        "cumulative_seconds": 0.083032
+      },
+      {
+        "file": "backend/services/query_understanding.py",
+        "line": 980,
+        "function": "_catalog_category_ngrams",
+        "primitive_calls": 1,
+        "total_calls": 1,
+        "self_seconds": 0.004379,
+        "cumulative_seconds": 0.080884
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 1624,
+        "function": "_catalog_product_title_rows",
+        "primitive_calls": 1,
+        "total_calls": 1,
+        "self_seconds": 0.000537,
+        "cumulative_seconds": 0.07985
+      },
+      {
+        "file": "backend/services/retail_tools.py",
+        "line": 1631,
+        "function": "<genexpr>",
+        "primitive_calls": 3082,
+        "total_calls": 3082,
+        "self_seconds": 0.010853,
+        "cumulative_seconds": 0.079312
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'search' of 're.Pattern' objects>",
+        "primitive_calls": 174450,
+        "total_calls": 174450,
+        "self_seconds": 0.077089,
+        "cumulative_seconds": 0.077089
+      },
+      {
+        "file": "backend/services/catalog_preferences.py",
+        "line": 101,
+        "function": "excluded_catalog_brands",
+        "primitive_calls": 120,
+        "total_calls": 120,
+        "self_seconds": 0.071306,
+        "cumulative_seconds": 0.075967
+      }
+    ]
+  },
+  "unprofiled_tool_latency_ms": {
+    "samples": [
+      91.158,
+      30.166,
+      28.478,
+      26.274,
+      89.831,
+      34.559,
+      28.645,
+      26.469,
+      88.494,
+      26.968,
+      26.397,
+      28.261,
+      77.875,
+      26.08,
+      23.539,
+      22.852,
+      79.772,
+      26.118,
+      23.721,
+      23.084,
+      79.414,
+      26.224,
+      23.683,
+      22.897,
+      80.925,
+      26.646,
+      24.21,
+      26.782,
+      81.359,
+      26.41,
+      24.777,
+      23.501,
+      82.012,
+      26.995,
+      24.24,
+      22.893,
+      79.15,
+      26.346,
+      23.969,
+      22.672
+    ],
+    "p50": 26.469,
+    "p95": 88.494,
+    "p99": 91.158,
+    "mean": 40.096,
+    "result_counts": [
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5,
+      5,
+      5,
+      4,
+      5
+    ]
+  },
+  "limitations": [
+    "Direct catalog-tool profile excludes HTTP, session state, Groq, STT, TTS and browser overhead.",
+    "The four-query workload is a repeatable representative profile, not a customer traffic distribution.",
+    "Local Windows CPU timing is diagnostic and is not a production SLO or capacity result.",
+    "Profiled wall time includes cProfile instrumentation; use unprofiled latency for timing comparisons."
+  ]
+}
