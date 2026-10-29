@@ -2482,6 +2482,151 @@ async def test_multi_turn_recommendations_exclude_seen_items_and_reset_for_new_c
 
 
 @pytest.mark.asyncio
+async def test_multi_turn_alternatives_return_new_snapshot_products_in_same_group(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    monkeypatch.setattr(api_main, "get_product_repository", lambda *_args, **_kwargs: repository)
+    monkeypatch.setattr(
+        retail_tools,
+        "get_product_repository",
+        lambda *_args, **_kwargs: repository,
+    )
+    created = await client.post("/sessions", json={"kiosk_id": "snapshot-alternative-flow"})
+    session_id = created.json()["session_id"]
+
+    first = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": "Mình muốn đồ ăn vặt xem phim, chưa biết chọn loại nào.",
+        },
+    )
+    alternative = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Còn loại khác không?"},
+    )
+
+    assert first.status_code == alternative.status_code == 200
+    first_payload = first.json()
+    alternative_payload = alternative.json()
+    first_ids = first_payload["grounded_product_ids"]
+    alternative_ids = alternative_payload["grounded_product_ids"]
+    assert first_payload["tools_used"] == ["recommend_products"]
+    assert alternative_payload["tools_used"] == ["recommend_products"]
+    assert first_ids and alternative_ids
+    assert set(first_ids).isdisjoint(alternative_ids)
+    assert first_ids == [card["product_id"] for card in first_payload["products"]]
+    assert alternative_ids == [card["product_id"] for card in alternative_payload["products"]]
+
+    displayed_products = [
+        repository.get_product_snapshot(product_id)
+        for product_id in (*first_ids, *alternative_ids)
+    ]
+    assert all(product is not None for product in displayed_products)
+    assert all(
+        "snack" in (product.category_hierarchy or product.category).casefold()
+        or "đồ ăn vặt" in (product.category_hierarchy or product.category).casefold()
+        for product in displayed_products
+        if product is not None
+    )
+    state = session_store.get(UUID(session_id)).shopping
+    assert set(state.seen_product_ids) == set(first_ids + alternative_ids)
+    assert service.calls == 0
+
+
+@pytest.mark.parametrize(
+    "category",
+    [
+        "Bánh ngũ cốc",
+        "Cà phê nước",
+        "Dầu gội nam",
+        "Dụng cụ cọ rửa bếp",
+        "Giò chả",
+        "Thịt bò đông lạnh",
+        "Sữa rửa mặt nữ",
+    ],
+)
+@pytest.mark.asyncio
+async def test_category_browse_can_continue_with_alternatives_without_repeating_items(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    category: str,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    monkeypatch.setattr(api_main, "get_product_repository", lambda *_args, **_kwargs: repository)
+    monkeypatch.setattr(
+        retail_tools,
+        "get_product_repository",
+        lambda *_args, **_kwargs: repository,
+    )
+    created = await client.post("/sessions", json={"kiosk_id": f"category-alternative-{category}"})
+    session_id = created.json()["session_id"]
+
+    first = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": session_id,
+            "text": f"Mình muốn xem nhóm {category}",
+        },
+    )
+    alternative = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Còn loại nào khác không?"},
+    )
+
+    assert first.status_code == alternative.status_code == 200
+    first_payload = first.json()
+    alternative_payload = alternative.json()
+    first_ids = first_payload["grounded_product_ids"]
+    alternative_ids = alternative_payload["grounded_product_ids"]
+    category_ids = {
+        product.product_id
+        for product in repository.products
+        if normalize_category_text(category)
+        in {
+            normalize_category_text(segment)
+            for segment in (product.category_hierarchy or "").split(">")
+        }
+    }
+    assert first_ids
+    assert alternative_payload["tools_used"] == ["recommend_products"]
+    assert set(first_ids).isdisjoint(alternative_ids)
+    for product_id in first_ids:
+        assert product_id in category_ids
+    unseen_ids = category_ids - set(first_ids)
+    if unseen_ids:
+        assert alternative_ids
+        assert set(alternative_ids).issubset(unseen_ids)
+    else:
+        assert not alternative_ids
+        assert any(
+            phrase in normalize_category_text(alternative_payload["text"])
+            for phrase in ("khong con", "khong tim thay them", "chua tim thay them")
+        )
+    for product_id in alternative_ids:
+        product = repository.get_product_snapshot(product_id)
+        assert product is not None
+        hierarchy_segments = {
+            normalize_category_text(segment)
+            for segment in (product.category_hierarchy or "").split(">")
+        }
+        assert normalize_category_text(category) in hierarchy_segments
+    state = session_store.get(UUID(session_id)).shopping
+    assert set(state.seen_product_ids) == set(first_ids + alternative_ids)
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_search_and_snapshot_return_grounded_demo_product(client: httpx.AsyncClient) -> None:
     search = await client.get("/products/search", params={"q": "coca zero"})
 

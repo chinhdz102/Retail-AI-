@@ -340,8 +340,20 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
             )
         )
         or re.search(
-            r"\b(?:xem|mo|show|open|view|check)\b.{0,32}\b(?:gio(?:\s+hang)?|cart)\b",
+            r"\b(?:xem|mo|show|open|view|check)\b.{0,32}\b(?:gio\s+hang|cart)\b",
             compact,
+        )
+        or re.search(
+            r"\b(?:xem|mo|show|open|view|check)\b.{0,32}\bgiỏ(?:\s+hàng)?\b",
+            text,
+            flags=re.IGNORECASE,
+        )
+        or (
+            state == SessionState.CART_ACTIVE
+            and re.search(
+                r"\b(?:xem|mo|show|open|view|check)\b.{0,32}\bgio\b",
+                compact,
+            )
         )
         or (state == SessionState.CART_ACTIVE and re.search(r"\btong\s+(?:tien|gio)\b", compact))
     ):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import statistics
 import time
@@ -268,11 +269,313 @@ def _run_conversations(
     )
 
 
+def _category_inventory(
+    repository: SnapshotProductRepository,
+    category: str,
+) -> tuple[Any, ...]:
+    """Read all catalog pages in a category for price and alternative checks."""
+    products_by_id: dict[str, Any] = {}
+    offset = 0
+    page_size = 20
+    while offset < 20_000:
+        page = repository.search(query="", category=category, limit=page_size, offset=offset)
+        if not page:
+            break
+        for product in page:
+            if _in_category(product, category):
+                products_by_id[product.product_id] = product
+        offset += len(page)
+        if len(page) < page_size:
+            break
+    return tuple(products_by_id.values())
+
+
+def _response_explicitly_reports_no_alternative(text: str) -> bool:
+    normalized = normalize_category_text(text)
+    return any(
+        phrase in normalized
+        for phrase in (
+            "khong con",
+            "chua tim thay them",
+            "khong tim thay them",
+            "het lua chon",
+            "no more",
+            "no other",
+        )
+    )
+
+
+async def _run_stateful_api_conversations(
+    path: Path,
+    repository: SnapshotProductRepository,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Evaluate real API/session/tool transitions without calling an LLM provider."""
+    import httpx
+
+    import backend.api.main as api_main
+    from backend.services import retail_tools
+
+    class NoProviderCalls:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def chat(self, *_args: Any, **_kwargs: Any) -> str:
+            self.calls += 1
+            raise AssertionError("The deterministic API conversation unexpectedly called Groq")
+
+    conversations = json.loads(path.read_text(encoding="utf-8"))
+    provider = NoProviderCalls()
+    original_api_repository = api_main.get_product_repository
+    original_tool_repository = retail_tools.get_product_repository
+    original_overrides = dict(api_main.app.dependency_overrides)
+    api_main.get_product_repository = lambda *_args, **_kwargs: repository
+    retail_tools.get_product_repository = lambda *_args, **_kwargs: repository
+    api_main.app.dependency_overrides[api_main.get_groq_service] = lambda: provider
+
+    details: list[dict[str, Any]] = []
+    category_relevant = category_visible = 0
+    id_card_consistent = 0
+    id_card_checks = 0
+    state_retained = 0
+    state_checks = 0
+    lowest_price_correct = 0
+    lowest_price_checks = 0
+    alternatives_novel = 0
+    alternative_checks = 0
+    alternative_available_returned = 0
+    alternative_available_checks = 0
+    provider_free_conversations = 0
+    category_inventories = {
+        conversation["expected_category"]: _category_inventory(
+            repository,
+            conversation["expected_category"],
+        )
+        for conversation in conversations
+    }
+
+    try:
+        transport = httpx.ASGITransport(app=api_main.app, raise_app_exceptions=False)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://retail-evaluation",
+            timeout=90,
+        ) as client:
+            for conversation in conversations:
+                provider_calls_before = provider.calls
+                created = await client.post(
+                    "/sessions",
+                    json={"kiosk_id": f"consultation-eval-{conversation['conversation_id']}"},
+                )
+                failures: list[str] = []
+                if created.status_code != 201:
+                    details.append(
+                        {
+                            "conversation_id": conversation["conversation_id"],
+                            "failures": [f"session_create_http_{created.status_code}"],
+                            "turns": [],
+                        }
+                    )
+                    continue
+
+                session_id = created.json()["session_id"]
+                expected_category = conversation["expected_category"]
+                category_products = category_inventories[expected_category]
+                category_ids = {product.product_id for product in category_products}
+                all_visible_ids: list[str] = []
+                turn_details: list[dict[str, Any]] = []
+
+                for turn_index, turn in enumerate(conversation["turns"]):
+                    response = await client.post(
+                        "/agent/respond",
+                        json={"session_id": session_id, "text": turn["user"]},
+                    )
+                    turn_row: dict[str, Any] = {
+                        "query": turn["user"],
+                        "expected_action": turn.get("intent"),
+                        "http_status": response.status_code,
+                        "failures": [],
+                    }
+                    if response.status_code != 200:
+                        turn_row["failures"].append(f"respond_http_{response.status_code}")
+                        failures.extend(turn_row["failures"])
+                        turn_details.append(turn_row)
+                        continue
+
+                    payload = response.json()
+                    ids = list(payload.get("grounded_product_ids") or [])
+                    cards = list(payload.get("products") or [])
+                    card_ids = [card.get("product_id") for card in cards]
+                    id_card_checks += 1
+                    card_ids_match = ids == card_ids
+                    id_card_consistent += int(card_ids_match)
+                    if not card_ids_match:
+                        turn_row["failures"].append("grounded_ids_do_not_match_visible_cards")
+
+                    product_rows = [
+                        repository.get_product_snapshot(product_id) for product_id in ids
+                    ]
+                    unknown_ids = [
+                        product_id
+                        for product_id, product in zip(ids, product_rows)
+                        if product is None
+                    ]
+                    wrong_category_ids = [
+                        product_id
+                        for product_id, product in zip(ids, product_rows)
+                        if product is not None and not _in_category(product, expected_category)
+                    ]
+                    category_visible += sum(product is not None for product in product_rows)
+                    category_relevant += sum(
+                        product is not None and _in_category(product, expected_category)
+                        for product in product_rows
+                    )
+                    if unknown_ids:
+                        turn_row["failures"].append(f"unknown_grounded_ids:{unknown_ids}")
+                    if wrong_category_ids:
+                        turn_row["failures"].append(f"wrong_category_ids:{wrong_category_ids}")
+
+                    prior_visible_ids = set(all_visible_ids)
+                    all_visible_ids.extend(ids)
+                    session_state = api_main.session_store.get(api_main.UUID(session_id)).shopping
+                    state_checks += 1
+                    retained_product_ids = set(session_state.selected_product_ids)
+                    retained_product_ids.update(session_state.seen_product_ids)
+                    retained_product_ids.update(session_state.original_displayed_product_ids)
+                    retained_product_ids.update(
+                        product_id
+                        for page in session_state.displayed_product_pages
+                        for product_id in page
+                    )
+                    state_contains_visible = set(all_visible_ids).issubset(retained_product_ids)
+                    state_retained += int(state_contains_visible)
+                    if not state_contains_visible:
+                        turn_row["failures"].append("session_did_not_remember_visible_products")
+
+                    if turn_index == 1:
+                        lowest_price_checks += 1
+                        displayed_before_price_followup = [
+                            product
+                            for product_id in prior_visible_ids
+                            if (product := repository.get_product_snapshot(product_id)) is not None
+                        ]
+                        expected_min = min(
+                            (product.price_vnd for product in displayed_before_price_followup),
+                            default=None,
+                        )
+                        actual_min = min((card["price_vnd"] for card in cards), default=None)
+                        correct_min = expected_min is not None and actual_min == expected_min
+                        lowest_price_correct += int(correct_min)
+                        turn_row["expected_min_price_vnd"] = expected_min
+                        turn_row["returned_min_price_vnd"] = actual_min
+                        if not correct_min:
+                            turn_row["failures"].append(
+                                "lowest_price_does_not_match_prior_visible_page"
+                            )
+
+                    is_alternative = turn.get("intent") == "alternative"
+                    if is_alternative:
+                        prior_ids = prior_visible_ids
+                        alternative_checks += 1
+                        novel = not (prior_ids & set(ids))
+                        alternatives_novel += int(novel)
+                        if not novel:
+                            turn_row["failures"].append("alternative_repeated_visible_product")
+
+                        unseen_category_ids = category_ids - prior_ids
+                        if unseen_category_ids:
+                            alternative_available_checks += 1
+                            returned_available = bool(set(ids) & unseen_category_ids)
+                            alternative_available_returned += int(returned_available)
+                            if not returned_available:
+                                turn_row["failures"].append(
+                                    "catalog_alternative_available_but_none_returned"
+                                )
+                        elif not ids and not _response_explicitly_reports_no_alternative(
+                            payload.get("text", "")
+                        ):
+                            turn_row["failures"].append(
+                                "catalog_exhausted_without_clear_no_alternative_response"
+                            )
+
+                    turn_row.update(
+                        {
+                            "grounded_product_ids": ids,
+                            "visible_product_ids": card_ids,
+                            "tools_used": payload.get("tools_used", []),
+                            "model": payload.get("model"),
+                            "answer": payload.get("text"),
+                            "seen_product_ids_after_turn": list(session_state.seen_product_ids),
+                        }
+                    )
+                    failures.extend(turn_row["failures"])
+                    turn_details.append(turn_row)
+
+                provider_free = provider.calls == provider_calls_before
+                provider_free_conversations += int(provider_free)
+                if not provider_free:
+                    failures.append("unexpected_provider_call")
+                details.append(
+                    {
+                        "conversation_id": conversation["conversation_id"],
+                        "expected_category": expected_category,
+                        "catalog_category_product_count": len(category_products),
+                        "previous_visible_ids_are_tracked": all(
+                            "session_did_not_remember_visible_products"
+                            not in turn["failures"]
+                            for turn in turn_details
+                        ),
+                        "provider_free": provider_free,
+                        "failures": list(dict.fromkeys(failures)),
+                        "turns": turn_details,
+                    }
+                )
+                await client.post(f"/sessions/{session_id}/close")
+    finally:
+        api_main.get_product_repository = original_api_repository
+        retail_tools.get_product_repository = original_tool_repository
+        api_main.app.dependency_overrides.clear()
+        api_main.app.dependency_overrides.update(original_overrides)
+
+    conversation_count = len(conversations)
+    turn_count = sum(len(item["turns"]) for item in details)
+    metrics = {
+        "mode": "in_process_agent_api_and_snapshot_catalog",
+        "conversation_count": conversation_count,
+        "turn_count": turn_count,
+        "id_card_consistency_rate": round(id_card_consistent / max(1, id_card_checks), 4),
+        "catalog_category_precision": round(category_relevant / max(1, category_visible), 4),
+        "session_visible_product_retention_rate_across_state_fields": round(
+            state_retained / max(1, state_checks),
+            4,
+        ),
+        "lowest_price_matches_prior_visible_page_rate": round(
+            lowest_price_correct / max(1, lowest_price_checks), 4
+        ),
+        "alternative_non_repetition_rate": round(
+            alternatives_novel / max(1, alternative_checks),
+            4,
+        ),
+        "alternative_return_rate_when_unseen_catalog_item_exists": round(
+            alternative_available_returned / max(1, alternative_available_checks),
+            4,
+        ),
+        "provider_free_conversation_rate": round(
+            provider_free_conversations / max(1, conversation_count),
+            4,
+        ),
+        "conversation_failures": sum(bool(item["failures"]) for item in details),
+    }
+    return metrics, details
+
+
 def run(cases_path: Path, conversations_path: Path, source_path: Path) -> dict[str, Any]:
     repository = SnapshotProductRepository(source_path)
     cases = _read_jsonl(cases_path)
     metrics, outcomes = _run_query_cases(cases, repository)
     conversation_metrics, conversation_outcomes = _run_conversations(conversations_path, repository)
+    api_conversation_metrics, api_conversation_outcomes = asyncio.run(
+        _run_stateful_api_conversations(conversations_path, repository)
+    )
     return {
         "kind": "generalized_catalog_consultation_benchmark",
         "generated_at_utc": datetime.now(UTC).isoformat(),
@@ -282,7 +585,8 @@ def run(cases_path: Path, conversations_path: Path, source_path: Path) -> dict[s
         "case_file": str(cases_path),
         "conversation_file": str(conversations_path),
         "metrics": metrics,
-        "conversation_metrics": conversation_metrics,
+        "parser_tool_conversation_diagnostic_metrics": conversation_metrics,
+        "stateful_api_conversation_metrics": api_conversation_metrics,
         "limitations": [
             "No LLM generation/provider latency measured; metrics cover parser and catalog tools.",
             "Snapshot has no attributes to verify use-case suitability.",
@@ -291,7 +595,8 @@ def run(cases_path: Path, conversations_path: Path, source_path: Path) -> dict[s
             "Baseline uses direct snapshot search; compiler uses parser and production tools.",
         ],
         "cases": outcomes,
-        "conversations": conversation_outcomes,
+        "parser_tool_conversation_diagnostics": conversation_outcomes,
+        "stateful_api_conversations": api_conversation_outcomes,
     }
 
 
@@ -312,7 +617,12 @@ def main() -> None:
             {
                 "output": str(args.output.resolve()),
                 "metrics": result["metrics"],
-                "conversation_metrics": result["conversation_metrics"],
+                "parser_tool_conversation_diagnostic_metrics": result[
+                    "parser_tool_conversation_diagnostic_metrics"
+                ],
+                "stateful_api_conversation_metrics": result[
+                    "stateful_api_conversation_metrics"
+                ],
             },
             ensure_ascii=False,
             indent=2,
