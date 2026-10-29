@@ -1532,6 +1532,108 @@ async def test_manufacturer_marketing_claim_is_attributed_and_scoped(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("text", "product_id", "expected_phrases"),
+    (
+        (
+            "Nước giải khát Coca-Cola Zero chai nhựa 1,5lít có bao nhiêu calo?",
+            "WIN_10307381",
+            ("0 kcal", "100 ml", "Coca-Cola Việt Nam"),
+        ),
+        (
+            "Nước giải khát Coca-Cola Zero chai nhựa 1,5lít có bao nhiêu caffeine?",
+            "WIN_10307381",
+            ("32 mg", "lon 330 ml", "không thể lấy số này suy ra"),
+        ),
+        (
+            "Kem đánh răng P/S bảo vệ 123 baking soda và hương thảo hộp 230g dùng thế nào?",
+            "WIN_10160995",
+            ("P/S Việt Nam", "ít nhất mỗi ngày 2 lần", "hạt đậu"),
+        ),
+        (
+            "Thùng 30 gói mì tôm chua cay Hảo Hảo Vina Acecook 75g pha thế nào?",
+            "WIN_10007893",
+            ("Acecook Việt Nam", "400 ml", "3 phút"),
+        ),
+    ),
+)
+async def test_verified_manufacturer_declarations_answer_across_product_groups(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    text: str,
+    product_id: str,
+    expected_phrases: tuple[str, ...],
+) -> None:
+    assert api_main._unsupported_catalog_attribute_requested(text)
+    assert not _requested_snapshot_fields(text)
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    created = await client.post("/sessions", json={"kiosk_id": "verified-manufacturer-facts"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={"session_id": created.json()["session_id"], "text": text, "language": "vi"},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["grounded_product_ids"] == [product_id], payload["text"]
+    assert payload["tools_used"] == ["search_products", "get_product_knowledge"]
+    assert all(
+        phrase.casefold() in payload["text"].casefold() for phrase in expected_phrases
+    ), payload["text"]
+    assert payload["model"] == "catalog-manufacturer-declaration"
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_verified_answer_keeps_unverified_suitability_separate(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    created = await client.post("/sessions", json={"kiosk_id": "partial-manufacturer-evidence"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": (
+                "Nước giải khát Coca-Cola Zero chai nhựa 1,5lít có bao nhiêu calo và "
+                "có phù hợp cho người tiểu đường không?"
+            ),
+            "language": "vi",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["grounded_product_ids"] == ["WIN_10307381"]
+    assert "0 kcal" in payload["text"]
+    assert "trên 100 ml" in payload["text"]
+    assert "chưa có dữ liệu xác minh về độ phù hợp" in payload["text"]
+    assert "Coca-Cola Việt Nam" in payload["text"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_broad_brand_product_knowledge_question_asks_which_variant(
     client: httpx.AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -5620,6 +5722,21 @@ def test_hair_conditioning_word_does_not_mean_sugar_nutrition() -> None:
     assert api_main._product_knowledge_attributes_requested("Coca Zero có bao nhiêu đường?") == (
         "nutrition",
     )
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "Kem đánh răng này dùng thế nào?",
+        "Mì này pha thế nào?",
+        "Mì này nấu ra sao?",
+        "How should I prepare this noodle?",
+    ),
+)
+def test_natural_preparation_and_usage_questions_request_usage_evidence(text: str) -> None:
+    assert api_main._unsupported_catalog_attribute_requested(text)
+    assert api_main._usage_dosage_question_requested(text)
+    assert api_main._product_knowledge_attributes_requested(text) == ("usage",)
 
 
 @pytest.mark.asyncio

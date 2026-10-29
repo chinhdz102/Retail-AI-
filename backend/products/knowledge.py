@@ -321,6 +321,25 @@ def product_knowledge_facts(
         direct_field = _DIRECT_FIELDS.get(requested)
         direct_value = getattr(product, direct_field, None) if direct_field else None
         enriched = manufacturer_facts.get(requested)
+        derived_value: dict[str, Any] | None = None
+        if requested == "calories" and enriched is None:
+            nutrition_fact = manufacturer_facts.get("nutrition")
+            nutrition_value = nutrition_fact.value if nutrition_fact is not None else None
+            energy_kcal = (
+                nutrition_value.get("energy_kcal")
+                if isinstance(nutrition_value, dict)
+                else None
+            )
+            basis = nutrition_value.get("basis") if isinstance(nutrition_value, dict) else None
+            if (
+                nutrition_fact is not None
+                and isinstance(energy_kcal, (int, float))
+                and not isinstance(energy_kcal, bool)
+                and isinstance(basis, str)
+                and basis.strip()
+            ):
+                enriched = nutrition_fact
+                derived_value = {"energy_kcal": energy_kcal, "basis": basis.strip()}
         # Prefer direct active-catalog values when they exist. Enrichment may fill
         # absent fields, but can never override price, stock, or physical state.
         if (
@@ -329,15 +348,22 @@ def product_knowledge_facts(
             and (direct_field is None or direct_value is None)
         ):
             assert manufacturer_record is not None
-            result.append(
-                _enriched_fact(
-                    product,
-                    enriched,
-                    match_scope=manufacturer_record.match_scope,
-                    registry_sha256=registry_sha256,
-                    catalog_version=version,
-                )
+            enriched_result = _enriched_fact(
+                product,
+                enriched,
+                match_scope=manufacturer_record.match_scope,
+                registry_sha256=registry_sha256,
+                catalog_version=version,
             )
+            if requested == "calories" and derived_value is not None:
+                enriched_result = enriched_result.model_copy(
+                    update={
+                        "attribute": "calories",
+                        "value": derived_value,
+                        "source_field": f"{enriched.source_field}.energy_kcal",
+                    }
+                )
+            result.append(enriched_result)
             continue
 
         if requested == "availability":

@@ -1118,7 +1118,9 @@ def _unique_product_match_id(
     if not query or not candidates:
         return None
     query_tokens = [
-        token for token in re.findall(r"\w+", _normalize_vietnamese(query)) if len(token) > 1
+        token
+        for token in re.findall(r"\w+", _normalize_vietnamese(query))
+        if len(token) > 1 and token not in {"va", "and", "with"}
     ]
     repeated_bim_bim_phrase = query_tokens.count("bim") >= 2
     if len(set(query_tokens)) < 2 and not repeated_bim_bim_phrase:

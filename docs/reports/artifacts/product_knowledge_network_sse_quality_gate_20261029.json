@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "run_date": "2026-10-29",
+  "base_commit": "2dc558e133016cec2bd4c5ca7097cb247eac0d95",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "manufacturer_enrichment_sha256": "741e8b98281ec220c83ec6a673ad6e6844a234370fdc1f8b9a7d54b2acd0c7ec",
+  "environment": {
+    "os": "Windows",
+    "python": "3.13.15"
+  },
+  "changes": [
+    "Project verified manufacturer nutrition.energy_kcal to the calories attribute without changing the stated per-100-ml basis.",
+    "Rendered verified manufacturer declarations with source, source field, and exact-variant/product-line scope.",
+    "Kept known facts and unresolved suitability questions separate in mixed questions.",
+    "Recognized natural Vietnamese and English usage/preparation phrasing.",
+    "Kept named product usage questions on product knowledge while preserving recommendation routing for open-ended needs.",
+    "Cancelled an in-flight agent/provider task when the actual HTTP client disconnects during response validation."
+  ],
+  "verification": {
+    "focused_before_routing_guard_narrowing": {
+      "command": ".venv\\Scripts\\python.exe -m pytest tests/test_product_knowledge_enrichment.py tests/test_retail_api.py tests/test_api_network_stream.py -k \"manufacturer or knowledge or usage or caffeine or network or hair_conditioning or calories or preparation\" -q --tb=short",
+      "passed": 28,
+      "failed": 0
+    },
+    "focused_after_routing_guard_narrowing": {
+      "command": ".venv\\Scripts\\python.exe -m pytest tests/test_product_knowledge_enrichment.py tests/test_contextual_consultation_regressions.py tests/test_retail_api.py -k \"personal_care_condition_refines or multi_turn_product_refinement or natural_product_discovery or verified_manufacturer or natural_preparation or hair_conditioning or calories\" -q --tb=short",
+      "passed": 13,
+      "failed": 0
+    },
+    "full_suite": {
+      "command": ".venv\\Scripts\\python.exe -m pytest tests -q --tb=short",
+      "passed": 1523,
+      "failed": 0,
+      "skipped": 1,
+      "duration_seconds": 353.46,
+      "skip_reason": "Windows does not grant symlink creation permission for one evaluation path-security test."
+    },
+    "repository_gates": {
+      "ruff": "passed",
+      "compileall": "passed",
+      "git_diff_check": "passed"
+    },
+    "network_sse_tests": {
+      "passed_in_full_suite": true,
+      "provider": "local deterministic fake",
+      "checks": [
+        "SSE start/delta/complete ordering after a delayed provider response.",
+        "Cancellation of the provider task when the real TCP HTTP request is cancelled.",
+        "No session-message or cart drift after cancellation."
+      ]
+    }
+  },
+  "limitations": [
+    "No live Groq request, browser, reverse proxy, voice/audio, or production worker-pool test was run.",
+    "The SSE endpoint emits text only after full response validation; these tests do not establish token streaming or provider TTFB.",
+    "Manufacturer-source enrichment covers four products only and does not establish independent efficacy or individual suitability.",
+    "Catalog price and stock remain dated snapshot evidence.",
+    "No protected blind evaluation set or completed human answer-quality labels exist."
+  ],
+  "release_decision": "DEMO_ONLY_NOT_PRODUCTION_READY",
+  "no_new_branch_or_worktree": true
+}

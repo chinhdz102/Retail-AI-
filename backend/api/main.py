@@ -10,7 +10,7 @@ from time import perf_counter
 from uuid import UUID
 
 import asyncpg
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 
@@ -7907,6 +7907,13 @@ async def agent_respond(
         and not requested_fields
         and not (
             category_recommendation_arguments and category_recommendation_arguments.get("category")
+            and (
+                is_recommendation_request(request.text)
+                or not (
+                    _has_specific_product_reference(request.text)
+                    and _usage_dosage_question_requested(request.text)
+                )
+            )
         )
     ):
         normalized_unsupported = _normalize_request_text(request.text)
@@ -7993,6 +8000,64 @@ async def agent_respond(
                         knowledge_observation,
                         manufacturer_claim_reply,
                         model="catalog-manufacturer-claim",
+                        tools_used=(
+                            ["search_products", "get_product_knowledge"]
+                            if used_product_search
+                            else ["get_product_knowledge"]
+                        ),
+                    )
+                declaration_facts = [
+                    fact
+                    for fact in facts
+                    if isinstance(fact, dict)
+                    and fact.get("status") == "VERIFIED"
+                    and fact.get("evidence_scope") == "MANUFACTURER_DECLARATION"
+                ]
+                manufacturer_declaration_reply = _localized_verified_manufacturer_declaration_reply(
+                    knowledge_product.name,
+                    declaration_facts,
+                    request.language,
+                )
+                if manufacturer_declaration_reply:
+                    unresolved_attributes = tuple(
+                        dict.fromkeys(
+                            str(fact.get("attribute"))
+                            for fact in facts
+                            if isinstance(fact, dict)
+                            and fact.get("status") != "VERIFIED"
+                            and fact.get("attribute")
+                        )
+                    )
+                    if unresolved_attributes:
+                        manufacturer_declaration_reply = (
+                            manufacturer_declaration_reply
+                            + " "
+                            + _localized_product_knowledge_abstention(
+                                knowledge_product.name,
+                                unresolved_attributes,
+                                request.language,
+                            )
+                        )
+                    session_store.set_last_grounded_product(
+                        request.session_id,
+                        knowledge_product.product_id,
+                        knowledge_product.name,
+                    )
+                    session_store.update_shopping(
+                        request.session_id,
+                        current_intent=IntentType.PRODUCT_LOOKUP,
+                        active_product_id=knowledge_product.product_id,
+                        active_category=knowledge_product.category,
+                        selected_product_ids=[knowledge_product.product_id],
+                        pending_action=None,
+                        pending_clarification=None,
+                    )
+                    return _deterministic_tool_response(
+                        request,
+                        record.state,
+                        knowledge_observation,
+                        manufacturer_declaration_reply,
+                        model="catalog-manufacturer-declaration",
                         tools_used=(
                             ["search_products", "get_product_knowledge"]
                             if used_product_search
@@ -8981,15 +9046,28 @@ def _validated_text_chunks(text: str, target_chars: int = 28) -> list[str]:
     return chunks
 
 
-@app.post("/agent/respond/stream")
+@app.post("/agent/respond/stream", response_model=None)
 async def agent_respond_stream(
     request: AgentRespondRequest,
+    http_request: Request,
     groq: GroqService = Depends(get_groq_service),
     settings: Settings = Depends(get_settings),
-) -> StreamingResponse:
+) -> StreamingResponse | Response:
     # Run the complete policy, tool, grounding, and transaction flow first. Only
     # its final response is exposed as text deltas, so no unverified claim streams.
-    response = await agent_respond(request, groq, settings)
+    response_task = asyncio.create_task(agent_respond(request, groq, settings))
+    try:
+        while not response_task.done():
+            if await http_request.is_disconnected():
+                response_task.cancel()
+                await asyncio.gather(response_task, return_exceptions=True)
+                return Response(status_code=204)
+            await asyncio.wait({response_task}, timeout=0.05)
+        response = await response_task
+    except asyncio.CancelledError:
+        response_task.cancel()
+        await asyncio.gather(response_task, return_exceptions=True)
+        raise
 
     async def response_events():
         metadata = response.model_dump(mode="json", exclude={"text"})
@@ -9531,6 +9609,25 @@ def _usage_dosage_question_requested(text: str) -> bool:
     return any(
         phrase in normalized
         for phrase in (
+            "dung the nao",
+            "su dung the nao",
+            "dung nhu the nao",
+            "dung ra sao",
+            "su dung nhu the nao",
+            "su dung ra sao",
+            "pha the nao",
+            "pha nhu the nao",
+            "pha ra sao",
+            "nau the nao",
+            "nau nhu the nao",
+            "nau ra sao",
+            "how to prepare",
+            "how do i prepare",
+            "how should i prepare",
+            "how to use",
+            "how do i use",
+            "how should i use",
+            "how is it prepared",
             "lieu luong",
             "lieu dung",
             "dosing",
@@ -9551,6 +9648,10 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
             "suc khoe nhu the nao",
             "huong dan su dung",
             "instructions for use",
+            "how to prepare",
+            "how do i prepare",
+            "how should i prepare",
+            "how is it prepared",
             "what is it for",
             "what does it do",
             "what does this do",
@@ -9558,10 +9659,13 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
             "what is the purpose",
             "purpose",
             "how to use",
+            "how should i use",
             "dung the nao",
             "su dung the nao",
             "dung nhu the nao",
+            "dung ra sao",
             "su dung nhu the nao",
+            "su dung ra sao",
             "de lam gi",
             "cach su dung",
             "lieu luong",
@@ -9572,7 +9676,11 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
             "how much should i use",
             "dung de lam gi",
             "cach dung",
+            "pha the nao",
+            "pha ra sao",
             "cach pha",
+            "nau the nao",
+            "nau ra sao",
             "cach nau",
             "pha nhu the nao",
             "nau nhu the nao",
@@ -11586,6 +11694,184 @@ def _localized_manufacturer_claim_reply(
         f"Về {product_name}, {source_text} mô tả: {claim_text} "
         "Đây là tuyên bố của nhà sản xuất, chưa phải bằng chứng độc lập về hiệu quả hoặc "
         f"độ phù hợp với riêng bạn.{scope_note}"
+    )
+
+
+def _manufacturer_declaration_value_text(
+    attribute: str,
+    value: object,
+    language: LanguageCode,
+) -> str | None:
+    if attribute == "caffeine" and isinstance(value, dict):
+        amount = value.get("amount_mg")
+        basis = str(value.get("basis") or "").strip()
+        product_line = str(value.get("product_line") or "").strip()
+        if (
+            isinstance(amount, (int, float))
+            and not isinstance(amount, bool)
+            and basis
+            and product_line
+        ):
+            amount_text = f"{amount:g}"
+            if language == "en":
+                return (
+                    f"{amount_text} mg of caffeine {basis} for the {product_line} line"
+                )
+            if language == "zh":
+                if basis.casefold() == "per 330 ml can":
+                    return f"{product_line} 系列每罐 330 毫升含 {amount_text} mg 咖啡因"
+                return f"{product_line} 系列：{basis}含 {amount_text} mg 咖啡因"
+            if basis.casefold() == "per 330 ml can":
+                basis_text = "mỗi lon 330 ml"
+            elif basis.casefold() == "per 100 ml":
+                basis_text = "trên 100 ml"
+            else:
+                basis_text = basis
+            return f"{amount_text} mg caffeine {basis_text} của dòng {product_line}"
+    if attribute == "calories" and isinstance(value, dict):
+        energy = value.get("energy_kcal")
+        basis = str(value.get("basis") or "").strip()
+        if (
+            isinstance(energy, (int, float))
+            and not isinstance(energy, bool)
+            and basis
+        ):
+            if language == "en":
+                return f"{energy:g} kcal {basis}"
+            if language == "zh":
+                if basis.casefold() == "per 100 ml":
+                    return f"每 100 毫升 {energy:g} kcal"
+                return f"{basis}：{energy:g} kcal"
+            basis_text = "trên 100 ml" if basis.casefold() == "per 100 ml" else basis
+            return f"{energy:g} kcal {basis_text}"
+    if attribute == "nutrition" and isinstance(value, dict):
+        labels_by_language = {
+            "vi": {
+                "energy_kcal": "năng lượng",
+                "protein_g": "đạm",
+                "fat_g": "chất béo",
+                "carbohydrate_g": "carbohydrate",
+                "sugar_g": "đường",
+                "sodium_mg_max": "natri tối đa",
+            },
+            "en": {
+                "energy_kcal": "energy",
+                "protein_g": "protein",
+                "fat_g": "fat",
+                "carbohydrate_g": "carbohydrate",
+                "sugar_g": "sugar",
+                "sodium_mg_max": "sodium (maximum)",
+            },
+            "zh": {
+                "energy_kcal": "能量",
+                "protein_g": "蛋白质",
+                "fat_g": "脂肪",
+                "carbohydrate_g": "碳水化合物",
+                "sugar_g": "糖",
+                "sodium_mg_max": "钠（最高）",
+            },
+        }
+        labels = labels_by_language[language]
+        parts: list[str] = []
+        for key, label in labels.items():
+            item = value.get(key)
+            if not isinstance(item, (int, float)) or isinstance(item, bool):
+                continue
+            unit = "kcal" if key == "energy_kcal" else ("mg" if key == "sodium_mg_max" else "g")
+            parts.append(f"{label} {item:g} {unit}")
+        if parts:
+            basis = str(value.get("basis") or "").strip()
+            if language == "vi" and basis.casefold() == "per 100 ml":
+                basis_text = "trên 100 ml"
+            elif language == "zh" and basis.casefold() == "per 100 ml":
+                basis_text = "每 100 毫升"
+            else:
+                basis_text = basis
+            return ", ".join(parts) + (f" ({basis_text})" if basis_text else "")
+    if isinstance(value, str) and value.strip():
+        if language == "en":
+            return f"Manufacturer information in Vietnamese: {value.strip()}"
+        if language == "zh":
+            return f"厂商提供的越南语信息：{value.strip()}"
+        return value.strip()
+    if isinstance(value, list) and value and all(isinstance(item, str) for item in value):
+        joined = "; ".join(item.strip() for item in value if item.strip())
+        if not joined:
+            return None
+        if language == "en":
+            return f"Manufacturer instructions in Vietnamese: {joined}"
+        if language == "zh":
+            return f"厂商提供的越南语说明：{joined}"
+        return joined
+    return None
+
+
+def _localized_verified_manufacturer_declaration_reply(
+    product_name: str,
+    facts: object,
+    language: LanguageCode,
+) -> str | None:
+    """Render manufacturer-published facts without broadening their product scope."""
+    if not isinstance(facts, list) or not facts:
+        return None
+    declarations: list[tuple[dict[str, object], str]] = []
+    for fact in facts:
+        if (
+            not isinstance(fact, dict)
+            or fact.get("status") != "VERIFIED"
+            or fact.get("evidence_scope") != "MANUFACTURER_DECLARATION"
+            or not fact.get("source")
+            or not fact.get("source_field")
+            or fact.get("product_match_scope") not in {"EXACT_VARIANT", "PRODUCT_LINE"}
+        ):
+            return None
+        value_text = _manufacturer_declaration_value_text(
+            str(fact.get("attribute") or ""),
+            fact.get("value"),
+            language,
+        )
+        if value_text is None:
+            return None
+        declarations.append((fact, value_text))
+
+    sources = list(dict.fromkeys(str(fact["source"]) for fact, _text in declarations))
+    source_text = ", ".join(sources)
+    details = "; ".join(value_text for _fact, value_text in declarations)
+    line_scoped = any(
+        fact.get("product_match_scope") == "PRODUCT_LINE" for fact, _text in declarations
+    )
+    source_fields = list(dict.fromkeys(str(fact["source_field"]) for fact, _text in declarations))
+    source_field_text = ", ".join(source_fields)
+    if language == "en":
+        scope_note = (
+            " This manufacturer information is scoped to the product line or the stated package "
+            "basis; it does not establish the value for a different size or variant."
+            if line_scoped
+            else " This declaration is matched to the exact catalog variant."
+        )
+        return (
+            f"For {product_name}, {source_text} declares: {details}. "
+            f"Source record: {source_field_text}.{scope_note}"
+        )
+    if language == "zh":
+        scope_note = (
+            "该厂商信息适用于产品系列或所注明的包装规格，不能据此推算其他规格。"
+            if line_scoped
+            else "这项声明与目录中的具体规格相匹配。"
+        )
+        return (
+            f"关于{product_name}，{source_text}公布的信息是：{details}。"
+            f"来源记录：{source_field_text}。{scope_note}"
+        )
+    scope_note = (
+        " Đây là thông tin cấp dòng sản phẩm hoặc theo quy cách được ghi rõ; không thể lấy số "
+        "này suy ra cho chai, lon hay biến thể khác."
+        if line_scoped
+        else " Khai báo này được đối chiếu với đúng biến thể trong catalog."
+    )
+    return (
+        f"Về {product_name}, {source_text} công bố: {details}. "
+        f"Mục nguồn: {source_field_text}.{scope_note}"
     )
 
 

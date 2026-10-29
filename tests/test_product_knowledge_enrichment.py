@@ -120,6 +120,27 @@ def test_direct_catalog_ingredient_evidence_takes_precedence_over_enrichment(
     assert fact.evidence_scope.value == "SOURCE_RECORD"
 
 
+def test_calories_are_projected_from_verified_nutrition_with_the_original_basis(
+    snapshot_repository: SnapshotProductRepository,
+) -> None:
+    product = snapshot_repository.get_product_snapshot("WIN_10307381")
+    assert product is not None
+
+    fact = product_knowledge_facts(
+        product,
+        ("calories",),
+        source="winmart_snapshot",
+        catalog_version=snapshot_repository.dataset_sha256,
+    )[0]
+
+    assert fact.attribute == "calories"
+    assert fact.value == {"energy_kcal": 0, "basis": "per 100 ml"}
+    assert fact.status.value == "VERIFIED"
+    assert fact.evidence_scope.value == "MANUFACTURER_DECLARATION"
+    assert fact.product_match_scope == "PRODUCT_LINE"
+    assert fact.source_field == "Coca-Cola Zero Sugar nutrition values per 100 ml.energy_kcal"
+
+
 @pytest.mark.parametrize(
     "mutation",
     (
