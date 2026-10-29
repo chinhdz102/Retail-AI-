@@ -3761,6 +3761,45 @@ def _grounded_reply(
         if snapshot.status == "NOT_FOUND":
             return _localized_not_found(language)
 
+    ranked_price_observation = next(
+        (
+            item
+            for item in reversed(agent_result.observations)
+            if item.tool_name in {"recommend_products", "search_products"}
+            and item.status == "SUCCESS"
+            and item.content.get("price_ranked_across_scope")
+            and item.products
+        ),
+        None,
+    )
+    if ranked_price_observation is not None:
+        lowest_price = min(product.price_vnd for product in ranked_price_observation.products)
+        lowest_products = tuple(
+            product
+            for product in ranked_price_observation.products
+            if product.price_vnd == lowest_price
+        )
+        names = ", ".join(product.name for product in lowest_products)
+        price = f"{lowest_price:,}"
+        snapshot_date = lowest_products[0].data_timestamp.strftime("%d/%m/%Y")
+        if language == "en":
+            return (
+                f"The lowest catalog reference price in this category is {price} VND: "
+                f"{names}. Catalog snapshot: {snapshot_date}. Package sizes may differ; "
+                "please confirm the in-store price and current stock."
+            )
+        if language == "zh":
+            return (
+                f"该类别中目录参考价最低的是{names}，价格为{price}越南盾。"
+                f"目录快照日期：{snapshot_date}。商品规格可能不同；"
+                "请确认门店价格和当前库存。"
+            )
+        return (
+            f"Trong nhóm hàng này, giá tham khảo thấp nhất trong catalog là "
+            f"{price.replace(',', '.')}đ: {names}. Dữ liệu snapshot ngày {snapshot_date}; "
+            "quy cách có thể khác nhau, bạn kiểm tra lại giá và tồn thực tế tại cửa hàng nhé."
+        )
+
     last_recommendation = next(
         (
             item
@@ -6492,7 +6531,16 @@ async def agent_respond(
                 tools_used=["get_product_snapshot"],
                 products=cheapest,
             )
-    if cheapest_requested and not record.shopping.selected_product_ids:
+    explicit_price_scope = _explicit_recommendation_category(request.text)
+    if cheapest_requested and not record.shopping.selected_product_ids and not explicit_price_scope:
+        try:
+            explicit_price_scope = resolve_catalog_request_category(
+                request.text,
+                get_product_repository(),
+            )
+        except (OSError, RuntimeError, TimeoutError, ValueError):
+            explicit_price_scope = None
+    if cheapest_requested and not record.shopping.selected_product_ids and not explicit_price_scope:
         return _record_shopping_turn(
             request,
             {
@@ -6505,27 +6553,6 @@ async def agent_respond(
                     "I'll find some options first."
                 ),
                 "zh": "您想比较哪类商品的价格？我会先查找一些选择。",
-            }[request.language],
-            model="local-clarification",
-        )
-    if (
-        cheapest_requested
-        and (price_followup_words or _explicit_recommendation_category(request.text))
-        and not is_comparison_request(request.text)
-        and not re.search(r"\b(?:gio(?:\s+hang)?|cart|checkout)\b", normalized_price_question)
-    ):
-        return _record_shopping_turn(
-            request,
-            {
-                "vi": (
-                    "Mình chưa thể xác nhận loại rẻ nhất trong toàn bộ nhóm hàng. "
-                    "Mình có thể tìm vài lựa chọn để bạn so sánh giá; bạn muốn xem không?"
-                ),
-                "en": (
-                    "I can't verify the lowest price across the whole category. "
-                    "Would you like a few options to compare?"
-                ),
-                "zh": "我无法核实整个类别中的最低价格。您想看几种商品进行比较吗？",
             }[request.language],
             model="local-clarification",
         )
@@ -7275,6 +7302,7 @@ async def agent_respond(
         and not is_recommendation_request(request.text)
         and not recommendation_lookup_request
         and not recommendation_constraint_followup
+        and not _product_ranking_requested(request.text)
         and not early_mission_route_requested
         and not prompt_override
         and (
@@ -8500,6 +8528,46 @@ async def agent_respond(
                 agent_result,
                 products=(verified_product,) if verified_product else (),
             )
+        if ranking_requested and _ranking_metric(request.text) == "price":
+            ranked_observation_index = next(
+                (
+                    index
+                    for index in range(len(agent_result.observations) - 1, -1, -1)
+                    if agent_result.observations[index].tool_name
+                    in {"recommend_products", "search_products"}
+                    and agent_result.observations[index].content.get(
+                        "price_ranked_across_scope"
+                    )
+                    and agent_result.observations[index].products
+                ),
+                None,
+            )
+            if ranked_observation_index is not None:
+                ranked_observation = agent_result.observations[ranked_observation_index]
+                minimum_price = min(item.price_vnd for item in ranked_observation.products)
+                cheapest_products = tuple(
+                    item for item in ranked_observation.products if item.price_vnd == minimum_price
+                )
+                filtered_content = dict(ranked_observation.content)
+                cheapest_ids = {item.product_id for item in cheapest_products}
+                filtered_content["items"] = [
+                    item
+                    for item in filtered_content.get("items", [])
+                    if isinstance(item, dict) and item.get("product_id") in cheapest_ids
+                ]
+                filtered_content["count"] = len(cheapest_products)
+                filtered_observation = replace(
+                    ranked_observation,
+                    content=filtered_content,
+                    products=cheapest_products,
+                )
+                observations = list(agent_result.observations)
+                observations[ranked_observation_index] = filtered_observation
+                agent_result = replace(
+                    agent_result,
+                    products=cheapest_products,
+                    observations=tuple(observations),
+                )
         if ranking_requested and _ranking_metric(request.text) != "price":
             ranking_observation = next(
                 (

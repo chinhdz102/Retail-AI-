@@ -74,6 +74,26 @@ def test_punctuation_only_search_is_constrained_to_zero_results(monkeypatch) -> 
     )
 
 
+def test_postgres_price_sort_is_applied_in_sql_before_limit(monkeypatch) -> None:
+    connection = _Connection()
+
+    async def connect(*args, **kwargs):
+        return connection
+
+    monkeypatch.setattr(postgres_repository.asyncpg, "connect", connect)
+    repository = postgres_repository.PostgresProductRepository("postgresql://unused")
+
+    assert repository.search(
+        category="Nước giặt",
+        limit=3,
+        sort_by="price_ascending",
+    ) == []
+
+    normalized_sql = " ".join(connection.query.split())
+    assert "ORDER BY p.effective_price_vnd ASC, p.name, p.product_id LIMIT" in normalized_sql
+    assert "OFFSET" in normalized_sql
+
+
 def test_like_wildcards_are_treated_as_literal_search_text(monkeypatch) -> None:
     connection = _Connection()
 

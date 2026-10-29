@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Protocol
+from typing import Literal, Protocol
 
 from backend.config import Settings, get_settings
 from backend.products.catalog import (
@@ -19,6 +19,8 @@ from backend.products.category_taxonomy import (
     collect_category_hierarchies,
     diversify_by_category_leaf,
 )
+
+ProductSort = Literal["price_ascending", "price_descending"]
 
 
 @dataclass(frozen=True)
@@ -45,6 +47,7 @@ class ProductRepository(Protocol):
         price_value_vnd: int | None = None,
         diversify_by_subcategory: bool = False,
         offset: int = 0,
+        sort_by: ProductSort | None = None,
     ) -> list[ProductSnapshot]: ...
 
     def list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]: ...
@@ -69,13 +72,27 @@ class DemoProductRepository:
     catalog_version = "demo-seed-v1"
     supports_current_stock = True
     supports_spicy_filter = True
+    supports_price_sort = True
 
     def search(self, **criteria) -> list[ProductSnapshot]:
         diversify = bool(criteria.pop("diversify_by_subcategory", False))
         offset = max(0, int(criteria.pop("offset", 0)))
+        sort_by = criteria.pop("sort_by", None)
         limit = max(1, int(criteria.get("limit", 10)))
         criteria["limit"] = offset + limit
         products = search_products(**criteria)
+        if sort_by == "price_ascending":
+            products = sorted(
+                products,
+                key=lambda item: (item.price_vnd, item.name.casefold(), item.product_id),
+            )
+        elif sort_by == "price_descending":
+            products = sorted(
+                products,
+                key=lambda item: (-item.price_vnd, item.name.casefold(), item.product_id),
+            )
+        elif sort_by is not None:
+            raise ValueError(f"Unsupported product sort: {sort_by}")
         if diversify:
             products = diversify_by_category_leaf(products, offset + limit)
         return products[offset : offset + limit]
