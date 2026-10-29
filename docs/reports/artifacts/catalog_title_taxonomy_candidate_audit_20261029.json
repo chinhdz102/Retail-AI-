@@ -1,0 +1,2416 @@
+{
+  "kind": "catalog_title_taxonomy_candidate_mismatch_scan",
+  "generated_at_utc": "2026-10-29T02:55:26.533382+00:00",
+  "code_commit": "59ce118ec52d456de42fc0afa4cb4dfe8dc3d2f3",
+  "catalog_path": "data/winmart_products.json",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "method": "For each snapshot product name, call resolve_catalog_category(name, active_hierarchies); when the resolver returns exact_phrase=True but its normalized category is not an exact normalized segment in that product’s stored hierarchy, record a candidate mismatch.",
+  "interpretation": "This is a broad lexical diagnostic, not a human-labeled error set. Common words, parent/child taxonomy wording, abbreviations, packaging text, and legitimate cross-listed items create false positives. Do not use these rows as an automatic exclusion list or alter gold labels from this scan.",
+  "catalog_product_count": 3081,
+  "product_names_with_exact_resolver_match": 1379,
+  "unreviewed_candidate_mismatch_count": 320,
+  "candidate_mismatch_rate_among_matched_names": 0.2321,
+  "top_resolver_category_to_catalog_leaf_pairs": [
+    {
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "count": 15
+    },
+    {
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "count": 11
+    },
+    {
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "count": 11
+    },
+    {
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "count": 10
+    },
+    {
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo mềm",
+      "count": 8
+    },
+    {
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt trẻ em",
+      "count": 8
+    },
+    {
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Mì ăn liền",
+      "count": 8
+    },
+    {
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Há cảo sủi cảo xíu m",
+      "count": 8
+    },
+    {
+      "resolver_category": "Bơ",
+      "catalog_leaf": "Bơ đóng hộp",
+      "count": 7
+    },
+    {
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "count": 6
+    },
+    {
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack khác",
+      "count": 6
+    },
+    {
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước hoa quả",
+      "count": 6
+    },
+    {
+      "resolver_category": "Đậu",
+      "catalog_leaf": "Hạt bí đóng gói",
+      "count": 5
+    },
+    {
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh ngọt",
+      "count": 5
+    },
+    {
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt gia đình",
+      "count": 5
+    },
+    {
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Rong biển cbiến đgói",
+      "count": 5
+    },
+    {
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thịt đóng hộp",
+      "count": 5
+    },
+    {
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Hải sản khô ăn liền",
+      "count": 4
+    },
+    {
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "count": 4
+    },
+    {
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh xốp và quế",
+      "count": 4
+    },
+    {
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Thạch đóng gói",
+      "count": 4
+    },
+    {
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo cứng",
+      "count": 4
+    },
+    {
+      "resolver_category": "Bàn chải đánh răng",
+      "catalog_leaf": "Bchải đrăng trẻ em",
+      "count": 4
+    },
+    {
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Khăn giấy gói",
+      "count": 4
+    },
+    {
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "count": 4
+    },
+    {
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước uống dinh dưỡng",
+      "count": 4
+    },
+    {
+      "resolver_category": "Thịt gà",
+      "catalog_leaf": "Bún, phở ăn liền",
+      "count": 4
+    },
+    {
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh đa nem",
+      "count": 4
+    },
+    {
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh gạo Toppoki",
+      "count": 4
+    },
+    {
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Ngũ cốc ăn sáng",
+      "count": 4
+    }
+  ],
+  "candidate_rows": [
+    {
+      "product_id": "WIN_10018378",
+      "name": "Bàn chải đánh răng Jordan Step 2 cho trẻ 3 - 5 tuổi (Giao màu ngẫu nhiên)",
+      "resolver_category": "Bàn chải đánh răng",
+      "catalog_leaf": "Bchải đrăng trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Đồ dùng chăm sóc mẹ và bé > Bchải đrăng trẻ em"
+    },
+    {
+      "product_id": "WIN_10205726",
+      "name": "Bàn chải đánh răng Oral Clean Royal Kid Soft màu xanh",
+      "resolver_category": "Bàn chải đánh răng",
+      "catalog_leaf": "Bchải đrăng trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Đồ dùng chăm sóc mẹ và bé > Bchải đrăng trẻ em"
+    },
+    {
+      "product_id": "WIN_10326626",
+      "name": "Bàn chải đánh răng trẻ em Colgate Ultra Soft siêu mềm Barbie/Spiderman",
+      "resolver_category": "Bàn chải đánh răng",
+      "catalog_leaf": "Bchải đrăng trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Đồ dùng chăm sóc mẹ và bé > Bchải đrăng trẻ em"
+    },
+    {
+      "product_id": "WIN_10628562",
+      "name": "Bàn chải đánh răng P/S trẻ em 2-6 tuổi cao cấp",
+      "resolver_category": "Bàn chải đánh răng",
+      "catalog_leaf": "Bchải đrăng trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Đồ dùng chăm sóc mẹ và bé > Bchải đrăng trẻ em"
+    },
+    {
+      "product_id": "WIN_10161795",
+      "name": "Kem đánh răng Colgate Maxfress bamboo Charcoal 225g + bàn chải đánh răng",
+      "resolver_category": "Bàn chải đánh răng",
+      "catalog_leaf": "Kem đánh răng",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc răng miệng > Kem đánh răng"
+    },
+    {
+      "product_id": "WIN_10183495",
+      "name": "Bánh ngon vị dâu Nue 45g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh bông lan tươi",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh bông lan tươi"
+    },
+    {
+      "product_id": "WIN_10055996",
+      "name": "Bánh sừng hươu Bảo Ngọc gói 175g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh croissant",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh croissant"
+    },
+    {
+      "product_id": "WIN_10603100",
+      "name": "Bánh sừng bò Bauli Moonfils Vanilla 47g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh croissant",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh croissant"
+    },
+    {
+      "product_id": "WIN_10603101",
+      "name": "Bánh sừng bò Bauli Moonfils Dâu 45g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh croissant",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh croissant"
+    },
+    {
+      "product_id": "WIN_10055438",
+      "name": "Bánh cốm đậu xanh trần Bảo Minh 85g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh mặn",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh ngọt-mặn > Bánh mặn"
+    },
+    {
+      "product_id": "WIN_10055440",
+      "name": "Bánh cốm Bảo Minh hộp 85g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh mặn",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh ngọt-mặn > Bánh mặn"
+    },
+    {
+      "product_id": "WIN_10314442",
+      "name": "Bánh cốm sầu riêng Bảo Minh 85g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh mặn",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh ngọt-mặn > Bánh mặn"
+    },
+    {
+      "product_id": "WIN_10224919",
+      "name": "Bánh mì chà bông Staff gói 60g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh mặn khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh mặn khác"
+    },
+    {
+      "product_id": "WIN_10315626",
+      "name": "Bánh mì tươi 6 múi Kinh Đô vị chà bông 90g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh mặn khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh mặn khác"
+    },
+    {
+      "product_id": "WIN_10055997",
+      "name": "Bánh Sandwich nhỏ  Bảo Ngọc  gói 275g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh mỳ sandwich",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh mỳ sandwich"
+    },
+    {
+      "product_id": "WIN_10140398",
+      "name": "Bánh mì sandwich Staff gói 275g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh mỳ sandwich",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh mỳ sandwich"
+    },
+    {
+      "product_id": "WIN_10223934",
+      "name": "Bánh pía chay Bảo Minh gói 300g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh ngọt",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh ngọt-mặn > Bánh ngọt"
+    },
+    {
+      "product_id": "WIN_10229623",
+      "name": "Bánh pía trứng Bảo Minh gói 300g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh ngọt",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh ngọt-mặn > Bánh ngọt"
+    },
+    {
+      "product_id": "WIN_10606923",
+      "name": "Bánh pía sầu riêng Thiên Lương Đặc biệt Số 7-400g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh ngọt",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh ngọt-mặn > Bánh ngọt"
+    },
+    {
+      "product_id": "WIN_10607069",
+      "name": "Bánh pía sầu riêng Thiên Lương chay số 11-400g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh ngọt",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh ngọt-mặn > Bánh ngọt"
+    },
+    {
+      "product_id": "WIN_10607104",
+      "name": "Bánh pía sầu riêng Thiên Lương số 9 gói 500g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh ngọt",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh ngọt-mặn > Bánh ngọt"
+    },
+    {
+      "product_id": "WIN_10005016",
+      "name": "Bánh bông nhài Bảo Minh gói 180g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh truyền thống",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh ngọt-mặn > Bánh truyền thống"
+    },
+    {
+      "product_id": "WIN_10007844",
+      "name": "Bánh tráng Safoco Việt Nam gói 200g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh đa nem",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Mì, miến, bánh đa, nui > Bánh đa nem"
+    },
+    {
+      "product_id": "WIN_10007845",
+      "name": "Bánh tráng Safoco gói 300g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh đa nem",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Mì, miến, bánh đa, nui > Bánh đa nem"
+    },
+    {
+      "product_id": "WIN_10281007",
+      "name": "Bánh tráng siêu mỏng Tinh Nguyên 180g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh đa nem",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Mì, miến, bánh đa, nui > Bánh đa nem"
+    },
+    {
+      "product_id": "WIN_10281008",
+      "name": "Bánh tráng Tinh Nguyên  200g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh đa nem",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Mì, miến, bánh đa, nui > Bánh đa nem"
+    },
+    {
+      "product_id": "WIN_10007952",
+      "name": "Bánh đa cua Hoàng Gia gói 120g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh đa ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bánh đa ăn liền"
+    },
+    {
+      "product_id": "WIN_10007953",
+      "name": "Bánh đa cua Vifon bát 125g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bánh đa ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bánh đa ăn liền"
+    },
+    {
+      "product_id": "WIN_10007962",
+      "name": "Bánh phở khô Bông Lúa Vàng Vifon gói 400g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Bún khô, Phở khô",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Mì, miến, bánh đa, nui > Bún khô, Phở khô"
+    },
+    {
+      "product_id": "WIN_10014779",
+      "name": "Bánh sô cô la KitKat Nestlé gói 35g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Chocolate",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Chocolate"
+    },
+    {
+      "product_id": "WIN_10014832",
+      "name": "Bánh sô cô la KitKat Nestlé gói 12 thanh x 17g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Chocolate",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Chocolate"
+    },
+    {
+      "product_id": "WIN_10015413",
+      "name": "Bánh xốp phủ sô cô la trà xanh Nestlé KitKat gói 8 + 2 thanh 2F 136g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Chocolate",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Chocolate"
+    },
+    {
+      "product_id": "WIN_10183401",
+      "name": "Bánh xếp Hàn Quốc CJ Foods nhân tôm 300g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Há cảo sủi cảo xíu m",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Há cảo sủi cảo xíu m"
+    },
+    {
+      "product_id": "WIN_10183402",
+      "name": "Bánh xếp Hàn Quốc CJ Foods nhân nấm 300g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Há cảo sủi cảo xíu m",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Há cảo sủi cảo xíu m"
+    },
+    {
+      "product_id": "WIN_10324982",
+      "name": "Bánh xếp Hàn Quốc Bibigo nhân thịt 350g (gói 10 cái)",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Há cảo sủi cảo xíu m",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Há cảo sủi cảo xíu m"
+    },
+    {
+      "product_id": "WIN_10600788",
+      "name": "Bánh xếp kiểu Hàn Quốc Bibigo nhân hải sản gói 175g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Há cảo sủi cảo xíu m",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Há cảo sủi cảo xíu m"
+    },
+    {
+      "product_id": "WIN_10600789",
+      "name": "Bánh xếp Hàn Quốc Bibigo nhân thịt gói 175g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Há cảo sủi cảo xíu m",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Há cảo sủi cảo xíu m"
+    },
+    {
+      "product_id": "WIN_10605331",
+      "name": "Bánh xếp Hàn Quốc Bibigo nhân thịt và bắp 175g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Há cảo sủi cảo xíu m",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Há cảo sủi cảo xíu m"
+    },
+    {
+      "product_id": "WIN_10605332",
+      "name": "Bánh xếp Hàn Quốc Bibigo nhân hải sản 350g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Há cảo sủi cảo xíu m",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Há cảo sủi cảo xíu m"
+    },
+    {
+      "product_id": "WIN_10605333",
+      "name": "Bánh xếp nhân thịt và bắp CJ Foods  350g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Há cảo sủi cảo xíu m",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Há cảo sủi cảo xíu m"
+    },
+    {
+      "product_id": "WIN_10007888",
+      "name": "Bánh phồng tôm Sa Giang gói 200g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Phồng tôm đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Phồng tôm đóng gói"
+    },
+    {
+      "product_id": "WIN_10007889",
+      "name": "Bánh phồng tôm Sa Giang gói 100g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Phồng tôm đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Phồng tôm đóng gói"
+    },
+    {
+      "product_id": "WIN_10141998",
+      "name": "Bánh phồng tôm hạt sen Sa Giang 100g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Phồng tôm đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Phồng tôm đóng gói"
+    },
+    {
+      "product_id": "WIN_10013932",
+      "name": "Bánh snack vị kim chi Hàn Quốc O'Star gói 90g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack kh.tây chiên"
+    },
+    {
+      "product_id": "WIN_10013935",
+      "name": "Bánh snack khoai tây tươi vị tảo biển O'Star gói 90g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack kh.tây chiên"
+    },
+    {
+      "product_id": "WIN_10015714",
+      "name": "Bánh lát khoai tây vị thơm cay Slide hộp 160g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack kh.tây chiên"
+    },
+    {
+      "product_id": "WIN_10015741",
+      "name": "Bánh snack vị bít tết kiểu New York Swing gói 90g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack kh.tây chiên"
+    },
+    {
+      "product_id": "WIN_10016331",
+      "name": "Bánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack kh.tây chiên"
+    },
+    {
+      "product_id": "WIN_10303866",
+      "name": "Bánh snack Swing vị gà Teriyali Osaka Orion gói 90g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack kh.tây chiên"
+    },
+    {
+      "product_id": "WIN_10013465",
+      "name": "Bánh que tôm Doakbua gói 55g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack khác"
+    },
+    {
+      "product_id": "WIN_10013793",
+      "name": "Bánh que tôm Doakbua gói 25g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack khác"
+    },
+    {
+      "product_id": "WIN_10013794",
+      "name": "Bánh que thịt heo xông khói Doakbua gói 25g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack khác"
+    },
+    {
+      "product_id": "WIN_10195958",
+      "name": "Bánh que vị rong biển Mix 60g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack khác"
+    },
+    {
+      "product_id": "WIN_10270024",
+      "name": "Bánh que cay MAXS 55G",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack khác"
+    },
+    {
+      "product_id": "WIN_10629512",
+      "name": "Bánh que hỗn hợp Mix Hot Chili 60g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Snack khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack khác"
+    },
+    {
+      "product_id": "WIN_10240211",
+      "name": "Bánh tráng mắm ruốc Vị gói 125g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Đồ ăn vặt khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Thức ăn nấu sẵn > Đồ ăn vặt > Đồ ăn vặt khác"
+    },
+    {
+      "product_id": "WIN_10241258",
+      "name": "Bánh tráng sốt tôm Vị gói 125g",
+      "resolver_category": "Bánh",
+      "catalog_leaf": "Đồ ăn vặt khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Thức ăn nấu sẵn > Đồ ăn vặt > Đồ ăn vặt khác"
+    },
+    {
+      "product_id": "WIN_10607316",
+      "name": "Bánh bao chỉ tổng hợp 300g",
+      "resolver_category": "Bánh bao",
+      "catalog_leaf": "Bánh Mochi",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh Mochi"
+    },
+    {
+      "product_id": "WIN_10056346",
+      "name": "Bánh gạo Topokki cay ngọt Young Poong hộp 140g",
+      "resolver_category": "Bánh gạo",
+      "catalog_leaf": "Bánh gạo Toppoki",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bánh gạo Toppoki"
+    },
+    {
+      "product_id": "WIN_10323463",
+      "name": "Hộp bút Silicon",
+      "resolver_category": "Bút",
+      "catalog_leaf": "Đồ dùng học sinh",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Văn phòng phẩm > Đồ dùng học sinh > Đồ dùng học sinh"
+    },
+    {
+      "product_id": "WIN_10005754",
+      "name": "Bơ Thực Vật Cao Cấp Meizan 80g",
+      "resolver_category": "Bơ",
+      "catalog_leaf": "Bơ đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Bơ đóng hộp"
+    },
+    {
+      "product_id": "WIN_10005755",
+      "name": "Bơ Thực Vật Cao Cấp Meizan 200g",
+      "resolver_category": "Bơ",
+      "catalog_leaf": "Bơ đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Bơ đóng hộp"
+    },
+    {
+      "product_id": "WIN_10005891",
+      "name": "Bơ thực vật Tường An hộp 80g",
+      "resolver_category": "Bơ",
+      "catalog_leaf": "Bơ đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Bơ đóng hộp"
+    },
+    {
+      "product_id": "WIN_10007597",
+      "name": "Bơ đậu phộng mịn Golden Farm lọ 170g",
+      "resolver_category": "Bơ",
+      "catalog_leaf": "Bơ đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Bơ đóng hộp"
+    },
+    {
+      "product_id": "WIN_10007598",
+      "name": "Bơ đậu phộng Golden Farm lọ 170g",
+      "resolver_category": "Bơ",
+      "catalog_leaf": "Bơ đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Bơ đóng hộp"
+    },
+    {
+      "product_id": "WIN_10007599",
+      "name": "Bơ đậu phộng Golden Farm mịn lọ 340g",
+      "resolver_category": "Bơ",
+      "catalog_leaf": "Bơ đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Bơ đóng hộp"
+    },
+    {
+      "product_id": "WIN_10010121",
+      "name": "Bơ thực vật Tường An hộp 200g",
+      "resolver_category": "Bơ",
+      "catalog_leaf": "Bơ đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Bơ đóng hộp"
+    },
+    {
+      "product_id": "WIN_10020648",
+      "name": "Khăn ướt chăm sóc da Fressi Care All 100 miếng",
+      "resolver_category": "Chăm sóc da",
+      "catalog_leaf": "Giấy ướt gia đình",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt gia đình"
+    },
+    {
+      "product_id": "WIN_10017475",
+      "name": "Sữa tắm chăm sóc da Lifebuoy chai 850g",
+      "resolver_category": "Chăm sóc da",
+      "catalog_leaf": "Sữa tắm nữ",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Sữa tắm và làm sạch > Sữa tắm nữ"
+    },
+    {
+      "product_id": "WIN_10018164",
+      "name": "Sữa tắm Lifebuoy chăm sóc da túi 850g",
+      "resolver_category": "Chăm sóc da",
+      "catalog_leaf": "Sữa tắm nữ",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Sữa tắm và làm sạch > Sữa tắm nữ"
+    },
+    {
+      "product_id": "WIN_10170932",
+      "name": "Sữa tắm Dove chăm sóc da nhạy cảm 500g",
+      "resolver_category": "Chăm sóc da",
+      "catalog_leaf": "Sữa tắm nữ",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Sữa tắm và làm sạch > Sữa tắm nữ"
+    },
+    {
+      "product_id": "WIN_10007460",
+      "name": "Cá nục sốt cà Lilly hộp 155g",
+      "resolver_category": "Cà",
+      "catalog_leaf": "Cá, tôm đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Cá, tôm đóng hộp"
+    },
+    {
+      "product_id": "WIN_10007531",
+      "name": "Cá nục sốt cà Three Lady Cooks lon 155g",
+      "resolver_category": "Cà",
+      "catalog_leaf": "Cá, tôm đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Cá, tôm đóng hộp"
+    },
+    {
+      "product_id": "WIN_10008529",
+      "name": "Xốt cà chua thịt bò băm Barilla lọ 400g",
+      "resolver_category": "Cà chua",
+      "catalog_leaf": "Các loại sốt",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Gia vị > Các loại sốt"
+    },
+    {
+      "product_id": "WIN_10013919",
+      "name": "Bánh quy cà phê Roma gói 142g",
+      "resolver_category": "Cà phê",
+      "catalog_leaf": "Bánh biscuit",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh biscuit"
+    },
+    {
+      "product_id": "WIN_10013920",
+      "name": "Bánh cà phê Mayora hộp 180g",
+      "resolver_category": "Cà phê",
+      "catalog_leaf": "Bánh biscuit",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh biscuit"
+    },
+    {
+      "product_id": "WIN_10014042",
+      "name": "Bánh Qui Coffê Joy Vị Cà Phê 312/360g",
+      "resolver_category": "Cà phê",
+      "catalog_leaf": "Bánh biscuit",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh biscuit"
+    },
+    {
+      "product_id": "WIN_10014110",
+      "name": "Bánh snack que nhân cà phê moka Akiko gói 160g",
+      "resolver_category": "Cà phê",
+      "catalog_leaf": "Bánh xốp và quế",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh xốp và quế"
+    },
+    {
+      "product_id": "WIN_10170957",
+      "name": "Bơ dưỡng thể cà phê Đắk Lắk Cocoon 200ml",
+      "resolver_category": "Cà phê",
+      "catalog_leaf": "Kem dưỡng toàn thân",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc cơ thể > Kem dưỡng toàn thân"
+    },
+    {
+      "product_id": "WIN_10014464",
+      "name": "Kẹo cà phê Coffeeshot Kopiko gói 150g",
+      "resolver_category": "Cà phê",
+      "catalog_leaf": "Kẹo cứng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo cứng"
+    },
+    {
+      "product_id": "WIN_10170960",
+      "name": "Tẩy tế bào chết mặt cà phê Đắk Lắk Cocoon 150ml",
+      "resolver_category": "Cà phê",
+      "catalog_leaf": "Sữa rửa mặt nữ",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da > Sữa rửa mặt nữ"
+    },
+    {
+      "product_id": "WIN_10223994",
+      "name": "Cháo tươi SG Food baby gà cà rốt gói 240g",
+      "resolver_category": "Cà rốt",
+      "catalog_leaf": "Cháo ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Cháo ăn liền"
+    },
+    {
+      "product_id": "WIN_10223995",
+      "name": "Cháo tươi baby bò đậu Hà Lan cà rốt SG Food gói 240g",
+      "resolver_category": "Cà rốt",
+      "catalog_leaf": "Cháo ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Cháo ăn liền"
+    },
+    {
+      "product_id": "WIN_10281772",
+      "name": "Cần tây nhỏ 100g",
+      "resolver_category": "Cần tây",
+      "catalog_leaf": "Rau gia vị ăn lá",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Rau củ > Rau gia vị > Rau gia vị ăn lá"
+    },
+    {
+      "product_id": "WIN_10007335",
+      "name": "Dưa chuột ngâm Fragata lọ 345g",
+      "resolver_category": "Dưa chuột",
+      "catalog_leaf": "Rau củ quả đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Rau củ quả đóng hộp"
+    },
+    {
+      "product_id": "WIN_10181042",
+      "name": "Lá Kim tẩm dầu Ô Liu Miwon 10g",
+      "resolver_category": "Dầu ô liu",
+      "catalog_leaf": "Rong biển cbiến đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Rong biển cbiến đgói"
+    },
+    {
+      "product_id": "WIN_10181043",
+      "name": "Lá Kim  Miwon tẩm dầu Ô Liu 15g",
+      "resolver_category": "Dầu ô liu",
+      "catalog_leaf": "Rong biển cbiến đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Rong biển cbiến đgói"
+    },
+    {
+      "product_id": "WIN_10086931",
+      "name": "Giấy thấm dầu ăn Komoda 27 x 25 cm (40 tờ)",
+      "resolver_category": "Dầu ăn",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10327464",
+      "name": "Bột chiên giòn nêm sẵn gia vị Meizan gói 150g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Bột chiên, rán",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Các loại bột nấu ăn > Bột chiên, rán"
+    },
+    {
+      "product_id": "WIN_10011145",
+      "name": "Mực tẩm gia vị Thái Bento gói 24g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Hải sản khô ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Hải sản khô ăn liền"
+    },
+    {
+      "product_id": "WIN_10011147",
+      "name": "Snack mực tẩm gia vị cay ngọt Bento gói 24g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Hải sản khô ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Hải sản khô ăn liền"
+    },
+    {
+      "product_id": "WIN_10604903",
+      "name": "Snack hải sản tẩm gia vị cực cay Bento gói 20g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Hải sản khô ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Hải sản khô ăn liền"
+    },
+    {
+      "product_id": "WIN_10604904",
+      "name": "Snack hải sản tẩm gia vị cay Bento gói 24g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Hải sản khô ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Hải sản khô ăn liền"
+    },
+    {
+      "product_id": "WIN_10601690",
+      "name": "Mì Ottogi không gói gia vị 110g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Mì ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+    },
+    {
+      "product_id": "WIN_10142170",
+      "name": "Lá kim Miwon tẩm gia vị 22g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Rong biển cbiến đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Rong biển cbiến đgói"
+    },
+    {
+      "product_id": "WIN_10181045",
+      "name": "Rong Biển Giòn Trộn Gia Vị Miwon 30g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Rong biển cbiến đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Rong biển cbiến đgói"
+    },
+    {
+      "product_id": "WIN_10327449",
+      "name": "Rong biển tẩm gia vị Daesang Miwon 8 gói x 2,3g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Rong biển cbiến đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Rong biển cbiến đgói"
+    },
+    {
+      "product_id": "WIN_10327450",
+      "name": "Rong biển giòn trộn gia vị Daesang Miwon 50g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Rong biển cbiến đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Rong biển cbiến đgói"
+    },
+    {
+      "product_id": "WIN_10616887",
+      "name": "Rong biển tẩm gia vị ăn liền Ottogi 4.2g",
+      "resolver_category": "Gia vị",
+      "catalog_leaf": "Rong biển cbiến đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Rong biển cbiến đgói"
+    },
+    {
+      "product_id": "WIN_10020616",
+      "name": "Giấy đa năng 2 lớp Elene gói 2 cuộn",
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Giấy bếp",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy bếp"
+    },
+    {
+      "product_id": "WIN_10170881",
+      "name": "Giấy lụa gói E'mos Special 2 lớp 250 tờ",
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10170882",
+      "name": "Giấy rút lụa  Silkwell 3 lớp 200 tờ",
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10171202",
+      "name": "Giấy lụa rút tre Elene 100 tờ 3 lớp",
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10317179",
+      "name": "Giấy ăn 2 lớp Bless You Softpack (gói 250 tờ)",
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10260531",
+      "name": "Giấy gói quà Thiên Long 4",
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Quà tặng",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Văn phòng phẩm > Quà tặng > Quà tặng"
+    },
+    {
+      "product_id": "WIN_10026593",
+      "name": "Giấy thấm dầu Kokusai 24.5cmx24cm (20 tờ /túi)",
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250996",
+      "name": "Giấy nướng đa năng (giấy nến) 20*22cm Winmart Home",
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250997",
+      "name": "Giấy thấm dầu 20*22cm Winmart Home",
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10300324",
+      "name": "Giấy thấm dầu Seria gói 50 tờ",
+      "resolver_category": "Giấy",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10064937",
+      "name": "Gối Memory Foam 50D Lock&Lock HLW113",
+      "resolver_category": "Gối",
+      "catalog_leaf": "Đồ nội thất",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Đồ dùng Dân dụng/Trang trí > Đồ dùng trong nhà > Đồ nội thất"
+    },
+    {
+      "product_id": "WIN_10628014",
+      "name": "Kem đánh răng Oral Clean Tom&Jerry Tutti Frutti 75ml",
+      "resolver_category": "Kem đánh răng",
+      "catalog_leaf": "Kem đánh răng trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Đồ dùng chăm sóc mẹ và bé > Kem đánh răng trẻ em"
+    },
+    {
+      "product_id": "WIN_10320566",
+      "name": "Kem đánh răng New Choice vị trái cây 450g",
+      "resolver_category": "Kem đánh răng",
+      "catalog_leaf": "Thạch đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Thạch đóng gói"
+    },
+    {
+      "product_id": "WIN_10020649",
+      "name": "Khăn ướt lau mặt FRESSICARE 20 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt gia đình",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt gia đình"
+    },
+    {
+      "product_id": "WIN_10162436",
+      "name": "Khăn ướt Kinkin mùi trà xanh có nắp 100 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt gia đình",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt gia đình"
+    },
+    {
+      "product_id": "WIN_10162437",
+      "name": "Khăn ướt không mùi Kinkin có nắp 100 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt gia đình",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt gia đình"
+    },
+    {
+      "product_id": "WIN_10316597",
+      "name": "Khăn ướt Yuniku xanh ngọc 90 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt gia đình",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt gia đình"
+    },
+    {
+      "product_id": "WIN_10316598",
+      "name": "Khăn ướt YUNIKU 20 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt gia đình",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt gia đình"
+    },
+    {
+      "product_id": "WIN_10020515",
+      "name": "Khăn ướt không mùi Mamamy 100 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt trẻ em"
+    },
+    {
+      "product_id": "WIN_10020597",
+      "name": "Khăn ướt vệ sinh Mamamy 100 tờ có mùi",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt trẻ em"
+    },
+    {
+      "product_id": "WIN_10020600",
+      "name": "Khăn giấy ướt Mamamy có nắp không mùi gói 80 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt trẻ em"
+    },
+    {
+      "product_id": "WIN_10020602",
+      "name": "Khăn ướt vệ sinh 30 tờ không mùi Mamamy",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt trẻ em"
+    },
+    {
+      "product_id": "WIN_10020722",
+      "name": "Khăn ướt Baby Nuna không mùi 80 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt trẻ em"
+    },
+    {
+      "product_id": "WIN_10229088",
+      "name": "Khăn ướt trẻ em Bobby 100 miếng không mùi hương",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt trẻ em"
+    },
+    {
+      "product_id": "WIN_10232580",
+      "name": "Khăn ướt không mùi Huggies 64 Miếng",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt trẻ em"
+    },
+    {
+      "product_id": "WIN_10639160",
+      "name": "Khăn ướt Huggié bơ cacao và hạt mỡ 72 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Giấy ướt trẻ em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Giấy ướt trẻ em"
+    },
+    {
+      "product_id": "WIN_10020501",
+      "name": "Khăn giấy lụa 2 lớp Elene gói 260 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10020513",
+      "name": "Khăn giấy ăn rút 2 lớp Watersilk gói 200 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10020563",
+      "name": "Khăn giấy lụa 2 lớp Fairy 280 tờ 200 x 195mm",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10020624",
+      "name": "Khăn giấy rút 2 lớp Silkwell 280 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10020644",
+      "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10020777",
+      "name": "Khăn giấy lụa 2 lớp Teddy Bear Mollis gói 300 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10161781",
+      "name": "Khăn giấy rút Elène 3 lớp gói 160 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10195151",
+      "name": "Khăn rút Fairy ngắn 150 tờ 3 lớp",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10317180",
+      "name": "Khăn ăn cao cấp 1 lớp Bless You 100 tờ 33 x 33 cm",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10624441",
+      "name": "Khăn giấy bỏ túi Tempo 4 lớp gói 90 tờ 16 x 19,5 cm",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10628250",
+      "name": "Khăn giấy rút Tempo Softpack 90 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn giấy gói",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+    },
+    {
+      "product_id": "WIN_10160732",
+      "name": "Khăn ướt cồn diệt khuẩn LETGREEN 50 tờ",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn ướt đa năng",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn ướt đa năng"
+    },
+    {
+      "product_id": "WIN_10170928",
+      "name": "Khăn ướt kháng khuẩn khử mùi Let Green 15 miếng",
+      "resolver_category": "Khăn",
+      "catalog_leaf": "Khăn ướt đa năng",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn ướt đa năng"
+    },
+    {
+      "product_id": "WIN_10026675",
+      "name": "Khăn lau micro tiện dụng Scotch Brite 30*30",
+      "resolver_category": "Khăn lau",
+      "catalog_leaf": "Dụng cụ cọ rửa bếp",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng giặt là, vệ sinh > Dụng cụ cọ rửa bếp"
+    },
+    {
+      "product_id": "WIN_10306388",
+      "name": "Combo 2 khăn mặt sợi tre Unobaby CBO2 28x50",
+      "resolver_category": "Khăn mặt",
+      "catalog_leaf": "Khăn tay",
+      "category_hierarchy": "Phi thực phẩm > Dệt may > Bông vải sợi, giày dép > Khăn > Khăn tay"
+    },
+    {
+      "product_id": "WIN_10009094",
+      "name": "Muối ớt chanh Nha Trang Dh Foods lọ 200g",
+      "resolver_category": "Muối",
+      "catalog_leaf": "Các loại sốt",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Gia vị > Các loại sốt"
+    },
+    {
+      "product_id": "WIN_10281713",
+      "name": "Măng tây xanh 200g",
+      "resolver_category": "Măng",
+      "catalog_leaf": "Rau khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Rau củ > Rau ăn lá > Rau khác"
+    },
+    {
+      "product_id": "WIN_10054133",
+      "name": "Măng muối ớt muối dổ Kim bôi lọ 750g",
+      "resolver_category": "Măng",
+      "catalog_leaf": "Rau, quả chua",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Thức ăn nấu sẵn > Salad, đồ chua > Rau, quả chua"
+    },
+    {
+      "product_id": "WIN_10196291",
+      "name": "Kẹo Họng Orion vị gừng mật ong 87.5g",
+      "resolver_category": "Mật ong",
+      "catalog_leaf": "Kẹo cứng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo cứng"
+    },
+    {
+      "product_id": "WIN_10405866",
+      "name": "Kẹo họng vị Việt Quất mật ong 87.5g",
+      "resolver_category": "Mật ong",
+      "catalog_leaf": "Kẹo cứng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo cứng"
+    },
+    {
+      "product_id": "WIN_10015558",
+      "name": "Ngũ cốc mật ong Honey Stars hộp 300g",
+      "resolver_category": "Mật ong",
+      "catalog_leaf": "Ngũ cốc ăn sáng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn sáng > Ngũ cốc ăn sáng"
+    },
+    {
+      "product_id": "WIN_10196848",
+      "name": "Trà tắc mật ong  TVT chai 450/470ml",
+      "resolver_category": "Mật ong",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10601530",
+      "name": "Trà chanh mật ong Lipton Ice Tea hộp 16 gói x 14g",
+      "resolver_category": "Mật ong",
+      "catalog_leaf": "Trà hòa tan",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Trà > Trà hòa tan"
+    },
+    {
+      "product_id": "WIN_10282438",
+      "name": "Chân gà vị mật ong Chef Biggy 30g",
+      "resolver_category": "Mật ong",
+      "catalog_leaf": "Đồ ăn vặt từ thịt",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Thức ăn nấu sẵn > Đồ ăn vặt > Đồ ăn vặt từ thịt"
+    },
+    {
+      "product_id": "WIN_10011216",
+      "name": "Thùng 24 chai nước khoáng thiên nhiên Aquafina chai 500ml",
+      "resolver_category": "Nước khoáng",
+      "catalog_leaf": "Nước tinh khiết",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước tinh khiết"
+    },
+    {
+      "product_id": "WIN_10161495",
+      "name": "Nước súc miệng Listerine Trẻ em hương dâu 250ml",
+      "resolver_category": "Nước súc miệng",
+      "catalog_leaf": "Nước súc miệng t.em",
+      "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Đồ dùng chăm sóc mẹ và bé > Nước súc miệng t.em"
+    },
+    {
+      "product_id": "WIN_10627955",
+      "name": "Nấm hương Đông Nam Việt 200g",
+      "resolver_category": "Nấm",
+      "catalog_leaf": "Nấm khô",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Gạo & Nông sản khô > Nấm khô"
+    },
+    {
+      "product_id": "WIN_10183496",
+      "name": "Bánh ngon vị phô mai Nue 38g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh bông lan tươi",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh bông lan tươi"
+    },
+    {
+      "product_id": "WIN_10141088",
+      "name": "Tokpokki Hàn Quốc vị phô mai gói 140g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh gạo Toppoki",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bánh gạo Toppoki"
+    },
+    {
+      "product_id": "WIN_10141835",
+      "name": "Tokpokki vị phô mai Miwon gói 300g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh gạo Toppoki",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bánh gạo Toppoki"
+    },
+    {
+      "product_id": "WIN_10181047",
+      "name": "Tokpokki MiWon Hàn Quốc vị phô mai hộp 105g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh gạo Toppoki",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bánh gạo Toppoki"
+    },
+    {
+      "product_id": "WIN_10181049",
+      "name": "Tokpokki MiWon Hàn Quốc vị phô mai gói 140g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh gạo Toppoki",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bánh gạo Toppoki"
+    },
+    {
+      "product_id": "WIN_10281742",
+      "name": "Bịch 6 gói Karo Bánh trứng chà bông phô mai 26g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh mặn khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh mặn khác"
+    },
+    {
+      "product_id": "WIN_10183370",
+      "name": "Bánh pía Mỹ Ngọc chà bông trứng muối phô mai 90g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh ngọt",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh ngọt-mặn > Bánh ngọt"
+    },
+    {
+      "product_id": "WIN_10140547",
+      "name": "Bánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh ngọt khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh ngọt khác"
+    },
+    {
+      "product_id": "WIN_10014286",
+      "name": "Bánh xốp nhân phô mai Nabati gói 52g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh xốp và quế",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh xốp và quế"
+    },
+    {
+      "product_id": "WIN_10060926",
+      "name": "Bánh xốp phô mai Cal Cheese Mayora hộp 20 x 8.5g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh xốp và quế",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh xốp và quế"
+    },
+    {
+      "product_id": "WIN_10192260",
+      "name": "Bánh kem xốp phô mai Tipo hộp 180g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh xốp và quế",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh xốp và quế"
+    },
+    {
+      "product_id": "WIN_10639588",
+      "name": "Snack que nhân phô mai Akiko 160g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Bánh xốp và quế",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh xốp và quế"
+    },
+    {
+      "product_id": "WIN_10009535",
+      "name": "Nước xốt phô mai cay Kewpie chai 210ml",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Mayonnaise & S.salad",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Gia vị > Mayonnaise & S.salad"
+    },
+    {
+      "product_id": "WIN_10140923",
+      "name": "Mì xào NISSIN  hương vị gà cay phô mai Hàn Quốc gói 72g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Mì ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+    },
+    {
+      "product_id": "WIN_10141829",
+      "name": "Mì khô gà phô mai Quattro Samyang gói 145g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Mì ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+    },
+    {
+      "product_id": "WIN_10142035",
+      "name": "Mì bò cay phô mai Nissin 70g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Mì ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+    },
+    {
+      "product_id": "WIN_10180811",
+      "name": "Mì ly mini Doraemon hàu sữa phô mai 48g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Mì ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+    },
+    {
+      "product_id": "WIN_10180829",
+      "name": "Mỳ ly khô gà cay Samyang vị phô mai 70g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Mì ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+    },
+    {
+      "product_id": "WIN_10224007",
+      "name": "Mì khô gà cay vị phô mai Samyang gói 140g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Mì ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+    },
+    {
+      "product_id": "WIN_10602866",
+      "name": "Thùng 24 gói mì spaghetti Bistro xốt kem phô mai kiểu Ý  100g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Mì ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+    },
+    {
+      "product_id": "WIN_10639850",
+      "name": "Mì Omachi trộn phô mai trứng muối 105g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Mì ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+    },
+    {
+      "product_id": "WIN_10181145",
+      "name": "Yến Mạch Hạnh nhân Phô mai Oatta gói  300g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Ngũ cốc ăn sáng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn sáng > Ngũ cốc ăn sáng"
+    },
+    {
+      "product_id": "WIN_10183338",
+      "name": "Pizza xúc xích phô mai Kitkool 140g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Pizza đông lạnh",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Pizza đông lạnh"
+    },
+    {
+      "product_id": "WIN_10015708",
+      "name": "Snack khoai tây vị phô mai Slide lon 75g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack kh.tây chiên"
+    },
+    {
+      "product_id": "WIN_10015713",
+      "name": "Bánh lát khoai tây vị phô mai Slide hộp 160g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack kh.tây chiên"
+    },
+    {
+      "product_id": "WIN_10015828",
+      "name": "Snack khoai tây Pringles vị phô mai 110g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack kh.tây chiên"
+    },
+    {
+      "product_id": "WIN_10623327",
+      "name": "Snack Lay's wavy vị phô mai cheddar 95g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Snack kh.tây chiên",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack kh.tây chiên"
+    },
+    {
+      "product_id": "WIN_10197481",
+      "name": "Snack vị phô mai bùng nổ  Toonies 60g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Snack rau, củ, quả",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack rau, củ, quả"
+    },
+    {
+      "product_id": "WIN_10320541",
+      "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Snack rau, củ, quả",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack rau, củ, quả"
+    },
+    {
+      "product_id": "WIN_10142168",
+      "name": "Rong biển Miwon cuộn nướng vị pho mai 6g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Snack rong biển",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack rong biển"
+    },
+    {
+      "product_id": "WIN_10006880",
+      "name": "Phô mai que Đôi Đũa Vàng khay 300g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Xôi bánh bún miến đl",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Xôi bánh bún miến đl"
+    },
+    {
+      "product_id": "WIN_10183829",
+      "name": "Mỳ spaghetti bò bằm phô mai LC Food  270g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Xôi bánh bún miến đl",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Xôi bánh bún miến đl"
+    },
+    {
+      "product_id": "WIN_10183841",
+      "name": "Xúc xích phô mai LC Food 200g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Xúc xích thanh trùng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thịt nguội, xúc xích, hàng chua > Xúc xích, Lạp xưởng > Xúc xích thanh trùng"
+    },
+    {
+      "product_id": "WIN_10183381",
+      "name": "Xúc xích lắc Heo Cao Bồi thịt nướng phô mai 5*15g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Xúc xích tiệt trùng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thịt nguội, xúc xích, hàng chua > Xúc xích, Lạp xưởng > Xúc xích tiệt trùng"
+    },
+    {
+      "product_id": "WIN_10311975",
+      "name": "Xúc xích lắc Heo Cao Bồi phô mai hộp 4 cây*15g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Xúc xích tiệt trùng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thịt nguội, xúc xích, hàng chua > Xúc xích, Lạp xưởng > Xúc xích tiệt trùng"
+    },
+    {
+      "product_id": "WIN_10321745",
+      "name": "Xúc xích lắc phô mai bắp bơ Heo Cao Bồi 64g",
+      "resolver_category": "Phô mai",
+      "catalog_leaf": "Xúc xích tiệt trùng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thịt nguội, xúc xích, hàng chua > Xúc xích, Lạp xưởng > Xúc xích tiệt trùng"
+    },
+    {
+      "product_id": "WIN_10006509",
+      "name": "Viên hải sản rau củ Thabifood gói 500g",
+      "resolver_category": "Rau củ",
+      "catalog_leaf": "Chả viên t.hợp đlạnh",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thực phẩm chế biến đông lạnh > Chả viên t.hợp đlạnh"
+    },
+    {
+      "product_id": "WIN_10141997",
+      "name": "Bánh phồng tôm rau củ Sa Giang 100g",
+      "resolver_category": "Rau củ",
+      "catalog_leaf": "Phồng tôm đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Phồng tôm đóng gói"
+    },
+    {
+      "product_id": "WIN_10141105",
+      "name": "Rong biển trộn cơm rau củ kimnori Tohogenkai gói 50g",
+      "resolver_category": "Rau củ",
+      "catalog_leaf": "Rong biển cbiến đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm khô chế biến > Rong biển cbiến đgói"
+    },
+    {
+      "product_id": "WIN_10014111",
+      "name": "Snack que nhân sữa Akiko gói 160g",
+      "resolver_category": "Snack",
+      "catalog_leaf": "Bánh xốp và quế",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh xốp và quế"
+    },
+    {
+      "product_id": "WIN_10015802",
+      "name": "Snack nhân đậu phộng vị nước cốt dừa Pinattsu Oishi gói 100g",
+      "resolver_category": "Snack",
+      "catalog_leaf": "Hạt bí đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Hạt sấy khô > Hạt bí đóng gói"
+    },
+    {
+      "product_id": "WIN_10015803",
+      "name": "Snack nhân đậu phộng vị mực cay Pinattsu Oishi gói 100g",
+      "resolver_category": "Snack",
+      "catalog_leaf": "Hạt bí đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Hạt sấy khô > Hạt bí đóng gói"
+    },
+    {
+      "product_id": "WIN_10195916",
+      "name": "Bánh cuộn kem sữa chua việt quất Tipo 180g",
+      "resolver_category": "Sữa chua",
+      "catalog_leaf": "Bánh bông lan",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh bông lan"
+    },
+    {
+      "product_id": "WIN_10640382",
+      "name": "Kẹo dẻo xếp hình sữa chua Playmore 64g",
+      "resolver_category": "Sữa chua",
+      "catalog_leaf": "Kẹo mềm",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo mềm"
+    },
+    {
+      "product_id": "WIN_10620855",
+      "name": "Lốc 6 chai nước giải khát không gas Good Mood vị sữa chua 455ml",
+      "resolver_category": "Sữa chua",
+      "catalog_leaf": "Nước hoa quả",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước hoa quả"
+    },
+    {
+      "product_id": "WIN_10014608",
+      "name": "Thạch sữa chưa Vfoods ABC 920g",
+      "resolver_category": "Sữa chua",
+      "catalog_leaf": "Thạch đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Thạch đóng gói"
+    },
+    {
+      "product_id": "WIN_10060901",
+      "name": "Socola sữa hạt dẻ Ritter Sport 100g",
+      "resolver_category": "Sữa hạt",
+      "catalog_leaf": "Chocolate",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Chocolate"
+    },
+    {
+      "product_id": "WIN_10005822",
+      "name": "Kem sữa tươi whipping cream Anchor hộp 1L",
+      "resolver_category": "Sữa tươi",
+      "catalog_leaf": "Kem sữa tươi làmbánh",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Kem sữa tươi (cream) > Kem sữa tươi làmbánh"
+    },
+    {
+      "product_id": "WIN_10005881",
+      "name": "Kem sữa tươi Emborg whipped cream 250ml",
+      "resolver_category": "Sữa tươi",
+      "catalog_leaf": "Kem sữa tươi làmbánh",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Kem sữa tươi (cream) > Kem sữa tươi làmbánh"
+    },
+    {
+      "product_id": "WIN_10196814",
+      "name": "Sữa tươi tiệt trùng Meiji không Lactose 946ml",
+      "resolver_category": "Sữa tươi tiệt trùng",
+      "catalog_leaf": "Sữa tươi thanh trùng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi thanh trùng"
+    },
+    {
+      "product_id": "WIN_10006639",
+      "name": "Thịt cua đồng xay tinh chế Vinacua gói 250g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Cua đông lạnh đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thủy hải sản đông lạnh đóng gói > Cua đông lạnh đgói"
+    },
+    {
+      "product_id": "WIN_10282507",
+      "name": "Thịt bò Úc Kiaora xay khay 200g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thịt bò đông lạnh",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thịt đông lạnh > Thịt bò đông lạnh"
+    },
+    {
+      "product_id": "WIN_10315293",
+      "name": "Thịt bò Bít tết Fuji gói 200g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thịt bò đông lạnh",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thịt đông lạnh > Thịt bò đông lạnh"
+    },
+    {
+      "product_id": "WIN_10601378",
+      "name": "Thịt bò New Zealand Hamburger KiaOra khay 200g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thịt bò đông lạnh",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đông lạnh > Thịt đông lạnh > Thịt bò đông lạnh"
+    },
+    {
+      "product_id": "WIN_10639559",
+      "name": "Thịt lợn hun khói Tâm Hòa Cao bằng gói 500g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thịt xông khói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thịt nguội, xúc xích, hàng chua > Thịt nguội > Thịt xông khói"
+    },
+    {
+      "product_id": "WIN_10007522",
+      "name": "Thịt hộp  Spam Classic  hộp 340g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thịt đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Thịt đóng hộp"
+    },
+    {
+      "product_id": "WIN_10141583",
+      "name": "Thịt viên 3 phút Heo Cao Bồi Masan hộp 200g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thịt đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Thịt đóng hộp"
+    },
+    {
+      "product_id": "WIN_10141959",
+      "name": "Thịt áp chảo Ponnie 340g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thịt đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Thịt đóng hộp"
+    },
+    {
+      "product_id": "WIN_10141960",
+      "name": "Thịt áp chảo Ponnie hộp 200g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thịt đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Thịt đóng hộp"
+    },
+    {
+      "product_id": "WIN_10403290",
+      "name": "Thịt heo viên 3 phút Heo Cao Bồi Masan hộp 200g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thịt đóng hộp",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm đóng hộp > Thịt đóng hộp"
+    },
+    {
+      "product_id": "WIN_10053348",
+      "name": "Thịt ốc làm sạch",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thủy hải sản sơ chế",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Thủy hải sản > Thủy hải sản sơ chế > Thủy hải sản sơ chế"
+    },
+    {
+      "product_id": "WIN_10140828",
+      "name": "Thịt nghêu Lenger 200g",
+      "resolver_category": "Thịt",
+      "catalog_leaf": "Thủy hải sản sơ chế",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Thủy hải sản > Thủy hải sản sơ chế > Thủy hải sản sơ chế"
+    },
+    {
+      "product_id": "WIN_10281159",
+      "name": "Bánh trứng tươi sợi thịt gà Fasty túi 6gói x 26g",
+      "resolver_category": "Thịt gà",
+      "catalog_leaf": "Bánh mặn khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Bánh mỳ > Bánh mỳ > Bánh mặn khác"
+    },
+    {
+      "product_id": "WIN_10007931",
+      "name": "Thùng 30 gói phở thịt gà Vina Acecook gói 60g",
+      "resolver_category": "Thịt gà",
+      "catalog_leaf": "Bún, phở ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bún, phở ăn liền"
+    },
+    {
+      "product_id": "WIN_10007959",
+      "name": "Phở thịt gà Vifon gói 65g",
+      "resolver_category": "Thịt gà",
+      "catalog_leaf": "Bún, phở ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bún, phở ăn liền"
+    },
+    {
+      "product_id": "WIN_10007961",
+      "name": "Phở thịt gà Hoàng Gia Vifon thùng 18 gói x 120g",
+      "resolver_category": "Thịt gà",
+      "catalog_leaf": "Bún, phở ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bún, phở ăn liền"
+    },
+    {
+      "product_id": "WIN_10007963",
+      "name": "Phở thịt gà Vifon bát 120g",
+      "resolver_category": "Thịt gà",
+      "catalog_leaf": "Bún, phở ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Bún, phở ăn liền"
+    },
+    {
+      "product_id": "WIN_10007983",
+      "name": "Cháo thịt gà Vifon gói 70g",
+      "resolver_category": "Thịt gà",
+      "catalog_leaf": "Cháo ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Cháo ăn liền"
+    },
+    {
+      "product_id": "WIN_10013795",
+      "name": "Bánh que thịt xông khói Doakbua gói 55g",
+      "resolver_category": "Thịt xông khói",
+      "catalog_leaf": "Snack khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Snack > Snack khác"
+    },
+    {
+      "product_id": "WIN_10167126",
+      "name": "Dụng cụ băm nhỏ thực phẩm mini Lock&Lock CKS321",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Dụng cụ nhà bếp",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Dụng cụ nhà bếp"
+    },
+    {
+      "product_id": "WIN_10026586",
+      "name": "Màng bọc thực phẩm Kokusai 30cmx150m đơn",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10026587",
+      "name": "Màng bọc thực phẩm Las Palms 30cm x 400m",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10166023",
+      "name": "Màng bọc thực phẩm PVC 30CMX150M Dao nhựa Winmart Home",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10166024",
+      "name": "Màng bọc thực phẩm PVC WinMart Home 30CM X 30m",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10197091",
+      "name": "Găng tay HomeDeli thực phẩm tự hủy sinh học Size L 100C/hộp",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10251277",
+      "name": "Màng bọc thực phẩm PVC Stahaus 30cm x 100m",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10251278",
+      "name": "Màng bọc thực phẩm Stahaus PVC 30cm x 250m",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10311359",
+      "name": "Màng bọc thực phẩm Las Palms size 30cm x 250m",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10600194",
+      "name": "Màng bọc thực phẩm PE Greeneco 30cm x 100m",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10600195",
+      "name": "Màng bọc thực phẩm PE 30*250m",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ bao gói thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ bao gói thực phẩm"
+    },
+    {
+      "product_id": "WIN_10025787",
+      "name": "Hộp đựng thực phẩm Inomata chịu nhiệt LVS 1661",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10167211",
+      "name": "Hộp thực phẩm Inochi tritan chữ nhật HKD 3500ml",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250119",
+      "name": "Hộp thực phẩm tròn Hokkaido 500ml",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250121",
+      "name": "Hộp thực phẩm tròn Hokkaido 1000ml",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250125",
+      "name": "Hộp thực phẩm Hokkaido chữ nhật 500ml",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250127",
+      "name": "Hộp thực phẩm Hokkaido chữ nhật 1000ml",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250128",
+      "name": "Hộp thực phẩm Hokkaido chữ nhật 1500ml",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250129",
+      "name": "Hộp thực phẩm Hokkaido chữ nhật 2000ml",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250130",
+      "name": "Hộp thực phẩm Hokkaido chữ nhật 2500ml",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250131",
+      "name": "Bộ hộp thực phẩm Hokkaido CN 500-1000-2000ml",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10250133",
+      "name": "Bộ hộp thực phẩm tròn Hokkaido 500-1000-2000ml",
+      "resolver_category": "Thực phẩm",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10300275",
+      "name": "Hộp đựng thực phẩm khô Inomata",
+      "resolver_category": "Thực phẩm khô",
+      "catalog_leaf": "Đồ ch.đựng thực phẩm",
+      "category_hierarchy": "Phi thực phẩm > Homeline > Gia dụng > Đồ dùng nhà bếp > Đồ ch.đựng thực phẩm"
+    },
+    {
+      "product_id": "WIN_10401692",
+      "name": "Tiêu xanh gói 50g",
+      "resolver_category": "Tiêu",
+      "catalog_leaf": "Rau gia vị ăn quả",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Rau củ > Rau gia vị > Rau gia vị ăn quả"
+    },
+    {
+      "product_id": "WIN_10011276",
+      "name": "Trà bí đao Wonderfarm lon 310ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10011315",
+      "name": "Trà xanh hương chanh C2 thùng 24 chai x 500ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10013198",
+      "name": "Trà Ô long Tea+ Plus Pepsico thùng 24 chai x 350ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10150201",
+      "name": "Trà bí đao Coca la hán quả lốc 6 lon x 320ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10150532",
+      "name": "Trà chanh với sả Fuze Tea 1 lít",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10165669",
+      "name": "Trà ô long Tea Plus vị chanh 1 lít",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10194719",
+      "name": "Trà Tea+ Oolong  chai 1L",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10194859",
+      "name": "Trà MrBrow Green Time hương bưởi 580ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10195597",
+      "name": "Trà xanh vị chanh TH 350ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10195598",
+      "name": "Trà Ô Long TH  chai 350ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10196620",
+      "name": "Trà đen hương dâu anh đào  C2 Freeze chai 455ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10196621",
+      "name": "Trà xanh hương chanh tuyết bạc hà Freeze chai 455ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10196847",
+      "name": "Trà đào TVT chai 450/470ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10197076",
+      "name": "Trà việt quất TVT chai 470ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10319012",
+      "name": "Trà đào và hạt chia Fuzetea lốc 6 chai 450ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10054144",
+      "name": "Lá trà xanh gói 300g",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Rau khác",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Rau củ > Rau ăn lá > Rau khác"
+    },
+    {
+      "product_id": "WIN_10240056",
+      "name": "Trà xanh Go Thái Sơn 330ml",
+      "resolver_category": "Trà",
+      "catalog_leaf": "Thức uống tr.miệng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Thức ăn nấu sẵn > Tráng miệng > Thức uống tr.miệng"
+    },
+    {
+      "product_id": "WIN_10150516",
+      "name": "Trà sữa đài loan Mr Brown chai 580ml",
+      "resolver_category": "Trà sữa",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10226650",
+      "name": "Trà sữa Kirin 1.5L",
+      "resolver_category": "Trà sữa",
+      "catalog_leaf": "Nước trà",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước trà"
+    },
+    {
+      "product_id": "WIN_10011284",
+      "name": "Thùng 24 chai trà sữa Latte Kirin 345ml",
+      "resolver_category": "Trà sữa",
+      "catalog_leaf": "Nước uống dinh dưỡng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước uống dinh dưỡng"
+    },
+    {
+      "product_id": "WIN_10197598",
+      "name": "Thạch trà sữa Zai Zai gói 210g",
+      "resolver_category": "Trà sữa",
+      "catalog_leaf": "Thạch đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Thạch đóng gói"
+    },
+    {
+      "product_id": "WIN_10240055",
+      "name": "Trà sữa Go Thái Sơn 330ml",
+      "resolver_category": "Trà sữa",
+      "catalog_leaf": "Thức uống tr.miệng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Thức ăn nấu sẵn > Tráng miệng > Thức uống tr.miệng"
+    },
+    {
+      "product_id": "WIN_10406887",
+      "name": "Bánh đậu xanh Hoàng Gia hương trái cây 200g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Bánh truyền thống",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Bánh > Bánh truyền thống"
+    },
+    {
+      "product_id": "WIN_10014729",
+      "name": "Kẹo mút trái cây Chupa Chups 100g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo cứng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo cứng"
+    },
+    {
+      "product_id": "WIN_10192785",
+      "name": "Kẹo mút Sukusuku hương trái cây 72g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo cứng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo cứng"
+    },
+    {
+      "product_id": "WIN_10194809",
+      "name": "Kẹo mút trái cây khổng lồ Phương Hiền gói 90g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo cứng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo cứng"
+    },
+    {
+      "product_id": "WIN_10324080",
+      "name": "Kẹo thảo  mộc Ricola trái cây Cranberry 40g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo cứng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo cứng"
+    },
+    {
+      "product_id": "WIN_10014415",
+      "name": "Kẹo dẻo trái cây Haribo Goldbears gói 160g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo mềm",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo mềm"
+    },
+    {
+      "product_id": "WIN_10014898",
+      "name": "Kẹo trái cây Starmix gói 80g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo mềm",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo mềm"
+    },
+    {
+      "product_id": "WIN_10015098",
+      "name": "Kẹo dẻo vị trái cây Goldbears Haribo gói 200g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo mềm",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo mềm"
+    },
+    {
+      "product_id": "WIN_10194730",
+      "name": "Kẹo dẻo trái cây Trolli Mini Berger 50g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo mềm",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo mềm"
+    },
+    {
+      "product_id": "WIN_10194731",
+      "name": "Kẹo dẻo trái cây Trolli Mini Berger 170g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo mềm",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo mềm"
+    },
+    {
+      "product_id": "WIN_10406916",
+      "name": "Kẹo dẻo gấu Panda Chupa Chups hương trái cây hỗn hợp gói 90g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo mềm",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo mềm"
+    },
+    {
+      "product_id": "WIN_10621338",
+      "name": "Kẹo trái cây Skittles 100g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo mềm",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo mềm"
+    },
+    {
+      "product_id": "WIN_10626514",
+      "name": "Kẹo dẻo hương trái cây Chupa Chups gói 56g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Kẹo mềm",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo mềm"
+    },
+    {
+      "product_id": "WIN_10140908",
+      "name": "Ngũ cốc Trái cây Calbee 482g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Ngũ cốc ăn sáng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn sáng > Ngũ cốc ăn sáng"
+    },
+    {
+      "product_id": "WIN_10140909",
+      "name": "Ngũ cốc Trái cây ít đường Calbee 600g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Ngũ cốc ăn sáng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn sáng > Ngũ cốc ăn sáng"
+    },
+    {
+      "product_id": "WIN_10140910",
+      "name": "Ngũ cốc Trái cây  CalBee 700g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Ngũ cốc ăn sáng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn sáng > Ngũ cốc ăn sáng"
+    },
+    {
+      "product_id": "WIN_10181143",
+      "name": "Yến Mạch Oatta Trái Cây 300g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Ngũ cốc ăn sáng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn sáng > Ngũ cốc ăn sáng"
+    },
+    {
+      "product_id": "WIN_10150039",
+      "name": "Nước ép trái cây thạch Jele Beautie hương vải 125g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước hoa quả",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước hoa quả"
+    },
+    {
+      "product_id": "WIN_10150041",
+      "name": "Nước ép trái cây thạch Jele Beautie hương berry 125g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước hoa quả",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước hoa quả"
+    },
+    {
+      "product_id": "WIN_10150722",
+      "name": "Nước Trái Cây Cao Cấp Fruit Love Kiwi Táo - Hộp 1L",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước hoa quả",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước hoa quả"
+    },
+    {
+      "product_id": "WIN_10610717",
+      "name": "Nước ép trái cây có thạch Jele Beautie Blackcurrant gói 150g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước hoa quả",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước hoa quả"
+    },
+    {
+      "product_id": "WIN_10610718",
+      "name": "Nước ép trái cây có thạch collagen Jele Beautie gói 150g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước hoa quả",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước hoa quả"
+    },
+    {
+      "product_id": "WIN_10610719",
+      "name": "Nước ép trái cây có thạch vitamin Jele Beautie gói 150g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước hoa quả",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước hoa quả"
+    },
+    {
+      "product_id": "WIN_10010686",
+      "name": "Nước uống sữa trái cây bổ dưỡng hương cam Nutri Boost chai 1L",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước uống dinh dưỡng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước uống dinh dưỡng"
+    },
+    {
+      "product_id": "WIN_10010687",
+      "name": "Nước uống sữa trái cây hương dâu Nutri Boost chai 1L",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước uống dinh dưỡng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước uống dinh dưỡng"
+    },
+    {
+      "product_id": "WIN_10011290",
+      "name": "Nước uống sữa trái cây bổ dưỡng hương dâu Nutri Boost thùng 24 chai x 297ml",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước uống dinh dưỡng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước uống dinh dưỡng"
+    },
+    {
+      "product_id": "WIN_10011394",
+      "name": "Nước uống hương vị trái cây nhiệt đới Pororo chai 235ml",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Nước uống dinh dưỡng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước uống dinh dưỡng"
+    },
+    {
+      "product_id": "WIN_10170145",
+      "name": "Sữa trái cây KUN vị nho thùng 24 túi x 110ml",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "SCU tiệt trùng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa chua > SCU tiệt trùng"
+    },
+    {
+      "product_id": "WIN_10266284",
+      "name": "Lốc 4 hộp thức uống trái cây tươi vị nho 180ml",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "SCU tiệt trùng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa chua > SCU tiệt trùng"
+    },
+    {
+      "product_id": "WIN_10606736",
+      "name": "Sữa trái cây KUN vị cam lốc 4 hộp x 180ml",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "SCU tiệt trùng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa chua > SCU tiệt trùng"
+    },
+    {
+      "product_id": "WIN_10625170",
+      "name": "Sữa trái cây Lof Kun hương nho 180ml",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "SCU tiệt trùng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa chua > SCU tiệt trùng"
+    },
+    {
+      "product_id": "WIN_10194775",
+      "name": "Thạch rau câu cốt trái cây tươi Fruit Gel",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Thạch cân ký",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Thạch cân ký"
+    },
+    {
+      "product_id": "WIN_10014602",
+      "name": "Thạch trái cây Vfoods tổng hợp 1kg",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Thạch đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Thạch đóng gói"
+    },
+    {
+      "product_id": "WIN_10195106",
+      "name": "Thạch trái cây tươi Vietfood Fruit Gel 850g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Thạch đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Thạch đóng gói"
+    },
+    {
+      "product_id": "WIN_10322604",
+      "name": "Thạch trái cây hình cá voi  Gummy gói 300g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Thạch đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Thạch đóng gói"
+    },
+    {
+      "product_id": "WIN_10601160",
+      "name": "Thạch trái cây hình cá ngựa Việt Quốc 300g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Thạch đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Thạch đóng gói"
+    },
+    {
+      "product_id": "WIN_10015654",
+      "name": "Trái cây sấy Vinamit gói 250g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Trái cây s.khô đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Ô mai & Trái cây sấy khô > Trái cây s.khô đgói"
+    },
+    {
+      "product_id": "WIN_10015655",
+      "name": "Trái cây sấy Vinamit gói 500g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Trái cây s.khô đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Ô mai & Trái cây sấy khô > Trái cây s.khô đgói"
+    },
+    {
+      "product_id": "WIN_10016343",
+      "name": "Trái cây sấy khô Dann Food gói 100g",
+      "resolver_category": "Trái cây",
+      "catalog_leaf": "Trái cây s.khô đgói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Ô mai & Trái cây sấy khô > Trái cây s.khô đgói"
+    },
+    {
+      "product_id": "WIN_10006037",
+      "name": "Trứng gà Omega 3 Dabaco hộp 10 quả",
+      "resolver_category": "Trứng gà",
+      "catalog_leaf": "Trứng chức năng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Trứng > Trứng chức năng"
+    },
+    {
+      "product_id": "WIN_10006069",
+      "name": "Trứng gà DHA Dabaco hộp 10 quả",
+      "resolver_category": "Trứng gà",
+      "catalog_leaf": "Trứng chức năng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Trứng > Trứng chức năng"
+    },
+    {
+      "product_id": "WIN_10006070",
+      "name": "Trứng gà vỏ DABACO xanh hộp 12 quả",
+      "resolver_category": "Trứng gà",
+      "catalog_leaf": "Trứng chức năng",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Trứng > Trứng chức năng"
+    },
+    {
+      "product_id": "WIN_10015610",
+      "name": "Đậu phộng Poca da cá gói 45/42g",
+      "resolver_category": "Đậu",
+      "catalog_leaf": "Hạt bí đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Hạt sấy khô > Hạt bí đóng gói"
+    },
+    {
+      "product_id": "WIN_10015747",
+      "name": "Đậu phộng nước cốt dừa Tân Tân lon 265g",
+      "resolver_category": "Đậu",
+      "catalog_leaf": "Hạt bí đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Hạt sấy khô > Hạt bí đóng gói"
+    },
+    {
+      "product_id": "WIN_10015748",
+      "name": "Đậu phộng da cá Tân Tân gói 285g",
+      "resolver_category": "Đậu",
+      "catalog_leaf": "Hạt bí đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Hạt sấy khô > Hạt bí đóng gói"
+    },
+    {
+      "product_id": "WIN_10623340",
+      "name": "Đậu phộng da cá Tân Tân 300g",
+      "resolver_category": "Đậu",
+      "catalog_leaf": "Hạt bí đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Hạt sấy khô > Hạt bí đóng gói"
+    },
+    {
+      "product_id": "WIN_10623341",
+      "name": "Đậu Tỏi ớt Tân Tân lon 260g",
+      "resolver_category": "Đậu",
+      "catalog_leaf": "Hạt bí đóng gói",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Hạt sấy khô > Hạt bí đóng gói"
+    },
+    {
+      "product_id": "WIN_10006085",
+      "name": "Đậu phụ tươi Làng Mơ hộp 400g",
+      "resolver_category": "Đậu",
+      "catalog_leaf": "Đậu hũ",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thịt nguội, xúc xích, hàng chua > Bánh bao, đậu hũ > Đậu hũ"
+    },
+    {
+      "product_id": "WIN_10010324",
+      "name": "Đậu xanh bóc vỏ  Thu Dung gói 500g",
+      "resolver_category": "Đậu",
+      "catalog_leaf": "Đậu khô",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Gạo & Nông sản khô > Đậu khô"
+    },
+    {
+      "product_id": "WIN_10141535",
+      "name": "Soup Marukome Miso rong biển đậu hũ 152g",
+      "resolver_category": "Đậu hũ",
+      "catalog_leaf": "Cháo ăn liền",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Cháo ăn liền"
+    },
+    {
+      "product_id": "WIN_10142063",
+      "name": "Sốt đậu hũ Tứ Xuyên Lee Kum Kee 80g",
+      "resolver_category": "Đậu hũ",
+      "catalog_leaf": "Các loại sốt",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Gia vị > Các loại sốt"
+    },
+    {
+      "product_id": "WIN_10193758",
+      "name": "Kẹo trái tim Relkon đồ chơi Hello Kitty",
+      "resolver_category": "Đồ chơi",
+      "catalog_leaf": "Kẹo đồ chơi",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo đồ chơi"
+    },
+    {
+      "product_id": "WIN_10193760",
+      "name": "Kẹo Relkon trứng đồ chơi Justice League",
+      "resolver_category": "Đồ chơi",
+      "catalog_leaf": "Kẹo đồ chơi",
+      "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bánh kẹo > Kẹo & Chocolate > Kẹo đồ chơi"
+    }
+  ],
+  "reproduced_customer_facing_issue": {
+    "query": "Cá nước ngọt tươi và cá biển đang bán gồm những loại nào?",
+    "incorrectly_presented_item": {
+      "product_id": "WIN_10053382",
+      "name": "Nhộng tằm",
+      "stored_category_hierarchy": "Thực phẩm > Thực phẩm Tươi sống, Chế biến > Thủy hải sản > Cá nước ngọt > Cá nước ngọt tươi"
+    },
+    "known_source": "The API response follows the snapshot hierarchy; the title/category contradiction is present in source data. No item-specific runtime override was applied."
+  }
+}
