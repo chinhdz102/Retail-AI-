@@ -36,6 +36,13 @@ def test_query_understanding_separates_product_type_from_use_case() -> None:
     assert "lẩu" not in result.product_reference.casefold()
 
 
+@pytest.mark.parametrize("query", ["Tìm nước ngọt", "Tìm Coca Zero", "xyz qzx"])
+def test_heuristic_parser_does_not_publish_uncalibrated_confidence(query: str) -> None:
+    result = understand_catalog_query(query)
+
+    assert "confidence" not in result.model_dump()
+
+
 @pytest.mark.parametrize(
     ("query", "expected_use_case"),
     [
