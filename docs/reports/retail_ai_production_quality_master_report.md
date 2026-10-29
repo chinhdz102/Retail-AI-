@@ -400,3 +400,15 @@ uv run ruff check backend tests evaluation
 ```
 
 The benchmark is manually authored and does not measure naturalness, quality of recommendation, stock freshness, ASR, or actual customer satisfaction. Catalog attributes such as product efficacy, suitability, and storage remain largely absent. Independent blind queries, human relevance/suitability judgments, data provenance cleanup, and production load evaluation are still required. Release status remains **demo-only / not production-ready**. Work remains on `codex/retail-text-quality-v4-20261019`; no extra branch was created.
+
+## 26. Cross-platform dataset split authorization — 29/10/2026
+
+GitHub Actions on commit `e35b98b0ab85ba1f146fa6d4f643cf3d024400b0` exposed a Windows/Linux portability defect in `evaluation/split_policy.py`: the repository-visible development registry stored Windows CRLF hashes, while Linux checked out the same JSON/JSONL files with LF. The test `test_known_semantic_frozen_dataset_is_registered_as_exposed_development` therefore treated a known exposed set as unregistered; 1,365 other CI tests passed in that run.
+
+The split policy and registry now hash text after normalizing line endings to LF. All 10 registered exposed datasets were checked against the normalized content and have zero missing paths or hash mismatches. The canonical SHA-256 for the frozen V2 dataset is `0fbfbdcecb83a0cfe2a8fc24bb688526a8a5db4a7ab797a3c73217b677d2e1f1`; the earlier `d030…` value in historical Windows benchmark artifacts is its CRLF raw-byte hash. A regression writes identical registered data as both LF and CRLF and asserts both remain `registered_exposed_development`; the protected-data hash and modification checks use the same canonical hash rule. Local full suite: **1,367 passed**. Commit [`26b388d`](https://github.com/chinhdz102/Retail-AI-/commit/26b388d926672b1e63953bb0e23cea200ae05cf8) is on the existing branch; GitHub Actions run [`40793937826`](https://github.com/chinhdz102/Retail-AI-/actions/runs/40793937826) passes Ruff, all offline backend tests, and Python compilation on Ubuntu. No new branch was created.
+
+## 27. Remove uncalibrated parser confidence — 29/10/2026
+
+The deterministic parser assigned `confidence` values of `0.94`, `0.76`, or `0.35` from the presence of a category/product phrase. No runtime consumer used the field, and no calibration data or reliability analysis supported interpreting those numbers as probabilities. The field and fixed assignments have been removed; parser output retains its explicit `ambiguity` and `clarification_needed` signals without presenting an uncalibrated score. A parameterized regression covers category, product-reference, and unrecognized-query shapes.
+
+Focused parser/split-policy suite: **139 passed**. Full local suite with the confidence change: **1,370 passed in 190.11 s**. Ruff and `git diff --check` pass. This is a reporting-correctness change, not a measured semantic-accuracy improvement. Human calibration and blind evaluation remain outstanding; release status remains **demo-only / not production-ready**.

@@ -74,7 +74,6 @@ class QueryUnderstandingResult(BaseModel):
     conversation_reference: str | None = None
     ranking_criterion: RankingCriterion = "relevance"
     ambiguity: tuple[str, ...] = ()
-    confidence: float = Field(ge=0.0, le=1.0)
     clarification_needed: bool = False
 
 
@@ -1474,7 +1473,6 @@ def understand_catalog_query(
     ):
         ambiguities.append("product or category is not explicit in this turn")
 
-    confidence = 0.94 if product_type else (0.76 if product_reference.strip() else 0.35)
     clarification_needed = not bool(product_type or product_reference.strip())
     if budget_scope_clarification:
         clarification_needed = True
@@ -1577,6 +1575,5 @@ def understand_catalog_query(
         conversation_reference=conversation_reference,
         ranking_criterion=ranking,
         ambiguity=tuple(ambiguities),
-        confidence=confidence,
         clarification_needed=clarification_needed,
     )
