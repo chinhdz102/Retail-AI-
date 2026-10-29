@@ -22,9 +22,20 @@ For each pair, mark category, exact identity, brand, price, negation, availabili
 
 1. Freeze the query set, candidate set, catalog SHA-256, and split manifest before annotation. Do not tune on validation or blind-test judgments.
 2. Give two reviewers separate files. Do not show `expected` labels, retrieval system/source, rank, model answer, evaluator-only manifest, or the other reviewer's judgments. Candidate and query order are independently randomized per reviewer with the exporter seed.
-3. Each reviewer records a grade, each applicable constraint, whether clarification/abstention is expected, confidence from 1–5, evidence fields, and a short rationale.
+3. Each reviewer records a grade, each applicable constraint, whether clarification/abstention is expected, confidence from 1–5, evidence fields, and a short rationale. Set `reviewer_status` to the assigned independent status, use a pseudonymous `reviewer_id`, and fill `reviewed_at` as an ISO-8601 timestamp with timezone.
 4. Compare reviewer agreement by grade and by hard-constraint field. Adjudicate disagreements without overwriting either original judgment; preserve both and record the adjudication.
 5. Keep reviewer identifiers pseudonymous. Never include customer data, credentials, or personal information.
+
+After both independent queues are complete, run the strict pair scorer. It checks that the frozen query/product pairs and catalog metadata match, refuses blank/incomplete rows, reports nominal Cohen's kappa and confusion matrices for every judgment field, and retains both original annotations. Disagreements remain `UNRESOLVED` unless a third, distinct reviewer supplies a complete adjudication row. The report always marks split-promotion eligibility false; this command cannot register or certify validation/blind data.
+
+```powershell
+uv run python -m evaluation.score_vietnamese_qrels_review `
+  --annotator-a evaluation/review/my_queue_annotator_a.csv `
+  --annotator-b evaluation/review/my_queue_annotator_b.csv `
+  --output docs/reports/artifacts/my_queue_agreement.json
+```
+
+For adjudication, add `--adjudication evaluation/review/my_queue_adjudication.csv`; that file must contain only disputed query/candidate pairs, use `reviewer_status=ADJUDICATED`, and identify a third reviewer. Preserve the original two files and never replace either queue with the scored output.
 
 ## Split policy
 
@@ -44,4 +55,4 @@ uv run python -m evaluation.export_vietnamese_qrels_review `
 
 Repeat `--results` for each retrieval variant only when it was run against the same dataset and carries matching `case_id` values. The exporter includes only dataset cases present in at least one supplied result artifact; when a system ran a case but returned no candidates, that case remains reviewable as an explicit no-candidate row. Candidate IDs absent from the validated runtime catalog stop the export. Do not pool artifacts from unrelated query sets.
 
-The CSVs are a queue, not completed judgments. After review, normalize rows to JSONL matching `schemas/vietnamese_product_qrel_v1_1.schema.json` and retain dataset/catalog hashes and each reviewer's independent labels.
+The CSVs are a queue, not completed judgments. When reviewing existing queues created before `reviewer_id` and `reviewed_at` columns were added, regenerate the queue from the same frozen dataset, candidate artifacts, and seed before annotation. Do not edit a submitted queue in place; preserve it and make a new version when required metadata is missing.

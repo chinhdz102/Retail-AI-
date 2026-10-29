@@ -81,6 +81,7 @@ from backend.services.product_comparison import (
     unsupported_comparison_dimension,
 )
 from backend.services.query_understanding import (
+    QueryUnderstandingResult,
     prior_product_page_reference_kind,
     understand_catalog_query,
 )
@@ -1743,14 +1744,14 @@ def _localized_recommendation_candidates(
                 )
             elif title_match:
                 response = (
-                    f"I found catalog titles with terms related to {unverified_use_case}: "
-                    f"{rendered_items}. That wording does not verify that they suit this use. "
+                    f"I found catalog titles that may be related: {rendered_items}. "
+                    "The product names alone do not verify their intended use. "
                     "Would you like to filter by product type, price, or brand?"
                 )
             else:
                 response = (
-                    f"The catalog lists {rendered_items}, but has no verified information about "
-                    f"{unverified_use_case}. Would you like to filter by price or brand?"
+                    f"The catalog lists {rendered_items}, but does not have verified evidence "
+                    "that they suit the requested use. Would you like to filter by price or brand?"
                 )
             if include_price_caveat:
                 response += " Store prices may differ from the catalog."
@@ -1767,12 +1768,12 @@ def _localized_recommendation_candidates(
                 )
             elif title_match:
                 response = (
-                    f"我找到商品名称中含有与“{unverified_use_case}”相关词语的商品：{rendered_items}。"
-                    "这只能说明名称有关联，不能证明用途匹配。您想按商品类型、价格还是品牌筛选？"
+                    f"我找到名称可能相关的商品：{rendered_items}。"
+                    "仅凭商品名称无法核实用途。您想按商品类型、价格还是品牌筛选？"
                 )
             else:
                 response = (
-                    f"目录中有{rendered_items}，但没有经过核实的“{unverified_use_case}”信息。"
+                    f"目录中有{rendered_items}，但没有经过核实的信息能确认它们适合您的用途。"
                     "您想按价格还是品牌筛选？"
                 )
             if include_price_caveat:
@@ -1790,15 +1791,15 @@ def _localized_recommendation_candidates(
             )
         elif title_match:
             response = (
-                f"Mình tìm thấy vài tên hàng có từ liên quan đến “{unverified_use_case}”: "
-                f"{rendered_items}. "
-                "Đây chỉ là dấu hiệu từ tên hàng, catalog chưa xác nhận chúng phù hợp với "
-                "cách dùng này. Bạn muốn lọc theo loại cụ thể, giá hay thương hiệu?"
+                f"Mình tìm thấy vài tên hàng có thể liên quan: {rendered_items}. "
+                "Tên hàng chưa đủ để xác nhận công dụng. "
+                "Bạn muốn lọc theo loại cụ thể, giá hay thương hiệu?"
             )
         else:
             response = (
                 f"Mình tìm thấy vài loại trong danh mục: {rendered_items}. "
-                "Catalog chưa có đủ thông tin để xác nhận loại nào phù hợp với nhu cầu này. "
+                "Catalog chưa có đủ thông tin xác minh để kết luận loại nào phù hợp "
+                "với nhu cầu này. "
                 "Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không?"
             )
         if include_price_caveat:
@@ -6766,6 +6767,10 @@ async def agent_respond(
         catalog_hierarchies = catalog_repository.list_category_hierarchies()
     except (OSError, RuntimeError, TimeoutError, ValueError):
         catalog_repository = None
+    structured_query = understand_catalog_query(request.text, catalog_hierarchies)
+    semantic_use_case_recommendation = bool(
+        structured_query.intent == "recommendation" and structured_query.use_case
+    )
 
     comparison_queries = parse_comparison_queries(request.text, catalog_hierarchies)
     if not mission_preemption_requested and (
@@ -7001,6 +7006,7 @@ async def agent_respond(
     category_recommendation_arguments = None
     if not requested_fields and (
         is_recommendation_request(request.text)
+        or semantic_use_case_recommendation
         or _explicit_product_list_requested(request.text)
         or record.shopping.current_intent == IntentType.RECOMMENDATION
         or (
@@ -7016,6 +7022,7 @@ async def agent_respond(
             previous_user_text,
             stored_constraints=record.shopping.constraints,
             active_context=record.shopping.current_intent == IntentType.RECOMMENDATION,
+            structured_query=structured_query,
         )
     if prompt_override and not requested_fields:
         return _local_policy_response(
@@ -7854,6 +7861,7 @@ async def agent_respond(
                 previous_user_text,
                 stored_constraints=record.shopping.constraints,
                 active_context=record.shopping.current_intent == IntentType.RECOMMENDATION,
+                structured_query=structured_query,
             )
         )
     )
@@ -7964,6 +7972,7 @@ async def agent_respond(
             previous_user_text,
             stored_constraints=saved_constraints,
             active_context=True,
+            structured_query=structured_query,
         )
     if recommendation_arguments and not recommendation_arguments.get("categories"):
         recommendation_arguments.setdefault("limit", 3)
@@ -10305,9 +10314,15 @@ def _recommendation_tool_arguments(
     *,
     stored_constraints: dict[str, object] | None = None,
     active_context: bool = False,
+    structured_query: QueryUnderstandingResult | None = None,
 ) -> dict[str, object] | None:
     if is_recommendation_negated(text):
         return None
+    semantic_use_case_recommendation = bool(
+        structured_query
+        and structured_query.intent == "recommendation"
+        and structured_query.use_case
+    )
     stored = stored_constraints or {}
     explicit_category = _explicit_recommendation_category(text)
     normalized = _normalize_request_text(text)
@@ -10338,6 +10353,7 @@ def _recommendation_tool_arguments(
     )
     category_lookup_request = bool(
         is_recommendation_request(text)
+        or semantic_use_case_recommendation
         or _product_ranking_requested(text)
         or _explicit_product_list_requested(text)
         or _explicit_recommendation_query(text)
@@ -10349,6 +10365,12 @@ def _recommendation_tool_arguments(
             catalog_category = resolve_catalog_request_category(text, get_product_repository())
         except (OSError, RuntimeError, TimeoutError, ValueError):
             catalog_category = None
+    if (
+        semantic_use_case_recommendation
+        and not catalog_category
+        and structured_query is not None
+    ):
+        catalog_category = structured_query.product_type
     # Semantic categories are safer than ambiguous one-word taxonomy matches
     # (for example "dầu gội" and the unrelated food category "đậu").
     category = explicit_category or catalog_category or stored.get("category")
@@ -10493,6 +10515,7 @@ def _recommendation_tool_arguments(
     )
     has_recommendation_signal = (
         is_recommendation_request(text)
+        or semantic_use_case_recommendation
         or _product_ranking_requested(text)
         or bool(category and category_lookup_request)
         or (

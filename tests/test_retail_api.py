@@ -4128,6 +4128,61 @@ async def test_natural_vietnamese_recommendation_calls_catalog_tool(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("text", "expected_category"),
+    [
+        ("Tôi muốn thịt bò để nấu lẩu.", "Thịt Bò, Bê"),
+        ("Mình muốn bột mì để làm bánh.", "Bột gạo, mì, nếp"),
+    ],
+)
+async def test_implicit_cooking_need_uses_grounded_catalog_without_claiming_fit(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    text: str,
+    expected_category: str,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    monkeypatch.setattr("backend.api.main.get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "implicit-use-case-routing"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": text,
+            "language": "vi",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["tools_used"] == ["recommend_products"]
+    assert payload["grounded_product_ids"]
+    assert [card["product_id"] for card in payload["products"]] == payload[
+        "grounded_product_ids"
+    ]
+    for card in payload["products"]:
+        snapshot = repository.get_product_snapshot(card["product_id"])
+        assert snapshot is not None
+        assert card["name"] == snapshot.name
+        assert card["price_vnd"] == snapshot.price_vnd
+        assert expected_category in snapshot.category_hierarchy
+    assert "chưa có đủ thông tin" in payload["text"].casefold()
+    assert "phù hợp" in payload["text"].casefold()
+    assert "nhu cầu này" in payload["text"].casefold()
+    assert "lựa chọn khác" not in payload["text"].casefold()
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_whole_cart_recommendation_uses_catalog_totals_without_cart_mutation(
     client: httpx.AsyncClient,
     monkeypatch,
