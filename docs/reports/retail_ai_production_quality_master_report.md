@@ -481,3 +481,16 @@ uv run python evaluation/semantic_intelligence_v2_benchmark.py `
 ```
 
 This update stays on `codex/retail-text-quality-v4-20261019`; no branch or worktree was created.
+
+## 31. Full repository quality gate on the report commit — 29/10/2026
+
+After publishing the benchmark report, reran the repository checks on code HEAD `0f844575cc94c63c321ace617a7521e587eadefe`:
+
+- `uv run pytest tests -q --tb=short`: **1,398 passed, 0 failed in 180.10 s**.
+- `uv run ruff check backend tests evaluation`: **passed**.
+- `uv run python -m compileall -q backend evaluation tests`: **passed**.
+- `git diff --check`: **passed**.
+
+The run artifact [`quality_gate_head_0f84457_20261029.json`](artifacts/quality_gate_head_0f84457_20261029.json) records the commit, branch, Windows/Python/tool versions, catalog snapshot hash, exact commands, and limits. The tracked code tree was clean at test start. Eight already-present untracked artifacts were preserved and were not staged.
+
+This is a local repository regression gate. It does not establish human-rated recommendation quality, blind-set performance, browser/network end-to-end behavior, provider reliability, or production capacity. Those release gates remain open, so the release status remains **demo-only / not production-ready**. This continuation remains on `codex/retail-text-quality-v4-20261019`; no branch was created.
