@@ -977,6 +977,61 @@ def test_product_correction_does_not_become_a_zero_currency_budget() -> None:
     assert result.negative_constraints
 
 
+@pytest.mark.parametrize(
+    ("query", "expected_type", "expected_exclusion"),
+    [
+        (
+            "Cho mình khăn giấy bỏ túi, không phải khăn ướt nhé.",
+            "Khăn giấy gói",
+            "khăn ướt",
+        ),
+        (
+            "Mình muốn nước khoáng, không phải nước ngọt có ga nha.",
+            "Nước khoáng",
+            "nước ngọt có ga",
+        ),
+        (
+            "Mình muốn mì ăn liền, không phải mì ly nhé.",
+            "Mì ăn liền",
+            "mì ly",
+        ),
+        (
+            "Minh muon nuoc khoang, khong phai nuoc ngot co ga nhe.",
+            "Nước khoáng",
+            "nuoc ngot co ga",
+        ),
+    ],
+)
+def test_taxonomy_negative_correction_preserves_surface_and_trims_politeness(
+    query: str, expected_type: str, expected_exclusion: str
+) -> None:
+    repository = _snapshot()
+
+    result = understand_catalog_query(query, repository.list_category_hierarchies())
+
+    assert normalize_vietnamese(result.product_type) == normalize_vietnamese(expected_type)
+    assert "khong phai" not in normalize_vietnamese(result.product_reference)
+    normalized_constraints = {
+        normalize_vietnamese(value) for value in result.negative_constraints
+    }
+    assert normalize_vietnamese(expected_exclusion) in normalized_constraints
+    assert all(
+        not normalize_vietnamese(value).endswith((" nhe", " nha", " nhi"))
+        for value in result.negative_constraints
+    )
+
+
+def test_negative_category_without_a_positive_request_does_not_select_the_excluded_type() -> None:
+    repository = _snapshot()
+
+    result = understand_catalog_query(
+        "Không phải nước ngọt có ga nhé.", repository.list_category_hierarchies()
+    )
+
+    assert result.product_type is None
+    assert result.clarification_needed
+
+
 def test_epistemic_safety_instruction_is_not_a_product_attribute_filter() -> None:
     repository = _snapshot()
     result = understand_catalog_query(

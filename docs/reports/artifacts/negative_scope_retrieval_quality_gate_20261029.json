@@ -1,0 +1,457 @@
+{
+  "benchmark": "negative_scope_retrieval_quality_gate",
+  "created_at_utc": "2026-10-29T08:12:13.956416+00:00",
+  "code_base_commit": "89c48e2398b313f510293fa8ac939171d6e18917",
+  "working_tree_diff_sha256_before_report_artifact": "cd8888b9543a8c8e49a53b52a65cd75cc8e706e5f2bd3d0b949300bdebdf3335",
+  "catalog": {
+    "path": "data/winmart_products.json",
+    "sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "repository_source": "winmart_json_snapshot",
+    "data_timestamp": "2026-09-15T13:53:58.097411+00:00",
+    "product_count": 3081
+  },
+  "provider_calls": 0,
+  "human_labels": 0,
+  "scope": "Four Vietnamese category-correction requests, tested with both search_products and recommend_products.",
+  "metrics": {
+    "cases": 8,
+    "passed": 8,
+    "failed": 0
+  },
+  "cases": [
+    {
+      "query": "Mình muốn nước khoáng, không phải nước ngọt có ga nha.",
+      "tool": "search_products",
+      "status": "SUCCESS",
+      "expected_category": "nước khoáng",
+      "positive_title_phrase": "nước khoáng",
+      "excluded_title_phrase": "nước ngọt",
+      "result_count": 10,
+      "products": [
+        {
+          "product_id": "WIN_10195098",
+          "name": "Nước khoáng Faith khoáng chanh muối gas 355ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10197397",
+          "name": "Nước khoáng LaVie 5",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10011222",
+          "name": "Nước khoáng thiên nhiên LaVie 1.5 lít",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10011639",
+          "name": "Nước khoáng thiên nhiên Lavie thùng 24 chai x 350ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10011640",
+          "name": "Nước khoáng thiên nhiên Lavie thùng 24 chai x 500ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10638673",
+          "name": "Lốc 6 chai nước Aquarius zezo 390ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10011695",
+          "name": "Nước ion I-On Life 450ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10196077",
+          "name": "Nước uống ion Pocari chai 900ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10011550",
+          "name": "Thùng 24 chai nước khoáng thiên nhiên Evian 500ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10615687",
+          "name": "Thùng 24 chai nước khoáng thiên nhiên Vivant 500ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        }
+      ],
+      "category_scope_pass": true,
+      "negative_title_filter_pass": true,
+      "positive_title_evidence_present": true,
+      "elapsed_ms_local_snapshot_tool_only": 196.466,
+      "passed": true
+    },
+    {
+      "query": "Mình muốn nước khoáng, không phải nước ngọt có ga nha.",
+      "tool": "recommend_products",
+      "status": "SUCCESS",
+      "expected_category": "nước khoáng",
+      "positive_title_phrase": "nước khoáng",
+      "excluded_title_phrase": "nước ngọt",
+      "result_count": 5,
+      "products": [
+        {
+          "product_id": "WIN_10195098",
+          "name": "Nước khoáng Faith khoáng chanh muối gas 355ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10197397",
+          "name": "Nước khoáng LaVie 5",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10011222",
+          "name": "Nước khoáng thiên nhiên LaVie 1.5 lít",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10011639",
+          "name": "Nước khoáng thiên nhiên Lavie thùng 24 chai x 350ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        },
+        {
+          "product_id": "WIN_10011640",
+          "name": "Nước khoáng thiên nhiên Lavie thùng 24 chai x 500ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Đồ uống, thuốc lá > Nước uống không cồn và hoa quả > Nước khoáng"
+        }
+      ],
+      "category_scope_pass": true,
+      "negative_title_filter_pass": true,
+      "positive_title_evidence_present": true,
+      "elapsed_ms_local_snapshot_tool_only": 195.574,
+      "passed": true
+    },
+    {
+      "query": "Mình muốn khăn giấy, không phải khăn ướt nhé.",
+      "tool": "search_products",
+      "status": "SUCCESS",
+      "expected_category": "khăn giấy gói",
+      "positive_title_phrase": "khăn giấy",
+      "excluded_title_phrase": "khăn ướt",
+      "result_count": 10,
+      "products": [
+        {
+          "product_id": "WIN_10020644",
+          "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10624441",
+          "name": "Khăn giấy bỏ túi Tempo 4 lớp gói 90 tờ 16 x 19,5 cm",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10020501",
+          "name": "Khăn giấy lụa 2 lớp Elene gói 260 tờ",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10020563",
+          "name": "Khăn giấy lụa 2 lớp Fairy 280 tờ 200 x 195mm",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10020777",
+          "name": "Khăn giấy lụa 2 lớp Teddy Bear Mollis gói 300 tờ",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10020624",
+          "name": "Khăn giấy rút 2 lớp Silkwell 280 tờ",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10161781",
+          "name": "Khăn giấy rút Elène 3 lớp gói 160 tờ",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10628250",
+          "name": "Khăn giấy rút Tempo Softpack 90 tờ",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10020513",
+          "name": "Khăn giấy ăn rút 2 lớp Watersilk gói 200 tờ",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10622308",
+          "name": "Lốc 10 gói khăn giấy bỏ túi  Tempo icy menthol",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        }
+      ],
+      "category_scope_pass": true,
+      "negative_title_filter_pass": true,
+      "positive_title_evidence_present": true,
+      "elapsed_ms_local_snapshot_tool_only": 120.985,
+      "passed": true
+    },
+    {
+      "query": "Mình muốn khăn giấy, không phải khăn ướt nhé.",
+      "tool": "recommend_products",
+      "status": "SUCCESS",
+      "expected_category": "khăn giấy gói",
+      "positive_title_phrase": "khăn giấy",
+      "excluded_title_phrase": "khăn ướt",
+      "result_count": 5,
+      "products": [
+        {
+          "product_id": "WIN_10020644",
+          "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10624441",
+          "name": "Khăn giấy bỏ túi Tempo 4 lớp gói 90 tờ 16 x 19,5 cm",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10020501",
+          "name": "Khăn giấy lụa 2 lớp Elene gói 260 tờ",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10020563",
+          "name": "Khăn giấy lụa 2 lớp Fairy 280 tờ 200 x 195mm",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        },
+        {
+          "product_id": "WIN_10020777",
+          "name": "Khăn giấy lụa 2 lớp Teddy Bear Mollis gói 300 tờ",
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Giấy và bông > Giấy ăn, giấy vệ sinh > Khăn giấy gói"
+        }
+      ],
+      "category_scope_pass": true,
+      "negative_title_filter_pass": true,
+      "positive_title_evidence_present": true,
+      "elapsed_ms_local_snapshot_tool_only": 192.589,
+      "passed": true
+    },
+    {
+      "query": "Mình muốn sữa tươi, không phải sữa hạt nhé.",
+      "tool": "search_products",
+      "status": "SUCCESS",
+      "expected_category": "sữa tươi",
+      "positive_title_phrase": "sữa tươi",
+      "excluded_title_phrase": "sữa hạt",
+      "result_count": 10,
+      "products": [
+        {
+          "product_id": "WIN_10605370",
+          "name": "Sữa tươi tiệt trùng Devondale nguyên chất 6 hộp x 200ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi tiệt trùng"
+        },
+        {
+          "product_id": "WIN_10005241",
+          "name": "Sữa tươi thanh trùng Dalat Milk không đường hộp 450ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi thanh trùng"
+        },
+        {
+          "product_id": "WIN_10638794",
+          "name": "Sữa tươi thanh trùng Meiji 4.3% hộp 946ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi thanh trùng"
+        },
+        {
+          "product_id": "WIN_10638793",
+          "name": "Sữa tươi thanh trùng Meiji hộp 946ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi thanh trùng"
+        },
+        {
+          "product_id": "WIN_10005238",
+          "name": "Sữa tươi thanh trùng Mộc Châu có đường chai 880ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi thanh trùng"
+        },
+        {
+          "product_id": "WIN_10005244",
+          "name": "Sữa tươi thanh trùng sô cô la Dalat Milk có đường hộp 180ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi thanh trùng"
+        },
+        {
+          "product_id": "WIN_10005426",
+          "name": "Sữa tươi tiệt trùng Cô gái Hà Lan có đường túi 180ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi tiệt trùng"
+        },
+        {
+          "product_id": "WIN_10005425",
+          "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi tiệt trùng"
+        },
+        {
+          "product_id": "WIN_10170470",
+          "name": "Sữa tươi tiệt trùng DALATMILK ít đường 220ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi tiệt trùng"
+        },
+        {
+          "product_id": "WIN_10010615",
+          "name": "Sữa tươi tiệt trùng hương dâu TH True Milk lốc 4 hộp x 180ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi tiệt trùng"
+        }
+      ],
+      "category_scope_pass": true,
+      "negative_title_filter_pass": true,
+      "positive_title_evidence_present": true,
+      "elapsed_ms_local_snapshot_tool_only": 107.673,
+      "passed": true
+    },
+    {
+      "query": "Mình muốn sữa tươi, không phải sữa hạt nhé.",
+      "tool": "recommend_products",
+      "status": "SUCCESS",
+      "expected_category": "sữa tươi",
+      "positive_title_phrase": "sữa tươi",
+      "excluded_title_phrase": "sữa hạt",
+      "result_count": 5,
+      "products": [
+        {
+          "product_id": "WIN_10605370",
+          "name": "Sữa tươi tiệt trùng Devondale nguyên chất 6 hộp x 200ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi tiệt trùng"
+        },
+        {
+          "product_id": "WIN_10005241",
+          "name": "Sữa tươi thanh trùng Dalat Milk không đường hộp 450ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi thanh trùng"
+        },
+        {
+          "product_id": "WIN_10638794",
+          "name": "Sữa tươi thanh trùng Meiji 4.3% hộp 946ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi thanh trùng"
+        },
+        {
+          "product_id": "WIN_10638793",
+          "name": "Sữa tươi thanh trùng Meiji hộp 946ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi thanh trùng"
+        },
+        {
+          "product_id": "WIN_10005238",
+          "name": "Sữa tươi thanh trùng Mộc Châu có đường chai 880ml",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Bơ, sữa, trứng > Sữa tươi > Sữa tươi thanh trùng"
+        }
+      ],
+      "category_scope_pass": true,
+      "negative_title_filter_pass": true,
+      "positive_title_evidence_present": true,
+      "elapsed_ms_local_snapshot_tool_only": 179.854,
+      "passed": true
+    },
+    {
+      "query": "Mình muốn mì ăn liền, không phải mì ly nhé.",
+      "tool": "search_products",
+      "status": "SUCCESS",
+      "expected_category": "mì ăn liền",
+      "positive_title_phrase": "mì",
+      "excluded_title_phrase": "mì ly",
+      "result_count": 10,
+      "products": [
+        {
+          "product_id": "WIN_10307181",
+          "name": "Mì gói ăn liền vị gà cay Samyang 145g",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10008050",
+          "name": "Mì gói ăn liền cay Shin Ramyun Nongshim 114g",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10008219",
+          "name": "Mì trộn ăn liền Jjajangmen Paldo gói 200g",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10406958",
+          "name": "Mì trộn ăn liền tương đen Koreno Jjajangmen Paldo gói 115g",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10008042",
+          "name": "Mì ăn liền Bongoyang​​​​​​​ Hanil Food gói 200g",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10007824",
+          "name": "Mì ăn liền Koreno Jumbo vị kim chi Paldo túi 1kg",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10007838",
+          "name": "Mì ăn liền Koreno vị gà Paldo túi 1kg",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10007821",
+          "name": "Mì ăn liền Koreno vị kim chi Paldo gói 100g",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10224005",
+          "name": "​​​​​​​Mì xào khô ăn liền vị gà cay Samyang 140g",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10281092",
+          "name": "Jumbo Koreno Mì nấm 1kg",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        }
+      ],
+      "category_scope_pass": true,
+      "negative_title_filter_pass": true,
+      "positive_title_evidence_present": true,
+      "elapsed_ms_local_snapshot_tool_only": 84.695,
+      "passed": true
+    },
+    {
+      "query": "Mình muốn mì ăn liền, không phải mì ly nhé.",
+      "tool": "recommend_products",
+      "status": "SUCCESS",
+      "expected_category": "mì ăn liền",
+      "positive_title_phrase": "mì",
+      "excluded_title_phrase": "mì ly",
+      "result_count": 5,
+      "products": [
+        {
+          "product_id": "WIN_10008042",
+          "name": "Mì ăn liền Bongoyang​​​​​​​ Hanil Food gói 200g",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10007770",
+          "name": "Mì ăn liền khoai tây Cung Đình Micoem vị lẩu tôm chua cay thùng 30 gói x 80g",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10007925",
+          "name": "Mì ăn liền khoai tây sườn ngủ quả Omachi thùng 30 gói x 80g",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10007824",
+          "name": "Mì ăn liền Koreno Jumbo vị kim chi Paldo túi 1kg",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        },
+        {
+          "product_id": "WIN_10007838",
+          "name": "Mì ăn liền Koreno vị gà Paldo túi 1kg",
+          "category_hierarchy": "Thực phẩm > Thực phẩm công nghệ > Thực phẩm khô > Thực phẩm ăn liền > Mì ăn liền"
+        }
+      ],
+      "category_scope_pass": true,
+      "negative_title_filter_pass": true,
+      "positive_title_evidence_present": true,
+      "elapsed_ms_local_snapshot_tool_only": 46.368,
+      "passed": true
+    }
+  ],
+  "limits": [
+    "Local deterministic snapshot/tool evidence only; no LLM, Groq, speech, browser, or live database calls.",
+    "These regression cases are development examples, not a blind or human-judged relevance set.",
+    "Category and title correctness remains bounded by the dated source catalog and its taxonomy quality.",
+    "Local elapsed times are not end-to-end user latency measurements."
+  ]
+}

@@ -12,6 +12,7 @@ from backend.products.snapshot_repository import SnapshotProductRepository
 from backend.services.catalog_preferences import excluded_catalog_brands
 from backend.services.retail_tools import (
     CATALOG_TOOL_DEFINITIONS,
+    _product_is_in_excluded_category,
     _search_alternative_candidates,
     execute_catalog_tool,
 )
@@ -205,6 +206,98 @@ def test_recommendation_observation_preserves_applied_hard_constraints() -> None
     }
     assert observation.products
     assert all(product.spicy is False for product in observation.products)
+
+
+@pytest.mark.parametrize("tool_name", ["search_products", "recommend_products"])
+@pytest.mark.parametrize(
+    ("query", "positive_category", "positive_title_phrase", "excluded_title_phrase"),
+    [
+        (
+            "Mình muốn nước khoáng, không phải nước ngọt có ga nha.",
+            "nước khoáng",
+            "nước khoáng",
+            "nước ngọt",
+        ),
+        (
+            "Mình muốn khăn giấy, không phải khăn ướt nhé.",
+            "khăn giấy gói",
+            "khăn giấy",
+            "khăn ướt",
+        ),
+        (
+            "Mình muốn sữa tươi, không phải sữa hạt nhé.",
+            "sữa tươi",
+            "sữa tươi",
+            "sữa hạt",
+        ),
+        (
+            "Mình muốn mì ăn liền, không phải mì ly nhé.",
+            "mì ăn liền",
+            "mì",
+            "mì ly",
+        ),
+    ],
+)
+def test_product_correction_filters_excluded_scope_without_losing_positive_scope(
+    tool_name: str,
+    query: str,
+    positive_category: str,
+    positive_title_phrase: str,
+    excluded_title_phrase: str,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+
+    arguments = {"query": query, "limit": 5 if tool_name == "recommend_products" else 10}
+    if tool_name == "recommend_products":
+        arguments["preference_text"] = query
+    observation = execute_catalog_tool(
+        tool_name,
+        json.dumps(arguments, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all(
+        normalize_category_text(positive_category)
+        in normalize_category_text(product.category_hierarchy)
+        for product in observation.products
+    )
+    assert all(
+        normalize_category_text(excluded_title_phrase)
+        not in normalize_category_text(product.name)
+        for product in observation.products
+    )
+    assert any(
+        normalize_category_text(positive_title_phrase)
+        in normalize_category_text(product.name)
+        for product in observation.products
+    )
+
+
+def test_title_only_exclusion_works_without_a_taxonomy_node() -> None:
+    excluded = ProductSnapshot(
+        product_id="NOODLE-CUP",
+        name="Mì ly hương vị tôm chua cay 65g",
+        category="Mì ăn liền",
+        category_hierarchy="Thực phẩm > Mì ăn liền",
+        price_vnd=5000,
+        stock=5,
+    )
+    allowed = ProductSnapshot(
+        product_id="NOODLE-BAG",
+        name="Mì gói hương vị tôm chua cay 75g",
+        category="Mì ăn liền",
+        category_hierarchy="Thực phẩm > Mì ăn liền",
+        price_vnd=5000,
+        stock=5,
+    )
+
+    assert _product_is_in_excluded_category(excluded, (), ("mì ly",))
+    assert not _product_is_in_excluded_category(allowed, (), ("mì ly",))
 
 
 def test_snapshot_requires_fields_and_returns_provenance_envelope() -> None:
