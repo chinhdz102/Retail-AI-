@@ -111,8 +111,22 @@ def test_hard_constraint_recall_uses_full_gold_and_raw_top_five(monkeypatch) -> 
     assert row["valid_results_at_5"] == 1
     assert row["violations"] == 4
     assert row["candidate_recall_at_5"] == 0.125
+    assert row["candidate_recall_at_5_capacity_ceiling"] == 0.625
+    assert row["capacity_normalized_recall_at_5"] == 0.2
+    assert row["valid_results_at_10"] == 3
+    assert row["candidate_recall_at_10"] == 0.375
+    assert row["candidate_recall_at_10_capacity_ceiling"] == 1.0
+    assert row["capacity_normalized_recall_at_10"] == 0.375
+    assert row["top_10_underfilled"] is True
     assert aggregate["candidate_recall_at_5"] == 0.125
     assert aggregate["candidate_recall_at_5_evaluable_count"] == 1
+    assert aggregate["candidate_recall_at_5_capacity_ceiling"] == 0.625
+    assert aggregate["capacity_normalized_recall_at_5"] == 0.2
+    assert aggregate["candidate_recall_at_10"] == 0.375
+    assert aggregate["candidate_recall_at_10_capacity_ceiling"] == 1.0
+    assert aggregate["capacity_normalized_recall_at_10"] == 0.375
+    assert aggregate["top_10_underfilled_case_count"] == 1
+    assert aggregate["top_10_underfilled_rate"] == 1.0
 
 
 def test_hard_constraint_recall_is_not_scored_when_no_products_are_eligible(
@@ -154,8 +168,15 @@ def test_hard_constraint_recall_is_not_scored_when_no_products_are_eligible(
     aggregate = result["aggregate"]["hard_constraint"]
     assert result["case_results"][0]["correct_abstention"] is True
     assert result["case_results"][0]["candidate_recall_at_5"] is None
+    assert result["case_results"][0]["candidate_recall_at_5_capacity_ceiling"] is None
+    assert result["case_results"][0]["capacity_normalized_recall_at_5"] is None
+    assert result["case_results"][0]["candidate_recall_at_10"] is None
+    assert result["case_results"][0]["top_10_underfilled"] is None
     assert aggregate["candidate_recall_at_5"] is None
     assert aggregate["candidate_recall_at_5_evaluable_count"] == 0
+    assert aggregate["candidate_recall_at_10"] is None
+    assert aggregate["candidate_recall_at_10_evaluable_count"] == 0
+    assert aggregate["top_10_underfilled_rate"] is None
 
 
 @pytest.mark.parametrize(

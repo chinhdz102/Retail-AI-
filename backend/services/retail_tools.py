@@ -748,6 +748,50 @@ def _search_alternative_candidates(
     return tuple(candidates.values())[:limit], exhausted
 
 
+def _refill_filtered_catalog_candidates(
+    repository: ProductRepository,
+    criteria: dict[str, Any],
+    initial_products: tuple[ProductSnapshot, ...],
+    *,
+    limit: int,
+    retain: Callable[[ProductSnapshot], bool],
+    max_pages: int = 5,
+) -> tuple[ProductSnapshot, ...]:
+    """Fill a filtered result window from a small, bounded number of catalog pages.
+
+    Apply exactly the same repository criteria on every page. ``retain`` carries
+    the post-search hard constraints (for example an excluded brand or family)
+    that cannot be expressed by every repository backend. Existing ranked
+    results remain first; page results only fill missing slots.
+    """
+    page_size = 20
+    candidates: dict[str, ProductSnapshot] = {}
+
+    def add(product: ProductSnapshot) -> None:
+        if product.product_id not in candidates and retain(product):
+            candidates[product.product_id] = product
+
+    for product in initial_products:
+        add(product)
+
+    offset = 0
+    for _ in range(max(0, max_pages)):
+        if len(candidates) >= limit:
+            break
+        page = repository.search(
+            **{**criteria, "limit": page_size, "offset": offset}
+        )
+        if not page:
+            break
+        for product in page:
+            add(product)
+        offset += len(page)
+        if len(candidates) >= limit or len(page) < page_size:
+            break
+
+    return tuple(candidates.values())[:limit]
+
+
 def _budget_unit_price_cap(understanding: QueryUnderstandingResult) -> int | None:
     """Convert a clear item or total budget into a safe per-SKU price ceiling."""
     budget = understanding.budget_vnd
@@ -3529,6 +3573,59 @@ def execute_catalog_tool(
                 product_audience_evidence(product) is None for product in products
             ):
                 audience_unverified = True
+            refill_for_post_filters = bool(
+                excluded_brands
+                or excluded_categories
+                or excluded_title_phrases
+                or ambiguous_family
+            )
+            if (
+                refill_for_post_filters
+                and len(products) < parsed.limit
+                and category
+                and not product_identity
+                and requested_audience != "child"
+            ):
+                def retain_refill_candidate(product: ProductSnapshot) -> bool:
+                    if normalize_category_text(product.brand) in excluded_brands:
+                        return False
+                    if ambiguous_family and not _product_matches_unresolved_family(
+                        product,
+                        understanding.product_type,
+                        family_scope_leaf,
+                    ):
+                        return False
+                    return (
+                        matches_explicit_product_audience(request_text, product)
+                        and not _product_is_in_excluded_category(
+                            product,
+                            excluded_categories,
+                            excluded_title_phrases,
+                        )
+                    )
+
+                products = _refill_filtered_catalog_candidates(
+                    repo,
+                    {**search_criteria, "diversify_by_subcategory": False},
+                    tuple(products),
+                    limit=parsed.limit,
+                    retain=retain_refill_candidate,
+                )
+                if understanding.ranking_criterion == "price_ascending":
+                    products = tuple(
+                        sorted(products, key=lambda item: (item.price_vnd, item.name.casefold()))
+                    )
+                elif understanding.ranking_criterion == "price_descending":
+                    products = tuple(
+                        sorted(
+                            products,
+                            key=lambda item: (-item.price_vnd, item.name.casefold()),
+                        )
+                    )
+                if requested_audience == "adult" and any(
+                    product_audience_evidence(product) is None for product in products
+                ):
+                    audience_unverified = True
             products = products[: parsed.limit]
             matched = [
                 key
@@ -4268,6 +4365,71 @@ def execute_catalog_tool(
                 product_audience_evidence(product) is None for product in products
             ):
                 audience_unverified = True
+            refill_for_post_filters = bool(
+                excluded_brands
+                or excluded_categories
+                or excluded_title_phrases
+                or parsed.exclude_product_ids
+                or preparation
+                or ambiguous_family
+            )
+            if (
+                refill_for_post_filters
+                and len(products) < parsed.limit
+                and category
+                and not product_identity
+                and not (
+                    parsed.alternative_requested
+                    and parsed.exclude_product_ids
+                )
+                and requested_audience != "child"
+            ):
+                def retain_refill_candidate(product: ProductSnapshot) -> bool:
+                    if product.product_id in parsed.exclude_product_ids:
+                        return False
+                    if normalize_category_text(product.brand) in excluded_brands:
+                        return False
+                    if recommendation_candidate_filter and not recommendation_candidate_filter(
+                        product
+                    ):
+                        return False
+                    if ambiguous_family and not _product_matches_unresolved_family(
+                        product,
+                        understanding.product_type,
+                        family_scope_leaf,
+                    ):
+                        return False
+                    if preparation and not title_mentions_preparation(
+                        product.name, preparation
+                    ):
+                        return False
+                    return (
+                        matches_explicit_product_audience(audience_query, product)
+                        and not _product_is_in_excluded_category(
+                            product,
+                            excluded_categories,
+                            excluded_title_phrases,
+                        )
+                    )
+
+                products = _refill_filtered_catalog_candidates(
+                    repo,
+                    {**search_criteria, "diversify_by_subcategory": False},
+                    tuple(products),
+                    limit=parsed.limit,
+                    retain=retain_refill_candidate,
+                )
+                if understanding.ranking_criterion == "price_ascending":
+                    products = tuple(
+                        sorted(products, key=lambda item: (item.price_vnd, item.name.casefold()))
+                    )
+                elif understanding.ranking_criterion == "price_descending":
+                    products = tuple(
+                        sorted(
+                            products,
+                            key=lambda item: (-item.price_vnd, item.name.casefold()),
+                        )
+                    )
             preference_matches = {
                 product.product_id: preference_matches[product.product_id]
                 for product in products

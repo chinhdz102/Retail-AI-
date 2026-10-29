@@ -235,18 +235,68 @@ def _run_deterministic(
             ]
             eligible_ids = {product.product_id for product in eligible}
             top5_ids = [product.product_id for product in products[:5]]
+            top10_ids = [product.product_id for product in products[:10]]
             valid_top5 = set(top5_ids) & eligible_ids
+            valid_top10 = set(top10_ids) & eligible_ids
             violations = len(products) - len(all_valid_results)
-            recall = _recall_at_k(top5_ids, eligible_ids, 5)
+            recall_at_5 = _recall_at_k(top5_ids, eligible_ids, 5)
+            recall_at_10 = _recall_at_k(top10_ids, eligible_ids, 10)
+            capacity_at_5 = min(5, len(eligible))
+            capacity_at_10 = min(10, len(eligible))
+            recall_ceiling_at_5 = (
+                capacity_at_5 / len(eligible) if eligible else None
+            )
+            recall_ceiling_at_10 = (
+                capacity_at_10 / len(eligible) if eligible else None
+            )
+            normalized_recall_at_5 = (
+                len(valid_top5) / capacity_at_5 if capacity_at_5 else None
+            )
+            normalized_recall_at_10 = (
+                len(valid_top10) / capacity_at_10 if capacity_at_10 else None
+            )
+            top10_underfilled = (
+                len(valid_top10) < capacity_at_10 if eligible else None
+            )
             row.update(
                 {
                     "hard_constraint_pass": (bool(products) and violations == 0)
                     or (not eligible and not products),
                     "violations": violations,
                     "eligible_product_count": len(eligible),
+                    "returned_product_count": len(products),
                     "valid_results_at_5": len(valid_top5),
+                    "top_5_capacity": capacity_at_5,
                     "correct_abstention": not eligible and not products,
-                    "candidate_recall_at_5": round(recall, 4) if recall is not None else None,
+                    "candidate_recall_at_5": (
+                        round(recall_at_5, 4) if recall_at_5 is not None else None
+                    ),
+                    "candidate_recall_at_5_capacity_ceiling": (
+                        round(recall_ceiling_at_5, 4)
+                        if recall_ceiling_at_5 is not None
+                        else None
+                    ),
+                    "capacity_normalized_recall_at_5": (
+                        round(normalized_recall_at_5, 4)
+                        if normalized_recall_at_5 is not None
+                        else None
+                    ),
+                    "valid_results_at_10": len(valid_top10),
+                    "top_10_capacity": capacity_at_10,
+                    "candidate_recall_at_10": (
+                        round(recall_at_10, 4) if recall_at_10 is not None else None
+                    ),
+                    "candidate_recall_at_10_capacity_ceiling": (
+                        round(recall_ceiling_at_10, 4)
+                        if recall_ceiling_at_10 is not None
+                        else None
+                    ),
+                    "capacity_normalized_recall_at_10": (
+                        round(normalized_recall_at_10, 4)
+                        if normalized_recall_at_10 is not None
+                        else None
+                    ),
+                    "top_10_underfilled": top10_underfilled,
                     "parsed_category": parsed.product_type if parsed else None,
                     "parsed_budget_vnd": parsed.budget_vnd if parsed else None,
                     "parsed_negative_constraints": (
@@ -260,9 +310,25 @@ def _run_deterministic(
             metric["constraint_violations"] += violations
             metric.setdefault("candidate_recall_at_5", 0)
             metric.setdefault("candidate_recall_at_5_evaluable_count", 0)
-            if recall is not None:
-                metric["candidate_recall_at_5"] += recall
+            metric.setdefault("candidate_recall_at_5_capacity_ceiling", 0)
+            metric.setdefault("capacity_normalized_recall_at_5", 0)
+            metric.setdefault("candidate_recall_at_10", 0)
+            metric.setdefault("candidate_recall_at_10_evaluable_count", 0)
+            metric.setdefault("candidate_recall_at_10_capacity_ceiling", 0)
+            metric.setdefault("capacity_normalized_recall_at_10", 0)
+            metric.setdefault("top_10_underfilled_case_count", 0)
+            metric.setdefault("top_10_underfilled_evaluable_count", 0)
+            if recall_at_5 is not None and recall_at_10 is not None:
+                metric["candidate_recall_at_5"] += recall_at_5
+                metric["candidate_recall_at_5_capacity_ceiling"] += recall_ceiling_at_5 or 0
+                metric["capacity_normalized_recall_at_5"] += normalized_recall_at_5 or 0
                 metric["candidate_recall_at_5_evaluable_count"] += 1
+                metric["candidate_recall_at_10"] += recall_at_10
+                metric["candidate_recall_at_10_capacity_ceiling"] += recall_ceiling_at_10 or 0
+                metric["capacity_normalized_recall_at_10"] += normalized_recall_at_10 or 0
+                metric["candidate_recall_at_10_evaluable_count"] += 1
+                metric["top_10_underfilled_case_count"] += int(bool(top10_underfilled))
+                metric["top_10_underfilled_evaluable_count"] += 1
             metric["nonempty_result"] += int(bool(products))
             metric["parser_error_count"] += int(parser_error is not None)
         rows.append(row)
@@ -277,8 +343,27 @@ def _run_deterministic(
             if key == "candidate_recall_at_5_evaluable_count":
                 summarized[kind][key] = int(value)
                 continue
-            if key == "candidate_recall_at_5":
+            if key in {
+                "candidate_recall_at_10_evaluable_count",
+                "top_10_underfilled_case_count",
+                "top_10_underfilled_evaluable_count",
+            }:
+                summarized[kind][key] = int(value)
+                continue
+            if key in {
+                "candidate_recall_at_5",
+                "candidate_recall_at_5_capacity_ceiling",
+                "capacity_normalized_recall_at_5",
+            }:
                 denominator = int(values["candidate_recall_at_5_evaluable_count"])
+                summarized[kind][key] = round(value / denominator, 4) if denominator else None
+                continue
+            if key in {
+                "candidate_recall_at_10",
+                "candidate_recall_at_10_capacity_ceiling",
+                "capacity_normalized_recall_at_10",
+            }:
+                denominator = int(values["candidate_recall_at_10_evaluable_count"])
                 summarized[kind][key] = round(value / denominator, 4) if denominator else None
                 continue
             summarized[kind][key] = (
@@ -292,9 +377,21 @@ def _run_deterministic(
                     "parser_category_accuracy",
                     "constraint_case_pass",
                     "candidate_recall_at_5",
+                    "candidate_recall_at_5_capacity_ceiling",
+                    "capacity_normalized_recall_at_5",
+                    "candidate_recall_at_10",
+                    "candidate_recall_at_10_capacity_ceiling",
+                    "capacity_normalized_recall_at_10",
                     "nonempty_result",
                 }
                 else int(value)
+            )
+        if "top_10_underfilled_evaluable_count" in summarized[kind]:
+            top10_evaluable = summarized[kind]["top_10_underfilled_evaluable_count"]
+            summarized[kind]["top_10_underfilled_rate"] = (
+                round(summarized[kind]["top_10_underfilled_case_count"] / top10_evaluable, 4)
+                if top10_evaluable
+                else None
             )
     return {
         "aggregate": summarized,

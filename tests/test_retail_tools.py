@@ -471,6 +471,83 @@ def test_catalog_brand_exclusions_work_without_parser_negative_spans() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("query", "category", "excluded_brand", "budget", "exclusive_budget"),
+    [
+        (
+            "Mình cần Nước trà, giá tối đa 22.300 đồng và đừng lấy hãng C2.",
+            "Nước trà",
+            "C2",
+            22_300,
+            False,
+        ),
+        (
+            "Cho mình xem Mì ăn liền dưới 84.000đ nhé, tránh thương hiệu KORENO.",
+            "Mì ăn liền",
+            "KORENO",
+            84_000,
+            True,
+        ),
+        (
+            "Mình muốn mua Ngũ cốc ăn sáng; loại KELLOGG'S thì bỏ qua, "
+            "ngân sách tối đa 103.900 đồng.",
+            "Ngũ cốc ăn sáng",
+            "KELLOGG'S",
+            103_900,
+            False,
+        ),
+    ],
+)
+def test_post_filter_refill_returns_full_window_without_relaxing_constraints(
+    query: str,
+    category: str,
+    excluded_brand: str,
+    budget: int,
+    exclusive_budget: bool,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    expected_category = normalize_category_text(category)
+    expected_brand = normalize_category_text(excluded_brand)
+    eligible = [
+        product
+        for product in repository.products
+        if expected_category
+        in {
+            normalize_category_text(product.category),
+            *(
+                normalize_category_text(part)
+                for part in (product.category_hierarchy or "").split(">")
+            ),
+        }
+        and normalize_category_text(product.brand) != expected_brand
+        and (product.price_vnd < budget if exclusive_budget else product.price_vnd <= budget)
+    ]
+    assert len(eligible) >= 10
+
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": 10}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+
+    returned_ids = {product.product_id for product in observation.products}
+    eligible_ids = {product.product_id for product in eligible}
+    assert observation.status == "SUCCESS"
+    assert len(observation.products) == 10
+    assert returned_ids <= eligible_ids
+    assert all(
+        normalize_category_text(item.brand) != expected_brand
+        for item in observation.products
+    )
+    assert all(
+        item.price_vnd < budget if exclusive_budget else item.price_vnd <= budget
+        for item in observation.products
+    )
+
+
 def test_snapshot_can_verify_spice_attribute() -> None:
     observation = execute_catalog_tool(
         "get_product_snapshot",
