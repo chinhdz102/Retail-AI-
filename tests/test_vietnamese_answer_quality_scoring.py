@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from evaluation.export_vietnamese_answer_quality_review import (
+    ANNOTATION_FIELDS,
     CSV_FIELDS,
     FLAG_FIELDS,
     FROZEN_REVIEW_FIELDS,
@@ -116,6 +117,34 @@ def _write_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
     return path_a, path_b, manifest_path
 
 
+def _adjudication_rows() -> list[dict[str, str]]:
+    rows_a, rows_b = _fixture_rows()
+    rows: list[dict[str, str]] = []
+    for row_a, row_b in zip(rows_a, rows_b, strict=True):
+        disputed = [
+            field for field in (*RATING_FIELDS, *FLAG_FIELDS) if row_a[field] != row_b[field]
+        ]
+        if not disputed:
+            continue
+        adjudicated = dict(row_a)
+        for field in ANNOTATION_FIELDS:
+            adjudicated[field] = ""
+        for field in disputed:
+            adjudicated[field] = row_a[field]
+        adjudicated.update(
+            {
+                "reviewer_id": "reviewer-c",
+                "reviewed_at": "2026-10-29T12:00:00+07:00",
+                "confidence_1_5": "5",
+                "rationale": "Phân xử độc lập theo bằng chứng hiển thị.",
+                "adjudication_decision": "KEEP_A",
+                "annotation_status": "ADJUDICATED",
+            }
+        )
+        rows.append(adjudicated)
+    return rows
+
+
 def test_reports_per_dimension_ordinal_agreement_and_flag_agreement(tmp_path: Path) -> None:
     path_a, path_b, manifest_path = _write_fixture(tmp_path)
     output = tmp_path / "agreement.json"
@@ -136,9 +165,144 @@ def test_reports_per_dimension_ordinal_agreement_and_flag_agreement(tmp_path: Pa
     assert flag["negative_agreement_rate"] == pytest.approx(0.5)
     assert report["summary"]["eligible_for_validation_or_blind_claim"] is False
     assert report["summary"]["single_composite_answer_quality_score"] is None
+    assert report["summary"]["paired_disagreement_field_count"] == 14
+    assert report["summary"]["unresolved_disagreement_field_count"] == 14
     assert json.loads(output.read_text(encoding="utf-8"))["schema_version"] == (
         "vietnamese_answer_quality_agreement_v1"
     )
+
+
+def test_distinct_adjudicator_resolves_only_independent_disagreements(tmp_path: Path) -> None:
+    path_a, path_b, manifest_path = _write_fixture(tmp_path)
+    adjudication_path = tmp_path / "adjudication.csv"
+    _write_queue(adjudication_path, _adjudication_rows())
+
+    report = score_vietnamese_answer_quality_review(
+        path_a,
+        path_b,
+        manifest_path,
+        tmp_path / "agreement.json",
+        adjudication_path,
+    )
+
+    assert report["reviewers"]["adjudicator"] == "reviewer-c"
+    assert report["summary"]["adjudication_performed"] is True
+    assert report["summary"]["adjudicated_disagreement_field_count"] == 14
+    assert report["summary"]["unresolved_disagreement_field_count"] == 0
+    assert report["summary"]["adjudication_coverage_of_paired_disagreements"] == 1
+    assert (
+        report["resolved_assessments"]["user_need_understanding_1_5"]["resolved_rating_mean"] == 3
+    )
+    assert (
+        report["resolved_assessments"]["critical_wrong_product_type"]["resolved_true_rate"] == 0.5
+    )
+    assert all(
+        item["adjudication_status"] == "ADJUDICATED"
+        for item in report["items"]
+        if item["disagreement_fields"]
+    )
+
+
+def test_adjudication_requires_a_distinct_reviewer_and_exact_dispute_fields(
+    tmp_path: Path,
+) -> None:
+    path_a, path_b, manifest_path = _write_fixture(tmp_path)
+    rows = _adjudication_rows()
+    adjudication_path = tmp_path / "adjudication.csv"
+
+    for row in rows:
+        row["reviewer_id"] = "reviewer-a"
+    _write_queue(adjudication_path, rows)
+    with pytest.raises(AnswerQualityScoringError, match="distinct pseudonymous ID"):
+        score_vietnamese_answer_quality_review(
+            path_a,
+            path_b,
+            manifest_path,
+            tmp_path / "agreement.json",
+            adjudication_path,
+        )
+
+
+def test_keep_b_adjudication_must_match_reviewer_b_labels(tmp_path: Path) -> None:
+    path_a, path_b, manifest_path = _write_fixture(tmp_path)
+    rows_a, rows_b = _fixture_rows()
+    rows = _adjudication_rows()
+    by_item_b = {row["review_item_id"]: row for row in rows_b}
+    for row in rows:
+        row["adjudication_decision"] = "KEEP_B"
+        source_b = by_item_b[row["review_item_id"]]
+        for field in (*RATING_FIELDS, *FLAG_FIELDS):
+            if row[field]:
+                row[field] = source_b[field]
+    _write_queue(path_a, rows_a)
+    _write_queue(path_b, rows_b)
+    adjudication_path = tmp_path / "adjudication.csv"
+    _write_queue(adjudication_path, rows)
+
+    report = score_vietnamese_answer_quality_review(
+        path_a,
+        path_b,
+        manifest_path,
+        tmp_path / "agreement.json",
+        adjudication_path,
+    )
+    assert report["summary"]["adjudication_decisions"] == {"KEEP_B": 3}
+
+    rows[0]["user_need_understanding_1_5"] = "1"
+    _write_queue(adjudication_path, rows)
+    with pytest.raises(AnswerQualityScoringError, match="does not preserve"):
+        score_vietnamese_answer_quality_review(
+            path_a,
+            path_b,
+            manifest_path,
+            tmp_path / "agreement.json",
+            adjudication_path,
+        )
+
+
+def test_new_judgment_records_a_third_reviewers_resolved_label(tmp_path: Path) -> None:
+    path_a, path_b, manifest_path = _write_fixture(tmp_path)
+    rows = _adjudication_rows()
+    rows[0]["adjudication_decision"] = "NEW_JUDGMENT"
+    rows[0]["user_need_understanding_1_5"] = "5"
+    adjudication_path = tmp_path / "adjudication.csv"
+    _write_queue(adjudication_path, rows)
+
+    report = score_vietnamese_answer_quality_review(
+        path_a,
+        path_b,
+        manifest_path,
+        tmp_path / "agreement.json",
+        adjudication_path,
+    )
+
+    resolved = report["resolved_assessments"]["user_need_understanding_1_5"]
+    assert report["summary"]["adjudication_decisions"]["NEW_JUDGMENT"] == 1
+    assert resolved["resolved_value_counts"]["5"] == 2
+
+    rows = _adjudication_rows()
+    rows[0]["user_need_understanding_1_5"] = ""
+    _write_queue(adjudication_path, rows)
+    with pytest.raises(AnswerQualityScoringError, match="must resolve exactly"):
+        score_vietnamese_answer_quality_review(
+            path_a,
+            path_b,
+            manifest_path,
+            tmp_path / "agreement.json",
+            adjudication_path,
+        )
+
+    rows = _adjudication_rows()
+    rows[0]["critical_other"] = "false"
+    _write_queue(adjudication_path, rows)
+    with pytest.raises(AnswerQualityScoringError, match="must resolve exactly"):
+        score_vietnamese_answer_quality_review(
+            path_a,
+            path_b,
+            manifest_path,
+            tmp_path / "agreement.json",
+            adjudication_path,
+        )
 
 
 def test_missing_and_not_applicable_ratings_are_excluded_and_counted(tmp_path: Path) -> None:

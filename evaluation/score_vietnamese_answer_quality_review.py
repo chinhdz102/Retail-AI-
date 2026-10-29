@@ -28,12 +28,15 @@ FLAG_CATEGORIES = (False, True)
 REVIEW_STATUSES = {
     "annotator_a": "INDEPENDENT_A",
     "annotator_b": "INDEPENDENT_B",
+    "adjudicator": "ADJUDICATED",
 }
+ADJUDICATION_DECISIONS = {"KEEP_A", "KEEP_B", "NEW_JUDGMENT"}
 REVIEW_METADATA_FIELDS = (
     "reviewer_id",
     "reviewed_at",
     "confidence_1_5",
     "rationale",
+    "adjudication_decision",
     "annotation_status",
 )
 ANNOTATION_VALUE_FIELDS = (*RATING_FIELDS, *FLAG_FIELDS)
@@ -190,6 +193,18 @@ def _read_queue(path: Path, role: str) -> tuple[dict[str, dict[str, Any]], str]:
                 raise AnswerQualityScoringError(
                     f"{role} row {row_number} status is {status!r}; expected {expected_status!r}"
                 )
+            adjudication_decision = (raw.get("adjudication_decision") or "").strip().upper()
+            if role == "adjudicator":
+                if adjudication_decision not in ADJUDICATION_DECISIONS:
+                    raise AnswerQualityScoringError(
+                        f"{role} row {row_number}: adjudication_decision must be one of "
+                        f"{', '.join(sorted(ADJUDICATION_DECISIONS))}"
+                    )
+            elif adjudication_decision:
+                raise AnswerQualityScoringError(
+                    f"{role} row {row_number}: independent reviewers must leave "
+                    "adjudication_decision blank"
+                )
 
             reviewer_id = (raw.get("reviewer_id") or "").strip()
             rationale = (raw.get("rationale") or "").strip()
@@ -250,6 +265,7 @@ def _read_queue(path: Path, role: str) -> tuple[dict[str, dict[str, Any]], str]:
                 "reviewed_at": reviewed_at,
                 "confidence_1_5": confidence,
                 "rationale": rationale,
+                "adjudication_decision": adjudication_decision,
                 "judgments": judgments,
             }
 
@@ -395,6 +411,7 @@ def score_vietnamese_answer_quality_review(
     annotator_b_path: Path,
     manifest_path: Path,
     output_path: Path,
+    adjudication_path: Path | None = None,
 ) -> dict[str, Any]:
     """Validate completed independent queues and write a conservative agreement report."""
     manifest, assignments = _read_manifest(manifest_path)
@@ -434,25 +451,148 @@ def score_vietnamese_answer_quality_review(
             "Frozen customer-visible packet hash mismatch; rows were altered or packet is stale"
         )
 
-    item_agreement: list[dict[str, Any]] = []
+    paired_disagreements: dict[str, list[str]] = {}
     for item_id in sorted(ids_a):
         judgments_a = rows_a[item_id]["judgments"]
         judgments_b = rows_b[item_id]["judgments"]
-        disagreements = [
+        paired_disagreements[item_id] = [
             field
             for field in ANNOTATION_VALUE_FIELDS
             if judgments_a[field] is not None
             and judgments_b[field] is not None
             and judgments_a[field] != judgments_b[field]
         ]
+
+    adjudication_rows: dict[str, dict[str, Any]] = {}
+    adjudicator_id: str | None = None
+    if adjudication_path is not None:
+        adjudication_rows, adjudicator_id = _read_queue(adjudication_path, "adjudicator")
+        if adjudicator_id in {reviewer_a_id, reviewer_b_id}:
+            raise AnswerQualityScoringError(
+                "Adjudicator must use a distinct pseudonymous ID from both reviewers"
+            )
+        if not set(adjudication_rows) <= ids_a:
+            raise AnswerQualityScoringError(
+                "Adjudication queue contains items outside the independent review queues"
+            )
+        for item_id, adjudicated_row in adjudication_rows.items():
+            if not paired_disagreements[item_id]:
+                raise AnswerQualityScoringError(
+                    f"Adjudication supplied for item with no paired disagreement: {item_id}"
+                )
+            if adjudicated_row["content"] != rows_a[item_id]["content"]:
+                raise AnswerQualityScoringError(
+                    "Adjudication packet differs from frozen customer-visible content "
+                    f"for {item_id}"
+                )
+            expected_fields = set(paired_disagreements[item_id])
+            supplied_fields = {
+                field for field, value in adjudicated_row["judgments"].items() if value is not None
+            }
+            missing_fields = sorted(expected_fields - supplied_fields)
+            unexpected_fields = sorted(supplied_fields - expected_fields)
+            if missing_fields or unexpected_fields:
+                raise AnswerQualityScoringError(
+                    f"Adjudication fields for {item_id} must resolve exactly the paired "
+                    f"disagreements (missing: {missing_fields}; unexpected: {unexpected_fields})"
+                )
+            decision = adjudicated_row["adjudication_decision"]
+            if decision in {"KEEP_A", "KEEP_B"}:
+                source = rows_a[item_id] if decision == "KEEP_A" else rows_b[item_id]
+                mismatched = sorted(
+                    field
+                    for field in expected_fields
+                    if adjudicated_row["judgments"][field] != source["judgments"][field]
+                )
+                if mismatched:
+                    raise AnswerQualityScoringError(
+                        f"Adjudication decision {decision} does not preserve the selected "
+                        f"reviewer's labels for {item_id}: {mismatched}"
+                    )
+
+    item_agreement: list[dict[str, Any]] = []
+    resolved_fields: dict[str, dict[str, Any]] = {}
+    for field in ANNOTATION_VALUE_FIELDS:
+        agreed_count = 0
+        adjudicated_count = 0
+        unresolved_disagreement_count = 0
+        missing_pair_count = 0
+        resolved_values: list[Any] = []
+        for item_id in sorted(ids_a):
+            value_a = rows_a[item_id]["judgments"][field]
+            value_b = rows_b[item_id]["judgments"][field]
+            if value_a is None or value_b is None:
+                missing_pair_count += 1
+                continue
+            if value_a == value_b:
+                agreed_count += 1
+                resolved_values.append(value_a)
+                continue
+            adjudicated_row = adjudication_rows.get(item_id)
+            if adjudicated_row is None:
+                unresolved_disagreement_count += 1
+                continue
+            adjudicated_count += 1
+            resolved_values.append(adjudicated_row["judgments"][field])
+
+        counts = Counter(resolved_values)
+        resolved_fields[field] = {
+            "resolved_count": len(resolved_values),
+            "agreed_count": agreed_count,
+            "adjudicated_count": adjudicated_count,
+            "unresolved_disagreement_count": unresolved_disagreement_count,
+            "missing_from_at_least_one_independent_review_count": missing_pair_count,
+            "resolved_value_counts": {
+                str(value).lower(): counts[value]
+                for value in (RATING_CATEGORIES if field in RATING_FIELDS else FLAG_CATEGORIES)
+            },
+            "resolved_rating_mean": round(sum(resolved_values) / len(resolved_values), 6)
+            if field in RATING_FIELDS and resolved_values
+            else None,
+            "resolved_true_count": sum(value is True for value in resolved_values)
+            if field in FLAG_FIELDS
+            else None,
+            "resolved_true_rate": round(
+                sum(value is True for value in resolved_values) / len(resolved_values), 6
+            )
+            if field in FLAG_FIELDS and resolved_values
+            else None,
+        }
+
+    for item_id in sorted(ids_a):
+        judgments_a = rows_a[item_id]["judgments"]
+        judgments_b = rows_b[item_id]["judgments"]
+        disagreements = paired_disagreements[item_id]
         missing_a = [field for field in ANNOTATION_VALUE_FIELDS if judgments_a[field] is None]
         missing_b = [field for field in ANNOTATION_VALUE_FIELDS if judgments_b[field] is None]
+        adjudicated_fields = [
+            field
+            for field in disagreements
+            if item_id in adjudication_rows
+            and adjudication_rows[item_id]["judgments"][field] is not None
+        ]
         item_agreement.append(
             {
                 "review_item_id": item_id,
                 "disagreement_fields": disagreements,
                 "missing_fields_a": missing_a,
                 "missing_fields_b": missing_b,
+                "adjudicated_fields": adjudicated_fields,
+                "adjudication_decision": (
+                    adjudication_rows[item_id]["adjudication_decision"]
+                    if item_id in adjudication_rows
+                    else None
+                ),
+                "unresolved_disagreement_fields": [
+                    field for field in disagreements if field not in adjudicated_fields
+                ],
+                "adjudication_status": (
+                    "ADJUDICATED"
+                    if disagreements and len(adjudicated_fields) == len(disagreements)
+                    else "UNRESOLVED"
+                    if disagreements
+                    else "NO_PAIRED_DISAGREEMENT"
+                ),
             }
         )
 
@@ -474,6 +614,12 @@ def score_vietnamese_answer_quality_review(
     )
 
     fully_paired_disagreements = sum(bool(item["disagreement_fields"]) for item in item_agreement)
+    paired_disagreement_field_count = sum(
+        len(item["disagreement_fields"]) for item in item_agreement
+    )
+    adjudicated_disagreement_field_count = sum(
+        len(item["adjudicated_fields"]) for item in item_agreement
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
         "schema_version": "vietnamese_answer_quality_agreement_v1",
@@ -482,6 +628,9 @@ def score_vietnamese_answer_quality_review(
             "annotator_a_sha256": _sha256(annotator_a_path),
             "annotator_b_sha256": _sha256(annotator_b_path),
             "evaluator_manifest_sha256": _sha256(manifest_path),
+            "adjudication_sha256": _sha256(adjudication_path)
+            if adjudication_path is not None
+            else None,
         },
         "review_packet": {
             "item_count": len(ids_a),
@@ -497,22 +646,42 @@ def score_vietnamese_answer_quality_review(
                 }
             ),
         },
-        "reviewers": {"annotator_a": reviewer_a_id, "annotator_b": reviewer_b_id},
+        "reviewers": {
+            "annotator_a": reviewer_a_id,
+            "annotator_b": reviewer_b_id,
+            "adjudicator": adjudicator_id,
+        },
         "summary": {
             "items_with_any_paired_disagreement": fully_paired_disagreements,
+            "paired_disagreement_field_count": paired_disagreement_field_count,
+            "adjudicated_disagreement_field_count": adjudicated_disagreement_field_count,
+            "unresolved_disagreement_field_count": (
+                paired_disagreement_field_count - adjudicated_disagreement_field_count
+            ),
+            "adjudication_coverage_of_paired_disagreements": (
+                round(adjudicated_disagreement_field_count / paired_disagreement_field_count, 6)
+                if paired_disagreement_field_count
+                else None
+            ),
             "ratings_and_flags_are_reported_per_field": True,
             "single_composite_answer_quality_score": None,
-            "adjudication_performed": False,
-            "disagreements_resolved": False,
+            "adjudication_performed": adjudication_path is not None,
+            "adjudication_decisions": dict(
+                Counter(row["adjudication_decision"] for row in adjudication_rows.values())
+            ),
+            "disagreements_resolved": (
+                paired_disagreement_field_count == adjudicated_disagreement_field_count
+            ),
             "eligible_for_validation_or_blind_claim": False,
             "interpretation": (
                 "This report measures independent reviewer agreement and label coverage. "
                 "It does not establish answer correctness, customer acceptance, "
-                "or release readiness. "
-                "Missing/N/A labels are excluded per field; disagreements remain unresolved."
+                "or release readiness. Missing/N/A labels are excluded per field. "
+                "Unadjudicated disagreements remain unresolved."
             ),
         },
         "agreement": agreement,
+        "resolved_assessments": resolved_fields,
         "items": item_agreement,
     }
     output_path.write_text(
@@ -527,10 +696,15 @@ def main() -> None:
     parser.add_argument("--annotator-a", type=Path, required=True)
     parser.add_argument("--annotator-b", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--adjudication", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     report = score_vietnamese_answer_quality_review(
-        args.annotator_a, args.annotator_b, args.manifest, args.output
+        args.annotator_a,
+        args.annotator_b,
+        args.manifest,
+        args.output,
+        args.adjudication,
     )
     summary = report["summary"]
     print(
@@ -538,6 +712,12 @@ def main() -> None:
             {
                 "review_item_count": report["review_packet"]["item_count"],
                 "items_with_any_paired_disagreement": summary["items_with_any_paired_disagreement"],
+                "adjudicated_disagreement_field_count": summary[
+                    "adjudicated_disagreement_field_count"
+                ],
+                "unresolved_disagreement_field_count": summary[
+                    "unresolved_disagreement_field_count"
+                ],
                 "eligible_for_validation_or_blind_claim": summary[
                     "eligible_for_validation_or_blind_claim"
                 ],

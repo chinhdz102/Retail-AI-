@@ -290,6 +290,12 @@ def test_answer_quality_schema_matches_blank_template_and_rubric_dimensions() ->
         "INDEPENDENT_B",
         "ADJUDICATED",
     ]
+    assert schema["properties"]["adjudication_decision"]["enum"] == [
+        "",
+        "KEEP_A",
+        "KEEP_B",
+        "NEW_JUDGMENT",
+    ]
     assert "adjudication" in schema["properties"]
 
 
