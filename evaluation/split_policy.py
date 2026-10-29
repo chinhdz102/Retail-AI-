@@ -31,6 +31,12 @@ def _is_within(path: Path, parent: Path) -> bool:
     return True
 
 
+def _stable_text_sha256(raw: bytes) -> str:
+    """Hash UTF-8 text content consistently across Windows and Unix checkouts."""
+    normalized = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(normalized).hexdigest()
+
+
 def _load_registry(path: Path = REGISTRY_PATH) -> tuple[dict[str, Any], str]:
     try:
         raw = path.read_bytes()
@@ -41,7 +47,7 @@ def _load_registry(path: Path = REGISTRY_PATH) -> tuple[dict[str, Any], str]:
         raise SplitPolicyError("Evaluation split registry must use schema_version 1.0")
     if not isinstance(registry.get("protected_datasets"), list):
         raise SplitPolicyError("Evaluation split registry has no protected_datasets list")
-    return registry, hashlib.sha256(raw).hexdigest()
+    return registry, _stable_text_sha256(raw)
 
 
 def authorize_dataset_split(
@@ -56,7 +62,7 @@ def authorize_dataset_split(
     path = dataset_path.resolve()
     if not path.is_file():
         raise SplitPolicyError(f"Evaluation dataset does not exist: {path}")
-    dataset_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+    dataset_sha256 = _stable_text_sha256(path.read_bytes())
     registry, registry_sha256 = _load_registry(registry_path)
 
     if requested_split == "development":

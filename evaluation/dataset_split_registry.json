@@ -29,31 +29,31 @@
     {
       "path": "evaluation/cases/retail_ai_semantic_intelligence_v2_frozen_20261028.json",
       "dataset_id": "retail_ai_semantic_intelligence_v2_frozen_20261028",
-      "sha256": "d030d8f860f426a0ffcba7d44b542f8f7b23e9d361a51d8810c052670ba8b1e9",
+      "sha256": "0fbfbdcecb83a0cfe2a8fc24bb688526a8a5db4a7ab797a3c73217b677d2e1f1",
       "exposure_status": "repo_visible; synthetic and previously inspected"
     },
     {
       "path": "evaluation/cases/generalized_catalog_consultation_dev_v1.jsonl",
       "dataset_id": "generalized_catalog_consultation_dev_v1",
-      "sha256": "2e42c0be4106a7af9a42ce3e8382f581d3c04cdfb79ea3b52d8c81f19cb7af0b",
+      "sha256": "c3a36a094f2c216544bbd3db7294d2716fc85af9b9fda9d8d7b33739f765573f",
       "exposure_status": "repo_visible; generated catalog query set"
     },
     {
       "path": "evaluation/cases/generalized_catalog_consultation_heldout_v1.jsonl",
       "dataset_id": "generalized_catalog_consultation_heldout_v1",
-      "sha256": "9a3a0a8d6847fa330cc88cc414ef2132c569a0df34889e8db543da1559d4496a",
+      "sha256": "35348f571c46f477f86188982a2e4fc3fff5269fc1b27a54643f0a1123ca19d3",
       "exposure_status": "repo_visible; SKU-disjoint exploratory set, not blind"
     },
     {
       "path": "evaluation/cases/generalized_catalog_conversations_dev_v1.json",
       "dataset_id": "generalized_catalog_conversations_dev_v1",
-      "sha256": "7bb0e4f3bfd81e5f7db06fbd9136b65198ea3236c1010e5882120d3df513e719",
+      "sha256": "c35d7493d0cf740007be89111b913ffea8765003039a3068b8dc0fd52b97d646",
       "exposure_status": "repo_visible; generated conversation templates"
     },
     {
       "path": "evaluation/cases/generalized_catalog_conversations_heldout_v1.json",
       "dataset_id": "generalized_catalog_conversations_heldout_v1",
-      "sha256": "55a21539a6d795392f89664eb4624c889de8402806e8e0a7526017269cebf8e9",
+      "sha256": "44342f4825f4ad6ad9df5f0f79b1814948a9b8354ddae4e8e75aab8d839fab14",
       "exposure_status": "repo_visible; generated conversation templates, not blind"
     },
     {
@@ -65,13 +65,13 @@
     {
       "path": "evaluation/cases/vietnamese_shopping_mission_heldout_v4_20261021.json",
       "dataset_id": "vietnamese_shopping_mission_heldout_v4_20261021",
-      "sha256": "2556882a9060d17115c482d7dea7359c38b4a41ba5dea9e1334688ed5fbfb9dd",
+      "sha256": "bd211d58999f6218d1beccd3c25b21f36bda5232ffcca96af801b289ef14e966",
       "exposure_status": "repo_visible; generated and inspected, not blind"
     },
     {
       "path": "evaluation/cases/vietnamese_text_sales_flow_v3_heldout.json",
       "dataset_id": "retail_vietnamese_text_sales_flow_v3_heldout",
-      "sha256": "a1383e0a03cd8ea93d0e9fd3047c613387cc05c70bd4a693aa2c820d8d84383",
+      "sha256": "06da313c6f275cc31bdfed1b30ce8a08e32d3f8c78b0448cf95d144005ed4710",
       "exposure_status": "repo_visible; previously used, not blind"
     },
     {
