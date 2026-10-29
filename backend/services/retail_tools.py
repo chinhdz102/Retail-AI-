@@ -1206,25 +1206,70 @@ def _supported_family_query(
     return " ".join((family, *dict.fromkeys(supported_details))), unverified_detail
 
 
+def _unresolved_family_scope_leaf(
+    product_type: str | None,
+    query_scope: str = "",
+    repository: ProductRepository | None = None,
+) -> str | None:
+    """Resolve a uniquely explicit scope among taxonomy leaves for a family."""
+    family = normalize_category_text(product_type)
+    if not family or not query_scope or repository is None:
+        return None
+    # A broad family can span distinct catalog leaves, such as face and body
+    # moisturizers. When the shopper explicitly names words from exactly one
+    # matching leaf, use that catalog taxonomy to scope candidates before
+    # preference ranking. This is data-driven: it does not map a product type
+    # to a hard-coded department or infer product benefits from the query.
+    list_hierarchies = getattr(repository, "list_category_hierarchies", None)
+    try:
+        hierarchies = list_hierarchies() if callable(list_hierarchies) else ()
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        hierarchies = ()
+    family_tokens = set(family.split())
+    requested_tokens = set(normalize_category_text(query_scope).split()) - family_tokens
+    leaf_scores: dict[str, int] = {}
+    for path in hierarchies:
+        if not path:
+            continue
+        leaf = normalize_category_text(path[-1])
+        if not re.search(rf"(?<!\w){re.escape(family)}(?!\w)", leaf):
+            continue
+        scope_tokens = set(leaf.split()) - family_tokens
+        overlap = scope_tokens & requested_tokens
+        if overlap:
+            leaf_scores[leaf] = max(leaf_scores.get(leaf, 0), len(overlap))
+    if not leaf_scores:
+        return None
+    highest_score = max(leaf_scores.values())
+    best_leaves = {leaf for leaf, score in leaf_scores.items() if score == highest_score}
+    return next(iter(best_leaves)) if len(best_leaves) == 1 else None
+
+
 def _product_matches_unresolved_family(
     product: ProductSnapshot,
     product_type: str | None,
+    scoped_leaf: str | None = None,
 ) -> bool:
-    """Require the full family phrase in a product title or one taxonomy label."""
+    """Require a catalog-backed family and honor a uniquely stated leaf scope."""
     family = normalize_category_text(product_type)
     if not family:
         return False
     sources = [product.name, product.category]
     if product.category_hierarchy:
         sources.extend(product.category_hierarchy.split(">"))
-    return any(
-        re.search(
-            rf"(?<!\w){re.escape(family)}(?!\w)",
-            normalize_category_text(source),
-        )
+    family_match = any(
+        re.search(rf"(?<!\w){re.escape(family)}(?!\w)", normalize_category_text(source))
         for source in sources
         if source
     )
+    if not family_match or not scoped_leaf:
+        return family_match
+    product_leaves = {
+        normalize_category_text(segment)
+        for segment in (product.category_hierarchy or "").split(">")
+        if segment.strip()
+    }
+    return scoped_leaf in product_leaves
 
 
 def _constraints_outside_catalog_title(
@@ -1969,6 +2014,31 @@ def _query_category_hint(
     if repository is not None and _query_matches_catalog_title(taxonomy_query, repository):
         return category, False
     return category, not residual
+
+
+def has_unverified_negative_catalog_constraint(
+    query: str,
+    repository: ProductRepository | None = None,
+) -> bool:
+    """Return whether a parsed negative product constraint lacks catalog support."""
+    repo = repository or get_product_repository()
+    list_hierarchies = getattr(repo, "list_category_hierarchies", None)
+    try:
+        hierarchies = list_hierarchies() if callable(list_hierarchies) else ()
+        understanding = understand_catalog_query(query, hierarchies)
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        return bool(understand_catalog_query(query).negative_constraints)
+    if not understanding.negative_constraints:
+        return False
+    category, _ = _query_category_hint(query, repo)
+    selected_category = _category_for_repository(category, repo)
+    unsupported, _, _, _ = _negative_constraint_status(
+        query,
+        understanding.negative_constraints,
+        repo,
+        selected_category=selected_category,
+    )
+    return bool(unsupported)
 
 
 def _category_from_product_type(
@@ -3098,6 +3168,15 @@ def execute_catalog_tool(
                 and not product_identity
                 and not explicit_leaf_override
             )
+            family_scope_leaf = (
+                _unresolved_family_scope_leaf(
+                    understanding.product_type,
+                    request_text,
+                    repo,
+                )
+                if ambiguous_family
+                else None
+            )
             category_source = (
                 query_category
                 if category_only_query and query_category
@@ -3288,6 +3367,7 @@ def execute_catalog_tool(
                     if _product_matches_unresolved_family(
                         product,
                         understanding.product_type,
+                        family_scope_leaf,
                     )
                 )
             audience_unverified = False
@@ -3511,6 +3591,26 @@ def execute_catalog_tool(
                 and not product_identity
                 and not explicit_leaf_override
             )
+            family_scope_leaf = (
+                _unresolved_family_scope_leaf(
+                    understanding.product_type,
+                    parsed.preference_text or current_user_text or parsed.query,
+                    repo,
+                )
+                if ambiguous_family
+                else None
+            )
+            family_candidate_filter = (
+                (
+                    lambda product: _product_matches_unresolved_family(
+                        product,
+                        understanding.product_type,
+                        family_scope_leaf,
+                    )
+                )
+                if ambiguous_family
+                else None
+            )
             category_source = (
                 query_category
                 if parsed_type_category or ambiguous_family or explicit_leaf_override
@@ -3646,6 +3746,7 @@ def execute_catalog_tool(
                 repo,
                 search_criteria,
                 preference_text_for_ranking,
+                candidate_filter=family_candidate_filter,
             )
             supported_details, unmatched_details = (
                 _category_query_unmatched_details(routing_query, category, repo)
@@ -3658,6 +3759,7 @@ def execute_catalog_tool(
                     repo,
                     search_criteria,
                     preference_text_for_ranking,
+                    candidate_filter=family_candidate_filter,
                 )
             elif (
                 not products and not product_identity and not mentioned_brand and unmatched_details
@@ -3667,6 +3769,7 @@ def execute_catalog_tool(
                     repo,
                     search_criteria,
                     preference_text_for_ranking,
+                    candidate_filter=family_candidate_filter,
                 )
                 category_fallback_used = bool(products)
             brand_query = " ".join((parsed.query, parsed.preference_text)).strip()
@@ -3682,6 +3785,7 @@ def execute_catalog_tool(
                         repo,
                         search_criteria,
                         preference_text_for_ranking,
+                        candidate_filter=family_candidate_filter,
                     )
             preparation = frozenset().union(
                 preparation_terms(understanding.use_case or ""),
@@ -3857,7 +3961,9 @@ def execute_catalog_tool(
                     if normalize_category_text(product.brand) in excluded_brands:
                         return False
                     if ambiguous_family and not _product_matches_unresolved_family(
-                        product, understanding.product_type
+                        product,
+                        understanding.product_type,
+                        family_scope_leaf,
                     ):
                         return False
                     if not matches_explicit_product_audience(audience_query, product):
@@ -3890,6 +3996,7 @@ def execute_catalog_tool(
                     if _product_matches_unresolved_family(
                         product,
                         understanding.product_type,
+                        family_scope_leaf,
                     )
                 )
             audience_query = " ".join(

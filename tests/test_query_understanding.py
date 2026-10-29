@@ -7,6 +7,7 @@ import pytest
 
 from backend.api.main import _localized_recommendation_candidates
 from backend.products.catalog import ProductSnapshot
+from backend.products.category_taxonomy import normalize_category_text
 from backend.products.snapshot_repository import SnapshotProductRepository
 from backend.services.query_understanding import (
     prior_product_page_reference_kind,
@@ -52,6 +53,20 @@ def test_use_case_keeps_customer_need_and_drops_only_polite_request_closing(
         query,
         repository.list_category_hierarchies(),
     )
+
+    assert result.use_case == expected_use_case
+
+
+@pytest.mark.parametrize(
+    ("query", "expected_use_case"),
+    [
+        ("Mình cần sữa tươi hộp giấy để ngoài được, có loại nào không?", "ngoài được"),
+        ("Cho mình khăn giấy để mang theo, có loại nào không?", "mang theo"),
+    ],
+)
+def test_use_case_drops_trailing_product_availability_question(query, expected_use_case):
+    repository = _snapshot()
+    result = understand_catalog_query(query, repository.list_category_hierarchies())
 
     assert result.use_case == expected_use_case
 
@@ -106,6 +121,78 @@ def test_natural_request_prefix_preserves_catalog_leaf(
     result = understand_catalog_query(query, repository.list_category_hierarchies())
 
     assert result.product_type == expected_category
+
+
+@pytest.mark.parametrize(
+    ("query", "expected_category"),
+    [
+        ("Tìm bàn là", "Bàn là"),
+        ("Tìm giá đỗ", "Giá đỗ"),
+        ("Tìm Dung dịch vs nam nữ", "Dung dịch vs nam nữ"),
+        ("Tìm Dụng cụ vs nhà cửa", "Dụng cụ vs nhà cửa"),
+    ],
+)
+def test_exact_catalog_labels_are_not_overridden_by_stopwords_or_intent_cues(
+    query: str, expected_category: str
+) -> None:
+    repository = _snapshot()
+
+    result = understand_catalog_query(query, repository.list_category_hierarchies())
+
+    assert result.product_type == expected_category
+    assert result.intent == "product_search"
+    assert result.comparison_targets == ()
+    assert result.budget_vnd is None
+
+
+def test_price_question_about_category_with_price_keyword_still_routes_as_price() -> None:
+    repository = _snapshot()
+
+    result = understand_catalog_query(
+        "Giá đỗ giá bao nhiêu?",
+        repository.list_category_hierarchies(),
+    )
+
+    assert result.product_type == "Giá đỗ"
+    assert result.intent == "price"
+    assert result.budget_vnd is None
+
+
+def test_explicit_comparison_cue_outside_category_label_is_preserved() -> None:
+    repository = _snapshot()
+
+    result = understand_catalog_query(
+        "So sánh giá đỗ với nước ngọt",
+        repository.list_category_hierarchies(),
+    )
+
+    assert result.intent == "comparison"
+    assert result.comparison_targets
+
+
+def test_all_exact_catalog_leaf_labels_keep_category_identity_and_lookup_intent() -> None:
+    repository = _snapshot()
+    hierarchies = repository.list_category_hierarchies()
+    labels = sorted({path[-1] for path in hierarchies if path})
+    taxonomy_labels = {
+        normalize_category_text(segment)
+        for path in hierarchies
+        for segment in path
+    }
+
+    assert labels
+    for label in labels:
+        result = understand_catalog_query(f"Tìm {label}", hierarchies)
+        assert result.product_type, (label, result.model_dump())
+        assert normalize_category_text(result.product_type) in taxonomy_labels, (
+            label,
+            result.model_dump(),
+        )
+        assert result.intent in {"product_search", "recommendation"}, (
+            label,
+            result.model_dump(),
+        )
+        assert result.comparison_targets == (), (label, result.model_dump())
 
 
 def test_package_size_is_not_misread_as_purchase_quantity() -> None:
@@ -933,6 +1020,27 @@ def test_indirect_customer_need_is_kept_separate_from_product_category() -> None
     assert result.soft_preferences == ("Da đầu mình nhanh bết",)
 
 
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Mì ăn liền vị bò với vị gà đang có những nhãn nào?",
+        "Sữa tươi có nhãn hàng nào?",
+        "Cho hỏi thương hiệu nào có trong nhóm dầu gội?",
+    ],
+)
+def test_natural_brand_and_label_questions_are_not_routed_as_product_choice(query):
+    repository = _snapshot()
+    result = understand_catalog_query(query, repository.list_category_hierarchies())
+
+    assert result.intent == "brand"
+
+
+def test_accentless_receiving_phrase_is_not_misread_as_a_brand_question():
+    result = understand_catalog_query("Tôi nhận hàng nào trước?")
+
+    assert result.intent != "brand"
+
+
 def test_unverified_need_is_not_rendered_as_a_suitability_recommendation() -> None:
     repository = _snapshot()
     query = "Da đầu mình nhanh bết, có dầu gội nào trong cửa hàng không?"
@@ -971,9 +1079,10 @@ def test_single_unverified_catalog_match_is_described_as_one_option() -> None:
 
     answer = _localized_recommendation_candidates(observation, "vi")
 
-    assert "một sản phẩm" in answer
+    assert "một lựa chọn" in answer
     assert "Dầu gội chống gàu 100ml" in answer
-    assert "chưa có bằng chứng độc lập" in answer
+    assert "chưa có dữ liệu đã xác minh" in answer
+    assert "hiệu quả" not in answer
     assert "một số món cùng nhóm" not in answer
 
 

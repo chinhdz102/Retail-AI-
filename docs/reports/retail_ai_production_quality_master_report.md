@@ -329,6 +329,8 @@ uv run python -m evaluation.live_text_conversation_benchmark `
   --case-file evaluation/cases/retail_ai_live_text_vietnamese_dev_20261029.json `
   --pace-seconds 9 `
   --output docs/reports/artifacts/live_text_vietnamese_dev_20261029.json
+uv run python -m evaluation.catalog_taxonomy_api_smoke `
+  --output docs/reports/artifacts/catalog_taxonomy_api_smoke_20261029.json
 uv run pytest tests/test_vietnamese_answer_quality_review.py tests/test_live_text_conversation_benchmark.py -q --tb=short
 git diff --check
 ```
@@ -342,3 +344,59 @@ Live Groq execution requires credentials in local environment/`.env`; do not pri
 3. The bounded cache changes can be reverted independently from session alternative tracking and preference preservation. Preserve regression tests and benchmark artifacts when reverting production behavior so the defect remains visible.
 4. If the preference parser causes noisy ranking, disable the soft-preference recovery path first; hard requirements and budget validation must stay enabled.
 5. Restore the prior report/artifacts from Git history if a report correction is needed; retain historical benchmark JSON and never overwrite it with a post-fix run.
+
+## 23. Generalized family retrieval and hard-constraint regression — 29/10/2026
+
+Two end-to-end API defects were reproduced and fixed on the existing branch `codex/retail-text-quality-v4-20261019`:
+
+1. **Family/category filtering happened after top-k ranking.** Soft preference matches could fill the candidate window with products from an adjacent leaf (for example, sunscreen/body moisturizer for a face-moisturizer query); filtering those rows afterward left no results. Candidate scope is now applied before ranking/truncation and resolved once from the active catalog taxonomy. No SKU-specific rule was added.
+2. **An unsupported negative attribute could be lost in a fresh session.** “Không chứa hương liệu” could route through generic product lookup without the original constraint reaching the tool, allowing an unsupported product result. The router now detects catalog-negative constraints that cannot be verified and abstains with a clear disclosure. A supported brand exclusion remains searchable.
+
+The deterministic API regression artifact [`family_scoped_preference_regression_20261029.json`](artifacts/family_scoped_preference_regression_20261029.json) records **4/4** cases: face moisturizer, men’s shampoo, floor cleaner, and an unsupported fragrance-free hard constraint. All returned product IDs, names, prices, and category leaves match the dated snapshot. It made no LLM or external-provider calls and is not human or blind evaluation.
+
+Verification after these changes: focused regression coverage **593 passed**; full repository suite `uv run pytest tests -q --tb=short` **1,347 passed in 180.47 s**; focused Ruff passed; `compileall` and `git diff --check` passed. The work remains in the existing branch; no new branch, commit, or push was made in this continuation.
+
+These results establish regression behavior only. Soft suitability such as “dịu nhẹ” is not verified by the catalog unless an evidence-backed attribute exists. Live stock, current shelf presence, sensitive product benefits, independent human relevance, and blind quality remain unverified. Release status remains **demo-only / not production-ready**.
+
+## 24. Catalog-label intent collisions and all-taxonomy API sweep — 29/10/2026
+
+A generated smoke run over every distinct catalog leaf exposed three reusable parser/router defects:
+
+1. **Exact labels made only of stop words were dropped.** The resolver removed both tokens in `Bàn là`, so a product request fell through to fuzzy search. Exact multiword taxonomy labels are now retained when normal tokenization removes the whole phrase; single-word accent-sensitive resolution remains on its existing path.
+2. **Taxonomy text was mistaken for an intent cue.** `Giá đỗ` was routed to price facts because `giá` is also a price keyword; taxonomy labels containing `vs` were routed to product comparison. The parser now evaluates price/comparison cues outside a matched catalog label. The API comparison route receives the live hierarchy, and fact-field routing does not intercept an exact category-only lookup. Explicit price questions and comparison cues outside the label remain active.
+3. **A parser-only fix was insufficient for routing.** API-level collision cases are now tested through session creation and `/agent/respond`, including card ID/name/price and taxonomy-path checks.
+
+The reusable sweep is `evaluation/catalog_taxonomy_api_smoke.py`. Final artifact [`catalog_taxonomy_api_smoke_20261029.json`](artifacts/catalog_taxonomy_api_smoke_20261029.json) records **344/344** distinct leaf-label requests passing through `/agent/respond`, with **0** LLM/provider calls. Every result had a taxonomy type, non-price/non-comparison lookup intent, at least one product in the requested taxonomy path, and cards matching snapshot IDs/names/prices. Local API latency in the final run was p50/p95 **188.49/218.54 ms**; it is not Groq latency or a production SLO.
+
+The property-style parser regression now checks every active taxonomy leaf rather than a fixed list of products. Four representative API collision cases cover the all-stopword label and price/comparison keyword collisions; a separate parser regression checks that `vs` inside a category label does not hijack a within-category cheapest-item question. Final verification on the current working tree: `uv run pytest tests -q --tb=short` **1,356 passed in 194.04 s**; `uv run ruff check backend tests evaluation`, `compileall`, and `git diff --check` passed.
+
+This sweep proves category routing and snapshot grounding only; it does not grade product suitability, answer quality, human relevance, or live store truth. It is exposed development evidence, not validation or blind evaluation. Independent qrels and human reviews remain uncompleted, so the release decision remains **demo-only / not production-ready**. All work stays on `codex/retail-text-quality-v4-20261019`; no additional branch was created.
+
+## 25. Brand questions, unsupported storage requirements, and parser regression — 29/10/2026
+
+The next review of realistic customer turns found three response-quality defects and fixed them on the existing branch:
+
+1. **Brand phrasing was missed.** A question such as “Mì ăn liền vị bò với vị gà đang có những nhãn nào?” was incorrectly routed as a stock lookup because “đang có” was over-weighted and “nhãn nào” was not recognized as a brand question. The parser now recognizes general Vietnamese brand/label questions, trims common availability suffixes, and asks the stock tool only when the user explicitly asks about stock (for example “còn hàng”, “hết hàng”, or “tồn kho”). The API fallback preserves the original user wording and lists brands only from matched catalog rows; it explicitly says packaging labels were not independently verified.
+2. **A storage requirement could show unverified products.** “Sữa tươi hộp giấy để ngoài được, có loại nào không?” could display candidates despite the snapshot having no verified storage-condition field. The API now detects this type of product attribute requirement and abstains without product cards when the catalog has no evidence. It distinguishes shelf location questions from storage-condition questions.
+3. **One-item fallback copy was irrelevant.** A single unverified candidate could receive a generic “hiệu quả” disclaimer. It now names the missing requested evidence in Vietnamese and the supported fallback languages.
+
+The 200-query development parser benchmark was rerun after these fixes and is recorded in [`independent_consultation_v2_after_storage_guard_20261029.json`](artifacts/independent_consultation_v2_after_storage_guard_20261029.json). Exact parse match is **95.0% (190/200)**; product type is **98.0% (196/200)**; intent **95.31% (61/64)**; budgets **20/20**; ranking criterion **21/21**; quantity **4/4**. Exact negative-constraint spans remain the weakest field at **76.92% (10/13)**; comparison intent is **80% (16/20)**. Category retrieval hit@1 is **92.5%** and tool category precision@5 is **92.0%** on this authored dataset. These scores are development/regression metrics, not a blind estimate: failure cases were inspected and this same dataset was rerun after code changes. Retrieval hit rate measures catalog category membership, not recommendation suitability or product relevance.
+
+The artifact now records the command, commit SHA, dirty-worktree state, dataset/catalog/configuration hashes, runtime/dependency versions, and that no model or randomized sampling was used. Local snapshot search latency was p50/p95 **62.36/110.98 ms** (baseline **76.44/232.86 ms**); this is local CPU tool latency, not LLM latency or an API production SLO.
+
+Focused regressions cover colloquial brand lookup through `/agent/respond`, positive/negative storage-intent detection, and withholding candidate cards when required storage evidence is absent. The end-to-end local API probes also confirmed that “nhãn nào” returns only brands from matched snapshot fields and includes a packaging-verification caveat. One catalog inconsistency remains visible: some product names contain brands that do not match the row's `brand` field, so the returned values are explicitly described as catalog brand fields rather than verified package brands.
+
+Verification for this continuation: focused consultation/parser tests **152 passed**; catalog browsing **20 passed**; benchmark-provenance test **1 passed**; full repository suite **1,366 passed in 193.58 s**; `uv run ruff check backend tests evaluation`, `compileall`, and `git diff --check` passed. Reproduction commands:
+
+```powershell
+uv run python evaluation/independent_consultation_benchmark.py `
+  --cases evaluation/cases/independent_consultation_v2.json `
+  --output docs/reports/artifacts/independent_consultation_v2_after_storage_guard_20261029.json
+uv run pytest tests/test_query_understanding.py tests/test_catalog_consultation.py -q --tb=short
+uv run pytest tests/test_catalog_browse.py -q --tb=short
+uv run pytest tests/test_independent_consultation_benchmark.py -q --tb=short
+uv run pytest tests -q --tb=short
+uv run ruff check backend tests evaluation
+```
+
+The benchmark is manually authored and does not measure naturalness, quality of recommendation, stock freshness, ASR, or actual customer satisfaction. Catalog attributes such as product efficacy, suitability, and storage remain largely absent. Independent blind queries, human relevance/suitability judgments, data provenance cleanup, and production load evaluation are still required. Release status remains **demo-only / not production-ready**. Work remains on `codex/retail-text-quality-v4-20261019`; no extra branch was created.

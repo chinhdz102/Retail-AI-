@@ -15,6 +15,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.products.category_taxonomy import (
+    CatalogCategoryMatch,
     catalog_leaf_query_phrase,
     category_alias_refines_explicit_audience,
     category_is_parent,
@@ -280,6 +281,7 @@ _RECOMMEND = re.compile(
 )
 _BRAND_QUESTION = re.compile(
     r"\b(?:thuong hieu|nhan hieu)\s+(?:nao|gi)\b|"
+    r"\bnhan(?:\s+hang)?\s+(?:nao|gi)\b|"
     r"\b(?:brand|which brand|what brand|hang nao)\b"
 )
 _AMBIGUOUS_WHICH_BRAND = re.compile(r"\bhang nao\b")
@@ -326,6 +328,14 @@ _IMPLICIT_QUERY_TAIL_FILLER = frozenset(
     "nao nay do trong cua tai o hang co khong a vay nhe nha please".split()
 )
 _USE_CASE_REQUEST_CLOSINGS = (
+    "co loai nao khong",
+    "co loai nao",
+    "co mon nao khong",
+    "co mon nao",
+    "co san pham nao khong",
+    "co san pham nao",
+    "co loai gi khong",
+    "co mon gi khong",
     "giup cho minh",
     "giup cho toi",
     "giup cho em",
@@ -471,11 +481,11 @@ def _strip_purpose_clause(raw: str, normalized: str) -> tuple[str, str | None]:
 def _trim_use_case_request_closing(value: str) -> str:
     """Remove a trailing polite request phrase from a captured purpose clause."""
     normalized = " ".join(normalize_vietnamese(value).split())
-    if normalized.endswith(" khong"):
-        return " ".join(value.split()[:-1]).strip(" ,.!?;:")
     for closing in _USE_CASE_REQUEST_CLOSINGS:
         if normalized.endswith(f" {closing}"):
             return " ".join(value.split()[: -len(closing.split())]).strip(" ,.!?;:")
+    if normalized.endswith(" khong"):
+        return " ".join(value.split()[:-1]).strip(" ,.!?;:")
     return value.strip(" ,.!?;:")
 
 
@@ -682,6 +692,15 @@ def _is_brand_question(normalized: str, raw: str) -> bool:
     match = _BRAND_QUESTION.search(normalized)
     if match is None:
         return False
+    label_question = re.search(r"\bnhan(?:\s+hang)?\s+(?:nao|gi)\b", match.group())
+    if label_question:
+        raw_label = re.search(r"\bnhãn(?:\s+hàng)?\s+(?:nào|gì)\b", raw, re.IGNORECASE)
+        if raw_label:
+            prefix = normalize_vietnamese(raw[: raw_label.start()])
+            return not bool(re.search(r"\b(?:theo|trên|ghi)\s*$", prefix))
+        # Avoid treating accentless ``nhận hàng nào`` as a brand question.
+        prefix = normalized[: match.start()]
+        return bool(re.search(r"\b(?:thuong hieu|nhan hieu|brand)\b", prefix))
     if not _AMBIGUOUS_WHICH_BRAND.search(match.group()):
         return True
     # "hãng nào" asks for a manufacturer, while "hàng nào ổn/ngon" asks for a
@@ -772,6 +791,30 @@ def _comparison_targets(raw: str, normalized: str) -> tuple[str, ...]:
         if target:
             targets.append(target)
     return tuple(dict.fromkeys(targets)) if len(targets) >= 2 else ()
+
+
+def _intent_cue_outside_exact_category(
+    normalized_query: str,
+    category_match: CatalogCategoryMatch | None,
+    cue_pattern: re.Pattern[str],
+) -> re.Match[str] | None:
+    """Ignore an intent keyword when it is part of an exact taxonomy name.
+
+    Catalog labels can contain ordinary words such as ``giá`` or abbreviations
+    such as ``vs``. Remove exact category mentions before interpreting those
+    tokens as price/comparison operators; explicit cues elsewhere in the turn
+    remain active (e.g. ``so sánh Giá đỗ với ...``).
+    """
+    search_text = normalized_query
+    if category_match is not None:
+        category_phrase = normalize_vietnamese(category_match.category)
+        if category_phrase:
+            search_text = re.sub(
+                rf"(?<!\w){re.escape(category_phrase)}(?!\w)",
+                " ",
+                search_text,
+            )
+    return cue_pattern.search(search_text)
 
 
 _PRIMARY_TYPE_FILLERS = frozenset(
@@ -1256,7 +1299,8 @@ def understand_catalog_query(
     ):
         product_type = None
 
-    comparison = _COMPARISON.search(normalized)
+    comparison = _intent_cue_outside_exact_category(normalized, category_match, _COMPARISON)
+    price_cue = _intent_cue_outside_exact_category(normalized, category_match, _PRICE)
     reference_match = _CONVERSATION_REFERENCE.search(normalized)
     context_query = previous_query
     context_product_type = None
@@ -1299,7 +1343,7 @@ def understand_catalog_query(
     if (
         product_type is None
         and context_query
-        and (reference_match or ranking != "relevance" or comparison or _PRICE.search(normalized))
+        and (reference_match or ranking != "relevance" or comparison or price_cue)
     ):
         previous = understand_catalog_query(context_query, category_hierarchies)
         product_type = previous.product_type
@@ -1395,7 +1439,7 @@ def understand_catalog_query(
         intent = "comparison"
     elif _LOCATION.search(normalized):
         intent = "location"
-    elif _PRICE.search(normalized) and (
+    elif price_cue and (
         not strong_recommendation or _DIRECT_PRICE_QUESTION.search(normalized)
     ):
         intent = "price"
@@ -1437,7 +1481,7 @@ def understand_catalog_query(
     broad_unresolved_request = bool(_BROAD_UNRESOLVED_REQUEST.search(normalized))
     if not product_type and broad_unresolved_request:
         clarification_needed = True
-    if not product_type and intent == "attribute" and not _PRICE.search(normalized):
+    if not product_type and intent == "attribute" and not price_cue:
         clarification_needed = True
     if (
         product_type
@@ -1454,7 +1498,7 @@ def understand_catalog_query(
             raw, normalized, reference_match.start(), reference_match.end()
         )
         conversation_reference = raw[reference_start:reference_end]
-    comparison_targets = _comparison_targets(raw, normalized)
+    comparison_targets = _comparison_targets(raw, normalized) if comparison else ()
     known_categories = {
         normalize_category_text(category): category
         for path in category_hierarchies
@@ -1492,7 +1536,7 @@ def understand_catalog_query(
     if _LOCATION.search(normalized):
         detected_intents.append("location")
     if (
-        _PRICE.search(normalized)
+        price_cue
         or re.search(r"\b(?:re hon|dat hon|cheaper|more expensive)\b", normalized)
         or ranking in {"price_ascending", "price_descending"}
     ):

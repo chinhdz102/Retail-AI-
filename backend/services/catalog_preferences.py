@@ -6,6 +6,7 @@ import math
 import re
 import unicodedata
 from collections import Counter
+from collections.abc import Callable
 from typing import Any
 
 from backend.products.catalog import QUERY_STOP_WORDS, ProductSnapshot
@@ -140,6 +141,8 @@ def search_with_preferences(
     repository: ProductRepository,
     criteria: dict[str, Any],
     text: str,
+    *,
+    candidate_filter: Callable[[ProductSnapshot], bool] | None = None,
 ) -> tuple[tuple[ProductSnapshot, ...], dict[str, list[str]]]:
     """Rerank with at most three extra searches, preserving every hard filter.
 
@@ -153,7 +156,14 @@ def search_with_preferences(
         return tuple(repository.search(**criteria)), {}
 
     pool_criteria = {**criteria, "limit": 20}
-    initial = repository.search(**pool_criteria)
+
+    def eligible(products: Any) -> tuple[ProductSnapshot, ...]:
+        rows = tuple(products)
+        if candidate_filter is None:
+            return rows
+        return tuple(product for product in rows if candidate_filter(product))
+
+    initial = eligible(repository.search(**pool_criteria))
     pool = {product.product_id: product for product in initial}
     taxonomy_words = set().union(
         *(_words(product.category_hierarchy or product.category) for product in initial)
@@ -169,7 +179,10 @@ def search_with_preferences(
     )[:3]
     for term in probes:
         probe = {**pool_criteria, "query": f"{criteria.get('query') or ''} {term}".strip()}
-        pool.update((product.product_id, product) for product in repository.search(**probe))
+        pool.update(
+            (product.product_id, product)
+            for product in eligible(repository.search(**probe))
+        )
 
     brands = list({product.brand for product in vocabulary_products if product.brand})
     excluded = excluded_catalog_brands(text, brands)

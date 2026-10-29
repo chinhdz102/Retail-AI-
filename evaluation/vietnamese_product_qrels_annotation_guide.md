@@ -16,7 +16,7 @@ Use the product snapshot fields shown in the review sheet as the available evide
 
 ## Constraint judgments
 
-For each pair, mark category, exact identity, brand, price, negation, and availability as `PASS`, `FAIL`, `UNKNOWN`, or `NOT_APPLICABLE`. A hard-constraint failure makes the pair `IRRELEVANT`, even if its name looks similar. Availability in a dated snapshot is not proof of live store stock. If the query asks for “best-selling,” “tastiest,” health benefit, or another absent field, annotate `clarification_expected` or `abstention_expected` as true as appropriate.
+For each pair, mark category, exact identity, brand, price, negation, availability, use-case/suitability, audience, variant, quantity/unit, and budget as `PASS`, `FAIL`, `UNKNOWN`, or `NOT_APPLICABLE`. A hard-constraint failure makes the pair `IRRELEVANT`, even if its name looks similar. A matching title/category alone does not prove suitability or audience fit. Availability in a dated snapshot is not proof of live store stock. If the query asks for “best-selling,” “tastiest,” health benefit, or another absent field, annotate `clarification_expected` or `abstention_expected` as true as appropriate.
 
 ## Independent review and adjudication
 
@@ -28,7 +28,7 @@ For each pair, mark category, exact identity, brand, price, negation, and availa
 
 ## Split policy
 
-`development` can contain synthetic or manually authored material used during iteration. `validation` should be independently authored and reviewed, then frozen before model selection. A `blind_test` requires a separate author/reviewer and access boundary; do not call templated SKU variants or generated prompts blind. The current V2 query templates are synthetic, highly repeated, and have no relevance qrels. Until people annotate the exported sheets and a split manifest is frozen, human metrics and a blind-test score are unavailable.
+`development` can contain synthetic or manually authored material used during iteration. `validation` should be independently authored, independently reviewed by at least two annotators, adjudicated, and frozen before model selection. A `blind_test` has the same requirements plus no tuning exposure, evaluator-held labels, and a data/label access boundary outside the repository. Do not call templated SKU variants or generated prompts blind. `evaluation/dataset_split_registry.json` records known repository-visible datasets as exposed development and currently registers no validation/blind dataset. The exporter rejects attempts to pass a case file under `evaluation/cases/` as `validation` or `blind_test`, and rejects unknown external hashes for those splits. Register a non-development dataset only after verifying its provenance and access boundary; a filename or CLI split flag is not evidence of blindness. Until people annotate the exported sheets and an eligible split is registered, human metrics and a blind-test score are unavailable.
 
 ## Export
 
@@ -44,4 +44,4 @@ uv run python -m evaluation.export_vietnamese_qrels_review `
 
 Repeat `--results` for each retrieval variant only when it was run against the same dataset and carries matching `case_id` values. The exporter includes only dataset cases present in at least one supplied result artifact; when a system ran a case but returned no candidates, that case remains reviewable as an explicit no-candidate row. Candidate IDs absent from the validated runtime catalog stop the export. Do not pool artifacts from unrelated query sets.
 
-The CSVs are a queue, not completed judgments. After review, normalize rows to JSONL matching `schemas/vietnamese_product_qrel_v1.schema.json` and retain dataset/catalog hashes and each reviewer's independent labels.
+The CSVs are a queue, not completed judgments. After review, normalize rows to JSONL matching `schemas/vietnamese_product_qrel_v1_1.schema.json` and retain dataset/catalog hashes and each reviewer's independent labels.

@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import importlib.metadata
 import json
+import os
+import platform
 import statistics
+import subprocess
+import sys
 import time
 from collections import defaultdict
 from datetime import UTC, datetime
@@ -50,6 +56,67 @@ def _percentile(values: list[float], fraction: float) -> float | None:
     ordered = sorted(values)
     index = max(0, min(len(ordered) - 1, int((len(ordered) - 1) * fraction + 0.999999)))
     return round(ordered[index], 3)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _git_output(*args: str) -> str | None:
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return completed.stdout.strip()
+
+
+def _package_version(name: str) -> str | None:
+    try:
+        return importlib.metadata.version(name)
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
+def _reproducibility_metadata(cases_path: Path, catalog_path: Path) -> dict[str, Any]:
+    status = _git_output("status", "--porcelain")
+    return {
+        "command": [sys.executable, *sys.argv],
+        "commit_sha": _git_output("rev-parse", "HEAD"),
+        "worktree_dirty": bool(status),
+        "worktree_status_entry_count": len(status.splitlines()) if status else 0,
+        "dataset_sha256": _sha256(cases_path),
+        "catalog_sha256": _sha256(catalog_path),
+        "pyproject_sha256": _sha256(ROOT / "pyproject.toml"),
+        "model": "none; deterministic query parser and snapshot search tool",
+        "seed": None,
+        "seed_note": "No randomized sampling; cases are evaluated in source order.",
+        "configuration": {
+            "tool_name": "search_products",
+            "candidate_limit": 5,
+            "parser": "understand_catalog_query",
+            "catalog_source": str(catalog_path.resolve()),
+        },
+        "runtime": {
+            "python": sys.version,
+            "platform": platform.platform(),
+            "processor": platform.processor() or None,
+            "logical_cpu_count": os.cpu_count(),
+            "dependencies": {
+                name: _package_version(name) for name in ("pydantic", "fastapi", "httpx")
+            },
+        },
+    }
 
 
 def _canonical(value: Any, field: str) -> Any:
@@ -154,6 +221,7 @@ def run(cases_path: Path, catalog_path: Path) -> dict[str, Any]:
         "authoring_method": source["authoring_method"],
         "evaluation_role": source.get("evaluation_role", "pilot; interpret with limitations"),
         "catalog_file": str(catalog_path),
+        "reproducibility": _reproducibility_metadata(cases_path, catalog_path),
         "case_count": len(results),
         "case_exact_match_rate": round(total_passed / max(1, len(results)), 4),
         "field_accuracy": {

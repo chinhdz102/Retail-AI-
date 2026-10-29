@@ -33,10 +33,39 @@ _DIFFERENCE_TAIL = re.compile(
 )
 
 
-def is_comparison_request(text: str) -> bool:
+def _taxonomy_label_contains_only_comparison_marker(
+    text: str,
+    category_hierarchies: tuple[tuple[str, ...], ...],
+) -> bool:
+    """Avoid treating a catalog label's own ``vs`` token as user intent."""
+    if not category_hierarchies:
+        return False
+    understanding = understand_catalog_query(text, category_hierarchies)
+    if not understanding.product_type or understanding.intent == "comparison":
+        return False
+    category_phrase = normalize_vietnamese(understanding.product_type)
+    if not re.search(r"\b(?:vs|versus)\b", category_phrase):
+        return False
+
     normalized = " ".join(normalize_vietnamese(text).split())
+    category_pattern = re.compile(rf"(?<!\w){re.escape(category_phrase)}(?!\w)")
+    remainder = category_pattern.sub(" ", normalized)
+    explicit_compare_cue = re.search(
+        r"\b(?:so sanh|compare|difference|differ|khac gi|khac nhau|co gi khac|vs|versus)\b",
+        remainder,
+    )
+    return explicit_compare_cue is None
+
+
+def is_comparison_request(
+    text: str,
+    category_hierarchies: tuple[tuple[str, ...], ...] = (),
+) -> bool:
+    normalized = " ".join(normalize_vietnamese(text).split())
+    if _taxonomy_label_contains_only_comparison_marker(text, category_hierarchies):
+        return False
     return bool(
-        parse_comparison_queries(text) is not None
+        parse_comparison_queries(text, category_hierarchies) is not None
         or re.search(r"\bso sanh\b|\bcompare\b|\bversus\b|\bvs\b", normalized)
         or _FOLLOWUP_TAIL.search(normalized)
         or _COMPARISON_FOLLOWUP.search(normalized)
@@ -92,7 +121,10 @@ def _parse_comparison_queries_from_patterns(text: str) -> tuple[str, str] | None
     return left, right
 
 
-def parse_comparison_queries(text: str) -> tuple[str, str] | None:
+def parse_comparison_queries(
+    text: str,
+    category_hierarchies: tuple[tuple[str, ...], ...] = (),
+) -> tuple[str, str] | None:
     """Extract comparison operands, falling back to the shared query IR.
 
     The local comparison grammar handles price/stock wording. The shared
@@ -100,11 +132,14 @@ def parse_comparison_queries(text: str) -> tuple[str, str] | None:
     ``A với B có gì khác theo nhãn?`` without maintaining a second copy of
     every comparison phrase and operand boundary.
     """
+    if _taxonomy_label_contains_only_comparison_marker(text, category_hierarchies):
+        return None
+
     pattern_operands = _parse_comparison_queries_from_patterns(text)
     if pattern_operands is not None:
         return pattern_operands
 
-    understanding = understand_catalog_query(text)
+    understanding = understand_catalog_query(text, category_hierarchies)
     if understanding.intent != "comparison" or len(understanding.comparison_targets) != 2:
         return None
     targets = tuple(
