@@ -2960,6 +2960,67 @@ def _local_policy_response(
     )
 
 
+def _product_matches_catalog_category(product: ProductSnapshot, category: str) -> bool:
+    category_key = normalize_category_text(category)
+    if not category_key:
+        return False
+    hierarchy_segments = [
+        normalize_category_text(segment)
+        for segment in split_category_hierarchy(product.category_hierarchy or "")
+    ]
+    return category_key in hierarchy_segments or category_key == normalize_category_text(
+        product.category
+    )
+
+
+def _catalog_scope_for_displayed_products(
+    request_text: str,
+    products: tuple[ProductSnapshot, ...] | list[ProductSnapshot],
+) -> str | None:
+    """Infer a follow-up scope only when the displayed catalog rows agree."""
+    if not products:
+        return None
+    try:
+        requested_category = resolve_catalog_request_category(
+            request_text,
+            get_product_repository(),
+        )
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        requested_category = None
+    if requested_category and all(
+        _product_matches_catalog_category(product, requested_category)
+        for product in products
+    ):
+        return requested_category
+
+    paths = [
+        split_category_hierarchy(product.category_hierarchy or "")
+        for product in products
+    ]
+    if all(paths):
+        shared_prefix: list[str] = []
+        for segments in zip(*paths, strict=False):
+            keys = {normalize_category_text(segment) for segment in segments}
+            if len(keys) != 1 or not next(iter(keys), ""):
+                break
+            shared_prefix.append(segments[0])
+        # The root department (for example, "Thực phẩm") is too broad to
+        # safely scope an alternative. A shared leaf or a narrower ancestor is
+        # useful; a single shared root is not.
+        if len(shared_prefix) >= 2:
+            return shared_prefix[-1]
+        leaves = [segments[-1] for segments in paths]
+        if len({normalize_category_text(label) for label in leaves}) == 1:
+            return leaves[0]
+
+    categories = {
+        normalize_category_text(product.category): product.category for product in products
+    }
+    if len(categories) == 1:
+        return next(iter(categories.values()))
+    return None
+
+
 def _deterministic_tool_response(
     request: AgentRespondRequest,
     state: SessionState,
@@ -2973,11 +3034,10 @@ def _deterministic_tool_response(
     session_store.add_message(request.session_id, "assistant", reply)
     if observation.tool_name in {"search_products", "recommend_products"}:
         candidate_ids = [product.product_id for product in observation.products]
-        categories = {
-            product.category.strip()
-            for product in observation.products
-            if product.category and product.category.strip()
-        }
+        category_scope = _catalog_scope_for_displayed_products(
+            request.text,
+            list(observation.products),
+        )
         one_product = observation.products[0] if len(observation.products) == 1 else None
         is_candidate_list = len(candidate_ids) > 1
         session_store.set_last_grounded_product(
@@ -2993,7 +3053,7 @@ def _deterministic_tool_response(
                 else IntentType.PRODUCT_LOOKUP
             ),
             active_product_id=one_product.product_id if one_product else None,
-            active_category=next(iter(categories)) if len(categories) == 1 else None,
+            active_category=category_scope,
             selected_product_ids=candidate_ids,
             pending_action="SELECT_RECOMMENDATION" if is_candidate_list else None,
             pending_clarification=(
@@ -7075,6 +7135,46 @@ async def agent_respond(
         for message in record.messages
         if message.get("role") == "user" and message.get("content")
     )[-4:]
+    alternative_category_context = None
+    if (
+        is_alternative_product_request(request.text)
+        and _explicit_recommendation_category(request.text) is None
+    ):
+        if record.shopping.current_intent == IntentType.RECOMMENDATION:
+            saved_category = record.shopping.constraints.get("category")
+            alternative_category_context = (
+                str(saved_category).strip()
+                if isinstance(saved_category, str) and saved_category.strip()
+                else record.shopping.active_category
+            )
+        elif record.shopping.selected_product_ids:
+            repository = get_product_repository(settings)
+            visible_products = [
+                product
+                for product_id in record.shopping.selected_product_ids
+                if (product := repository.get_product_snapshot(product_id)) is not None
+            ]
+            alternative_category_context = _catalog_scope_for_displayed_products(
+                "",
+                visible_products,
+            )
+            if (
+                alternative_category_context is None
+                and record.shopping.active_category
+                and visible_products
+                and all(
+                    _product_matches_catalog_category(product, record.shopping.active_category)
+                    for product in visible_products
+                )
+            ):
+                alternative_category_context = record.shopping.active_category
+
+    effective_constraints = record.shopping.constraints
+    if alternative_category_context:
+        effective_constraints = {
+            **record.shopping.constraints,
+            "category": alternative_category_context,
+        }
     category_recommendation_arguments = None
     if not requested_fields and (
         is_recommendation_request(request.text)
@@ -7092,8 +7192,11 @@ async def agent_respond(
         category_recommendation_arguments = _recommendation_tool_arguments(
             request.text,
             previous_user_text,
-            stored_constraints=record.shopping.constraints,
-            active_context=record.shopping.current_intent == IntentType.RECOMMENDATION,
+            stored_constraints=effective_constraints,
+            active_context=(
+                record.shopping.current_intent == IntentType.RECOMMENDATION
+                or bool(alternative_category_context)
+            ),
             structured_query=structured_query,
         )
     if prompt_override and not requested_fields:
@@ -7582,12 +7685,25 @@ async def agent_respond(
         and not unsupported_attribute_requested
         and not _administrative_action_requested(request.text)
     ):
+        category_browse_request = bool(
+            explicit_catalog_category
+            and re.search(
+                r"\b(?:xem|nhom|cac loai|nhung loai|danh muc|show me|browse)\b",
+                _normalize_request_text(request.text),
+            )
+        )
         candidate_observation = await lookup_product_candidates(
-            explicit_fact_query,
+            "" if category_browse_request else explicit_fact_query,
+            current_user_text=request.text if category_browse_request else "",
+            category=explicit_catalog_category if category_browse_request else None,
         )
         if candidate_observation.status == "SUCCESS" and candidate_observation.products:
             candidates = tuple(candidate_observation.products)
-            exact_id = _unique_product_match_id(explicit_fact_query, candidates)
+            exact_id = (
+                None
+                if category_browse_request
+                else _unique_product_match_id(explicit_fact_query, candidates)
+            )
             if (
                 exact_id is None
                 and len(candidates) == 1
@@ -8157,6 +8273,14 @@ async def agent_respond(
                 )
             )
         )
+        seed_visible_alternative_page = bool(
+            is_alternative_product_request(request.text)
+            and alternative_category_context
+            and record.shopping.selected_product_ids
+            and not record.shopping.seen_product_ids
+            and not stored_seen_scope
+        )
+        same_seen_scope = same_seen_scope or seed_visible_alternative_page
         constraints = record.shopping.constraints
         previous_scope = constraints.get("preference_scope")
         prior_text = str(constraints.get("preference_text") or "")
@@ -8211,6 +8335,14 @@ async def agent_respond(
             recommendation_arguments["exclude_product_ids"] = list(
                 dict.fromkeys(str(product_id) for product_id in previous_ids if product_id)
             )[:300]
+            if seed_visible_alternative_page and recommendation_scope_key:
+                record = session_store.update_shopping(
+                    request.session_id,
+                    seen_product_ids=list(
+                        dict.fromkeys(str(product_id) for product_id in previous_ids if product_id)
+                    )[-300:],
+                    seen_product_scope=recommendation_scope_key,
+                )
         else:
             # A fresh recommendation starts a fresh pagination history, even
             # when the shopper asks for the same category again.

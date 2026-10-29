@@ -128,6 +128,7 @@ def test_gathering_goal_with_explicit_no_cart_write_routes_to_mission_planner() 
         ("Thêm 2 lon Coca Zero vào giỏ nhé", ShoppingActionType.ADD_ITEM, "coca zero", 2),
         ("Lấy giúp tui 2 chai bỏ vô giỏ", ShoppingActionType.ADD_ITEM, "", 2),
         ("Add three cans of Coca Zero to my cart", ShoppingActionType.ADD_ITEM, "coca zero", 3),
+        ("Xem giỏ", ShoppingActionType.VIEW_CART, "", None),
         ("Xem giỏ hàng giúp mình", ShoppingActionType.VIEW_CART, "", None),
         ("Mở giỏ hàng cho mình xem", ShoppingActionType.VIEW_CART, "", None),
         ("Xem lại giỏ hàng giúp mình", ShoppingActionType.VIEW_CART, "", None),
@@ -147,6 +148,17 @@ def test_common_vietnamese_and_english_cart_intents(
     assert action.action == expected
     assert action.query == query
     assert action.quantity == quantity
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Mình muốn xem nhóm Giò chả",
+        "Cho mình xem giò chả",
+    ],
+)
+def test_food_category_gio_cha_is_not_misread_as_cart_view(text: str) -> None:
+    assert classify_shopping_action(text, SessionState.BROWSING) is None
 
 
 @pytest.mark.parametrize(
