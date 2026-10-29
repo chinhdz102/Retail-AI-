@@ -32,6 +32,7 @@
     "reviewed_at",
     "confidence_1_5",
     "rationale",
+    "adjudication_decision",
     "annotation_status"
   ],
   "properties": {
@@ -62,6 +63,7 @@
     "reviewed_at": { "type": ["string", "null"], "format": "date-time" },
     "confidence_1_5": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
     "rationale": { "type": "string", "maxLength": 3000 },
+    "adjudication_decision": { "enum": ["", "KEEP_A", "KEEP_B", "NEW_JUDGMENT"] },
     "annotation_status": {
       "enum": ["UNREVIEWED", "INDEPENDENT_A", "INDEPENDENT_B", "ADJUDICATED"]
     },
@@ -73,12 +75,28 @@
         "reviewer_id": { "type": "string", "minLength": 1 },
         "reviewed_at": { "type": "string", "format": "date-time" },
         "decision": {
-          "enum": ["AGREE", "KEEP_A", "KEEP_B", "NEW_JUDGMENT", "UNRESOLVED"]
+          "enum": ["KEEP_A", "KEEP_B", "NEW_JUDGMENT"]
         },
         "rationale": { "type": "string", "maxLength": 3000 }
       }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "annotation_status": { "const": "ADJUDICATED" } },
+        "required": ["annotation_status"]
+      },
+      "then": {
+        "properties": {
+          "adjudication_decision": { "enum": ["KEEP_A", "KEEP_B", "NEW_JUDGMENT"] }
+        }
+      },
+      "else": {
+        "properties": { "adjudication_decision": { "const": "" } }
+      }
+    }
+  ],
   "$defs": {
     "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
     "critical_flag": { "type": ["boolean", "null"] }

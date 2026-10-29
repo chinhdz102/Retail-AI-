@@ -69,4 +69,17 @@ uv run python -m evaluation.score_vietnamese_answer_quality_review `
   --output docs/reports/artifacts/answer_quality_agreement_20261028.json
 ```
 
-The report includes per-dimension quadratic-weighted Cohen's kappa and exact/within-one-point agreement, per-flag raw agreement and nominal kappa, positive/negative agreement, confusion matrices, and missing-label counts. It does not merge dimensions into one score or resolve disagreements. An unresolved difference needs a separate, distinct adjudicator; agreement alone is not a correctness oracle or a blind-test certification. The scorer refuses queues still marked `UNREVIEWED`.
+The report includes per-dimension quadratic-weighted Cohen's kappa and exact/within-one-point agreement, per-flag raw agreement and nominal kappa, positive/negative agreement, confusion matrices, and missing-label counts. It does not merge dimensions into one score. Disagreements remain unresolved unless you provide a separate third-reviewer CSV with status `ADJUDICATED` and a distinct pseudonymous reviewer ID. Copy only disputed items from the frozen customer-visible packet; after both independent reviews are frozen, let the adjudicator see both original rationales and fill only the fields where both reviewers supplied different judgments. Record `KEEP_A`, `KEEP_B`, or `NEW_JUDGMENT`; the scorer verifies that a `KEEP_A`/`KEEP_B` decision matches the selected reviewer's labels. Keep the original A/B files unchanged. The scorer validates the adjudication item set, packet content, reviewer identity, decision, and that the adjudicator filled exactly those disputed fields; missing/N/A fields are not silently imputed.
+
+After creating the separate adjudication CSV from the template header and disputed rows, pass it with `--adjudication`:
+
+```powershell
+uv run python -m evaluation.score_vietnamese_answer_quality_review `
+  --annotator-a evaluation/review/my_packet_annotator_a.csv `
+  --annotator-b evaluation/review/my_packet_annotator_b.csv `
+  --manifest evaluation/review/my_packet_evaluator_only_manifest.json `
+  --adjudication evaluation/review/my_packet_adjudication.csv `
+  --output docs/reports/artifacts/my_packet_answer_quality_agreement.json
+```
+
+The scorer reports original A/B agreement separately from per-field labels resolved by agreement or by adjudication. It refuses queues still marked `UNREVIEWED`. Adjudication and agreement are not a product-truth oracle or blind-test certification.

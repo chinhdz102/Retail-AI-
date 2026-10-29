@@ -47,6 +47,7 @@ CSV_FIELDS = [
     "reviewed_at",
     "confidence_1_5",
     "rationale",
+    "adjudication_decision",
     "annotation_status",
 ]
 RATING_FIELDS = CSV_FIELDS[8:14]
@@ -59,6 +60,7 @@ ANNOTATION_FIELDS = [
     "reviewed_at",
     "confidence_1_5",
     "rationale",
+    "adjudication_decision",
     "annotation_status",
 ]
 VISIBLE_ITEM_KEYS = (
