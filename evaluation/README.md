@@ -39,6 +39,14 @@ Kiểm thử SQL giả lập và đối chiếu ID snapshot không thay thế be
 
 `run_smoke_benchmark.py` dùng phản hồi Groq được lập trình sẵn để kiểm backend, tool, grounding, phân quyền, session và lỗi. Kết quả ở `evaluation/results/smoke_benchmark.json`; exit code 1 nghĩa là có ca FAIL.
 
+`production_tool_search_benchmark.py` đo đường tìm kiếm sản phẩm deterministic đang được customer agent gọi: `execute_catalog_tool(search_products)` trên WinMart snapshot. Mặc định chạy 150 biến thể truy vấn phân giải tên sản phẩm và ghi ID, Recall@1/5, MRR/nDCG, latency mỗi lượt, snapshot/query SHA và trạng thái tool. Đây là benchmark development sinh từ title catalog, không đo semantic-fit tư vấn; không dùng kết quả làm human relevance hoặc production-quality claim. Chạy bằng:
+
+```powershell
+uv run python evaluation/production_tool_search_benchmark.py
+```
+
+`generalized_retrieval_variants.py` hiện ghi thêm baseline cùng đường tool thật khi so sánh BM25, E5 và RRF; các biến thể dense vẫn dùng thử nghiệm offline riêng, không được bật trong request production.
+
 `run_p0_regressions.py` chạy 8 regression ưu tiên × 5 lượt. Nó cũng dùng phản hồi giả lập nên cô lập backend và không tiêu quota; nó không đo khả năng model tự chọn tool hoặc `fields`. Kết quả ở `evaluation/results/p0_regression_5x.json`.
 
 `live_groq_smoke.py` chạy benchmark agent bằng Groq thật. Nó mặc định đọc key từ `.env`; có thể chọn file cấu hình khác bằng `RETAIL_EVAL_ENV_FILE`. Script không ghi key vào kết quả, tắt SDK retry, đặt timeout provider 12 giây và timeout tác vụ 50 giây. Kết quả được lưu sau mỗi lượt.

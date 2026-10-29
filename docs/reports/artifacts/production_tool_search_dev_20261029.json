@@ -1,0 +1,2801 @@
+{
+  "kind": "production_snapshot_search_tool_dev_benchmark",
+  "generated_at_utc": "2026-10-29T07:11:24.374711+00:00",
+  "commit_sha": "453a5d64a7e53d07ff0ce0ddbe47be454441c1fa",
+  "working_tree": {
+    "dirty_tracked_files": true,
+    "tracked_diff_sha256": "bf7086446b40db13d2e04692f4bda677cd35463978dd084a8a26eb5c2fc88116"
+  },
+  "source_file": "data/winmart_products.json",
+  "case_file": "evaluation/cases/generalized_catalog_consultation_dev_v1.jsonl",
+  "catalog": {
+    "raw_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "canonical_content_sha256": "8f2ee3771be548b85a8d8981127b2518b8e8e5868584491df36b96317476cbbc",
+    "runtime_accepted_products": 3081,
+    "quarantined_products": 18,
+    "repository_load_ms": 600.107
+  },
+  "query_set": {
+    "kind": "repo-visible catalog-derived product-resolution variants",
+    "split": "development only",
+    "query_count": 150,
+    "case_file_canonical_sha256": "c3a36a094f2c216544bbd3db7294d2716fc85af9b9fda9d8d7b33739f765573f",
+    "label_source": "validated catalog identity; not human relevance judgments",
+    "relevance_cluster_count": 50
+  },
+  "system": {
+    "name": "execute_catalog_tool(search_products)",
+    "result_limit": 5,
+    "path_included": [
+      "tool argument validation",
+      "Vietnamese query understanding and deterministic routing",
+      "snapshot category, brand, price, and audience filters",
+      "SnapshotProductRepository candidate retrieval and ranking",
+      "tool observation construction"
+    ],
+    "external_llm_or_provider": false
+  },
+  "status_counts": {
+    "SUCCESS": 150
+  },
+  "metrics": {
+    "overall": {
+      "recall_at_1": 1.0,
+      "recall_at_5": 1.0,
+      "mrr_at_5": 1.0,
+      "ndcg_at_5": 1.0
+    },
+    "by_query_variant": {
+      "accentless": {
+        "count": 50,
+        "metrics": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      },
+      "conversational_exact": {
+        "count": 50,
+        "metrics": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      },
+      "single_typo": {
+        "count": 50,
+        "metrics": {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "mrr_at_5": 1.0,
+          "ndcg_at_5": 1.0
+        }
+      }
+    }
+  },
+  "latency_ms": {
+    "tool_path_end_to_end_excluding_repository_load": {
+      "p50": 56.208,
+      "p95": 92.439,
+      "p99": 118.796,
+      "mean": 58.435,
+      "max": 142.272
+    },
+    "repository_load_once": 600.107
+  },
+  "environment": {
+    "python": "3.13.15",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD"
+  },
+  "limitations": [
+    "Development-only, repository-visible queries; the set is generated from catalog titles.",
+    "Identity labels do not measure semantic fit, advice quality, or human relevance.",
+    "No LLM response generation, HTTP overhead, voice, live inventory, or concurrency is measured.",
+    "The snapshot exposes no verified product suitability attributes for many use cases."
+  ],
+  "cases": [
+    {
+      "case_id": "dev_product_001_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Bộ đồ chơi robot biến hình khủng long BKK-8285",
+      "gold_product_ids": [
+        "WIN_10330593"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10330593"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_001_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Bo do choi robot bien hinh khung long BKK-8285",
+      "gold_product_ids": [
+        "WIN_10330593"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10330593"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_001_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Bộ đồ chơi robot biến hình khủng long BKK-8285",
+      "gold_product_ids": [
+        "WIN_10330593"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10330593"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_002_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Dao cạo râu Gillette Vector",
+      "gold_product_ids": [
+        "WIN_10018953"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10018953"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_002_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Dao cao rau Gillette Vector",
+      "gold_product_ids": [
+        "WIN_10018953"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10018953"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_002_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Dao cạo râu Gillette Vecor",
+      "gold_product_ids": [
+        "WIN_10018953"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10018953"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_003_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Miến khô Vifon gói 300g",
+      "gold_product_ids": [
+        "WIN_10141804"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10141804"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_003_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Mien kho Vifon goi 300g",
+      "gold_product_ids": [
+        "WIN_10141804"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10141804"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_003_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Miến khô Vifon gói 300g",
+      "gold_product_ids": [
+        "WIN_10141804"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10141804"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_004_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Mì chính Ajinomoto Plus gói 1kg",
+      "gold_product_ids": [
+        "WIN_10008603"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10008603"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_004_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Mi chinh Ajinomoto Plus goi 1kg",
+      "gold_product_ids": [
+        "WIN_10008603"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10008603"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_004_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Mì chính Ajinmoto Plus gói 1kg",
+      "gold_product_ids": [
+        "WIN_10008603"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10008603"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_005_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Mứt dâu Bonne Maman  30g",
+      "gold_product_ids": [
+        "WIN_10014985"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10014985"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_005_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Mut dau Bonne Maman  30g",
+      "gold_product_ids": [
+        "WIN_10014985"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10014985"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_005_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Mứt dâu Bonne Maman  30g",
+      "gold_product_ids": [
+        "WIN_10014985"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10014985"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_006_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Chanh có hạt 250g",
+      "gold_product_ids": [
+        "WIN_10236467"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10236467"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_006_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Chanh co hat 250g",
+      "gold_product_ids": [
+        "WIN_10236467"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10236467"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_006_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Chanh có hạt 250g",
+      "gold_product_ids": [
+        "WIN_10236467"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10236467"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_007_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Nước rửa tay diệt khuẩn dưỡng da tinh chất dâu Dr. Clean Hand Wash Strawberry 500ml",
+      "gold_product_ids": [
+        "WIN_10017460"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10017460"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_007_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Nuoc rua tay diet khuan duong da tinh chat dau Dr. Clean Hand Wash Strawberry 500ml",
+      "gold_product_ids": [
+        "WIN_10017460"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10017460"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_007_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Nước rửa tay diệt khuẩn dưỡng da tinh chất dâu Dr. Clean Hand Wash Strawerry 500ml",
+      "gold_product_ids": [
+        "WIN_10017460"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10017460"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_008_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Dầu hào Maggi chai 820g",
+      "gold_product_ids": [
+        "WIN_10008709"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10008709"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_008_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Dau hao Maggi chai 820g",
+      "gold_product_ids": [
+        "WIN_10008709"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10008709"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_008_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Dầu hào Maggi chai 820g",
+      "gold_product_ids": [
+        "WIN_10008709"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10008709"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_009_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Sữa chua ăn vị mật ong Farmers Union Greek Style Lốc 2 hộp x 140g",
+      "gold_product_ids": [
+        "WIN_10623202"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10623202"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_009_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Sua chua an vi mat ong Farmers Union Greek Style Loc 2 hop x 140g",
+      "gold_product_ids": [
+        "WIN_10623202"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10623202"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_009_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Sữa chua ăn vị mật ong Farers Union Greek Style Lốc 2 hộp x 140g",
+      "gold_product_ids": [
+        "WIN_10623202"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10623202"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_010_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Trứng chim cút 729 Ba Vì hộp 30 quả",
+      "gold_product_ids": [
+        "WIN_10225936"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10225936"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_010_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Trung chim cut 729 Ba Vi hop 30 qua",
+      "gold_product_ids": [
+        "WIN_10225936"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10225936"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_010_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Trứng chim cút 729 Ba Vì hộp 30 quả",
+      "gold_product_ids": [
+        "WIN_10225936"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10225936"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_011_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Gel tẩy da chết trà xanh Benew Green Tea Whitening Natural Herb Peeling Gel 120ml",
+      "gold_product_ids": [
+        "WIN_10316566"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10316566"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_011_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Gel tay da chet tra xanh Benew Green Tea Whitening Natural Herb Peeling Gel 120ml",
+      "gold_product_ids": [
+        "WIN_10316566"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10316566"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_011_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Gel tẩy da chết trà xanh Benew Green Tea Whitening Natural Herb Peeing Gel 120ml",
+      "gold_product_ids": [
+        "WIN_10316566"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10316566"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_012_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Cá chim trắng biển tươi",
+      "gold_product_ids": [
+        "WIN_10053300"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053300"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_012_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Ca chim trang bien tuoi",
+      "gold_product_ids": [
+        "WIN_10053300"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053300"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_012_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Cá chim trắng biển tươi",
+      "gold_product_ids": [
+        "WIN_10053300"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053300"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_013_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Hộp thực phẩm tròn Hokkaido 1000ml",
+      "gold_product_ids": [
+        "WIN_10250121"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10250121"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_013_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Hop thuc pham tron Hokkaido 1000ml",
+      "gold_product_ids": [
+        "WIN_10250121"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10250121"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_013_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Hộp thực phẩm tròn Hokkido 1000ml",
+      "gold_product_ids": [
+        "WIN_10250121"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10250121"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_014_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Bông tẩy trang Ipek Cotton Pads 120 miếng",
+      "gold_product_ids": [
+        "WIN_10020414"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10020414"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_014_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Bong tay trang Ipek Cotton Pads 120 mieng",
+      "gold_product_ids": [
+        "WIN_10020414"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10020414"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_014_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Bông tẩy trang Ipek Coton Pads 120 miếng",
+      "gold_product_ids": [
+        "WIN_10020414"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10020414"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_015_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Kẹo Socola hạnh nhân Nga Ivan 400g",
+      "gold_product_ids": [
+        "WIN_10229108"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10229108"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_015_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Keo Socola hanh nhan Nga Ivan 400g",
+      "gold_product_ids": [
+        "WIN_10229108"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10229108"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_015_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Kẹo Socla hạnh nhân Nga Ivan 400g",
+      "gold_product_ids": [
+        "WIN_10229108"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10229108"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_016_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Thùng 24 chai nước tăng lực Sting hương dâu tây đỏ 330ml",
+      "gold_product_ids": [
+        "WIN_10011214"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10011214"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_016_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Thung 24 chai nuoc tang luc Sting huong dau tay do 330ml",
+      "gold_product_ids": [
+        "WIN_10011214"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10011214"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_016_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Thùng 24 chai nước tăng lực Sting hương dâu tây đỏ 330ml",
+      "gold_product_ids": [
+        "WIN_10011214"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10011214"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_017_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Ngũ cốc Xuân An yến mạch hạnh nhân hạt chia 400g",
+      "gold_product_ids": [
+        "WIN_10194856"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10194856"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_017_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Ngu coc Xuan An yen mach hanh nhan hat chia 400g",
+      "gold_product_ids": [
+        "WIN_10194856"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10194856"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_017_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Ngũ cốc Xuân An yến mạch hạnh nhân hạt chia 400g",
+      "gold_product_ids": [
+        "WIN_10194856"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10194856"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_018_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Dầu gội Head&Shoulders bạc hà 600ml",
+      "gold_product_ids": [
+        "WIN_10170586"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10170586"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_018_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Dau goi Head&Shoulders bac ha 600ml",
+      "gold_product_ids": [
+        "WIN_10170586"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10170586"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_018_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Dầu gội Head&Shouders bạc hà 600ml",
+      "gold_product_ids": [
+        "WIN_10170586"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10170586"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_019_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Thạch trái cây tươi Vietfood Fruit Gel 850g",
+      "gold_product_ids": [
+        "WIN_10195106"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10195106"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_019_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Thach trai cay tuoi Vietfood Fruit Gel 850g",
+      "gold_product_ids": [
+        "WIN_10195106"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10195106"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_019_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Thạch trái cây tươi Vietood Fruit Gel 850g",
+      "gold_product_ids": [
+        "WIN_10195106"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10195106"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_020_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Creamer đặc sữa pha chế Nutimilk hộp 380g",
+      "gold_product_ids": [
+        "WIN_10141580"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10141580"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_020_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Creamer dac sua pha che Nutimilk hop 380g",
+      "gold_product_ids": [
+        "WIN_10141580"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10141580"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_020_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Creamer đặc sữa pha chế Nutiilk hộp 380g",
+      "gold_product_ids": [
+        "WIN_10141580"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10141580"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_021_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Bò viên ngon Cầu Tre 500g",
+      "gold_product_ids": [
+        "WIN_10170093"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10170093"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_021_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Bo vien ngon Cau Tre 500g",
+      "gold_product_ids": [
+        "WIN_10170093"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10170093"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_021_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Bò viên ngon Cầu Tre 500g",
+      "gold_product_ids": [
+        "WIN_10170093"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10170093"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_022_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Nước Rửa Chén Sunlight Thiên Nhiên Lô Hội Túi 2kg",
+      "gold_product_ids": [
+        "WIN_10640562"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10640562"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_022_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Nuoc Rua Chen Sunlight Thien Nhien Lo Hoi Tui 2kg",
+      "gold_product_ids": [
+        "WIN_10640562"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10640562"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_022_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Nước Rửa Chén Sunlght Thiên Nhiên Lô Hội Túi 2kg",
+      "gold_product_ids": [
+        "WIN_10640562"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10640562"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_023_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Cà phê Sữa Highland lon 185ml",
+      "gold_product_ids": [
+        "WIN_10197241"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10197241"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_023_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Ca phe Sua Highland lon 185ml",
+      "gold_product_ids": [
+        "WIN_10197241"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10197241"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_023_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Cà phê Sữa Highand lon 185ml",
+      "gold_product_ids": [
+        "WIN_10197241"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10197241"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_024_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Dứa/khóm",
+      "gold_product_ids": [
+        "WIN_10054981"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10054981"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_024_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Dua/khom",
+      "gold_product_ids": [
+        "WIN_10054981"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10054981"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_024_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Dứa/khóm",
+      "gold_product_ids": [
+        "WIN_10054981"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10054981"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_025_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Bao cao su Durex Fetherlite 3s",
+      "gold_product_ids": [
+        "WIN_10019000"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10019000"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_025_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Bao cao su Durex Fetherlite 3s",
+      "gold_product_ids": [
+        "WIN_10019000"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10019000"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_025_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Bao cao su Durex Fethelite 3s",
+      "gold_product_ids": [
+        "WIN_10019000"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10019000"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_026_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Táo xanh",
+      "gold_product_ids": [
+        "WIN_10054817"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10054817"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_026_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Tao xanh",
+      "gold_product_ids": [
+        "WIN_10054817"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10054817"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_026_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Táo xanh",
+      "gold_product_ids": [
+        "WIN_10054817"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10054817"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_027_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Thập cẩm sấy WinMart Good gói 150g",
+      "gold_product_ids": [
+        "WIN_10195887"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10195887"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_027_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Thap cam say WinMart Good goi 150g",
+      "gold_product_ids": [
+        "WIN_10195887"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10195887"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_027_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Thập cẩm sấy Winart Good gói 150g",
+      "gold_product_ids": [
+        "WIN_10195887"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10195887"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_028_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Cua đồng xay",
+      "gold_product_ids": [
+        "WIN_10053377"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053377"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_028_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Cua dong xay",
+      "gold_product_ids": [
+        "WIN_10053377"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053377"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_028_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Cua đồng xay",
+      "gold_product_ids": [
+        "WIN_10053377"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053377"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_029_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Pin AAA Energizer max E92 BP4",
+      "gold_product_ids": [
+        "WIN_10027649"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10027649"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_029_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Pin AAA Energizer max E92 BP4",
+      "gold_product_ids": [
+        "WIN_10027649"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10027649"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_029_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Pin AAA Enerizer max E92 BP4",
+      "gold_product_ids": [
+        "WIN_10027649"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10027649"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_030_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Cá hồi Úc Fillet",
+      "gold_product_ids": [
+        "WIN_10628265"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10628265"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_030_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Ca hoi Uc Fillet",
+      "gold_product_ids": [
+        "WIN_10628265"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10628265"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_030_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Cá hồi Úc Filet",
+      "gold_product_ids": [
+        "WIN_10628265"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10628265"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_031_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Nước dùng cô đặc vị lẩu Thái SG Food gói 150g",
+      "gold_product_ids": [
+        "WIN_10223991"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10223991"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_031_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Nuoc dung co dac vi lau Thai SG Food goi 150g",
+      "gold_product_ids": [
+        "WIN_10223991"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10223991"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_031_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Nước dùng cô đặc vị lẩu Thái SG Food gói 150g",
+      "gold_product_ids": [
+        "WIN_10223991"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10223991"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_032_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Màng bọc thực phẩm PE Greeneco 30cm x 100m",
+      "gold_product_ids": [
+        "WIN_10600194"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10600194"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_032_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Mang boc thuc pham PE Greeneco 30cm x 100m",
+      "gold_product_ids": [
+        "WIN_10600194"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10600194"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_032_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Màng bọc thực phẩm PE Greeeco 30cm x 100m",
+      "gold_product_ids": [
+        "WIN_10600194"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10600194"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_033_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Bột tàu hủ Singapore Thiên Ý  90g",
+      "gold_product_ids": [
+        "WIN_10141154"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10141154"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_033_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Bot tau hu Singapore Thien Y  90g",
+      "gold_product_ids": [
+        "WIN_10141154"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10141154"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_033_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Bột tàu hủ Singpore Thiên Ý  90g",
+      "gold_product_ids": [
+        "WIN_10141154"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10141154"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_034_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Giấy vệ sinh Elene hồng 3 lớp 10 cuộn",
+      "gold_product_ids": [
+        "WIN_10020669"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10020669"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_034_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Giay ve sinh Elene hong 3 lop 10 cuon",
+      "gold_product_ids": [
+        "WIN_10020669"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10020669"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_034_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Giấy vệ sinh Elene hồng 3 lớp 10 cuộn",
+      "gold_product_ids": [
+        "WIN_10020669"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10020669"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_035_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Bánh quế Cosy xoài xí muội 126/117,6g",
+      "gold_product_ids": [
+        "WIN_10197436"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10197436"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_035_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Banh que Cosy xoai xi muoi 126/117,6g",
+      "gold_product_ids": [
+        "WIN_10197436"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10197436"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_035_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Bánh quế Cosy xoài xí muội 126/117,6g",
+      "gold_product_ids": [
+        "WIN_10197436"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10197436"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_036_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Củ dền",
+      "gold_product_ids": [
+        "WIN_10053941"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053941"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_036_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Cu den",
+      "gold_product_ids": [
+        "WIN_10053941"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053941"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_036_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Củ dền",
+      "gold_product_ids": [
+        "WIN_10053941"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053941"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_037_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Kem dưỡng ban đêm Pond's Age Miracle 45G",
+      "gold_product_ids": [
+        "WIN_10315206"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10315206"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_037_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Kem duong ban dem Pond's Age Miracle 45G",
+      "gold_product_ids": [
+        "WIN_10315206"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10315206"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_037_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Kem dưỡng ban đêm Pond's Age Mircle 45G",
+      "gold_product_ids": [
+        "WIN_10315206"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10315206"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_038_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Bánh Cosy Socola Yến Mạch 163.2g",
+      "gold_product_ids": [
+        "WIN_10191623"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10191623"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_038_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Banh Cosy Socola Yen Mach 163.2g",
+      "gold_product_ids": [
+        "WIN_10191623"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10191623"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_038_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Bánh Cosy Socla Yến Mạch 163.2g",
+      "gold_product_ids": [
+        "WIN_10191623"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10191623"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_039_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Túi Lohas Hạ 43,5x39,5x22-85G",
+      "gold_product_ids": [
+        "WIN_10270526"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10270526"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_039_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Tui Lohas Ha 43,5x39,5x22-85G",
+      "gold_product_ids": [
+        "WIN_10270526"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10270526"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_039_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Túi Lohas Hạ 43,5x39,5x22-85G",
+      "gold_product_ids": [
+        "WIN_10270526"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10270526"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_040_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Hạt lạc nhân Thu Dung 500g",
+      "gold_product_ids": [
+        "WIN_10010435"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10010435"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_040_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Hat lac nhan Thu Dung 500g",
+      "gold_product_ids": [
+        "WIN_10010435"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10010435"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_040_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Hạt lạc nhân Thu Dung 500g",
+      "gold_product_ids": [
+        "WIN_10010435"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10010435"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_041_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Khô cá cơm sữa An Vĩnh khay 200g",
+      "gold_product_ids": [
+        "WIN_10053595"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053595"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_041_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Kho ca com sua An Vinh khay 200g",
+      "gold_product_ids": [
+        "WIN_10053595"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053595"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_041_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Khô cá cơm sữa An Vĩnh khay 200g",
+      "gold_product_ids": [
+        "WIN_10053595"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10053595"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_042_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Nước lẩu nấm Icook Ashima gói 1L",
+      "gold_product_ids": [
+        "WIN_10006637"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10006637"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_042_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Nuoc lau nam Icook Ashima goi 1L",
+      "gold_product_ids": [
+        "WIN_10006637"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10006637"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_042_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Nước lẩu nấm Icook Ashma gói 1L",
+      "gold_product_ids": [
+        "WIN_10006637"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10006637"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_043_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Sầu riêng hạt lép",
+      "gold_product_ids": [
+        "WIN_10054831"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10054831"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_043_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Sau rieng hat lep",
+      "gold_product_ids": [
+        "WIN_10054831"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10054831"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_043_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Sầu riêng hạt lép",
+      "gold_product_ids": [
+        "WIN_10054831"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10054831"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_044_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Muối chấm hoa quả DHF lọ 110g",
+      "gold_product_ids": [
+        "WIN_10140900"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10140900"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_044_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Muoi cham hoa qua DHF lo 110g",
+      "gold_product_ids": [
+        "WIN_10140900"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10140900"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_044_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Muối chấm hoa quả DHF lọ 110g",
+      "gold_product_ids": [
+        "WIN_10140900"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10140900"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_045_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Cua đồng tinh chất Minh Tiến gói 200g",
+      "gold_product_ids": [
+        "WIN_10006608"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10006608"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_045_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Cua dong tinh chat Minh Tien goi 200g",
+      "gold_product_ids": [
+        "WIN_10006608"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10006608"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_045_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Cua đồng tinh chất Minh Tiến gói 200g",
+      "gold_product_ids": [
+        "WIN_10006608"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10006608"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_046_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Gối Memory Foam 50D Lock&Lock HLW113",
+      "gold_product_ids": [
+        "WIN_10064937"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10064937"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_046_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Goi Memory Foam 50D Lock&Lock HLW113",
+      "gold_product_ids": [
+        "WIN_10064937"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10064937"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_046_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Gối Memry Foam 50D Lock&Lock HLW113",
+      "gold_product_ids": [
+        "WIN_10064937"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10064937"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_047_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Nước xả hương nắng mai Downy  4L",
+      "gold_product_ids": [
+        "WIN_10170745"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10170745"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_047_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Nuoc xa huong nang mai Downy  4L",
+      "gold_product_ids": [
+        "WIN_10170745"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10170745"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_047_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Nước xả hương nắng mai Downy  4L",
+      "gold_product_ids": [
+        "WIN_10170745"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10170745"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_048_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Khăn tay bamboo WinMart Home 28*42*60g",
+      "gold_product_ids": [
+        "WIN_10167096"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10167096"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_048_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Khan tay bamboo WinMart Home 28*42*60g",
+      "gold_product_ids": [
+        "WIN_10167096"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10167096"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_048_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Khăn tay bamboo Winart Home 28*42*60g",
+      "gold_product_ids": [
+        "WIN_10167096"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10167096"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_049_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Gia vị wasabi neri S&B 43g",
+      "gold_product_ids": [
+        "WIN_10009100"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10009100"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_049_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Gia vi wasabi neri S&B 43g",
+      "gold_product_ids": [
+        "WIN_10009100"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10009100"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_049_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Gia vị wasbi neri S&B 43g",
+      "gold_product_ids": [
+        "WIN_10009100"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10009100"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_050_conversational_exact",
+      "variant": "conversational_exact",
+      "query": "Mình muốn tìm Nước Giải Khát Coca-Cola Zero Pet 600ml",
+      "gold_product_ids": [
+        "WIN_10194711"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10194711"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_050_accentless",
+      "variant": "accentless",
+      "query": "cho mình xem Nuoc Giai Khat Coca-Cola Zero Pet 600ml",
+      "gold_product_ids": [
+        "WIN_10194711"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10194711"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "dev_product_050_single_typo",
+      "variant": "single_typo",
+      "query": "tìm giúp Nước Giải Khát Coca-Cola Zero Pet 600ml",
+      "gold_product_ids": [
+        "WIN_10194711"
+      ],
+      "retrieved_product_ids_top5": [
+        "WIN_10194711"
+      ],
+      "status": "SUCCESS",
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    }
+  ]
+}

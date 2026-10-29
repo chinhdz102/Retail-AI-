@@ -27,6 +27,7 @@ from typing import Any
 
 from backend.data.catalog_import import canonical_dataset_sha256
 from backend.products.snapshot_repository import SnapshotProductRepository
+from backend.services.retail_tools import execute_catalog_tool
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "data" / "winmart_products.json"
@@ -130,6 +131,26 @@ def _validated_product_cases(
                 f"{unknown_ids}"
             )
     return cases
+
+
+def _production_tool_rank(
+    query: str,
+    repository: SnapshotProductRepository,
+    *,
+    limit: int = 5,
+) -> tuple[list[str], str]:
+    """Run the deterministic customer search tool against the runtime snapshot.
+
+    This includes production query parsing, filters, repository ranking, and
+    tool observation construction. It is measured separately from the BM25/E5 trial.
+    """
+    observation = execute_catalog_tool(
+        "search_products",
+        json.dumps({"query": query, "limit": limit}, ensure_ascii=False),
+        repository=repository,
+        current_user_text=query,
+    )
+    return [product.product_id for product in observation.products], observation.status
 
 
 _QUERY_METRIC_NAMES = ("recall_at_1", "recall_at_5", "mrr_at_5", "ndcg_at_5")
@@ -340,13 +361,17 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
     embeddings = list(model.embed([f"passage: {text}" for text in corpus]))
     index_build_ms = (time.perf_counter_ns() - cold_started) / 1_000_000
 
+    production_tool_ranked = []
     bm25_ranked = []
     dense_ranked = []
     hybrid_ranked = []
+    production_tool_latencies = []
+    production_tool_status_counts: dict[str, int] = {}
     bm25_latencies = []
     dense_latencies = []
     dense_embedding_latencies = []
     hybrid_latencies = []
+    production_tool_query_metrics = []
     bm25_query_metrics = []
     dense_query_metrics = []
     hybrid_query_metrics = []
@@ -354,6 +379,14 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
     case_rows = []
     for case in cases:
         query = case["query"]
+        production_started = time.perf_counter_ns()
+        production_ids, production_status = _production_tool_rank(query, repository)
+        production_tool_latencies.append(
+            (time.perf_counter_ns() - production_started) / 1_000_000
+        )
+        production_tool_status_counts[production_status] = (
+            production_tool_status_counts.get(production_status, 0) + 1
+        )
         bm25_started = time.perf_counter_ns()
         bm25_ids = _bm25_rank(
             query, product_docs, tokenized_documents, document_frequency, average_length
@@ -375,16 +408,23 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
         hybrid_started = time.perf_counter_ns()
         hybrid_ids = _rrf_rank(bm25_ids, dense_ids)
         hybrid_latencies.append((time.perf_counter_ns() - hybrid_started) / 1_000_000)
+        production_tool_ranked.append(production_ids)
         bm25_ranked.append(bm25_ids)
         dense_ranked.append(dense_ids)
         hybrid_ranked.append(hybrid_ids)
         relevant = set(case["gold_product_ids"])
         gold_ids.append(relevant)
         query_scores = {
+            "production_snapshot_search_tool": _query_metric_values(
+                production_ids, relevant
+            ),
             "bm25": _query_metric_values(bm25_ids, relevant),
             "dense_e5_small": _query_metric_values(dense_ids, relevant),
             "rrf_bm25_dense": _query_metric_values(hybrid_ids, relevant),
         }
+        production_tool_query_metrics.append(
+            query_scores["production_snapshot_search_tool"]
+        )
         bm25_query_metrics.append(query_scores["bm25"])
         dense_query_metrics.append(query_scores["dense_e5_small"])
         hybrid_query_metrics.append(query_scores["rrf_bm25_dense"])
@@ -393,6 +433,8 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
                 "case_id": case["case_id"],
                 "query": query,
                 "gold_product_ids": sorted(relevant),
+                "production_snapshot_search_tool_top5": production_ids[:5],
+                "production_tool_status": production_status,
                 "bm25_top5": bm25_ids[:5],
                 "dense_top5": dense_ids[:5],
                 "rrf_top5": hybrid_ids[:5],
@@ -494,11 +536,15 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
         ),
         "vector_payload_fp32_bytes": len(embeddings) * 384 * 4,
         "query_latency_ms": {
+            "production_snapshot_search_tool_end_to_end": percentile_samples(
+                production_tool_latencies
+            ),
             "bm25_full_rank": percentile_samples(bm25_latencies),
             "dense_embedding_only": percentile_samples(dense_embedding_latencies),
             "dense_embedding_scoring_and_sort": percentile_samples(dense_latencies),
             "rrf_fusion": percentile_samples(hybrid_latencies),
         },
+        "production_tool_status_counts": production_tool_status_counts,
         "process_cpu_ms": round(process_cpu_ms, 3),
         "memory_measurement": "not_measured",
         "environment": {
@@ -517,8 +563,14 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
             "rrf_constant": 60,
             "same_queries_same_catalog": True,
             "gold_ids_validated_before_retrieval": True,
+            "production_baseline": (
+                "execute_catalog_tool(search_products) against the runtime snapshot with the "
+                "query text and five-result limit; includes deterministic query parsing, "
+                "hard filters, repository ranking, and production tool response construction"
+            ),
         },
         "metrics": {
+            "production_snapshot_search_tool": _metrics(production_tool_ranked, gold_ids),
             "bm25": _metrics(bm25_ranked, gold_ids),
             "dense_e5_small": _metrics(dense_ranked, gold_ids),
             "rrf_bm25_dense": _metrics(hybrid_ranked, gold_ids),
@@ -535,6 +587,20 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
                 "MRR@5 and binary nDCG@5 use the same validated relevance set."
             ),
             "candidate_minus_reference": {
+                "production_snapshot_search_tool_vs_bm25": _paired_bootstrap_comparison(
+                    bm25_query_metrics,
+                    production_tool_query_metrics,
+                    cluster_ids=relevance_clusters,
+                    seed=20261032,
+                ),
+                "production_snapshot_search_tool_vs_rrf_bm25_dense": (
+                    _paired_bootstrap_comparison(
+                        hybrid_query_metrics,
+                        production_tool_query_metrics,
+                        cluster_ids=relevance_clusters,
+                        seed=20261033,
+                    )
+                ),
                 "dense_e5_small_vs_bm25": _paired_bootstrap_comparison(
                     bm25_query_metrics,
                     dense_query_metrics,
@@ -565,6 +631,11 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
                 "heldout result."
             ),
             "Dense vectors retrieve candidates; claims still need verified catalog evidence.",
+            (
+                "The production-tool baseline is measured only on catalog-derived product-identity "
+                "queries; this does not establish relevance for independently authored "
+                "natural-need advice."
+            ),
             (
                 "Cold build includes initialization, any cache-miss download, and vectorization; "
                 "these parts are not separately timed."
