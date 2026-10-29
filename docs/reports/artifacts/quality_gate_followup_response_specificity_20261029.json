@@ -1,0 +1,47 @@
+{
+  "kind": "followup_repository_quality_gate",
+  "generated_at_utc": "2026-10-29T03:01:55.195920+00:00",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "base_commit": "086c6c47c6832e0b5214953e7ca3072221388eee",
+  "working_tree_dirty": true,
+  "tracked_working_changes": [
+    "backend/api/main.py",
+    "tests/test_query_understanding.py",
+    "tests/test_contextual_consultation_regressions.py"
+  ],
+  "tested_source_sha256": {
+    "backend/api/main.py": "2faacfec3384e0918ade3df1cfa571a6b06c595789fb6b44058064d251f22702",
+    "tests/test_query_understanding.py": "b5734f3f3cf2a2479bf0ee76de7e82f1d049374dc9ed908a503defc9cd156789",
+    "tests/test_contextual_consultation_regressions.py": "f56c1b3eb8756f0403af301cec47e394cc73262fdf223617d615c92550b518c7"
+  },
+  "preexisting_untracked_artifact_count": 8,
+  "environment": {
+    "python": "3.13.15 (tags/v3.13.15:4061bc4, Aug  5 2026, 13:05:39) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "commands": {
+    "focused_tests": {
+      "command": "uv run pytest tests/test_query_understanding.py::test_single_unverified_catalog_match_is_described_as_one_option tests/test_contextual_consultation_regressions.py::test_missing_product_variant_is_explained_without_claiming_a_comparison -q --tb=short",
+      "result": "2 passed in 3.05s"
+    },
+    "full_tests": {
+      "command": "uv run pytest tests -q --tb=short",
+      "result": "1405 passed in 196.76s"
+    },
+    "lint_compile_diff": {
+      "commands": [
+        "uv run ruff check backend tests evaluation",
+        "uv run python -m compileall -q backend evaluation tests",
+        "git diff --check"
+      ],
+      "result": "all passed"
+    }
+  },
+  "scope": "Generic localization for one result when other requested family variants/details are not verified, plus a real snapshot API regression for egg variants.",
+  "limitations": [
+    "Tests use a local catalog snapshot, not live branch stock or price.",
+    "The source category mismatch that lists Nhộng tằm as fresh-water fish is unchanged and remains a catalog-data quality issue.",
+    "No human-rated or blind evaluation, provider/network check, browser E2E, or load test was performed by this gate.",
+    "Release remains demo-only / not production-ready."
+  ]
+}

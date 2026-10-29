@@ -1821,9 +1821,10 @@ def _localized_recommendation_candidates(
             product = products[0]
             if language == "en":
                 response = (
-                    f"I found one catalog option: {rendered_items}. I don't have verified data "
-                    "to confirm that it meets all the criteria you asked about. Would you like "
-                    "the listed price or more options from this category?"
+                    f"I found one catalog option: {rendered_items}. The catalog does not confirm "
+                    "the remaining variants or details you asked about, so I can't compare or "
+                    "confirm them. Would you like the listed price or more options from this "
+                    "category?"
                 )
                 if has_weight_size_caveat:
                     response += (
@@ -1837,8 +1838,8 @@ def _localized_recommendation_candidates(
                 return response
             if language == "zh":
                 response = (
-                    f"目录中找到一个选择：{rendered_items}。目前没有经过核实的数据能确认它符合您提到的全部条件。"
-                    "您想查看目录价格，还是继续找同类商品？"
+                    f"目录中找到一个选择：{rendered_items}。目录没有核实您提到的其他变体或信息，"
+                    "所以我暂时无法完整比较或确认。您想查看目录价格，还是继续找同类商品？"
                 )
                 if has_weight_size_caveat:
                     response += "目录没有标明适用体重或尺码，请先查看包装。"
@@ -1849,8 +1850,9 @@ def _localized_recommendation_candidates(
                 return response
             response = (
                 f"Trong danh mục, mình tìm được một lựa chọn: {rendered_items}. "
-                "Mình chưa có dữ liệu đã xác minh để khẳng định mặt hàng này đáp ứng tất cả "
-                "tiêu chí bạn hỏi. Bạn muốn xem giá hoặc tìm thêm lựa chọn cùng nhóm không?"
+                "Catalog chưa xác nhận được các biến thể hoặc chi tiết còn lại bạn hỏi, "
+                "nên mình chưa thể kết luận hay so sánh đầy đủ. Bạn muốn xem giá hoặc tìm thêm "
+                "lựa chọn cùng nhóm không?"
             )
             if has_weight_size_caveat:
                 response += (
