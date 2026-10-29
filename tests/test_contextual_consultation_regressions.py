@@ -7,6 +7,7 @@ import httpx
 import pytest
 
 import backend.api.main as api
+from backend.products.category_taxonomy import normalize_category_text
 from backend.products.snapshot_repository import SnapshotProductRepository
 from backend.services import retail_tools
 from backend.services.catalog_preferences import preparation_terms
@@ -278,6 +279,97 @@ async def test_missing_product_variant_is_explained_without_claiming_a_compariso
     assert "Trứng gà công nghiệp" not in payload["products"][0]["name"]
     assert "các biến thể hoặc chi tiết còn lại" in payload["text"]
     assert "chưa thể kết luận hay so sánh đầy đủ" in payload["text"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("query", "positive_category", "positive_title", "excluded_title"),
+    [
+        (
+            "Mình muốn nước khoáng, không phải nước ngọt có ga nha.",
+            "nước khoáng",
+            "nước khoáng",
+            "nước ngọt",
+        ),
+        (
+            "Mình muốn khăn giấy, không phải khăn ướt nhé.",
+            "khăn giấy gói",
+            "khăn giấy",
+            "khăn ướt",
+        ),
+        (
+            "Mình muốn sữa tươi, không phải sữa hạt nhé.",
+            "sữa tươi",
+            "sữa tươi",
+            "sữa hạt",
+        ),
+        (
+            "Mình muốn mì ăn liền, không phải mì ly nhé.",
+            "mì ăn liền",
+            "mì",
+            "mì ly",
+        ),
+    ],
+)
+async def test_customer_correction_keeps_positive_scope_through_agent_response(
+    snapshot,
+    monkeypatch,
+    query: str,
+    positive_category: str,
+    positive_title: str,
+    excluded_title: str,
+) -> None:
+    class NoModelNeeded:
+        async def chat(self, *_args, **_kwargs):
+            raise AssertionError("Catalog-backed category correction must stay deterministic")
+
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    api.app.dependency_overrides[api.get_groq_service] = lambda: NoModelNeeded()
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+        ) as client:
+            session = (
+                await client.post(
+                    "/sessions",
+                    json={
+                        "kiosk_id": (
+                            f"negative-scope-{normalize_category_text(positive_category)}"
+                        )
+                    },
+                )
+            ).json()["session_id"]
+            response = await client.post(
+                "/agent/respond", json={"session_id": session, "text": query}
+            )
+
+        payload = response.json()
+        assert response.status_code == 200, response.text
+        assert payload["tools_used"] == ["search_products"]
+        assert payload["grounded_product_ids"]
+        assert payload["products"]
+        products = [
+            snapshot.get_product_snapshot(product_id)
+            for product_id in payload["grounded_product_ids"]
+        ]
+        assert all(product is not None for product in products)
+        assert all(
+            normalize_category_text(positive_category)
+            in normalize_category_text(product.category_hierarchy)
+            for product in products
+        )
+        assert all(
+            normalize_category_text(excluded_title)
+            not in normalize_category_text(product.name)
+            for product in products
+        )
+        assert any(
+            normalize_category_text(positive_title) in normalize_category_text(product.name)
+            for product in products
+        )
+    finally:
+        api.app.dependency_overrides.pop(api.get_groq_service, None)
 
 
 @pytest.mark.asyncio

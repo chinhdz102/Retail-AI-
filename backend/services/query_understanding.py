@@ -136,6 +136,10 @@ _NEGATION = re.compile(
     r"(?:(?:thich|muon|can|lay|mua|dung|chon|co|tim|use|buy|choose|want)\s+){0,2}"
     r"(?!biet\b|ro\b|nho\b|can\s+gi\b)([^,.;!?]{1,80})"
 )
+_NEGATED_CATEGORY_CORRECTION = re.compile(
+    r"\b(?:khong|ko|khum)\s+phai\s+(?:loai\s+)?(.+?)(?:[,.!?;:]|$)"
+)
+_COURTESY_TAIL_PARTICLES = frozenset({"a", "ha", "nha", "nhe", "nhi", "please"})
 _NEGATION_TAIL_STOP = re.compile(
     r"\b(?:uu\s+tien|prefer|truoc\s+tien|sau\s+do|va|nhung|con|hay|hoac|neu|if|doi\s+(?:thanh|sang)|but|and|or|please|nhe|nha|duoi|tren|"
     r"toi\s+da|khong\s+qua|ngan\s+sach|qua|under|up\s+to|less\s+than|budget|"
@@ -883,7 +887,7 @@ def _negative_constraints(normalized: str, raw: str | None = None) -> tuple[str,
                 continue
         # ``không phải ...`` is commonly a correction or contrast in Vietnamese,
         # not a request to filter products by a missing catalog attribute.
-        if re.match(r"khong\s+phai\b", match.group()):
+        if re.match(r"(?:khong|ko|khum)\s+phai\b", match.group()):
             continue
         phrase = match.group(1).strip()
         if raw:
@@ -950,6 +954,13 @@ def _negative_constraints(normalized: str, raw: str | None = None) -> tuple[str,
         ):
             values.append(phrase)
     return tuple(dict.fromkeys(values))
+
+
+def _trim_courtesy_tail(value: str) -> str:
+    tokens = value.split()
+    while len(tokens) > 1 and normalize_vietnamese(tokens[-1]) in _COURTESY_TAIL_PARTICLES:
+        tokens.pop()
+    return " ".join(tokens)
 
 
 def _strip_request_prefix(raw: str, normalized: str) -> tuple[str, str]:
@@ -1280,12 +1291,45 @@ def understand_catalog_query(
         product_reference = ""
         normalized_reference = ""
 
+    # When a customer corrects the requested type ("A, không phải B"), only
+    # the positive part may establish the search scope. Otherwise an exact
+    # catalog match on B can override A before the exclusion is applied.
+    category_reference = product_reference
+    normalized_category_reference = normalized_reference
+    negative_category_without_positive_scope = False
+    negated_category = _NEGATED_CATEGORY_CORRECTION.search(normalized_reference)
+    if negated_category:
+        excluded_phrase = _trim_courtesy_tail(negated_category.group(1).strip())
+        positive_end = negated_category.start()
+        if positive_end > 0:
+            _positive_start, positive_raw_end = _raw_span_for_normalized_span(
+                product_reference,
+                normalized_reference,
+                0,
+                positive_end,
+            )
+            category_reference = product_reference[:positive_raw_end].strip(" ,.!?;:")
+        positive_tokens = [
+            token
+            for token in normalized_reference[:positive_end].split()
+            if token not in _PRIMARY_TYPE_FILLERS
+        ]
+        if not positive_tokens:
+            category_reference = ""
+            product_reference = ""
+            negative_category_without_positive_scope = True
+        else:
+            product_reference = category_reference
+        normalized_category_reference = " ".join(
+            normalize_vietnamese(category_reference).split()
+        )
+
     try:
         # An exact taxonomy label must win over a shorter synonym embedded in
         # it (for example, "cá nước ngọt tươi" contains the alias "nước ngọt").
-        exact_match = resolve_catalog_category(product_reference, category_hierarchies)
-        alias_match = resolve_catalog_category_alias(product_reference, category_hierarchies)
-        exact_leaf_phrase = catalog_leaf_query_phrase(product_reference, category_hierarchies)
+        exact_match = resolve_catalog_category(category_reference, category_hierarchies)
+        alias_match = resolve_catalog_category_alias(category_reference, category_hierarchies)
+        exact_leaf_phrase = catalog_leaf_query_phrase(category_reference, category_hierarchies)
         exact_leaf_is_named = bool(
             exact_match is not None
             and exact_leaf_phrase
@@ -1297,13 +1341,13 @@ def understand_catalog_query(
             exact_match is not None
             and alias_match is not None
             and category_alias_refines_explicit_audience(
-                product_reference,
+                category_reference,
                 exact_match.category,
                 alias_match.category,
             )
         )
         audience_match = resolve_catalog_category_with_explicit_audience(
-            product_reference,
+            category_reference,
             category_hierarchies,
             alias_match or exact_match,
         )
@@ -1327,13 +1371,13 @@ def understand_catalog_query(
                 else alias_match or exact_match
             )
         )
-        attribute_marker = _PRODUCT_ATTRIBUTE_MARKER.search(normalized_reference)
+        attribute_marker = _PRODUCT_ATTRIBUTE_MARKER.search(normalized_category_reference)
         # Attribute words such as ``hương`` and ``mùi`` can also be part of a
         # canonical taxonomy label (for example ``Dầu hướng dương`` or
         # ``Lăn khử mùi Nam``). Preserve a complete named leaf instead of
         # truncating it to a shorter alias before the marker.
         if attribute_marker and not exact_leaf_is_named:
-            primary_phrase = normalized_reference[: attribute_marker.start()].strip()
+            primary_phrase = normalized_category_reference[: attribute_marker.start()].strip()
             # In colloquial Vietnamese, "dầu gội đầu" is simply shampoo;
             # the second "đầu" is not part of a catalog category name.
             primary_phrase = re.sub(r"\bdau\s+goi\s+dau\b", "dau goi", primary_phrase)
@@ -1362,7 +1406,7 @@ def understand_catalog_query(
             # A product type can be embedded in a longer utterance with
             # audience, size, or preference words. Match the longest taxonomy
             # phrase rather than requiring the entire query to equal the label.
-            leaf_phrase = catalog_leaf_query_phrase(product_reference, category_hierarchies)
+            leaf_phrase = catalog_leaf_query_phrase(category_reference, category_hierarchies)
             if leaf_phrase:
                 exact_match = resolve_catalog_category(leaf_phrase, category_hierarchies)
                 alias_match = resolve_catalog_category_alias(leaf_phrase, category_hierarchies)
@@ -1388,7 +1432,7 @@ def understand_catalog_query(
     if (
         product_type
         and not alias_backed_type
-        and not _single_word_category_is_primary(product_type, normalized_reference)
+        and not _single_word_category_is_primary(product_type, normalized_category_reference)
     ):
         product_type = None
 
@@ -1459,27 +1503,44 @@ def understand_catalog_query(
             match = spans[-1]
             start, end = _raw_span_for_normalized_span(raw, normalized, match.start(), match.end())
             negative_constraints[index] = raw[start:end].strip(" ,.!?;:")
-    # A taxonomy-resolvable ``không phải X`` after a positive category is a
-    # real sibling exclusion (for example, mineral water but not fizzy water).
-    # Keep ordinary correction phrases out of this field unless the live
-    # taxonomy proves that X is a separate product category.
-    excluded_match = re.search(r"\bkhong\s+phai\s+(?:loai\s+)?(.+?)(?:[,.!?;:]|$)", normalized)
+    # A correction can exclude a catalog category or a product-title subtype
+    # (e.g. ``mì ly``) even when that subtype has no taxonomy node.
+    excluded_match = _NEGATED_CATEGORY_CORRECTION.search(normalized)
     if excluded_match and product_type:
-        excluded_phrase = excluded_match.group(1).strip()
+        excluded_phrase = _trim_courtesy_tail(excluded_match.group(1).strip())
+        excluded_start = excluded_match.start(1) + (
+            len(excluded_match.group(1)) - len(excluded_match.group(1).lstrip())
+        )
+        excluded_end = excluded_start + len(excluded_phrase)
         excluded_type = resolve_catalog_category(excluded_phrase, category_hierarchies)
         if excluded_type is None:
             excluded_type = resolve_catalog_category_alias(excluded_phrase, category_hierarchies)
-        if excluded_type and normalize_vietnamese(excluded_type.category) != normalize_vietnamese(
-            product_type
-        ):
-            both_in_path = any(
+        same_type = bool(
+            excluded_type
+            and normalize_vietnamese(excluded_type.category) == normalize_vietnamese(product_type)
+        )
+        both_in_path = bool(
+            excluded_type
+            and not same_type
+            and any(
                 normalize_vietnamese(product_type) in {normalize_vietnamese(item) for item in path}
                 and normalize_vietnamese(excluded_type.category)
                 in {normalize_vietnamese(item) for item in path}
                 for path in category_hierarchies
             )
-            if not both_in_path:
-                negative_constraints.append(excluded_phrase)
+        )
+        if not both_in_path and normalize_vietnamese(excluded_phrase) != normalize_vietnamese(
+            product_type
+        ):
+            if raw:
+                raw_start, raw_end = _raw_span_for_normalized_span(
+                    raw, normalized, excluded_start, excluded_end
+                )
+                excluded_surface = raw[raw_start:raw_end].strip(" ,.!?;:")
+            else:
+                excluded_surface = excluded_phrase
+            if excluded_surface:
+                negative_constraints.append(excluded_surface)
     negative_constraints = list(dict.fromkeys(negative_constraints))
     quantity_match = next(
         (
@@ -1555,7 +1616,11 @@ def understand_catalog_query(
     else:
         intent = "general"
 
+    if negative_category_without_positive_scope:
+        product_reference = ""
     ambiguities: list[str] = []
+    if negative_category_without_positive_scope:
+        ambiguities.append("the excluded product type was named without a positive request")
     if ambiguities_budget:
         ambiguities.append(ambiguities_budget)
     if ranking in {"sales_popularity", "customer_rating"}:
@@ -1567,7 +1632,9 @@ def understand_catalog_query(
     ):
         ambiguities.append("product or category is not explicit in this turn")
 
-    clarification_needed = not bool(product_type or product_reference.strip())
+    clarification_needed = negative_category_without_positive_scope or not bool(
+        product_type or product_reference.strip()
+    )
     if budget_scope_clarification:
         clarification_needed = True
     broad_unresolved_request = bool(_BROAD_UNRESOLVED_REQUEST.search(normalized))

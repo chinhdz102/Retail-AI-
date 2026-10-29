@@ -7435,10 +7435,11 @@ async def agent_respond(
     ):
         candidate_observation = await lookup_product_candidates(
             explicit_fact_query,
+            # Keep the original turn only when the shared parser found a
+            # negative constraint; ordinary fact queries must retain the
+            # existing exact-product lookup behavior.
             current_user_text=(
-                request.text
-                if unsupported_attribute_requested or requested_fields == ("spicy",)
-                else ""
+                request.text if structured_query.negative_constraints else ""
             ),
         )
         candidate_observation = _filter_product_candidates_to_session_context(
@@ -7694,7 +7695,13 @@ async def agent_respond(
         )
         candidate_observation = await lookup_product_candidates(
             "" if category_browse_request else explicit_fact_query,
-            current_user_text=request.text if category_browse_request else "",
+            # Preserve category-browse context and explicit corrections after
+            # the product query has been normalized.
+            current_user_text=(
+                request.text
+                if category_browse_request or structured_query.negative_constraints
+                else ""
+            ),
             category=explicit_catalog_category if category_browse_request else None,
         )
         if candidate_observation.status == "SUCCESS" and candidate_observation.products:

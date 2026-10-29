@@ -801,7 +801,7 @@ def _negative_constraint_status(
     constraints: tuple[str, ...],
     repository: ProductRepository,
     selected_category: str | None = None,
-) -> tuple[tuple[str, ...], frozenset[str], bool | None, tuple[str, ...]]:
+) -> tuple[tuple[str, ...], frozenset[str], bool | None, tuple[str, ...], tuple[str, ...]]:
     """Separate constraints the active catalog can enforce from unknown attributes."""
     products = getattr(repository, "products", ())
     brands = [product.brand for product in products if getattr(product, "brand", None)]
@@ -814,9 +814,10 @@ def _negative_constraint_status(
         # must still be enforced when the language parser intentionally omits
         # a broader/ambiguous negative-constraint span (for example,
         # "không phải hãng X").
-        return (), excluded_brands, None, ()
+        return (), excluded_brands, None, (), ()
     unsupported: list[str] = []
     excluded_categories: list[str] = []
+    excluded_title_phrases: list[str] = []
     requested_spicy: bool | None = None
     for constraint in constraints:
         normalized = normalize_category_text(constraint)
@@ -895,12 +896,36 @@ def _negative_constraint_status(
             # An explicitly named leaf already rules out a sibling subtype
             # that the snapshot does not expose as its own taxonomy leaf.
             continue
+        if _catalog_title_phrase_has_evidence(constraint, selected_category, repository):
+            excluded_title_phrases.append(constraint)
+            continue
         unsupported.append(constraint)
     return (
         tuple(dict.fromkeys(unsupported)),
         excluded_brands,
         requested_spicy,
         tuple(dict.fromkeys(excluded_categories)),
+        tuple(dict.fromkeys(excluded_title_phrases)),
+    )
+
+
+def _catalog_title_phrase_has_evidence(
+    phrase: str,
+    selected_category: str | None,
+    repository: ProductRepository,
+) -> bool:
+    """Support a negative subtype only when its exact wording appears in scoped titles."""
+    normalized_phrase = normalize_category_text(phrase)
+    if not selected_category or len(normalized_phrase.split()) < 2:
+        return False
+    try:
+        candidates = repository.search(query=phrase, category=selected_category, limit=100)
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        return False
+    padded_phrase = f" {normalized_phrase} "
+    return any(
+        padded_phrase in f" {normalize_category_text(product.name)} "
+        for product in candidates
     )
 
 
@@ -963,27 +988,40 @@ def _taxonomy_categories_are_disjoint(
 def _product_is_in_excluded_category(
     product: ProductSnapshot,
     excluded_categories: tuple[str, ...],
+    excluded_title_phrases: tuple[str, ...] = (),
 ) -> bool:
-    if not excluded_categories:
+    if not excluded_categories and not excluded_title_phrases:
         return False
     product_categories = {
         normalize_category_text(segment)
-        for segment in (product.category_hierarchy or "").split(">")
-        if segment.strip()
+        for segment in (
+            *(product.category_hierarchy or "").split(">"),
+            product.category,
+        )
+        if segment and segment.strip()
     }
-    if not product_categories and product.category:
-        product_categories.add(normalize_category_text(product.category))
     if any(
-        normalize_category_text(category) in product_categories for category in excluded_categories
+        f" {normalize_category_text(category)} " in f" {product_category} "
+        for category in excluded_categories
+        for product_category in product_categories
     ):
         return True
     title = normalize_category_text(product.name)
+    if any(
+        f" {normalize_category_text(phrase)} " in f" {title} "
+        for phrase in excluded_title_phrases
+    ):
+        return True
     for category in excluded_categories:
         category_key = normalize_category_text(category)
-        # Catalogs sometimes place carbonated water under the mineral-water
-        # leaf. Preserve the user's explicit category exclusion using the
-        # product title's verified wording, including the common ``gas`` form.
-        if category_key == "nuoc ngot co ga" and re.search(r"\b(?:co\s+ga|gas)\b", title):
+        # Product names can still provide category evidence when a snapshot
+        # has attached the wrong taxonomy leaf. Allow a few intervening brand
+        # or variant words, but preserve the category's token order.
+        tokens = category_key.split()
+        title_pattern = r"\b" + r"\b(?:\s+\w+){0,3}\s+".join(
+            re.escape(token) for token in tokens
+        ) + r"\b"
+        if len(tokens) > 1 and re.search(title_pattern, title):
             return True
     return False
 
@@ -2032,7 +2070,7 @@ def has_unverified_negative_catalog_constraint(
         return False
     category, _ = _query_category_hint(query, repo)
     selected_category = _category_for_repository(category, repo)
-    unsupported, _, _, _ = _negative_constraint_status(
+    unsupported, _, _, _, _ = _negative_constraint_status(
         query,
         understanding.negative_constraints,
         repo,
@@ -3158,7 +3196,11 @@ def execute_catalog_tool(
             )
             product_identity = matched_product_title is not None
             identity_query = matched_product_title or routing_query
-            category_context = request_text or parsed.query or routing_query
+            category_context = (
+                understanding.product_reference
+                if understanding.negative_constraints and understanding.product_reference
+                else request_text or parsed.query or routing_query
+            )
             query_category, category_only_query = _query_category_hint(category_context, repo)
             parsed_type_category = _category_from_product_type(understanding.product_type, repo)
             explicit_leaf_category = _explicit_query_leaf_category(category_context, repo)
@@ -3232,6 +3274,7 @@ def execute_catalog_tool(
                 excluded_brands,
                 inferred_spicy,
                 excluded_categories,
+                excluded_title_phrases,
             ) = _negative_constraint_status(
                 request_text,
                 title_safe_constraints,
@@ -3321,8 +3364,21 @@ def execute_catalog_tool(
                     repo,
                 )
             if (
+                not effective_query
+                and understanding.negative_constraints
+                and understanding.product_type
+                and category
+                and _catalog_title_phrase_has_evidence(
+                    understanding.product_type,
+                    category,
+                    repo,
+                )
+            ):
+                effective_query = understanding.product_type
+            if (
                 category
                 and not product_identity
+                and not understanding.negative_constraints
                 and normalize_category_text(effective_query) == normalize_category_text(category)
             ):
                 # Once a recognized category is the only retrieval phrase,
@@ -3345,6 +3401,7 @@ def execute_catalog_tool(
                 and understanding.ranking_criterion == "relevance"
                 and not excluded_brands
                 and not excluded_categories
+                and not excluded_title_phrases
             )
             effective_max_price = parsed.max_price_vnd
             if budget_cap is not None:
@@ -3365,6 +3422,8 @@ def execute_catalog_tool(
                 else parsed.limit,
                 "diversify_by_subcategory": diversify,
             }
+            if excluded_categories or excluded_title_phrases:
+                search_criteria["limit"] = min(max(parsed.limit * 4, 20), 100)
             if (
                 understanding.ranking_criterion in {"price_ascending", "price_descending"}
                 and getattr(repo, "supports_price_sort", False)
@@ -3412,7 +3471,11 @@ def execute_catalog_tool(
                 product
                 for product in products
                 if matches_explicit_product_audience(request_text, product)
-                and not _product_is_in_excluded_category(product, excluded_categories)
+                and not _product_is_in_excluded_category(
+                    product,
+                    excluded_categories,
+                    excluded_title_phrases,
+                )
             )
             if excluded_brands:
                 products = tuple(
@@ -3432,7 +3495,11 @@ def execute_catalog_tool(
                     product
                     for product in fallback_candidates
                     if normalize_category_text(product.brand) not in excluded_brands
-                    and not _product_is_in_excluded_category(product, excluded_categories)
+                    and not _product_is_in_excluded_category(
+                        product,
+                        excluded_categories,
+                        excluded_title_phrases,
+                    )
                 )
                 labelled = tuple(
                     product
@@ -3464,6 +3531,7 @@ def execute_catalog_tool(
                 product_audience_evidence(product) is None for product in products
             ):
                 audience_unverified = True
+            products = products[: parsed.limit]
             matched = [
                 key
                 for key, requested in (
@@ -3623,13 +3691,14 @@ def execute_catalog_tool(
             )
             product_identity = matched_product_title is not None
             identity_query = matched_product_title or routing_query
-            category_context = (
-                parsed.preference_text
-                if modifier
-                else current_user_text
-                if understanding.ranking_criterion in {"price_ascending", "price_descending"}
-                else routing_query or parsed.preference_text
-            )
+            if understanding.negative_constraints and understanding.product_reference:
+                category_context = understanding.product_reference
+            elif modifier:
+                category_context = parsed.preference_text
+            elif understanding.ranking_criterion in {"price_ascending", "price_descending"}:
+                category_context = current_user_text or routing_query
+            else:
+                category_context = routing_query or parsed.preference_text
             query_category, category_only_query = _query_category_hint(category_context, repo)
             parsed_type_category = _category_from_product_type(understanding.product_type, repo)
             explicit_leaf_category = _explicit_query_leaf_category(category_context, repo)
@@ -3682,7 +3751,9 @@ def execute_catalog_tool(
             family_scope_leaf = (
                 _unresolved_family_scope_leaf(
                     understanding.product_type,
-                    parsed.preference_text or current_user_text or parsed.query,
+                    category_context
+                    if understanding.negative_constraints
+                    else parsed.preference_text or current_user_text or parsed.query,
                     repo,
                 )
                 if ambiguous_family
@@ -3727,6 +3798,7 @@ def execute_catalog_tool(
                 excluded_brands,
                 inferred_spicy,
                 excluded_categories,
+                excluded_title_phrases,
             ) = _negative_constraint_status(
                 parsed.preference_text or parsed.query,
                 title_safe_constraints,
@@ -3735,6 +3807,21 @@ def execute_catalog_tool(
             )
             if unsupported_constraints:
                 return _unsupported_constraint_error(name, repo, unsupported_constraints, category)
+
+            def recommendation_candidate_is_eligible(product: ProductSnapshot) -> bool:
+                if family_candidate_filter and not family_candidate_filter(product):
+                    return False
+                return not _product_is_in_excluded_category(
+                    product,
+                    excluded_categories,
+                    excluded_title_phrases,
+                )
+
+            recommendation_candidate_filter = (
+                recommendation_candidate_is_eligible
+                if family_candidate_filter or excluded_categories or excluded_title_phrases
+                else None
+            )
             requested_spicy = False if inferred_spicy is False else parsed.spicy
             if requested_spicy is not None and not getattr(repo, "supports_spicy_filter", True):
                 return _tool_error(
@@ -3793,6 +3880,18 @@ def execute_catalog_tool(
                     repo,
                 )
             if (
+                not effective_query
+                and understanding.negative_constraints
+                and understanding.product_type
+                and category
+                and _catalog_title_phrase_has_evidence(
+                    understanding.product_type,
+                    category,
+                    repo,
+                )
+            ):
+                effective_query = understanding.product_type
+            if (
                 understanding.ranking_criterion in {"price_ascending", "price_descending"}
                 and category
                 and not _exact_product_title(identity_query, repo)
@@ -3838,7 +3937,9 @@ def execute_catalog_tool(
                 search_criteria["sort_by"] = understanding.ranking_criterion
             preference_text_for_ranking = (
                 understanding.product_reference
-                if understanding.use_case or understanding.ranking_criterion != "relevance"
+                if understanding.use_case
+                or understanding.ranking_criterion != "relevance"
+                or understanding.negative_constraints
                 else parsed.preference_text
             )
             category_fallback_used = False
@@ -3846,7 +3947,7 @@ def execute_catalog_tool(
                 repo,
                 search_criteria,
                 preference_text_for_ranking,
-                candidate_filter=family_candidate_filter,
+                candidate_filter=recommendation_candidate_filter,
             )
             supported_details, unmatched_details = (
                 _category_query_unmatched_details(routing_query, category, repo)
@@ -3859,7 +3960,7 @@ def execute_catalog_tool(
                     repo,
                     search_criteria,
                     preference_text_for_ranking,
-                    candidate_filter=family_candidate_filter,
+                    candidate_filter=recommendation_candidate_filter,
                 )
             elif (
                 not products and not product_identity and not mentioned_brand and unmatched_details
@@ -3869,7 +3970,7 @@ def execute_catalog_tool(
                     repo,
                     search_criteria,
                     preference_text_for_ranking,
-                    candidate_filter=family_candidate_filter,
+                    candidate_filter=recommendation_candidate_filter,
                 )
                 category_fallback_used = bool(products)
             brand_query = " ".join((parsed.query, parsed.preference_text)).strip()
@@ -3885,7 +3986,7 @@ def execute_catalog_tool(
                         repo,
                         search_criteria,
                         preference_text_for_ranking,
-                        candidate_filter=family_candidate_filter,
+                        candidate_filter=recommendation_candidate_filter,
                     )
             preparation = frozenset().union(
                 preparation_terms(understanding.use_case or ""),
@@ -3932,6 +4033,11 @@ def execute_catalog_tool(
                         and title_mentions_preparation(product.name, preparation)
                         and product.product_id not in parsed.exclude_product_ids
                         and normalize_category_text(product.brand) not in excluded
+                        and not _product_is_in_excluded_category(
+                            product,
+                            excluded_categories,
+                            excluded_title_phrases,
+                        )
                     )[: parsed.limit]
                     preparation_title_match = bool(products)
                     preference_matches = {}
@@ -4000,7 +4106,11 @@ def execute_catalog_tool(
                     if product.product_id not in parsed.exclude_product_ids
                     and normalize_category_text(product.brand) not in excluded_brands
                     and matches_explicit_product_audience(audience_query, product)
-                    and not _product_is_in_excluded_category(product, excluded_categories)
+                    and not _product_is_in_excluded_category(
+                        product,
+                        excluded_categories,
+                        excluded_title_phrases,
+                    )
                 )[: parsed.limit]
                 preference_matches = {}
                 category_fallback_used = bool(products)
@@ -4066,7 +4176,11 @@ def execute_catalog_tool(
                         return False
                     if not matches_explicit_product_audience(audience_query, product):
                         return False
-                    if _product_is_in_excluded_category(product, excluded_categories):
+                    if _product_is_in_excluded_category(
+                        product,
+                        excluded_categories,
+                        excluded_title_phrases,
+                    ):
                         return False
                     return True
 
@@ -4104,7 +4218,11 @@ def execute_catalog_tool(
                 product
                 for product in products
                 if matches_explicit_product_audience(audience_query, product)
-                and not _product_is_in_excluded_category(product, excluded_categories)
+                and not _product_is_in_excluded_category(
+                    product,
+                    excluded_categories,
+                    excluded_title_phrases,
+                )
             )
             requested_audience = explicit_product_audience(audience_query)
             if (
@@ -4128,7 +4246,11 @@ def execute_catalog_tool(
                     for product in fallback_candidates
                     if product.product_id not in parsed.exclude_product_ids
                     and normalize_category_text(product.brand) not in excluded_brands
-                    and not _product_is_in_excluded_category(product, excluded_categories)
+                    and not _product_is_in_excluded_category(
+                        product,
+                        excluded_categories,
+                        excluded_title_phrases,
+                    )
                 )
                 labelled = tuple(
                     product
