@@ -111,6 +111,20 @@ class SessionRecord:
     snapshot_disclosures: list[str] = field(default_factory=list)
 
 
+def _model_context_projection(messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Keep user turns but never replay assistant prose as model instructions.
+
+    Assistant replies can quote untrusted catalog names or descriptions. They
+    remain in the session transcript for display and audit, while structured
+    shopping state carries the product references needed by later turns.
+    """
+    return [
+        {"role": "user", "content": message["content"]}
+        for message in messages
+        if message.get("role") == "user" and isinstance(message.get("content"), str)
+    ]
+
+
 def _remember_previous_displayed_page(
     shopping: ShoppingSessionState,
     updates: dict[str, Any],
@@ -351,7 +365,7 @@ class InMemorySessionStore:
 
     def messages_for_model(self, session_id: UUID) -> list[dict[str, str]]:
         with self._lock:
-            return copy.deepcopy(self._active_record(session_id).messages)
+            return _model_context_projection(self._active_record(session_id).messages)
 
     def set_last_grounded_product(
         self,
@@ -641,7 +655,7 @@ class RedisSessionStore:
         self._mutate(session_id, append)
 
     def messages_for_model(self, session_id: UUID) -> list[dict[str, str]]:
-        return self.get(session_id).messages
+        return _model_context_projection(self.get(session_id).messages)
 
     def set_last_grounded_product(
         self,
