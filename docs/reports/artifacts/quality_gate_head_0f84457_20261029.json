@@ -1,0 +1,51 @@
+{
+  "artifact_id": "retail_ai_repository_quality_gate",
+  "created_at_utc": "2026-10-29T01:49:07Z",
+  "commit_sha": "0f844575cc94c63c321ace617a7521e587eadefe",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "working_tree_at_run": {
+    "tracked_changes_present": false,
+    "preexisting_untracked_artifact_count": 8,
+    "preexisting_untracked_files_staged_or_modified": false
+  },
+  "environment": {
+    "os_family": "Windows",
+    "python": "3.13.15",
+    "pytest": "9.1.1",
+    "ruff": "0.16.5",
+    "uv": "0.12.19",
+    "catalog_snapshot": "data/winmart_products.json",
+    "catalog_snapshot_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "dataset_sha256": null,
+    "dataset_note": "Full repository test suite uses multiple fixtures; this run does not define a single benchmark dataset."
+  },
+  "checks": {
+    "tests": {
+      "command": "uv run pytest tests -q --tb=short",
+      "status": "passed",
+      "passed": 1398,
+      "failed": 0,
+      "duration_seconds": 180.10
+    },
+    "lint": {
+      "command": "uv run ruff check backend tests evaluation",
+      "status": "passed"
+    },
+    "python_compilation": {
+      "command": "uv run python -m compileall -q backend evaluation tests",
+      "status": "passed"
+    },
+    "tracked_diff_whitespace": {
+      "command": "git diff --check",
+      "status": "passed"
+    }
+  },
+  "not_evaluated": [
+    "Human-rated recommendation suitability, answer naturalness, or helpfulness",
+    "Blind held-out quality",
+    "Browser or real-network end-to-end behavior",
+    "Production latency, concurrency capacity, or SLO",
+    "Live provider availability or voice recognition quality"
+  ],
+  "interpretation": "Local repository regression gate only. It does not establish production readiness or real-customer recommendation accuracy."
+}
