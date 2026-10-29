@@ -221,3 +221,249 @@ async def test_actual_customer_request_returns_grounded_titles_and_prices(snapsh
             assert "chắc chắn hết" not in payload["text"]
     finally:
         api.app.dependency_overrides.pop(api.get_groq_service, None)
+
+
+@pytest.mark.asyncio
+async def test_natural_brand_question_returns_catalog_brands_instead_of_product_picker(
+    snapshot, monkeypatch
+):
+    class NoModelNeeded:
+        async def chat(self, *args, **kwargs):
+            raise AssertionError("A catalog-grounded brand list must not need a model call")
+
+    monkeypatch.setattr(api, "get_product_repository", lambda *args, **kwargs: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args, **kwargs: snapshot)
+    api.app.dependency_overrides[api.get_groq_service] = lambda: NoModelNeeded()
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=api.app), base_url="http://test"
+        ) as client:
+            created = await client.post("/sessions", json={"kiosk_id": "brand-question"})
+            result = await client.post(
+                "/agent/respond",
+                json={
+                    "session_id": created.json()["session_id"],
+                    "text": "Mì ăn liền vị bò với vị gà đang có những nhãn nào?",
+                },
+            )
+
+        assert result.status_code == 200
+        payload = result.json()
+        assert payload["grounded_product_ids"]
+        expected_brands = {
+            snapshot.get_product_snapshot(product_id).brand
+            for product_id in payload["grounded_product_ids"]
+            if snapshot.get_product_snapshot(product_id).brand
+        }
+        assert expected_brands
+        assert all(brand in payload["text"] for brand in expected_brands)
+        assert "trường thương hiệu trong catalog" in payload["text"]
+        assert "chưa xác minh trực tiếp nhãn trên bao bì" in payload["text"]
+        assert "Bạn muốn tra sản phẩm nào" not in payload["text"]
+    finally:
+        api.app.dependency_overrides.pop(api.get_groq_service, None)
+
+
+def test_storage_condition_parser_separates_product_storage_from_shelf_location(snapshot):
+    paths = snapshot.list_category_hierarchies()
+
+    assert api._storage_condition_requested(
+        "Sữa tươi hộp giấy để ngoài được, có loại nào không?", paths
+    )
+    assert api._storage_condition_requested("Mì này bảo quản ở nhiệt độ phòng được không?", paths)
+    assert not api._storage_condition_requested(
+        "Nước suối để ở tủ mát hay khu đồ uống?", paths
+    )
+
+
+@pytest.mark.asyncio
+async def test_storage_requirement_without_catalog_evidence_abstains_before_listing_products(
+    snapshot, monkeypatch
+):
+    class NoModelNeeded:
+        async def chat(self, *args, **kwargs):
+            raise AssertionError("Unverified storage conditions must abstain locally")
+
+    monkeypatch.setattr(api, "get_product_repository", lambda *args, **kwargs: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args, **kwargs: snapshot)
+    api.app.dependency_overrides[api.get_groq_service] = lambda: NoModelNeeded()
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=api.app), base_url="http://test"
+        ) as client:
+            created = await client.post("/sessions", json={"kiosk_id": "storage-guidance"})
+            result = await client.post(
+                "/agent/respond",
+                json={
+                    "session_id": created.json()["session_id"],
+                    "text": "Sữa tươi hộp giấy để ngoài được, có loại nào không?",
+                },
+            )
+
+        assert result.status_code == 200
+        payload = result.json()
+        assert payload["products"] == []
+        assert payload["grounded_product_ids"] == []
+        assert payload["tools_used"] == []
+        assert "chưa có hướng dẫn bảo quản đã xác minh" in payload["text"]
+    finally:
+        api.app.dependency_overrides.pop(api.get_groq_service, None)
+
+
+@pytest.mark.asyncio
+async def test_soft_preferences_are_ranked_only_after_family_and_taxonomy_scope(
+    snapshot, monkeypatch
+):
+    class NoModelNeeded:
+        async def chat(self, *args, **kwargs):
+            raise AssertionError("A catalog-anchored recommendation must not call a model")
+
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    api.app.dependency_overrides[api.get_groq_service] = lambda: NoModelNeeded()
+    scenarios = (
+        (
+            "Da mặt mình khô căng sau khi rửa, muốn tìm kem dưỡng ẩm dịu nhẹ loại nào?",
+            "kem dưỡng da mặt",
+            ("kem chống nắng", "kem dưỡng toàn thân"),
+        ),
+        (
+            "Tóc mình khô xơ, tư vấn dầu gội cho nam dưỡng ẩm dịu nhẹ",
+            "dầu gội nam",
+            ("dầu gội nữ",),
+        ),
+        (
+            "Tìm nước lau sàn mùi dịu nhẹ",
+            "nước lau sàn nhà",
+            (),
+        ),
+    )
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=api.app), base_url="http://test"
+        ) as client:
+            for index, (text, expected_leaf, forbidden_leaf_phrases) in enumerate(scenarios):
+                created = await client.post(
+                    "/sessions", json={"kiosk_id": f"family-scope-{index}"}
+                )
+                result = await client.post(
+                    "/agent/respond",
+                    json={"session_id": created.json()["session_id"], "text": text},
+                )
+                assert result.status_code == 200
+                payload = result.json()
+                assert payload["grounded_product_ids"]
+                assert payload["tools_used"] == ["recommend_products"]
+                if "dịu nhẹ" in text or "khô xơ" in text:
+                    assert "chưa xác" in payload["text"] or "chưa có đủ thông tin" in payload[
+                        "text"
+                    ]
+                for card in payload["products"]:
+                    original = snapshot.get_product_snapshot(card["product_id"])
+                    hierarchy = normalize_category_text(original.category_hierarchy)
+                    assert normalize_category_text(expected_leaf) in hierarchy
+                    assert all(
+                        normalize_category_text(forbidden) not in hierarchy
+                        for forbidden in forbidden_leaf_phrases
+                    )
+                    assert card["name"] == original.name
+                    assert card["price_vnd"] == original.price_vnd
+    finally:
+        api.app.dependency_overrides.pop(api.get_groq_service, None)
+
+
+@pytest.mark.asyncio
+async def test_unknown_negative_attribute_is_not_dropped_on_fresh_product_lookup(
+    snapshot, monkeypatch
+):
+    class NoModelNeeded:
+        async def chat(self, *args, **kwargs):
+            raise AssertionError("Unsupported negative constraints must abstain locally")
+
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    api.app.dependency_overrides[api.get_groq_service] = lambda: NoModelNeeded()
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=api.app), base_url="http://test"
+        ) as client:
+            created = await client.post(
+                "/sessions", json={"kiosk_id": "unknown-negative-attribute"}
+            )
+            result = await client.post(
+                "/agent/respond",
+                json={
+                    "session_id": created.json()["session_id"],
+                    "text": "Mình cần kem dưỡng ẩm không chứa hương liệu",
+                },
+            )
+            brand_session = await client.post(
+                "/sessions", json={"kiosk_id": "supported-brand-exclusion"}
+            )
+            brand_result = await client.post(
+                "/agent/respond",
+                json={
+                    "session_id": brand_session.json()["session_id"],
+                    "text": "Không lấy Clear, muốn dầu gội loại khác",
+                },
+            )
+
+        assert result.status_code == 200
+        payload = result.json()
+        assert payload["products"] == []
+        assert payload["grounded_product_ids"] == []
+        assert "chưa có dữ liệu đã xác minh" in payload["text"]
+        assert brand_result.status_code == 200
+        brand_payload = brand_result.json()
+        assert brand_payload["grounded_product_ids"]
+        assert all(product["brand"] != "CLEAR" for product in brand_payload["products"])
+    finally:
+        api.app.dependency_overrides.pop(api.get_groq_service, None)
+
+
+@pytest.mark.asyncio
+async def test_exact_taxonomy_queries_with_stopword_or_intent_collisions_are_grounded(
+    snapshot, monkeypatch
+):
+    class NoModelNeeded:
+        async def chat(self, *args, **kwargs):
+            raise AssertionError("An exact catalog category lookup must not call a model")
+
+    monkeypatch.setattr(api, "get_product_repository", lambda *args, **kwargs: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args, **kwargs: snapshot)
+    api.app.dependency_overrides[api.get_groq_service] = lambda: NoModelNeeded()
+    categories = ("Bàn là", "Giá đỗ", "Dung dịch vs nam nữ", "Dụng cụ vs nhà cửa")
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=api.app), base_url="http://test"
+        ) as client:
+            for index, category in enumerate(categories):
+                created = await client.post(
+                    "/sessions", json={"kiosk_id": f"taxonomy-collision-{index}"}
+                )
+                result = await client.post(
+                    "/agent/respond",
+                    json={
+                        "session_id": created.json()["session_id"],
+                        "text": f"Tìm {category}",
+                    },
+                )
+                assert result.status_code == 200
+                payload = result.json()
+                assert payload["products"], (category, payload.get("text"))
+                for card in payload["products"]:
+                    product = snapshot.get_product_snapshot(card["product_id"])
+                    path = {
+                        normalize_category_text(segment)
+                        for segment in product.category_hierarchy.split(">")
+                    }
+                    assert normalize_category_text(category) in path, (
+                        category,
+                        product.product_id,
+                        product.name,
+                        product.category_hierarchy,
+                    )
+                    assert card["name"] == product.name
+                    assert card["price_vnd"] == product.price_vnd
+    finally:
+        api.app.dependency_overrides.pop(api.get_groq_service, None)

@@ -1,11 +1,16 @@
+from pathlib import Path
+
 import pytest
 
+from backend.products.snapshot_repository import SnapshotProductRepository
 from backend.services.product_comparison import (
     comparison_metric,
     is_comparison_request,
     parse_comparison_queries,
     unsupported_comparison_dimension,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize(
@@ -92,6 +97,15 @@ def test_comparison_request_detection(text: str) -> None:
 
 def test_ordinary_retail_question_is_not_misclassified_as_comparison() -> None:
     assert not is_comparison_request("Coca Zero giá bao nhiêu?")
+
+
+def test_comparison_keyword_inside_catalog_label_does_not_override_price_ranking() -> None:
+    repository = SnapshotProductRepository(ROOT / "data" / "winmart_products.json")
+    query = "Dụng cụ vs nhà cửa loại nào rẻ hơn?"
+    hierarchies = repository.list_category_hierarchies()
+
+    assert not is_comparison_request(query, hierarchies)
+    assert parse_comparison_queries(query, hierarchies) is None
 
 
 @pytest.mark.parametrize(

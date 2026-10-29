@@ -1,0 +1,178 @@
+{
+  "schema_version": "1.0",
+  "run_type": "local_deterministic_api_regression_diagnostic",
+  "created_at_utc": "2026-10-28T23:20:25.915419+00:00",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "base_commit": "90d6156364e8f50b747e09095c2ce4118bece085",
+  "tracked_worktree_diff_sha256": "0ff6e906f02d199147c72bd9663e2751d9b4db7503be8e829705e46520c19bd6",
+  "code_and_test_file_sha256": {
+    "backend/api/main.py": "b7ed9e2f39eb0cba4935b2566d1328d3178c1288950bc4de49cce64d1a6bf1b9",
+    "backend/services/retail_tools.py": "abb215baefd8e116e03e2843ab321ea3de0944dff05772e6742d001e52c40582",
+    "backend/services/catalog_preferences.py": "49212bb1a3944cad25ddc9ce8a9e8ec706e4cca440cd51afa6c96bc19bd3ba32",
+    "tests/test_catalog_consultation.py": "013342988d68913974596a3d573c6ffb97ee695d449a785563de1520276dfcb3"
+  },
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "python_version": "3.13.15",
+  "external_provider_calls": 0,
+  "llm_calls": 0,
+  "human_evaluation": false,
+  "independent_or_blind": false,
+  "case_count": 4,
+  "passed_cases": 4,
+  "results": [
+    {
+      "case_id": "face_moisturizer_soft_traits",
+      "query": "Da mặt mình khô căng sau khi rửa, muốn tìm kem dưỡng ẩm dịu nhẹ loại nào?",
+      "answer": "Mình tìm thấy vài loại trong nhóm này: Kem dưỡng ban đêm Pond's Age Miracle 45G (giá tham khảo 299.900đ); Kem dưỡng mềm da Nivea 50ml (giá tham khảo 79.500đ); Kem Pond's chống lão hóa ngày hộp 50g (giá tham khảo 299.900đ). Catalog chưa xác nhận chúng đáp ứng các tiêu chí khác bạn vừa nêu. Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không? Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+      "status_code": 200,
+      "tools_used": [
+        "recommend_products"
+      ],
+      "duration_ms": 382.65,
+      "grounded_product_ids": [
+        "WIN_10315206",
+        "WIN_10017296",
+        "WIN_10315205"
+      ],
+      "products": [
+        {
+          "product_id": "WIN_10315206",
+          "name": "Kem dưỡng ban đêm Pond's Age Miracle 45G",
+          "price_vnd": 299900,
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da > Kem dưỡng da mặt"
+        },
+        {
+          "product_id": "WIN_10017296",
+          "name": "Kem dưỡng mềm da Nivea 50ml",
+          "price_vnd": 79500,
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da > Kem dưỡng da mặt"
+        },
+        {
+          "product_id": "WIN_10315205",
+          "name": "Kem Pond's chống lão hóa ngày hộp 50g",
+          "price_vnd": 299900,
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc da > Kem dưỡng da mặt"
+        }
+      ],
+      "checks": {
+        "http_200": true,
+        "expected_product_presence": true,
+        "recommendation_tool_used": true,
+        "all_candidates_in_expected_leaf": true,
+        "no_forbidden_leaf_candidates": true,
+        "all_cards_match_snapshot": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "male_shampoo_soft_traits",
+      "query": "Tóc mình khô xơ, tư vấn dầu gội cho nam dưỡng ẩm dịu nhẹ",
+      "answer": "Mình tìm thấy vài loại trong danh mục: Dầu gội Clear Men mát lạnh bạc hà 180g/170g (giá tham khảo 80.000đ); Dầu gội cao cấp Romano classic chai 380g (giá tham khảo 127.600đ); Dầu gội nước hoa X-men Active 650g (giá tham khảo 149.900đ). Catalog chưa có đủ thông tin để xác nhận loại nào phù hợp với nhu cầu này. Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không? Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+      "status_code": 200,
+      "tools_used": [
+        "recommend_products"
+      ],
+      "duration_ms": 228.98,
+      "grounded_product_ids": [
+        "WIN_10601171",
+        "WIN_10016873",
+        "WIN_10016836"
+      ],
+      "products": [
+        {
+          "product_id": "WIN_10601171",
+          "name": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g",
+          "price_vnd": 80000,
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam > Dầu gội nam"
+        },
+        {
+          "product_id": "WIN_10016873",
+          "name": "Dầu gội cao cấp Romano classic chai 380g",
+          "price_vnd": 127600,
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam > Dầu gội nam"
+        },
+        {
+          "product_id": "WIN_10016836",
+          "name": "Dầu gội nước hoa X-men Active 650g",
+          "price_vnd": 149900,
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Mỹ phẩm, chăm sóc cá nhân > Chăm sóc nam > Dầu gội nam"
+        }
+      ],
+      "checks": {
+        "http_200": true,
+        "expected_product_presence": true,
+        "recommendation_tool_used": true,
+        "all_candidates_in_expected_leaf": true,
+        "no_forbidden_leaf_candidates": true,
+        "all_cards_match_snapshot": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "floor_cleaner_soft_scent",
+      "query": "Tìm nước lau sàn mùi dịu nhẹ",
+      "answer": "Mình tìm thấy vài loại trong nhóm này: Nước lau nhà MaxKleen hương ban mai thanh mát chai 1.01 lít (giá tham khảo 34.400đ); Nước lau sàn Gift pink sakura can 3,8kg (giá tham khảo 94.000đ); Nước lau sàn hương lily Gift  chai 1L (giá tham khảo 32.400đ). Catalog chưa xác nhận chúng đáp ứng các tiêu chí khác bạn vừa nêu. Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không? Giá tại cửa hàng có thể khác catalog. Tồn hiện tại chưa được xác minh.",
+      "status_code": 200,
+      "tools_used": [
+        "recommend_products"
+      ],
+      "duration_ms": 237.8,
+      "grounded_product_ids": [
+        "WIN_10170559",
+        "WIN_10019680",
+        "WIN_10019677"
+      ],
+      "products": [
+        {
+          "product_id": "WIN_10170559",
+          "name": "Nước lau nhà MaxKleen hương ban mai thanh mát chai 1.01 lít",
+          "price_vnd": 34400,
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà > Nước lau sàn nhà"
+        },
+        {
+          "product_id": "WIN_10019680",
+          "name": "Nước lau sàn Gift pink sakura can 3,8kg",
+          "price_vnd": 94000,
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà > Nước lau sàn nhà"
+        },
+        {
+          "product_id": "WIN_10019677",
+          "name": "Nước lau sàn hương lily Gift  chai 1L",
+          "price_vnd": 32400,
+          "category_hierarchy": "Phi thực phẩm > Hoá mỹ phẩm > Hóa phẩm > Vệ sinh nhà > Nước lau sàn nhà"
+        }
+      ],
+      "checks": {
+        "http_200": true,
+        "expected_product_presence": true,
+        "recommendation_tool_used": true,
+        "all_candidates_in_expected_leaf": true,
+        "no_forbidden_leaf_candidates": true,
+        "all_cards_match_snapshot": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": "unsupported_fragrance_free_hard_constraint",
+      "query": "Mình cần kem dưỡng ẩm không chứa hương liệu",
+      "answer": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+      "status_code": 200,
+      "tools_used": [],
+      "duration_ms": 131.46,
+      "grounded_product_ids": [],
+      "products": [],
+      "checks": {
+        "http_200": true,
+        "expected_product_presence": true,
+        "hard_constraint_abstains_without_candidates": true,
+        "unknown_attribute_disclosed": true
+      },
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Four-case deterministic regression diagnostic, not a relevance benchmark or human evaluation.",
+    "The catalog is a dated snapshot; it does not verify live availability or unlisted product attributes.",
+    "Soft suitability phrases are not claimed as facts unless the catalog provides evidence."
+  ]
+}

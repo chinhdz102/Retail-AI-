@@ -572,6 +572,39 @@ def _resolve_catalog_category_cached(
     their nearest shared parent and keep the phrase available to product search.
     """
     normalized_query = normalize_category_text(query)
+    paths = tuple(hierarchies)
+
+    # A canonical multiword category can consist only of words that are
+    # normally stop words (for example, ``Bàn là``). Preserve the full exact
+    # taxonomy phrase before the lexical candidate path removes those words.
+    exact_labels: dict[str, tuple[str, list[tuple[str, ...]]]] = {}
+    if normalized_query:
+        for path in paths:
+            for label in path:
+                key = normalize_category_text(label)
+                if key != normalized_query:
+                    continue
+                entry = exact_labels.get(key)
+                if entry is None:
+                    exact_labels[key] = (label, [path])
+                elif path not in entry[1]:
+                    entry[1].append(path)
+    if exact_labels and not _category_query_words(
+        normalized_query,
+        _CATEGORY_QUERY_STOP_WORDS,
+        query,
+    ):
+        key, (label, label_paths) = next(iter(exact_labels.items()))
+        deepest_depth = max(map(len, label_paths))
+        deepest_paths = [path for path in label_paths if len(path) == deepest_depth]
+        if deepest_paths:
+            label = deepest_paths[0][-1]
+        return CatalogCategoryMatch(
+            category=label,
+            matched_tokens=frozenset(key.split()),
+            exact_phrase=True,
+        )
+
     query_words = _category_query_words(normalized_query, _CATEGORY_QUERY_STOP_WORDS, query)
     query_tokens = frozenset(query_words)
     category_query_words = _category_query_words(
@@ -584,11 +617,7 @@ def _resolve_catalog_category_cached(
         for word in _native_category_words(query)
         if normalize_category_text(word) not in _SINGLE_WORD_CATEGORY_CONTEXT_WORDS
     ]
-    if not query_tokens:
-        return None
-
     labels: dict[str, tuple[str, list[tuple[str, ...]]]] = {}
-    paths = tuple(hierarchies)
     for path in paths:
         for label in path:
             key = normalize_category_text(label)
@@ -599,6 +628,9 @@ def _resolve_catalog_category_cached(
                 labels[key] = (label, [path])
             elif path not in entry[1]:
                 entry[1].append(path)
+
+    if not query_tokens:
+        return None
 
     exact: list[tuple[int, int, int, str, frozenset[str]]] = []
     for key, (label, label_paths) in labels.items():

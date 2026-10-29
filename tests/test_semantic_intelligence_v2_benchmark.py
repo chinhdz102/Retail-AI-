@@ -310,11 +310,20 @@ def test_review_queue_pools_retrievers_and_independently_blinds_reviewers(tmp_pa
     assert {row["candidate_key"] for row in rows_a} == {
         row["candidate_key"] for row in rows_b
     }
+    assert {
+        "use_case_fit",
+        "audience_fit",
+        "variant_fit",
+        "quantity_unit_fit",
+        "budget_fit",
+    } <= set(rows_a[0])
     order_a = [row["candidate_key"] for row in rows_a]
     order_b = [row["candidate_key"] for row in rows_b]
     assert order_a != order_b
     manifest = json.loads(Path(str(exported["evaluator_manifest"])).read_text(encoding="utf-8"))
     assert manifest["candidate_count_by_query"] == {rows_a[0]["query_id"]: 4}
+    assert manifest["split_authorization"]["effective_split"] == "development"
+    assert manifest["split_authorization"]["eligible_for_blind_claim"] is False
     assert manifest["reviewer_queues"]["source_and_rank_hidden"] is True
     assert exported["skipped_dataset_cases_without_retrieval_results"] == 1
 

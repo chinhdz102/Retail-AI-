@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0",
+  "registered_at": "2026-10-29",
+  "policy": {
+    "unregistered_datasets": "development_only",
+    "repository_visible_case_sets": "development_only",
+    "validation_requires": [
+      "exact dataset SHA-256 registration",
+      "independent authoring verified",
+      "at least two independent reviewers",
+      "independent review and adjudication complete",
+      "frozen before model selection"
+    ],
+    "blind_test_requires": [
+      "all validation requirements",
+      "not used for tuning",
+      "data and labels external to the repository",
+      "labels sealed until final evaluation"
+    ],
+    "current_release_state": "no validation or blind_test dataset is registered"
+  },
+  "known_exposed_datasets": [
+    {
+      "path": "evaluation/cases/retail_ai_semantic_intelligence_v2_dev_rev1_20261028.json",
+      "dataset_id": "retail_ai_semantic_intelligence_v2_dev_rev1_20261028",
+      "sha256": "8f129beecee14b7c8ff1bbba106fae154a3321a55ef2efaad718e3493de27d3b",
+      "exposure_status": "repo_visible; synthetic catalog and taxonomy templates"
+    },
+    {
+      "path": "evaluation/cases/retail_ai_semantic_intelligence_v2_frozen_20261028.json",
+      "dataset_id": "retail_ai_semantic_intelligence_v2_frozen_20261028",
+      "sha256": "d030d8f860f426a0ffcba7d44b542f8f7b23e9d361a51d8810c052670ba8b1e9",
+      "exposure_status": "repo_visible; synthetic and previously inspected"
+    },
+    {
+      "path": "evaluation/cases/generalized_catalog_consultation_dev_v1.jsonl",
+      "dataset_id": "generalized_catalog_consultation_dev_v1",
+      "sha256": "2e42c0be4106a7af9a42ce3e8382f581d3c04cdfb79ea3b52d8c81f19cb7af0b",
+      "exposure_status": "repo_visible; generated catalog query set"
+    },
+    {
+      "path": "evaluation/cases/generalized_catalog_consultation_heldout_v1.jsonl",
+      "dataset_id": "generalized_catalog_consultation_heldout_v1",
+      "sha256": "9a3a0a8d6847fa330cc88cc414ef2132c569a0df34889e8db543da1559d4496a",
+      "exposure_status": "repo_visible; SKU-disjoint exploratory set, not blind"
+    },
+    {
+      "path": "evaluation/cases/generalized_catalog_conversations_dev_v1.json",
+      "dataset_id": "generalized_catalog_conversations_dev_v1",
+      "sha256": "7bb0e4f3bfd81e5f7db06fbd9136b65198ea3236c1010e5882120d3df513e719",
+      "exposure_status": "repo_visible; generated conversation templates"
+    },
+    {
+      "path": "evaluation/cases/generalized_catalog_conversations_heldout_v1.json",
+      "dataset_id": "generalized_catalog_conversations_heldout_v1",
+      "sha256": "55a21539a6d795392f89664eb4624c889de8402806e8e0a7526017269cebf8e9",
+      "exposure_status": "repo_visible; generated conversation templates, not blind"
+    },
+    {
+      "path": "evaluation/cases/independent_consultation_v2.json",
+      "dataset_id": "independent_vietnamese_retail_consultation_v2",
+      "sha256": "ef7dbc026407793e88bff64b11a3b156ac693c41af90e22c61ffcfdf205727b2",
+      "exposure_status": "repo_visible; implementer-authored diagnostic, no external panel"
+    },
+    {
+      "path": "evaluation/cases/vietnamese_shopping_mission_heldout_v4_20261021.json",
+      "dataset_id": "vietnamese_shopping_mission_heldout_v4_20261021",
+      "sha256": "2556882a9060d17115c482d7dea7359c38b4a41ba5dea9e1334688ed5fbfb9dd",
+      "exposure_status": "repo_visible; generated and inspected, not blind"
+    },
+    {
+      "path": "evaluation/cases/vietnamese_text_sales_flow_v3_heldout.json",
+      "dataset_id": "retail_vietnamese_text_sales_flow_v3_heldout",
+      "sha256": "a1383e0a03cd8ea93d0e9fd3047c613387cc05c70bd4a693aa2c820d8d84383",
+      "exposure_status": "repo_visible; previously used, not blind"
+    },
+    {
+      "path": "evaluation/cases/vietnamese_text_sales_flow_v5_heldout_20261020.json",
+      "dataset_id": "retail_vietnamese_text_sales_flow_v5_heldout_20261020",
+      "sha256": "f2d84b231218f4601978290355415066c713be7eeda31ce83111479f684ededd",
+      "exposure_status": "repo_visible; previously used, not blind"
+    }
+  ],
+  "protected_datasets": []
+}

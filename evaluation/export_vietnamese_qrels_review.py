@@ -15,6 +15,7 @@ from typing import Any
 
 from backend.data.catalog_import import canonical_dataset_sha256
 from backend.products.snapshot_repository import SnapshotProductRepository
+from evaluation.split_policy import authorize_dataset_split
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CATALOG = ROOT / "data" / "winmart_products.json"
@@ -27,6 +28,11 @@ REVIEW_FIELDS = (
     "price_fit",
     "negation_fit",
     "availability_fit",
+    "use_case_fit",
+    "audience_fit",
+    "variant_fit",
+    "quantity_unit_fit",
+    "budget_fit",
     "clarification_expected",
     "abstention_expected",
     "confidence_1_to_5",
@@ -149,6 +155,7 @@ def export_review_queues(
     seed: int = 20261028,
     max_candidates_per_query: int = 50,
 ) -> dict[str, str | int]:
+    split_authorization = authorize_dataset_split(dataset_path, split)
     dataset = _load_dataset(dataset_path)
     results_paths = [results_path] if isinstance(results_path, Path) else list(results_path)
     if not results_paths:
@@ -296,6 +303,7 @@ def export_review_queues(
         "dataset_sha256": dataset_sha256,
         "catalog_sha256": catalog_sha256,
         "split": split,
+        "split_authorization": split_authorization,
         "seed": seed,
         "candidate_pool_policy": "rank_interleaved_union_from_all_supplied_artifacts",
         "max_candidates_per_query": max_candidates_per_query,
@@ -334,7 +342,10 @@ def main() -> None:
         "--split",
         choices=("development", "validation", "blind_test"),
         default="development",
-        help="Only label as blind_test after an independently authored split is frozen.",
+        help=(
+            "Non-development splits require exact-hash authorization in "
+            "evaluation/dataset_split_registry.json; repo-visible case sets are development-only."
+        ),
     )
     parser.add_argument("--seed", type=int, default=20261028)
     parser.add_argument("--max-candidates-per-query", type=int, default=50)

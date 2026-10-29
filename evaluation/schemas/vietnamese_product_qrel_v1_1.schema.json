@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://retail-ai.local/schemas/vietnamese_product_qrel_v1_1.schema.json",
+  "title": "Vietnamese retail product relevance judgment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "split",
+    "catalog_sha256",
+    "query_id",
+    "query_text",
+    "product_id",
+    "relevance",
+    "constraint_fit",
+    "clarification_expected",
+    "abstention_expected",
+    "evidence",
+    "annotation"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.1" },
+    "dataset_id": { "type": "string", "minLength": 1 },
+    "split": { "enum": ["development", "validation", "blind_test"] },
+    "catalog_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "query_id": { "type": "string", "minLength": 1 },
+    "query_text": { "type": "string", "minLength": 1 },
+    "product_id": { "type": ["string", "null"] },
+    "relevance": {
+      "enum": ["EXACT", "SUBSTITUTE", "COMPLEMENT", "IRRELEVANT", "UNJUDGED"]
+    },
+    "constraint_fit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "category",
+        "identity",
+        "brand",
+        "price",
+        "negation",
+        "availability",
+        "use_case",
+        "audience",
+        "variant",
+        "quantity_unit",
+        "budget"
+      ],
+      "properties": {
+        "category": { "$ref": "#/$defs/judgment" },
+        "identity": { "$ref": "#/$defs/judgment" },
+        "brand": { "$ref": "#/$defs/judgment" },
+        "price": { "$ref": "#/$defs/judgment" },
+        "negation": { "$ref": "#/$defs/judgment" },
+        "availability": { "$ref": "#/$defs/judgment" },
+        "use_case": { "$ref": "#/$defs/judgment" },
+        "audience": { "$ref": "#/$defs/judgment" },
+        "variant": { "$ref": "#/$defs/judgment" },
+        "quantity_unit": { "$ref": "#/$defs/judgment" },
+        "budget": { "$ref": "#/$defs/judgment" }
+      }
+    },
+    "clarification_expected": { "type": ["boolean", "null"] },
+    "abstention_expected": { "type": ["boolean", "null"] },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "value", "source", "source_timestamp"],
+        "properties": {
+          "field": { "type": "string", "minLength": 1 },
+          "value": { "type": ["string", "number", "boolean", "null"] },
+          "source": { "type": "string", "minLength": 1 },
+          "source_timestamp": { "type": ["string", "null"], "format": "date-time" }
+        }
+      }
+    },
+    "annotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewer_id", "reviewed_at", "confidence", "rationale"],
+      "properties": {
+        "status": { "enum": ["UNREVIEWED", "INDEPENDENT_A", "INDEPENDENT_B", "ADJUDICATED"] },
+        "reviewer_id": { "type": ["string", "null"] },
+        "reviewed_at": { "type": ["string", "null"], "format": "date-time" },
+        "confidence": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+        "rationale": { "type": "string", "maxLength": 2000 }
+      }
+    },
+    "adjudication": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["reviewer_id", "reviewed_at", "decision", "rationale"],
+      "properties": {
+        "reviewer_id": { "type": "string", "minLength": 1 },
+        "reviewed_at": { "type": "string", "format": "date-time" },
+        "decision": { "enum": ["ACCEPT_A", "ACCEPT_B", "NEW_GRADE", "UNRESOLVED"] },
+        "rationale": { "type": "string", "maxLength": 2000 }
+      }
+    }
+  },
+  "$defs": {
+    "judgment": {
+      "enum": ["PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"]
+    }
+  }
+}
