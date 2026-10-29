@@ -40,6 +40,8 @@ Mark each flag `true` only when the answer contains a serious, material issue. O
 
 The exporter copies user-visible answer text and a small allowlist of returned product/plan fields. It deliberately removes case IDs, expected labels, automated grades, source labels, model/provider names, tool traces, product IDs, and retrieval ranks from reviewer files. The evaluator-only manifest records input artifact hashes and hidden source mapping; keep it separate.
 
+The current exporter also fingerprints the immutable customer-visible packet. The scorer checks that fingerprint, the manifest assignments, and both queues' visible content before calculating agreement. Regenerate older queues whose manifests predate `frozen_review_packet`; the scorer rejects them instead of silently scoring potentially edited content.
+
 Human ratings are not produced automatically. A completed two-reviewer sample is still not a blind held-out evaluation if its prompts or results were used to tune the system. For factual claims that cannot be checked from the displayed answer and product details, annotate uncertainty and rationale; this packet does not supply an independent product-truth oracle. Do not claim hallucination accuracy, release readiness, or user acceptance from a blank queue or a single reviewer's ratings.
 
 ## Export review queues
@@ -54,3 +56,17 @@ uv run python -m evaluation.export_vietnamese_answer_quality_review `
 ```
 
 To compare variants, repeat `--results` and `--source-label` in matching order. Use files from the same query set and comparable catalog snapshot. The exporter creates `*_annotator_a.csv`, `*_annotator_b.csv`, and `*_evaluator_only_manifest.json`. The static header-only starter is `evaluation/review/vietnamese_answer_quality_template_v1.csv`; no human labels are included.
+
+## Score two completed independent queues
+
+After both reviewers finish, preserve their separate CSVs, set every reviewed row's status to `INDEPENDENT_A` or `INDEPENDENT_B`, and use distinct pseudonymous reviewer IDs. Provide a rationale, confidence, and timestamp on each reviewed row. Blank dimension scores may represent not applicable; blank critical flags mean the reviewer could not decide. The scorer reports coverage and excludes missing values per field.
+
+```powershell
+uv run python -m evaluation.score_vietnamese_answer_quality_review `
+  --annotator-a evaluation/review/answer_quality_probe_20261028_annotator_a.csv `
+  --annotator-b evaluation/review/answer_quality_probe_20261028_annotator_b.csv `
+  --manifest evaluation/review/answer_quality_probe_20261028_evaluator_only_manifest.json `
+  --output docs/reports/artifacts/answer_quality_agreement_20261028.json
+```
+
+The report includes per-dimension quadratic-weighted Cohen's kappa and exact/within-one-point agreement, per-flag raw agreement and nominal kappa, positive/negative agreement, confusion matrices, and missing-label counts. It does not merge dimensions into one score or resolve disagreements. An unresolved difference needs a separate, distinct adjudicator; agreement alone is not a correctness oracle or a blind-test certification. The scorer refuses queues still marked `UNREVIEWED`.

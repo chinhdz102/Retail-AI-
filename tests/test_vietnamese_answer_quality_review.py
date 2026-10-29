@@ -9,6 +9,8 @@ import pytest
 from evaluation.export_vietnamese_answer_quality_review import (
     ANNOTATION_FIELDS,
     CSV_FIELDS,
+    FROZEN_REVIEW_FIELDS,
+    _frozen_review_packet_sha256,
     export_review_queues,
 )
 
@@ -96,12 +98,8 @@ def test_answer_quality_export_blinds_sources_and_preserves_provenance(tmp_path)
     rows_b = _read_csv(exported["annotator_b"])
     assert len(rows_a) == len(rows_b) == 3
     assert set(rows_a[0]) == set(CSV_FIELDS)
-    assert {row["review_item_id"] for row in rows_a} == {
-        row["review_item_id"] for row in rows_b
-    }
-    assert [row["review_item_id"] for row in rows_a] != [
-        row["review_item_id"] for row in rows_b
-    ]
+    assert {row["review_item_id"] for row in rows_a} == {row["review_item_id"] for row in rows_b}
+    assert [row["review_item_id"] for row in rows_a] != [row["review_item_id"] for row in rows_b]
     for row in rows_a + rows_b:
         assert row["annotation_status"] == "UNREVIEWED"
         assert all(row[field] == "" for field in ANNOTATION_FIELDS if field != "annotation_status")
@@ -130,6 +128,26 @@ def test_answer_quality_export_blinds_sources_and_preserves_provenance(tmp_path)
 
     manifest = json.loads(Path(exported["evaluator_manifest"]).read_text(encoding="utf-8"))
     assert manifest["annotation_status"] == "UNREVIEWED; no human labels are present"
+    assert manifest["frozen_review_packet"]["row_count"] == 3
+    assert len(manifest["frozen_review_packet"]["visible_content_sha256"]) == 64
+    assert manifest["frozen_review_packet"]["hashed_fields"] == [
+        "schema_version",
+        "review_item_id",
+        "conversation_id",
+        "turn_index",
+        "dialogue_context",
+        "user_message",
+        "assistant_response",
+        "visible_recommendations",
+    ]
+    frozen_rows = [
+        {field: row[field] for field in FROZEN_REVIEW_FIELDS}
+        | {"turn_index": int(row["turn_index"])}
+        for row in rows_a
+    ]
+    assert manifest["frozen_review_packet"]["visible_content_sha256"] == (
+        _frozen_review_packet_sha256(frozen_rows)
+    )
     assert manifest["reviewer_queues"]["do_not_distribute_manifest_to_annotators"] is True
     assert [item["source_label"] for item in manifest["source_artifacts"]] == [
         "baseline_source",
@@ -177,9 +195,7 @@ def test_answer_quality_export_reads_nested_api_conversations(tmp_path) -> None:
             ],
         },
     )
-    exported = export_review_queues(
-        [nested], ["private-label"], tmp_path / "nested-review", seed=4
-    )
+    exported = export_review_queues([nested], ["private-label"], tmp_path / "nested-review", seed=4)
     rows = _read_csv(exported["annotator_a"])
 
     assert len(rows) == 1
