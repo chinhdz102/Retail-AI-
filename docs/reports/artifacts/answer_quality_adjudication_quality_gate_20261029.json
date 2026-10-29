@@ -1,0 +1,60 @@
+{
+  "adjudication_behavior_tested_with_synthetic_fixtures": [
+    "KEEP_A with consistency verification",
+    "KEEP_B with consistency verification",
+    "NEW_JUDGMENT",
+    "distinct third-reviewer requirement",
+    "exact disputed-field coverage",
+    "frozen visible packet integrity",
+    "blank/unreviewed refusal"
+  ],
+  "artifact_id": "answer_quality_adjudication_quality_gate_20261029",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "generated_at_utc": "2026-10-29T06:13:11.594959+00:00",
+  "human_review_state": {
+    "existing_manifest_has_frozen_packet_fingerprint": false,
+    "human_answer_quality_metrics_available": false,
+    "human_labels_available": false,
+    "reviewer_queues": {
+      "annotator_a": {
+        "row_count": 5,
+        "rows_with_any_human_labels": 0,
+        "sha256": "2e18c7b8e2b099bf7c0f52c83962862385a1818f74957c9d7eb26405a892d0b6",
+        "status_counts": {
+          "UNREVIEWED": 5
+        }
+      },
+      "annotator_b": {
+        "row_count": 5,
+        "rows_with_any_human_labels": 0,
+        "sha256": "51d25690eaf60953a5c2ca18c908aa81881d9c10a1c579459293bb3321ff7803",
+        "status_counts": {
+          "UNREVIEWED": 5
+        }
+      }
+    }
+  },
+  "limitations": [
+    "Adjudication tests use synthetic reviewer values; they validate scoring mechanics only.",
+    "No human has completed the retained answer-quality or product-qrels queues.",
+    "No protected independent validation or blind dataset is registered.",
+    "The answer-review source packet predates the frozen packet fingerprint and must be regenerated before annotation.",
+    "This artifact does not establish answer correctness, suitability, hallucination rate, or production readiness."
+  ],
+  "preexisting_untracked_artifacts_preserved_not_staged": 8,
+  "release_readiness": "NOT_READY_DEMO_ONLY",
+  "tested_code_commit": "cd9919371ac85c4475ca306909cf0ee714949ee8",
+  "tracked_worktree_clean_at_full_test_start": true,
+  "validation": {
+    "compileall": "uv run python -m compileall -q backend evaluation tests: passed",
+    "focused_command": "uv run pytest -p no:cacheprovider tests/test_vietnamese_answer_quality_review.py tests/test_vietnamese_answer_quality_scoring.py tests/test_vietnamese_qrels_retrieval_scoring.py -q --tb=short",
+    "focused_failed": 0,
+    "focused_passed": 28,
+    "full_command": "uv run pytest tests -q --tb=short",
+    "full_duration_seconds": 427.17,
+    "full_failed": 0,
+    "full_passed": 1433,
+    "git_diff_check": "passed",
+    "ruff": "uv run ruff check backend tests evaluation: passed"
+  }
+}
