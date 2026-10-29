@@ -13,6 +13,11 @@ from evaluation.split_policy import SplitPolicyError, authorize_dataset_split
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _stable_text_sha256(path: Path) -> str:
+    content = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(content).hexdigest()
+
+
 def test_known_semantic_frozen_dataset_is_registered_as_exposed_development() -> None:
     dataset = (
         ROOT
@@ -27,8 +32,29 @@ def test_known_semantic_frozen_dataset_is_registered_as_exposed_development() ->
     assert authorization["effective_split"] == "development"
     assert authorization["eligible_for_blind_claim"] is False
     assert authorization["dataset_sha256"] == (
-        "d030d8f860f426a0ffcba7d44b542f8f7b23e9d361a51d8810c052670ba8b1e9"
+        "0fbfbdcecb83a0cfe2a8fc24bb688526a8a5db4a7ab797a3c73217b677d2e1f1"
     )
+
+
+def test_known_dataset_hash_is_stable_across_checkout_line_endings(tmp_path: Path) -> None:
+    source = (
+        ROOT
+        / "evaluation"
+        / "cases"
+        / "retail_ai_semantic_intelligence_v2_frozen_20261028.json"
+    )
+    content = source.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    lf_path = tmp_path / "frozen-lf.json"
+    crlf_path = tmp_path / "frozen-crlf.json"
+    lf_path.write_bytes(content)
+    crlf_path.write_bytes(content.replace(b"\n", b"\r\n"))
+
+    lf_result = authorize_dataset_split(lf_path, "development")
+    crlf_result = authorize_dataset_split(crlf_path, "development")
+
+    assert lf_result["dataset_sha256"] == crlf_result["dataset_sha256"]
+    assert lf_result["authorization_status"] == "registered_exposed_development"
+    assert crlf_result["authorization_status"] == "registered_exposed_development"
 
 
 def test_repo_visible_heldout_case_cannot_be_promoted_to_blind_test() -> None:
@@ -53,7 +79,7 @@ def test_unregistered_external_dataset_is_development_only(tmp_path: Path) -> No
 def test_external_blind_split_requires_exact_hash_and_provenance(tmp_path: Path) -> None:
     dataset = tmp_path / "independent-blind.json"
     dataset.write_text('{"cases": [{"query": "tìm đồ uống"}]}\n', encoding="utf-8")
-    digest = hashlib.sha256(dataset.read_bytes()).hexdigest()
+    digest = _stable_text_sha256(dataset)
     registry = tmp_path / "split_registry.json"
     registry.write_text(
         json.dumps(
@@ -89,7 +115,7 @@ def test_external_blind_split_requires_exact_hash_and_provenance(tmp_path: Path)
 def test_registered_blind_hash_does_not_authorize_modified_dataset(tmp_path: Path) -> None:
     dataset = tmp_path / "independent-blind.json"
     dataset.write_text('{"cases": []}\n', encoding="utf-8")
-    old_digest = hashlib.sha256(dataset.read_bytes()).hexdigest()
+    old_digest = _stable_text_sha256(dataset)
     registry = tmp_path / "split_registry.json"
     registry.write_text(
         json.dumps(
@@ -120,7 +146,7 @@ def test_registered_blind_hash_does_not_authorize_modified_dataset(tmp_path: Pat
 def test_blind_registration_requires_every_independence_and_sealing_flag(tmp_path: Path) -> None:
     dataset = tmp_path / "independent-blind.json"
     dataset.write_text('{"cases": []}\n', encoding="utf-8")
-    digest = hashlib.sha256(dataset.read_bytes()).hexdigest()
+    digest = _stable_text_sha256(dataset)
     registry = tmp_path / "split_registry.json"
     registry.write_text(
         json.dumps(
