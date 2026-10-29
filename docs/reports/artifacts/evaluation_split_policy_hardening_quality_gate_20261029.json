@@ -1,0 +1,70 @@
+{
+  "artifact_type": "quality_gate_and_read_only_runtime_audit",
+  "date": "2026-10-29",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "base_commit": "cc1c12a6ce4dfac8c7ac1a3d1552d998f9d926fd",
+  "working_tree_changes_during_final_gate": [
+    "evaluation/split_policy.py",
+    "tests/test_evaluation_split_policy.py"
+  ],
+  "split_policy_change": {
+    "rule": "A blind_test dataset is rejected if either its lexical path or its resolved path is inside the repository root.",
+    "symlink_paths_checked_both_ways": true,
+    "regression": "A repository file outside evaluation/cases remains ineligible even when a supplied registry claims complete blind-test provenance.",
+    "validation_and_development_behavior_changed": false
+  },
+  "quality_gate": {
+    "focused_command": "uv run pytest -p no:cacheprovider tests/test_evaluation_split_policy.py -q --tb=short",
+    "focused_passed": 10,
+    "focused_failed": 0,
+    "focused_duration_seconds": 0.39,
+    "full_command": "uv run pytest tests -q --tb=short",
+    "full_passed": 1410,
+    "full_failed": 0,
+    "full_duration_seconds": 200.63,
+    "ruff_command": "uv run ruff check backend tests evaluation",
+    "ruff": "passed",
+    "compile_command": "uv run python -m compileall -q backend evaluation tests",
+    "compileall": "passed",
+    "diff_check": "passed",
+    "python": "3.13.15",
+    "ruff_version": "0.16.5"
+  },
+  "read_only_runtime_audit_on_base_commit": {
+    "temporary_server": "127.0.0.1:8001",
+    "temporary_server_stopped": true,
+    "openapi_status": 200,
+    "warm_n": 10,
+    "warm_response_latency_ms_p50_p95": [86.85, 94.09],
+    "warm_sse_headers_latency_ms_p50_p95": [85.44, 87.07],
+    "warm_sse_first_delta_latency_ms_p50_p95": [85.92, 87.38],
+    "warm_sse_total_latency_ms_p50_p95": [86.48, 87.91],
+    "cold_first_delta_ms": 887.84,
+    "concurrency_load": {
+      "sessions_per_level": 20,
+      "failures": 0,
+      "model": "catalog",
+      "latency_ms_p50_p95": {
+        "concurrency_1": [97.96, 104.35],
+        "concurrency_5": [492.79, 610.5],
+        "concurrency_20": [1289.37, 1976.76]
+      }
+    },
+    "focused_backend_tests_passed": 89,
+    "frontend_sse_client_tests_passed": 10,
+    "sse_streaming_limitation": "The API awaits the complete agent response before emitting start/delta events; this is chunked delivery after completion, not model token streaming.",
+    "limits": [
+      "Snapshot/catalog-only; no Groq provider call or live inventory check.",
+      "No real Redis, browser/network end-to-end, same-session concurrency, production SLO, or human-rated answer-quality test.",
+      "The existing servers on ports 8000 and 5173 predated the base commit and were not attributed to this checkout."
+    ]
+  },
+  "evaluation_readiness": {
+    "protected_validation_or_blind_datasets_registered": 0,
+    "reviewer_labels_completed": 0,
+    "production_ready": false,
+    "release_recommendation": "demo-only"
+  },
+  "preexisting_untracked_artifacts_preserved_and_not_staged": true,
+  "no_new_branch_or_worktree_created": true
+}
