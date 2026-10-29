@@ -30,7 +30,7 @@ from backend.services.vietnamese_intent import (
 )
 from backend.shared.contracts import SessionState
 
-MAX_AGENT_TOOL_ROUNDS = 2
+MAX_AGENT_TOOL_ROUNDS = 1
 MAX_AGENT_TOOL_CALLS = 5
 CATALOG_TOOL_TIMEOUT_SECONDS = 2.0
 CATALOG_SEARCH_TIMEOUT_SECONDS = 4.0
@@ -1036,16 +1036,7 @@ async def run_retail_agent(
                 observations=tuple(observations),
             )
 
-        terminal_observation = False
-        messages.append(
-            {
-                "role": "assistant",
-                "content": str(result) or None,
-                "tool_calls": tool_calls,
-            }
-        )
-
-        for call_number, call in enumerate(tool_calls, start=1):
+        for call in tool_calls:
             function = call.get("function") or {}
             name = str(function.get("name") or "")
             if name in {"get_product_snapshot", "get_product_knowledge"}:
@@ -1094,21 +1085,10 @@ async def run_retail_agent(
                 )
             calls_executed += 1
             observations.append(observation)
-            terminal_observation = terminal_observation or observation.terminal
             if name and observation.status != "DENIED":
                 tools_used.append(name)
             for product in observation.products:
                 products_by_id[product.product_id] = product
-
-            tool_call_id = str(call.get("id") or f"unidentified-tool-call-{call_number}")
-            messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tool_call_id,
-                    "name": name,
-                    "content": json.dumps(observation.to_envelope(), ensure_ascii=False),
-                }
-            )
 
             if observation.status == "TEMPORARY_FAILURE":
                 return RetailAgentResult(
@@ -1119,21 +1099,12 @@ async def run_retail_agent(
                     observations=tuple(observations),
                 )
 
-        if terminal_observation:
-            return RetailAgentResult(
-                text="",
-                model=getattr(result, "model", ""),
-                tools_used=tuple(dict.fromkeys(tools_used)),
-                products=tuple(products_by_id.values()),
-                observations=tuple(observations),
-            )
-
-    final_result = await groq.chat(messages, tools=tools, tool_choice="none")
-    if getattr(final_result, "tool_calls", None):
-        raise GroqProviderError("Retail agent exceeded its tool-call limit")
+        # Catalog observations contain free-form strings from imported data. Do not
+        # feed those values back into the model; the API renders grounded answers
+        # from the typed observations and performs any additional lookup itself.
     return RetailAgentResult(
-        text=str(final_result),
-        model=getattr(final_result, "model", ""),
+        text="",
+        model=getattr(result, "model", ""),
         tools_used=tuple(dict.fromkeys(tools_used)),
         products=tuple(products_by_id.values()),
         observations=tuple(observations),
