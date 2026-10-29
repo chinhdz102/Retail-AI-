@@ -156,3 +156,5 @@ Kết quả mẫu ngày 01/10/2026 ở `evaluation/results/live_groq_stt_benchma
 Artifact JSON có timestamp, voice, loại audio, số byte và latency từng lượt. Kết quả provider-level không đo thời gian phát trên browser hoặc thiết bị, chất lượng phát âm, micro hay lip-sync.
 
 Báo cáo sửa P0 nằm tại `evaluation/results/evaluation_report.md`.
+
+For human answer-quality review, follow `evaluation/vietnamese_answer_quality_annotation_guide.md`. The current exporter fingerprints the frozen visible packet and produces separate annotator queues; `evaluation.score_vietnamese_answer_quality_review` checks both queues and reports per-dimension ordinal agreement and per-flag agreement. It refuses unreviewed queues. The currently retained packet has no completed labels, so it cannot produce human quality metrics yet.

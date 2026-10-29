@@ -1,0 +1,44 @@
+{
+  "artifact_id": "vietnamese_review_scoring_tool_quality_gate_20261029",
+  "base_commit": "0a1b0e31e45e19fbcdc34a06254b4a1d50b962e9",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "generated_at_utc": "2026-10-29T05:46:14.098603+00:00",
+  "human_review_state": {
+    "existing_manifest_has_frozen_packet_fingerprint": false,
+    "human_answer_quality_metrics_generated": false,
+    "queues": {
+      "annotator_a": {
+        "annotation_status_counts": {
+          "UNREVIEWED": 5
+        },
+        "row_count": 5,
+        "rows_with_any_rating_or_flag": 0,
+        "sha256": "2e18c7b8e2b099bf7c0f52c83962862385a1818f74957c9d7eb26405a892d0b6"
+      },
+      "annotator_b": {
+        "annotation_status_counts": {
+          "UNREVIEWED": 5
+        },
+        "row_count": 5,
+        "rows_with_any_rating_or_flag": 0,
+        "sha256": "51d25690eaf60953a5c2ca18c908aa81881d9c10a1c579459293bb3321ff7803"
+      }
+    },
+    "reason": "Both retained reviewer queues remain UNREVIEWED; no human labels are present."
+  },
+  "limits": [
+    "The 24 tests use synthetic judgments and prove scorer behavior only.",
+    "No human relevance or answer-quality score was produced.",
+    "No protected blind dataset or adjudicated ground truth exists.",
+    "Full repository quality gate for this continuation was pending at artifact creation.",
+    "Do not infer release readiness from this artifact."
+  ],
+  "source_results_sha256": "a26d0dceb957252744078bb24e70c73243e5da814b49e6c7210e95a127158310",
+  "validation": {
+    "focused_test_command": "uv run pytest -p no:cacheprovider tests/test_vietnamese_answer_quality_review.py tests/test_vietnamese_answer_quality_scoring.py tests/test_vietnamese_qrels_retrieval_scoring.py -q --tb=short",
+    "focused_tests_failed": 0,
+    "focused_tests_passed": 24,
+    "fresh_temporary_review_export": "scorer rejected status UNREVIEWED as expected",
+    "ruff_changed_modules": "passed"
+  }
+}

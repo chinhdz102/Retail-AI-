@@ -37,6 +37,24 @@ uv run python -m evaluation.score_vietnamese_qrels_review `
 
 For adjudication, add `--adjudication evaluation/review/my_queue_adjudication.csv`; that file must contain only disputed query/candidate pairs, use `reviewer_status=ADJUDICATED`, and identify a third reviewer. Preserve the original two files and never replace either queue with the scored output.
 
+## Score retrieval against resolved qrels
+
+After the review scorer has produced an agreement report, compare the original ranked run artifact(s) against those resolved human labels:
+
+```powershell
+uv run python -m evaluation.score_vietnamese_qrels_retrieval `
+  --agreement-report docs/reports/artifacts/my_queue_agreement.json `
+  --dataset evaluation/cases/generalized_catalog_consultation_dev_v1.jsonl `
+  --evaluator-manifest evaluation/review/generalized_catalog_consultation_dev_v1_evaluator_only_manifest.json `
+  --catalog data/winmart_products.json `
+  --run docs/reports/artifacts/generalized_retrieval_variants_runtime_dev_20261029.json `
+  --output docs/reports/artifacts/my_queue_retrieval_metrics.json
+```
+
+The fixed relevance grades are `EXACT=3`, `SUBSTITUTE=2`, `COMPLEMENT=1`, `IRRELEVANT=0`. Binary Precision/Recall/MRR count only Exact and Substitute; nDCG uses gain `2^grade - 1`. Recall is conditional on the judged pooled candidates, not the entire catalog. A query is excluded at cutoff `k` when any returned top-k product lacks a resolved judgment; coverage and the missing product IDs are reported rather than treating them as irrelevant. A cutoff deeper than the ranking artifact (for example, `@10` from a `_top5` field) is `INSUFFICIENT_RUN_DEPTH`. Paired per-query nDCG differences and bootstrap intervals are emitted when at least 30 fully judged queries are available.
+
+This command does not create human labels or certify that a dataset is independent/blind. The current runtime qrels and answer-quality queues are blank; until people complete and adjudicate them, no human relevance metrics are available. The split registry remains the authority for validation/blind authorization.
+
 ## Split policy
 
 `development` can contain synthetic or manually authored material used during iteration. `validation` should be independently authored, independently reviewed by at least two annotators, adjudicated, and frozen before model selection. A `blind_test` has the same requirements plus no tuning exposure, evaluator-held labels, and a data/label access boundary outside the repository. Do not call templated SKU variants or generated prompts blind. `evaluation/dataset_split_registry.json` records known repository-visible datasets as exposed development and currently registers no validation/blind dataset. The exporter rejects attempts to pass a case file under `evaluation/cases/` as `validation` or `blind_test`, and rejects unknown external hashes for those splits. Register a non-development dataset only after verifying its provenance and access boundary; a filename or CLI split flag is not evidence of blindness. Until people annotate the exported sheets and an eligible split is registered, human metrics and a blind-test score are unavailable.

@@ -81,10 +81,31 @@ VISIBLE_ITEM_KEYS = (
 )
 USER_KEYS = ("user_message", "user_text", "prompt", "user", "query", "text")
 ANSWER_KEYS = ("assistant_response", "assistant", "response", "answer", "output")
+FROZEN_REVIEW_FIELDS = (
+    "schema_version",
+    "review_item_id",
+    "conversation_id",
+    "turn_index",
+    "dialogue_context",
+    "user_message",
+    "assistant_response",
+    "visible_recommendations",
+)
 
 
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _frozen_review_packet_sha256(rows: Sequence[Mapping[str, Any]]) -> str:
+    packet = [
+        {field: row.get(field, "") for field in FROZEN_REVIEW_FIELDS}
+        for row in sorted(rows, key=lambda item: str(item.get("review_item_id") or ""))
+    ]
+    canonical = json.dumps(
+        packet, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return _sha256_bytes(canonical)
 
 
 def _text(value: Any) -> str:
@@ -97,9 +118,7 @@ def _text(value: Any) -> str:
                 return nested.strip()
         if isinstance(value.get("content"), list):
             fragments = [
-                _text(item)
-                for item in value["content"]
-                if isinstance(item, (str, Mapping))
+                _text(item) for item in value["content"] if isinstance(item, (str, Mapping))
             ]
             return "\n".join(fragment for fragment in fragments if fragment)
     if isinstance(value, list):
@@ -206,9 +225,7 @@ def _turn_records(payload: Any) -> list[dict[str, Any]]:
         if not isinstance(source, Mapping):
             continue
         case_id = str(
-            source.get("case_id")
-            or source.get("conversation_id")
-            or f"conversation-{source_index}"
+            source.get("case_id") or source.get("conversation_id") or f"conversation-{source_index}"
         )
         nested_turns = source.get("turns")
         if isinstance(nested_turns, list):
@@ -400,9 +417,7 @@ def export_review_queues(
                 grouped[turn["case_id"]].append(turn)
             for case_id, turns in sorted(grouped.items()):
                 turns.sort(key=lambda item: item["turn_index"])
-                conversation_id = _opaque_id(
-                    "conv", seed, artifact_hash, unit_label, case_id
-                )
+                conversation_id = _opaque_id("conv", seed, artifact_hash, unit_label, case_id)
                 history: list[str] = []
                 occurrence_by_turn: dict[int, int] = defaultdict(int)
                 for turn in turns:
@@ -472,9 +487,7 @@ def export_review_queues(
             writer.writerows(queues[reviewer])
         written[reviewer] = str(output_path)
 
-    manifest_path = output_prefix.with_name(
-        f"{output_prefix.name}_evaluator_only_manifest.json"
-    )
+    manifest_path = output_prefix.with_name(f"{output_prefix.name}_evaluator_only_manifest.json")
     manifest = {
         "artifact_id": "vietnamese_answer_quality_review_packet",
         "schema_version": "1.0",
@@ -482,6 +495,11 @@ def export_review_queues(
         "seed": seed,
         "source_artifacts": provenance_sources,
         "assignments": assignments,
+        "frozen_review_packet": {
+            "row_count": len(review_rows),
+            "visible_content_sha256": _frozen_review_packet_sha256(review_rows),
+            "hashed_fields": list(FROZEN_REVIEW_FIELDS),
+        },
         "reviewer_queues": {
             "model_provider_and_source_hidden": True,
             "case_ids_and_grader_expectations_hidden": True,
