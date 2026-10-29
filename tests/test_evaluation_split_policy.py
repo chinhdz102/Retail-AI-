@@ -64,6 +64,38 @@ def test_repo_visible_heldout_case_cannot_be_promoted_to_blind_test() -> None:
         authorize_dataset_split(dataset, "blind_test")
 
 
+def test_any_repo_visible_file_cannot_be_blind_even_if_registry_claims_it(tmp_path: Path) -> None:
+    dataset = ROOT / "tests" / "test_evaluation_split_policy.py"
+    digest = _stable_text_sha256(dataset)
+    registry = tmp_path / "split_registry.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "known_exposed_datasets": [],
+                "protected_datasets": [
+                    {
+                        "sha256": digest,
+                        "split": "blind_test",
+                        "independent_authoring_verified": True,
+                        "independent_review_complete": True,
+                        "independent_reviewer_count": 2,
+                        "adjudication_complete": True,
+                        "frozen_before_model_selection": True,
+                        "not_used_for_tuning": True,
+                        "data_and_labels_external_to_repo": True,
+                        "labels_sealed_until_final_evaluation": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SplitPolicyError, match="(?i)repository-visible.*development-only"):
+        authorize_dataset_split(dataset, "blind_test", registry_path=registry)
+
+
 def test_unregistered_external_dataset_is_development_only(tmp_path: Path) -> None:
     dataset = tmp_path / "private-query-set.json"
     dataset.write_text('{"cases": []}\n', encoding="utf-8")

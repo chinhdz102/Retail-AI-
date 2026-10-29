@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +61,18 @@ def authorize_dataset_split(
     if requested_split not in ALLOWED_SPLITS:
         raise SplitPolicyError(f"Unsupported evaluation split: {requested_split!r}")
     path = dataset_path.resolve()
+    if requested_split == "blind_test":
+        # Check both the lexical path (which may be a symlink into an external
+        # directory) and the resolved path (which may point back into the repo).
+        # Either route makes the data discoverable from the checkout and therefore
+        # unsuitable for a blind-test claim.
+        repo_root = ROOT.resolve()
+        lexical_path = Path(os.path.abspath(dataset_path))
+        if _is_within(lexical_path, repo_root) or _is_within(path, repo_root):
+            raise SplitPolicyError(
+                "Repository-visible datasets are development-only and cannot be "
+                "used as blind_test."
+            )
     if not path.is_file():
         raise SplitPolicyError(f"Evaluation dataset does not exist: {path}")
     dataset_sha256 = _stable_text_sha256(path.read_bytes())
