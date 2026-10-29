@@ -15,7 +15,7 @@ from typing import Any
 
 from backend.data.catalog_import import canonical_dataset_sha256
 from backend.products.snapshot_repository import SnapshotProductRepository
-from evaluation.split_policy import authorize_dataset_split
+from evaluation.split_policy import authorize_dataset_split, authorize_evaluation_artifact_path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CATALOG = ROOT / "data" / "winmart_products.json"
@@ -41,6 +41,29 @@ REVIEW_FIELDS = (
 )
 
 REVIEW_METADATA_FIELDS = ("reviewer_id", "reviewed_at")
+FROZEN_ASSIGNMENT_FIELDS = (
+    "query_id",
+    "candidate_key",
+    "query_text",
+    "product_id",
+    "product_name",
+    "product_brand",
+    "product_category",
+    "product_price_vnd",
+    "evidence_json",
+    "dataset_id",
+    "dataset_sha256",
+    "catalog_sha256",
+    "split",
+)
+
+
+def _frozen_assignment_sha256(row: dict[str, Any]) -> str:
+    frozen = {field: row.get(field, "") for field in FROZEN_ASSIGNMENT_FIELDS}
+    canonical = json.dumps(
+        frozen, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def _load_dataset(path: Path) -> dict[str, Any]:
@@ -162,9 +185,33 @@ def export_review_queues(
     results_paths = [results_path] if isinstance(results_path, Path) else list(results_path)
     if not results_paths:
         raise ValueError("At least one benchmark results artifact is required")
+    for result_path in results_paths:
+        authorize_evaluation_artifact_path(
+            result_path,
+            split,
+            artifact_role="candidate-results input",
+        )
+    authorize_evaluation_artifact_path(
+        output_prefix,
+        split,
+        artifact_role="review-queue output prefix",
+    )
     if not 1 <= max_candidates_per_query <= 200:
         raise ValueError("max_candidates_per_query must be between 1 and 200")
     candidates_by_case = _load_candidates(results_paths, max_candidates_per_query)
+    if split in {"validation", "blind_test"}:
+        case_ids = {
+            str(case.get("case_id") or "").strip()
+            for case in dataset.get("cases", [])
+            if isinstance(case, dict) and str(case.get("case_id") or "").strip()
+        }
+        missing_case_ids = case_ids - set(candidates_by_case)
+        if missing_case_ids:
+            raise ValueError(
+                f"Protected {split} candidate artifacts omit {len(missing_case_ids)} "
+                "registered dataset cases; export a complete run or register the exact subset "
+                "as its own dataset."
+            )
     repository = SnapshotProductRepository(catalog_path)
     dataset_sha256 = canonical_dataset_sha256(dataset_path.read_bytes())
     catalog_sha256 = canonical_dataset_sha256(catalog_path.read_bytes())
@@ -249,6 +296,11 @@ def export_review_queues(
     reviewer_orders: dict[str, dict[str, list[str]]] = {}
     for reviewer in ("annotator_a", "annotator_b"):
         output_path = output_prefix.with_name(f"{output_prefix.name}_{reviewer}.csv")
+        authorize_evaluation_artifact_path(
+            output_path,
+            split,
+            artifact_role=f"{reviewer} queue",
+        )
         with output_path.open("w", encoding="utf-8-sig", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=fields)
             writer.writeheader()
@@ -301,7 +353,21 @@ def export_review_queues(
             candidate_counts[str(row["query_id"])] += 1
 
     manifest_path = output_prefix.with_name(f"{output_prefix.name}_evaluator_only_manifest.json")
+    authorize_evaluation_artifact_path(
+        manifest_path,
+        split,
+        artifact_role="evaluator-only manifest",
+    )
+    case_id_by_query_id = {
+        hashlib.sha256(
+            f"{dataset_sha256}:{str(case.get('case_id') or '')}".encode()
+        ).hexdigest()[:16]: str(case.get("case_id") or "")
+        for case in dataset["cases"]
+        if isinstance(case, dict) and str(case.get("case_id") or "").strip()
+    }
     manifest = {
+        "artifact_id": "vietnamese_product_qrels_review_packet",
+        "schema_version": "1.0",
         "dataset_id": str(dataset.get("dataset_id", dataset_path.stem)),
         "dataset_sha256": dataset_sha256,
         "catalog_sha256": catalog_sha256,
@@ -314,6 +380,20 @@ def export_review_queues(
             canonical_dataset_sha256(path.read_bytes()) for path in results_paths
         ],
         "candidate_count_by_query": candidate_counts,
+        "candidate_assignments": [
+            {
+                "query_id": str(row["query_id"]),
+                "candidate_key": str(row["candidate_key"]),
+                "case_id": case_id_by_query_id[str(row["query_id"])],
+                "product_id": str(row["product_id"]),
+                "query_text": str(row["query_text"]),
+                "frozen_row_sha256": _frozen_assignment_sha256(row),
+            }
+            for row in sorted(
+                review_rows,
+                key=lambda item: (str(item["query_id"]), str(item["candidate_key"])),
+            )
+        ],
         "reviewer_queues": {
             "source_and_rank_hidden": True,
             "query_and_candidate_order_randomized_per_reviewer": True,

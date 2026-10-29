@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from backend.data.catalog_import import canonical_dataset_sha256
+from evaluation import score_vietnamese_qrels_retrieval as retrieval_scoring
 from evaluation.score_vietnamese_qrels_retrieval import (
     RetrievalQrelsScoringError,
     _paired_comparisons,
@@ -267,6 +268,88 @@ def test_catalog_hash_mismatch_fails_closed(tmp_path: Path) -> None:
             Path(meta["output"]),
             catalog_path=catalog,
             ks=(1,),
+        )
+
+
+def test_protected_retrieval_score_cannot_write_report_into_repository(
+    tmp_path: Path, monkeypatch
+) -> None:
+    paths = _build_inputs(tmp_path, qrels=_qrels())
+    agreement, dataset, catalog, manifest, run, _meta = paths
+    agreement_data = json.loads(agreement.read_text(encoding="utf-8"))
+    agreement_data["dataset"]["split"] = "blind_test"
+    for item in agreement_data["items"]:
+        item["split"] = "blind_test"
+    _write_json(agreement, agreement_data)
+    manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
+    manifest_data["split"] = "blind_test"
+    _write_json(manifest, manifest_data)
+    monkeypatch.setattr(
+        retrieval_scoring,
+        "authorize_dataset_split",
+        lambda path, _split: {
+            "dataset_sha256": canonical_dataset_sha256(path.read_bytes()),
+            "effective_split": "blind_test",
+            "authorization_status": "test-only",
+        },
+    )
+    output = Path(__file__).resolve().parents[1] / "evaluation" / "blocked-protected-score.json"
+
+    with pytest.raises(RetrievalQrelsScoringError, match="must stay outside the repository"):
+        score_ranked_runs_against_qrels(
+            agreement,
+            dataset,
+            manifest,
+            [run],
+            output,
+            catalog_path=catalog,
+            ks=(1,),
+            bootstrap_resamples=0,
+        )
+
+    assert not output.exists()
+
+
+def test_protected_retrieval_score_rejects_qrels_missing_dataset_queries(
+    tmp_path: Path, monkeypatch
+) -> None:
+    agreement, dataset, catalog, manifest, run, meta = _build_inputs(
+        tmp_path, qrels=_qrels()
+    )
+    agreement_data = json.loads(agreement.read_text(encoding="utf-8"))
+    agreement_data["dataset"]["split"] = "blind_test"
+    agreement_data["items"] = [
+        item for item in agreement_data["items"] if item["query_text"].endswith("nhất")
+    ]
+    for item in agreement_data["items"]:
+        item["split"] = "blind_test"
+    _write_json(agreement, agreement_data)
+    manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
+    manifest_data["split"] = "blind_test"
+    _write_json(manifest, manifest_data)
+    monkeypatch.setattr(
+        retrieval_scoring,
+        "authorize_dataset_split",
+        lambda path, _split: {
+            "dataset_sha256": canonical_dataset_sha256(path.read_bytes()),
+            "effective_split": "blind_test",
+            "authorization_status": "test-only",
+        },
+    )
+
+    with pytest.raises(
+        RetrievalQrelsScoringError,
+        match="do not cover the complete frozen dataset",
+    ):
+        score_ranked_runs_against_qrels(
+            agreement,
+            dataset,
+            manifest,
+            [run],
+            Path(meta["output"]),
+            catalog_path=catalog,
+            ks=(1,),
+            bootstrap_resamples=0,
         )
 
 

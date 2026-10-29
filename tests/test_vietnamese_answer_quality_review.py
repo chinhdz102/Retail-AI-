@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 from pathlib import Path
 
 import pytest
 
+from backend.data.catalog_import import canonical_dataset_sha256
+from evaluation import export_vietnamese_answer_quality_review as exporter_module
 from evaluation.export_vietnamese_answer_quality_review import (
     ANNOTATION_FIELDS,
     CSV_FIELDS,
@@ -13,6 +16,7 @@ from evaluation.export_vietnamese_answer_quality_review import (
     _frozen_review_packet_sha256,
     export_review_queues,
 )
+from evaluation.split_policy import SplitPolicyError
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -74,6 +78,9 @@ def test_answer_quality_export_blinds_sources_and_preserves_provenance(tmp_path)
         tmp_path / "second.json",
         {
             "kind": "second-system",
+            "dataset_id": "dataset-secret",
+            "dataset_sha256": "a" * 64,
+            "catalog_scope": {"winmart_dataset_sha256": "b" * 64},
             "model_primary": "other-secret-model",
             "results": [
                 {
@@ -82,7 +89,13 @@ def test_answer_quality_export_blinds_sources_and_preserves_provenance(tmp_path)
                     "prompt": "Mình cần nước rửa chén dưới 70 nghìn.",
                     "response": {"text": "Mình thấy một lựa chọn trong tầm giá."},
                     "evaluation_expectations": {"gold": "SECRET_EXPECTATION"},
-                }
+                },
+                {
+                    "case_id": "secret-case-1",
+                    "turn": 2,
+                    "prompt": "Loại nào dịu nhẹ hơn?",
+                    "response": {"text": "Mình chưa có thông tin xác minh."},
+                },
             ],
         },
     )
@@ -96,7 +109,7 @@ def test_answer_quality_export_blinds_sources_and_preserves_provenance(tmp_path)
 
     rows_a = _read_csv(exported["annotator_a"])
     rows_b = _read_csv(exported["annotator_b"])
-    assert len(rows_a) == len(rows_b) == 3
+    assert len(rows_a) == len(rows_b) == 4
     assert set(rows_a[0]) == set(CSV_FIELDS)
     assert {row["review_item_id"] for row in rows_a} == {row["review_item_id"] for row in rows_b}
     assert [row["review_item_id"] for row in rows_a] != [row["review_item_id"] for row in rows_b]
@@ -128,7 +141,7 @@ def test_answer_quality_export_blinds_sources_and_preserves_provenance(tmp_path)
 
     manifest = json.loads(Path(exported["evaluator_manifest"]).read_text(encoding="utf-8"))
     assert manifest["annotation_status"] == "UNREVIEWED; no human labels are present"
-    assert manifest["frozen_review_packet"]["row_count"] == 3
+    assert manifest["frozen_review_packet"]["row_count"] == 4
     assert len(manifest["frozen_review_packet"]["visible_content_sha256"]) == 64
     assert manifest["frozen_review_packet"]["hashed_fields"] == [
         "schema_version",
@@ -306,3 +319,232 @@ def test_answer_quality_export_rejects_unpaired_source_labels(tmp_path) -> None:
     )
     with pytest.raises(ValueError, match="one --source-label"):
         export_review_queues([result], [], tmp_path / "invalid")
+
+
+def test_answer_quality_export_rejects_blind_metadata_without_registered_dataset(tmp_path) -> None:
+    result = _write_json(
+        tmp_path / "blind-result.json",
+        {
+            "kind": "live_text_conversation_benchmark",
+            "dataset_id": "claimed-blind-dataset",
+            "split": "blind_test",
+            "results": [
+                {
+                    "case_id": "case-1",
+                    "turn": 1,
+                    "prompt": "Mình cần nước uống.",
+                    "response": {"text": "Mình tìm giúp bạn."},
+                }
+            ],
+        },
+    )
+    output_prefix = tmp_path / "should-not-write"
+
+    with pytest.raises(ValueError, match="requires an evaluation_dataset path"):
+        export_review_queues(
+            [result], ["candidate"], output_prefix, split="blind_test"
+        )
+
+    assert not list(tmp_path.glob("should-not-write*"))
+
+
+def test_answer_quality_export_keeps_protected_packets_outside_repository(
+    tmp_path, monkeypatch
+) -> None:
+    dataset = tmp_path / "registered-blind.json"
+    dataset.write_text(
+        json.dumps(
+            {
+                "dataset_id": "blind-set",
+                "cases": [
+                    {
+                        "case_id": "case-1",
+                        "turns": [{"text": "Mình cần nước uống."}],
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    dataset_sha256 = hashlib.sha256(dataset.read_bytes()).hexdigest()
+    monkeypatch.setattr(
+        exporter_module,
+        "authorize_dataset_split",
+        lambda _path, _split: {"dataset_sha256": dataset_sha256},
+    )
+    result = _write_json(
+        tmp_path / "protected-result.json",
+        {
+            "kind": "live_text_conversation_benchmark",
+            "dataset_id": "blind-set",
+            "dataset_sha256": dataset_sha256,
+            "split": "blind_test",
+            "evaluation_dataset": {
+                "dataset_id": "blind-set",
+                "split": "blind_test",
+                "path": str(dataset),
+                "dataset_sha256": dataset_sha256,
+            },
+            "results": [
+                {
+                    "case_id": "case-1",
+                    "turn": 1,
+                    "prompt": "Mình cần nước uống.",
+                    "response": {"text": "Mình tìm giúp bạn."},
+                }
+            ],
+        },
+    )
+    output_prefix = ROOT / "evaluation" / "review" / "should-not-leak-blind"
+
+    with pytest.raises(ValueError, match="must stay outside the repository"):
+        export_review_queues([result], ["candidate"], output_prefix, split="blind_test")
+
+    assert not output_prefix.with_name(f"{output_prefix.name}_annotator_a.csv").exists()
+
+
+def test_answer_quality_export_rejects_result_hash_not_bound_to_registered_dataset(
+    tmp_path, monkeypatch
+) -> None:
+    dataset = _write_json(
+        tmp_path / "blind.json",
+        {
+            "dataset_id": "blind-set",
+            "cases": [
+                {"case_id": "case-1", "turns": [{"text": "Mình cần nước uống."}]}
+            ],
+        },
+    )
+    digest = hashlib.sha256(dataset.read_bytes()).hexdigest()
+    result = _write_json(
+        tmp_path / "result.json",
+        {
+            "dataset_id": "blind-set",
+            "dataset_sha256": "0" * 64,
+            "split": "blind_test",
+            "evaluation_dataset": {
+                "dataset_id": "blind-set",
+                "dataset_sha256": digest,
+                "split": "blind_test",
+                "path": str(dataset),
+            },
+            "results": [
+                {
+                    "case_id": "case-1",
+                    "turn": 1,
+                    "prompt": "Mình cần nước uống.",
+                    "response": "Mình tìm giúp bạn.",
+                }
+            ],
+        },
+    )
+    monkeypatch.setattr(
+        exporter_module,
+        "authorize_dataset_split",
+        lambda _path, _split: {"dataset_sha256": digest},
+    )
+    with pytest.raises(ValueError, match="result dataset hash"):
+        export_review_queues([result], ["candidate"], tmp_path / "invalid", split="blind_test")
+
+
+def test_answer_quality_export_rejects_protected_result_missing_dataset_turns(
+    tmp_path, monkeypatch
+) -> None:
+    dataset = _write_json(
+        tmp_path / "blind.json",
+        {
+            "dataset_id": "blind-set",
+            "cases": [
+                {"case_id": "case-1", "turns": [{"text": "Mình cần nước uống."}]},
+                {"case_id": "case-2", "turns": [{"text": "Mình cần đồ ăn."}]},
+            ],
+        },
+    )
+    digest = canonical_dataset_sha256(dataset.read_bytes())
+    monkeypatch.setattr(
+        exporter_module,
+        "authorize_dataset_split",
+        lambda _path, _split: {"dataset_sha256": digest},
+    )
+    result = _write_json(
+        tmp_path / "partial-result.json",
+        {
+            "dataset_id": "blind-set",
+            "dataset_sha256": digest,
+            "split": "blind_test",
+            "evaluation_dataset": {
+                "dataset_id": "blind-set",
+                "dataset_sha256": digest,
+                "split": "blind_test",
+                "path": str(dataset),
+            },
+            "results": [
+                {
+                    "case_id": "case-1",
+                    "turn": 1,
+                    "prompt": "Mình cần nước uống.",
+                    "response": "Mình tìm giúp bạn.",
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(ValueError, match="omits registered case/turn prompts"):
+        export_review_queues([result], ["candidate"], tmp_path / "partial", split="blind_test")
+
+    assert not list(tmp_path.glob("partial*annotator*.csv"))
+
+
+def test_answer_quality_export_rejects_unpaired_prompt_sets(tmp_path) -> None:
+    first = _write_json(
+        tmp_path / "first.json",
+        {
+            "dataset_id": "same",
+            "dataset_sha256": "a" * 64,
+            "results": [{"case_id": "case-1", "prompt": "Tìm nước.", "response": "A"}],
+        },
+    )
+    second = _write_json(
+        tmp_path / "second.json",
+        {
+            "dataset_id": "same",
+            "dataset_sha256": "a" * 64,
+            "results": [{"case_id": "case-2", "prompt": "Tìm sữa.", "response": "B"}],
+        },
+    )
+
+    with pytest.raises(ValueError, match="prompt_set_sha256"):
+        export_review_queues(
+            [first, second], ["baseline", "candidate"], tmp_path / "unpaired"
+        )
+
+
+def test_answer_quality_export_rejects_protected_hash_relabelled_as_development(
+    tmp_path, monkeypatch
+) -> None:
+    def reject_registered_protected_hash(dataset_sha256: str, split: str) -> None:
+        if dataset_sha256 == "c" * 64 and split == "development":
+            raise SplitPolicyError("registered protected dataset cannot be downgraded")
+
+    monkeypatch.setattr(
+        exporter_module,
+        "reject_protected_dataset_hash_downgrade",
+        reject_registered_protected_hash,
+    )
+    result = _write_json(
+        tmp_path / "relabelled-result.json",
+        {
+            "dataset_id": "registered-blind",
+            "dataset_sha256": "c" * 64,
+            "split": "development",
+            "results": [
+                {"case_id": "case-1", "prompt": "Tìm đồ uống.", "response": "Có đây."}
+            ],
+        },
+    )
+
+    with pytest.raises(ValueError, match="cannot be downgraded"):
+        export_review_queues([result], ["candidate"], tmp_path / "blocked")
+
+    assert not list(tmp_path.glob("blocked*"))

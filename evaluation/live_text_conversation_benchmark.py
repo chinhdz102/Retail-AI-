@@ -35,6 +35,11 @@ from backend.data.catalog_import import analyze_dataset
 from backend.products.catalog import DEMO_PRODUCTS
 from backend.products.repository import get_product_repository
 from evaluation.live_groq_smoke import RecordingGroq, RequestPacer
+from evaluation.split_policy import (
+    SplitPolicyError,
+    authorize_dataset_split,
+    authorize_evaluation_artifact_path,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -567,12 +572,17 @@ async def run(
     pace_seconds: float,
     case_ids: list[str] | None = None,
     case_file: Path | None = None,
+    split: str = "development",
 ) -> dict[str, Any]:
     settings = settings.model_copy(update={"groq_timeout_seconds": 12.0})
     case_set: dict[str, Any] = {}
     if case_file is not None:
         case_payload = case_file.read_bytes()
         case_set = json.loads(case_payload.decode("utf-8"))
+        try:
+            dataset_authorization = authorize_dataset_split(case_file, split)
+        except SplitPolicyError as exc:
+            raise ValueError(f"Conversation case split is not authorized: {exc}") from exc
         candidate_cases = tuple(case_set.get("cases", []))
         if case_set.get("language_scope") != "Vietnamese only":
             raise ValueError("The external case set must declare Vietnamese-only scope")
@@ -583,6 +593,8 @@ async def run(
         ):
             raise ValueError("Vietnamese-only case sets may not contain non-Vietnamese turns")
     else:
+        if split != "development":
+            raise ValueError("Protected evaluation requires an external, registered case file")
         candidate_cases = CASES
         case_payload = json.dumps(
             candidate_cases,
@@ -590,14 +602,29 @@ async def run(
             sort_keys=True,
             separators=(",", ":"),
         ).encode("utf-8")
+        dataset_authorization = None
     selected_cases = [
         case
         for case in candidate_cases
         if case_ids is None or case["case_id"] in case_ids
     ]
     selected_ids = {case["case_id"] for case in selected_cases}
+    all_case_ids = {case["case_id"] for case in candidate_cases}
+    if split in {"validation", "blind_test"} and selected_ids != all_case_ids:
+        raise ValueError(
+            f"Protected {split} benchmark must include every registered dataset case; "
+            "register an exact subset as its own dataset before evaluating a subset."
+        )
     if not selected_cases or (case_ids and selected_ids != set(case_ids)):
         raise ValueError("case_ids must contain known case IDs")
+    try:
+        authorize_evaluation_artifact_path(
+            output,
+            split,
+            artifact_role="live conversation result artifact",
+        )
+    except SplitPolicyError as exc:
+        raise ValueError(f"Conversation result path is not authorized: {exc}") from exc
     case_catalog_preflight = _preflight_case_catalog(selected_cases, settings)
     # A single user turn may need several paced LLM/tool rounds. Keep the
     # HTTP deadline above that bounded worst case so the benchmark measures
@@ -610,6 +637,18 @@ async def run(
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "reproducibility": _reproducibility_metadata(case_payload),
         "dataset_id": case_set.get("dataset_id", "built_in_legacy_cases"),
+        "split": split,
+        "evaluation_dataset": {
+            "dataset_id": case_set.get("dataset_id", "built_in_legacy_cases"),
+            "split": split,
+            "path": str(case_file.resolve()) if case_file is not None else None,
+            "dataset_sha256": (
+                dataset_authorization["dataset_sha256"]
+                if dataset_authorization is not None
+                else hashlib.sha256(case_payload).hexdigest()
+            ),
+            "authorization": dataset_authorization,
+        },
         "language_scope": case_set.get("language_scope", "mixed for legacy built-in cases"),
         "research_informed_by": case_set.get("research_informed_by", []),
         "provider": "Groq live; fallback configuration from .env",
@@ -845,6 +884,12 @@ def main() -> None:
     parser.add_argument("--cases", nargs="+")
     parser.add_argument("--case-file", type=Path)
     parser.add_argument(
+        "--split",
+        choices=("development", "validation", "blind_test"),
+        default="development",
+        help=("Protected splits require an exact registered dataset hash and external outputs."),
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=ROOT / "evaluation" / "results" / "live_text_conversation_20261013.json",
@@ -856,7 +901,14 @@ def main() -> None:
     if args.pace_seconds < 0:
         raise SystemExit("--pace-seconds must be non-negative")
     report = asyncio.run(
-        run(settings, args.output, args.pace_seconds, args.cases, args.case_file)
+        run(
+            settings,
+            args.output,
+            args.pace_seconds,
+            args.cases,
+            args.case_file,
+            args.split,
+        )
     )
     print(
         json.dumps(

@@ -24,7 +24,12 @@ from typing import Any
 
 from backend.data.catalog_import import canonical_dataset_sha256
 from evaluation.score_vietnamese_qrels_review import FIT_FIELDS, FIT_LABELS
-from evaluation.split_policy import SplitPolicyError, authorize_dataset_split
+from evaluation.split_policy import (
+    PROTECTED_SPLITS,
+    SplitPolicyError,
+    authorize_dataset_split,
+    authorize_evaluation_artifact_path,
+)
 
 DEFAULT_CATALOG = Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
 ROOT = Path(__file__).resolve().parents[1]
@@ -462,6 +467,19 @@ def score_ranked_runs_against_qrels(
     split = str(qrels_dataset["split"])
     try:
         split_authorization = authorize_dataset_split(dataset_path, split)
+        if split in PROTECTED_SPLITS:
+            protected_inputs = [agreement_report_path, evaluator_manifest_path, *run_paths]
+            for artifact_path in protected_inputs:
+                authorize_evaluation_artifact_path(
+                    artifact_path,
+                    split,
+                    artifact_role="retrieval-scoring input",
+                )
+            authorize_evaluation_artifact_path(
+                output_path,
+                split,
+                artifact_role="retrieval-scoring report",
+            )
     except SplitPolicyError as exc:
         raise RetrievalQrelsScoringError(f"Dataset split is not authorized: {exc}") from exc
     evaluator_manifest = _validate_evaluator_manifest(
@@ -478,6 +496,14 @@ def score_ranked_runs_against_qrels(
         raise RetrievalQrelsScoringError(
             f"Qrels contain query IDs absent from the frozen dataset: {unknown_qrels_queries[:5]}"
         )
+    if split in PROTECTED_SPLITS:
+        expected_query_ids = set(query_ids_by_case.values())
+        if set(qrel_query_texts) != expected_query_ids:
+            missing = sorted(expected_query_ids - set(qrel_query_texts))
+            raise RetrievalQrelsScoringError(
+                "Protected qrels do not cover the complete frozen dataset; "
+                f"missing query IDs: {missing[:5]}"
+            )
     for query_id, query_text in qrel_query_texts.items():
         case_id = case_by_query_id[query_id]
         if query_text != cases_by_id[case_id]:
