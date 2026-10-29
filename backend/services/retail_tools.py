@@ -2176,6 +2176,36 @@ def _is_category_only_request(
     )
 
 
+def _has_category_refinement_terms(query: str, category: str | None) -> bool:
+    """Detect meaningful query terms beyond the selected catalog category."""
+    if not category or not query:
+        return False
+    remaining = _remove_category_phrases(query, category)
+    remaining.difference_update(normalize_category_text(category).split())
+    remaining.difference_update(_CATEGORY_QUERY_FILLER | _CATEGORY_NEED_CONTEXT)
+    remaining.difference_update(
+        {
+            "gia",
+            "re",
+            "nhat",
+            "nhut",
+            "thap",
+            "cao",
+            "mem",
+            "phai",
+            "chang",
+            "cheapest",
+            "lowest",
+            "price",
+            "least",
+            "expensive",
+            "cheap",
+            "low",
+        }
+    )
+    return any(len(token) > 1 for token in remaining)
+
+
 def _category_query_unmatched_details(
     query: str,
     category: str | None,
@@ -3305,6 +3335,7 @@ def execute_catalog_tool(
                 understanding.ranking_criterion in {"price_ascending", "price_descending"}
                 and category
                 and not _exact_product_title(identity_query, repo)
+                and not _has_category_refinement_terms(routing_query, category)
             ):
                 effective_query = ""
             category_browse = bool(category and not effective_query)
@@ -3334,6 +3365,11 @@ def execute_catalog_tool(
                 else parsed.limit,
                 "diversify_by_subcategory": diversify,
             }
+            if (
+                understanding.ranking_criterion in {"price_ascending", "price_descending"}
+                and getattr(repo, "supports_price_sort", False)
+            ):
+                search_criteria["sort_by"] = understanding.ranking_criterion
             category_fallback_used = False
             products = tuple(repo.search(**search_criteria))
             brand_filter = search_criteria["brand"] or _mentioned_candidate_brand(
@@ -3481,6 +3517,20 @@ def execute_catalog_tool(
                     ),
                 ],
             }
+            content["price_ranked_across_scope"] = bool(
+                category
+                and understanding.ranking_criterion == "price_ascending"
+                and search_criteria.get("sort_by") == "price_ascending"
+                and not product_identity
+                and not ambiguous_family
+                and not excluded_brands
+                and not excluded_categories
+                and not requested_audience
+                and not understanding.use_case
+                and not understanding.soft_preferences
+                and not understanding.hard_constraints
+                and not understanding.negative_constraints
+            )
             return ToolObservation(
                 content=content,
                 products=products,
@@ -3532,12 +3582,34 @@ def execute_catalog_tool(
                 previous_query=previous_query,
                 previous_queries=previous_queries,
             )
+            turn_understanding = (
+                understand_catalog_query(
+                    current_user_text,
+                    hierarchies,
+                    previous_query=previous_query,
+                    previous_queries=previous_queries,
+                )
+                if current_user_text
+                else None
+            )
             routing_query = (
                 _restore_query_surface(
                     query_understanding.product_reference,
                     current_user_text or parsed.query,
                 )
                 if parsed.query
+                else _restore_query_surface(
+                    turn_understanding.product_reference,
+                    current_user_text,
+                )
+                if parsed.category
+                and turn_understanding is not None
+                and turn_understanding.ranking_criterion
+                in {"price_ascending", "price_descending"}
+                and _has_category_refinement_terms(
+                    turn_understanding.product_reference,
+                    parsed.category,
+                )
                 else ""
                 if parsed.category
                 else understanding.product_reference
@@ -3552,7 +3624,11 @@ def execute_catalog_tool(
             product_identity = matched_product_title is not None
             identity_query = matched_product_title or routing_query
             category_context = (
-                parsed.preference_text if modifier else routing_query or parsed.preference_text
+                parsed.preference_text
+                if modifier
+                else current_user_text
+                if understanding.ranking_criterion in {"price_ascending", "price_descending"}
+                else routing_query or parsed.preference_text
             )
             query_category, category_only_query = _query_category_hint(category_context, repo)
             parsed_type_category = _category_from_product_type(understanding.product_type, repo)
@@ -3582,7 +3658,12 @@ def execute_catalog_tool(
             elif parsed_type_category:
                 query_category = parsed_type_category
                 category_only_query = True
-            elif understanding.product_type:
+            elif understanding.product_type and not (
+                understanding.ranking_criterion in {"price_ascending", "price_descending"}
+                and query_category
+                and normalize_category_text(query_category)
+                == normalize_category_text(understanding.product_type)
+            ):
                 query_category = None
                 category_only_query = False
             ambiguous_family = bool(
@@ -3590,6 +3671,13 @@ def execute_catalog_tool(
                 and not parsed_type_category
                 and not product_identity
                 and not explicit_leaf_override
+                and not (
+                    understanding.ranking_criterion
+                    in {"price_ascending", "price_descending"}
+                    and query_category
+                    and normalize_category_text(query_category)
+                    == normalize_category_text(understanding.product_type)
+                )
             )
             family_scope_leaf = (
                 _unresolved_family_scope_leaf(
@@ -3618,6 +3706,12 @@ def execute_catalog_tool(
                 if _query_names_a_specific_category(category_context, query_category, repo)
                 else parsed.category or query_category
             )
+            if (
+                understanding.ranking_criterion in {"price_ascending", "price_descending"}
+                and parsed.category
+                and not category_source
+            ):
+                category_source = parsed.category
             if product_identity:
                 category_source = None
             category = _category_for_repository(category_source, repo)
@@ -3702,6 +3796,7 @@ def execute_catalog_tool(
                 understanding.ranking_criterion in {"price_ascending", "price_descending"}
                 and category
                 and not _exact_product_title(identity_query, repo)
+                and not _has_category_refinement_terms(routing_query, category)
             ):
                 effective_query = ""
             named_type = bool(
@@ -3736,6 +3831,11 @@ def execute_catalog_tool(
                 "price_value_vnd": price.value_vnd if price else None,
                 "diversify_by_subcategory": diversify,
             }
+            if (
+                understanding.ranking_criterion in {"price_ascending", "price_descending"}
+                and getattr(repo, "supports_price_sort", False)
+            ):
+                search_criteria["sort_by"] = understanding.ranking_criterion
             preference_text_for_ranking = (
                 understanding.product_reference
                 if understanding.use_case or understanding.ranking_criterion != "relevance"
@@ -4160,6 +4260,22 @@ def execute_catalog_tool(
                 "quantity": budget_understanding.quantity,
                 "max_unit_price_vnd": budget_cap,
             }
+            content["ranking_criterion"] = understanding.ranking_criterion
+            content["price_ranked_across_scope"] = bool(
+                category
+                and understanding.ranking_criterion == "price_ascending"
+                and search_criteria.get("sort_by") == "price_ascending"
+                and not product_identity
+                and not ambiguous_family
+                and not parsed.exclude_product_ids
+                and not excluded_brands
+                and not excluded_categories
+                and not requested_audience
+                and not understanding.use_case
+                and not understanding.soft_preferences
+                and not understanding.hard_constraints
+                and not understanding.negative_constraints
+            )
             content["current_stock_verified"] = bool(getattr(repo, "supports_current_stock", False))
             if preference_matches:
                 content["preference_matches"] = preference_matches

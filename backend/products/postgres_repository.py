@@ -56,6 +56,7 @@ class PostgresProductRepository:
     source_name = "winmart_postgres_catalog"
     supports_current_stock = False
     supports_spicy_filter = False
+    supports_price_sort = True
 
     def __init__(self, database_url: str) -> None:
         self._dsn = re.sub(r"^postgresql\+asyncpg://", "postgresql://", database_url)
@@ -207,6 +208,27 @@ class PostgresProductRepository:
             diversify = bind(bool(criteria.get("diversify_by_subcategory", False)))
             limit = bind(max(1, min(int(criteria.get("limit", 10)), 20)))
             offset = bind(max(0, min(int(criteria.get("offset", 0)), 100_000)))
+            sort_by = criteria.get("sort_by")
+            if sort_by == "price_ascending":
+                order_by = "p.effective_price_vnd ASC, p.name, p.product_id"
+            elif sort_by == "price_descending":
+                order_by = "p.effective_price_vnd DESC, p.name, p.product_id"
+            elif sort_by is None:
+                order_by = f"""CASE
+                        WHEN {exact_identifier} THEN 0
+                        WHEN p.search_title = {exact} THEN 1
+                        WHEN p.search_title LIKE {prefix} ESCAPE '!' THEN 2
+                        WHEN {" AND ".join(lexical_tokens) if lexical_tokens else "false"} THEN 3
+                        ELSE 4
+                    END,
+                    CASE WHEN {exact} IS NULL THEN 0
+                         ELSE word_similarity({exact}, p.search_title) END DESC,
+                    CASE WHEN {exact} IS NULL THEN 0
+                         ELSE similarity(p.search_title, {exact}) END DESC,
+                    p.name,
+                    p.product_id"""
+            else:
+                raise ValueError(f"Unsupported product sort: {sort_by}")
             sql = f"""
                 WITH latest AS (
                     SELECT DISTINCT ON (product_id) *
@@ -249,20 +271,7 @@ class PostgresProductRepository:
                        p.price_quality_status, p.dataset_version
                 FROM matched p
                 WHERE (NOT {diversify} OR p.category_leaf_rank = 1)
-                ORDER BY
-                    CASE
-                        WHEN {exact_identifier} THEN 0
-                        WHEN p.search_title = {exact} THEN 1
-                        WHEN p.search_title LIKE {prefix} ESCAPE '!' THEN 2
-                        WHEN {" AND ".join(lexical_tokens) if lexical_tokens else "false"} THEN 3
-                        ELSE 4
-                    END,
-                    CASE WHEN {exact} IS NULL THEN 0
-                         ELSE word_similarity({exact}, p.search_title) END DESC,
-                    CASE WHEN {exact} IS NULL THEN 0
-                         ELSE similarity(p.search_title, {exact}) END DESC,
-                    p.name,
-                    p.product_id
+                ORDER BY {order_by}
                 LIMIT {limit}
                 OFFSET {offset}
             """
@@ -289,6 +298,7 @@ class PostgresProductRepository:
         price_value_vnd: int | None = None,
         diversify_by_subcategory: bool = False,
         offset: int = 0,
+        sort_by: str | None = None,
     ) -> list[ProductSnapshot]:
         return self._run(
             self._search(
@@ -303,6 +313,7 @@ class PostgresProductRepository:
                 price_operator=price_operator,
                 price_value_vnd=price_value_vnd,
                 diversify_by_subcategory=diversify_by_subcategory,
+                sort_by=sort_by,
             )
         )
 

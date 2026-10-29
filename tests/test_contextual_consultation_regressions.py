@@ -80,7 +80,9 @@ async def test_price_and_rank_followups_preserve_actual_candidates(snapshot, mon
 
 
 @pytest.mark.asyncio
-async def test_new_category_cheapest_question_never_reuses_previous_group(snapshot, monkeypatch):
+async def test_new_category_cheapest_question_uses_new_group_and_global_minimum(
+    snapshot, monkeypatch
+):
     monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
     monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
     async with httpx.AsyncClient(
@@ -103,8 +105,107 @@ async def test_new_category_cheapest_question_never_reuses_previous_group(snapsh
             },
         )
         assert second.status_code == 200
-        assert not second.json()["products"]
-        assert "chưa thể xác nhận" in second.json()["text"]
+        payload = second.json()
+        towels = []
+        for offset in range(0, 100_000, 20):
+            page = snapshot.search(
+                query="",
+                category="Khăn mặt",
+                limit=20,
+                offset=offset,
+            )
+            towels.extend(page)
+            if len(page) < 20:
+                break
+        minimum = min(product.price_vnd for product in towels)
+        expected_ids = {
+            product.product_id for product in towels if product.price_vnd == minimum
+        }
+        assert set(payload["grounded_product_ids"]) == expected_ids
+        assert {product["price_vnd"] for product in payload["products"]} == {minimum}
+        assert "giá tham khảo thấp nhất" in payload["text"]
+        assert "Dầu gội" not in payload["text"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("query", "category"),
+    [
+        ("Trong các loại dầu gội, loại nào có giá thấp nhất?", "Dầu gội"),
+        ("Khăn mặt nào rẻ nhất?", "Khăn mặt"),
+        ("Nước giặt nào có giá thấp nhất?", "Nước giặt"),
+    ],
+)
+async def test_explicit_category_cheapest_returns_catalog_global_minimum(
+    snapshot, monkeypatch, query, category
+):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    items = []
+    for offset in range(0, 100_000, 20):
+        page = snapshot.search(
+            query="",
+            category=category,
+            limit=20,
+            offset=offset,
+        )
+        items.extend(page)
+        if len(page) < 20:
+            break
+    assert items
+    minimum = min(product.price_vnd for product in items)
+    expected_ids = {
+        product.product_id for product in items if product.price_vnd == minimum
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app),
+        base_url="http://test",
+        timeout=60,
+    ) as client:
+        session = (
+            await client.post("/sessions", json={"kiosk_id": f"cheapest-{category}"})
+        ).json()["session_id"]
+        response = await client.post(
+            "/agent/respond",
+            json={"session_id": session, "text": query},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert set(payload["grounded_product_ids"]) == expected_ids
+    assert {product["price_vnd"] for product in payload["products"]} == {minimum}
+    assert "giá tham khảo thấp nhất" in payload["text"]
+    assert "snapshot ngày" in payload["text"]
+
+
+@pytest.mark.asyncio
+async def test_specific_meat_cut_is_not_broadened_to_cheapest_meat(snapshot, monkeypatch):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    expected = snapshot.search(query="Thịt Thăn bò", category="Thịt", limit=10)
+    assert expected
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app),
+        base_url="http://test",
+        timeout=60,
+    ) as client:
+        session = (
+            await client.post("/sessions", json={"kiosk_id": "specific-beef-cut"})
+        ).json()["session_id"]
+        response = await client.post(
+            "/agent/respond",
+            json={"session_id": session, "text": "thịt thăn bò loại nào giá thấp nhất?"},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert set(payload["grounded_product_ids"]) == {
+        product.product_id for product in expected
+    }
+    assert all("thăn bò" in product["name"].casefold() for product in payload["products"])
+    assert all("gà viên" not in product["name"].casefold() for product in payload["products"])
 
 
 @pytest.mark.asyncio

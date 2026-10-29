@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0",
+  "run_date": "2026-10-29",
+  "base_head": "cae607c",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "working_tree_was_dirty": true,
+  "catalog": {
+    "source": "data/winmart_products.json",
+    "sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "accepted_rows": 3081,
+    "quarantined_rows": 18,
+    "snapshot_product_dates": ["2026-09-15"]
+  },
+  "checks": [
+    {
+      "command": "uv run pytest tests/test_contextual_consultation_regressions.py tests/test_snapshot_repository.py tests/test_product_search_benchmark.py -q --tb=short",
+      "result": "PASS",
+      "passed": 106,
+      "duration_seconds": 37.22
+    },
+    {
+      "command": "uv run pytest tests -q --tb=short",
+      "result": "PASS",
+      "passed": 1404,
+      "failed": 0,
+      "duration_seconds": 201.65
+    },
+    {
+      "command": "uv run ruff check backend tests",
+      "result": "PASS"
+    },
+    {
+      "command": "uv run python -m compileall -q backend tests evaluation",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "regression_scenarios": [
+    {
+      "scope": "shampoo",
+      "query": "Trong các loại dầu gội, loại nào có giá thấp nhất?",
+      "assertions": [
+        "lowest price is derived by paging the complete matching catalog category",
+        "only minimum-price products are returned, including ties",
+        "answer includes snapshot date and price/stock caveats"
+      ],
+      "result": "PASS"
+    },
+    {
+      "scope": "face towels",
+      "query": "Khăn mặt nào rẻ nhất?",
+      "assertions": [
+        "category switch does not reuse previously shown shampoo IDs",
+        "all equal minimum-price matches are returned"
+      ],
+      "result": "PASS"
+    },
+    {
+      "scope": "laundry detergent",
+      "query": "Nước giặt nào có giá thấp nhất?",
+      "assertions": [
+        "both recommend_products and search_products ranking paths are covered",
+        "answer names the catalog minimum rather than only listing prices"
+      ],
+      "result": "PASS"
+    },
+    {
+      "scope": "specific meat cut",
+      "query": "thịt thăn bò loại nào giá thấp nhất?",
+      "assertions": [
+        "query remains scoped to products matching beef tenderloin wording",
+        "does not widen to an unrelated cheapest meat product"
+      ],
+      "result": "PASS"
+    },
+    {
+      "scope": "no category or active candidates",
+      "query": "tìm sản phẩm giá thấp nhất giúp tôi",
+      "assertions": [
+        "asks which product group to compare",
+        "does not fabricate a lowest item"
+      ],
+      "result": "PASS"
+    }
+  ],
+  "postgresql": {
+    "sql_ordering_test": "PASS",
+    "live_database_tested": false
+  },
+  "limitations": [
+    "The snapshot is dated 2026-09-15; current in-store price and availability are not verified.",
+    "Lowest price means listed package price; differing package sizes are not normalized per unit.",
+    "No independent human review, blind-set evaluation, or production load test was performed."
+  ],
+  "release_status": "demo-only / not production-ready"
+}

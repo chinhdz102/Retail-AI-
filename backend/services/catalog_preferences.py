@@ -151,6 +151,13 @@ def search_with_preferences(
     matching products outside the first page without broadening the category.
     """
     limit = int(criteria.get("limit", 5))
+    if criteria.get("sort_by") in {"price_ascending", "price_descending"}:
+        # Explicit price ranking is a hard ordering request; preference reranking
+        # must not replace a globally price-sorted catalog page.
+        products = tuple(repository.search(**criteria))
+        if candidate_filter is not None:
+            products = tuple(product for product in products if candidate_filter(product))
+        return products[:limit], {}
     terms = preference_terms(text, str(criteria.get("query") or ""))
     if not text or not terms:
         return tuple(repository.search(**criteria)), {}

@@ -402,6 +402,7 @@ class SnapshotProductRepository:
     source_name = "winmart_json_snapshot"
     supports_current_stock = False
     supports_spicy_filter = False
+    supports_price_sort = True
 
     def __init__(self, path: Path) -> None:
         self.path = path.resolve()
@@ -581,6 +582,7 @@ class SnapshotProductRepository:
         price_value_vnd: int | None = None,
         diversify_by_subcategory: bool = False,
         offset: int = 0,
+        sort_by: str | None = None,
     ) -> list[ProductSnapshot]:
         normalized = normalize_search_text(query).strip().casefold()
         exact_id = self._identifier_index.get(normalized)
@@ -627,7 +629,25 @@ class SnapshotProductRepository:
                 continue
             results.append((score, product))
 
-        if not terms:
+        if sort_by == "price_ascending":
+            results.sort(
+                key=lambda pair: (
+                    pair[1].price_vnd,
+                    pair[1].name.casefold(),
+                    pair[1].product_id,
+                )
+            )
+        elif sort_by == "price_descending":
+            results.sort(
+                key=lambda pair: (
+                    -pair[1].price_vnd,
+                    pair[1].name.casefold(),
+                    pair[1].product_id,
+                )
+            )
+        elif sort_by is not None:
+            raise ValueError(f"Unsupported product sort: {sort_by}")
+        elif not terms:
             results.sort(
                 key=lambda pair: (
                     pair[1].price_vnd,

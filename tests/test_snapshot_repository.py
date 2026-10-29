@@ -82,6 +82,23 @@ def test_snapshot_search_offset_returns_a_stable_non_overlapping_next_page(
     }
 
 
+def test_snapshot_price_sort_applies_before_page_limit_even_with_query_terms(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    products = snapshot_repo.search(
+        query="Nước giặt",
+        category="Nước giặt",
+        limit=5,
+        sort_by="price_ascending",
+    )
+
+    assert len(products) == 5
+    assert [product.price_vnd for product in products] == sorted(
+        product.price_vnd for product in products
+    )
+    assert products[0].name.startswith("CHANTE Nước giặt")
+
+
 def test_snapshot_prices_and_stock_are_never_presented_as_current(
     snapshot_repo: SnapshotProductRepository,
 ) -> None:
