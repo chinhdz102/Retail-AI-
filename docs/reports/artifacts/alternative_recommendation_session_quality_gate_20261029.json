@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-29",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "base_head": "5e3cf1d8e21697f290724d53c5f0f05a495f4c53",
+  "scope": "Stateful recommendation pagination and exclusion regression",
+  "production_code_changed": false,
+  "conversation_sequence": [
+    "Recommend a generic snack category and capture the first visible IDs",
+    "Ask for another item and verify the first page IDs are excluded",
+    "Ask again after exhaustion and verify no product is repeated",
+    "Switch to drinks and verify the previous category exclusion set is cleared",
+    "Start a fresh snack request and verify the original first page can be shown again"
+  ],
+  "verification": [
+    {
+      "command": "uv run pytest tests/test_retail_api.py::test_multi_turn_recommendations_exclude_seen_items_and_reset_for_new_category tests/test_retail_tools.py::test_alternative_search_pages_past_the_first_twenty_seen_products tests/test_retail_tools.py::test_alternative_search_reports_exhaustion_only_after_the_last_page tests/test_retail_tools.py::test_recommendation_returns_unseen_products_after_the_first_snapshot_page -q --tb=short",
+      "result": "4 passed"
+    },
+    {
+      "command": "uv run pytest tests/test_retail_api.py -q --tb=short",
+      "result": "373 passed in 70.64 seconds"
+    },
+    {
+      "command": "uv run pytest tests/test_retail_tools.py -q --tb=short",
+      "result": "96 passed in 65.49 seconds"
+    },
+    {
+      "command": "uv run ruff check tests/test_retail_api.py",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "The route-level regression stubs the catalog lookup and uses generated generic fixture products.",
+    "The full retail-tools suite exercises real deterministic catalog filtering and pagination, but no live database, Groq provider, browser, or current store inventory was tested.",
+    "The checks verify state handoff and duplicate exclusion, not semantic relevance or human-rated recommendation quality."
+  ],
+  "release_status": "demo-only / not production-ready",
+  "branch_policy": "Continued on the existing branch; no branch or worktree was created."
+}

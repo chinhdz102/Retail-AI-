@@ -2378,6 +2378,110 @@ async def test_session_selection_matches_product_cards_after_hard_filtering(
 
 
 @pytest.mark.asyncio
+async def test_multi_turn_recommendations_exclude_seen_items_and_reset_for_new_category(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    products_by_category = {
+        category: tuple(
+            ProductSnapshot(
+                product_id=f"{category.upper()}-{index}",
+                name=f"{category.title()} lựa chọn {index}",
+                category=category,
+                category_hierarchy="Thực phẩm > Đồ ăn vặt"
+                if category == "snack"
+                else "Đồ uống",
+                price_vnd=5000 + index * 1000,
+                stock=5,
+            )
+            for index in range(1, 7 if category == "snack" else 4)
+        )
+        for category in ("snack", "drink")
+    }
+    lookup_calls: list[dict[str, object]] = []
+
+    async def lookup_candidates(arguments, **_kwargs):
+        lookup_calls.append(dict(arguments))
+        category = str(arguments.get("category") or "")
+        if (
+            category == "snack"
+            or "snack" in category.casefold()
+            or "ăn vặt" in category.casefold()
+        ):
+            candidates = products_by_category["snack"]
+        elif (
+            category == "drink"
+            or "đồ uống" in category.casefold()
+            or "nước" in category.casefold()
+        ):
+            candidates = products_by_category["drink"]
+        else:
+            candidates = ()
+        excluded = {str(value) for value in arguments.get("exclude_product_ids", [])}
+        limit = int(arguments.get("limit") or 3)
+        returned = tuple(
+            product for product in candidates if product.product_id not in excluded
+        )[:limit]
+        return ToolObservation(
+            content={"count": len(returned)},
+            products=returned,
+            tool_name="recommend_products",
+            status="SUCCESS",
+            source="test_catalog",
+            response_mode="CANDIDATE_LIST",
+        )
+
+    monkeypatch.setattr(api_main, "lookup_recommendation_products", lookup_candidates)
+    created = await client.post("/sessions", json={"kiosk_id": "multi-turn-alternatives"})
+    session_id = created.json()["session_id"]
+
+    first = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Gợi ý đồ ăn vặt cho mình."},
+    )
+    second = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Còn món nào khác không?"},
+    )
+    exhausted = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Còn món ăn vặt nào khác nữa không?"},
+    )
+    new_category = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Gợi ý nước uống cho mình."},
+    )
+    fresh_recommendation = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Gợi ý đồ ăn vặt cho mình."},
+    )
+
+    responses = (first, second, exhausted, new_category, fresh_recommendation)
+    assert all(response.status_code == 200 for response in responses)
+    first_ids = first.json()["grounded_product_ids"]
+    second_ids = second.json()["grounded_product_ids"]
+    exhausted_ids = exhausted.json()["grounded_product_ids"]
+    new_category_ids = new_category.json()["grounded_product_ids"]
+    fresh_ids = fresh_recommendation.json()["grounded_product_ids"]
+    assert first_ids and second_ids and new_category_ids and fresh_ids
+    assert set(first_ids).isdisjoint(second_ids)
+    assert exhausted_ids == []
+    snack_ids = {product.product_id for product in products_by_category["snack"]}
+    drink_ids = {product.product_id for product in products_by_category["drink"]}
+    assert set(first_ids).issubset(snack_ids)
+    assert set(second_ids).issubset(snack_ids)
+    assert set(new_category_ids).issubset(drink_ids)
+    assert set(fresh_ids) == set(first_ids)
+    assert set(lookup_calls[1].get("exclude_product_ids", [])) == set(first_ids)
+    assert set(lookup_calls[2].get("exclude_product_ids", [])) == set(first_ids + second_ids)
+    assert lookup_calls[3].get("exclude_product_ids", []) == []
+    assert lookup_calls[4].get("exclude_product_ids", []) == []
+    state = session_store.get(UUID(session_id)).shopping
+    assert state.seen_product_scope == ["snack"]
+    assert state.seen_product_ids == fresh_ids
+
+
+@pytest.mark.asyncio
 async def test_search_and_snapshot_return_grounded_demo_product(client: httpx.AsyncClient) -> None:
     search = await client.get("/products/search", params={"q": "coca zero"})
 
