@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from datetime import UTC, date, datetime
+from functools import lru_cache
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -35,6 +36,7 @@ def _normalize_audience_text(value: str | None) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", unaccented))
 
 
+@lru_cache(maxsize=4096)
 def explicit_product_audience(text: str | None) -> str | None:
     """Return an age group only when it is a positive product target.
 

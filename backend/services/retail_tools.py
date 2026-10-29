@@ -3189,11 +3189,10 @@ def execute_catalog_tool(
             brand_only_query = bool(
                 mentioned_brand and _query_is_only_catalog_brand(routing_query, mentioned_brand)
             )
-            matched_product_title = (
-                None
-                if brand_only_query
-                else routed_product_title or _catalog_product_title_match(routing_query, repo)
-            )
+            # `routing_query` is `routed_product_title` or the original search
+            # phrase, so repeating the same title match here only rescans the
+            # same catalog when the first lookup found no exact title.
+            matched_product_title = None if brand_only_query else routed_product_title
             product_identity = matched_product_title is not None
             identity_query = matched_product_title or routing_query
             category_context = (
