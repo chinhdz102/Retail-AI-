@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "run_type": "manual_browser_consultation_smoke",
+  "observed_at": "2026-10-29T09:36:15+07:00",
+  "checkout": {
+    "branch": "codex/retail-text-quality-v4-20261019",
+    "sha": "83953fd0f8f6738b47de85a6dbc1c6fe65ed2957",
+    "tracked_worktree_clean": true,
+    "preexisting_untracked_artifacts_preserved": 8
+  },
+  "runtime": {
+    "frontend_url": "http://127.0.0.1:5173/",
+    "frontend_title": "Sky / Retail — Voice Kiosk",
+    "backend_health": {
+      "status": "ok",
+      "service": "ai-retail-backend",
+      "version": "0.1.0"
+    },
+    "server_commit_sha": null,
+    "server_commit_sha_note": "The running demo health endpoint does not expose its source commit.",
+    "catalog_snapshot_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "catalog_snapshot_date_shown_by_ui": "2026-09-15"
+  },
+  "method": {
+    "kind": "manual-visible-browser-e2e",
+    "frontend_flow": "Open text chat, enter a Vietnamese turn, submit, and inspect rendered transcript and product cards.",
+    "response_route_from_frontend_source": "/agent/respond/stream",
+    "same_session": true,
+    "rendered_model_labels": ["CATALOG", "CATALOG-CLARIFICATION"],
+    "provider_call_telemetry": "not captured",
+    "latency_instrumented": false
+  },
+  "cases": [
+    {
+      "turn": 1,
+      "query": "Coca Zero giá bao nhiêu?",
+      "expected": "Show catalog-backed Coca-Cola Zero variants with reference prices, package units, and snapshot-date disclosure.",
+      "observed_route": "CATALOG",
+      "observed_product_cards": [
+        {"product_id": "WIN_10307381", "name": "Nước giải khát Coca-Cola Zero chai nhựa 1,5lít", "price_vnd": 15900},
+        {"product_id": "WIN_10194711", "name": "Nước Giải Khát Coca-Cola Zero Pet 600ml", "price_vnd": 9900},
+        {"product_id": "WIN_10194712", "name": "COCA-COLA Nc Zero SS.pet 390ml", "price_vnd": 179800},
+        {"product_id": "WIN_10011651", "name": "Thùng 24 lon nước giải khát Zero Coca Cola không đường 330ml", "price_vnd": 254000}
+      ],
+      "grounding_check": "All four rendered IDs, names, and prices matched the local /products/search results for their exact names.",
+      "result": "PASS"
+    },
+    {
+      "turn": 2,
+      "query": "loại nào rẻ nhất?",
+      "expected": "Resolve the comparison against products shown in the previous turn and identify the minimum reference package price.",
+      "observed_route": "CATALOG",
+      "observed_product_cards": [
+        {"product_id": "WIN_10194711", "name": "Nước Giải Khát Coca-Cola Zero Pet 600ml", "price_vnd": 9900}
+      ],
+      "observed_answer": "Identified the 600ml bottle at 9,900đ as the lowest among products just shown; disclosed store-price and package-size limitations.",
+      "result": "PASS"
+    },
+    {
+      "turn": 3,
+      "query": "loại nào bán chạy nhất?",
+      "expected": "Do not infer sales rank from a catalog that has no verified sales data; preserve the active product group where possible.",
+      "observed_route": "CATALOG-CLARIFICATION",
+      "observed_answer": "Explicitly said verified sales data is unavailable, listed the active Coca-Cola Zero group, and offered price or attribute filtering as a next step.",
+      "result": "PASS"
+    }
+  ],
+  "limits": [
+    "This is an exploratory manual browser run against an already running local demo. Its process commit could not be verified, so it is not evidence for final-HEAD browser acceptance.",
+    "No browser-side timing instrumentation was captured; do not infer first-token latency or claim that model tokens stream before response validation.",
+    "The snapshot is dated 2026-09-15 and does not establish current in-store price or availability.",
+    "This run covers one Vietnamese session and three turns only; it is not blind, human-reviewed, concurrent-load, voice, or production evaluation."
+  ]
+}

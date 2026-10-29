@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "run_type": "repository_quality_gate",
+  "recorded_at": "2026-10-29T09:41:34+07:00",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "code_head_sha": "83953fd0f8f6738b47de85a6dbc1c6fe65ed2957",
+  "worktree": {
+    "tracked_files_dirty": true,
+    "tracked_diff_paths": [
+      "docs/reports/retail_ai_production_quality_master_report.md"
+    ],
+    "code_files_match_head": true,
+    "untracked_artifact_count": 9,
+    "untracked_artifacts_staged": false
+  },
+  "environment": {
+    "os": "Windows",
+    "uv": "0.12.19",
+    "python": "3.13.15",
+    "catalog_snapshot": "data/winmart_products.json",
+    "catalog_snapshot_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "model_version": null,
+    "hardware_profile": "not collected"
+  },
+  "commands": [
+    {
+      "command": "uv run pytest tests -q --tb=short",
+      "result": "PASS",
+      "passed": 1404,
+      "failed": 0,
+      "duration_seconds": 200.51
+    },
+    {
+      "command": "uv run ruff check backend tests evaluation",
+      "result": "PASS"
+    },
+    {
+      "command": "uv run python -m compileall -q backend evaluation tests",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    },
+    {
+      "command": "PowerShell ConvertFrom-Json on docs/reports/artifacts/manual_browser_consultation_smoke_20261029.json",
+      "result": "PASS"
+    }
+  ],
+  "latency_distribution": null,
+  "provider_reliability": "not measured by this repository test run",
+  "failures": [],
+  "limitations": [
+    "Only the tracked report file was modified during the run; application and test source files matched the recorded code HEAD.",
+    "This regression suite does not establish human-rated recommendation quality, blind-set performance, browser commit identity, provider reliability, production load, current price/stock, or real microphone accuracy.",
+    "The browser smoke is recorded separately and is exploratory because the running demo does not expose its source commit."
+  ]
+}

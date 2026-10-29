@@ -506,3 +506,22 @@ The scope stays tied to the customer's wording. “Thịt thăn bò” remains a
 Verification on the working tree based on `cae607c`: focused catalog/API/repository tests **106 passed**; full `uv run pytest tests -q --tb=short` **1,404 passed in 201.65 s**; `uv run ruff check backend tests`, `uv run python -m compileall -q backend tests evaluation`, and `git diff --check` passed. Artifact: [`cheapest_category_e2e_20261029.json`](artifacts/cheapest_category_e2e_20261029.json). The PostgreSQL ordering is verified by SQL-construction tests; no live PostgreSQL connection was exercised.
 
 This is deterministic local API/catalog regression evidence, not independent human evaluation, blind-set performance, current in-store price or stock verification, or production load evidence. “Cheapest” currently means lowest listed package price; different package sizes are not normalized to a per-unit price. Those limitations remain visible in the response. Release status remains **demo-only / not production-ready**. Work stays on `codex/retail-text-quality-v4-20261019`; no branch or worktree was created.
+
+## 33. Manual browser conversation smoke — 29/10/2026
+
+The visible Vue kiosk was opened at `http://127.0.0.1:5173/` with the local backend health endpoint returning `ok`. The browser rendered its ready state without adding an unsolicited chat turn. In one text-chat session, I asked “Coca Zero giá bao nhiêu?”, followed with “loại nào rẻ nhất?”, then asked “loại nào bán chạy nhất?”.
+
+All four first-turn product cards (IDs `WIN_10307381`, `WIN_10194711`, `WIN_10194712`, and `WIN_10011651`) matched the local product-search endpoint by exact product name and reference price. The relative cheapest follow-up selected the displayed 600ml Coca-Cola Zero bottle at **9,900đ**, the minimum price among the four visible cards. The bestseller question did not invent a sales rank: Sky stated that verified sales data is unavailable, retained the active Coca-Cola Zero group, and offered a supported next filter. The full turn-by-turn evidence is in [`manual_browser_consultation_smoke_20261029.json`](artifacts/manual_browser_consultation_smoke_20261029.json).
+
+This is a manual smoke against an already-running local demo. Its health endpoint does not expose a commit SHA, so the run cannot be attributed to code HEAD `83953fd`; it is exploratory browser evidence and not final-HEAD acceptance. The run did not capture request timing, prove first-token latency, or assess token-level model streaming. It covers one Vietnamese session only and does not validate current store price/stock, human-rated suitability, blind performance, voice, or concurrent load. Keep the release decision **demo-only / not production-ready**.
+
+## 34. Repository quality gate on code HEAD `83953fd` — 29/10/2026
+
+Reran the full repository quality gate after the latest product-ranking code had been committed. The tested application and test sources match code HEAD `83953fd0f8f6738b47de85a6dbc1c6fe65ed2957`; the only tracked working-tree diff during the run was this report update. The nine untracked artifacts present during the run were not staged. [`quality_gate_head_83953fd_20261029.json`](artifacts/quality_gate_head_83953fd_20261029.json) records commands, environment, catalog hash, dirty-state details and limits.
+
+- `uv run pytest tests -q --tb=short`: **1,404 passed, 0 failed** in **200.51 s**.
+- `uv run ruff check backend tests evaluation`: passed.
+- `uv run python -m compileall -q backend evaluation tests`: passed.
+- `git diff --check` and browser-artifact JSON parsing: passed.
+
+This is a deterministic local regression gate. It does not close the independent human review, blind evaluation, provider reliability, server-commit-attributed browser E2E, real-store freshness, or production-load gaps. Release remains **demo-only / not production-ready**. Work stays on `codex/retail-text-quality-v4-20261019`; no branch or worktree was created.
