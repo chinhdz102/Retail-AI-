@@ -543,6 +543,18 @@ These API probes used the local snapshot and a provider stub; no Groq call was m
 
 All work remains on `codex/retail-text-quality-v4-20261019`; no new branch or worktree was created.
 
+## 37. Natural personal-care follow-ups and honest single-result wording — 29/10/2026
+
+Improved the shared Vietnamese query parser so common frequency wording such as “hay” and “thường”, plus short causal or time context such as “sau khi rửa” and “vào cuối ngày”, stays attached to a skin, scalp, or hair need. A condition-only utterance remains a clarification rather than becoming a product title. In an active recommendation, the same utterance refines the existing category and query; the catalog still does not get treated as evidence that a product suits that condition.
+
+The response now distinguishes a single catalog result from several results in the unverified-use-case path. It explicitly says suitability is not verified and avoids adding the generic “chưa có dữ liệu đã xác minh” sentence a second time. The tests cover three natural condition-only forms, the homographic “Bánh đa khô” regression, and a three-turn cream consultation that keeps the `Kem dưỡng da mặt` category, excludes Pond’s when requested, and does not claim Nivea is suitable for dry skin. This is shared parser and response behavior; no product ID or SKU-specific rule was added.
+
+On the local WinMart snapshot, the deterministic API conversation returned `Kem dưỡng mềm da Nivea 50ml` after the dry-skin preference, kept it in the cream category, and did not return the excluded Pond’s items. The response disclosed that catalog evidence cannot verify suitability. No Groq provider call was made. Case-level probes, output product IDs and commands are recorded in [`personal_care_natural_context_quality_gate_20261029.json`](artifacts/personal_care_natural_context_quality_gate_20261029.json).
+
+Verification on the final working tree based on `537756963d65e19edd487d55f03f80f3c8edee2c`: focused regressions **10 passed**; full `uv run pytest tests -q --tb=short` **1,409 passed in 199.40 s**; `uv run ruff check backend tests evaluation`, `uv run python -m compileall -q backend evaluation tests`, and `git diff --check` passed.
+
+This does not prove product suitability, freshness, or current in-store stock; it is a deterministic local evaluation against a dated snapshot. Human-rated blind evaluation, live-store checks, provider reliability, browser E2E on a verified server commit, and production load tests remain open. Release remains **demo-only / not production-ready**. Work stays on `codex/retail-text-quality-v4-20261019`; no branch or worktree was created.
+
 ## 36. Clearer response when only one requested variant is found — 29/10/2026
 
 Changed the shared one-result response for `family_details_unverified` in Vietnamese, English, and Chinese. It now states that only one catalog option was found and that the remaining variants or details are not verified, so the assistant cannot complete a comparison. It does not assign an unverified subtype to the returned product. This is a shared response path, not a special case for eggs.

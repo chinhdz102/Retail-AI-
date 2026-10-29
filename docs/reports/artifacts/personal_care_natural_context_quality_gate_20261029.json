@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-29",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "base_commit": "537756963d65e19edd487d55f03f80f3c8edee2c",
+  "scope": "Vietnamese personal-care need parsing and multi-turn catalog consultation",
+  "changes": [
+    "Recognize common frequency modifiers hay and thuong in skin, scalp, and hair condition phrases.",
+    "Keep short causal or temporal context attached to the stated need instead of treating it as product-search text.",
+    "Use the active catalog product family on preference-only follow-ups and state when catalog evidence cannot verify suitability.",
+    "Render singular results as one product and avoid appending a redundant generic unverified-fact sentence."
+  ],
+  "parser_probes": [
+    {
+      "query": "Da mặt mình hay khô căng sau khi rửa",
+      "product_type": null,
+      "product_reference": "",
+      "use_case": "Da mặt mình hay khô căng sau khi rửa",
+      "clarification_needed": true
+    },
+    {
+      "query": "Da đầu mình thường nhanh bết vào cuối ngày",
+      "product_type": null,
+      "product_reference": "",
+      "use_case": "Da đầu mình thường nhanh bết vào cuối ngày",
+      "clarification_needed": true
+    },
+    {
+      "query": "Tóc mình hay khô xơ sau khi gội đầu",
+      "product_type": null,
+      "product_reference": "",
+      "use_case": "Tóc mình hay khô xơ sau khi gội đầu",
+      "clarification_needed": true
+    }
+  ],
+  "snapshot_api_conversation": {
+    "repository": "data/winmart_products.json",
+    "provider_calls": 0,
+    "turns": [
+      {
+        "text": "Tư vấn kem dưỡng da mặt giúp mình",
+        "result_product_ids": ["WIN_10017296", "WIN_10315206", "WIN_10315205"]
+      },
+      {
+        "text": "Da mặt mình hay khô căng sau khi rửa",
+        "result_product_ids": ["WIN_10017296"],
+        "result_category_leaf": "Kem dưỡng da mặt",
+        "discloses_suitability_is_unverified": true
+      },
+      {
+        "text": "Đừng lấy Pond’s, ưu tiên da khô",
+        "result_product_ids": ["WIN_10017296"],
+        "result_category_leaf": "Kem dưỡng da mặt",
+        "excluded_brand_returned": false,
+        "discloses_suitability_is_unverified": true
+      }
+    ]
+  },
+  "verification": {
+    "focused_regressions": {
+      "command": "uv run pytest -q tests/test_query_understanding.py::test_unverified_need_is_not_rendered_as_a_suitability_recommendation tests/test_retail_api.py::test_implicit_cooking_need_uses_grounded_catalog_without_claiming_fit tests/test_retail_api.py::test_multi_turn_product_refinement_keeps_group_and_discloses_unverified_fit tests/test_retail_api.py::test_spoken_product_requests_resolve_from_the_full_snapshot_catalog tests/test_retail_api.py::test_natural_product_discovery_stays_catalog_grounded_across_departments tests/test_contextual_consultation_regressions.py::test_personal_care_condition_refines_current_category_without_inventing_fit tests/test_query_understanding.py::test_personal_care_conditions_with_natural_context_are_not_product_names",
+      "result": "10 passed"
+    },
+    "full_test_suite": {
+      "command": "uv run pytest tests -q --tb=short",
+      "passed": 1409,
+      "failed": 0,
+      "duration_seconds": 199.40
+    },
+    "ruff": "passed",
+    "compileall": "passed",
+    "git_diff_check": "passed"
+  },
+  "limitations": [
+    "The product snapshot does not verify whether a listed item is clinically or cosmetically suitable for a particular skin or hair condition; the response explicitly abstains from that claim.",
+    "This is a deterministic local snapshot evaluation, not a human-rated blind study, live-stock check, provider reliability test, browser E2E, or production load test.",
+    "No product-specific SKU rule or catalog record was changed."
+  ]
+}

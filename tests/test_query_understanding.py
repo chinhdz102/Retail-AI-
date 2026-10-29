@@ -1086,6 +1086,31 @@ def test_indirect_customer_need_is_kept_separate_from_product_category() -> None
 
 
 @pytest.mark.parametrize(
+    ("query", "expected_need"),
+    [
+        ("Da mặt mình hay khô căng sau khi rửa", "Da mặt mình hay khô căng sau khi rửa"),
+        (
+            "Da đầu mình thường nhanh bết vào cuối ngày",
+            "Da đầu mình thường nhanh bết vào cuối ngày",
+        ),
+        ("Tóc mình hay khô xơ sau khi gội đầu", "Tóc mình hay khô xơ sau khi gội đầu"),
+    ],
+)
+def test_personal_care_conditions_with_natural_context_are_not_product_names(
+    query: str,
+    expected_need: str,
+) -> None:
+    repository = _snapshot()
+    result = understand_catalog_query(query, repository.list_category_hierarchies())
+
+    assert result.intent == "recommendation"
+    assert result.product_type is None
+    assert result.product_reference == ""
+    assert result.use_case == expected_need
+    assert result.clarification_needed
+
+
+@pytest.mark.parametrize(
     "query",
     [
         "Mì ăn liền vị bò với vị gà đang có những nhãn nào?",

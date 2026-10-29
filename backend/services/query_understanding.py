@@ -122,9 +122,13 @@ _DIRECT_USE_CASE = re.compile(
 _PERSONAL_CARE_NEED = re.compile(
     r"\b(?:da(?:\s+(?:mat|dau))?|toc|scalp|skin|hair)\s+"
     r"(?:(?:cua\s+)?(?:minh|toi|em|anh|chi|ban)\s+)?"
-    r"(?:(?:rat|hoi|nhanh|dang|bi|de|cuc|qua|hon)\s+){0,2}"
+    r"(?:(?:rat|hoi|nhanh|dang|bi|de|cuc|qua|hon|hay|thuong)\s+){0,3}"
     r"(?:kho|dau|nhay cam|mun|hon hop|bet|gau|rung|gay rung|lao hoa)"
     r"(?:\s+(?:cang|xo|xu|nhieu|nhanh))?\b"
+)
+_PERSONAL_CARE_CONTEXT_TAIL = re.compile(
+    r"^\s+(?:sau\s+(?:khi|luc)|khi|luc|vi|do|boi|nhat\s+la\s+khi|"
+    r"dac\s+biet\s+khi|vao)(?:\s+[\w]+){0,4}\b"
 )
 _NEGATION = re.compile(
     r"\b(?:khong|ko|khum|tranh|loai bo|loai tru|bo qua|avoid|without|except|no|"
@@ -1091,11 +1095,15 @@ def _personal_care_need_before_or_after_product(
     if not matches:
         return None
     for match in reversed(matches):
+        care_end = match.end()
+        context_tail = _PERSONAL_CARE_CONTEXT_TAIL.match(normalized[care_end:])
+        if context_tail:
+            care_end += context_tail.end()
         raw_start, raw_end = _raw_span_for_normalized_span(
             raw,
             normalized,
             match.start(),
-            match.end(),
+            care_end,
         )
         need = raw[raw_start:raw_end].strip(" ,.!?;:")
         leading_word = re.match(r"[^\W_]+", need, flags=re.UNICODE)

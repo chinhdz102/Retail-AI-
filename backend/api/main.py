@@ -1784,24 +1784,40 @@ def _localized_recommendation_candidates(
                 response += " 当前库存尚未核实。"
             return response
         if unverified_alternative:
+            alternatives_intro = (
+                "Mình tìm được một lựa chọn khác cùng nhóm: "
+                if len(items[:3]) == 1
+                else "Mình tìm được vài lựa chọn khác cùng nhóm: "
+            )
             response = (
-                f"Mình tìm được vài lựa chọn khác cùng nhóm: {rendered_items}. "
+                f"{alternatives_intro}{rendered_items}. "
                 f"Catalog chưa xác nhận chúng có phù hợp với “{unverified_use_case}” không. "
                 "Bạn muốn so sánh giá hay thương hiệu?"
             )
         elif title_match:
+            titles_intro = (
+                "Mình tìm thấy một tên hàng có thể liên quan: "
+                if len(items[:3]) == 1
+                else "Mình tìm thấy vài tên hàng có thể liên quan: "
+            )
             response = (
-                f"Mình tìm thấy vài tên hàng có thể liên quan: {rendered_items}. "
+                f"{titles_intro}{rendered_items}. "
                 "Tên hàng chưa đủ để xác nhận công dụng. "
                 "Bạn muốn lọc theo loại cụ thể, giá hay thương hiệu?"
             )
         else:
-            response = (
-                f"Mình tìm thấy vài loại trong danh mục: {rendered_items}. "
-                "Catalog chưa có đủ thông tin xác minh để kết luận loại nào phù hợp "
-                "với nhu cầu này. "
-                "Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không?"
-            )
+            if len(items[:3]) == 1:
+                response = (
+                    f"Trong catalog, mình tìm thấy một sản phẩm trong nhóm này: {rendered_items}. "
+                    "Catalog chưa có đủ thông tin xác minh để kết luận sản phẩm này có phù hợp "
+                    "với nhu cầu này không. Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không?"
+                )
+            else:
+                response = (
+                    f"Mình tìm thấy vài loại trong danh mục: {rendered_items}. "
+                    "Catalog chưa có đủ thông tin xác minh để kết luận sản phẩm nào phù hợp "
+                    "với nhu cầu này. Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không?"
+                )
         if include_price_caveat:
             response += " Giá tại cửa hàng có thể khác catalog."
         if include_stock_caveat and any(not product.stock_is_current for product in products[:3]):
@@ -2470,6 +2486,7 @@ def _reply_already_discloses_missing_attribute(reply: str, language: LanguageCod
             "chua co thong tin xac minh ve",
             "chua the noi loai nao phu hop",
             "catalog chua co du thong tin de xac nhan loai nao phu hop voi nhu cau nay",
+            "catalog chua co du thong tin xac minh de ket luan san pham",
         ),
         "en": (
             "no verified information about",

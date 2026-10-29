@@ -635,6 +635,51 @@ async def test_cooking_goal_survives_an_ingredient_reply_and_resets_on_new_depar
 
 
 @pytest.mark.asyncio
+async def test_personal_care_condition_refines_current_category_without_inventing_fit(
+    snapshot,
+    monkeypatch,
+):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app),
+        base_url="http://test",
+        timeout=60,
+    ) as client:
+        session = (
+            await client.post("/sessions", json={"kiosk_id": "personal-care-context"})
+        ).json()["session_id"]
+
+        async def ask(text):
+            response = await client.post(
+                "/agent/respond", json={"session_id": session, "text": text}
+            )
+            assert response.status_code == 200, response.text
+            return response.json()
+
+        initial = await ask("Tư vấn kem dưỡng da mặt giúp mình")
+        condition = await ask("Da mặt mình hay khô căng sau khi rửa")
+        refinement = await ask("Đừng lấy Pond’s, ưu tiên da khô")
+
+    assert initial["products"]
+    assert condition["products"]
+    assert refinement["products"]
+    for payload in (condition, refinement):
+        for item in payload["products"]:
+            product = snapshot.get_product_snapshot(item["product_id"])
+            assert product is not None
+            assert product.category_hierarchy.endswith("Kem dưỡng da mặt")
+    assert all("pond's" not in item["name"].casefold() for item in refinement["products"])
+    assert "Catalog chưa có đủ thông tin xác minh" in condition["text"]
+    assert "Catalog chưa có đủ thông tin xác minh" in refinement["text"]
+    assert "một sản phẩm trong nhóm này" in condition["text"]
+    assert "Mình chưa có dữ liệu đã xác minh" not in condition["text"]
+    assert "Mình chưa có dữ liệu đã xác minh" not in refinement["text"]
+    assert "Mình gợi ý" not in condition["text"]
+    assert "Mình gợi ý" not in refinement["text"]
+
+
+@pytest.mark.asyncio
 async def test_hotpot_other_types_are_real_new_products_with_uncertainty(snapshot, monkeypatch):
     monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
     monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
