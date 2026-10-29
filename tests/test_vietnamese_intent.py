@@ -142,6 +142,14 @@ def test_supported_product_facts_are_not_mistaken_for_unsupported_attributes(tex
     assert not _unsupported_catalog_attribute_requested(text)
 
 
+def test_banh_da_dry_food_is_not_classified_as_skin_care_or_health_advice() -> None:
+    text = "Bánh đa khô."
+
+    assert _explicit_recommendation_category(text) is None
+    assert explicit_recommendation_query(text) is None
+    assert not _unsupported_catalog_attribute_requested(text)
+
+
 @pytest.mark.parametrize(
     ("text", "expected"),
     [

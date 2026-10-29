@@ -884,6 +884,7 @@ def product_type_attribute_modifier(text: str) -> tuple[str, str, int, int] | No
 
 def explicit_recommendation_category(text: str) -> str | None:
     normalized = " ".join(normalize_vietnamese(text).split())
+    is_banh_da_product = bool(re.search(r"\b(?:bánh\s+đa|banh\s+da)\b", text.casefold()))
     modifier = product_type_attribute_modifier(normalized)
     if modifier is not None:
         return modifier[0]
@@ -903,6 +904,11 @@ def explicit_recommendation_category(text: str) -> str | None:
         for category, cue, cue_text, pattern in _NORMALIZED_CATEGORY_CUE_MATCHERS
         if pattern.search(normalized)
         and not (
+            is_banh_da_product
+            and category == "skincare"
+            and cue in {"da kho", "da nhay cam", "da dau", "da mun"}
+        )
+        and not (
             category == "snack"
             and cue == "qua vat"
             and _has_phrase(normalized, ("qua vat chat",))
@@ -912,10 +918,10 @@ def explicit_recommendation_category(text: str) -> str | None:
     # the body area ("da mình bị khô", "tóc nhanh bết"). Keep that as use-case
     # context for catalog lookup, without claiming any product is suitable.
     if re.search(
-        r"\bda\b(?:\s+(?:cua\s+)?(?:minh|toi|em|ban|rat|hoi|bi|dang)){0,3}"
+        r"\bda\b(?:\s+(?:cua\s+)?(?:mat|minh|toi|em|ban|rat|hoi|bi|dang)){0,3}"
         r"\s+(?:kho|dau|nhay cam|mun)\b",
         normalized,
-    ):
+    ) and not re.search(r"\b(?:bánh\s+đa|banh\s+da)\b", text.casefold()):
         matches.append((2, "skincare", "da kho"))
     if re.search(
         r"\btoc\b(?:\s+(?:cua\s+)?(?:minh|toi|em|ban|rat|hoi|bi|dang|nhanh)){0,3}"
@@ -1138,7 +1144,16 @@ _RECOMMENDATION_CONTEXT_QUERY_CUES = frozenset(
 def explicit_recommendation_query(text: str) -> str | None:
     """Keep a clearly named subcategory as a catalog filter during consultation."""
     normalized = " ".join(normalize_vietnamese(text).split())
-    matches = [cue for cue in _RECOMMENDATION_QUERY_CUES if _has_phrase(normalized, (cue,))]
+    is_banh_da_product = bool(re.search(r"\b(?:bánh\s+đa|banh\s+da)\b", text.casefold()))
+    matches = [
+        cue
+        for cue in _RECOMMENDATION_QUERY_CUES
+        if _has_phrase(normalized, (cue,))
+        and not (
+            is_banh_da_product
+            and cue in {"da kho", "da nhay cam", "da dau", "da mun"}
+        )
+    ]
     product_type_matches = [
         cue for cue in matches if cue not in _RECOMMENDATION_CONTEXT_QUERY_CUES
     ]
@@ -1854,12 +1869,6 @@ def unsupported_catalog_attribute_requested(text: str) -> bool:
         "cach nau",
         "bao quan nhu the nao",
         "co tot khong",
-        "da kho",
-        "da nhay cam",
-        "da dau",
-        "toc kho",
-        "toc dau",
-        "gau dau",
         "rung toc",
         "dry skin",
         "sensitive skin",
@@ -1960,16 +1969,21 @@ def unsupported_catalog_attribute_requested(text: str) -> bool:
             normalized,
         )
     )
+    personal_care_condition = bool(
+        re.search(
+            r"\b(?:da(?:\s+(?:mặt|mat|đầu|dau|dầu))?|tóc|toc|skin|hair|scalp)\b"
+            r"(?:\s+(?:của|cua|mình|minh|tôi|toi|em|anh|chị|chi|bạn|ban|rất|rat|"
+            r"hơi|hoi|nhanh|đang|dang|bị|bi|dễ|de)){0,5}"
+            r"\s+(?:khô|kho|dầu|dau|nhạy\s+cảm|nhay\s+cam|mụn|mun|bết|bet|"
+            r"gàu|gau|rụng|rung|hỗn\s+hợp|hon\s+hop)\b",
+            text,
+            flags=re.IGNORECASE,
+        )
+    )
     return (
         contextual_use_or_safety
+        or personal_care_condition
         or _has_phrase(normalized, unsupported_phrases)
-        or bool(
-            re.search(
-                r"\bda\b(?:\s+(?:cua\s+)?(?:minh|toi|em|ban|rat|hoi|bi|dang)){0,3}"
-                r"\s+(?:kho|dau|nhay cam|mun)\b",
-                normalized,
-            )
-        )
         or bool(
             re.search(
                 r"\btoc\b(?:\s+(?:cua\s+)?(?:minh|toi|em|ban|rat|hoi|bi|dang|nhanh)){0,3}"

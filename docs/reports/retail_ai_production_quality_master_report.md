@@ -434,3 +434,26 @@ git diff --check
 ```
 
 No independent human ratings, blind labels, browser/network E2E, or production latency evidence were added by this change. Catalog fit and current stock remain limited by snapshot evidence. Release status remains **demo-only / not production-ready**. All work remains on `codex/retail-text-quality-v4-20261019`; no additional branch was created.
+
+## 29. Cross-turn use-case refinement and catalog review integrity — 29/10/2026
+
+An additional review of natural consultation turns found that a preference-only reply could replace the active product query with a skin/hair condition or an exclusion. The API now retains the active catalog group and query when the customer only refines a use case, soft preference, or negative constraint. It keeps the existing preference scope across those turns, while an explicitly named new product group can still switch the search. When a use case is stated without a product group, the assistant asks which group to look up rather than searching for a guessed item.
+
+The parser now separates common Vietnamese skin and hair conditions from catalog product wording. These conditions remain unverified suitability context; they do not assert that a listed product will work. The implementation also guards the homonym “bánh đa khô” from being interpreted as dry skin. Negative constraints stop at punctuation/clause boundaries, so a later positive preference such as “ưu tiên da khô” is not accidentally included in a rejected-brand phrase. Catalog responses retain the unverified-detail marker when the customer gives a use case that the snapshot cannot substantiate.
+
+The full test pass caught one more contextual regression: “Tư vấn thịt nhúng lẩu giúp mình” was sent to catalog search as the literal conjunctive title query “thịt lẩu” and returned no products. For semantic use-case requests, the API now resolves the product group from the structured product reference when the full utterance is too conversational for category resolution. The cooking-use fallback then searches title-backed preparation wording inside that resolved group. The multi-turn regression now passes while preserving the catalog’s caveat that suitability is not verified.
+
+Reviewer and adjudicator CSV queues are now rejected if rows mix dataset ID, frozen dataset hash, catalog hash, or split. This prevents a scorer from accidentally combining judgments across different snapshots or evaluation partitions.
+
+Verification on the final working tree: focused parser/API/tool/qrels regressions **677 passed**; the repaired multi-turn cooking regression **1 passed**; full repository suite `uv run pytest tests -q --tb=short` **1,398 passed in 182.00 s**; `uv run ruff check backend tests evaluation`, Python compilation, and `git diff --check` passed. Reproduction commands:
+
+```powershell
+uv run pytest tests/test_retail_tools.py::test_ambiguous_product_family_stays_with_title_backed_products tests/test_query_understanding.py tests/test_vietnamese_intent.py tests/test_retail_api.py tests/test_vietnamese_qrels_agreement.py -q --tb=short
+uv run pytest tests/test_contextual_consultation_regressions.py::test_cooking_goal_survives_an_ingredient_reply_and_resets_on_new_department -q --tb=short
+uv run pytest tests -q --tb=short
+uv run ruff check backend tests evaluation
+uv run python -m compileall -q backend evaluation tests
+git diff --check
+```
+
+These are local deterministic regression checks against the catalog snapshot. They do not establish human-rated conversational quality, suitability, live stock, browser/network E2E, or production performance. No new branch was created; all work remains on `codex/retail-text-quality-v4-20261019`. Release status remains **demo-only / not production-ready**.
