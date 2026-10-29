@@ -412,3 +412,25 @@ The split policy and registry now hash text after normalizing line endings to LF
 The deterministic parser assigned `confidence` values of `0.94`, `0.76`, or `0.35` from the presence of a category/product phrase. No runtime consumer used the field, and no calibration data or reliability analysis supported interpreting those numbers as probabilities. The field and fixed assignments have been removed; parser output retains its explicit `ambiguity` and `clarification_needed` signals without presenting an uncalibrated score. A parameterized regression covers category, product-reference, and unrecognized-query shapes.
 
 Focused parser/split-policy suite: **139 passed**. Full local suite with the confidence change: **1,370 passed in 190.11 s**. Ruff and `git diff --check` pass. This is a reporting-correctness change, not a measured semantic-accuracy improvement. Human calibration and blind evaluation remain outstanding; release status remains **demo-only / not production-ready**.
+
+## 28. Implicit use-case routing and reviewer-agreement tooling — 29/10/2026
+
+Testing natural shopping turns found that the parser could identify an implicit recommendation and its intended use, but the API router only entered catalog recommendation flow when a separate lexical cue matched. As a result, turns such as “Tôi muốn thịt bò để nấu lẩu” and “Mình muốn bột mì để làm bánh” could miss grounded catalog retrieval. The API now passes the structured parse into the recommendation router and uses its recommendation/use-case signal alongside existing routing signals. Category resolution still uses the active catalog taxonomy; this change adds no SKU-specific rules.
+
+The same flow exposed misleading fallback wording: a first-time cooking request could be described as “lựa chọn khác” even though no earlier recommendation existed. That false alternative flag is no longer set by the generic audience fallback. When catalog evidence cannot establish suitability, the response lists grounded catalog candidates and their snapshot prices, clearly says fit is unverified, and avoids echoing an arbitrary raw phrase from the customer as if it were a normalized use case. Existing price and stock caveats remain in force.
+
+The API regression checks two different product groups (meat for hotpot and flour for baking), verifies every returned ID/name/price/category against the dated snapshot, confirms the missing-suitability disclosure, and asserts the LLM is not called. The parser regression also checks that unverified-use responses do not repeat the customer's full raw phrase.
+
+For the review workflow, newly exported qrels queues include blank reviewer ID and timestamp fields. A new scorer validates two independently labeled packets, frozen dataset/catalog metadata, completeness, reviewer separation and timestamps; reports per-field exact agreement, nominal Cohen's kappa, and confusion matrices; retains each annotator's judgments; leaves disagreements unresolved unless a distinct adjudicator supplies a complete annotation; and never promotes the set to validation/blind status. Older queues must be regenerated before review. This is evaluation infrastructure only and is not evidence that any human review has occurred.
+
+Focused verification: **166 passed**; the full repository suite: **1,378 passed in 176.41 s**. Focused Ruff, Python compilation, and `git diff --check` passed; full-repository lint and final artifact checks are rerun before commit. Reproduction commands:
+
+```powershell
+uv run pytest tests/test_query_understanding.py::test_unverified_need_is_not_rendered_as_a_suitability_recommendation tests/test_retail_api.py::test_implicit_cooking_need_uses_grounded_catalog_without_claiming_fit tests/test_vietnamese_intent.py tests/test_vietnamese_qrels_agreement.py tests/test_semantic_intelligence_v2_benchmark.py::test_review_queue_pools_retrievers_and_independently_blinds_reviewers -q --tb=short
+uv run pytest tests -q --tb=short
+uv run ruff check backend tests evaluation
+uv run python -m compileall -q backend evaluation tests
+git diff --check
+```
+
+No independent human ratings, blind labels, browser/network E2E, or production latency evidence were added by this change. Catalog fit and current stock remain limited by snapshot evidence. Release status remains **demo-only / not production-ready**. All work remains on `codex/retail-text-quality-v4-20261019`; no additional branch was created.

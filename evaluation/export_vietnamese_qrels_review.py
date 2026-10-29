@@ -40,6 +40,8 @@ REVIEW_FIELDS = (
     "rationale",
 )
 
+REVIEW_METADATA_FIELDS = ("reviewer_id", "reviewed_at")
+
 
 def _load_dataset(path: Path) -> dict[str, Any]:
     if path.suffix.casefold() == ".jsonl":
@@ -229,6 +231,7 @@ def export_review_queues(
                     "catalog_sha256": catalog_sha256,
                     "split": split,
                     "reviewer_status": "UNREVIEWED",
+                    **{field: "" for field in REVIEW_METADATA_FIELDS},
                     **{field: "" for field in REVIEW_FIELDS},
                 }
             )

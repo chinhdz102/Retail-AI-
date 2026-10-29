@@ -3904,8 +3904,6 @@ def execute_catalog_tool(
                 )[: parsed.limit]
                 preference_matches = {}
                 category_fallback_used = bool(products)
-                if preparation and products:
-                    preparation_alternatives_unverified = True
             if excluded_brands:
                 products = tuple(
                     product

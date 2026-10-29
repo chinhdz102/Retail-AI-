@@ -316,7 +316,10 @@ def test_review_queue_pools_retrievers_and_independently_blinds_reviewers(tmp_pa
         "variant_fit",
         "quantity_unit_fit",
         "budget_fit",
+        "reviewer_id",
+        "reviewed_at",
     } <= set(rows_a[0])
+    assert all(row["reviewer_id"] == "" and row["reviewed_at"] == "" for row in rows_a)
     order_a = [row["candidate_key"] for row in rows_a]
     order_b = [row["candidate_key"] for row in rows_b]
     assert order_a != order_b
