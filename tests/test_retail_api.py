@@ -1488,7 +1488,79 @@ async def test_named_product_unsupported_question_uses_knowledge_and_stays_groun
 
 
 @pytest.mark.asyncio
-async def test_unsupported_nutrition_for_ambiguous_named_product_shows_grounded_variants(
+async def test_manufacturer_marketing_claim_is_attributed_and_scoped(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    created = await client.post("/sessions", json={"kiosk_id": "manufacturer-claim"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Dầu gội Pantene Pro-V dưỡng tóc suôn mượt óng ả 650g có công dụng gì?",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["grounded_product_ids"] == ["WIN_10016738"]
+    assert payload["tools_used"] == ["search_products", "get_product_knowledge"]
+    assert "Pantene Việt Nam" in payload["text"]
+    assert "tuyên bố của nhà sản xuất" in payload["text"]
+    assert "dòng sản phẩm" in payload["text"]
+    assert "chưa phải bằng chứng độc lập" in payload["text"]
+    assert "độ phù hợp với riêng bạn" in payload["text"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_broad_brand_product_knowledge_question_asks_which_variant(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    created = await client.post("/sessions", json={"kiosk_id": "ambiguous-product-claim"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Dầu gội Pantene có công dụng gì?",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert 1 <= len(payload["grounded_product_ids"]) <= 5
+    assert payload["tools_used"] == ["search_products"]
+    assert "Bạn muốn hỏi loại nào?" in payload["text"]
+    assert "650g" in payload["text"]
+    assert "tuyên bố của nhà sản xuất" not in payload["text"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_unsupported_nutrition_for_ambiguous_product_asks_customer_to_choose_variant(
     client: httpx.AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1514,10 +1586,10 @@ async def test_unsupported_nutrition_for_ambiguous_named_product_shows_grounded_
 
     assert response.status_code == 200
     payload = response.json()
-    assert "WIN_10194711" in payload["grounded_product_ids"]
+    assert 1 <= len(payload["grounded_product_ids"]) <= 5
     assert payload["products"]
     assert "Coca-Cola Zero" in payload["text"]
-    assert "chưa có dữ liệu xác minh" in payload["text"]
+    assert "Bạn muốn hỏi loại nào?" in payload["text"]
     assert not any(
         claim in payload["text"].casefold()
         for claim in ("0 calo", "0 kcal", "0g đường", "0 g đường")
@@ -5468,6 +5540,18 @@ async def test_azure_failure_does_not_silently_use_potentially_billable_elevenla
 
 def test_story_request_does_not_map_to_shelf_intent() -> None:
     assert _requested_snapshot_fields("Kể chuyện vui đi.") == ()
+
+
+def test_hair_conditioning_word_does_not_mean_sugar_nutrition() -> None:
+    assert api_main._product_knowledge_attributes_requested(
+        "Dầu gội Pantene dưỡng tóc mềm mượt có công dụng gì?"
+    ) == ("benefits",)
+    assert api_main._product_knowledge_attributes_requested("Nước này có đường không?") == (
+        "nutrition",
+    )
+    assert api_main._product_knowledge_attributes_requested("Coca Zero có bao nhiêu đường?") == (
+        "nutrition",
+    )
 
 
 @pytest.mark.asyncio

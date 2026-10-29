@@ -4059,8 +4059,13 @@ call `get_product_snapshot` with only the requested fields. A shelf marked
 `RECOMMENDED_PLANOGRAM` is proposed and has not been physically verified.
 For benefits, taste, use, or suitability questions about a known product, call
 `get_product_knowledge`. State only `VERIFIED` attributes as facts; qualify `INFERRED` as
-catalog/listing evidence, and say the catalog cannot verify `UNKNOWN` attributes. Never infer a
-benefit or suitability from the product name, brand, or category.
+catalog/listing evidence, and say the catalog cannot verify `UNKNOWN` attributes. A
+`MANUFACTURER_DECLARATION` is verified only as information published by that manufacturer:
+attribute it to the source, preserve its units and measurement basis, and respect
+`product_match_scope`; it is not an independent test or personal suitability assessment. A
+`MANUFACTURER_CLAIM` is an inferred marketing claim, not proof of effectiveness or suitability;
+only mention it when relevant and clearly attribute it to the manufacturer. Never infer a benefit
+or suitability from the product name, brand, or category.
 For a broad question about recorded offers without a named product, call
 `list_product_promotions`; describe these as catalog snapshot records, never as guaranteed-active
 campaigns because start/end dates and terms are not provided.
@@ -4123,7 +4128,11 @@ tra cứu, kể cả mặt hàng hết hàng. Gọi `get_product_snapshot` để
 Nếu khách hỏi công dụng, mùi vị, cách dùng hoặc độ phù hợp của sản phẩm đã xác định, gọi
 `get_product_knowledge`. Chỉ nêu thuộc tính `VERIFIED` như sự thật; nói rõ `INFERRED` là dữ liệu
 ghi nhận trong catalog và `UNKNOWN` là catalog chưa xác minh. Không suy công dụng hoặc độ phù hợp
-từ tên sản phẩm, nhãn hàng hay nhóm hàng.
+từ tên sản phẩm, nhãn hàng hay nhóm hàng. `MANUFACTURER_DECLARATION` chỉ xác nhận rằng hãng đã
+công bố thông tin đó: cần nêu nguồn hãng, giữ nguyên đơn vị/cơ sở đo và phạm vi biến thể
+(`product_match_scope`); không gọi đó là kiểm nghiệm độc lập hay kết luận phù hợp cá nhân.
+`MANUFACTURER_CLAIM` là tuyên bố tiếp thị mức `INFERRED`, không chứng minh hiệu quả hoặc độ phù
+hợp; chỉ nhắc khi liên quan và phải quy rõ cho hãng. Không biến nội dung quảng bá thành sự thật.
 Nếu khách hỏi chung về ưu đãi mà không nêu một sản phẩm cụ thể, gọi
 `list_product_promotions`; chỉ mô tả là ghi nhận trong snapshot catalog, không khẳng định
 chương trình còn hiệu lực vì dữ liệu chưa có thời hạn và điều kiện áp dụng.
@@ -7915,12 +7924,8 @@ async def agent_respond(
                         )
                         knowledge_product_name = knowledge_product.name
                     else:
-                        names = "; ".join(
-                            product.name for product in candidate_observation.products[:3]
-                        )
-                        reply = _localized_product_knowledge_abstention(
-                            names,
-                            knowledge_attributes,
+                        reply = _localized_product_knowledge_disambiguation(
+                            candidate_observation.products,
                             request.language,
                         )
                         return _deterministic_tool_response(
@@ -7939,6 +7944,38 @@ async def agent_respond(
             if knowledge_observation.status == "SUCCESS" and knowledge_observation.products:
                 knowledge_product = knowledge_observation.products[0]
                 facts = knowledge_observation.content.get("facts", [])
+                manufacturer_claim_reply = _localized_manufacturer_claim_reply(
+                    knowledge_product.name,
+                    facts,
+                    request.language,
+                )
+                if manufacturer_claim_reply:
+                    session_store.set_last_grounded_product(
+                        request.session_id,
+                        knowledge_product.product_id,
+                        knowledge_product.name,
+                    )
+                    session_store.update_shopping(
+                        request.session_id,
+                        current_intent=IntentType.PRODUCT_LOOKUP,
+                        active_product_id=knowledge_product.product_id,
+                        active_category=knowledge_product.category,
+                        selected_product_ids=[knowledge_product.product_id],
+                        pending_action=None,
+                        pending_clarification=None,
+                    )
+                    return _deterministic_tool_response(
+                        request,
+                        record.state,
+                        knowledge_observation,
+                        manufacturer_claim_reply,
+                        model="catalog-manufacturer-claim",
+                        tools_used=(
+                            ["search_products", "get_product_knowledge"]
+                            if used_product_search
+                            else ["get_product_knowledge"]
+                        ),
+                    )
                 if any(
                     not isinstance(fact, dict) or fact.get("status") != "VERIFIED"
                     for fact in facts
@@ -11368,10 +11405,17 @@ def _product_knowledge_attributes_requested(text: str) -> tuple[str, ...]:
         attributes.append("suitability")
     if any(token in normalized.split() for token in ("calo", "kcal", "calorie", "calories")):
         attributes.append("calories")
-    if any(
-        token in normalized.split()
-        for token in ("protein", "nutrition", "nutritional", "sugar", "duong")
-    ) or "dinh duong" in normalized:
+    normalized_tokens = set(normalized.split())
+    asks_about_sugar = bool(
+        re.search(
+            r"\b(?:luong|ham luong|it|khong|co|bao nhieu)\s+(?:co\s+)?duong\b",
+            normalized,
+        )
+        or re.search(r"\bduong\s+(?:huyet|an)\b", normalized)
+    )
+    if normalized_tokens.intersection({"protein", "nutrition", "nutritional", "sugar"}) or (
+        "dinh duong" in normalized
+    ) or asks_about_sugar:
         attributes.append("nutrition")
     if "caffeine" in normalized or "cafein" in normalized:
         attributes.append("caffeine")
@@ -11449,6 +11493,82 @@ def _localized_product_knowledge_abstention(
         f"{attribute_text}, nên mình chưa thể xác nhận phần này; mình không đoán. "
         "Nếu bạn cần, mình có thể tra các thông tin khác đang được ghi trong danh mục như giá "
         "hoặc thành phần."
+    )
+
+
+def _localized_product_knowledge_disambiguation(
+    products: tuple[ProductSnapshot, ...] | list[ProductSnapshot],
+    language: LanguageCode,
+) -> str:
+    names = [product.name for product in products[:3]]
+    options = "; ".join(names)
+    if language == "en":
+        return (
+            f"I found several matching products: {options}. Which one do you mean? "
+            "I’ll check its product information once you choose."
+        )
+    if language == "zh":
+        return f"我找到几种相符的商品：{options}。您想查哪一种？"
+    return f"Mình tìm thấy vài sản phẩm phù hợp: {options}. Bạn muốn hỏi loại nào?"
+
+
+def _localized_manufacturer_claim_reply(
+    product_name: str,
+    facts: object,
+    language: LanguageCode,
+) -> str | None:
+    """Render manufacturer marketing copy only with explicit attribution and limits."""
+    if not isinstance(facts, list) or not facts:
+        return None
+    if any(
+        not isinstance(fact, dict)
+        or fact.get("status") != "INFERRED"
+        or fact.get("evidence_scope") != "MANUFACTURER_CLAIM"
+        or not fact.get("source")
+        or fact.get("product_match_scope") not in {"EXACT_VARIANT", "PRODUCT_LINE"}
+        for fact in facts
+    ):
+        return None
+
+    sources = list(dict.fromkeys(str(fact["source"]) for fact in facts))
+    line_scoped = any(fact.get("product_match_scope") == "PRODUCT_LINE" for fact in facts)
+    claims: list[str] = []
+    for fact in facts:
+        value = fact.get("value")
+        if isinstance(value, dict):
+            value = value.get(language)
+        if not isinstance(value, str) or not value.strip():
+            return None
+        claims.append(value.strip())
+    claim_text = " ".join(claims)
+    source_text = ", ".join(sources)
+    if language == "en":
+        scope_note = (
+            " The claim covers the product line, so check the package for this exact variant."
+            if line_scoped
+            else ""
+        )
+        return (
+            f"For {product_name}, {source_text} says: {claim_text} "
+            "This is the manufacturer's claim, not independent evidence of effectiveness or "
+            f"personal suitability.{scope_note}"
+        )
+    if language == "zh":
+        scope_note = "该说明适用于产品系列，具体规格请以包装为准。" if line_scoped else ""
+        return (
+            f"关于{product_name}，{source_text}的产品页面称：{claim_text}。"
+            "这是厂商的宣传说明，并非独立的效果或个人适用性验证。"
+            f"{scope_note}"
+        )
+    scope_note = (
+        " Thông tin áp dụng cho cả dòng sản phẩm; bạn xem nhãn để xác nhận đúng biến thể."
+        if line_scoped
+        else ""
+    )
+    return (
+        f"Về {product_name}, {source_text} mô tả: {claim_text} "
+        "Đây là tuyên bố của nhà sản xuất, chưa phải bằng chứng độc lập về hiệu quả hoặc "
+        f"độ phù hợp với riêng bạn.{scope_note}"
     )
 
 

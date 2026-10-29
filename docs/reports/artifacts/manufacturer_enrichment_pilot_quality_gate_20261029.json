@@ -1,0 +1,144 @@
+{
+  "benchmark": "manufacturer_enrichment_pilot_quality_gate",
+  "created_at_utc": "2026-10-29T12:09:12.725349+00:00",
+  "code_base_commit": "189bc45bdc4a5fed3ab453f1828c55dc65f1f8aa",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "tracked_diff_sha256_before_artifact": "43f93d71a88486bde892dd62bbb53035f80eab9f7c8163b3a868995eaf185de2",
+  "source_file_sha256": {
+    "backend/api/main.py": "2c0be5bcf81a3efe35ff345e909c59b85ca2dffd757e778d6034068276ac3a44",
+    "backend/products/knowledge.py": "f24f32c92f04e843b091cf0d164d3941ab14f5ae7a8c5a5d73972a3060d53739",
+    "backend/services/retail_tools.py": "2de8c98bb1ebc0aee7da2eb37c1d97e1c196f77efb0ca8856139d17d350b1ce7",
+    "data/product_knowledge_enrichment_pilot.json": "741e8b98281ec220c83ec6a673ad6e6844a234370fdc1f8b9a7d54b2acd0c7ec",
+    "tests/test_product_knowledge_enrichment.py": "f030d28c2682bd9c9346c03cd7fcf51a44210368b19d60212108f446c7bdfdaa",
+    "tests/test_retail_api.py": "cc9f0f5af4f5d6d3fcea9312b2a38d79370d2bd0cffb7b0b4f4e92925d6bc0eb",
+    "docs/reports/retail_ai_production_quality_master_report.md": "ada91805b58dbdfe534908387015b58186d0886cc7296d4003c6b59311357c1e"
+  },
+  "catalog": {
+    "path": "data/winmart_products.json",
+    "sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "sidecar_bound_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "product_count": 3081,
+    "data_timestamp": "2026-09-15"
+  },
+  "enrichment_registry": {
+    "path": "data/product_knowledge_enrichment_pilot.json",
+    "sha256": "741e8b98281ec220c83ec6a673ad6e6844a234370fdc1f8b9a7d54b2acd0c7ec",
+    "record_count": 4,
+    "products": [
+      {
+        "product_id": "WIN_10307381",
+        "product_name": "Nước giải khát Coca-Cola Zero chai nhựa 1,5lít",
+        "brand": "COCA-COLA",
+        "barcode": "8935049510147",
+        "match_scope": "PRODUCT_LINE",
+        "facts": [
+          {
+            "attribute": "nutrition",
+            "status": "VERIFIED",
+            "evidence_scope": "MANUFACTURER_DECLARATION"
+          },
+          {
+            "attribute": "ingredients",
+            "status": "VERIFIED",
+            "evidence_scope": "MANUFACTURER_DECLARATION"
+          },
+          {
+            "attribute": "caffeine",
+            "status": "VERIFIED",
+            "evidence_scope": "MANUFACTURER_DECLARATION"
+          }
+        ]
+      },
+      {
+        "product_id": "WIN_10160995",
+        "product_name": "Kem đánh răng P/S bảo vệ 123 baking soda & hương thảo hộp 230g",
+        "brand": "P/S",
+        "barcode": "8934839126117",
+        "match_scope": "EXACT_VARIANT",
+        "facts": [
+          {
+            "attribute": "usage",
+            "status": "VERIFIED",
+            "evidence_scope": "MANUFACTURER_DECLARATION"
+          }
+        ]
+      },
+      {
+        "product_id": "WIN_10007893",
+        "product_name": "Thùng 30 gói mì tôm chua cay Hảo Hảo Vina Acecook 75g",
+        "brand": "HẢO HẢO",
+        "barcode": "8934563305048",
+        "match_scope": "PRODUCT_LINE",
+        "facts": [
+          {
+            "attribute": "ingredients",
+            "status": "VERIFIED",
+            "evidence_scope": "MANUFACTURER_DECLARATION"
+          },
+          {
+            "attribute": "usage",
+            "status": "VERIFIED",
+            "evidence_scope": "MANUFACTURER_DECLARATION"
+          }
+        ]
+      },
+      {
+        "product_id": "WIN_10016738",
+        "product_name": "Dầu gội Pantene Pro-V dưỡng tóc suôn mượt óng ả 650g",
+        "brand": "PANTENE",
+        "barcode": "4902430467773",
+        "match_scope": "PRODUCT_LINE",
+        "facts": [
+          {
+            "attribute": "benefits",
+            "status": "INFERRED",
+            "evidence_scope": "MANUFACTURER_CLAIM"
+          }
+        ]
+      }
+    ]
+  },
+  "quality_cases": {
+    "identity_and_version_matched_records": 4,
+    "stale_product_identity_or_catalog_version_rejections": 4,
+    "invalid_registry_semantics_rejections": 2,
+    "direct_catalog_precedence_cases": 1,
+    "api_attribution_and_variant_scope_cases": 3,
+    "vietnamese_duong_vs_duong_semantic_cases": 3,
+    "test_provider_calls": 0,
+    "human_review_labels": 0
+  },
+  "test_runs": {
+    "focused_command": "uv run pytest tests/test_product_knowledge_enrichment.py tests/test_retail_api.py tests/test_retail_tools.py -q --tb=short",
+    "focused_passed": 500,
+    "focused_failed": 0,
+    "full_command": "uv run pytest -q --tb=short",
+    "full_passed": 1480,
+    "full_failed": 0,
+    "full_elapsed_seconds": 272.61,
+    "ruff_command": "uv run ruff check backend tests evaluation",
+    "ruff_passed": true,
+    "compile_command": "uv run python -m compileall -q backend evaluation tests",
+    "compile_passed": true,
+    "diff_check_command": "git diff --check",
+    "diff_check_passed": true,
+    "python": "3.13.15",
+    "pytest": "9.1.1"
+  },
+  "official_sources": [
+    "https://www.coca-cola.com/vn/vi/brands/coca-cola",
+    "https://www.coca-cola.com/vn/vi/about-us/faq/coca-cola-ch_a-bao-nhieu-caffeine",
+    "https://www.psvietnam.vn/p/p-s-baking-soda-and-huong-thao.html/08934839126100",
+    "https://acecookvietnam.vn/product/mi-hao-hao/",
+    "https://www.pantene.com.vn/vi-vn/mua-s%E1%BA%A3n-ph%E1%BA%A9m/ch%C4%83m-s%C3%B3c-t%C3%B3c-m%E1%BB%81m-m%C6%B0%E1%BB%A3t"
+  ],
+  "limitations": [
+    "Four representative SKUs only; this is not broad enrichment coverage of the 3,081-row catalog.",
+    "Manufacturer declarations verify what the cited page publishes, not independent testing or exact package labels.",
+    "Pantene is a manufacturer marketing claim and is not efficacy or individual-suitability evidence.",
+    "Coca-Cola caffeine is sourced for a 330 ml can and is not scaled to the 1.5 l catalog bottle.",
+    "Snapshot prices, stock, and shelf placement remain dated or unverified.",
+    "No human answer-quality review, blind holdout, live inventory, browser, or production-provider test was run."
+  ],
+  "release_readiness": "demo-only; not production-ready"
+}

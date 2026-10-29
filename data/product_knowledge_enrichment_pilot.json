@@ -1,0 +1,157 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-10-29T11:51:14Z",
+  "source_catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "records": [
+    {
+      "product_id": "WIN_10307381",
+      "product_name": "Nước giải khát Coca-Cola Zero chai nhựa 1,5lít",
+      "brand": "COCA-COLA",
+      "barcode": "8935049510147",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "nutrition",
+          "value": {
+            "basis": "per 100 ml",
+            "energy_kcal": 0,
+            "protein_g": 0,
+            "fat_g": 0,
+            "carbohydrate_g": 0,
+            "sugar_g": 0,
+            "sodium_mg_max": 26
+          },
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Coca-Cola Việt Nam",
+          "source_url": "https://www.coca-cola.com/vn/vi/brands/coca-cola",
+          "source_field": "Coca-Cola Zero Sugar nutrition values per 100 ml",
+          "observed_at": "2026-10-29T11:51:14Z",
+          "verified_at": "2026-10-29T11:51:14Z",
+          "confidence": 1.0,
+          "note": "Verified as information published by Coca-Cola Việt Nam for the Zero Sugar product line, not as an independent laboratory test. Nutritional basis is 100 ml; check the package label for the exact bottle variant."
+        },
+        {
+          "attribute": "ingredients",
+          "value": "Nước bão hòa CO₂, màu tự nhiên (150d), chất điều chỉnh độ acid (338, 331(iii)), chất tạo ngọt tổng hợp (955, 950), hương liệu tự nhiên, chất bảo quản (211), caffeine.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Coca-Cola Việt Nam",
+          "source_url": "https://www.coca-cola.com/vn/vi/brands/coca-cola",
+          "source_field": "Coca-Cola Zero Sugar ingredients",
+          "observed_at": "2026-10-29T11:51:14Z",
+          "verified_at": "2026-10-29T11:51:14Z",
+          "confidence": 1.0,
+          "note": "Manufacturer-published ingredient declaration for the Zero Sugar line. The exact package label is authoritative for the bottle in the customer's hand."
+        },
+        {
+          "attribute": "caffeine",
+          "value": {
+            "amount_mg": 32,
+            "basis": "per 330 ml can",
+            "product_line": "Coca-Cola Zero Sugar"
+          },
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Coca-Cola Việt Nam",
+          "source_url": "https://www.coca-cola.com/vn/vi/about-us/faq/coca-cola-ch_a-bao-nhieu-caffeine",
+          "source_field": "Caffeine table, Coca-Cola Zero Sugar column",
+          "observed_at": "2026-10-29T11:51:14Z",
+          "verified_at": "2026-10-29T11:51:14Z",
+          "confidence": 1.0,
+          "note": "The manufacturer FAQ reports 32 mg per 330 ml can. Do not scale this to a different bottle size without explaining the calculation and its assumption."
+        }
+      ]
+    },
+    {
+      "product_id": "WIN_10160995",
+      "product_name": "Kem đánh răng P/S bảo vệ 123 baking soda & hương thảo hộp 230g",
+      "brand": "P/S",
+      "barcode": "8934839126117",
+      "match_scope": "EXACT_VARIANT",
+      "facts": [
+        {
+          "attribute": "usage",
+          "value": [
+            "Chải răng ít nhất mỗi ngày 2 lần, sáng và tối, hoặc theo hướng dẫn của nha sĩ.",
+            "Dùng ít nhất 1 g kem đánh răng mỗi lần chải.",
+            "Trẻ em dưới 6 tuổi chỉ dùng lượng nhỏ bằng hạt đậu dưới sự giám sát của người lớn."
+          ],
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "P/S Việt Nam",
+          "source_url": "https://www.psvietnam.vn/p/p-s-baking-soda-and-huong-thao.html/08934839126100",
+          "source_field": "Product usage instructions; 180 g and 230 g package variants",
+          "observed_at": "2026-10-29T11:51:14Z",
+          "verified_at": "2026-10-29T11:51:14Z",
+          "confidence": 1.0,
+          "note": "The official P/S page lists both 180 g and 230 g variants and gives these instructions. They are manufacturer-published package-use instructions, not individualized dental advice."
+        }
+      ]
+    },
+    {
+      "product_id": "WIN_10007893",
+      "product_name": "Thùng 30 gói mì tôm chua cay Hảo Hảo Vina Acecook 75g",
+      "brand": "HẢO HẢO",
+      "barcode": "8934563305048",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Vắt mì: bột mì 630,55 g/kg, dầu cọ, tinh bột sắn, muối, đường, nước mắm, chất điều vị (621), chất điều chỉnh độ acid (501(i), 500(i)), chất làm ẩm (451(i)), bột nghệ, phẩm màu curcumin tự nhiên, bột cà ri, chất chống oxy hóa (320, 321). Gói gia vị: đường, muối, dầu cọ, chất điều vị (621, 631, 627), gia vị (tỏi, ớt, tiêu), chất điều chỉnh độ acid (330), bột tôm 2,81 g/kg, hành lá sấy, hỗn hợp rau phi (ngò om, ngò gai), ba rô sấy, nước mắm, phẩm màu tự nhiên (paprika oleoresin, curcumin).",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Acecook Việt Nam",
+          "source_url": "https://acecookvietnam.vn/product/mi-hao-hao/",
+          "source_field": "Hảo Hảo Hương Vị Mì Tôm Chua Cay ingredient declaration",
+          "observed_at": "2026-10-29T11:51:14Z",
+          "verified_at": "2026-10-29T11:51:14Z",
+          "confidence": 1.0,
+          "note": "This is the manufacturer's declared ingredient list for the Hảo Hảo hot-and-sour shrimp flavor family. The source does not establish that every production lot or export variant has identical ingredients; check the package label."
+        },
+        {
+          "attribute": "usage",
+          "value": [
+            "Cho vắt mì và gói gia vị vào tô.",
+            "Chế khoảng 400 ml nước sôi, đậy nắp và chờ 3 phút.",
+            "Trộn đều rồi dùng."
+          ],
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Acecook Việt Nam",
+          "source_url": "https://acecookvietnam.vn/product/mi-hao-hao/",
+          "source_field": "Hảo Hảo noodle preparation instructions for mì nước",
+          "observed_at": "2026-10-29T11:51:14Z",
+          "verified_at": "2026-10-29T11:51:14Z",
+          "confidence": 1.0,
+          "note": "Manufacturer-published preparation instructions for the Hảo Hảo product line. Verify the package for variant-specific directions."
+        }
+      ]
+    },
+    {
+      "product_id": "WIN_10016738",
+      "product_name": "Dầu gội Pantene Pro-V dưỡng tóc suôn mượt óng ả 650g",
+      "brand": "PANTENE",
+      "barcode": "4902430467773",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Dòng chăm sóc tóc mềm mượt Pro-Vitamin B5 được giới thiệu là hướng tới mái tóc suôn mượt.",
+            "en": "The Pro-Vitamin B5 soft-smooth hair-care line is described as intended to help hair feel smooth."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "Pantene Việt Nam",
+          "source_url": "https://www.pantene.com.vn/vi-vn/mua-s%E1%BA%A3n-ph%E1%BA%A9m/ch%C4%83m-s%C3%B3c-t%C3%B3c-m%E1%BB%81m-m%C6%B0%E1%BB%A3t",
+          "source_field": "Soft-smooth hair-care line description and listed Pro-Vitamin shampoo",
+          "observed_at": "2026-10-29T11:51:14Z",
+          "verified_at": "2026-10-29T11:51:14Z",
+          "confidence": 0.8,
+          "note": "This is a manufacturer marketing description, not an independent efficacy test or a verified suitability result for an individual's hair. Always attribute it to Pantene."
+        }
+      ]
+    }
+  ]
+}
