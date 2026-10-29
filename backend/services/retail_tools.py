@@ -4089,7 +4089,12 @@ def execute_catalog_tool(
             child_fit_unverified = _child_age_or_weight_specification_requested(
                 parsed.preference_text or current_user_text or parsed.query
             )
-            if family_details_unverified or unverified_query_details or child_fit_unverified:
+            if (
+                family_details_unverified
+                or unverified_query_details
+                or child_fit_unverified
+                or understanding.use_case
+            ):
                 content["family_details_unverified"] = True
             if unverified_query_details:
                 content["unverified_constraints"] = [

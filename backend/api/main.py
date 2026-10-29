@@ -2541,6 +2541,20 @@ def _localized_consultation_clarification(language: LanguageCode) -> str:
     }[language]
 
 
+def _localized_use_case_category_clarification(language: LanguageCode) -> str:
+    return {
+        "en": (
+            "What product group are you looking for to meet that need? Tell me the product type, "
+            "and I'll check the catalog."
+        ),
+        "zh": "您想找哪一类商品来满足这个需求？告诉我商品类型，我再帮您查目录。",
+        "vi": (
+            "Bạn muốn tìm nhóm sản phẩm nào cho nhu cầu này? Nói tên loại hàng, "
+            "mình sẽ tra catalog cho đúng nhé."
+        ),
+    }[language]
+
+
 def _localized_action_denial(language: LanguageCode) -> str:
     return {
         "en": (
@@ -6771,6 +6785,18 @@ async def agent_respond(
     semantic_use_case_recommendation = bool(
         structured_query.intent == "recommendation" and structured_query.use_case
     )
+    if (
+        structured_query.use_case
+        and structured_query.clarification_needed
+        and not structured_query.product_type
+        and not structured_query.product_reference
+        and record.shopping.current_intent != IntentType.RECOMMENDATION
+    ):
+        return _record_shopping_turn(
+            request,
+            _localized_use_case_category_clarification(request.language),
+            model="local-clarification",
+        )
 
     comparison_queries = parse_comparison_queries(request.text, catalog_hierarchies)
     if not mission_preemption_requested and (
@@ -7921,16 +7947,38 @@ async def agent_respond(
             record.shopping.constraints,
         )
         saved_preference_before_turn = str(record.shopping.constraints.get("preference_text") or "")
+        active_recommendation = record.shopping.current_intent == IntentType.RECOMMENDATION
+        preference_only_followup = bool(
+            active_recommendation
+            and (
+                record.shopping.constraints.get("query")
+                or record.shopping.constraints.get("category")
+            )
+            and not (structured_query and structured_query.product_type)
+            and (
+                re.search(
+                    r"\b(?:thich|muon|uu tien|can|chuyen sang|lay|chon|prefer|like|want)\b",
+                    _normalize_request_text(request.text),
+                )
+                or (
+                    structured_query
+                    and (
+                        structured_query.use_case
+                        or structured_query.negative_constraints
+                    )
+                )
+            )
+        )
         preparation_only_followup = bool(
-            record.shopping.current_intent == IntentType.RECOMMENDATION
+            active_recommendation
             and preparation_terms(request.text)
             and preparation_terms(saved_preference_before_turn)
             and not _explicit_recommendation_query(request.text)
             and not _explicit_recommendation_category(request.text)
         )
-        if preparation_only_followup:
+        if preparation_only_followup or preference_only_followup:
             # Keep the active product query when a short conversational reply
-            # only confirms/refines its cooking method (e.g. “ăn lẩu”).
+            # only refines its use case, audience, brand, or other preference.
             updates = [
                 update
                 for update in updates
@@ -8032,6 +8080,12 @@ async def agent_respond(
             str(recommendation_arguments.get("category") or ""),
             str(recommendation_arguments.get("query") or ""),
         ]
+        if preference_only_followup:
+            saved_scope = record.shopping.constraints.get("preference_scope")
+            if isinstance(saved_scope, list):
+                stable_scope = [str(value).strip() for value in saved_scope if str(value).strip()]
+                if stable_scope:
+                    scope = stable_scope
         recommendation_scope_key = [
             normalized
             for value in scope
@@ -10334,13 +10388,25 @@ def _recommendation_tool_arguments(
         and not _explicit_recommendation_query(text)
         and not explicit_category
     )
-    active_preference_refinement = bool(
-        active_context
-        and (stored.get("query") or stored.get("category"))
-        and re.search(
+    preference_refinement_cue = bool(
+        re.search(
             r"\b(?:thich|muon|uu tien|can|chuyen sang|lay|chon|prefer|like|want)\b",
             normalized,
         )
+    )
+    parsed_constraint_refinement = bool(
+        structured_query
+        and not structured_query.product_type
+        and (structured_query.use_case or structured_query.negative_constraints)
+    )
+    active_preference_refinement = bool(
+        active_context
+        and (stored.get("query") or stored.get("category"))
+        and (preference_refinement_cue or parsed_constraint_refinement)
+    )
+    preference_only_refinement = bool(
+        active_preference_refinement
+        and not (structured_query and structured_query.product_type)
     )
     catalog_category = None
     category_browse_intent = bool(
@@ -10370,10 +10436,21 @@ def _recommendation_tool_arguments(
         and not catalog_category
         and structured_query is not None
     ):
-        catalog_category = structured_query.product_type
+        catalog_category = structured_query.product_type or (
+            resolve_catalog_request_category(
+                structured_query.product_reference,
+                get_product_repository(),
+            )
+            if structured_query.product_reference
+            else None
+        )
     # Semantic categories are safer than ambiguous one-word taxonomy matches
     # (for example "dầu gội" and the unrelated food category "đậu").
-    category = explicit_category or catalog_category or stored.get("category")
+    category = (
+        stored.get("category")
+        if preference_only_refinement and stored.get("category")
+        else explicit_category or catalog_category or stored.get("category")
+    )
     category_changed = bool(category and category != stored.get("category"))
     current_price_constraint = _price_constraint_from_text(text)
     current_brand = _recommendation_brand_from_text(text)
@@ -10425,8 +10502,15 @@ def _recommendation_tool_arguments(
         extracted_product_query = _explicit_recommendation_query(
             text
         ) or _consultation_product_query(text)
-    product_query = extracted_product_query or (
-        None if category_changed or is_alternative_product_request(text) else stored.get("query")
+    product_query = (
+        stored.get("query")
+        if preference_only_refinement
+        else extracted_product_query
+        or (
+            None
+            if category_changed or is_alternative_product_request(text)
+            else stored.get("query")
+        )
     )
     if active_preparation_followup and not extracted_product_query:
         # A short reply such as “ăn lẩu” refines the cooking goal; it is not a

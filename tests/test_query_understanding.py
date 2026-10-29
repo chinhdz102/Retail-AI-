@@ -36,6 +36,64 @@ def test_query_understanding_separates_product_type_from_use_case() -> None:
     assert "lẩu" not in result.product_reference.casefold()
 
 
+@pytest.mark.parametrize(
+    ("query", "expected_type", "expected_need"),
+    [
+        ("Da mặt khô căng, tìm kem dưỡng.", "kem dưỡng", "Da mặt khô căng"),
+        ("Tìm kem chống nắng cho da dầu.", "kem chống nắng", "da dầu"),
+        ("Tìm dầu gội cho tóc khô xơ.", "dầu gội", "tóc khô xơ"),
+        ("Tìm nước giặt cho da nhạy cảm.", "nước giặt", "da nhạy cảm"),
+    ],
+)
+def test_unverified_customer_needs_stay_separate_across_catalog_groups(
+    query: str,
+    expected_type: str,
+    expected_need: str,
+) -> None:
+    repository = _snapshot()
+    result = understand_catalog_query(query, repository.list_category_hierarchies())
+
+    assert normalize_vietnamese(result.product_reference).find(
+        normalize_vietnamese(expected_type)
+    ) >= 0
+    assert result.use_case == expected_need
+    assert expected_need.casefold() not in result.product_reference.casefold()
+    observation = execute_catalog_tool(
+        "recommend_products",
+        json.dumps(
+            {"query": expected_type, "preference_text": query, "limit": 3},
+            ensure_ascii=False,
+        ),
+        repository=repository,
+        current_user_text=query,
+    )
+    answer = _localized_recommendation_candidates(observation, "vi")
+
+    assert observation.status == "SUCCESS"
+    assert observation.content["use_case_verified"] is False
+    assert expected_need.casefold() == observation.content["use_case"].casefold()
+    assert "Catalog chưa có đủ thông tin xác minh" in answer
+    assert "Mình gợi ý" not in answer
+
+
+def test_condition_only_query_is_not_mistaken_for_a_catalog_product_type() -> None:
+    repository = _snapshot()
+    result = understand_catalog_query("Da khô.", repository.list_category_hierarchies())
+
+    assert result.product_type is None
+    assert result.product_reference == ""
+    assert result.use_case == "Da khô"
+    assert result.clarification_needed
+
+
+def test_banh_da_product_name_is_not_misread_as_a_skin_condition() -> None:
+    repository = _snapshot()
+    result = understand_catalog_query("Bánh đa khô.", repository.list_category_hierarchies())
+
+    assert result.use_case is None
+    assert normalize_vietnamese(result.product_reference) == "banh da kho"
+
+
 @pytest.mark.parametrize("query", ["Tìm nước ngọt", "Tìm Coca Zero", "xyz qzx"])
 def test_heuristic_parser_does_not_publish_uncalibrated_confidence(query: str) -> None:
     result = understand_catalog_query(query)

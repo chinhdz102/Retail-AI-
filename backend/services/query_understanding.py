@@ -119,6 +119,13 @@ _DIRECT_USE_CASE = re.compile(
     r"(?:mon\s+)?(?:lau|nuong|chien|xao|hap|ham|luoc|ran|tiec|da kho|"
     r"toc dau|da nhay cam)\b"
 )
+_PERSONAL_CARE_NEED = re.compile(
+    r"\b(?:da(?:\s+(?:mat|dau))?|toc|scalp|skin|hair)\s+"
+    r"(?:(?:cua\s+)?(?:minh|toi|em|anh|chi|ban)\s+)?"
+    r"(?:(?:rat|hoi|nhanh|dang|bi|de|cuc|qua|hon)\s+){0,2}"
+    r"(?:kho|dau|nhay cam|mun|hon hop|bet|gau|rung|gay rung|lao hoa)"
+    r"(?:\s+(?:cang|xo|xu|nhieu|nhanh))?\b"
+)
 _NEGATION = re.compile(
     r"\b(?:khong|ko|khum|tranh|loai bo|loai tru|bo qua|avoid|without|except|no|"
     r"dung(?=\s+(?:lay|mua|chon|dung|su\s+dung|use|buy|choose)\b))\s+"
@@ -126,7 +133,7 @@ _NEGATION = re.compile(
     r"(?!biet\b|ro\b|nho\b|can\s+gi\b)([^,.;!?]{1,80})"
 )
 _NEGATION_TAIL_STOP = re.compile(
-    r"\b(?:truoc\s+tien|sau\s+do|va|nhung|con|hay|hoac|neu|if|doi\s+(?:thanh|sang)|but|and|or|please|nhe|nha|duoi|tren|"
+    r"\b(?:uu\s+tien|prefer|truoc\s+tien|sau\s+do|va|nhung|con|hay|hoac|neu|if|doi\s+(?:thanh|sang)|but|and|or|please|nhe|nha|duoi|tren|"
     r"toi\s+da|khong\s+qua|ngan\s+sach|qua|under|up\s+to|less\s+than|budget|"
     r"cho\s+(?:minh|toi|em|anh|chi|ban)\s+(?:xem|hoi|biet)|"
     r"cho\s+xem|xem\s+giup|tim|minh|toi|em|anh|chi|ban|biet|noi|hoi)\b"
@@ -875,6 +882,18 @@ def _negative_constraints(normalized: str, raw: str | None = None) -> tuple[str,
         if re.match(r"khong\s+phai\b", match.group()):
             continue
         phrase = match.group(1).strip()
+        if raw:
+            raw_start, raw_end = _raw_span_for_normalized_span(
+                raw,
+                normalized,
+                match.start(1),
+                match.end(1),
+            )
+            raw_clause = raw[raw_start:raw_end]
+            clause_boundary = re.search(r"[,;!?\n]", raw_clause)
+            if clause_boundary:
+                raw_clause = raw_clause[: clause_boundary.start()]
+            phrase = " ".join(normalize_vietnamese(raw_clause).split()).strip(" ,.!?;:")
         # ``không cần gợi ý`` and similar meta instructions control the
         # assistant's response style; they do not describe a product filter.
         if re.match(
@@ -1034,11 +1053,7 @@ def _implicit_need_before_catalog_type(
         need_text = raw_prefix[: raw_connector.start()].strip(" ,.!?;:")
         normalized_need = " ".join(normalize_vietnamese(need_text).split())
         need_words = normalized_need.split()
-        if any(
-            tuple(need_words[index : index + width]) in category_phrases
-            for width in range(2, len(need_words) + 1)
-            for index in range(len(need_words) - width + 1)
-        ):
+        if catalog_leaf_query_phrase(need_text, category_hierarchies):
             # A previous product/category mention is not a customer need.
             # This prevents a trailing phrase such as "dùng hằng ngày" from
             # reclassifying the already stated product as the use case.
@@ -1059,6 +1074,68 @@ def _implicit_need_before_catalog_type(
         return None
     _, reference, need = max(spans, key=lambda item: (item[0], -len(item[1])))
     return reference, need
+
+
+def _personal_care_need_before_or_after_product(
+    raw: str,
+    normalized: str,
+    category_hierarchies: tuple[tuple[str, ...], ...],
+) -> tuple[str, str] | None:
+    """Separate a stated skin/hair condition from catalog product wording.
+
+    The condition remains unverified context. A category or product type must
+    come from the catalog; a condition-only query stays a clarification rather
+    than being mistaken for a homographic item such as ``bánh đa khô``.
+    """
+    matches = list(_PERSONAL_CARE_NEED.finditer(normalized))
+    if not matches:
+        return None
+    for match in reversed(matches):
+        raw_start, raw_end = _raw_span_for_normalized_span(
+            raw,
+            normalized,
+            match.start(),
+            match.end(),
+        )
+        need = raw[raw_start:raw_end].strip(" ,.!?;:")
+        leading_word = re.match(r"[^\W_]+", need, flags=re.UNICODE)
+        if leading_word is None or leading_word.group().casefold() not in {
+            "da",
+            "tóc",
+            "toc",
+            "skin",
+            "hair",
+            "scalp",
+        }:
+            # Accent folding turns ``đa khô`` into ``da kho``. Keep the
+            # Vietnamese product term ``bánh đa khô`` out of skin semantics.
+            continue
+        cleaned = f"{raw[:raw_start]} {raw[raw_end:]}"
+        cleaned = re.sub(
+            r"\b(?:cho|với|voi|dành\s+cho|danh\s+cho|phù\s+hợp\s+với|phu\s+hop\s+voi)\s*$",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        ).strip(" ,.!?;:")
+        query = catalog_leaf_query_phrase(cleaned, category_hierarchies)
+        has_catalog_type = bool(
+            query
+            or resolve_catalog_category(cleaned, category_hierarchies)
+            or resolve_catalog_category_alias(cleaned, category_hierarchies)
+        )
+        if has_catalog_type:
+            return cleaned, need
+        prefix = " ".join(normalize_vietnamese(raw[:raw_start]).split())
+        suffix = " ".join(normalize_vietnamese(raw[raw_end:]).split())
+        prefix_tokens = set(prefix.split())
+        suffix_tokens = set(suffix.split())
+        if (
+            not prefix_tokens.intersection({"banh"})
+            and prefix_tokens <= _IMPLICIT_NEED_FILLER
+            and suffix_tokens <= _IMPLICIT_QUERY_TAIL_FILLER
+        ):
+            return cleaned, need
+    return None
 
 
 def understand_catalog_query(
@@ -1145,6 +1222,15 @@ def understand_catalog_query(
         )
         if implicit_need is not None:
             product_reference, use_case = implicit_need
+            normalized_reference = " ".join(normalize_vietnamese(product_reference).split())
+    if use_case is None and not purpose_is_catalog_type:
+        personal_care_need = _personal_care_need_before_or_after_product(
+            product_reference,
+            normalized_reference,
+            category_hierarchies,
+        )
+        if personal_care_need is not None:
+            product_reference, use_case = personal_care_need
             normalized_reference = " ".join(normalize_vietnamese(product_reference).split())
     if use_case:
         use_case = _trim_use_case_request_closing(use_case)

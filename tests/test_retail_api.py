@@ -1760,6 +1760,51 @@ def test_recommendation_constraints_reuse_category_when_user_corrects_budget() -
     }
 
 
+@pytest.mark.parametrize(
+    ("category", "query"),
+    [
+        ("skincare", "kem duong da mat"),
+        ("haircare", "dau goi"),
+        ("snack", "bim bim"),
+        ("drink", "nuoc ngot"),
+        ("laundry", "nuoc giat"),
+    ],
+)
+def test_preference_only_refinement_preserves_any_active_catalog_scope(
+    category: str,
+    query: str,
+) -> None:
+    arguments = _recommendation_tool_arguments(
+        "Ưu tiên giá thấp hơn.",
+        stored_constraints={"category": category, "query": query},
+        active_context=True,
+    )
+
+    assert arguments == {"category": category, "query": query}
+
+
+def test_condition_only_followup_keeps_the_existing_product_type() -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    text = "Da khô."
+    structured_query = api_main.understand_catalog_query(
+        text,
+        repository.list_category_hierarchies(),
+    )
+
+    arguments = _recommendation_tool_arguments(
+        text,
+        stored_constraints={"category": "skincare", "query": "kem duong da mat"},
+        active_context=True,
+        structured_query=structured_query,
+    )
+
+    assert structured_query.product_type is None
+    assert structured_query.use_case == "Da khô"
+    assert arguments == {"category": "skincare", "query": "kem duong da mat"}
+
+
 @pytest.mark.asyncio
 async def test_recommendation_session_keeps_category_and_merges_later_hard_constraints(
     client: httpx.AsyncClient,
@@ -4330,6 +4375,28 @@ async def test_open_ended_consultation_asks_one_question_without_calling_the_llm
 
 
 @pytest.mark.asyncio
+async def test_condition_without_product_group_asks_for_a_group_before_searching(
+    client: httpx.AsyncClient,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "need-category-clarification"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={"session_id": created.json()["session_id"], "text": "Da khô."},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "nhóm sản phẩm nào" in payload["text"]
+    assert payload["tools_used"] == []
+    assert payload["grounded_product_ids"] == []
+    assert payload["model"] == "local-clarification"
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
 async def test_product_named_consultation_uses_catalog_filter_without_llm(
     client: httpx.AsyncClient,
 ) -> None:
@@ -4350,6 +4417,53 @@ async def test_product_named_consultation_uses_catalog_filter_without_llm(
     assert "13.000đ" in response.json()["text"]
     assert response.json()["grounded_product_ids"] == ["COKE_ZERO_330"]
     assert response.json()["tools_used"] == ["recommend_products"]
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_multi_turn_product_refinement_keeps_group_and_discloses_unverified_fit(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "winmart_products.json"
+    )
+    monkeypatch.setattr(api_main, "get_product_repository", lambda *_args, **_kwargs: repository)
+    monkeypatch.setattr(
+        retail_tools,
+        "get_product_repository",
+        lambda *_args, **_kwargs: repository,
+    )
+    created = await client.post("/sessions", json={"kiosk_id": "care-refinement-regression"})
+    session_id = created.json()["session_id"]
+
+    first = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Gợi ý kem dưỡng da mặt giúp mình."},
+    )
+    second = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Da mặt mình khô căng."},
+    )
+    third = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Đừng lấy Pond's, ưu tiên da khô."},
+    )
+
+    assert first.status_code == second.status_code == third.status_code == 200
+    second_payload = second.json()
+    third_payload = third.json()
+    assert second_payload["tools_used"] == ["recommend_products"]
+    assert "chưa có đủ thông tin xác minh" in second_payload["text"].casefold()
+    assert "phù hợp với nhu cầu này" in second_payload["text"].casefold()
+    assert third_payload["tools_used"] == ["recommend_products"]
+    assert "Pond's" not in third_payload["text"]
+    assert any(
+        "kem dưỡng" in product["name"].casefold()
+        for product in third_payload["products"]
+    )
     assert service.calls == 0
 
 

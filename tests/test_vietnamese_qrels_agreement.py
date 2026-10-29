@@ -193,6 +193,65 @@ def test_mismatched_review_packets_fail_closed(tmp_path: Path) -> None:
         score_product_qrels_review(reviewer_a, reviewer_b, tmp_path / "must-not-exist.json")
 
 
+@pytest.mark.parametrize(
+    ("metadata_field", "other_value"),
+    [
+        ("dataset_id", "different-dataset"),
+        ("dataset_sha256", "c" * 64),
+        ("catalog_sha256", "d" * 64),
+        ("split", "blind_test"),
+    ],
+)
+def test_reviewer_queue_must_not_mix_datasets_or_splits(
+    tmp_path: Path,
+    metadata_field: str,
+    other_value: str,
+) -> None:
+    row_a_first = _row(status="INDEPENDENT_A", reviewer_id="reviewer-a")
+    row_a_second = _row(
+        status="INDEPENDENT_A", reviewer_id="reviewer-a", candidate_key="candidate-2"
+    )
+    row_a_second[metadata_field] = other_value
+    row_b_first = _row(status="INDEPENDENT_B", reviewer_id="reviewer-b")
+    row_b_second = _row(
+        status="INDEPENDENT_B", reviewer_id="reviewer-b", candidate_key="candidate-2"
+    )
+    row_b_second[metadata_field] = other_value
+
+    with pytest.raises(ReviewScoringError, match="mixes frozen dataset/catalog metadata"):
+        score_product_qrels_review(
+            _write_queue(tmp_path / "a.csv", [row_a_first, row_a_second]),
+            _write_queue(tmp_path / "b.csv", [row_b_first, row_b_second]),
+            tmp_path / "must-not-exist.json",
+        )
+
+
+def test_adjudication_queue_must_not_mix_frozen_metadata(tmp_path: Path) -> None:
+    row_a_first = _row(status="INDEPENDENT_A", reviewer_id="reviewer-a")
+    row_a_second = _row(
+        status="INDEPENDENT_A", reviewer_id="reviewer-a", candidate_key="candidate-2"
+    )
+    row_b_first = _row(status="INDEPENDENT_B", reviewer_id="reviewer-b")
+    row_b_second = _row(
+        status="INDEPENDENT_B", reviewer_id="reviewer-b", candidate_key="candidate-2"
+    )
+    adjudication_first = _row(status="ADJUDICATED", reviewer_id="reviewer-c")
+    adjudication_second = _row(
+        status="ADJUDICATED", reviewer_id="reviewer-c", candidate_key="candidate-2"
+    )
+    adjudication_second["split"] = "blind_test"
+
+    with pytest.raises(ReviewScoringError, match="mixes frozen dataset/catalog metadata"):
+        score_product_qrels_review(
+            _write_queue(tmp_path / "a.csv", [row_a_first, row_a_second]),
+            _write_queue(tmp_path / "b.csv", [row_b_first, row_b_second]),
+            tmp_path / "must-not-exist.json",
+            _write_queue(
+                tmp_path / "adjudication.csv", [adjudication_first, adjudication_second]
+            ),
+        )
+
+
 def test_adjudicator_cannot_self_adjudicate_or_resolve_unannotated_items(tmp_path: Path) -> None:
     reviewer_a = _write_queue(
         tmp_path / "a.csv", [_row(status="INDEPENDENT_A", reviewer_id="reviewer-a")]

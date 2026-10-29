@@ -48,6 +48,12 @@ SHARED_METADATA_FIELDS = (
     "catalog_sha256",
     "split",
 )
+QUEUE_METADATA_FIELDS = (
+    "dataset_id",
+    "dataset_sha256",
+    "catalog_sha256",
+    "split",
+)
 REQUIRED_FIELDS = (
     *IDENTITY_FIELDS,
     *SHARED_METADATA_FIELDS,
@@ -114,6 +120,7 @@ def _read_queue(path: Path, role: str) -> dict[tuple[str, str], dict[str, Any]]:
 
         rows: dict[tuple[str, str], dict[str, Any]] = {}
         reviewer_ids: set[str] = set()
+        queue_metadata: tuple[str, ...] | None = None
         for row_number, raw in enumerate(reader, start=2):
             key = tuple((raw.get(field) or "").strip() for field in IDENTITY_FIELDS)
             if not all(key):
@@ -187,6 +194,24 @@ def _read_queue(path: Path, role: str) -> dict[tuple[str, str], dict[str, Any]]:
             if not metadata["query_text"] or not metadata["dataset_id"]:
                 raise ReviewScoringError(
                     f"{role} queue row {row_number}: query_text and dataset_id are required"
+                )
+            current_queue_metadata = tuple(metadata[field] for field in QUEUE_METADATA_FIELDS)
+            if queue_metadata is None:
+                queue_metadata = current_queue_metadata
+            elif current_queue_metadata != queue_metadata:
+                differing_fields = [
+                    field
+                    for field, expected, actual in zip(
+                        QUEUE_METADATA_FIELDS,
+                        queue_metadata,
+                        current_queue_metadata,
+                        strict=True,
+                    )
+                    if expected != actual
+                ]
+                raise ReviewScoringError(
+                    f"{role} queue mixes frozen dataset/catalog metadata at row {row_number}: "
+                    f"{', '.join(differing_fields)} must match every other row"
                 )
             for field in ("dataset_sha256", "catalog_sha256"):
                 if not re.fullmatch(r"[a-fA-F0-9]{64}", metadata[field]):
