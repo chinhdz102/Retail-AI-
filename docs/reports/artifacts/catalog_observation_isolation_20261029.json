@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-29",
+  "branch": "codex/retail-text-quality-v4-20261019",
+  "code_commit": "0164c8870abcdcc6113e0e7cb821d9b0a3c5b72e",
+  "scope": "Prevent catalog-derived free text from being replayed into another model decision during the same turn; keep dynamic shopping taxonomy and prior catalog proposals out of the planner system prompt.",
+  "implementation": {
+    "agent_tool_rounds": 1,
+    "catalog_observations_returned_to_controller": true,
+    "catalog_observations_replayed_as_tool_messages": false,
+    "mission_taxonomy_embedded_in_system_prompt": false,
+    "prior_mission_context_role": "user",
+    "prior_proposed_items_filtered": true
+  },
+  "regression_assertions": [
+    "A malicious instruction placed in a catalog product name does not trigger a second model-selected add_to_cart call.",
+    "The model provider is called once by the catalog agent flow and receives no role=tool catalog observation.",
+    "Catalog taxonomy labels, including an injected instruction-like label, are not included in planner provider messages.",
+    "Prior proposed product names and proposed_items are omitted from later mission-planner context.",
+    "The advisory shopping plan does not mutate the cart."
+  ],
+  "verification": {
+    "targeted": [
+      {
+        "command": "uv run pytest tests/test_retail_agent.py -q --tb=short",
+        "result": "40 passed"
+      },
+      {
+        "command": "uv run pytest tests/test_retail_api.py -q --tb=short",
+        "result": "385 passed"
+      },
+      {
+        "scope": "Focused product-knowledge, catalog-history isolation, streaming follow-up, mission prompt and mission API regressions",
+        "result": "5 passed across two focused runs"
+      }
+    ],
+    "full_suite": {
+      "command": "uv run pytest tests -q --tb=short",
+      "result": "1485 passed in 216.01 seconds",
+      "exit_code": 0
+    },
+    "static_checks": [
+      {
+        "command": "uv run ruff check backend tests evaluation",
+        "result": "All checks passed"
+      },
+      {
+        "command": "uv run python -m compileall -q backend evaluation tests",
+        "result": "Passed"
+      },
+      {
+        "command": "git diff --check",
+        "result": "Passed; Git emitted only an LF-to-CRLF working-copy warning for the Markdown report"
+      }
+    ]
+  },
+  "limitations": [
+    "Tests use scripted/local providers; no live Groq adversarial request was run.",
+    "No browser, voice, production catalog, load, or independent human security evaluation was run.",
+    "These regressions cover the exercised data-flow path and do not certify the system against all prompt-injection attacks.",
+    "The existing protected blind-set, independent relevance review, answer-quality review, production provider/browser checks, and load-test gates remain unmet."
+  ],
+  "release_decision": "DEMO_ONLY_NOT_PRODUCTION_READY",
+  "new_branch_created": false
+}
