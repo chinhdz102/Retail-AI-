@@ -1146,7 +1146,8 @@ def test_single_unverified_catalog_match_is_described_as_one_option() -> None:
 
     assert "một lựa chọn" in answer
     assert "Dầu gội chống gàu 100ml" in answer
-    assert "chưa có dữ liệu đã xác minh" in answer
+    assert "các biến thể hoặc chi tiết còn lại" in answer
+    assert "chưa thể kết luận hay so sánh đầy đủ" in answer
     assert "hiệu quả" not in answer
     assert "một số món cùng nhóm" not in answer
 

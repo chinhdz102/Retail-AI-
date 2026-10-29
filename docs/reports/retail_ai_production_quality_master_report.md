@@ -537,8 +537,18 @@ A separate read-only scan of all **3,081** snapshot products found **1,379** tit
 Two deterministic API probes expose limits that need to remain visible:
 
 - “Cá nước ngọt tươi và cá biển đang bán gồm những loại nào?” returned `Nhộng tằm` under `Cá nước ngọt tươi`. The API followed the stored source hierarchy; the title and hierarchy contradict each other. This is a catalog-data quality issue. No SKU-specific runtime exception was added because the catalog-wide lexical scan has too many false positives to justify an automatic exclusion policy.
-- “Trứng gà ta với trứng gà công nghiệp có loại nào?” found one `Trứng gà ta` product. The current answer says the catalog cannot verify that it meets all criteria, but it does not explicitly say that the `trứng gà công nghiệp` subtype was not found. The product is not labeled “công nghiệp” in the snapshot, so the system must not infer that subtype or claim a comparison.
+- “Trứng gà ta với trứng gà công nghiệp có loại nào?” found one `Trứng gà ta` product. The answer at the time of this probe only said the catalog could not verify that the item met all criteria; it did not explain that the requested variants/details were not confirmed. The product is not labeled “công nghiệp” in the snapshot, so the system must not infer that subtype or claim a comparison.
 
 These API probes used the local snapshot and a provider stub; no Groq call was made. They reproduce deterministic routing and expose a source-data defect and a response-specificity gap. They do not establish general product relevance. The source taxonomy needs reviewed corrections or a separately validated, general category-consistency model before this browse path can be considered reliable. No category gold labels or SKU rules were added. Release remains **demo-only / not production-ready**.
 
 All work remains on `codex/retail-text-quality-v4-20261019`; no new branch or worktree was created.
+
+## 36. Clearer response when only one requested variant is found — 29/10/2026
+
+Changed the shared one-result response for `family_details_unverified` in Vietnamese, English, and Chinese. It now states that only one catalog option was found and that the remaining variants or details are not verified, so the assistant cannot complete a comparison. It does not assign an unverified subtype to the returned product. This is a shared response path, not a special case for eggs.
+
+Added both a localization regression and a real-snapshot API regression using the question “Trứng gà ta với trứng gà công nghiệp có loại nào?”. The API still returns only the catalog-listed “Trứng gà ta” product and now clearly says it cannot verify or fully compare the remaining variants/details. No SKU ID, product-specific rule, or catalog change was added.
+
+Verification on the working tree based on `086c6c47c6832e0b5214953e7ca3072221388eee`: focused tests **2 passed**; full `uv run pytest tests -q --tb=short` **1,405 passed in 196.76 s**; `uv run ruff check backend tests evaluation`, `uv run python -m compileall -q backend evaluation tests`, and `git diff --check` passed. Artifact: [`quality_gate_followup_response_specificity_20261029.json`](artifacts/quality_gate_followup_response_specificity_20261029.json).
+
+The earlier “Nhộng tằm” category issue remains: the snapshot assigns it to fresh-water fish, and no general classifier has been validated to correct that source data safely. Human-rated blind evaluation, real-store data checks, provider reliability, final-head browser E2E, and production load testing also remain open. Release stays **demo-only / not production-ready**. This update is on the existing `codex/retail-text-quality-v4-20261019` branch; no branch or worktree was created.

@@ -251,6 +251,36 @@ async def test_natural_shelf_lookup_keeps_vietnamese_product_terms(snapshot, mon
 
 
 @pytest.mark.asyncio
+async def test_missing_product_variant_is_explained_without_claiming_a_comparison(
+    snapshot, monkeypatch
+):
+    monkeypatch.setattr(api, "get_product_repository", lambda *args: snapshot)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda *args: snapshot)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=60
+    ) as client:
+        session = (await client.post("/sessions", json={"kiosk_id": "egg-variant-gap"})).json()[
+            "session_id"
+        ]
+        response = await client.post(
+            "/agent/respond",
+            json={
+                "session_id": session,
+                "text": "Trứng gà ta với trứng gà công nghiệp có loại nào?",
+            },
+        )
+
+    payload = response.json()
+    assert response.status_code == 200, response.text
+    assert payload["tools_used"] == ["recommend_products"]
+    assert len(payload["products"]) == 1
+    assert "Trứng gà ta" in payload["products"][0]["name"]
+    assert "Trứng gà công nghiệp" not in payload["products"][0]["name"]
+    assert "các biến thể hoặc chi tiết còn lại" in payload["text"]
+    assert "chưa thể kết luận hay so sánh đầy đủ" in payload["text"]
+
+
+@pytest.mark.asyncio
 async def test_natural_category_comparison_routes_to_grounded_product_clarification(
     snapshot, monkeypatch
 ):
