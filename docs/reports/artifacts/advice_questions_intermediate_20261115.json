@@ -1,0 +1,991 @@
+{
+  "started_utc": "2026-11-15T04:54:47.971768+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 5.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "q01",
+      "turns": [
+        {
+          "question": "Anh ơi, nhà em đang thiếu mấy đồ dùng cơ bản, anh tư vấn giúp em với.",
+          "http_status": 200,
+          "response": {
+            "session_id": "a693e578-4e6f-43e0-b7b1-94470a10cfce",
+            "text": "Bạn đang cần bổ sung đồ dùng cho phòng nào hoặc mục đích gì (nấu ăn, vệ sinh, phòng ngủ...)?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.026
+        }
+      ]
+    },
+    {
+      "id": "q02",
+      "turns": [
+        {
+          "question": "Em muốn mua cái gì đó ăn sáng cho nhanh mà vẫn no, có loại nào ổn không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "eeafda2a-083c-4de8-b124-d8bb8d78ceb0",
+            "text": "Bạn chọn bánh mì sandwich hoặc bánh bao nhân thịt để ăn nhanh, no lâu. Nếu muốn thêm chất đạm, bạn có thể mua thêm trứng gà để luộc hoặc ốp la ăn kèm.\nBánh mì sandwich Staff gói 275g (21.000đ): Bánh mì sandwich gói 275g đủ no cho bữa sáng, tiện mang đi và ăn nhanh.\nBánh bao nhân thịt heo trứng cút Thọ Phát gói 250g (30.700đ): Bánh bao nhân thịt heo và trứng cút cung cấp đạm, giúp no lâu hơn so với bánh ngọt.\nTrứng gà Ba Huân hộp 10 quả (34.000đ): Trứng gà tươi luộc nhanh, bổ sung protein để bữa sáng cân bằng và no lâu.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "TLM_10140398",
+              "TLM_10005885",
+              "TLM_10006030"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10140398",
+                "name": "Bánh mì sandwich Staff gói 275g",
+                "category": "Bánh mì",
+                "brand": "HỮU NGHỊ",
+                "price_vnd": 21000,
+                "stock": 77,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:30.497500Z"
+              },
+              {
+                "product_id": "TLM_10005885",
+                "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+                "category": "Bánh bao",
+                "brand": "THỌ PHÁT",
+                "price_vnd": 30700,
+                "stock": 18,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:30.238996Z"
+              },
+              {
+                "product_id": "TLM_10006030",
+                "name": "Trứng gà Ba Huân hộp 10 quả",
+                "category": "Trứng",
+                "brand": "BA HUÂN",
+                "price_vnd": 34000,
+                "stock": 12,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:57.591517Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.099
+        }
+      ]
+    },
+    {
+      "id": "q03",
+      "turns": [
+        {
+          "question": "Dạo này trời nóng quá, có loại nước nào uống ngon mà không quá ngọt không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "8eecbda3-658f-4c93-87c4-7bc92d67c033",
+            "text": "Bạn có thể chọn nước khoáng thiên nhiên để giải khát mà không lo lượng đường, hoặc nước ép trái cây nếu thích hương vị trái cây. Vì mình chưa thấy thông tin về độ ngọt trên nhãn, bạn có thể kiểm tra bảng thành phần để chắc chắn lượng đường phù hợp với khẩu vị.\nNước khoáng thiên nhiên LaVie 1.5 lít (11.100đ): Nước khoáng thiên nhiên giúp giải khát trong thời tiết nóng.\nThùng 24 chia nước ép cam Twister Tropicana 455ml (205.000đ): Nước ép cam có hương vị trái cây tự nhiên.\nBạn thích vị chua thanh của nước khoáng hay vị trái cây của nước ép hơn?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "TLM_10011222",
+              "TLM_10011224"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10011222",
+                "name": "Nước khoáng thiên nhiên LaVie 1.5 lít",
+                "category": "Nước Suối",
+                "brand": "LA VIE",
+                "price_vnd": 11100,
+                "stock": 199,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:41.144611Z"
+              },
+              {
+                "product_id": "TLM_10011224",
+                "name": "Thùng 24 chia nước ép cam Twister Tropicana 455ml",
+                "category": "Nước Ngọt",
+                "brand": "TWISTER",
+                "price_vnd": 205000,
+                "stock": 4,
+                "uom": "Thùng",
+                "data_timestamp": "2026-09-15T13:53:40.204274Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.758
+        }
+      ]
+    },
+    {
+      "id": "q04",
+      "turns": [
+        {
+          "question": "Nhà em có trẻ con, muốn mua ít đồ ăn vặt mà đỡ ngọt thì chọn gì nhỉ?",
+          "http_status": 200,
+          "response": {
+            "session_id": "8bd4967a-677c-44ab-8e1d-b14cadfa6fd0",
+            "text": "Bạn ơi, bé nhà mình bao nhiêu tuổi để mình chọn loại snack an toàn, không gây hóc nghẹn nhé?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.998
+        }
+      ]
+    },
+    {
+      "id": "q05",
+      "turns": [
+        {
+          "question": "Em định mua quà cho mẹ mà chưa biết chọn cái gì, tầm 300 nghìn thôi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "c2969fca-6211-4718-b725-e6660c55cd5f",
+            "text": "Với ngân sách 300 nghìn, bạn có thể chọn một hộp bánh quy bơ cao cấp hoặc một chai sữa tắm dưỡng da để làm quà tặng mẹ. Bánh quy phù hợp nếu mẹ thích ăn vặt, còn sữa tắm là lựa chọn thiết thực nếu mẹ cần chăm sóc da hàng ngày.\nBánh quy bơ Pep Farm Chessmen 206g (144.100đ): Hộp bánh quy bơ cao cấp, phù hợp làm quà tặng mẹ thích ăn vặt.\nSữa tắm Dove chăm sóc da nhạy cảm 500g (154.000đ): Sữa tắm dành cho da nhạy cảm, phù hợp làm quà tặng mẹ cần chăm sóc da.\n\nTổng: 298.100đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "TLM_10013412",
+              "TLM_10170932"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10013412",
+                "name": "Bánh quy bơ Pep Farm Chessmen 206g",
+                "category": "Bánh Xốp - Bánh Quy",
+                "brand": "PEPPERIDGE FARM",
+                "price_vnd": 144100,
+                "stock": 34,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:30.447919Z"
+              },
+              {
+                "product_id": "TLM_10170932",
+                "name": "Sữa tắm Dove chăm sóc da nhạy cảm 500g",
+                "category": "Chăm Sóc Da",
+                "brand": "DOVE",
+                "price_vnd": 154000,
+                "stock": 32,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.406684Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.032
+        }
+      ]
+    },
+    {
+      "id": "q06",
+      "turns": [
+        {
+          "question": "Có gì ăn tiện mà không cần nấu nướng nhiều không anh?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.24
+        }
+      ]
+    },
+    {
+      "id": "q07",
+      "turns": [
+        {
+          "question": "Em muốn mua đồ để dọn nhà cuối tuần, cần những gì nhỉ?",
+          "http_status": 200,
+          "response": {
+            "session_id": "98dd784b-ca97-46ab-a900-a6f58c0b1f85",
+            "text": "Bạn nên ưu tiên nước lau sàn, nước rửa chén và găng tay cao su để bảo vệ tay khi dùng hóa chất. Khi lau sàn, hãy để sàn khô hoàn toàn trước khi cho trẻ nhỏ hoặc thú cưng quay lại khu vực đó.\nNước lau sàn Sunlight hương hoa diên vỹ túi 3,6kg (83.000đ): Dung tích lớn phù hợp để lau dọn toàn bộ nhà cửa trong một buổi cuối tuần.\nNước rửa chén bát Sunlight trà xanh khử mùi tanh túi 3.4Kg (115.100đ): Khả năng khử mùi tanh giúp chén bát sạch sẽ và không còn mùi khó chịu sau khi rửa.\nGăng tay cao su tự nhiên Lock&Lock 37cm - ETM802P (29.000đ): Găng tay cao su tự nhiên bảo vệ da tay khỏi tiếp xúc trực tiếp với hóa chất tẩy rửa.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "TLM_10161896",
+              "TLM_10171190",
+              "TLM_10026853"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10161896",
+                "name": "Nước lau sàn Sunlight hương hoa diên vỹ túi 3,6kg",
+                "category": "Nước Lau Sàn - Lau Kính",
+                "brand": "SUNLIGHT",
+                "price_vnd": 83000,
+                "stock": 15,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:44.063510Z"
+              },
+              {
+                "product_id": "TLM_10171190",
+                "name": "Nước rửa chén bát Sunlight trà xanh khử mùi tanh túi 3.4Kg",
+                "category": "Nước Rửa Chén",
+                "brand": "SUNLIGHT",
+                "price_vnd": 115100,
+                "stock": 66,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:44.337037Z"
+              },
+              {
+                "product_id": "TLM_10026853",
+                "name": "Găng tay cao su tự nhiên Lock&Lock 37cm - ETM802P",
+                "category": "Vệ Sinh Nhà Cửa",
+                "brand": "LOCK&LOCK",
+                "price_vnd": 29000,
+                "stock": 52,
+                "uom": "Đôi",
+                "data_timestamp": "2026-09-15T13:53:38.354706Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.32
+        }
+      ]
+    },
+    {
+      "id": "q08",
+      "turns": [
+        {
+          "question": "Em có khoảng 200 nghìn, mua đồ ăn đủ cho hai người một bữa tối được không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 6.326
+        }
+      ]
+    },
+    {
+      "id": "q09",
+      "turns": [
+        {
+          "question": "Có loại dầu gội nào tầm dưới 150 nghìn mà dùng ổn không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "4e3a4197-68a0-4f4a-be94-210823dc08ed",
+            "text": "Bạn nên chọn chai có dung tích vừa phải để dùng thử trước, tránh lãng phí nếu không hợp. Nếu tóc bạn hay gàu hoặc rụng nhiều, mình có thể lọc thêm loại chuyên dụng.\nDầu gội cao cấp Romano classic chai 380g (127.600đ): Giá dưới 150 nghìn, dung tích 380g phù hợp dùng thử.\nDầu gội dược liệu Thái Dương 3 hương hoa chai 480ml (114.900đ): Giá dưới 150 nghìn, dung tích 480ml dùng được lâu hơn.\nDầu gội Clear Men mát lạnh bạc hà 180g/170g (80.000đ): Giá thấp nhất trong danh sách, phù hợp ngân sách.\nTóc bạn có vấn đề cụ thể nào như gàu hay rụng không để mình chọn đúng loại?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "TLM_10016873",
+              "TLM_10170560",
+              "TLM_10601171"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10016873",
+                "name": "Dầu gội cao cấp Romano classic chai 380g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "ROMANO",
+                "price_vnd": 127600,
+                "stock": 40,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:33.773402Z"
+              },
+              {
+                "product_id": "TLM_10170560",
+                "name": "Dầu gội dược liệu Thái Dương 3 hương hoa chai 480ml",
+                "category": "Chăm Sóc Tóc",
+                "brand": "THÁI DƯƠNG",
+                "price_vnd": 114900,
+                "stock": 14,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.396001Z"
+              },
+              {
+                "product_id": "TLM_10601171",
+                "name": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "CLEAR",
+                "price_vnd": 80000,
+                "stock": 8,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.397509Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.467
+        }
+      ]
+    },
+    {
+      "id": "q10",
+      "turns": [
+        {
+          "question": "Em muốn mua ít đồ ăn cho cả tuần, khoảng 500 nghìn thì nên mua gì?",
+          "http_status": 200,
+          "response": {
+            "session_id": "dc868bc6-ab20-4f6b-9283-b41be3784014",
+            "text": "Bạn ăn mấy người để mình tính lượng đồ ăn phù hợp nhé?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.271
+        }
+      ]
+    },
+    {
+      "id": "q11",
+      "turns": [
+        {
+          "question": "Loại nào vừa rẻ vừa dùng được lâu ấy anh?",
+          "http_status": 200,
+          "response": {
+            "session_id": "fc6a23cf-ea11-412f-af90-1b2949e9521f",
+            "text": "Bạn đang muốn tìm loại đồ dùng nào để mình gợi ý cho bạn?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.582
+        }
+      ]
+    },
+    {
+      "id": "q12",
+      "turns": [
+        {
+          "question": "Cái này hơi đắt, có loại nào tương tự mà rẻ hơn không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "bd722def-18f9-4195-a9cd-383528bddf42",
+            "text": "Bạn đang muốn tìm sản phẩm tương tự cho mặt hàng nào? Mình cần biết tên hoặc loại sản phẩm để gợi ý cho bạn nhé.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.267
+        }
+      ]
+    },
+    {
+      "id": "q13",
+      "turns": [
+        {
+          "question": "Em không cần hàng xịn nhất đâu, loại nào đáng tiền là được.",
+          "http_status": 200,
+          "response": {
+            "session_id": "6b887c4f-82d4-4714-aff2-86c4af29ecb9",
+            "text": "Bạn đang muốn tìm sản phẩm thuộc nhóm nào để mình gợi ý loại đáng tiền?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.109
+        }
+      ]
+    },
+    {
+      "id": "q14",
+      "turns": [
+        {
+          "question": "Hai loại sữa này khác nhau ở điểm nào vậy anh?",
+          "http_status": 200,
+          "response": {
+            "session_id": "ebd6d608-4a57-4cce-9ca3-fb52c9bdfee1",
+            "text": "Bạn đang muốn so sánh hai loại sữa cụ thể nào ạ? Mình cần tên sản phẩm hoặc hình ảnh để tư vấn chính xác hơn.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.702
+        }
+      ]
+    },
+    {
+      "id": "q15",
+      "turns": [
+        {
+          "question": "OMO với Ariel thì loại nào giặt sạch hơn nhỉ?",
+          "http_status": 200,
+          "response": {
+            "session_id": "a613af8c-4116-41ea-90f3-73f52e264096",
+            "text": "Mình không có số liệu so sánh khả năng giặt sạch cụ thể giữa OMO và Ariel để khẳng định loại nào sạch hơn. Bạn nên xem hướng dẫn liều lượng trên bao bì và thử với vết bẩn khó giặt để đánh giá thực tế.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.473
+        }
+      ]
+    },
+    {
+      "id": "q16",
+      "turns": [
+        {
+          "question": "Loại này đắt hơn có đáng để mua không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "7206bb05-b917-4410-9587-67fe15e63383",
+            "text": "Bạn đang muốn so sánh loại sản phẩm nào?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 7.712
+        }
+      ]
+    },
+    {
+      "id": "q17",
+      "turns": [
+        {
+          "question": "Em thấy hai cái này gần giống nhau, sao giá chênh nhiều thế?",
+          "http_status": 200,
+          "response": {
+            "session_id": "0272ff6f-769a-436e-a152-628ea7f00c3c",
+            "text": "Bạn đang so sánh hai sản phẩm nào? Mình cần biết tên hoặc mã sản phẩm để kiểm tra chi tiết cho bạn.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.773
+        }
+      ]
+    },
+    {
+      "id": "q18",
+      "turns": [
+        {
+          "question": "Nếu là anh thì anh chọn loại nào?",
+          "http_status": 200,
+          "response": {
+            "session_id": "547af423-4fa6-4212-9171-4ac1e0f5df8d",
+            "text": "Anh đang muốn chọn loại sản phẩm nào để mình tư vấn cho anh?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.599
+        }
+      ]
+    },
+    {
+      "id": "q19",
+      "turns": [
+        {
+          "question": "Cùng một mức giá thì loại nào dùng thích hơn?",
+          "http_status": 200,
+          "response": {
+            "session_id": "d3fbd127-c31e-4b9d-8aa8-9249c680de57",
+            "text": "Bạn đang muốn so sánh loại sản phẩm nào?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.697
+        }
+      ]
+    },
+    {
+      "id": "q20",
+      "turns": [
+        {
+          "question": "Da em khá nhạy cảm, có loại sữa tắm nào dịu nhẹ không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "7b2f82c7-1ade-46a2-9217-671be861009c",
+            "text": "Với da nhạy cảm, bạn nên chọn sữa tắm có công thức dịu nhẹ, không chứa hương liệu mạnh hoặc chất tẩy rửa gây kích ứng. Khi mua, hãy đọc kỹ nhãn để ưu tiên các sản phẩm ghi rõ dành cho da nhạy cảm hoặc có thành phần làm dịu.\nBạn có đang dùng loại sữa tắm nào trước đây bị kích ứng không để mình loại trừ thành phần?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.53
+        }
+      ]
+    },
+    {
+      "id": "q21",
+      "turns": [
+        {
+          "question": "Mẹ em không thích đồ quá ngọt, có loại bánh nào phù hợp không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.933
+        }
+      ]
+    },
+    {
+      "id": "q22",
+      "turns": [
+        {
+          "question": "Nhà em có nuôi mèo, muốn mua đồ vệ sinh nhà mà an toàn khi dùng quanh thú cưng.",
+          "http_status": 200,
+          "response": {
+            "session_id": "8ae7c1ca-fd26-485b-9b54-3c4a5eb3858c",
+            "text": "Khi chọn nước lau sàn hoặc rửa chén cho nhà có mèo, bạn nên ưu tiên các sản phẩm có ghi rõ thành phần thân thiện, không chứa chất độc hại mạnh và có hướng dẫn sử dụng an toàn. Sau khi lau, hãy để sàn khô hoàn toàn trước khi cho mèo ra lại để tránh tiếp xúc với hóa chất còn ướt.\nBạn đang cần mua nước lau sàn, nước rửa chén hay cả hai?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.755
+        }
+      ]
+    },
+    {
+      "id": "q23",
+      "turns": [
+        {
+          "question": "Em đang hạn chế đường, có đồ uống nào phù hợp không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "f4f2f416-4788-485e-aeb7-4a7a55f9b71a",
+            "text": "Bạn nên ưu tiên các loại nước uống có ghi rõ 'không đường' trên nhãn để kiểm soát lượng đường nạp vào. Nước lọc, sữa tươi không đường và trà không đường là những lựa chọn an toàn và phổ biến nhất cho nhu cầu này.\nNước uống đóng chai Aquafina 1.5 lít (10.900đ): Nước uống tinh khiết không chứa đường, phù hợp để thay thế đồ uống có đường.\nSữa tươi tiệt trùng Vinamilk không đường hộp 1 lít (38.300đ): Sữa tươi tiệt trùng không đường, cung cấp dinh dưỡng mà không thêm đường.\nLốc 6 chai trà Oolong không đường Tea+ 455ml (60.500đ): Trà Oolong không đường, lựa chọn thay thế nước ngọt có ga.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "TLM_10011217",
+              "TLM_10010491",
+              "TLM_10638663"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10011217",
+                "name": "Nước uống đóng chai Aquafina 1.5 lít",
+                "category": "Nước Suối",
+                "brand": "AQUAFINA",
+                "price_vnd": 10900,
+                "stock": 324,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:40.207341Z"
+              },
+              {
+                "product_id": "TLM_10010491",
+                "name": "Sữa tươi tiệt trùng Vinamilk không đường hộp 1 lít",
+                "category": "Sữa Tươi",
+                "brand": "VINAMILK",
+                "price_vnd": 38300,
+                "stock": 637,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:52.884154Z"
+              },
+              {
+                "product_id": "TLM_10638663",
+                "name": "Lốc 6 chai trà Oolong không đường Tea+ 455ml",
+                "category": "Nước Ngọt",
+                "brand": "TEA+",
+                "price_vnd": 60500,
+                "stock": 38,
+                "uom": "Gói 6",
+                "data_timestamp": "2026-09-15T13:53:41.152438Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.484
+        }
+      ]
+    },
+    {
+      "id": "q24",
+      "turns": [
+        {
+          "question": "Em cần loại nhỏ gọn thôi, phòng em bé lắm.",
+          "http_status": 200,
+          "response": {
+            "session_id": "80e557ec-ff0f-4e45-b341-9d9f4c0db4b2",
+            "text": "Bạn đang cần tìm loại đồ dùng hay thiết bị nào cho phòng bé?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.221
+        }
+      ]
+    },
+    {
+      "id": "q25",
+      "turns": [
+        {
+          "question": "Em muốn loại không có mùi nồng, dùng hằng ngày ấy.",
+          "http_status": 200,
+          "response": {
+            "session_id": "faaf5d43-2d04-4803-98ef-b26b78639a81",
+            "text": "Bạn đang muốn tìm loại sữa tắm, dầu gội hay nước rửa mặt?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.928
+        }
+      ]
+    },
+    {
+      "id": "q26",
+      "turns": [
+        {
+          "question": "Anh ơi, nước giặt ở đâu vậy?",
+          "http_status": 200,
+          "response": {
+            "session_id": "1aa04769-d612-4dd9-80ab-63fba7611a72",
+            "text": "Mình chưa rõ vị trí cụ thể của khu nước giặt trong cửa hàng. Bạn vui lòng hỏi nhân viên trực tại quầy để được chỉ dẫn chính xác nhé.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.872
+        }
+      ]
+    },
+    {
+      "id": "q27",
+      "turns": [
+        {
+          "question": "Có bán cái loại sữa hộp màu xanh xanh không nhỉ?",
+          "http_status": 200,
+          "response": {
+            "session_id": "2c666f4e-fbb7-4df9-8e1b-e612c8b9eb69",
+            "text": "Bạn đang tìm sữa hộp màu xanh của thương hiệu nào vậy mình?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.744
+        }
+      ]
+    },
+    {
+      "id": "q28",
+      "turns": [
+        {
+          "question": "Loại mì Hàn Quốc cay cay hôm trước em mua còn không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "4e3557a8-3c59-4b4a-a923-510c0c204bde",
+            "text": "Bạn có thể cho mình biết tên thương hiệu hoặc hình ảnh bao bì của gói mì Hàn Quốc đó không để mình kiểm tra chính xác?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.951
+        }
+      ]
+    },
+    {
+      "id": "q29",
+      "turns": [
+        {
+          "question": "Em tìm mãi không thấy khăn giấy, nó nằm khu nào vậy?",
+          "http_status": 200,
+          "response": {
+            "session_id": "c48b38e1-9121-4f3f-9f4f-319cf1aa9053",
+            "text": "Mình chưa có thông tin xác minh về vị trí cụ thể của khu kệ bán khăn giấy trong cửa hàng. Bạn vui lòng hỏi nhân viên trực tại quầy để được chỉ dẫn chính xác nhất nhé.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.891
+        }
+      ]
+    },
+    {
+      "id": "q30",
+      "turns": [
+        {
+          "question": "Cái loại 1 lít ấy, chứ không phải chai nhỏ đâu.",
+          "http_status": 200,
+          "response": {
+            "session_id": "cb7aa6a4-f5f3-42b1-b1c0-20b08085d428",
+            "text": "Bạn đang muốn mua loại sản phẩm nào dung tích 1 lít?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.652
+        }
+      ]
+    },
+    {
+      "id": "q31",
+      "turns": [
+        {
+          "question": "Có sản phẩm nào tương tự không, nếu cái em cần hết hàng rồi?",
+          "http_status": 200,
+          "response": {
+            "session_id": "282e5fae-72ae-4cdb-81ff-dcc59862b430",
+            "text": "Bạn đang cần tìm sản phẩm thay thế cho món gì ạ? Mình cần biết tên hoặc loại sản phẩm để gợi ý nhé.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.818
+        }
+      ]
+    },
+    {
+      "id": "q32",
+      "turns": [
+        {
+          "question": "Anh ơi, cái loại hay quảng cáo trên TikTok ấy, bên mình có không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "dc7ad50b-51ed-4e26-bcd3-d7d611b34f8a",
+            "text": "Bạn đang tìm sản phẩm gì trên TikTok vậy mình? Mình cần thêm tên hoặc loại để tìm chính xác cho bạn nha.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.73
+        }
+      ]
+    },
+    {
+      "id": "q33",
+      "turns": [
+        {
+          "question": "Em muốn mua loại tốt tốt một chút, nhưng đừng đắt quá.",
+          "http_status": 200,
+          "response": {
+            "session_id": "43f9f872-a3de-4b01-ba32-308c55bdbf84",
+            "text": "Bạn đang muốn mua sản phẩm nào để mình gợi ý loại chất lượng vừa túi tiền?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.674
+        }
+      ]
+    },
+    {
+      "id": "q34",
+      "turns": [
+        {
+          "question": "Có cái nào dùng được cho cả nhà không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "1d05233a-f147-4ebe-bb5c-0b408c355c3d",
+            "text": "Bạn đang muốn tìm loại sản phẩm nào cho cả nhà (ví dụ: nước rửa chén, kem đánh răng, sữa tắm...)?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.686
+        }
+      ]
+    },
+    {
+      "id": "q35",
+      "turns": [
+        {
+          "question": "Hôm trước em mua loại màu vàng ấy, giờ có loại nào tốt hơn không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "f396f859-0bb5-4ccd-957e-5d618b126f31",
+            "text": "Bạn đang muốn tìm sản phẩm gì (ví dụ: dầu ăn, nước mắm, sữa...)?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 0.731
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T04:59:06.994197+00:00"
+}

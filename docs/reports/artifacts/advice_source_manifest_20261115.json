@@ -1,0 +1,6 @@
+{
+  "data/thanh_lam_products.json": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "backend/services/consultation.py": "e9bc2cfa1fe063329fd8bff5f06f2c7a21d720eb50e1e3e70f66e9e0190012c7",
+  "backend/api/main.py": "8037086296b920105dde34295b34ecf6bfec48b9434a83346b23e9f2a73a4c4b",
+  "evaluation/audit_live_consultation.py": "13b208605d6fb9059d766212b223b49b2db82afbdc95ce804a2eef656d4f7ae2"
+}

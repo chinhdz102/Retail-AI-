@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from dataclasses import replace
@@ -41,6 +42,7 @@ from backend.services.azure_speech import (
     AzureSpeechProviderError,
     AzureSpeechService,
 )
+from backend.services.consultation import consult, use_consultation
 from backend.services.elevenlabs import (
     ElevenLabsConfigurationError,
     ElevenLabsProviderError,
@@ -3289,6 +3291,64 @@ async def agent_respond(
                 campaign_observation,
                 reply,
             )
+    # Imported catalogs need semantic advice before the legacy lexical router:
+    # it otherwise treats the whole need as a product name or abstains before LLM.
+    if (
+        request.language == "vi"
+        and settings.catalog_repository in {"snapshot", "postgres"}
+        and promotion_list_arguments is None
+        and catalog_additions_arguments is None
+        and use_consultation(request.text, requested_fields)
+    ):
+        previous_ids = record.shopping.selected_product_ids
+        if not previous_ids and record.last_grounded_product_id:
+            previous_ids = [record.last_grounded_product_id]
+        history = session_store.messages_for_model(request.session_id)
+        # A provider failure must not erase the customer's correction or budget.
+        # A retry of the same unanswered message is represented only once.
+        latest = {"role": "user", "content": request.text}
+        if history and history[-1] == latest:
+            history = history[:-1]
+        else:
+            session_store.add_message(request.session_id, "user", request.text)
+        try:
+            async with asyncio.timeout(settings.groq_timeout_seconds):
+                advice = await consult(
+                    groq, get_product_repository(settings), request.text,
+                    history, previous_ids,
+                    record.shopping.constraints.get("consultation_plan"),
+                )
+        except TimeoutError as exc:
+            raise HTTPException(status_code=504, detail="Consultation timed out") from exc
+        except GroqConfigurationError as exc:
+            raise HTTPException(status_code=503, detail="Consultation is not configured") from exc
+        except GroqProviderError as exc:
+            validated_plan = getattr(exc, "consultation_plan", None)
+            if isinstance(validated_plan, dict):
+                session_store.update_constraints(request.session_id, [{
+                    "action": "SET", "key": "consultation_plan", "value": validated_plan,
+                }])
+            raise HTTPException(
+                status_code=502, detail="Consultation temporarily unavailable",
+            ) from exc
+        session_store.add_message(request.session_id, "assistant", advice.text)
+        session_store.update_constraints(request.session_id, [{
+            "action": "SET", "key": "consultation_plan", "value": advice.plan.model_dump(),
+        }])
+        session_store.update_shopping(
+            request.session_id, current_intent=IntentType.RECOMMENDATION,
+            selected_product_ids=[p.product_id for p in advice.products],
+        )
+        only = advice.products[0] if len(advice.products) == 1 else None
+        session_store.set_last_grounded_product(
+            request.session_id, only.product_id if only else None, only.name if only else None,
+        )
+        return AgentRespondResponse(
+            session_id=request.session_id, text=advice.text, model=advice.model,
+            products=[_product_card(p) for p in advice.products],
+            grounded_product_ids=[p.product_id for p in advice.products],
+            tools_used=["search_products"] if advice.plan.searches else [], state=record.state,
+        )
     explicit_grounded_reference = (
         record.last_grounded_product_id
         if requested_fields
@@ -3678,6 +3738,7 @@ async def agent_respond(
         model=model,
         grounded_product_ids=[product.product_id for product in products],
         tools_used=tools_used,
+        products=[_product_card(product) for product in products],
         state=record.state,
     )
 
@@ -4092,10 +4153,16 @@ def _fact_product_query(text: str) -> str:
     )
     for phrase in _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES:
         normalized = re.sub(rf"\b{re.escape(phrase)}\b", " ", normalized)
+    normalized = re.sub(
+        r"\b(?:bao nhieu(?: tien)?|bao gio|o dau|cho nao|ke nao|han su dung|han dung|"
+        r"lay o|co cay khong|san pham)\b",
+        " ", normalized,
+    )
+    product_words = {"an", "bao", "bo", "dau", "tra", "san"}
     return " ".join(
         word
         for word in normalized.split()
-        if word not in _FACT_QUERY_STOP_WORDS
+        if (word not in _FACT_QUERY_STOP_WORDS or word in product_words)
         and not word.isdigit()
         and not re.fullmatch(r"\d+(?:k|d|dong|vnd)", word)
     )

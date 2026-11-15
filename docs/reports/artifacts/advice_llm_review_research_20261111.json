@@ -1,0 +1,265 @@
+{
+  "production_switch": false,
+  "mode": "real-LLM-semantic-review-probe",
+  "complete": true,
+  "cases": [
+    {
+      "id": "actual-mince-error",
+      "product": "Thịt bò Úc Kiaora xay khay 200g.",
+      "draft": "Thịt bò xay mỏng, dễ cắt thành lát mỏng cho lẩu.",
+      "expected_acceptable": false
+    },
+    {
+      "id": "unsweetened-error",
+      "product": "Sữa tươi có đường 1 lít.",
+      "draft": "Sản phẩm này là sữa không đường.",
+      "expected_acceptable": false
+    },
+    {
+      "id": "scent-error",
+      "product": "Nước lau sàn hương hoa 1 lít.",
+      "draft": "Sản phẩm này không mùi.",
+      "expected_acceptable": false
+    },
+    {
+      "id": "size-error",
+      "product": "Nước uống đóng chai 500ml.",
+      "draft": "Một chai có dung tích 1 lít.",
+      "expected_acceptable": false
+    },
+    {
+      "id": "length-error",
+      "product": "Băng vệ sinh ban đêm dài 30cm.",
+      "draft": "Sản phẩm này dài ít nhất 35cm.",
+      "expected_acceptable": false
+    },
+    {
+      "id": "mass-volume-error",
+      "product": "Dầu gội Clear chai 630g.",
+      "draft": "Chai dầu gội này có dung tích 630ml.",
+      "expected_acceptable": false
+    },
+    {
+      "id": "pet-safety-error",
+      "product": "Nước lau sàn hương chanh 1 lít.",
+      "draft": "Sản phẩm này an toàn cho mèo.",
+      "expected_acceptable": false
+    },
+    {
+      "id": "acne-treatment-error",
+      "product": "Sữa rửa mặt Biore sạch mụn kháng khuẩn 100g.",
+      "draft": "Sản phẩm này điều trị mụn sau hai tuần.",
+      "expected_acceptable": false
+    },
+    {
+      "id": "hypoallergenic-error",
+      "product": "Sữa tắm hương hoa 500ml.",
+      "draft": "Sản phẩm này không gây kích ứng cho da nhạy cảm.",
+      "expected_acceptable": false
+    },
+    {
+      "id": "cooking-time-error",
+      "product": "Bánh bao nhân thịt 300g.",
+      "draft": "Sản phẩm này chỉ cần hâm 30 giây là ăn được.",
+      "expected_acceptable": false
+    },
+    {
+      "id": "grounded-plain",
+      "product": "Sữa tươi không đường 1 lít.",
+      "draft": "Sản phẩm này là sữa không đường.",
+      "expected_acceptable": true
+    },
+    {
+      "id": "grounded-size",
+      "product": "Nước uống đóng chai 1 lít.",
+      "draft": "Một chai có dung tích 1000ml.",
+      "expected_acceptable": true
+    },
+    {
+      "id": "grounded-form",
+      "product": "Ba chỉ bò cắt lát khay 200g.",
+      "draft": "Thịt đã được cắt thành lát.",
+      "expected_acceptable": true
+    },
+    {
+      "id": "grounded-scent",
+      "product": "Nước lau sàn hương chanh 1 lít.",
+      "draft": "Sản phẩm này có hương chanh.",
+      "expected_acceptable": true
+    },
+    {
+      "id": "general-usage-not-label",
+      "product": "Ba chỉ bò cắt lát khay 200g.",
+      "draft": "Thịt cắt lát sẵn tiện nhúng lẩu, nhúng chín từng ít một.",
+      "expected_acceptable": true
+    },
+    {
+      "id": "general-cleaning-not-label",
+      "product": "Cây lau nhà và khăn lau.",
+      "draft": "Dùng khăn riêng cho bếp và nhà vệ sinh để tránh lây bẩn.",
+      "expected_acceptable": true
+    },
+    {
+      "id": "holdout-tools",
+      "product": "Khăn lau kính, cây lau sàn.",
+      "draft": "Lau bụi trước rồi mới lau ướt; dùng khăn riêng cho kính để tránh vệt bẩn.",
+      "expected_acceptable": true
+    },
+    {
+      "id": "holdout-battery",
+      "product": "Pin AA và pin AAA.",
+      "draft": "Bạn mở nắp chỗ lắp pin, xem ký hiệu hoặc mang viên cũ để chọn đúng cỡ.",
+      "expected_acceptable": true
+    },
+    {
+      "id": "holdout-food",
+      "product": "Thịt heo xay 500g.",
+      "draft": "Bạn nặn thành viên nhỏ rồi nấu chín trong nước dùng.",
+      "expected_acceptable": true
+    },
+    {
+      "id": "holdout-food-error",
+      "product": "Thịt heo xay 500g.",
+      "draft": "Bạn thái thành từng lát mỏng rồi nhúng lẩu.",
+      "expected_acceptable": false
+    }
+  ],
+  "model": "openai/gpt-oss-120b",
+  "usage": {
+    "prompt_tokens": 1171,
+    "completion_tokens": 926,
+    "total_tokens": 2097
+  },
+  "reviews": [
+    {
+      "id": "actual-mince-error",
+      "acceptable": false,
+      "issue": "Claims the product can be sliced thinly, but it is minced beef."
+    },
+    {
+      "id": "unsweetened-error",
+      "acceptable": false,
+      "issue": "States the milk is unsweetened while the product is sweetened."
+    },
+    {
+      "id": "scent-error",
+      "acceptable": false,
+      "issue": "Says the floor cleaner has no scent, contradicting the labeled fragrance."
+    },
+    {
+      "id": "size-error",
+      "acceptable": false,
+      "issue": "Describes a 1 L volume for a product that is 500 ml."
+    },
+    {
+      "id": "length-error",
+      "acceptable": false,
+      "issue": "Claims the sanitary pad is at least 35 cm long, but the label says 30 cm."
+    },
+    {
+      "id": "mass-volume-error",
+      "acceptable": false,
+      "issue": "Confuses mass (630 g) with volume (630 ml) for the shampoo."
+    },
+    {
+      "id": "pet-safety-error",
+      "acceptable": false,
+      "issue": "Asserts the floor cleaner is safe for cats without such a label claim."
+    },
+    {
+      "id": "acne-treatment-error",
+      "acceptable": false,
+      "issue": "Makes a therapeutic claim that the face wash treats acne in two weeks."
+    },
+    {
+      "id": "hypoallergenic-error",
+      "acceptable": false,
+      "issue": "States the body wash is non‑irritating for sensitive skin without label support."
+    },
+    {
+      "id": "cooking-time-error",
+      "acceptable": false,
+      "issue": "Specifies an unrealistically short 30‑second heating time for bao."
+    },
+    {
+      "id": "grounded-plain",
+      "acceptable": true,
+      "issue": ""
+    },
+    {
+      "id": "grounded-size",
+      "acceptable": true,
+      "issue": ""
+    },
+    {
+      "id": "grounded-form",
+      "acceptable": true,
+      "issue": ""
+    },
+    {
+      "id": "grounded-scent",
+      "acceptable": true,
+      "issue": ""
+    },
+    {
+      "id": "general-usage-not-label",
+      "acceptable": true,
+      "issue": ""
+    },
+    {
+      "id": "general-cleaning-not-label",
+      "acceptable": true,
+      "issue": ""
+    },
+    {
+      "id": "holdout-tools",
+      "acceptable": true,
+      "issue": ""
+    },
+    {
+      "id": "holdout-battery",
+      "acceptable": true,
+      "issue": ""
+    },
+    {
+      "id": "holdout-food",
+      "acceptable": true,
+      "issue": ""
+    },
+    {
+      "id": "holdout-food-error",
+      "acceptable": false,
+      "issue": "Suggests slicing ground pork, which contradicts its minced form."
+    }
+  ],
+  "fallback_trace": [
+    {
+      "model": "qwen/qwen3.8-27b",
+      "status": "error",
+      "error_type": "BadRequestError",
+      "http_status": 400,
+      "provider_code": "json_validate_failed",
+      "rate_limit_headers": {
+        "x-ratelimit-limit-requests": "1000",
+        "x-ratelimit-limit-tokens": "8000",
+        "x-ratelimit-remaining-requests": "999",
+        "x-ratelimit-remaining-tokens": "6796",
+        "x-ratelimit-reset-requests": "1m26.4s",
+        "x-ratelimit-reset-tokens": "9.03s"
+      }
+    },
+    {
+      "model": "openai/gpt-oss-120b",
+      "status": "success",
+      "rate_limit_headers": {
+        "x-ratelimit-limit-requests": "1000",
+        "x-ratelimit-limit-tokens": "8000",
+        "x-ratelimit-remaining-requests": "999",
+        "x-ratelimit-remaining-tokens": "6304",
+        "x-ratelimit-reset-requests": "1m26.4s",
+        "x-ratelimit-reset-tokens": "12.719s"
+      }
+    }
+  ],
+  "seconds": 7.809
+}

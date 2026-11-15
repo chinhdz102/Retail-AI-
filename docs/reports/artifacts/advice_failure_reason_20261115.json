@@ -1,0 +1,151 @@
+{
+  "question": "Mình muốn mua thịt heo để ăn lẩu.",
+  "status": "failed",
+  "reason": "Sửa lý lẽ/lựa chọn trước khi trả khách: Giá và khối lượng trong lời tư vấn (300g, 59.970đ, 50.070đ) không khớp với dữ liệu sản phẩm (giá/kg là 199.900đ và 166.900đ), cần sửa lại cho đúng quy cách và đơn giá.; Lời khuyên kiểm tra quy cách đóng gói tại quầy là không khả thi nếu sản phẩm đã được xác định là đóng gói sẵn (S) trong danh mục, nên loại bỏ hoặc thay bằng lời khuyên cụ thể hơn về cách chọn.",
+  "fallback_trace": [],
+  "calls": [
+    {
+      "text": "{\n  \"need\": \"Mua thịt heo tươi phù hợp để nấu lẩu.\",\n  \"action\": \"advise\",\n  \"searches\": [\n    {\n      \"query\": \"thịt heo\",\n      \"category\": \"Thịt\"\n    },\n    {\n      \"query\": \"ba rọi heo\",\n      \"category\": \"Thịt\"\n    },\n    {\n      \"query\": \"sườn heo\",\n      \"category\": \"Thịt\"\n    },\n    {\n      \"query\": \"mông heo\",\n      \"category\": \"Thịt\"\n    }\n  ],\n  \"constraints\": [\n    \"Thịt tươi\",\n    \"Phù hợp nấu lẩu\"\n  ]\n}",
+      "model": "qwen/qwen3.8-27b",
+      "usage": {
+        "prompt_tokens": 1489,
+        "completion_tokens": 165,
+        "total_tokens": 1654
+      },
+      "fallbacks": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "credential_slot": 0,
+          "status": "success",
+          "rate_limit_headers": {
+            "x-ratelimit-limit-requests": "1000",
+            "x-ratelimit-limit-tokens": "8000",
+            "x-ratelimit-remaining-requests": "990",
+            "x-ratelimit-remaining-tokens": "6247",
+            "x-ratelimit-reset-requests": "14m24s",
+            "x-ratelimit-reset-tokens": "13.147s"
+          }
+        }
+      ]
+    },
+    {
+      "text": "{\n  \"advice\": \"Để nấu lẩu, bạn nên chọn phần thịt có chút mỡ như ba rọi hoặc nạc thăn để miếng thịt không bị khô khi nhúng. Hãy nhờ nhân viên thái thịt mỏng để thịt chín nhanh và thấm vị nước lẩu.\",\n  \"choices\": [\n    {\n      \"product_id\": \"TLM_10617959\",\n      \"quantity\": 1,\n      \"weight_g\": 300,\n      \"reason\": \"Phần ba rọi có mỡ xen kẽ giúp miếng thịt mềm, không bị khô khi nhúng lẩu.\",\n      \"evidence\": [\n        \"Thịt Ba Rọi heo\"\n      ]\n    },\n    {\n      \"product_id\": \"TLM_10617958\",\n      \"quantity\": 1,\n      \"weight_g\": 300,\n      \"reason\": \"Nạc thăn là phần thịt nạc, phù hợp cho người thích ăn lẩu ít mỡ.\",\n      \"evidence\": [\n        \"Thịt Nạc thăn heo\"\n      ]\n    }\n  ],\n  \"selection_mode\": \"alternatives\"\n}",
+      "model": "qwen/qwen3.8-27b",
+      "usage": {
+        "prompt_tokens": 2377,
+        "completion_tokens": 258,
+        "total_tokens": 2635
+      },
+      "fallbacks": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "credential_slot": 0,
+          "status": "success",
+          "rate_limit_headers": {
+            "x-ratelimit-limit-requests": "1000",
+            "x-ratelimit-limit-tokens": "8000",
+            "x-ratelimit-remaining-requests": "989",
+            "x-ratelimit-remaining-tokens": "3855",
+            "x-ratelimit-reset-requests": "15m50.4s",
+            "x-ratelimit-reset-tokens": "31.087s"
+          }
+        }
+      ]
+    },
+    {
+      "text": "{\n  \"acceptable\": false,\n  \"issues\": [\n    \"Giá và trọng lượng trong lời tư vấn (300g, 59.970đ, 50.070đ) không khớp với dữ liệu sản phẩm (giá/kg là 199.900đ và 166.900đ), cần sửa lại cho đúng quy cách bán.\",\n    \"Lời khuyên 'nhờ nhân viên thái thịt mỏng' có thể không khả thi nếu sản phẩm là thịt đóng gói sẵn (thường là miếng lớn hoặc đã cắt sẵn), nên kiểm tra quy cách thực tế trước khi tư vấn.\"\n  ]\n}",
+      "model": "qwen/qwen3.8-27b",
+      "usage": {
+        "prompt_tokens": 729,
+        "completion_tokens": 146,
+        "total_tokens": 875
+      },
+      "fallbacks": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "credential_slot": 0,
+          "status": "success",
+          "rate_limit_headers": {
+            "x-ratelimit-limit-requests": "1000",
+            "x-ratelimit-limit-tokens": "8000",
+            "x-ratelimit-remaining-requests": "988",
+            "x-ratelimit-remaining-tokens": "3039",
+            "x-ratelimit-reset-requests": "17m16.8s",
+            "x-ratelimit-reset-tokens": "37.207s"
+          }
+        }
+      ]
+    },
+    {
+      "text": "{\"advice\":\"Khi chọn thịt heo nấu lẩu, bạn nên ưu tiên phần thịt có chút mỡ như ba rọi để miếng thịt mềm, không bị khô khi nhúng. Nếu thích ăn nạc, nạc thăn là lựa chọn phù hợp. Hãy kiểm tra quy cách đóng gói thực tế tại quầy để biết thịt đã cắt sẵn hay còn nguyên miếng.\",\"choices\":[{\"product_id\":\"TLM_10617959\",\"quantity\":1,\"weight_g\":300,\"reason\":\"Phần ba rọi có mỡ xen kẽ giúp miếng thịt mềm, không bị khô khi nhúng lẩu.\",\"evidence\":[\"Thịt Ba Rọi heo\"]},{\"product_id\":\"TLM_10617958\",\"quantity\":1,\"weight_g\":300,\"reason\":\"Nạc thăn là phần thịt nạc, phù hợp cho người thích ăn lẩu ít mỡ.\",\"evidence\":[\"Thịt Nạc thăn heo\"]}],\"selection_mode\":\"alternatives\",\"question\":\"\"}",
+      "model": "qwen/qwen3.8-27b",
+      "usage": {
+        "prompt_tokens": 2749,
+        "completion_tokens": 204,
+        "total_tokens": 2953
+      },
+      "fallbacks": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "credential_slot": 0,
+          "status": "error",
+          "error_type": "RateLimitError",
+          "http_status": 429,
+          "provider_code": "rate_limit_exceeded",
+          "rate_limit_headers": {
+            "retry-after": "1",
+            "x-ratelimit-limit-requests": "1000",
+            "x-ratelimit-limit-tokens": "8000",
+            "x-ratelimit-remaining-requests": "988",
+            "x-ratelimit-remaining-tokens": "3146",
+            "x-ratelimit-reset-requests": "17m16.8s",
+            "x-ratelimit-reset-tokens": "37.045s"
+          }
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "credential_slot": 1,
+          "status": "success",
+          "rate_limit_headers": {
+            "x-ratelimit-limit-requests": "1000",
+            "x-ratelimit-limit-tokens": "8000",
+            "x-ratelimit-remaining-requests": "996",
+            "x-ratelimit-remaining-tokens": "5031",
+            "x-ratelimit-reset-requests": "5m45.6s",
+            "x-ratelimit-reset-tokens": "22.267s"
+          }
+        }
+      ]
+    },
+    {
+      "text": "{\n  \"acceptable\": false,\n  \"issues\": [\n    \"Giá và khối lượng trong lời tư vấn (300g, 59.970đ, 50.070đ) không khớp với dữ liệu sản phẩm (giá/kg là 199.900đ và 166.900đ), cần sửa lại cho đúng quy cách và đơn giá.\",\n    \"Lời khuyên kiểm tra quy cách đóng gói tại quầy là không khả thi nếu sản phẩm đã được xác định là đóng gói sẵn (S) trong danh mục, nên loại bỏ hoặc thay bằng lời khuyên cụ thể hơn về cách chọn.\"\n  ]\n}",
+      "model": "qwen/qwen3.8-27b",
+      "usage": {
+        "prompt_tokens": 751,
+        "completion_tokens": 148,
+        "total_tokens": 899
+      },
+      "fallbacks": [
+        {
+          "model": "qwen/qwen3.8-27b",
+          "credential_slot": 0,
+          "status": "cooldown",
+          "retry_after_seconds": 0.1
+        },
+        {
+          "model": "qwen/qwen3.8-27b",
+          "credential_slot": 1,
+          "status": "success",
+          "rate_limit_headers": {
+            "x-ratelimit-limit-requests": "1000",
+            "x-ratelimit-limit-tokens": "8000",
+            "x-ratelimit-remaining-requests": "995",
+            "x-ratelimit-remaining-tokens": "4180",
+            "x-ratelimit-reset-requests": "7m12s",
+            "x-ratelimit-reset-tokens": "29.211s"
+          }
+        }
+      ]
+    }
+  ]
+}

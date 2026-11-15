@@ -96,8 +96,8 @@ async def test_chat_reports_the_qwen_fallback_model_that_replied() -> None:
     assert result == "Xin chào từ model dự phòng."
     assert result.model == "qwen/fallback-model"
     assert result.fallback_trace == [
-        {"model": "qwen/primary-model", "status": "error", "error_type": "RuntimeError"},
-        {"model": "qwen/fallback-model", "status": "success"},
+        {"model": "qwen/primary-model", "credential_slot": 0, "status": "error", "error_type": "RuntimeError"},
+        {"model": "qwen/fallback-model", "credential_slot": 0, "status": "success"},
     ]
     assert [call["model"] for call in client.chat.completions.calls] == [
         "qwen/primary-model",
@@ -264,8 +264,96 @@ async def test_chat_provider_error_preserves_rate_limit_headers() -> None:
     assert error.value.fallback_trace == [
         {
             "model": "qwen/qwen3.8-27b",
+            "credential_slot": 0,
             "status": "error",
             "error_type": "RateLimitFailure",
             "rate_limit_headers": {"retry-after": "2"},
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_chat_tries_configured_secondary_credential_before_changing_model(monkeypatch):
+    class Limited(FakeChatCompletions):
+        async def create(self, **kwargs):
+            error = RateLimitFailure()
+            error.status_code = 429
+            raise error
+
+    primary, secondary = FakeClient(), FakeClient()
+    primary.chat.completions = Limited()
+    service = GroqService(Settings(groq_api_key="test-key"), client=primary)
+    monkeypatch.setattr(service, "_clients", lambda _: [primary, secondary])
+    result = await service.chat([{"role": "user", "content": "Mua hàng"}],
+                                max_tokens=1000, reasoning_effort="low",
+                                response_format={"type": "json_object"})
+    assert result.model == service.settings.groq_model
+    assert [a["status"] for a in result.fallback_trace] == ["error", "success"]
+    assert secondary.chat.completions.calls[0]["max_tokens"] == 1000
+    assert secondary.chat.completions.calls[0]["reasoning_effort"] == "low"
+
+
+class StatusFailure(RateLimitFailure):
+    def __init__(self, status):
+        super().__init__()
+        self.status_code = status
+
+
+class ScriptedCompletions:
+    def __init__(self, *statuses):
+        self.statuses = iter(statuses)
+        self.calls = []
+
+    async def create(self, **kwargs):
+        self.calls.append(kwargs)
+        status = next(self.statuses)
+        if status != 200:
+            raise StatusFailure(status)
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content='ok'))])
+
+
+def scripted_client(*statuses):
+    client = FakeClient()
+    client.chat.completions = ScriptedCompletions(*statuses)
+    return client
+
+
+@pytest.mark.asyncio
+async def test_all_keys_rate_limited_moves_to_fallback_model(monkeypatch):
+    primary, secondary = scripted_client(429, 200), scripted_client(429)
+    service = GroqService(Settings(groq_api_key='test-key'), client=primary)
+    monkeypatch.setattr(service, '_clients', lambda _: [primary, secondary])
+    result = await service.chat([{'role': 'user', 'content': 'Chọn giúp mình'}],
+                                fallback_models=['openai/gpt-oss-120b'])
+    assert result.model == 'openai/gpt-oss-120b'
+    assert [r['credential_slot'] for r in result.fallback_trace] == [0, 1, 0]
+    assert [r['status'] for r in result.fallback_trace] == ['error', 'error', 'success']
+    assert primary.chat.completions.calls[-1]['reasoning_effort'] == 'low'
+
+
+@pytest.mark.asyncio
+async def test_rate_limited_pair_is_skipped_until_retry_after_expires(monkeypatch):
+    clock = [100.0]
+    monkeypatch.setattr('backend.services.groq.time.monotonic', lambda: clock[0])
+    primary, secondary = scripted_client(429, 200), scripted_client(200, 200)
+    service = GroqService(Settings(groq_api_key='test-key'), client=primary)
+    monkeypatch.setattr(service, '_clients', lambda _: [primary, secondary])
+    await service.chat([], fallback_models=[])
+    result = await service.chat([], fallback_models=[])
+    assert len(primary.chat.completions.calls) == 1
+    assert result.fallback_trace[0]['status'] == 'cooldown'
+    assert result.fallback_trace[0]['retry_after_seconds'] == 2
+    clock[0] = 103.0
+    await service.chat([], fallback_models=[])
+    assert len(primary.chat.completions.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_invalid_key_is_not_retried_on_each_model_in_same_request(monkeypatch):
+    primary, secondary = scripted_client(401), scripted_client(429, 200)
+    service = GroqService(Settings(groq_api_key='test-key'), client=primary)
+    monkeypatch.setattr(service, '_clients', lambda _: [primary, secondary])
+    result = await service.chat([], fallback_models=['openai/gpt-oss-120b'])
+    assert result.model == 'openai/gpt-oss-120b'
+    assert len(primary.chat.completions.calls) == 1
+    assert [r['credential_slot'] for r in result.fallback_trace] == [0, 1, 1]
