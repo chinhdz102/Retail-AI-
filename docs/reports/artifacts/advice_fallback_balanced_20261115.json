@@ -1,0 +1,166 @@
+{
+  "started_utc": "2026-11-15T07:43:59.948776+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 20.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "owned-food",
+      "turns": [
+        {
+          "question": "Hai người ăn cơm tối, nhà có gạo và dầu ăn rồi. Chọn thịt heo với một loại rau, tổng tối đa 120 nghìn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "536d7df3-d94e-49a7-b686-f991fa9891a2",
+            "text": "Mình gợi ý mua 300 g thịt đùi heo và 50 g rau Răm; lượng này đủ cho 2 người, giá dưới 120 nghìn và dễ chế biến thành món xào hoặc hầm.\nMEATDELI Thịt đùi heo (S) — 300g (41.670đ): Thịt đùi heo là phần mềm, thích hợp cho món xào hoặc hầm, giá/kg hợp lý\nRau Răm 50g (3.500đ): Răm thơm nhẹ, giá rẻ, phù hợp làm rau xào hoặc nêm món thịt\n\nTổng: 45.170đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "TLM_10617961",
+              "TLM_10282403"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10617961",
+                "name": "MEATDELI Thịt đùi heo (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 138900,
+                "stock": 2,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367650Z"
+              },
+              {
+                "product_id": "TLM_10282403",
+                "name": "Rau Răm 50g",
+                "category": "Rau Lá",
+                "brand": "NOBRAND",
+                "price_vnd": 3500,
+                "stock": 2,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:50.239896Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 7.12
+        },
+        {
+          "question": "Không lấy thịt xay, chọn miếng thịt nạc để xào và rau luộc thôi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "536d7df3-d94e-49a7-b686-f991fa9891a2",
+            "text": "MEATDELI Thịt Nạc thăn heo (S) — 300g (50.070đ): Thịt nạc thăn heo mềm, ít mỡ, thích hợp xào nhanh cho 2 người\nRau Răm 50g (3.500đ): Răm thơm nhẹ, thích hợp luộc hoặc xào nhanh, giá rẻ\n\nTổng: 53.570đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "TLM_10617958",
+              "TLM_10282403"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10617958",
+                "name": "MEATDELI Thịt Nạc thăn heo (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 166900,
+                "stock": 2,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367481Z"
+              },
+              {
+                "product_id": "TLM_10282403",
+                "name": "Rau Răm 50g",
+                "category": "Rau Lá",
+                "brand": "NOBRAND",
+                "price_vnd": 3500,
+                "stock": 2,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:50.239896Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.659
+        },
+        {
+          "question": "Thịt chỉ mua 300 gram, tính tổng hai món giúp mình.",
+          "http_status": 200,
+          "response": {
+            "session_id": "536d7df3-d94e-49a7-b686-f991fa9891a2",
+            "text": "Bạn muốn chọn loại thịt heo nào trong cửa hàng (ví dụ: thịt đùi, ba rọi) để mua 300 g, hay muốn tôi tìm kiếm thêm trong kho?",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 7.053
+        },
+        {
+          "question": "Giờ bỏ giới hạn tiền, vẫn chỉ cần đúng hai món ăn với cơm. Chọn chốt giúp mình, đừng giới thiệu thêm.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 6.083
+        }
+      ]
+    },
+    {
+      "id": "one-shampoo",
+      "turns": [
+        {
+          "question": "Có loại dầu gội nào dưới 150 nghìn không, chọn giúp mình đúng một loại.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.461
+        },
+        {
+          "question": "Đừng quảng cáo công dụng, nói một điểm nên cân nhắc thôi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.158
+        },
+        {
+          "question": "Chỉ cần hướng dẫn chọn dầu gội cho tóc dầu, không cần mua thêm sản phẩm.",
+          "http_status": 200,
+          "response": {
+            "session_id": "1d1d1e51-9a76-42dd-8d4a-2ea2cbfe4b65",
+            "text": "Chọn dầu gội có thành phần nhẹ nhàng, không chứa dầu thô hoặc dầu thực vật nặng để tránh làm tóc dầu thêm; hãy kiểm tra nhãn ghi “không chứa dầu thô” hoặc “đặc chế cho tóc dầu”.\nBạn muốn ưu tiên thương hiệu nào hoặc có điều kiện nào khác khi chọn dầu gội?",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.411
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T07:46:57.842144+00:00"
+}
