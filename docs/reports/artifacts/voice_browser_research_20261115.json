@@ -1,0 +1,553 @@
+{
+  "physical_microphone": false,
+  "llm_called": false,
+  "real_browser_vad": true,
+  "real_cloud_stt_tts": true,
+  "synthetic_voice": true,
+  "rows": [
+    {
+      "events": [
+        {
+          "event": "state_listening",
+          "at_ms": 3000
+        },
+        {
+          "event": "source_scheduled",
+          "at_ms": 3000
+        },
+        {
+          "event": "confirmed_onset",
+          "at_ms": 4256
+        },
+        {
+          "event": "state_recording",
+          "at_ms": 4256
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 7095
+        },
+        {
+          "event": "final_endpoint",
+          "at_ms": 7095
+        },
+        {
+          "event": "transcription_ready",
+          "at_ms": 8425
+        },
+        {
+          "event": "tts_playing",
+          "at_ms": 8814
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 8815
+        }
+      ],
+      "done": true,
+      "error": "",
+      "text": "Cho mình thịt bò để nhúng lẩu.",
+      "uploads": [
+        {
+          "start_ms": 7095,
+          "bytes": 116780,
+          "complete_ms": 8425,
+          "cancelled": false
+        }
+      ],
+      "last_speech_ms": 5621,
+      "quality": {
+        "server_vad_duration_seconds": 3.648,
+        "server_vad_frame_count": 114,
+        "server_vad_positive_frame_ratio": 0.42105263157894735,
+        "server_vad_positive_frame_count": 48,
+        "server_vad_max_probability": 0.9999475479125977,
+        "server_vad_mean_probability": 0.4356758008923447,
+        "server_vad_max_speech_frames": 48,
+        "event_speech_peak": 0.998645544052124,
+        "event_non_speech_peak": 0.008162319660186768,
+        "event_non_speech_class": 504,
+        "event_veto": 0,
+        "event_supported_speech_windows": 5,
+        "server_vad_analysis_gain": 1,
+        "server_vad_raw_max_probability": 0.9999475479125977,
+        "server_vad_elapsed_ms": 45.82350002601743,
+        "asr_input_gain": 25.598742737530728,
+        "stt_acoustic_ms": 46.12069998984225,
+        "stt_prepare_ms": 0.5753999867010862,
+        "stt_provider_ms": 1259.5632000011392,
+        "azure_confidence": 0.9262652,
+        "stt_trace_ms": 7.95630001812242,
+        "stt_total_ms": 1314.3564999918453
+      },
+      "accepted": true,
+      "preview": false,
+      "fixture": "vi-VN-NamMinhNeural-01-raw.wav",
+      "expected": "thịt bò",
+      "errors": [],
+      "endpoint_to_stt_ms": 1330,
+      "last_speech_to_stt_ms": 2804,
+      "last_speech_to_tts_playing_ms": 3193
+    },
+    {
+      "events": [
+        {
+          "event": "state_listening",
+          "at_ms": 952
+        },
+        {
+          "event": "source_scheduled",
+          "at_ms": 952
+        },
+        {
+          "event": "confirmed_onset",
+          "at_ms": 2183
+        },
+        {
+          "event": "state_recording",
+          "at_ms": 2183
+        },
+        {
+          "event": "preview_started",
+          "at_ms": 4222,
+          "id": 1
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 5054
+        },
+        {
+          "event": "final_endpoint",
+          "at_ms": 5054,
+          "preview_id": 1
+        },
+        {
+          "event": "transcription_ready",
+          "at_ms": 5055
+        },
+        {
+          "event": "tts_playing",
+          "at_ms": 5435
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 5436
+        }
+      ],
+      "done": true,
+      "error": "",
+      "text": "Cho mình thịt bò để nhúng lẩu.",
+      "uploads": [
+        {
+          "start_ms": 4222,
+          "bytes": 91180,
+          "complete_ms": 4972,
+          "cancelled": false
+        }
+      ],
+      "last_speech_ms": 3580,
+      "quality": {
+        "server_vad_duration_seconds": 2.848,
+        "server_vad_frame_count": 89,
+        "server_vad_positive_frame_ratio": 0.5393258426966292,
+        "server_vad_positive_frame_count": 48,
+        "server_vad_max_probability": 0.9999046921730042,
+        "server_vad_mean_probability": 0.5545458870657375,
+        "server_vad_max_speech_frames": 48,
+        "event_speech_peak": 0.9983558654785156,
+        "event_non_speech_peak": 0.008351057767868042,
+        "event_non_speech_class": 500,
+        "event_veto": 0,
+        "event_supported_speech_windows": 5,
+        "server_vad_analysis_gain": 1,
+        "server_vad_raw_max_probability": 0.9999046921730042,
+        "server_vad_elapsed_ms": 32.451000006403774,
+        "asr_input_gain": 22.618366822463376,
+        "stt_acoustic_ms": 32.761799986474216,
+        "stt_prepare_ms": 0.4458000184968114,
+        "stt_provider_ms": 698.2786000007764,
+        "azure_confidence": 0.9249506,
+        "stt_trace_ms": 8.249100006651133,
+        "stt_total_ms": 739.8102000006475
+      },
+      "accepted": true,
+      "preview": true,
+      "fixture": "vi-VN-NamMinhNeural-01-raw.wav",
+      "expected": "thịt bò",
+      "errors": [],
+      "endpoint_to_stt_ms": 1,
+      "last_speech_to_stt_ms": 1475,
+      "last_speech_to_tts_playing_ms": 1855
+    },
+    {
+      "events": [
+        {
+          "event": "state_listening",
+          "at_ms": 601
+        },
+        {
+          "event": "source_scheduled",
+          "at_ms": 601
+        },
+        {
+          "event": "confirmed_onset",
+          "at_ms": 1853
+        },
+        {
+          "event": "state_recording",
+          "at_ms": 1853
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 4694
+        },
+        {
+          "event": "final_endpoint",
+          "at_ms": 4694
+        },
+        {
+          "event": "transcription_ready",
+          "at_ms": 5558
+        },
+        {
+          "event": "tts_playing",
+          "at_ms": 5907
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 5907
+        }
+      ],
+      "done": true,
+      "error": "",
+      "text": "Cho mình thịt bò để nhúng lẩu.",
+      "uploads": [
+        {
+          "start_ms": 4694,
+          "bytes": 116780,
+          "complete_ms": 5558,
+          "cancelled": false
+        }
+      ],
+      "last_speech_ms": 3218,
+      "quality": {
+        "server_vad_duration_seconds": 3.648,
+        "server_vad_frame_count": 114,
+        "server_vad_positive_frame_ratio": 0.42105263157894735,
+        "server_vad_positive_frame_count": 48,
+        "server_vad_max_probability": 0.9998432397842407,
+        "server_vad_mean_probability": 0.4340445326085676,
+        "server_vad_max_speech_frames": 48,
+        "event_speech_peak": 0.9995038509368896,
+        "event_non_speech_peak": 0.005115002393722534,
+        "event_non_speech_class": 500,
+        "event_veto": 0,
+        "event_supported_speech_windows": 5,
+        "server_vad_analysis_gain": 1,
+        "server_vad_raw_max_probability": 0.9998432397842407,
+        "server_vad_elapsed_ms": 50.56980001972988,
+        "asr_input_gain": 25.598745788989156,
+        "stt_acoustic_ms": 50.88250001426786,
+        "stt_prepare_ms": 0.5604999896604568,
+        "stt_provider_ms": 791.5126000007149,
+        "azure_confidence": 0.9267238,
+        "stt_trace_ms": 5.18420001026243,
+        "stt_total_ms": 848.1927000102587
+      },
+      "accepted": true,
+      "preview": false,
+      "fixture": "vi-VN-NamMinhNeural-01-raw.wav",
+      "expected": "thịt bò",
+      "errors": [],
+      "endpoint_to_stt_ms": 864,
+      "last_speech_to_stt_ms": 2340,
+      "last_speech_to_tts_playing_ms": 2689
+    },
+    {
+      "events": [
+        {
+          "event": "state_listening",
+          "at_ms": 829
+        },
+        {
+          "event": "source_scheduled",
+          "at_ms": 829
+        },
+        {
+          "event": "confirmed_onset",
+          "at_ms": 2058
+        },
+        {
+          "event": "state_recording",
+          "at_ms": 2058
+        },
+        {
+          "event": "preview_started",
+          "at_ms": 4098,
+          "id": 1
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 4898
+        },
+        {
+          "event": "final_endpoint",
+          "at_ms": 4899,
+          "preview_id": 1
+        },
+        {
+          "event": "transcription_ready",
+          "at_ms": 4938
+        },
+        {
+          "event": "tts_playing",
+          "at_ms": 5219
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 5219
+        }
+      ],
+      "done": true,
+      "error": "",
+      "text": "Cho mình thịt bò để nhúng lẩu.",
+      "uploads": [
+        {
+          "start_ms": 4098,
+          "bytes": 91180,
+          "complete_ms": 4938,
+          "cancelled": false
+        }
+      ],
+      "last_speech_ms": 3456,
+      "quality": {
+        "server_vad_duration_seconds": 2.848,
+        "server_vad_frame_count": 89,
+        "server_vad_positive_frame_ratio": 0.5393258426966292,
+        "server_vad_positive_frame_count": 48,
+        "server_vad_max_probability": 0.9999059438705444,
+        "server_vad_mean_probability": 0.553641536932313,
+        "server_vad_max_speech_frames": 48,
+        "event_speech_peak": 0.9991883039474487,
+        "event_non_speech_peak": 0.009529531002044678,
+        "event_non_speech_class": 500,
+        "event_veto": 0,
+        "event_supported_speech_windows": 5,
+        "server_vad_analysis_gain": 1,
+        "server_vad_raw_max_probability": 0.9999059438705444,
+        "server_vad_elapsed_ms": 36.31729999324307,
+        "asr_input_gain": 22.618366822463376,
+        "stt_acoustic_ms": 36.615499993786216,
+        "stt_prepare_ms": 0.5318999756127596,
+        "stt_provider_ms": 785.5022000148892,
+        "azure_confidence": 0.92387664,
+        "stt_trace_ms": 6.061099993530661,
+        "stt_total_ms": 828.7652999861166
+      },
+      "accepted": true,
+      "preview": true,
+      "fixture": "vi-VN-NamMinhNeural-01-raw.wav",
+      "expected": "thịt bò",
+      "errors": [],
+      "endpoint_to_stt_ms": 39,
+      "last_speech_to_stt_ms": 1482,
+      "last_speech_to_tts_playing_ms": 1763
+    },
+    {
+      "events": [
+        {
+          "event": "state_listening",
+          "at_ms": 644
+        },
+        {
+          "event": "source_scheduled",
+          "at_ms": 644
+        },
+        {
+          "event": "confirmed_onset",
+          "at_ms": 1869
+        },
+        {
+          "event": "state_recording",
+          "at_ms": 1869
+        },
+        {
+          "event": "preview_started",
+          "at_ms": 3621,
+          "id": 1
+        },
+        {
+          "event": "preview_invalidated",
+          "at_ms": 4225,
+          "id": 1
+        },
+        {
+          "event": "preview_started",
+          "at_ms": 5316,
+          "id": 2
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 6212
+        },
+        {
+          "event": "final_endpoint",
+          "at_ms": 6212,
+          "preview_id": 2
+        },
+        {
+          "event": "transcription_ready",
+          "at_ms": 6682
+        },
+        {
+          "event": "tts_playing",
+          "at_ms": 7049
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 7049
+        }
+      ],
+      "done": true,
+      "error": "",
+      "text": "Em muốn mua sữa ít đường. Không đường.",
+      "uploads": [
+        {
+          "start_ms": 3621,
+          "bytes": 81964,
+          "complete_ms": 4226,
+          "cancelled": true
+        },
+        {
+          "start_ms": 5316,
+          "bytes": 136236,
+          "complete_ms": 6682,
+          "cancelled": false
+        }
+      ],
+      "last_speech_ms": 4769,
+      "quality": {
+        "server_vad_duration_seconds": 4.256,
+        "server_vad_frame_count": 133,
+        "server_vad_positive_frame_ratio": 0.44360902255639095,
+        "server_vad_positive_frame_count": 59,
+        "server_vad_max_probability": 0.9999853372573853,
+        "server_vad_mean_probability": 0.45261247534500926,
+        "server_vad_max_speech_frames": 42,
+        "event_speech_peak": 0.9993106126785278,
+        "event_non_speech_peak": 0.028028488159179688,
+        "event_non_speech_class": 500,
+        "event_veto": 0,
+        "event_supported_speech_windows": 7,
+        "server_vad_analysis_gain": 1,
+        "server_vad_raw_max_probability": 0.9999853372573853,
+        "server_vad_elapsed_ms": 44.506399979582056,
+        "asr_input_gain": 1,
+        "stt_acoustic_ms": 44.798600021749735,
+        "stt_prepare_ms": 0.599599996348843,
+        "stt_provider_ms": 1299.5845999976154,
+        "azure_confidence": 0.9424996,
+        "stt_trace_ms": 7.600999990245327,
+        "stt_total_ms": 1352.6462000154424
+      },
+      "accepted": true,
+      "preview": true,
+      "fixture": "NamMinh-pause-raw.wav",
+      "expected": "Không đường",
+      "errors": [],
+      "endpoint_to_stt_ms": 470,
+      "last_speech_to_stt_ms": 1913,
+      "last_speech_to_tts_playing_ms": 2280
+    },
+    {
+      "events": [
+        {
+          "event": "state_listening",
+          "at_ms": 830
+        },
+        {
+          "event": "source_scheduled",
+          "at_ms": 830
+        },
+        {
+          "event": "confirmed_onset",
+          "at_ms": 2060
+        },
+        {
+          "event": "state_recording",
+          "at_ms": 2060
+        },
+        {
+          "event": "preview_started",
+          "at_ms": 5446,
+          "id": 1
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 5642
+        },
+        {
+          "event": "final_endpoint",
+          "at_ms": 5642,
+          "preview_id": 1
+        },
+        {
+          "event": "transcription_ready",
+          "at_ms": 6480
+        },
+        {
+          "event": "tts_playing",
+          "at_ms": 6768
+        },
+        {
+          "event": "state_idle",
+          "at_ms": 6769
+        }
+      ],
+      "done": true,
+      "error": "",
+      "text": "Bỏ bánh bao ra, mình muốn mua thịt tươi.",
+      "uploads": [
+        {
+          "start_ms": 5446,
+          "bytes": 134188,
+          "complete_ms": 6480,
+          "cancelled": false
+        }
+      ],
+      "last_speech_ms": 4193,
+      "quality": {
+        "server_vad_duration_seconds": 4.192,
+        "server_vad_frame_count": 131,
+        "server_vad_positive_frame_ratio": 0.48091603053435117,
+        "server_vad_positive_frame_count": 63,
+        "server_vad_max_probability": 0.9999774694442749,
+        "server_vad_mean_probability": 0.49872524433463583,
+        "server_vad_max_speech_frames": 63,
+        "event_speech_peak": 0.643679141998291,
+        "event_non_speech_peak": 0.4559546411037445,
+        "event_non_speech_class": 438,
+        "event_veto": 0,
+        "event_supported_speech_windows": 0,
+        "server_vad_analysis_gain": 1,
+        "server_vad_raw_max_probability": 0.9999774694442749,
+        "server_vad_elapsed_ms": 86.27279999200255,
+        "asr_input_gain": 1,
+        "stt_acoustic_ms": 86.93650001077913,
+        "stt_prepare_ms": 1.5685999824199826,
+        "stt_provider_ms": 914.5850000204518,
+        "azure_confidence": 0.9295384,
+        "stt_trace_ms": 12.509400025010109,
+        "stt_total_ms": 1015.6707999994978
+      },
+      "accepted": true,
+      "preview": true,
+      "fixture": "vi-VN-NamMinhNeural-06-fan5db-raw.wav",
+      "expected": "",
+      "errors": [],
+      "endpoint_to_stt_ms": 838,
+      "last_speech_to_stt_ms": 2287,
+      "last_speech_to_tts_playing_ms": 2575
+    }
+  ]
+}
