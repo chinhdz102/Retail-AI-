@@ -856,3 +856,16 @@ async def test_planner_pantries_are_not_automatically_added_to_a_meal(requested)
     await consult(model, repo, "Mua thêm nước mắm" if requested else "Mua nguyên liệu nấu bữa tối", [], [])
     context = json.loads(model.calls[1][0][1]["content"].split(": ", 1)[1])
     assert bool(context["candidates"]) is requested
+
+
+@pytest.mark.asyncio
+async def test_all_consultation_stages_keep_both_configured_fallback_models():
+    from types import SimpleNamespace
+    model = Scripted({"need": "thịt bò", "searches": [{"query": "thịt bò"}]},
+                     {"choices": [{"product_id": "P1"}]})
+    model.settings = SimpleNamespace(groq_fallback_model="openai/gpt-oss-120b",
+                                     groq_fallback_model_2="openai/gpt-oss-20b")
+    answer = await consult(model, Repository(), "Chọn thịt bò giúp mình", [], [])
+    assert answer.products
+    assert all(options["fallback_models"] == ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
+               for _, options in model.calls)

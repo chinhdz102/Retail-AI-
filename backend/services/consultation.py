@@ -367,10 +367,14 @@ async def _json_call(groq, messages, schema, max_tokens, topics=None):
     for attempt in range(2):
         options = {}
         if getattr(groq, "settings", None):
-            # The smaller fallback repeatedly lost negation, product identity
-            # and medical boundaries in the real conversation audit. Do not
-            # quietly lower the advice quality when the primary is rate-limited.
-            options["fallback_models"] = [groq.settings.groq_fallback_model]
+            # Try every configured fallback after the key pool. The same
+            # schema/grounding/review checks apply regardless of model size.
+            options["fallback_models"] = [
+                model for model in (
+                    groq.settings.groq_fallback_model,
+                    groq.settings.groq_fallback_model_2,
+                ) if model
+            ]
         result = await groq.chat(messages, max_tokens=max_tokens,
                                  response_format={"type": "json_object"}, **options)
         try:
