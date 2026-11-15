@@ -1,0 +1,168 @@
+{
+  "started_utc": "2026-11-15T08:22:36.481571+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 15.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "owned-food",
+      "turns": [
+        {
+          "question": "Hai người ăn cơm tối, nhà có gạo và dầu ăn rồi. Chọn thịt heo với một loại rau, tổng tối đa 120 nghìn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "e9e5c42e-7292-43c2-a585-f362e13f8f08",
+            "text": "MEATDELI Xương heo chuẩn ngon WCM (S) — 200g (18.580đ): Xương heo có vị ngọt tự nhiên, thích hợp xào hoặc hầm nhanh\nRau mầm cải xanh  WinEco 100g (14.800đ): Rau mầm cải xanh thơm nhẹ, dễ xào nhanh, bổ sung màu sắc và chất xơ cho bữa ăn\n\nTổng: 33.380đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "TLM_10618635",
+              "TLM_10281840"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10618635",
+                "name": "MEATDELI Xương heo chuẩn ngon WCM (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 92900,
+                "stock": 5,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367909Z"
+              },
+              {
+                "product_id": "TLM_10281840",
+                "name": "Rau mầm cải xanh  WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 33,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238132Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 7.102
+        },
+        {
+          "question": "Không lấy thịt xay, chọn miếng thịt nạc để xào và rau luộc thôi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "e9e5c42e-7292-43c2-a585-f362e13f8f08",
+            "text": "MEATDELI Thịt Nạc thăn heo (S) — 200g (33.380đ): Thịt nạc thăn heo dễ xào nhanh, giữ được độ mềm và hương vị thơm ngon\n\nTổng: 33.380đ.",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "TLM_10617958"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10617958",
+                "name": "MEATDELI Thịt Nạc thăn heo (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 166900,
+                "stock": 2,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367481Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.819
+        },
+        {
+          "question": "Thịt chỉ mua 300 gram, tính tổng hai món giúp mình.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.26
+        },
+        {
+          "question": "Giờ bỏ giới hạn tiền, vẫn chỉ cần đúng hai món ăn với cơm. Chọn chốt giúp mình, đừng giới thiệu thêm.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 6.629
+        }
+      ]
+    },
+    {
+      "id": "one-shampoo",
+      "turns": [
+        {
+          "question": "Có loại dầu gội nào dưới 150 nghìn không, chọn giúp mình đúng một loại.",
+          "http_status": 200,
+          "response": {
+            "session_id": "b62d1282-fa8b-4bc1-beb8-138f1a3c0932",
+            "text": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g (80.000đ): phù hợp ngân sách và có hương bạc hà mát lạnh giúp thư giãn khi gội",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "TLM_10601171"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10601171",
+                "name": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "CLEAR",
+                "price_vnd": 80000,
+                "stock": 8,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.397509Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.368
+        },
+        {
+          "question": "Đừng quảng cáo công dụng, nói một điểm nên cân nhắc thôi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.567
+        },
+        {
+          "question": "Chỉ cần hướng dẫn chọn dầu gội cho tóc dầu, không cần mua thêm sản phẩm.",
+          "http_status": 200,
+          "response": {
+            "session_id": "b62d1282-fa8b-4bc1-beb8-138f1a3c0932",
+            "text": "Chọn dầu gội có thành phần làm sạch nhẹ, tránh dầu thừa và không gây khô tóc.\nBạn muốn thử dầu gội dạng chai nhỏ gọn hay chai lớn hơn?",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 9.415
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T08:25:02.687586+00:00"
+}

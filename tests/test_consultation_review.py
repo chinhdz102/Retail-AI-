@@ -63,6 +63,59 @@ async def test_useful_general_usage_does_not_require_a_label_instruction():
 
 
 @pytest.mark.asyncio
+async def test_strict_provider_encoding_failure_retries_json_without_releasing_unreviewed_draft():
+    from types import SimpleNamespace
+    model = RecordedReplies(PLAN,
+        GroqProviderError("Provider rejected schema", fallback_trace=[
+            {"http_status": 400, "provider_code": "json_validate_failed"}]),
+        GOOD_DRAFT, {"acceptable": True, "issues": []})
+    model.settings = SimpleNamespace(groq_model="qwen/qwen3.8-27b",
+        groq_fallback_model="openai/gpt-oss-120b", groq_fallback_model_2="openai/gpt-oss-20b")
+    result = await consult(model, Repository(), "Chọn thịt giúp", [], [])
+    assert result.products
+    assert model.calls[1][1]["response_format"]["type"] == "json_schema"
+    assert model.calls[2][1]["response_format"] == {"type": "json_object"}
+    assert "draft" in json.loads(model.calls[3][0][-1]["content"])
+
+
+@pytest.mark.asyncio
+async def test_quota_exhaustion_is_not_retried_as_a_schema_failure():
+    from types import SimpleNamespace
+    model = RecordedReplies(PLAN, GroqProviderError("No available provider", fallback_trace=[
+        {"http_status": 429, "provider_code": "rate_limit_exceeded"}]))
+    model.settings = SimpleNamespace(groq_model="qwen/qwen3.8-27b",
+        groq_fallback_model="openai/gpt-oss-120b", groq_fallback_model_2="openai/gpt-oss-20b")
+    with pytest.raises(GroqProviderError):
+        await consult(model, Repository(), "Chọn thịt giúp", [], [])
+    assert len(model.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_no_match_guidance_is_reviewed_against_empty_retrieval_not_a_required_purchase():
+    model = RecordedReplies({"need": "Trà không đường dưới 20 nghìn", "decision_mode": "recommend",
+        "budget_vnd": 20000, "searches": [{"query": "trà", "required_phrases": ["không đường"]}]},
+        {"advice": "Mình chưa chọn được loại có nhãn đúng yêu cầu. Bạn có thể pha trà nguyên chất, không thêm đường."},
+        {"acceptable": True, "issues": []})
+    result = await consult(model, Repository(), "Tư vấn trà không đường giúp", [], [])
+    assert not result.products and "không thêm đường" in result.text
+    review = json.loads(model.calls[2][0][-1]["content"])
+    assert review["available_candidates"] == []
+    assert "Do NOT demand a SKU" in model.calls[2][0][0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_separate_serving_boast_is_omitted_without_rewriting_purchase_or_skipping_review():
+    draft = {"choices": [{"product_id": "P1", "evidence_fields": ["name"],
+                           "reason": "Thái mỏng để xào, đủ cho hai người."}]}
+    model = RecordedReplies(PLAN, draft, {"acceptable": True, "issues": []})
+    result = await consult(model, Repository(), "Chọn thịt để xào", [], [])
+    assert "Thái mỏng để xào" in result.text and "đủ cho" not in result.text
+    assert result.purchase_lines[0]["quantity"] == 1
+    reviewed = json.loads(model.calls[2][0][-1]["content"])
+    assert reviewed["draft"] == result.text
+
+
+@pytest.mark.asyncio
 async def test_format_repair_does_not_spend_semantic_repair_budget():
     repo = Repository()
     repo.product = repo.product.model_copy(update={"name": "Thịt bò xay 200g"})
