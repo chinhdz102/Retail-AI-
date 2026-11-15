@@ -1,0 +1,89 @@
+{
+  "started_utc": "2026-11-15T07:32:03.132015+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 20.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "one-shampoo",
+      "turns": [
+        {
+          "question": "Có loại dầu gội nào dưới 150 nghìn không, chọn giúp mình đúng một loại.",
+          "http_status": 200,
+          "response": {
+            "session_id": "79a862e2-2ecd-4d61-baf9-0c31cad007ab",
+            "text": "Bạn nên chọn dầu gội có dung tích vừa phải để dùng thử trước, tránh lãng phí nếu không hợp với da đầu. Khi gội, hãy massage nhẹ nhàng và xả sạch để tóc không bị bết.\nDầu gội dược liệu Thái Dương 3 hương hoa chai 480ml (114.900đ): Dầu gội dược liệu có hương hoa, dung tích 480ml phù hợp để dùng thử và nằm trong ngân sách bạn đưa ra",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "TLM_10170560"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10170560",
+                "name": "Dầu gội dược liệu Thái Dương 3 hương hoa chai 480ml",
+                "category": "Chăm Sóc Tóc",
+                "brand": "THÁI DƯƠNG",
+                "price_vnd": 114900,
+                "stock": 14,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.396001Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.426
+        },
+        {
+          "question": "Đừng quảng cáo công dụng, nói một điểm nên cân nhắc thôi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "79a862e2-2ecd-4d61-baf9-0c31cad007ab",
+            "text": "Bạn nên cân nhắc mùi hương hoa của sản phẩm này, vì hương liệu có thể không hợp với sở thích cá nhân của bạn.\nDầu gội dược liệu Thái Dương 3 hương hoa chai 480ml (114.900đ): Sản phẩm có hương hoa, bạn nên cân nhắc xem mùi này có hợp với sở thích của bạn không\n\nTổng: 114.900đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "TLM_10170560"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10170560",
+                "name": "Dầu gội dược liệu Thái Dương 3 hương hoa chai 480ml",
+                "category": "Chăm Sóc Tóc",
+                "brand": "THÁI DƯƠNG",
+                "price_vnd": 114900,
+                "stock": 14,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.396001Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.702
+        },
+        {
+          "question": "Chỉ cần hướng dẫn chọn dầu gội cho tóc dầu, không cần mua thêm sản phẩm.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.475
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T07:33:19.106058+00:00"
+}

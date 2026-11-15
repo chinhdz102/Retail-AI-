@@ -3,7 +3,9 @@ from types import SimpleNamespace
 import pytest
 
 from backend.config import Settings
-from backend.services.groq import GroqConfigurationError, GroqProviderError, GroqService
+from backend.services.groq import (
+    GroqConfigurationError, GroqProviderError, GroqService, _retry_delay_seconds,
+)
 
 
 class FakeChatCompletions:
@@ -357,3 +359,69 @@ async def test_invalid_key_is_not_retried_on_each_model_in_same_request(monkeypa
     assert result.model == 'openai/gpt-oss-120b'
     assert len(primary.chat.completions.calls) == 1
     assert [r['credential_slot'] for r in result.fallback_trace] == [0, 1, 1]
+
+
+@pytest.mark.parametrize("headers,expected", [
+    ({"retry-after": "2"}, 2.0),
+    ({"retry-after": "1m12.5s"}, 72.5),
+    ({"x-ratelimit-reset-tokens": "3s"}, 3.0),
+    ({"x-ratelimit-reset-tokens": "1ms"}, 1.0),
+    ({}, 60.0),
+])
+def test_retry_delay_accepts_groq_second_and_minute_headers(headers, expected):
+    assert _retry_delay_seconds(headers) == expected
+
+
+@pytest.mark.asyncio
+async def test_transient_server_error_tries_another_key_for_same_model(monkeypatch):
+    primary, secondary = scripted_client(500), scripted_client(200)
+    service = GroqService(Settings(groq_api_key="test-key"), client=primary)
+    monkeypatch.setattr(service, "_clients", lambda _: [primary, secondary])
+    result = await service.chat([], fallback_models=[])
+    assert result.model == service.settings.groq_model
+    assert [row["credential_slot"] for row in result.fallback_trace] == [0, 1]
+
+
+@pytest.mark.asyncio
+async def test_second_fallback_model_is_reached_after_all_keys_rate_limited(monkeypatch):
+    primary = scripted_client(429, 429, 200)
+    secondary = scripted_client(429, 429, 429)
+    service = GroqService(Settings(groq_api_key="test-key"), client=primary)
+    monkeypatch.setattr(service, "_clients", lambda _: [primary, secondary])
+    result = await service.chat([], fallback_models=["openai/gpt-oss-120b", "openai/gpt-oss-20b"])
+    assert result.model == "openai/gpt-oss-20b"
+    assert [row["status"] for row in result.fallback_trace] == [
+        "error", "error", "error", "error", "success"
+    ]
+    assert primary.chat.completions.calls[-1]["model"] == "openai/gpt-oss-20b"
+
+
+@pytest.mark.asyncio
+async def test_healthy_keys_share_requests_instead_of_hotspotting_first_key(monkeypatch):
+    primary, secondary = scripted_client(200, 200), scripted_client(200)
+    service = GroqService(Settings(groq_api_key="test-key"), client=primary)
+    monkeypatch.setattr(service, "_clients", lambda _: [primary, secondary])
+    slots = [(await service.chat([], fallback_models=[])).fallback_trace[-1]["credential_slot"]
+             for _ in range(3)]
+    assert slots == [0, 1, 0]
+
+
+@pytest.mark.asyncio
+async def test_invalid_model_request_does_not_burn_every_key_on_the_same_payload(monkeypatch):
+    primary, secondary = scripted_client(400, 200), scripted_client()
+    service = GroqService(Settings(groq_api_key="test-key"), client=primary)
+    monkeypatch.setattr(service, "_clients", lambda _: [primary, secondary])
+    result = await service.chat([], fallback_models=["openai/gpt-oss-120b"])
+    assert result.model == "openai/gpt-oss-120b"
+    assert not secondary.chat.completions.calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [403, 404])
+async def test_model_access_error_on_one_key_does_not_hide_other_keys_access(monkeypatch, status):
+    primary, secondary = scripted_client(status), scripted_client(200)
+    service = GroqService(Settings(groq_api_key="test-key"), client=primary)
+    monkeypatch.setattr(service, "_clients", lambda _: [primary, secondary])
+    result = await service.chat([], fallback_models=[])
+    assert result.model == service.settings.groq_model
+    assert result.fallback_trace[-1]["credential_slot"] == 1
