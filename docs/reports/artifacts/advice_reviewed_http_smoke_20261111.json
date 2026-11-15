@@ -1,0 +1,11 @@
+{
+  "live_HTTP": true,
+  "stt_used": false,
+  "rows": [
+    {
+      "question": "Mua thịt bò hoặc ba chỉ ăn lẩu, khoảng 200 nghìn. Chọn một loại tiện nhúng giúp tôi.",
+      "http_status": 502,
+      "seconds": 0.01
+    }
+  ]
+}

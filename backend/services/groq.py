@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import inspect
 import logging
+import time
 from collections.abc import Sequence
+from itertools import product
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -118,6 +120,9 @@ class GroqService:
     def __init__(self, settings: Settings | None = None, client: Any | None = None) -> None:
         self.settings = settings or get_settings()
         self.client = client
+        self._injected_client = client is not None
+        self._fallback_clients: list[Any] | None = None
+        self._cooldowns: dict[tuple[str, int], float] = {}
 
     def _client_or_raise(self) -> Any:
         if not self.settings.has_groq_key:
@@ -127,8 +132,26 @@ class GroqService:
                 api_key=self.settings.groq_api_key.get_secret_value(),
                 base_url=self.settings.groq_base_url,
                 timeout=self.settings.groq_timeout_seconds,
+                max_retries=0,
             )
         return self.client
+
+    def _clients(self, primary: Any) -> list[Any]:
+        if self._injected_client:
+            return [primary]
+        if self._fallback_clients is None:
+            keys = list(dict.fromkeys(
+                getattr(self.settings, field).get_secret_value().strip()
+                for field in (
+                    "groq_api_key", "groq_api_key_fallback_1", "groq_api_key_fallback_2",
+                    "groq_api_key_fallback_3", "groq_api_key_fallback_4",
+                ) if getattr(self.settings, field).get_secret_value().strip()
+            ))
+            self._fallback_clients = [AsyncOpenAI(
+                api_key=key, base_url=self.settings.groq_base_url,
+                timeout=self.settings.groq_timeout_seconds, max_retries=0,
+            ) for key in keys[1:]]
+        return [primary, *self._fallback_clients]
 
     async def chat(
         self,
@@ -136,6 +159,11 @@ class GroqService:
         model: str | None = None,
         tools: Sequence[dict[str, Any]] | None = None,
         tool_choice: str | None = None,
+        *,
+        max_tokens: int = 80,
+        response_format: dict[str, Any] | None = None,
+        reasoning_effort: str | None = None,
+        fallback_models: Sequence[str] | None = None,
     ) -> GroqChatResult:
         client = self._client_or_raise()
         models = list(
@@ -143,31 +171,47 @@ class GroqService:
                 selected_model
                 for selected_model in (
                     model or self.settings.groq_model,
-                    self.settings.groq_fallback_model,
-                    self.settings.groq_fallback_model_2,
+                    *(fallback_models if fallback_models is not None else (
+                        self.settings.groq_fallback_model,
+                        self.settings.groq_fallback_model_2,
+                    )),
                 )
                 if selected_model
             )
         )
 
         last_error: Exception | None = None
-        fallback_trace: list[dict[str, str]] = []
-        for selected_model in models:
+        fallback_trace: list[dict[str, Any]] = []
+        clients = self._clients(client)
+        blocked_slots: set[int] = set()
+        failed_models: set[str] = set()
+        for selected_model, (credential_slot, client) in product(models, enumerate(clients)):
+            if credential_slot in blocked_slots or selected_model in failed_models:
+                continue
+            cooldown = self._cooldowns.get((selected_model, credential_slot), 0) - time.monotonic()
+            if cooldown > 0:
+                fallback_trace.append({"model": selected_model, "credential_slot": credential_slot,
+                                       "status": "cooldown", "retry_after_seconds": round(cooldown, 1)})
+                continue
             try:
                 model_options: dict[str, Any] = {}
                 if selected_model.startswith("qwen/"):
                     model_options["reasoning_effort"] = "none"
                 elif selected_model.startswith("openai/gpt-oss-"):
                     model_options["reasoning_effort"] = "low"
+                if reasoning_effort is not None:
+                    model_options["reasoning_effort"] = reasoning_effort
                 if tools:
                     model_options["tools"] = list(tools)
                     model_options["tool_choice"] = tool_choice or "auto"
+                if response_format is not None:
+                    model_options["response_format"] = response_format
 
                 request_options = {
                     "model": selected_model,
                     "messages": list(messages),
                     "temperature": 0.2,
-                    "max_tokens": 80,
+                    "max_tokens": max_tokens,
                     **model_options,
                 }
                 completion_endpoint = client.chat.completions
@@ -201,14 +245,16 @@ class GroqService:
                     raise ValueError("Groq returned an empty response")
                 successful_attempt: dict[str, Any] = {
                     "model": selected_model,
+                    "credential_slot": credential_slot,
                     "status": "success",
                 }
                 if response_headers:
                     successful_attempt["rate_limit_headers"] = response_headers
                 fallback_trace.append(successful_attempt)
                 logger.info(
-                    "Groq chat completed model=%s attempts=%d",
+                    "Groq chat completed model=%s credential_slot=%d attempts=%d",
                     selected_model,
+                    credential_slot,
                     len(fallback_trace),
                 )
                 usage = getattr(response, "usage", None)
@@ -224,20 +270,44 @@ class GroqService:
                 last_error = exc
                 failed_attempt: dict[str, Any] = {
                     "model": selected_model,
+                    "credential_slot": credential_slot,
                     "status": "error",
                     "error_type": type(exc).__name__,
                 }
+                status = getattr(exc, "status_code", None)
+                if isinstance(status, int):
+                    failed_attempt["http_status"] = status
+                # Keep a bounded diagnostic code, never the provider's raw body
+                # (which may include request data or credential information).
+                provider_code = getattr(exc, "code", None)
+                if provider_code in {
+                    "json_validate_failed", "tool_use_failed", "rate_limit_exceeded",
+                    "context_length_exceeded", "model_not_found", "invalid_api_key",
+                }:
+                    failed_attempt["provider_code"] = provider_code
+                if getattr(exc, "status_code", None) in {401, 403}:
+                    blocked_slots.add(credential_slot)
+                elif getattr(exc, "status_code", None) != 429:
+                    failed_models.add(selected_model)
                 error_response = getattr(exc, "response", None)
-                response_headers = _rate_limit_headers(
-                    getattr(error_response, "headers", None)
-                )
+                response_headers = _rate_limit_headers(getattr(error_response, "headers", None))
                 if response_headers:
                     failed_attempt["rate_limit_headers"] = response_headers
+                if getattr(exc, "status_code", None) == 429:
+                    try:
+                        delay = float(response_headers.get("retry-after", "60"))
+                    except ValueError:
+                        delay = 60.0
+                    self._cooldowns[(selected_model, credential_slot)] = (
+                        time.monotonic() + max(1.0, min(delay, 86400.0))
+                    )
                 fallback_trace.append(failed_attempt)
                 logger.warning(
-                    "Groq chat model attempt failed model=%s error_type=%s",
+                    "Groq chat model attempt failed model=%s credential_slot=%d error_type=%s code=%s",
                     selected_model,
+                    credential_slot,
                     type(exc).__name__,
+                    failed_attempt.get("provider_code", "unclassified"),
                 )
 
         logger.error(

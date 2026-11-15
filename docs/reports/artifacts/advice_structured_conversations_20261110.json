@@ -1,0 +1,532 @@
+{
+  "started_utc": "2026-11-10T16:59:05.702202+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 12.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "hotpot",
+      "turns": [
+        {
+          "question": "Mua thịt về ăn lẩu cho 4 người thì chọn gì?",
+          "http_status": 200,
+          "response": {
+            "session_id": "f9f873a9-bd2c-4a66-a29f-8d3e06f5c459",
+            "text": "Bạn nên chuẩn bị khoảng 300‑400 g thịt ba rọi heo và 200‑250 g thịt bò xay cho 4 người, kèm nước lẩu và các rau củ. Thịt ba rọi mỏng, béo sẽ ngấm vị lẩu tốt, còn thịt bò xay có thể ném nhanh vào nồi để ăn ngay. Nếu muốn đa dạng, có thể bổ sung thêm một ít chả viên hoặc xúc xích.\nMEATDELI Thịt Ba Rọi heo (S) — 400g (79.960đ).\nPACOW Thịt bò Úc xay (Minced) khay 250g × 2 (189.800đ): Thịt bò Úc xay trong khay 250 g, dễ nhúng lẩu và bổ sung vị thịt bò cho món lẩu.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10617959",
+              "WIN_10240587"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10617959",
+                "name": "MEATDELI Thịt Ba Rọi heo (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 199900,
+                "stock": 1,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367568Z"
+              },
+              {
+                "product_id": "WIN_10240587",
+                "name": "PACOW Thịt bò Úc xay (Minced) khay 250g",
+                "category": "Thịt",
+                "brand": "PACOW",
+                "price_vnd": 94900,
+                "stock": 1,
+                "uom": "Khay",
+                "data_timestamp": "2026-09-15T13:53:54.366516Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.996
+        },
+        {
+          "question": "Thịt bò bình thường hoặc ba chỉ cũng được, khoảng 200 nghìn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.562
+        },
+        {
+          "question": "Tư vấn giúp t chọn loại nào đi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "f9f873a9-bd2c-4a66-a29f-8d3e06f5c459",
+            "text": "Chọn một gói thịt bò xay (PACOW) và một gói thịt ba chỉ (VISSAN). Thịt bò xay giúp nhanh nấu, thịt ba chỉ béo ngấm vị lẩu, đủ cho 4 người ăn lẩu. Nếu muốn thêm hương vị, bạn có thể thêm một ít rau củ và nước lẩu chuẩn.\nPACOW Thịt bò Úc xay (Minced) khay 250g (94.900đ): Thịt bò xay nhanh nấu, phù hợp cho lẩu.\nGiò bò Vissan cây 500g (143.300đ): Thịt ba chỉ béo ngấm vị lẩu, đủ cho 4 người.\nBạn có muốn thêm rau củ hoặc nước lẩu chuẩn không?",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10240587",
+              "WIN_10005928"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10240587",
+                "name": "PACOW Thịt bò Úc xay (Minced) khay 250g",
+                "category": "Thịt",
+                "brand": "PACOW",
+                "price_vnd": 94900,
+                "stock": 1,
+                "uom": "Khay",
+                "data_timestamp": "2026-09-15T13:53:54.366516Z"
+              },
+              {
+                "product_id": "WIN_10005928",
+                "name": "Giò bò Vissan cây 500g",
+                "category": "Chả Giò",
+                "brand": "VISSAN",
+                "price_vnd": 143300,
+                "stock": 8,
+                "uom": "Cái",
+                "data_timestamp": "2026-09-15T13:53:32.919894Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.638
+        }
+      ]
+    },
+    {
+      "id": "acne",
+      "turns": [
+        {
+          "question": "Có loại nào điều trị mụn không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.726
+        },
+        {
+          "question": "Tư vấn cho t với.",
+          "http_status": 200,
+          "response": {
+            "session_id": "5ecd4e0c-2d00-4abe-acdc-f65182af5a2b",
+            "text": "Bạn nên chọn sữa rửa mặt có thành phần kháng khuẩn và kem rửa mặt có thành phần điều trị mụn để hỗ trợ làm sạch da và giảm mụn. Hãy rửa mặt hai lần mỗi ngày, dùng sữa rửa mặt trước khi dùng kem rửa mặt, và tránh chạm tay vào mặt quá thường xuyên.\nSữa rửa mặt Biore sạch mụn và kháng khuẩn 100g (54.000đ): Sữa rửa mặt Biore có kháng khuẩn\nKem rửa mặt ngăn ngừa mụn Acnes Medicated tuýt 100g (75.600đ).\nBạn có muốn dùng thêm sản phẩm dưỡng ẩm sau khi rửa mặt không?",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10017633",
+              "WIN_10017342"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10017633",
+                "name": "Sữa rửa mặt Biore sạch mụn và kháng khuẩn 100g",
+                "category": "Chăm Sóc Da",
+                "brand": "BIORE",
+                "price_vnd": 54000,
+                "stock": 17,
+                "uom": "Tuýp",
+                "data_timestamp": "2026-09-15T13:53:35.400664Z"
+              },
+              {
+                "product_id": "WIN_10017342",
+                "name": "Kem rửa mặt ngăn ngừa mụn Acnes Medicated tuýt 100g",
+                "category": "Chăm Sóc Da",
+                "brand": "ACNES",
+                "price_vnd": 75600,
+                "stock": 21,
+                "uom": "Tuýp",
+                "data_timestamp": "2026-09-15T13:53:35.398463Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.709
+        },
+        {
+          "question": "Da dầu, khoảng 100 nghìn, chọn gì được?",
+          "http_status": 200,
+          "response": {
+            "session_id": "5ecd4e0c-2d00-4abe-acdc-f65182af5a2b",
+            "text": "Bạn nên chọn sữa rửa mặt có thành phần kháng khuẩn và kem rửa mặt có thành phần điều trị mụn để hỗ trợ làm sạch da và giảm mụn. Hãy rửa mặt hai lần mỗi ngày, dùng sữa rửa mặt trước khi dùng kem rửa mặt, và tránh chạm tay vào mặt quá thường xuyên.\nBạn muốn dùng thêm sản phẩm dưỡng ẩm sau khi rửa mặt không?",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.715
+        }
+      ]
+    },
+    {
+      "id": "shampoo",
+      "turns": [
+        {
+          "question": "Có dầu gội dưới 150 nghìn không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.113
+        },
+        {
+          "question": "Tóc t dầu, chọn giúp loại đáng tiền.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.848
+        },
+        {
+          "question": "Có loại nào rẻ hơn mà dung tích tương tự không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.154
+        }
+      ]
+    },
+    {
+      "id": "drinks",
+      "turns": [
+        {
+          "question": "Có đồ uống nào không quá ngọt dưới 20 nghìn?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 7.122
+        },
+        {
+          "question": "Không lấy nước có ga.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.362
+        },
+        {
+          "question": "Loại 1 lít ấy chứ không phải chai nhỏ.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.856
+        }
+      ]
+    },
+    {
+      "id": "dinner",
+      "turns": [
+        {
+          "question": "Mua đồ ăn tối cho hai người, tổng khoảng 200 nghìn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "6653a166-ffe5-4ebe-a7e7-d3a70a3d7de7",
+            "text": "Bạn có thể chuẩn bị một bữa ăn tối đơn giản, ngon miệng cho hai người bằng cách chọn phở ăn liền và bánh mì tươi. Để tăng thêm phần bổ sung dinh dưỡng, thêm sữa chua uống làm món tráng miệng nhẹ.\nPhở gà Đệ Nhất gói 65g × 2 (17.200đ): đủ khẩu phần cho hai người\nBánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g × 2 (26.000đ): dễ ăn và thơm ngon\nSữa Chua Uống Susu Hương Cam  gói 110ml × 2 (10.800đ): làm món tráng miệng nhẹ\n\nTổng: 54.000đ.",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10007939",
+              "WIN_10140547",
+              "WIN_10195011"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10007939",
+                "name": "Phở gà Đệ Nhất gói 65g",
+                "category": "Phở - Bún",
+                "brand": "ĐỆ NHẤT",
+                "price_vnd": 8600,
+                "stock": 227,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:47.626543Z"
+              },
+              {
+                "product_id": "WIN_10140547",
+                "name": "Bánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g",
+                "category": "Bánh mì",
+                "brand": "KINH ĐÔ",
+                "price_vnd": 13000,
+                "stock": 23,
+                "uom": "Cái",
+                "data_timestamp": "2026-09-15T13:53:30.496953Z"
+              },
+              {
+                "product_id": "WIN_10195011",
+                "name": "Sữa Chua Uống Susu Hương Cam  gói 110ml",
+                "category": "Sữa Chua - Váng Sữa",
+                "brand": "VINAMILK",
+                "price_vnd": 5400,
+                "stock": 242,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:52.881403Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 6.196
+        },
+        {
+          "question": "Nhà có gạo rồi, lấy món dễ nấu thôi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "6653a166-ffe5-4ebe-a7e7-d3a70a3d7de7",
+            "text": "Bạn có thể chuẩn bị một bữa ăn tối nhanh, ngon và dễ nấu bằng cách chọn bún khô hoặc bún tươi, kèm theo cơm chiên hải sản để tăng hương vị. Nếu muốn tiết kiệm thời gian, bún khô chỉ cần ngâm nước ấm và trộn với nước dùng, còn bún tươi có thể nấu sẵn trong nồi. Cơm chiên hải sản là món ăn nhanh, chỉ cần rắc nước, dầu và trộn đều.\nBún khô Safoco gói 400g (30.300đ): Bún khô dễ chuẩn bị, chỉ cần ngâm nước và trộn với nước dùng\nCơm chiên hải sản ngũ sắc SG Food 200g (32.000đ): Cơm chiên hải sản ngũ sắc nhanh, chỉ cần rắc nước, dầu và trộn\n\nTổng: 62.300đ.",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10007849",
+              "WIN_10170209"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10007849",
+                "name": "Bún khô Safoco gói 400g",
+                "category": "Phở - Bún",
+                "brand": "SAFOCO",
+                "price_vnd": 30300,
+                "stock": 38,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:47.626256Z"
+              },
+              {
+                "product_id": "WIN_10170209",
+                "name": "Cơm chiên hải sản ngũ sắc SG Food 200g",
+                "category": "Thực Phẩm Đông Lạnh Khác",
+                "brand": "SG FOOD",
+                "price_vnd": 32000,
+                "stock": 20,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:56.077688Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.55
+        },
+        {
+          "question": "Gợi ý cụ thể và tính tổng giúp t.",
+          "http_status": 200,
+          "response": {
+            "session_id": "6653a166-ffe5-4ebe-a7e7-d3a70a3d7de7",
+            "text": "Bạn có thể chuẩn bị một bữa ăn tối nhanh, ngon và dễ nấu cho hai người bằng cách chọn bún khô hoặc bún tươi, kèm theo cơm chiên hải sản để tăng hương vị. Nếu muốn tiết kiệm thời gian, bún khô chỉ cần ngâm nước ấm và trộn với nước dùng, còn bún tươi có thể nấu sẵn trong nồi. Cơm chiên hải sản là món ăn nhanh, chỉ cần rắc nước, dầu và trộn đều.\nBún khô Safoco gói 400g (30.300đ): Bún khô dễ chuẩn bị, chỉ cần ngâm nước và trộn với nước dùng\nCơm chiên hải sản ngũ sắc SG Food 200g (32.000đ): Cơm chiên hải sản ngũ sắc nhanh, chỉ cần rắc nước, dầu và trộn\nBạn muốn thêm món tráng miệng hay uống gì để hoàn thiện bữa ăn?\n\nTổng: 62.300đ.",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10007849",
+              "WIN_10170209"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10007849",
+                "name": "Bún khô Safoco gói 400g",
+                "category": "Phở - Bún",
+                "brand": "SAFOCO",
+                "price_vnd": 30300,
+                "stock": 38,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:47.626256Z"
+              },
+              {
+                "product_id": "WIN_10170209",
+                "name": "Cơm chiên hải sản ngũ sắc SG Food 200g",
+                "category": "Thực Phẩm Đông Lạnh Khác",
+                "brand": "SG FOOD",
+                "price_vnd": 32000,
+                "stock": 20,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:56.077688Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.967
+        }
+      ]
+    },
+    {
+      "id": "cleaning",
+      "turns": [
+        {
+          "question": "Nhà t nuôi mèo, cuối tuần muốn mua đồ lau nhà.",
+          "http_status": 200,
+          "response": {
+            "session_id": "8c9a3562-2194-4075-a8a9-408e5d036f29",
+            "text": "Bạn nên chọn khăn lau micro để làm sạch nhanh và hiệu quả, tránh làm hại cho mèo. Nếu muốn có thêm lựa chọn mềm mại, có thể thêm khăn lau siêu mềm.\nKhăn lau micro tiện dụng Scotch Brite 30*30 (39.000đ): Khăn lau micro tiện dụng, bám bẩn tốt\nKhăn lau siêu mềm Viethop-VN02 30x30cm (19.000đ): Khăn siêu mềm, nhẹ nhàng cho bề mặt",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10026675",
+              "WIN_10232170"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10026675",
+                "name": "Khăn lau micro tiện dụng Scotch Brite 30*30",
+                "category": "Vệ Sinh Nhà Cửa",
+                "brand": "SCOTCH-BRITE",
+                "price_vnd": 39000,
+                "stock": 36,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:38.355243Z"
+              },
+              {
+                "product_id": "WIN_10232170",
+                "name": "Khăn lau siêu mềm Viethop-VN02 30x30cm",
+                "category": "Đồ dùng nhà bếp",
+                "brand": "VẠN NĂNG",
+                "price_vnd": 19000,
+                "stock": 61,
+                "uom": "Cái",
+                "data_timestamp": "2026-09-15T13:53:38.678304Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.603
+        },
+        {
+          "question": "Không có mùi nồng, tầm dưới 100 nghìn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.965
+        },
+        {
+          "question": "Tư vấn nên chọn loại nào?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.089
+        }
+      ]
+    },
+    {
+      "id": "stt-typo",
+      "turns": [
+        {
+          "question": "Mua thịt về ăn lấu thì nên chọn gì?",
+          "http_status": 200,
+          "response": {
+            "session_id": "7454f1a1-f895-443d-99f4-91b153ef9b5f",
+            "text": "Bạn nên chọn thịt ba chỉ bò Mỹ Orifood 1.3kg. Thịt ba chỉ có độ mỡ vừa phải, khi lấu sẽ giữ được độ mềm và vị ngọt tự nhiên, phù hợp cho món lẩu Tom Yum.\nLẩu Tomyum ba chỉ bò Mỹ  Orifood 1.3kg (334.900đ): Thịt ba chỉ bò Mỹ có độ mỡ vừa, giữ được độ mềm và vị ngọt khi lấu",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10601287"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10601287",
+                "name": "Lẩu Tomyum ba chỉ bò Mỹ  Orifood 1.3kg",
+                "category": "Thịt Đông Lạnh",
+                "brand": "ORIFOOD",
+                "price_vnd": 334900,
+                "stock": 4,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:54.417994Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.367
+        },
+        {
+          "question": "Ý t là ăn lẩu ấy.",
+          "http_status": 200,
+          "response": {
+            "session_id": "7454f1a1-f895-443d-99f4-91b153ef9b5f",
+            "text": "Chọn thịt ba chỉ bò Mỹ Orifood 1.3kg vì độ mỡ vừa, giữ độ mềm và vị ngọt khi lấu, phù hợp cho lẩu Tom Yum.\nLẩu Tomyum ba chỉ bò Mỹ  Orifood 1.3kg (334.900đ): Thịt ba chỉ bò Mỹ có độ mỡ vừa, giữ độ mềm và vị ngọt khi lấu\nBạn muốn lẩu với gia vị nào? (điểm, cay, chua, ngọt, hay trộn) để mình gợi thêm lựa chọn phù hợp.",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10601287"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10601287",
+                "name": "Lẩu Tomyum ba chỉ bò Mỹ  Orifood 1.3kg",
+                "category": "Thịt Đông Lạnh",
+                "brand": "ORIFOOD",
+                "price_vnd": 334900,
+                "stock": 4,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:54.417994Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.889
+        },
+        {
+          "question": "Bỏ bánh bao ra, muốn thịt tươi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "7454f1a1-f895-443d-99f4-91b153ef9b5f",
+            "text": "Bạn muốn mua thịt tươi để lẩu, nhưng hiện tại không có mặt hàng thịt tươi trong danh sách đề xuất. Bạn có thể chọn mua thịt ba chỉ bò Mỹ Orifood 1.3kg (đã đông lạnh) hoặc cho mình biết thêm chi tiết về loại thịt tươi bạn muốn (bò, gà, lợn, dê) để mình tìm kiếm phù hợp.\nBạn muốn lẩu với loại thịt tươi nào (bò, gà, lợn, dê) và số lượng dự kiến?",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.424
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-10T17:04:46.148900+00:00"
+}

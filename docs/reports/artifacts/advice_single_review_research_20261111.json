@@ -1,0 +1,76 @@
+{
+  "production_component": true,
+  "live_LLM": true,
+  "rows": [
+    {
+      "id": "mince-bad",
+      "product": "Thịt bò xay 200g",
+      "draft": "Thịt bò xay 200g (50.000đ): Dễ cắt thành lát mỏng cho lẩu.",
+      "expected_acceptable": false,
+      "review": {
+        "acceptable": false,
+        "issues": [
+          "Thịt bò xay là dạng đã xay nhuyễn, không thể cắt thành lát mỏng như thịt nguyên khối.",
+          "Gợi ý dùng cho lẩu không phù hợp với quy cách thịt xay (dễ tan, không giữ form), nên tư vấn cách chế biến phù hợp như làm burger, thịt viên hoặc xào."
+        ]
+      },
+      "correct": true,
+      "seconds": 2.208
+    },
+    {
+      "id": "slices-good",
+      "product": "Ba chỉ bò cắt lát 200g",
+      "draft": "Ba chỉ bò cắt lát 200g (50.000đ): Tiện nhúng lẩu, nhúng chín từng ít một.",
+      "expected_acceptable": true,
+      "review": {
+        "acceptable": true,
+        "issues": []
+      },
+      "correct": true,
+      "seconds": 0.266
+    },
+    {
+      "id": "mince-good",
+      "product": "Thịt heo xay 500g",
+      "draft": "Thịt heo xay 500g (50.000đ): Vo viên nhỏ rồi nấu chín trong nước dùng.",
+      "expected_acceptable": true,
+      "review": {
+        "acceptable": true,
+        "issues": []
+      },
+      "correct": true,
+      "seconds": 0.644
+    },
+    {
+      "id": "pet-unknown",
+      "product": "Nước lau sàn hương chanh 1L",
+      "draft": "Nước lau sàn hương chanh 1L (50.000đ): An toàn cho mèo.",
+      "expected_acceptable": false,
+      "review": {
+        "acceptable": false,
+        "issues": [
+          "Không có cơ sở trong nhãn sản phẩm để khẳng định an toàn cho mèo, cần loại bỏ tuyên bố này.",
+          "Thiếu hướng dẫn sử dụng cụ thể (tỷ lệ pha, cách lau) phù hợp với loại nước lau sàn."
+        ]
+      },
+      "correct": true,
+      "seconds": 0.378
+    },
+    {
+      "id": "pet-limit",
+      "product": "Nước lau sàn hương chanh 1L",
+      "draft": "Nước lau sàn hương chanh 1L (50.000đ): Mình chưa có cơ sở khẳng định loại này an toàn cho mèo. Nên giữ mèo ở chỗ khác lúc lau và chờ sàn khô.",
+      "expected_acceptable": true,
+      "review": {
+        "acceptable": false,
+        "issues": [
+          "Khách chỉ yêu cầu tư vấn chung, không đề cập đến mèo; việc đưa ra cảnh báo an toàn cho thú cưng là thêm yêu cầu mà khách chưa nói.",
+          "Lời khuyên 'chờ sàn khô' là an toàn chung nhưng cần tránh khẳng định mức độ an toàn cụ thể cho mèo khi không có dữ liệu SKU, thay vào đó nên tập trung vào cách dùng cơ bản như pha loãng hay lau trực tiếp nếu có thông tin."
+        ]
+      },
+      "correct": false,
+      "seconds": 0.84
+    }
+  ],
+  "complete": true
+}

@@ -1,0 +1,596 @@
+{
+  "advice_questions_before_20261115.json": {
+    "q01:1": {
+      "rating": "pass",
+      "reason": "Hỏi khu vực/mục đích để xác định nhóm hàng."
+    },
+    "q02:1": {
+      "rating": "partial",
+      "reason": "Chọn được món sáng nhưng dài, suy diễn mức no và chưa phân biệt cách làm nóng."
+    },
+    "q03:1": {
+      "rating": "fail",
+      "reason": "HTTP 502."
+    },
+    "q04:1": {
+      "rating": "fail",
+      "reason": "Gợi hạt nguyên chất cho trẻ khi chưa biết tuổi; chưa chọn được hàng."
+    },
+    "q05:1": {
+      "rating": "partial",
+      "reason": "Hai phương án quà bị cộng thành giỏ; suy diễn bao bì cao cấp."
+    },
+    "q06:1": {
+      "rating": "fail",
+      "reason": "HTTP 502."
+    },
+    "q07:1": {
+      "rating": "fail",
+      "reason": "Tự thêm hàng và gán độ bền/khả năng lau bề mặt nhạy cảm cho giấy ăn."
+    },
+    "q08:1": {
+      "rating": "fail",
+      "reason": "Gọi gói phở kèm xốt là một phần xốt riêng; bữa tối không được lập hợp lý."
+    },
+    "q09:1": {
+      "rating": "partial",
+      "reason": "Câu hỏi bị lặp, đưa danh sách thay vì chọn có lý do cụ thể."
+    },
+    "q10:1": {
+      "rating": "fail",
+      "reason": "HTTP 502."
+    },
+    "q11:1": {
+      "rating": "pass",
+      "reason": "Chưa có ngữ cảnh sản phẩm nên hỏi nhận diện."
+    },
+    "q12:1": {
+      "rating": "pass",
+      "reason": "Hỏi sản phẩm đang so sánh, không bịa hàng."
+    },
+    "q13:1": {
+      "rating": "pass",
+      "reason": "Hỏi nhóm hàng khi chưa có ngữ cảnh."
+    },
+    "q14:1": {
+      "rating": "pass",
+      "reason": "Hỏi tên hai SKU để so sánh."
+    },
+    "q15:1": {
+      "rating": "partial",
+      "reason": "Không bịa hãng giặt sạch hơn, nhưng chưa giúp chọn thực tế."
+    },
+    "q16:1": {
+      "rating": "pass",
+      "reason": "Hỏi đối tượng cần so sánh."
+    },
+    "q17:1": {
+      "rating": "pass",
+      "reason": "Hỏi hai sản phẩm cụ thể."
+    },
+    "q18:1": {
+      "rating": "pass",
+      "reason": "Không tự chọn sản phẩm khi chưa có ngữ cảnh."
+    },
+    "q19:1": {
+      "rating": "pass",
+      "reason": "Hỏi nhóm cần so sánh."
+    },
+    "q20:1": {
+      "rating": "fail",
+      "reason": "HTTP 502."
+    },
+    "q21:1": {
+      "rating": "fail",
+      "reason": "HTTP 502."
+    },
+    "q22:1": {
+      "rating": "fail",
+      "reason": "HTTP 502."
+    },
+    "q23:1": {
+      "rating": "partial",
+      "reason": "Có hàng đúng nhãn không đường nhưng tự đưa thùng/lốc lớn, nhiều lựa chọn."
+    },
+    "q24:1": {
+      "rating": "pass",
+      "reason": "Hỏi loại vật dụng khi chưa xác định."
+    },
+    "q25:1": {
+      "rating": "partial",
+      "reason": "Hỏi nhận diện nhưng tự thu hẹp nhóm chăm sóc cá nhân."
+    },
+    "q26:1": {
+      "rating": "pass",
+      "reason": "Không tự đặt vị trí khu kệ chưa xác minh."
+    },
+    "q27:1": {
+      "rating": "partial",
+      "reason": "Hỏi thương hiệu đúng hướng nhưng xưng hô vụng."
+    },
+    "q28:1": {
+      "rating": "pass",
+      "reason": "Hỏi nhãn hiệu/bao bì thay vì đoán lần mua cũ."
+    },
+    "q29:1": {
+      "rating": "pass",
+      "reason": "Không bịa vị trí; câu xưng hô còn vụng."
+    },
+    "q30:1": {
+      "rating": "pass",
+      "reason": "Hỏi chai một lít của mặt hàng nào."
+    },
+    "q31:1": {
+      "rating": "pass",
+      "reason": "Hỏi mặt hàng cần thay thế."
+    },
+    "q32:1": {
+      "rating": "partial",
+      "reason": "Câu hỏi đúng nhưng cách xưng hô thiếu tự nhiên."
+    },
+    "q33:1": {
+      "rating": "pass",
+      "reason": "Hỏi nhóm hàng cần mua."
+    },
+    "q34:1": {
+      "rating": "pass",
+      "reason": "Hỏi sản phẩm dùng chung nào."
+    },
+    "q35:1": {
+      "rating": "pass",
+      "reason": "Không suy màu bao bì thành SKU đã mua trước."
+    }
+  },
+  "advice_full_revision2_20261115.json": {
+    "q01:1": {
+      "rating": "pass",
+      "reason": "Hỏi khu vực/mục đích để xác định nhóm hàng."
+    },
+    "q02:1": {
+      "rating": "fail",
+      "reason": "Nói bánh bao mua về ăn ngay không cần chế biến dù thiếu chứng cứ ăn liền."
+    },
+    "q03:1": {
+      "rating": "fail",
+      "reason": "HTTP 502."
+    },
+    "q04:1": {
+      "rating": "pass",
+      "reason": "Hỏi tuổi trước khi chọn đồ ăn cho trẻ."
+    },
+    "q05:1": {
+      "rating": "fail",
+      "reason": "HTTP 502."
+    },
+    "q06:1": {
+      "rating": "partial",
+      "reason": "Hàng tiện dùng hợp chủ đề nhưng vẫn dài và suy cách làm nóng bánh bao."
+    },
+    "q07:1": {
+      "rating": "fail",
+      "reason": "Gán nước lau nhà dùng lau kính, chưa có nhãn chứng minh."
+    },
+    "q08:1": {
+      "rating": "fail",
+      "reason": "Chọn xương heo rồi nói là thịt để xé/xào nhanh."
+    },
+    "q09:1": {
+      "rating": "partial",
+      "reason": "Có SKU cụ thể, vẫn tự gán giảm ngứa và đưa nhiều dòng điều trị không được hỏi."
+    },
+    "q10:1": {
+      "rating": "pass",
+      "reason": "Hỏi số người trước khi lập đồ ăn cả tuần."
+    },
+    "q11:1": {
+      "rating": "pass",
+      "reason": "Chưa có ngữ cảnh sản phẩm nên hỏi nhận diện."
+    },
+    "q12:1": {
+      "rating": "pass",
+      "reason": "Hỏi sản phẩm đang so sánh, không bịa hàng."
+    },
+    "q13:1": {
+      "rating": "pass",
+      "reason": "Hỏi nhóm hàng khi chưa có ngữ cảnh."
+    },
+    "q14:1": {
+      "rating": "pass",
+      "reason": "Hỏi tên hai SKU để so sánh."
+    },
+    "q15:1": {
+      "rating": "fail",
+      "reason": "HTTP 502."
+    },
+    "q16:1": {
+      "rating": "pass",
+      "reason": "Hỏi đối tượng cần so sánh."
+    },
+    "q17:1": {
+      "rating": "pass",
+      "reason": "Hỏi hai sản phẩm cụ thể."
+    },
+    "q18:1": {
+      "rating": "pass",
+      "reason": "Không tự chọn sản phẩm khi chưa có ngữ cảnh."
+    },
+    "q19:1": {
+      "rating": "pass",
+      "reason": "Hỏi nhóm cần so sánh."
+    },
+    "q20:1": {
+      "rating": "fail",
+      "reason": "Tự đổi sang da bé, hỏi nhiều chi tiết và dạng thanh/bột không rõ."
+    },
+    "q21:1": {
+      "rating": "partial",
+      "reason": "Không bịa ít ngọt nhưng hỏi dồn loại bánh và mức đường; chưa giúp chọn."
+    },
+    "q22:1": {
+      "rating": "fail",
+      "reason": "HTTP 502."
+    },
+    "q23:1": {
+      "rating": "partial",
+      "reason": "Có hàng đúng nhãn không đường nhưng tự đưa thùng/lốc lớn, nhiều lựa chọn."
+    },
+    "q24:1": {
+      "rating": "pass",
+      "reason": "Hỏi loại vật dụng khi chưa xác định."
+    },
+    "q25:1": {
+      "rating": "partial",
+      "reason": "Hỏi nhận diện nhưng tự thu hẹp nhóm chăm sóc cá nhân."
+    },
+    "q26:1": {
+      "rating": "partial",
+      "reason": "Không bịa kệ nhưng tự upsell thêm nước giặt và lặp lời mời."
+    },
+    "q27:1": {
+      "rating": "partial",
+      "reason": "Thừa đoạn hướng dẫn chọn hộp màu xanh trước câu hỏi thương hiệu."
+    },
+    "q28:1": {
+      "rating": "partial",
+      "reason": "Hỏi nhận diện đúng nhưng hứa kiểm tra tồn chính xác khi chỉ có snapshot."
+    },
+    "q29:1": {
+      "rating": "partial",
+      "reason": "Hỏi cửa hàng nhưng hứa chỉ vị trí chưa có công cụ/bằng chứng."
+    },
+    "q30:1": {
+      "rating": "pass",
+      "reason": "Hỏi chai một lít của mặt hàng nào."
+    },
+    "q31:1": {
+      "rating": "pass",
+      "reason": "Hỏi mặt hàng cần thay thế."
+    },
+    "q32:1": {
+      "rating": "pass",
+      "reason": "Hỏi tên/loại sản phẩm, không đoán quảng cáo TikTok."
+    },
+    "q33:1": {
+      "rating": "pass",
+      "reason": "Hỏi nhóm hàng cần mua."
+    },
+    "q34:1": {
+      "rating": "pass",
+      "reason": "Hỏi sản phẩm dùng chung nào."
+    },
+    "q35:1": {
+      "rating": "pass",
+      "reason": "Không suy màu bao bì thành SKU đã mua trước."
+    },
+    "long-dinner:1": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:3": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:4": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:8": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:9": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:14": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:15": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:2": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:5": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:9": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:2": {
+      "rating": "fail",
+      "reason": "Gọi xương heo là thịt mềm để cắt lát/xào, sai dạng hàng."
+    },
+    "long-dinner:5": {
+      "rating": "partial",
+      "reason": "Đúng thịt nạc/rau, thiếu tổng khi đang lập bữa."
+    },
+    "long-dinner:6": {
+      "rating": "partial",
+      "reason": "Giữ ngân sách, lượng và tổng đúng; còn dài và tư vấn rau mầm sống thiếu cân nhắc."
+    },
+    "long-dinner:7": {
+      "rating": "partial",
+      "reason": "Không thêm gia vị nhưng thiếu tổng phương án."
+    },
+    "long-dinner:10": {
+      "rating": "fail",
+      "reason": "Báo không có trà không đường dù bản cũ có lốc; lọc cứng thiếu bằng chứng không ga."
+    },
+    "long-dinner:11": {
+      "rating": "partial",
+      "reason": "Không có chai riêng dưới giá nhưng tiếp tục nói kiểu danh sách."
+    },
+    "long-dinner:12": {
+      "rating": "partial",
+      "reason": "Không tự đổi chai nhỏ nhưng dùng lời văn truy xuất, thiếu hướng chọn hữu ích."
+    },
+    "long-dinner:13": {
+      "rating": "partial",
+      "reason": "Không thực sự so sánh lựa chọn gần nhất mà hỏi xin tìm tiếp."
+    },
+    "long-dinner:16": {
+      "rating": "fail",
+      "reason": "Nói đã chọn chai dù các lượt chọn trước bị lỗi; không có SKU cuối."
+    },
+    "long-household:1": {
+      "rating": "partial",
+      "reason": "Chỉ gợi tiêu chí, chưa giúp chọn hàng và đẩy sang nhân viên quầy."
+    },
+    "long-household:3": {
+      "rating": "fail",
+      "reason": "Hiểu không quảng cáo công dụng thành điều kiện của sản phẩm."
+    },
+    "long-household:4": {
+      "rating": "fail",
+      "reason": "Báo thiếu dầu gội >=400ml dù có Thái Dương480ml114900; trạng thái/filter sai."
+    },
+    "long-household:6": {
+      "rating": "fail",
+      "reason": "Giữ sai tiêu chí không quảng cáo và bỏ cuộc."
+    },
+    "long-household:7": {
+      "rating": "fail",
+      "reason": "Không chọn được hàng sau khi cho phép chai nhỏ dưới100k."
+    },
+    "long-household:8": {
+      "rating": "fail",
+      "reason": "Không chốt được dù còn hàng chai nhỏ phù hợp mức giá."
+    },
+    "long-household:10": {
+      "rating": "pass",
+      "reason": "Tách mèo khỏi khu lau, làm theo nhãn, thông thoáng và đợi khô."
+    },
+    "long-household:11": {
+      "rating": "partial",
+      "reason": "Giữ mèo khỏi khu lau nhưng tự khuyên giấm/baking soda chưa biết bề mặt."
+    },
+    "long-household:12": {
+      "rating": "pass",
+      "reason": "Giữ tư vấn chung, không bán thêm và tách mèo khỏi khu lau."
+    }
+  },
+  "advice_long_before_20261115.json": {
+    "long-dinner:4": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:6": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:7": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:8": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:9": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:13": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:14": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:15": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:1": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:2": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:3": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:4": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:5": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:6": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:7": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:8": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:11": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-household:12": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được tư vấn."
+    },
+    "long-dinner:1": {
+      "rating": "fail",
+      "reason": "Tự thêm trứng, hành, nước mắm; dài và lặp."
+    },
+    "long-dinner:2": {
+      "rating": "fail",
+      "reason": "Lặp nguyên giỏ và lời tư vấn thay vì xử lý chỉnh ý gọn."
+    },
+    "long-dinner:3": {
+      "rating": "fail",
+      "reason": "Tiếp tục lặp nguyên giỏ năm món."
+    },
+    "long-dinner:5": {
+      "rating": "partial",
+      "reason": "Thịt nạc/rau đúng hướng, thiếu bối cảnh khẩu phần."
+    },
+    "long-dinner:10": {
+      "rating": "partial",
+      "reason": "Lốc trà không đường, chưa phân biệt nhu cầu chai riêng và bằng chứng không ga."
+    },
+    "long-dinner:11": {
+      "rating": "partial",
+      "reason": "Không có SKU chai riêng dưới ngân sách nhưng lời mời tìm thêm chung chung."
+    },
+    "long-dinner:12": {
+      "rating": "partial",
+      "reason": "Nêu thiếu đúng cỡ nhưng gợi chai nhỏ trước khi khách cho phép."
+    },
+    "long-dinner:16": {
+      "rating": "fail",
+      "reason": "Không chốt/nhắc lại được phương án sau chuỗi lỗi."
+    },
+    "long-household:9": {
+      "rating": "fail",
+      "reason": "Suy hương Lily là nhẹ và phù hợp nhà nuôi mèo."
+    },
+    "long-household:10": {
+      "rating": "fail",
+      "reason": "Vẫn khuyên lau khi mèo trong phòng và gán mùi nhẹ không có bằng chứng."
+    }
+  },
+  "advice_hotfix_questions_20261115.json": {
+    "q02:1": {
+      "rating": "partial",
+      "reason": "Có món sáng nhưng vẫn ba lựa chọn và phần mô tả mức no chưa rõ cơ sở."
+    },
+    "q03:1": {
+      "rating": "fail",
+      "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+    },
+    "q05:1": {
+      "rating": "fail",
+      "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+    },
+    "q08:1": {
+      "rating": "fail",
+      "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+    },
+    "q09:1": {
+      "rating": "fail",
+      "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+    },
+    "q20:1": {
+      "rating": "fail",
+      "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+    },
+    "q22:1": {
+      "rating": "fail",
+      "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+    },
+    "q27:1": {
+      "rating": "fail",
+      "reason": "Đoán sữa đặc từ mô tả sữa hộp xanh; chưa xác định loại sữa khách muốn."
+    }
+  },
+  "advice_household_final_20261115.json": {
+    "long-household:1": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được câu tư vấn."
+    },
+    "long-household:2": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được câu tư vấn."
+    },
+    "long-household:3": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được câu tư vấn."
+    },
+    "long-household:4": {
+      "rating": "fail",
+      "reason": "Đúng480ml/114900 nhưng tự gán phù hợp tóc bết dầu trong advice; lý do vẫn đọc thông số."
+    },
+    "long-household:5": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được câu tư vấn."
+    },
+    "long-household:6": {
+      "rating": "partial",
+      "reason": "Giữsize/budget nhưng hỏi mở rộng chung chung, chưa kiểm tra được công dụng tóc dầu."
+    },
+    "long-household:7": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được câu tư vấn."
+    },
+    "long-household:8": {
+      "rating": "fail",
+      "reason": "Sau khi nới dung tích vẫn bỏ cuộc và nói hệ thống không có; chưa chốt hàng."
+    },
+    "long-household:9": {
+      "rating": "partial",
+      "reason": "Tư vấn đọc nhãn có ích nhưng hỏi dung tích không giải quyết tiêu chí an toàn quanh mèo."
+    },
+    "long-household:10": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được câu tư vấn."
+    },
+    "long-household:11": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được câu tư vấn."
+    },
+    "long-household:12": {
+      "rating": "fail",
+      "reason": "HTTP 502, không trả được câu tư vấn."
+    }
+  }
+}

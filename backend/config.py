@@ -9,7 +9,8 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_version: str = "0.1.0"
     database_url: str = "postgresql+asyncpg://retail:retail@localhost:5432/retail"
-    catalog_repository: Literal["demo", "postgres"] = "demo"
+    catalog_repository: Literal["demo", "postgres", "snapshot"] = "demo"
+    catalog_snapshot_path: str = "data/winmart_products.json"
     redis_url: str = "redis://localhost:6379/0"
     session_ttl_seconds: int = 1800
 
@@ -21,6 +22,10 @@ class Settings(BaseSettings):
     groq_stt_model: str = "whisper-large-v3-turbo"
     groq_stt_fallback_model: str = "whisper-large-v3"
     groq_timeout_seconds: float = 45.0
+    groq_api_key_fallback_1: SecretStr = SecretStr("")
+    groq_api_key_fallback_2: SecretStr = SecretStr("")
+    groq_api_key_fallback_3: SecretStr = SecretStr("")
+    groq_api_key_fallback_4: SecretStr = SecretStr("")
 
     azure_speech_key: SecretStr = SecretStr("")
     azure_speech_region: str = ""

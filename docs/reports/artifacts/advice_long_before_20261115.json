@@ -1,0 +1,564 @@
+{
+  "started_utc": "2026-11-15T04:43:33.446988+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 4.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "long-dinner",
+      "turns": [
+        {
+          "question": "Tối nay hai người ăn ở nhà, chọn đồ nấu một bữa tối tổng không quá 180 nghìn. Nhà có gạo rồi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "7cd9cb1b-b621-4ffd-8349-063dd93a69a4",
+            "text": "Với ngân sách 180 nghìn cho hai người, bạn có thể chọn thịt heo xay để làm món chính (như thịt kho, chiên hoặc làm chả), kết hợp rau cải xanh để luộc hoặc xào, và trứng gà để bổ sung dinh dưỡng. Hành lá dùng để trang trí và tăng hương vị. Nước mắm là gia vị cơ bản không thể thiếu.\nMEATDELI Thịt heo xay chuẩn ngon (S) — 300g (42.570đ): Thịt heo xay tiện lợi để chế biến nhanh các món như thịt kho, chiên hoặc làm chả cho bữa tối.\nRau mầm cải ngọt WinEco 100g (14.800đ): Rau mầm cải ngọt phù hợp để luộc hoặc xào nhanh, cung cấp chất xơ cho bữa ăn.\nTrứng gà Ba Huân hộp 10 quả (34.000đ): Trứng gà là nguồn protein bổ sung, có thể luộc, chiên hoặc hấp đơn giản.\nHành lá WinEco gói 100g (8.000đ): Hành lá dùng để cắt nhỏ trang trí và tăng hương vị cho các món ăn.\nNước mắm Nam Ngư Đệ nhị 900ml (27.800đ): Nước mắm là gia vị cơ bản để nêm nếm và chấm các món ăn trong bữa tối.\n\nTổng: 127.170đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10617947",
+              "WIN_10281839",
+              "WIN_10006030",
+              "WIN_10281879",
+              "WIN_10008683"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10617947",
+                "name": "MEATDELI Thịt heo xay chuẩn ngon (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 141900,
+                "stock": 18,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367254Z"
+              },
+              {
+                "product_id": "WIN_10281839",
+                "name": "Rau mầm cải ngọt WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 19,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238192Z"
+              },
+              {
+                "product_id": "WIN_10006030",
+                "name": "Trứng gà Ba Huân hộp 10 quả",
+                "category": "Trứng",
+                "brand": "BA HUÂN",
+                "price_vnd": 34000,
+                "stock": 12,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:57.591517Z"
+              },
+              {
+                "product_id": "WIN_10281879",
+                "name": "Hành lá WinEco gói 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 8000,
+                "stock": 385,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:50.238264Z"
+              },
+              {
+                "product_id": "WIN_10008683",
+                "name": "Nước mắm Nam Ngư Đệ nhị 900ml",
+                "category": "Nước Mắm - Nước Chấm",
+                "brand": "NAM NGƯ",
+                "price_vnd": 27800,
+                "stock": 90,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:42.608080Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.128
+        },
+        {
+          "question": "Không lấy thịt gà, xúc xích hay đồ chế biến sẵn nhé.",
+          "http_status": 200,
+          "response": {
+            "session_id": "7cd9cb1b-b621-4ffd-8349-063dd93a69a4",
+            "text": "Bạn có thể chọn thịt heo xay để làm món chính như thịt kho, chiên hoặc làm chả, kết hợp rau cải xanh để luộc hoặc xào, và trứng gà để bổ sung dinh dưỡng. Hành lá dùng để trang trí và tăng hương vị, nước mắm là gia vị cơ bản không thể thiếu.\nMEATDELI Thịt heo xay chuẩn ngon (S) — 300g (42.570đ): Thịt heo xay tiện lợi để chế biến nhanh các món như thịt kho, chiên hoặc làm chả cho bữa tối.\nRau mầm cải ngọt WinEco 100g (14.800đ): Rau mầm cải ngọt phù hợp để luộc hoặc xào nhanh, cung cấp chất xơ cho bữa ăn.\nTrứng gà Ba Huân hộp 10 quả (34.000đ): Trứng gà là nguồn protein bổ sung, có thể luộc, chiên hoặc hấp đơn giản.\nHành lá WinEco gói 100g (8.000đ): Hành lá dùng để cắt nhỏ trang trí và tăng hương vị cho các món ăn.\nNước mắm Nam Ngư Đệ nhị 900ml (27.800đ): Nước mắm là gia vị cơ bản để nêm nếm và chấm các món ăn trong bữa tối.\n\nTổng: 127.170đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10617947",
+              "WIN_10281839",
+              "WIN_10006030",
+              "WIN_10281879",
+              "WIN_10008683"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10617947",
+                "name": "MEATDELI Thịt heo xay chuẩn ngon (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 141900,
+                "stock": 18,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367254Z"
+              },
+              {
+                "product_id": "WIN_10281839",
+                "name": "Rau mầm cải ngọt WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 19,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238192Z"
+              },
+              {
+                "product_id": "WIN_10006030",
+                "name": "Trứng gà Ba Huân hộp 10 quả",
+                "category": "Trứng",
+                "brand": "BA HUÂN",
+                "price_vnd": 34000,
+                "stock": 12,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:57.591517Z"
+              },
+              {
+                "product_id": "WIN_10281879",
+                "name": "Hành lá WinEco gói 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 8000,
+                "stock": 385,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:50.238264Z"
+              },
+              {
+                "product_id": "WIN_10008683",
+                "name": "Nước mắm Nam Ngư Đệ nhị 900ml",
+                "category": "Nước Mắm - Nước Chấm",
+                "brand": "NAM NGƯ",
+                "price_vnd": 27800,
+                "stock": 90,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:42.608080Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.672
+        },
+        {
+          "question": "Mình thích thịt heo hơn thịt bò.",
+          "http_status": 200,
+          "response": {
+            "session_id": "7cd9cb1b-b621-4ffd-8349-063dd93a69a4",
+            "text": "Bạn có thể chọn thịt heo xay để làm món chính như thịt kho, chiên hoặc làm chả, kết hợp rau cải xanh để luộc hoặc xào, và trứng gà để bổ sung dinh dưỡng. Hành lá dùng để trang trí và tăng hương vị, nước mắm là gia vị cơ bản không thể thiếu.\nMEATDELI Thịt heo xay chuẩn ngon (S) — 300g (42.570đ): Thịt heo xay tiện lợi để chế biến nhanh các món như thịt kho, chiên hoặc làm chả cho bữa tối.\nRau mầm cải ngọt WinEco 100g (14.800đ): Rau mầm cải ngọt phù hợp để luộc hoặc xào nhanh, cung cấp chất xơ cho bữa ăn.\nTrứng gà Ba Huân hộp 10 quả (34.000đ): Trứng gà là nguồn protein bổ sung, có thể luộc, chiên hoặc hấp đơn giản.\nHành lá WinEco gói 100g (8.000đ): Hành lá dùng để cắt nhỏ trang trí và tăng hương vị cho các món ăn.\nNước mắm Nam Ngư Đệ nhị 900ml (27.800đ): Nước mắm là gia vị cơ bản để nêm nếm và chấm các món ăn trong bữa tối.\n\nTổng: 127.170đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10617947",
+              "WIN_10281839",
+              "WIN_10006030",
+              "WIN_10281879",
+              "WIN_10008683"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10617947",
+                "name": "MEATDELI Thịt heo xay chuẩn ngon (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 141900,
+                "stock": 18,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367254Z"
+              },
+              {
+                "product_id": "WIN_10281839",
+                "name": "Rau mầm cải ngọt WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 19,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238192Z"
+              },
+              {
+                "product_id": "WIN_10006030",
+                "name": "Trứng gà Ba Huân hộp 10 quả",
+                "category": "Trứng",
+                "brand": "BA HUÂN",
+                "price_vnd": 34000,
+                "stock": 12,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:57.591517Z"
+              },
+              {
+                "product_id": "WIN_10281879",
+                "name": "Hành lá WinEco gói 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 8000,
+                "stock": 385,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:50.238264Z"
+              },
+              {
+                "product_id": "WIN_10008683",
+                "name": "Nước mắm Nam Ngư Đệ nhị 900ml",
+                "category": "Nước Mắm - Nước Chấm",
+                "brand": "NAM NGƯ",
+                "price_vnd": 27800,
+                "stock": 90,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:42.608080Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.021
+        },
+        {
+          "question": "Chọn giúp mình món thịt và một loại rau dễ nấu, tính tổng luôn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.047
+        },
+        {
+          "question": "Mỡ nhiều quá thì không thích, ưu tiên phần nạc hơn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "7cd9cb1b-b621-4ffd-8349-063dd93a69a4",
+            "text": "Thịt nạc thăn ít mỡ, phù hợp để xào nhanh hoặc luộc chấm mắm cho bữa tối gọn nhẹ.\nMEATDELI Thịt Nạc thăn heo (S) — 300g (50.070đ): Phần nạc thăn ít mỡ, phù hợp để xào hoặc luộc cho bữa tối.\nRau mầm cải xanh  WinEco 100g (14.800đ): Rau mầm cải xanh dễ luộc hoặc xào nhanh, không cần sơ chế cầu kỳ.\n\nTổng: 64.870đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10617958",
+              "WIN_10281840"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10617958",
+                "name": "MEATDELI Thịt Nạc thăn heo (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 166900,
+                "stock": 2,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367481Z"
+              },
+              {
+                "product_id": "WIN_10281840",
+                "name": "Rau mầm cải xanh  WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 33,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238132Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.113
+        },
+        {
+          "question": "Giảm tiền xuống tối đa 120 nghìn cho toàn bộ bữa nhé.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.023
+        },
+        {
+          "question": "Nhà có dầu ăn, gia vị rồi, đừng tính thêm mấy thứ đó.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.555
+        },
+        {
+          "question": "Mua thịt 300 gram thôi, còn lại chọn rau.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 6.492
+        },
+        {
+          "question": "Cho mình xem lại phương án cuối với tổng tiền.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.428
+        },
+        {
+          "question": "Giờ chuyển sang mua nước uống, phần đồ ăn giữ nguyên, đừng gộp giá. Mình muốn trà không đường, không có ga.",
+          "http_status": 200,
+          "response": {
+            "session_id": "7cd9cb1b-b621-4ffd-8349-063dd93a69a4",
+            "text": "Chọn trà đóng chai không đường và không ga để uống kèm bữa ăn. Nếu thích vị thanh nhẹ, có thể chọn trà xanh hoặc oolong; nếu thích đậm hơn thì chọn trà đen. Nên uống trong ngày mở nắp để giữ hương vị tốt nhất.\nLốc 6 chai trà Oolong không đường Tea+ 455ml (60.500đ): Lốc 6 chai trà Oolong không đường, không ga, phù hợp nhu cầu uống trà không đường.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10638663"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10638663",
+                "name": "Lốc 6 chai trà Oolong không đường Tea+ 455ml",
+                "category": "Nước Ngọt",
+                "brand": "TEA+",
+                "price_vnd": 60500,
+                "stock": 38,
+                "uom": "Gói 6",
+                "data_timestamp": "2026-09-15T13:53:41.152438Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.281
+        },
+        {
+          "question": "Dưới 20 nghìn một chai thôi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "7cd9cb1b-b621-4ffd-8349-063dd93a69a4",
+            "text": "Hiện tại không có trà đóng chai không đường, không ga với giá dưới 20.000 đ mỗi chai trong danh sách.\nBạn có muốn mở rộng tìm kiếm sang các loại trà đóng chai 350 ml hoặc 500 ml, hoặc cân nhắc mua trà bột pha chế tại nhà không?",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.504
+        },
+        {
+          "question": "Mình cần loại một lít, không phải cộng hai chai nhỏ thành một lít.",
+          "http_status": 200,
+          "response": {
+            "session_id": "7cd9cb1b-b621-4ffd-8349-063dd93a69a4",
+            "text": "Hiện chưa có chai trà 1 lít không đường, không ga trong tầm giá bạn nêu. Bạn có thể chọn chai 500 ml hoặc 350 ml để uống trong bữa, hoặc cân nhắc mua trà túi lọc pha tại nhà nếu cần đúng thể tích 1 lít.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.175
+        },
+        {
+          "question": "Nếu không có đúng cỡ thì nói giúp mình lựa chọn nào gần nhất, đừng tự chốt chai nhỏ.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.062
+        },
+        {
+          "question": "Thôi bỏ yêu cầu một lít, chọn một chai nhỏ phù hợp hai tiêu chí còn lại.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.041
+        },
+        {
+          "question": "Nếu là bạn thì chọn đúng một loại nào?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 7.248
+        },
+        {
+          "question": "Nhắc lại giúp mình các tiêu chí của chai vừa chọn, không cần giới thiệu thêm món khác.",
+          "http_status": 200,
+          "response": {
+            "session_id": "7cd9cb1b-b621-4ffd-8349-063dd93a69a4",
+            "text": "Bạn muốn chọn chai trà nhỏ kích thước nào (ví dụ 350 ml hay 500 ml) để đáp ứng tiêu chí không đường và không ga?",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.899
+        }
+      ]
+    },
+    {
+      "id": "long-household",
+      "turns": [
+        {
+          "question": "Mình cần dầu gội cho người lớn, dưới 150 nghìn, tóc hay bết dầu.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.28
+        },
+        {
+          "question": "Không cần quảng cáo công dụng, chọn một loại đáng tiền và nói điểm cần cân nhắc.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.003
+        },
+        {
+          "question": "Chai nhỏ quá, có loại tối thiểu 400ml vẫn trong ngân sách không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.082
+        },
+        {
+          "question": "Không lấy gói lẻ, chỉ chai hoặc túi từ 400ml trở lên.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.564
+        },
+        {
+          "question": "Đắt quá, đổi ngân sách xuống dưới 100 nghìn nhé.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.141
+        },
+        {
+          "question": "Nếu không đủ tiêu chí thì nói đúng điều còn thiếu, đừng tự đổi sang chai nhỏ.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.078
+        },
+        {
+          "question": "Thôi cho phép chai nhỏ hơn, vẫn giữ dưới 100 nghìn và không lấy gói lẻ.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.286
+        },
+        {
+          "question": "Chọn chốt một loại giúp mình.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 2.876
+        },
+        {
+          "question": "Giờ hỏi chuyện khác: nhà có mèo, cần nước lau sàn không có mùi nồng, tầm 80 nghìn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "2e4dd17c-7b57-4709-a0c3-c9331ec3525d",
+            "text": "Chọn nước lau sàn có hương nhẹ, tránh các loại có hương mạnh như sả chanh để không gây khó chịu cho mèo.\nNước lau sàn Sunlight tinh dầu thiên nhiên hương hoa Lily chai 1kg (36.000đ): Hương hoa Lily nhẹ, phù hợp cho môi trường có mèo và giá dưới 80 nghìn.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10170661"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10170661",
+                "name": "Nước lau sàn Sunlight tinh dầu thiên nhiên hương hoa Lily chai 1kg",
+                "category": "Nước Lau Sàn - Lau Kính",
+                "brand": "SUNLIGHT",
+                "price_vnd": 36000,
+                "stock": 47,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:44.336354Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.18
+        },
+        {
+          "question": "Có thể dùng lúc mèo đang đi lại trong phòng không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "2e4dd17c-7b57-4709-a0c3-c9331ec3525d",
+            "text": "Nước lau sàn thường có chất hoạt động bề mặt và hương liệu, nên tốt nhất là lau xong chờ sàn khô hẳn rồi mới cho mèo đi lại để tránh liếm phải chất còn ướt. Nếu cần dùng khi mèo đang ở trong phòng, hãy chọn loại hương nhẹ và lau nhanh, sau đó mở cửa sổ thông thoáng.\nNước lau sàn Sunlight tinh dầu thiên nhiên hương hoa Lily chai 1kg (36.000đ): Hương hoa Lily nhẹ, phù hợp khi cần lau sàn trong không gian có mèo mà không gây mùi nồng.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10170661"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10170661",
+                "name": "Nước lau sàn Sunlight tinh dầu thiên nhiên hương hoa Lily chai 1kg",
+                "category": "Nước Lau Sàn - Lau Kính",
+                "brand": "SUNLIGHT",
+                "price_vnd": 36000,
+                "stock": 47,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:44.336354Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.51
+        },
+        {
+          "question": "Vậy nếu chưa xác định được an toàn thì mình nên vệ sinh như nào trước?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 7.039
+        },
+        {
+          "question": "Mình chỉ cần cách chọn và cách dùng chung, không cần mua thêm sản phẩm.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.622
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T04:47:25.462442+00:00"
+}

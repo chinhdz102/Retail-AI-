@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import re
 import unicodedata
+from collections import Counter
 from datetime import UTC, date, datetime
+from functools import lru_cache
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -309,10 +312,31 @@ QUERY_STOP_WORDS = frozenset(
 )
 
 
+@lru_cache(maxsize=32768)
 def _normalize(value: str) -> str:
     decomposed = unicodedata.normalize("NFD", value.lower())
     unaccented = "".join(char for char in decomposed if unicodedata.category(char) != "Mn")
     return unaccented.replace("đ", "d")
+
+
+@lru_cache(maxsize=32768)
+def _search_words(value: str) -> tuple[str, ...]:
+    return tuple(re.findall(r"[^\W_]+", _normalize(value)))
+
+
+def _search_query_words(query: str) -> tuple[str, ...]:
+    normalized = _normalize(query)
+    normalized = re.sub(
+        r"(?:价格|多少钱|多少|货架|哪里|在哪|哪一个|库存|有货|数量|保质期|过期)",
+        " ", normalized,
+    )
+    normalized = re.sub(
+        r"\b(?:bao nhieu(?: tien)?|o dau|cho nao|ke nao|gia bao|how much)\b",
+        " ", normalized,
+    )
+    # Repository queries describe products. Dropping individual words such as
+    # "sàn", "dầu" or "không" changes the product/variant being requested.
+    return _search_words(normalized)
 
 
 def search_products(
@@ -325,6 +349,8 @@ def search_products(
     brand: str | None = None,
     price_operator: PriceOperator | None = None,
     price_value_vnd: int | None = None,
+    *,
+    products: tuple[ProductSnapshot, ...] = DEMO_PRODUCTS,
 ) -> list[ProductSnapshot]:
     normalized_query = _normalize(query).strip()
     chinese_intent_phrases = (
@@ -342,32 +368,50 @@ def search_products(
     )
     for phrase in chinese_intent_phrases:
         normalized_query = normalized_query.replace(phrase, f" {phrase} ")
-    query_tokens = [token.strip(".,?!:;()[]{}，。！？；：") for token in normalized_query.split()]
-    meaningful_tokens = [token for token in query_tokens if token and token not in QUERY_STOP_WORDS]
-    needle = " ".join(meaningful_tokens) if meaningful_tokens else normalized_query
+    meaningful_tokens = _search_query_words(normalized_query)
+    if normalized_query and not meaningful_tokens:
+        return []
+    needle = " ".join(meaningful_tokens)
+    literal_needle = " ".join(
+        re.findall(r"[^\W_]+", unicodedata.normalize("NFC", query.casefold()))
+    )
+    query_counts = Counter(meaningful_tokens)
     normalized_category = _normalize(category) if category else None
-    matches: list[ProductSnapshot] = []
-    for product in DEMO_PRODUCTS:
-        haystack = _normalize(
-            f"{product.product_id} {product.item_no or ''} {product.barcode or ''} "
-            f"{product.name} {product.category} {product.category_hierarchy or ''} "
-            f"{DEMO_CATEGORY_ALIASES.get(product.category, '')} "
-            f"{product.brand or ''} {product.description or ''} {product.ingredients or ''} "
-            f"{PRODUCT_ALIASES.get(product.product_id, '')}"
+    normalized_brand = " ".join(_search_words(brand or ""))
+    matches: list[tuple[tuple[int, ...], ProductSnapshot]] = []
+    for product in products:
+        fields = (
+            product.name, product.brand or "", product.category,
+            product.category_hierarchy or "", product.description or "",
+            product.ingredients or "", PRODUCT_ALIASES.get(product.product_id, ""),
+            DEMO_CATEGORY_ALIASES.get(product.category, ""),
+            product.product_id, product.item_no or "", product.barcode or "",
         )
-        if needle and not all(token in haystack for token in needle.split()):
+        field_words = [_search_words(value) for value in fields]
+        words = {word for values in field_words for word in values}
+        identifiers = {
+            _normalize(value) for value in (product.product_id, product.item_no, product.barcode)
+            if value
+        }
+        exact_identifier = normalized_query in identifiers
+        if needle and not exact_identifier and not set(meaningful_tokens) <= words:
+            continue
+        # Repeated names such as Hảo Hảo must occur within one field, rather
+        # than accumulating one occurrence from unrelated metadata fields.
+        if not exact_identifier and any(
+            count > 1 and not any(values.count(word) >= count for values in field_words)
+            for word, count in query_counts.items()
+        ):
             continue
         if normalized_category:
-            category_text = _normalize(
+            category_words = set(_search_words(
                 f"{product.category} {product.category_hierarchy or ''} "
                 f"{DEMO_CATEGORY_ALIASES.get(product.category, '')}"
-            )
-            if not all(token in category_text for token in normalized_category.split()):
+            ))
+            if not set(_search_words(normalized_category)) <= category_words:
                 continue
-        normalized_brand = _normalize(brand) if brand else None
-        if normalized_brand and not all(
-            token in _normalize(product.brand or "") for token in normalized_brand.split()
-        ):
+        product_brand = " ".join(field_words[1])
+        if normalized_brand and not set(normalized_brand.split()) <= set(field_words[1]):
             continue
         if max_price_vnd is not None and product.price_vnd > max_price_vnd:
             continue
@@ -377,10 +421,19 @@ def search_products(
             continue
         if in_stock and product.sellable_stock <= 0:
             continue
-        matches.append(product)
-        if len(matches) >= limit:
-            break
-    return matches
+        title = " ".join(field_words[0])
+        rank = (
+            int(exact_identifier),
+            int(bool(needle) and needle == product_brand),
+            int(bool(literal_needle) and f" {literal_needle} " in (
+                " " + " ".join(re.findall(r"[^\W_]+", product.name.casefold())) + " "
+            )),
+            int(bool(needle) and f" {needle} " in f" {title} "),
+            int(bool(needle) and set(meaningful_tokens) <= set(field_words[0])),
+        )
+        matches.append((rank, product))
+    matches.sort(key=lambda match: match[0], reverse=True)
+    return [product for _, product in matches[:limit]]
 
 
 def get_product_snapshot(product_id: str) -> ProductSnapshot | None:

@@ -1,0 +1,164 @@
+{
+  "started_utc": "2026-11-15T05:18:14.644156+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 4.0,
+  "complete": false,
+  "cases": [
+    {
+      "id": "long-dinner",
+      "turns": [
+        {
+          "question": "Tối nay hai người ăn ở nhà, chọn đồ nấu một bữa tối tổng không quá 180 nghìn. Nhà có gạo rồi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "1992abda-d328-4e7b-be60-f8534eee32b3",
+            "text": "Bạn có thể dùng cá basa làm món chính, kèm đậu phụ để bổ sung protein và dùng nước mắm để nêm nếm. Khi muốn thêm rau xanh, có thể mua thêm rau lá khác lần sau.\nBao tử cá basa — 1000g (129.000đ): Cá basa tươi, thích hợp nấu chiên hoặc hấp cho bữa tối.\nĐậu phụ tươi Làng Mơ hộp 400g (13.100đ): Đậu phụ tươi, nguồn protein thực vật bổ sung cho món cá.\nNước mắm Nam Ngư Đệ nhị 900ml (27.800đ): Nước mắm Nam Ngư 900ml, dùng để nêm nếm món cá và đậu phụ.\n\nTổng: 169.900đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10053346",
+              "WIN_10006085",
+              "WIN_10008683"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10053346",
+                "name": "Bao tử cá basa",
+                "category": "Hải Sản Đông Lạnh",
+                "brand": "NOBRAND",
+                "price_vnd": 129000,
+                "stock": 4,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:43.371654Z"
+              },
+              {
+                "product_id": "WIN_10006085",
+                "name": "Đậu phụ tươi Làng Mơ hộp 400g",
+                "category": "Đậu hũ",
+                "brand": "LÀNG MƠ",
+                "price_vnd": 13100,
+                "stock": 40,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:37.999117Z"
+              },
+              {
+                "product_id": "WIN_10008683",
+                "name": "Nước mắm Nam Ngư Đệ nhị 900ml",
+                "category": "Nước Mắm - Nước Chấm",
+                "brand": "NAM NGƯ",
+                "price_vnd": 27800,
+                "stock": 90,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:42.608080Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 7.632
+        },
+        {
+          "question": "Không lấy thịt gà, xúc xích hay đồ chế biến sẵn nhé.",
+          "http_status": 200,
+          "response": {
+            "session_id": "1992abda-d328-4e7b-be60-f8534eee32b3",
+            "text": "Bao tử cá basa — 1000g (129.000đ): Cá basa tươi, thích hợp chiên hoặc hấp làm món chính cho bữa tối.\nĐậu phụ tươi Làng Mơ hộp 400g (13.100đ): Đậu phụ tươi, nguồn protein thực vật bổ sung cho món cá.\nNước mắm Nam Ngư Đệ nhị 900ml (27.800đ): Nước mắm dùng để nêm nếm cá và đậu phụ, tạo hương vị truyền thống.\n\nTổng: 169.900đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10053346",
+              "WIN_10006085",
+              "WIN_10008683"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10053346",
+                "name": "Bao tử cá basa",
+                "category": "Hải Sản Đông Lạnh",
+                "brand": "NOBRAND",
+                "price_vnd": 129000,
+                "stock": 4,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:43.371654Z"
+              },
+              {
+                "product_id": "WIN_10006085",
+                "name": "Đậu phụ tươi Làng Mơ hộp 400g",
+                "category": "Đậu hũ",
+                "brand": "LÀNG MƠ",
+                "price_vnd": 13100,
+                "stock": 40,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:37.999117Z"
+              },
+              {
+                "product_id": "WIN_10008683",
+                "name": "Nước mắm Nam Ngư Đệ nhị 900ml",
+                "category": "Nước Mắm - Nước Chấm",
+                "brand": "NAM NGƯ",
+                "price_vnd": 27800,
+                "stock": 90,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:42.608080Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.787
+        },
+        {
+          "question": "Mình thích thịt heo hơn thịt bò.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 2.24
+        },
+        {
+          "question": "Chọn giúp mình món thịt và một loại rau dễ nấu, tính tổng luôn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 2.699
+        },
+        {
+          "question": "Mỡ nhiều quá thì không thích, ưu tiên phần nạc hơn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "1992abda-d328-4e7b-be60-f8534eee32b3",
+            "text": "Bạn có muốn mua phần thịt heo nạc với khối lượng bao nhiêu (ví dụ 0.5 kg) để phù hợp với ngân sách 180 nghìn?",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.162
+        },
+        {
+          "question": "Giảm tiền xuống tối đa 120 nghìn cho toàn bộ bữa nhé.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.547
+        }
+      ]
+    }
+  ]
+}

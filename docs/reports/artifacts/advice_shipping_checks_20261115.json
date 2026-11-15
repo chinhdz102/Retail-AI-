@@ -1,0 +1,153 @@
+{
+  "started_utc": "2026-11-15T05:27:15.899370+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 6.0,
+  "complete": false,
+  "cases": [
+    {
+      "id": "q08",
+      "turns": [
+        {
+          "question": "Em có khoảng 200 nghìn, mua đồ ăn đủ cho hai người một bữa tối được không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "42fe18c9-4aae-441a-a23e-908452b19803",
+            "text": "Bạn nên chọn một loại thịt hoặc cá làm món chính, kèm rau xanh và trứng để bữa tối đủ protein và chất xơ cho hai người.\nMEATDELI Thịt heo xay chuẩn ngon (S) — 300g (42.570đ): Thịt heo xay thích hợp để xào hoặc làm chả, lượng 300 g đáp ứng khẩu phần cho hai người\nCải bó xôi WinEco gói 300g (20.720đ): Cải bó xôi là rau lá xanh, dễ nấu canh hoặc xào, gói 300 g phù hợp cho hai người\nTrứng gà Ba Huân hộp 10 quả (34.000đ): Trứng gà hộp 10 quả cung cấp protein bổ sung, giá hợp lý cho bữa tối và các bữa tiếp theo\nBạn đã có gạo ở nhà chưa, hay cần mua thêm gạo cho bữa tối này?\n\nTổng: 97.290đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10617947",
+              "WIN_10281825",
+              "WIN_10006030"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10617947",
+                "name": "MEATDELI Thịt heo xay chuẩn ngon (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 141900,
+                "stock": 18,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367254Z"
+              },
+              {
+                "product_id": "WIN_10281825",
+                "name": "Cải bó xôi WinEco gói 300g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 20720,
+                "stock": 1,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:50.237993Z"
+              },
+              {
+                "product_id": "WIN_10006030",
+                "name": "Trứng gà Ba Huân hộp 10 quả",
+                "category": "Trứng",
+                "brand": "BA HUÂN",
+                "price_vnd": 34000,
+                "stock": 12,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:57.591517Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 8.389
+        }
+      ]
+    },
+    {
+      "id": "long-household",
+      "turns": [
+        {
+          "question": "Mình cần dầu gội cho người lớn, dưới 150 nghìn, tóc hay bết dầu.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.827
+        },
+        {
+          "question": "Không cần quảng cáo công dụng, chọn một loại đáng tiền và nói điểm cần cân nhắc.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.869
+        },
+        {
+          "question": "Chai nhỏ quá, có loại tối thiểu 400ml vẫn trong ngân sách không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "b0a13b8c-dfab-4ecf-9a0e-b12c90adf1f8",
+            "text": "Mình nên chọn loại 480 ml, giá dưới 150 nghìn, phù hợp với tóc bết dầu và đủ dung tích cho nhu cầu dùng lâu. Cân nhắc xem chai có nắp đậy kín để bảo quản và tránh lãng phí nếu dùng ít lần mỗi tuần.\nDầu gội dược liệu Thái Dương 3 hương hoa chai 480ml (114.900đ): Dung tích 480 ml đáp ứng tối thiểu 400 ml, giá dưới ngân sách và phù hợp cho tóc bết dầu",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10170560"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10170560",
+                "name": "Dầu gội dược liệu Thái Dương 3 hương hoa chai 480ml",
+                "category": "Chăm Sóc Tóc",
+                "brand": "THÁI DƯƠNG",
+                "price_vnd": 114900,
+                "stock": 14,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.396001Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.913
+        },
+        {
+          "question": "Không lấy gói lẻ, chỉ chai hoặc túi từ 400ml trở lên.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.992
+        },
+        {
+          "question": "Đắt quá, đổi ngân sách xuống dưới 100 nghìn nhé.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.576
+        },
+        {
+          "question": "Nếu không đủ tiêu chí thì nói đúng điều còn thiếu, đừng tự đổi sang chai nhỏ.",
+          "http_status": 200,
+          "response": {
+            "session_id": "b0a13b8c-dfab-4ecf-9a0e-b12c90adf1f8",
+            "text": "Hiện tại không có dầu gội dạng chai hoặc túi, dung tích từ 400 ml trở lên, giá dưới 100 000 đồng. Bạn có thể cân nhắc tăng ngân sách lên một mức nhất định hoặc chấp nhận dung tích lớn hơn để tìm được sản phẩm phù hợp?",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 6.551
+        }
+      ]
+    }
+  ]
+}

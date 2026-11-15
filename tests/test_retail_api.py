@@ -1283,6 +1283,30 @@ async def test_session_creation_and_isolation(client: httpx.AsyncClient) -> None
 
 
 @pytest.mark.asyncio
+async def test_failed_consultation_preserves_validated_customer_state(client, monkeypatch):
+    import importlib
+    api = importlib.import_module("backend.api.main")
+    plan = {"need": "bữa tối", "requirements": {"owned": "đã có gạo"},
+            "budget_vnd": 120000, "budget_scope": "basket"}
+
+    async def unavailable(*args):
+        failure = GroqProviderError("provider unavailable")
+        failure.consultation_plan = plan
+        raise failure
+
+    monkeypatch.setattr(api, "consult", unavailable)
+    app.dependency_overrides[get_settings] = lambda: Settings(catalog_repository="snapshot")
+    created = await client.post("/sessions", json={"kiosk_id": "failed-advice-memory"})
+    session_id = created.json()["session_id"]
+    response = await client.post("/agent/respond", json={"session_id": session_id,
+        "text": "Chọn bữa tối dưới 120 nghìn, có gạo rồi", "language": "vi"})
+    assert response.status_code == 502
+    record = session_store.get(UUID(session_id))
+    assert record.shopping.constraints["consultation_plan"] == plan
+    assert not record.shopping.selected_product_ids
+
+
+@pytest.mark.asyncio
 async def test_search_and_snapshot_return_grounded_demo_product(client: httpx.AsyncClient) -> None:
     search = await client.get("/products/search", params={"q": "coca zero"})
 
