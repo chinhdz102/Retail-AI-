@@ -234,6 +234,15 @@ def test_named_ingredient_prefers_its_category_over_a_flavoured_snack():
     assert _matching_candidates([snack, meat], Search(query="thịt bò", category="Thịt")) == [meat]
 
 
+def test_generic_meat_request_does_not_choose_bone_product_from_meat_department():
+    meat = Repository().product.model_copy(update={"name": "Thịt đùi heo", "category": "Thịt"})
+    bone = meat.model_copy(update={"product_id": "B", "name": "Xương heo chuẩn ngon", "category": "Thịt"})
+    assert _matching_candidates([bone, meat], Search(query="thịt heo", category="Thịt")) == [meat]
+    assert _matching_candidates([bone], Search(query="xương heo", category="Thịt")) == [bone]
+    boneless = meat.model_copy(update={"name": "Thịt đùi heo không xương"})
+    assert _matching_candidates([boneless], Search(query="thịt heo", category="Thịt")) == [boneless]
+
+
 def test_category_supplies_generic_noun_without_inventing_an_ingredient():
     vegetable = Repository().product.model_copy(update={"name": "Cải ngọt WinEco 300g", "category": "Rau Lá"})
     assert _matching_candidates([vegetable], Search(query="rau", category="Rau Lá")) == [vegetable]
@@ -258,9 +267,255 @@ async def test_only_planner_chosen_type_can_back_off_inside_category(named_by_cu
     repo.products = (repo.product,)
     choices = [] if named_by_customer else [{"product_id": "P1", "evidence": ["Cải ngọt"]}]
     model = Scripted({"need": "chọn rau cho bữa tối", "searches": [{"query": "rau muống", "category": "Rau Lá"}]},
+                     *([{"corrections": []}] if named_by_customer else []),
                      {"advice": "Chọn loại rau đang phù hợp.", "choices": choices})
     result = await consult(model, repo, "Mua rau muống" if named_by_customer else "Chọn rau cho bữa tối", [], [])
     assert bool(result.products) is not named_by_customer
+
+
+@pytest.mark.asyncio
+async def test_failed_use_case_search_is_repaired_without_relaxing_product_filters():
+    repo = Repository()
+    repo.product = repo.product.model_copy(update={"name": "Cải ngọt WinEco 300g", "category": "Rau Lá"})
+    repo.products = (repo.product,)
+    model = Scripted({"need": "Rau luộc dưới 30 nghìn, gói 300g", "budget_vnd": 30000,
+        "searches": [{"query": "rau luộc", "category": "Rau Lá", "brand": "WinEco",
+            "package_constraints": [{"dimension": "mass_g", "value": 300, "source_quote": "gói 300g"}]}]},
+        {"corrections": [{"index": 0, "query": "rau"}]},
+        {"choices": [{"product_id": "P1", "evidence_fields": ["name"], "evidence": [],
+                      "reason": "Luộc chín, ăn cùng món thịt."}]})
+    repo.product = repo.product.model_copy(update={"price_vnd": 20000})
+    repo.products = (repo.product,)
+    answer = await consult(model, repo, "Mua rau luộc, gói 300g dưới 30 nghìn", [], [])
+    assert answer.products == (repo.product,)
+    search = answer.plan.searches[0]
+    assert search.query == "rau" and search.brand == "WinEco"
+    assert search.package_constraints[0].value == 300
+    assert all(call["brand"] == "WinEco" for call in repo.calls)
+    assert all(call["price_value_vnd"] == 30000 for call in repo.calls if call["price_operator"])
+    assert answer.purchase_lines[0]["line_total_vnd"] <= 30000
+
+
+@pytest.mark.asyncio
+async def test_retrieval_repair_can_recover_omitted_category_but_cannot_substitute_named_type():
+    from backend.services.consultation import _repair_retrieval
+    repo = Repository()
+    plan = Plan(need="Mua rau luộc", searches=[{"query": "rau luộc"}])
+    model = Scripted({"corrections": [{"index": 0, "query": "rau", "category": "Rau Lá"}]})
+    corrected = await _repair_retrieval(model, repo, plan, [0], ["Rau Lá"], "Mua rau luộc")
+    assert corrected[0].query == "rau" and corrected[0].category == "Rau Lá"
+    invalid = Scripted({"corrections": [{"index": 0, "query": "cải ngọt", "category": "Rau Lá"}]})
+    assert await _repair_retrieval(invalid, repo, plan, [0], ["Rau Lá"], "Mua rau luộc") == plan.searches
+
+
+@pytest.mark.asyncio
+async def test_repair_numbering_failed_subset_cannot_erase_or_cross_apply_searches():
+    from backend.services.consultation import _repair_retrieval
+    repo = Repository()
+    plan = Plan(need="Thịt nạc và rau luộc", searches=[{"query": "thịt nạc", "category": "Thịt"},
+        {"query": "rau luộc", "category": "Rau Lá"}])
+    model = Scripted({"corrections": [{"index": 0, "query": "rau", "category": "Rau Lá"}]})
+    searches = await _repair_retrieval(model, repo, plan, [1], ["Rau Lá", "Thịt"], "Chọn giúp")
+    assert searches[0] == plan.searches[0]
+    assert searches[1].query == "rau" and searches[1].category == "Rau Lá"
+
+
+@pytest.mark.asyncio
+async def test_diverse_cheapest_hits_cannot_reintroduce_flavoured_snacks_for_meat():
+    from backend.services.consultation import _retrieve_candidates
+    repo = Repository()
+    snack = repo.product.model_copy(update={"product_id": "S", "name": "Bánh que vị thịt bò", "category": "Bánh Snack", "price_vnd": 1000})
+    repo.search = lambda **kwargs: [repo.product, snack]
+    candidates, _ = await _retrieve_candidates(repo, Plan(need="Mua thịt bò", searches=[{"query": "thịt bò"}]), [], [])
+    assert set(candidates) == {"P1"}
+
+
+@pytest.mark.asyncio
+async def test_generic_category_query_exposes_head_products_without_literal_generic_noun():
+    from backend.services.consultation import _retrieve_candidates
+    repo = Repository()
+    cabbage = repo.product.model_copy(update={"name": "Bắp cải trắng", "category": "Rau Lá"})
+    sprout = cabbage.model_copy(update={"product_id": "S", "name": "Rau mầm cải xanh 100g"})
+    repo.search = lambda **kwargs: [cabbage, sprout] if not kwargs["query"] else [sprout]
+    candidates, _ = await _retrieve_candidates(repo, Plan(need="Mua rau luộc", searches=[{"query": "rau", "category": "Rau Lá"}]), ["Rau Lá"], [])
+    assert "P1" in candidates
+
+
+def test_candidate_purchase_evidence_prices_customer_amount_without_changing_unit_price():
+    from backend.services.consultation import _candidate_evidence
+    product = Repository().product.model_copy(update={"name": "Thịt bò", "uom": "kg", "price_vnd": 199900})
+    row = _candidate_evidence(product, Plan(need="Mua thịt", purchase_weights={
+        "amount": {"query": "thịt", "weight_g": 300}}))
+    assert row["price_vnd"] == 199900 and row["price_basis"] == "per_kg"
+    assert row["customer_purchase"] == {"weight_g": 300, "line_total_vnd": 59970}
+
+
+@pytest.mark.asyncio
+async def test_customer_purchase_weight_is_source_validated_and_persists_after_history_rolls():
+    repo = Repository()
+    repo.product = repo.product.model_copy(update={"uom": "kg", "price_vnd": 199900,
+                                                 "name": "Thịt bò"})
+    model = Scripted({"need": "Mua thịt", "decision_mode": "basket",
+        "requirement_updates": [{"key": "meat_amount", "value": "Thịt 300g",
+            "source_quote": "Thịt chỉ mua 300 gram", "purchase_weight": {"query": "thịt", "weight_g": 300}}],
+        "searches": [{"query": "thịt"}]},
+        {"choices": [{"product_id": "P1", "reason": "Thái mỏng để xào."}]})
+    answer = await consult(model, repo, "Thịt chỉ mua 300 gram", [], [])
+    assert answer.purchase_lines[0]["weight_g"] == 300
+    assert answer.purchase_lines[0]["line_total_vnd"] == 59970
+    assert answer.plan.searches[0].package_constraints == []
+    followup = Scripted({"need": "Mua thịt", "decision_mode": "basket", "searches": [{"query": "thịt"}]},
+        {"choices": [{"product_id": "P1", "reason": "Thái mỏng để xào."}]})
+    result = await consult(followup, repo, "Nhắc lại phương án", [], [], answer.plan.model_dump())
+    assert result.purchase_lines[0]["weight_g"] == 300
+
+
+@pytest.mark.asyncio
+async def test_literal_purchase_instruction_survives_planner_omitting_weight_update():
+    repo = Repository()
+    repo.product = repo.product.model_copy(update={"uom": "kg", "name": "Thịt bò"})
+    model = Scripted({"need": "Mua thịt", "decision_mode": "basket", "searches": [{"query": "thịt bò"}]},
+                     {"choices": [{"product_id": "P1"}]})
+    result = await consult(model, repo, "Thịt chỉ mua 300 gram, tính tổng giúp mình.", [], [])
+    assert result.purchase_lines[0]["weight_g"] == 300
+
+
+@pytest.mark.parametrize("text", ["Không mua thịt 300g", "Thịt mua gói 300g", "Thịt mua 300g hay 500g",
+    "Thịt mỗi người mua 300g", "Thịt mua 300g, rau mua 500g", "Mua thịt cho hai người"])
+def test_literal_weight_parser_does_not_infer_ambiguous_or_different_targets(text):
+    from backend.services.consultation import _explicit_purchase_weights
+    parsed = list(_explicit_purchase_weights(text, [Search(query="cá")]))
+    assert parsed == []
+
+
+@pytest.mark.parametrize("text", ["Không mua thịt 300g", "Thịt mua gói 300g", "Thịt mua 300g hay 500g",
+    "Thịt mỗi người mua 300g", "Mua thịt cho hai người"])
+def test_literal_weight_parser_keeps_packaging_and_negation(text):
+    from backend.services.consultation import _explicit_purchase_weights
+    assert list(_explicit_purchase_weights(text, [Search(query="thịt")])) == []
+
+
+@pytest.mark.parametrize("target,amount,grams", [("cá", "nửa ký", 500), ("thịt", "0,3kg", 300),
+                                                ("rau", "ba trăm gam", 300)])
+def test_literal_weight_parser_handles_vietnamese_amounts_across_types(target, amount, grams):
+    from backend.services.consultation import _explicit_purchase_weights
+    assert list(_explicit_purchase_weights(f"{target} chỉ mua {amount}", [Search(query=target)])) == [(target, grams)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("quote,value", [("Thịt mua 500g", 300), ("Thịt mua hai phần", 300),
+                                         ("Thịt gói 300g", 300)])
+async def test_invented_or_fixed_package_weight_is_not_converted_to_loose_purchase(quote, value):
+    model = Scripted({"need": "Mua thịt", "requirement_updates": [{"key": "amount", "value": "300g",
+        "source_quote": quote, "purchase_weight": {"query": "thịt", "weight_g": value}}]},
+        {"advice": "Bạn cần loại nguyên miếng hay xay?"})
+    answer = await consult(model, Repository(), quote, [], [])
+    assert answer.plan.purchase_weights == {}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change,expected", [({"topic_changed": True}, {}),
+    ({"requirement_updates": [{"key": "amount", "action": "remove", "source_quote": "Bỏ giới hạn lượng thịt"}]}, {})])
+async def test_purchase_weight_clears_on_new_topic_or_explicit_removal(change, expected):
+    model = Scripted({"need": "Mua hàng", **change}, {"advice": "Bạn muốn mua món nào?"})
+    answer = await consult(model, Repository(), "Bỏ giới hạn lượng thịt", [], [], {
+        "requirements": {"amount": "thịt 300g"},
+        "purchase_weights": {"amount": {"query": "thịt", "weight_g": 300}}})
+    assert answer.plan.purchase_weights == expected
+
+
+def test_loose_weight_never_changes_fixed_pack_or_ambiguous_basket():
+    plan = Plan(need="Mua 300g thịt", decision_mode="basket",
+                purchase_weights={"amount": {"query": "thịt", "weight_g": 300}})
+    product = Repository().product
+    draft = Composition(choices=[{"product_id": "P1", "evidence_fields": ["name"]}])
+    answer = _render_structured(draft, {"P1": product}, plan, "test")
+    assert answer.purchase_lines[0]["weight_g"] is None
+    loose = product.model_copy(update={"uom": "kg"})
+    other = loose.model_copy(update={"product_id": "P2", "name": "Thịt heo"})
+    with pytest.raises(GroqProviderError, match="nhiều hàng cân"):
+        _render_structured(Composition(choices=[
+            {"product_id": "P1", "evidence_fields": ["name"]},
+            {"product_id": "P2", "evidence_fields": ["name"]}]), {"P1": loose, "P2": other}, plan, "test")
+    with pytest.raises(GroqProviderError, match="300g"):
+        _render_structured(Composition(choices=[{"product_id": "P1", "weight_g": 500,
+            "evidence_fields": ["name"]}]), {"P1": loose}, plan, "test")
+
+
+def test_evidence_field_reference_does_not_bypass_missing_facts_or_claim_validation():
+    product = Repository().product.model_copy(update={"name": "Sữa tắm 200ml"})
+    plan = Plan(need="Mua sữa tắm")
+    with pytest.raises(GroqProviderError, match="evidence"):
+        _render_structured(Composition(choices=[{"product_id": "P1", "evidence_fields": ["ingredients"]}]),
+                           {"P1": product}, plan, "test")
+    with pytest.raises(GroqProviderError, match="chưa có nhãn"):
+        _render_structured(Composition(choices=[{"product_id": "P1", "evidence_fields": ["name"],
+                                               "reason": "Không gây kích ứng."}]), {"P1": product}, plan, "test")
+
+
+@pytest.mark.asyncio
+async def test_verified_models_constrain_choices_to_retrieved_ids_and_use_field_evidence():
+    from types import SimpleNamespace
+    model = Scripted({"need": "Mua thịt", "searches": [{"query": "thịt"}]},
+                     {"choices": [{"product_id": "P1", "evidence": [], "evidence_fields": ["name"]}]})
+    model.settings = SimpleNamespace(groq_model="qwen/qwen3.8-27b",
+        groq_fallback_model="openai/gpt-oss-120b", groq_fallback_model_2="openai/gpt-oss-20b")
+    await consult(model, Repository(), "Mua thịt", [], [])
+    format = model.calls[1][1]["response_format"]
+    assert format["json_schema"]["strict"] is True
+    schema = format["json_schema"]["schema"]
+    choice = schema["$defs"]["Choice"]
+    assert choice["properties"]["product_id"]["enum"] == ["P1"]
+    assert "evidence" not in choice["properties"]
+    assert set(choice["required"]) == set(choice["properties"])
+    assert choice["additionalProperties"] is False
+    assert model.calls[0][1]["response_format"] == {"type": "json_object"}
+
+
+@pytest.mark.parametrize("text", ["Lượng này đủ cho hai người.", "Đủ cho 2 bữa tối.", "Đủ ăn cả hai ngày."])
+def test_unverified_serving_promises_are_rejected_but_portion_suggestions_are_allowed(text):
+    with pytest.raises(GroqProviderError, match="chứng minh"):
+        _render_structured(Composition(advice=text), {}, Plan(need="Mua đồ ăn"), "test")
+    answer = _render_structured(Composition(advice="Bạn có thể bắt đầu với 300g, tăng giảm theo sức ăn."),
+                                {}, Plan(need="Mua đồ ăn"), "test")
+    assert "theo sức ăn" in answer.text
+
+
+def test_customer_budget_is_not_evidence_for_a_fabricated_general_price():
+    plan = Plan(need="Trà không đường dưới 20 nghìn", budget_vnd=20000)
+    with pytest.raises(GroqProviderError, match="không đoán giá"):
+        _render_structured(Composition(advice="Trà không đường thường có giá dưới 20.000đ."), {}, plan, "test")
+    answer = _render_structured(Composition(advice="Mình chưa chọn được loại đúng nhãn với giá dưới 20.000đ. "
+        "Bạn có thể pha trà nguyên chất và không thêm đường."), {}, plan, "test")
+    assert "không thêm đường" in answer.text
+
+
+def test_recommendation_cannot_be_rendered_as_basket_or_repeat_price_in_opening():
+    product = Repository().product
+    plan = Plan(need="Chọn một loại thịt", decision_mode="recommend")
+    answer = _render_structured(Composition(choices=[{"product_id": "P1", "evidence_fields": ["name"]}],
+        selection_mode="basket"), {"P1": product}, plan, "test")
+    assert "Tổng:" not in answer.text
+    with pytest.raises(GroqProviderError, match="advice rỗng"):
+        _render_structured(Composition(advice="Mình chọn thịt giá 50.000đ.",
+            choices=[{"product_id": "P1", "evidence_fields": ["name"]}]), {"P1": product}, plan, "test")
+
+
+def test_price_or_identity_cleanup_cannot_leave_a_dangling_reason():
+    product = Repository().product
+    with pytest.raises(GroqProviderError):
+        _render_structured(Composition(choices=[{"product_id": "P1", "evidence_fields": ["name"],
+            "reason": "Loại này có giá 50.000đ, thái mỏng để xào."}]), {"P1": product}, Plan(need="Mua thịt"), "test")
+    with pytest.raises(GroqProviderError):
+        _render_structured(Composition(choices=[{"product_id": "P1", "evidence_fields": ["name"],
+            "reason": f"Mình chọn {product.name} vì dễ xào."}]), {"P1": product}, Plan(need="Mua thịt"), "test")
+
+
+def test_general_guide_cannot_turn_into_an_unrequested_package_sales_question():
+    with pytest.raises(GroqProviderError, match="chỉ cần hướng dẫn"):
+        _render_structured(Composition(advice="Gội kỹ da đầu rồi xả sạch.",
+            question="Bạn muốn thử dầu gội dạng chai nhỏ gọn hay chai lớn hơn?"), {},
+            Plan(need="Hướng dẫn gội đầu, không mua thêm", decision_mode="guide"), "test")
 
 
 def test_alternative_gifts_are_not_added_as_a_single_basket():

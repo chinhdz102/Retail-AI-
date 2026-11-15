@@ -1,0 +1,118 @@
+{
+  "started_utc": "2026-11-15T08:17:31.181995+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 12.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "owned-food",
+      "turns": [
+        {
+          "question": "Hai người ăn cơm tối, nhà có gạo và dầu ăn rồi. Chọn thịt heo với một loại rau, tổng tối đa 120 nghìn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 7.715
+        },
+        {
+          "question": "Không lấy thịt xay, chọn miếng thịt nạc để xào và rau luộc thôi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.88
+        },
+        {
+          "question": "Thịt chỉ mua 300 gram, tính tổng hai món giúp mình.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 2.381
+        },
+        {
+          "question": "Giờ bỏ giới hạn tiền, vẫn chỉ cần đúng hai món ăn với cơm. Chọn chốt giúp mình, đừng giới thiệu thêm.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.218
+        }
+      ]
+    },
+    {
+      "id": "one-shampoo",
+      "turns": [
+        {
+          "question": "Có loại dầu gội nào dưới 150 nghìn không, chọn giúp mình đúng một loại.",
+          "http_status": 200,
+          "response": {
+            "session_id": "4be83fd5-bf54-48ab-af82-9984f75bcf11",
+            "text": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g (80.000đ): Dầu gội Clear Men mát lạnh bạc hà có , phù hợp với ngân sách 150k và mang hương bạc hà dễ chịu cho tóc",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10601171"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10601171",
+                "name": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "CLEAR",
+                "price_vnd": 80000,
+                "stock": 8,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.397509Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.009
+        },
+        {
+          "question": "Đừng quảng cáo công dụng, nói một điểm nên cân nhắc thôi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "4be83fd5-bf54-48ab-af82-9984f75bcf11",
+            "text": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g (80.000đ): Giá rẻ, phù hợp với ngân sách dưới 150 nghìn",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10601171"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10601171",
+                "name": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "CLEAR",
+                "price_vnd": 80000,
+                "stock": 8,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.397509Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.583
+        },
+        {
+          "question": "Chỉ cần hướng dẫn chọn dầu gội cho tóc dầu, không cần mua thêm sản phẩm.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.705
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T08:19:27.589080+00:00"
+}
