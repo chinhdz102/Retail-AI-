@@ -50,8 +50,9 @@ async def run(args):
     elif args.question:
         questions = [args.question]
     history, previous_ids, previous_plan = [], [], None
+    service = Recorder(args.model, args.effort)
     for question in questions:
-        service = Recorder(args.model, args.effort)
+        call_start = len(service.outputs)
         row = {"question": question}
         try:
             result = await consult(service, get_product_repository(), question,
@@ -60,11 +61,15 @@ async def run(args):
             if args.conversation:
                 previous_plan = result.plan.model_dump()
                 previous_ids = [p.product_id for p in result.products]
-                history.extend([{"role": "user", "content": question},
-                                {"role": "assistant", "content": result.text}])
         except Exception as error:
             row["error_type"] = type(error).__name__
-        row["calls"] = service.outputs
+            if args.conversation and isinstance(getattr(error, "consultation_plan", None), dict):
+                previous_plan = error.consultation_plan
+        if args.conversation:
+            history.append({"role": "user", "content": question})
+            if "text" in row:
+                history.append({"role": "assistant", "content": row["text"]})
+        row["calls"] = service.outputs[call_start:]
         report.append(row)
         args.output.write_text(
             json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")

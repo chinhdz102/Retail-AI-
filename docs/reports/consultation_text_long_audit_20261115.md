@@ -1,5 +1,7 @@
 # Kiểm tra tư vấn bằng text thật — 15/11/2026
 
+Đợt commit và tối ưu tiếp theo: [báo cáo bổ sung](consultation_followup_20261115.md).
+
 ## Kết luận
 
 **Chưa đạt mức nhân viên tư vấn thực sự.** Đã gọi backend thật với đủ 35 câu của người dùng và hai hội thoại dài 16 + 12 lượt. Không dùng mock hoặc STT để tạo kết quả live. Đã sửa nhiều lỗi ở truy xuất, trạng thái và kiểm tra câu trả lời; vẫn còn lỗi hiểu sản phẩm, suy công dụng và bỏ cuộc trong hội thoại dài. Không dùng HTTP 200 hoặc test unit làm bằng chứng rằng tư vấn đã tốt.

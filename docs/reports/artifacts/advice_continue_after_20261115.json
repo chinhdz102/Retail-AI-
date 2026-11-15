@@ -1,0 +1,200 @@
+{
+  "started_utc": "2026-11-15T06:36:11.521774+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 12.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "q09",
+      "turns": [
+        {
+          "question": "Có loại dầu gội nào tầm dưới 150 nghìn mà dùng ổn không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "7142ed3d-d13d-446a-9ea8-6bbaa305d390",
+            "text": "Bạn có thể thử dầu gội Clear Men mát lạnh bạc hà, giá dưới 150 nghìn, dùng ổn cho tóc thường.\nDầu gội Clear Men mát lạnh bạc hà 180g/170g (80.000đ): Giá 80 000 đ, phù hợp với ngân sách và công thức mát lạnh giúp tóc sạch sẽ",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "TLM_10601171"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10601171",
+                "name": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "CLEAR",
+                "price_vnd": 80000,
+                "stock": 8,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.397509Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 8.228
+        }
+      ]
+    },
+    {
+      "id": "long-dinner",
+      "turns": [
+        {
+          "question": "Tối nay hai người ăn ở nhà, chọn đồ nấu một bữa tối tổng không quá 180 nghìn. Nhà có gạo rồi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "f3e23adc-0a2c-45af-a204-cf04e504a6e1",
+            "text": "Mình gợi ý dùng thịt gà, rau xanh và đậu phụ để làm món xào hoặc hầm, vừa đủ cho 2 người và không vượt ngân sách.\nMEATDELI Má đùi gà — 500g (47.950đ): Thịt gà mềm, thích hợp xào hoặc hầm cho 2 người\nRau mầm cải xanh  WinEco 100g (14.800đ): Rau mầm cải xanh tươi, dùng làm rau luộc hoặc xào nhanh\nĐậu phụ tươi Làng Mơ hộp 400g (13.100đ): Đậu phụ tươi, bổ sung protein thực vật, dễ chế biến cùng gà và rau\n\nTổng: 75.850đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "TLM_10283203",
+              "TLM_10281840",
+              "TLM_10006085"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10283203",
+                "name": "MEATDELI Má đùi gà",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 95900,
+                "stock": 5,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.366926Z"
+              },
+              {
+                "product_id": "TLM_10281840",
+                "name": "Rau mầm cải xanh  WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 33,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238132Z"
+              },
+              {
+                "product_id": "TLM_10006085",
+                "name": "Đậu phụ tươi Làng Mơ hộp 400g",
+                "category": "Đậu hũ",
+                "brand": "LÀNG MƠ",
+                "price_vnd": 13100,
+                "stock": 40,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:37.999117Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 6.622
+        },
+        {
+          "question": "Không lấy thịt gà, xúc xích hay đồ chế biến sẵn nhé.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.91
+        },
+        {
+          "question": "Mình thích thịt heo hơn thịt bò.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 7.003
+        },
+        {
+          "question": "Chọn giúp mình món thịt và một loại rau dễ nấu, tính tổng luôn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.635
+        },
+        {
+          "question": "Mỡ nhiều quá thì không thích, ưu tiên phần nạc hơn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.505
+        },
+        {
+          "question": "Giảm tiền xuống tối đa 120 nghìn cho toàn bộ bữa nhé.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.37
+        },
+        {
+          "question": "Nhà có dầu ăn, gia vị rồi, đừng tính thêm mấy thứ đó.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.27
+        },
+        {
+          "question": "Mua thịt 300 gram thôi, còn lại chọn rau.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 7.757
+        },
+        {
+          "question": "Cho mình xem lại phương án cuối với tổng tiền.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.856
+        },
+        {
+          "question": "Giờ chuyển sang mua nước uống, phần đồ ăn giữ nguyên, đừng gộp giá. Mình muốn trà không đường, không có ga.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.392
+        },
+        {
+          "question": "Dưới 20 nghìn một chai thôi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.313
+        },
+        {
+          "question": "Mình cần loại một lít, không phải cộng hai chai nhỏ thành một lít.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 8.099
+        },
+        {
+          "question": "Nếu không có đúng cỡ thì nói giúp mình lựa chọn nào gần nhất, đừng tự chốt chai nhỏ.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.017
+        },
+        {
+          "question": "Thôi bỏ yêu cầu một lít, chọn một chai nhỏ phù hợp hai tiêu chí còn lại.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.465
+        },
+        {
+          "question": "Nếu là bạn thì chọn đúng một loại nào?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.715
+        },
+        {
+          "question": "Nhắc lại giúp mình các tiêu chí của chai vừa chọn, không cần giới thiệu thêm món khác.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.126
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T06:40:57.373228+00:00"
+}
