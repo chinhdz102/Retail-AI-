@@ -521,6 +521,10 @@ async def test_query_backoff_recovers_product_type_without_use_case_in_title(que
     ("Ngân sách 1,5 triệu", (1500000, False)),
     ("Loại 1 lít, chai trước giá 50 nghìn", None),
     ("Lúc đầu tầm 100 nghìn, giờ lấy dưới 80 nghìn thôi.", (80000, True)),
+    ("Tăng ngân sách lên 150 nghìn", (150000, False)),
+    ("Giảm còn 100 nghìn nhé", (100000, False)),
+    ("Giá tăng lên 150 nghìn rồi", None),
+    ("Giá giảm còn 100 nghìn", None),
 ])
 def test_explicit_numeric_budget_is_kept_without_confusing_volume_or_item_price(text, expected):
     assert _explicit_budget(text) == expected
@@ -691,3 +695,164 @@ def test_multiplying_packages_cannot_bypass_an_item_spending_limit():
     with pytest.raises(GroqProviderError):
         _parse_answer("Lấy [[P1|3]].", {"P1": Repository().product},
                       Plan(need="mua thịt", budget_vnd=100000, budget_scope="item"))
+
+
+@pytest.mark.asyncio
+async def test_owned_items_filter_new_and_remembered_candidates_and_survive_short_history():
+    repo = Repository()
+    repo.product = repo.product.model_copy(update={"name": "Gạo thơm túi 1kg", "category": "Gạo"})
+    previous = {"requirements": {"owned_rice": "đã có gạo"}, "purchase_exclusions": {
+        "owned_rice": {"query": "gạo", "category": "Gạo"},
+    }}
+    model = Scripted({"need": "món ăn kèm cơm", "reuse_previous": True,
+                      "searches": [{"query": "gạo"}]},
+                     {"advice": "Mình chọn món ăn kèm cơm, không mua thêm gạo."})
+    answer = await consult(model, repo, "Nhắc lại phương án cuối", [], ["P1"], previous)
+    assert not answer.products
+    context = json.loads(model.calls[1][0][1]["content"].split(": ", 1)[1])
+    assert not context["candidates"]
+    assert answer.plan.purchase_exclusions["owned_rice"].query == "gạo"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("topic_changed,action,expected", [
+    (False, "set", False), (False, "remove", True), (True, "set", True),
+])
+async def test_purchase_exclusion_has_source_and_can_be_released_or_reset(topic_changed, action, expected):
+    repo = Repository()
+    previous = {"requirements": {"refused": "không lấy thịt bò"},
+                "purchase_exclusions": {"refused": {"query": "thịt bò"}}}
+    plan = {"need": "mua thịt", "searches": [{"query": "thịt bò"}],
+            "topic_changed": topic_changed, "requirement_updates": []}
+    if not topic_changed:
+        plan["requirement_updates"] = [{"key": "refused", "action": action,
+            "value": "không lấy thịt bò", "source_quote": "thịt bò",
+            "purchase_exclusion": {"query": "thịt bò"}}]
+    model = Scripted(plan, {"advice": "Mình giữ đúng yêu cầu bạn vừa đổi."})
+    answer = await consult(model, repo, "thịt bò", [], [], previous)
+    context = json.loads(model.calls[1][0][1]["content"].split(": ", 1)[1])
+    assert bool(context["candidates"]) is expected
+
+
+@pytest.mark.asyncio
+async def test_response_style_cannot_inject_an_unquoted_product_exclusion():
+    model = Scripted({"need": "mua thịt bò", "searches": [{"query": "thịt bò"}],
+        "purchase_exclusions": {"invented": {"query": "thịt bò"}},
+        "requirement_updates": [{"key": "style", "value": "nói ngắn",
+            "source_quote": "không cần quảng cáo công dụng",
+            "purchase_exclusion": {"query": "thịt bò"}}]},
+        {"choices": [{"product_id": "P1"}]})
+    answer = await consult(model, Repository(), "không cần quảng cáo công dụng", [], [])
+    assert len(answer.products) == 1 and not answer.plan.purchase_exclusions
+
+
+def test_owned_rice_does_not_exclude_a_different_category_with_rice_as_ingredient():
+    from backend.services.consultation import _excluded_purchase
+    snack = Repository().product.model_copy(update={"name": "Bánh gạo 100g", "category": "Bánh"})
+    assert not _excluded_purchase(snack, [Search(query="gạo", category="Gạo")])
+
+
+@pytest.mark.asyncio
+async def test_removed_budget_is_not_resurrected_from_a_stale_user_turn():
+    model = Scripted({"need": "mua thịt", "searches": [{"query": "thịt bò"}]},
+                     {"choices": [{"product_id": "P1"}]})
+    answer = await consult(model, Repository(), "Chọn chốt giúp mình", [
+        {"role": "user", "content": "Mua thịt khoảng 40 nghìn"},
+        {"role": "user", "content": "Thôi bỏ giới hạn tiền đi"},
+    ], [], {"budget_vnd": None, "budget_scope": "none", "budget_action": "remove"})
+    assert answer.plan.budget_vnd is None and len(answer.products) == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_planner_budget_correction_after_processed_turn_is_recovered():
+    model = Scripted({"need": "mua thịt", "searches": [{"query": "thịt bò"}],
+                      "budget_vnd": 100000}, {"choices": [{"product_id": "P1"}]})
+    answer = await consult(model, Repository(), "Chọn chốt", [
+        {"role": "user", "content": "Mua thịt khoảng 100 nghìn"},
+        {"role": "assistant", "content": "Mình gợi ý thịt."},
+        {"role": "user", "content": "Tăng ngân sách lên 150 nghìn"},
+    ], [], {"budget_vnd": 100000, "budget_scope": "item",
+            "source_user_text": "Mua thịt khoảng 100 nghìn"})
+    assert answer.plan.budget_vnd == 150000
+    assert answer.plan.source_user_text == "Chọn chốt"
+
+
+@pytest.mark.asyncio
+async def test_keep_budget_cannot_restore_amount_from_previous_topic_even_if_model_emits_it():
+    model = Scripted({"need": "mua thịt", "searches": [{"query": "thịt bò"}],
+                      "budget_vnd": 40000, "budget_action": "keep"},
+                     {"choices": [{"product_id": "P1"}]})
+    result = await consult(model, Repository(), "Chọn giúp", [
+        {"role": "user", "content": "Mua nước dưới 40 nghìn"},
+        {"role": "user", "content": "Giờ chọn thịt, chưa giới hạn tiền"},
+    ], [], {"budget_vnd": None, "budget_scope": "none",
+            "source_user_text": "Giờ chọn thịt, chưa giới hạn tiền"})
+    assert result.plan.budget_vnd is None and result.products
+    context = json.loads(model.calls[1][0][1]["content"].split(": ", 1)[1])
+    assert "previous_plan" not in context
+
+
+def test_recommendation_requires_a_decision_and_guidance_does_not_upsell():
+    p = Repository().product
+    candidates = {"P1": p, "P2": p.model_copy(update={"product_id": "P2"})}
+    with pytest.raises(GroqProviderError, match="chốt một"):
+        _render_structured(Composition(choices=[{"product_id": "P1"}, {"product_id": "P2"}]),
+                           candidates, Plan(need="chọn giúp", decision_mode="recommend"), "test")
+    with pytest.raises(GroqProviderError, match="hướng dẫn chung"):
+        _render_structured(Composition(choices=[{"product_id": "P1"}]), candidates,
+                           Plan(need="cách dùng", decision_mode="guide"), "test")
+
+
+@pytest.mark.parametrize("claim", [
+    "Thích hợp cho da đầu dầu.", "Phù hợp với tóc dầu.", "Hợp cho da nhạy cảm.",
+])
+def test_mint_or_brand_does_not_prove_compatibility_with_hair_or_skin(claim):
+    p = Repository().product.model_copy(update={"name": "Dầu gội bạc hà chai 180g"})
+    with pytest.raises(GroqProviderError, match="Sửa lý do"):
+        _render_structured(Composition(choices=[{"product_id": "P1", "reason": claim,
+                                               "evidence": ["Dầu gội bạc hà"]}]),
+                           {"P1": p}, Plan(need="dầu gội"), "test")
+
+
+@pytest.mark.parametrize("price,valid", [("50.000đ", True), ("50\u202f000\u202fđ", True), ("49.000đ", False)])
+def test_only_a_verified_repeated_price_can_be_removed_from_the_reason(price, valid):
+    p = Repository().product
+    draft = Composition(choices=[{"product_id": "P1", "reason": f"Giá {price}, thái mỏng để xào.",
+                                  "evidence": ["Thịt bò"]}])
+    if valid:
+        answer = _render_structured(draft, {"P1": p}, Plan(need="thịt"), "test")
+        assert answer.text == "Thịt bò 200g (50.000đ): thái mỏng để xào"
+    else:
+        with pytest.raises(GroqProviderError, match="giá/tổng"):
+            _render_structured(draft, {"P1": p}, Plan(need="thịt"), "test")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("question", [
+    "Chưa thấy trong catalog, bạn muốn loại nào?", "Bạn mua gì? Ngân sách bao nhiêu?",
+])
+async def test_planner_clarifications_cannot_bypass_customer_facing_text_rules(question):
+    model = Scripted({"need": "xác định sản phẩm", "action": "ask", "clarification": question})
+    with pytest.raises(GroqProviderError) as raised:
+        await consult(model, Repository(), "Chọn giúp", [], [])
+    assert raised.value.consultation_plan["source_user_text"] == "Chọn giúp"
+
+
+def test_shampoo_mass_is_not_described_as_volume():
+    p = Repository().product.model_copy(update={"name": "Dầu gội bạc hà 180g"})
+    with pytest.raises(GroqProviderError, match="khối lượng"):
+        _render_structured(Composition(choices=[{"product_id": "P1",
+            "reason": "Dung tích 180 g, tiện mang theo.", "evidence": ["180g"]}]),
+            {"P1": p}, Plan(need="dầu gội"), "test")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("requested", [True, False])
+async def test_planner_pantries_are_not_automatically_added_to_a_meal(requested):
+    repo = Repository()
+    repo.product = repo.product.model_copy(update={"name": "Nước mắm cá cơm 500ml", "category": "Nước mắm"})
+    model = Scripted({"need": "nấu bữa tối", "searches": [{"query": "nước mắm", "role": "pantry"}]},
+                     {"advice": "Mình giữ các món chính, không mua thêm đồ chưa cần."})
+    await consult(model, repo, "Mua thêm nước mắm" if requested else "Mua nguyên liệu nấu bữa tối", [], [])
+    context = json.loads(model.calls[1][0][1]["content"].split(": ", 1)[1])
+    assert bool(context["candidates"]) is requested

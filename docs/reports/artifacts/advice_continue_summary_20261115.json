@@ -1,0 +1,436 @@
+{
+  "reviewer": "assistant qualitative review; not an independent human study",
+  "qualitative_review_is_separate_from_data_checks": true,
+  "runs": [
+    {
+      "artifact": "advice_continue_before_20261115.json",
+      "complete": true,
+      "turns": 5,
+      "http_200": 4,
+      "http_error": 1,
+      "models": {
+        "qwen/qwen3.8-27b": 3,
+        "openai/gpt-oss-120b": 1
+      },
+      "median_seconds_http_200": 4.9355,
+      "p95_seconds_http_200": 5.886,
+      "data_integrity_issues": 0,
+      "qualitative_ratings": {
+        "partial": 2,
+        "fail": 3
+      },
+      "rows": [
+        {
+          "key": "q08:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 548,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Có giỏ/tổng đúng nhưng tự mua gạo và giải thích khẩu phần thiếu cơ sở."
+          }
+        },
+        {
+          "key": "q09:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "dinner:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 571,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Có thịt và rau, cách nấu còn chung chung, tự mời thêm trứng."
+          }
+        },
+        {
+          "key": "dinner:2",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 584,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Đã có gạo bị diễn đạt thành không cần gạo; chưa chốt cách nấu rõ."
+          }
+        },
+        {
+          "key": "dinner:3",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 751,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Lặp giỏ, dài dòng, quay lại hỏi chọn món và nói không cần gạo."
+          }
+        }
+      ]
+    },
+    {
+      "artifact": "advice_continue_after_20261115.json",
+      "complete": true,
+      "turns": 17,
+      "http_200": 2,
+      "http_error": 15,
+      "models": {
+        "openai/gpt-oss-120b": 2
+      },
+      "median_seconds_http_200": 7.425,
+      "p95_seconds_http_200": 8.228,
+      "data_integrity_issues": 0,
+      "qualitative_ratings": {
+        "fail": 16,
+        "partial": 1
+      },
+      "rows": [
+        {
+          "key": "q09:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 1,
+          "characters": 223,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Tự gán dùng ổn cho tóc thường; lặp tên rút gọn và giá."
+          }
+        },
+        {
+          "key": "long-dinner:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 419,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Không mua lại gạo, giá/tổng đúng; khẩu phần và cách chế biến còn chưa thuyết phục."
+          }
+        },
+        {
+          "key": "long-dinner:2",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:3",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:4",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:5",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:6",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:7",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:8",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:9",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:10",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:11",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:12",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:13",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:14",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:15",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "long-dinner:16",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        }
+      ]
+    },
+    {
+      "artifact": "advice_continue_final_20261115.json",
+      "complete": true,
+      "turns": 7,
+      "http_200": 3,
+      "http_error": 4,
+      "models": {
+        "qwen/qwen3.8-27b": 1,
+        "openai/gpt-oss-120b": 2
+      },
+      "median_seconds_http_200": 5.396,
+      "p95_seconds_http_200": 6.108,
+      "data_integrity_issues": 0,
+      "qualitative_ratings": {
+        "partial": 2,
+        "fail": 5
+      },
+      "rows": [
+        {
+          "key": "owned-food:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 2,
+          "characters": 471,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Giữ đúng hai hàng cần mua; suy tỷ lệ nạc mỡ, intro còn dài."
+          }
+        },
+        {
+          "key": "owned-food:2",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "owned-food:3",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "owned-food:4",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "one-shampoo:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+          }
+        },
+        {
+          "key": "one-shampoo:2",
+          "data_issues": [],
+          "answered": true,
+          "cards": 1,
+          "characters": 104,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Gọi 180g là dung tích; chỉ đọc thông số và tiền, chưa nói điểm cân nhắc."
+          }
+        },
+        {
+          "key": "one-shampoo:3",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 151,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Không upsell, có hướng chọn chung; tránh thành phần dưỡng ẩm quá tuyệt đối."
+          }
+        }
+      ]
+    },
+    {
+      "artifact": "advice_continue_shipping_20261115.json",
+      "complete": true,
+      "turns": 3,
+      "http_200": 3,
+      "http_error": 0,
+      "models": {
+        "openai/gpt-oss-120b": 3
+      },
+      "median_seconds_http_200": 5.118,
+      "p95_seconds_http_200": 12.598,
+      "data_integrity_issues": 0,
+      "qualitative_ratings": {
+        "fail": 1,
+        "partial": 2
+      },
+      "rows": [
+        {
+          "key": "dinner:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 430,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Gạo lức đỏ bị gọi cơm trắng; tự thêm nước mắm, không có rau."
+          }
+        },
+        {
+          "key": "dinner:2",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 484,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Bỏ gạo, có thịt và rau; vẫn tự thêm chai nước mắm và thời gian nấu thiếu cơ sở."
+          }
+        },
+        {
+          "key": "dinner:3",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 439,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Tổng đúng và không hỏi lại; lặp giỏ và tự hứa thời gian nấu."
+          }
+        }
+      ]
+    }
+  ]
+}

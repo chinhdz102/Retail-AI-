@@ -135,6 +135,20 @@ LONG_CONVERSATIONS = {
     ],
 }
 
+FOLLOWUP_CONVERSATIONS = {
+    "owned-food": [
+        "Hai người ăn cơm tối, nhà có gạo và dầu ăn rồi. Chọn thịt heo với một loại rau, tổng tối đa 120 nghìn.",
+        "Không lấy thịt xay, chọn miếng thịt nạc để xào và rau luộc thôi.",
+        "Thịt chỉ mua 300 gram, tính tổng hai món giúp mình.",
+        "Giờ bỏ giới hạn tiền, vẫn chỉ cần đúng hai món ăn với cơm. Chọn chốt giúp mình, đừng giới thiệu thêm.",
+    ],
+    "one-shampoo": [
+        "Có loại dầu gội nào dưới 150 nghìn không, chọn giúp mình đúng một loại.",
+        "Đừng quảng cáo công dụng, nói một điểm nên cân nhắc thôi.",
+        "Chỉ cần hướng dẫn chọn dầu gội cho tóc dầu, không cần mua thêm sản phẩm.",
+    ],
+}
+
 
 async def run(args):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -161,6 +175,8 @@ async def run(args):
         definitions += list(LONG_CONVERSATIONS.items())
     elif args.suite == "all":
         definitions += list(LONG_CONVERSATIONS.items())
+    elif args.suite == "followup":
+        definitions = list(FOLLOWUP_CONVERSATIONS.items())
     if args.holdout:
         definitions = [(f"h{i:02}", [text]) for i, text in enumerate(HOLDOUT, 1)]
     if args.ids:
@@ -230,7 +246,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--ids")
-    parser.add_argument("--suite", choices=["core", "questions", "long", "full", "all"], default="core")
+    parser.add_argument("--suite", choices=["core", "questions", "long", "full", "all", "followup"], default="core")
     parser.add_argument("--holdout", action="store_true")
     parser.add_argument("--pause-seconds", type=float, default=12)
     parser.add_argument("--output", type=Path, required=True)

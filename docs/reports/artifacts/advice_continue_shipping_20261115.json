@@ -1,0 +1,182 @@
+{
+  "started_utc": "2026-11-15T06:51:39.376669+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 25.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "dinner",
+      "turns": [
+        {
+          "question": "Mua đồ ăn tối cho hai người, tổng khoảng 200 nghìn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "edcc0287-b723-471f-bdb5-6921b6dcb4d7",
+            "text": "Mình đề xuất bữa tối gồm thịt gà, cơm trắng và nước mắm làm chấm. Bạn có thể chiên hoặc hầm gà, ăn kèm cơm và rưới một ít nước mắm để tăng hương vị.\nMEATDELI Má đùi gà — 500g (47.950đ): Thịt gà đủ cho hai người, giá hợp lý\nGạo Ngọc Nương Lức đỏ túi 1kg (51.600đ): Gạo 1kg đáp ứng đủ khẩu phần cho 2 bữa, giá thấp\nNước mắm Cá Cơm Than Thuận Phát chai 490ml (25.500đ): Nước mắm 490ml đủ dùng cho cả hai món, giá vừa\n\nTổng: 125.050đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10283203",
+              "WIN_10141772",
+              "WIN_10621537"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10283203",
+                "name": "MEATDELI Má đùi gà",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 95900,
+                "stock": 5,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.366926Z"
+              },
+              {
+                "product_id": "WIN_10141772",
+                "name": "Gạo Ngọc Nương Lức đỏ túi 1kg",
+                "category": "Gạo - Nông Sản Khô",
+                "brand": "NGỌC NƯƠNG",
+                "price_vnd": 51600,
+                "stock": 28,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:41.363141Z"
+              },
+              {
+                "product_id": "WIN_10621537",
+                "name": "Nước mắm Cá Cơm Than Thuận Phát chai 490ml",
+                "category": "Nước Mắm - Nước Chấm",
+                "brand": "THUẬN PHÁT",
+                "price_vnd": 25500,
+                "stock": 87,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:42.102266Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 12.598
+        },
+        {
+          "question": "Nhà có gạo rồi, lấy món dễ nấu thôi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "edcc0287-b723-471f-bdb5-6921b6dcb4d7",
+            "text": "Mình gợi ý món gà xào rau xanh, dùng nước mắm làm gia vị. Chỉ cần 1 gói gà, 1 gói rau mầm cải xanh và 1 chai nước mắm, dễ chế biến trong 15‑20 phút.\nMEATDELI Cánh gà — 500g (61.950đ): Thịt gà cánh có khối lượng vừa đủ cho hai người, thích hợp xào nhanh\nRau mầm cải xanh  WinEco 100g (14.800đ): Rau mầm cải xanh tươi, nhanh chín, phù hợp làm rau xào kèm gà\nNước mắm cá cơm Thuận Phát 30N chai 620ml (39.900đ): Nước mắm cá cơm 620ml đủ dùng để làm gia vị cho món gà xào\n\nTổng: 116.650đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10283202",
+              "WIN_10281840",
+              "WIN_10603567"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10283202",
+                "name": "MEATDELI Cánh gà",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 123900,
+                "stock": 20,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.366914Z"
+              },
+              {
+                "product_id": "WIN_10281840",
+                "name": "Rau mầm cải xanh  WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 33,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238132Z"
+              },
+              {
+                "product_id": "WIN_10603567",
+                "name": "Nước mắm cá cơm Thuận Phát 30N chai 620ml",
+                "category": "Nước Mắm - Nước Chấm",
+                "brand": "THUẬN PHÁT",
+                "price_vnd": 39900,
+                "stock": 44,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:42.101861Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.301
+        },
+        {
+          "question": "Gợi ý cụ thể và tính tổng giúp t.",
+          "http_status": 200,
+          "response": {
+            "session_id": "edcc0287-b723-471f-bdb5-6921b6dcb4d7",
+            "text": "Mình gợi ý gà xào rau mầm cải xanh, dùng nước mắm làm gia vị; xào nhanh trong 15‑20 phút, vừa ngon vừa tiết kiệm.\nMEATDELI Cánh gà — 500g (61.950đ): Cánh gà 500 g đủ cho hai người, thích hợp xào nhanh\nRau mầm cải xanh  WinEco 100g (14.800đ): Rau mầm cải xanh 100 g tươi, nhanh chín, phù hợp làm rau xào kèm gà\nNước mắm cá cơm Thuận Phát 30N chai 620ml (39.900đ): Nước mắm cá cơm 620 ml đủ dùng để làm gia vị cho món gà xào\n\nTổng: 116.650đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10283202",
+              "WIN_10281840",
+              "WIN_10603567"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10283202",
+                "name": "MEATDELI Cánh gà",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 123900,
+                "stock": 20,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.366914Z"
+              },
+              {
+                "product_id": "WIN_10281840",
+                "name": "Rau mầm cải xanh  WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 33,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238132Z"
+              },
+              {
+                "product_id": "WIN_10603567",
+                "name": "Nước mắm cá cơm Thuận Phát 30N chai 620ml",
+                "category": "Nước Mắm - Nước Chấm",
+                "brand": "THUẬN PHÁT",
+                "price_vnd": 39900,
+                "stock": 44,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:42.101861Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.118
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T06:53:18.285379+00:00"
+}

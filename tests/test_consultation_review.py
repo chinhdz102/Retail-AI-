@@ -84,6 +84,28 @@ async def test_unavailable_reviewer_does_not_release_an_unchecked_draft():
 
 
 @pytest.mark.asyncio
+async def test_two_distinct_format_errors_can_be_repaired_inside_three_draft_limit():
+    model = RecordedReplies(PLAN,
+        {"choices": [{"product_id": "UNKNOWN", "evidence": ["Thịt bò"]}]},
+        {"choices": [{"product_id": "P1", "reason": "Không gây kích ứng.", "evidence": ["Thịt bò"]}]},
+        GOOD_DRAFT, {"acceptable": True, "issues": []})
+    answer = await consult(model, Repository(), "Chọn giúp", [], [])
+    assert "Vo viên nhỏ" in answer.text
+    assert len(model.calls) == 5
+    assert "Chỉ dùng ID" in model.calls[2][0][-1]["content"]
+    assert "chưa có nhãn" in model.calls[3][0][-1]["content"]
+
+
+@pytest.mark.asyncio
+async def test_identical_render_failure_stops_without_spending_a_third_draft():
+    invalid = {"choices": [{"product_id": "UNKNOWN", "evidence": ["Thịt bò"]}]}
+    model = RecordedReplies(PLAN, invalid, invalid)
+    with pytest.raises(GroqProviderError):
+        await consult(model, Repository(), "Chọn giúp", [], [])
+    assert len(model.calls) == 3
+
+
+@pytest.mark.asyncio
 async def test_reviewer_receives_verified_purchase_weight_and_cost_for_per_kg_goods():
     product = Repository().product.model_copy(update={
         'name': 'Thịt ba rọi heo (S)', 'uom': 'Kg', 'price_vnd': 199900,

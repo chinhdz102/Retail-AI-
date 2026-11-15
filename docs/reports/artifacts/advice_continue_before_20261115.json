@@ -1,0 +1,253 @@
+{
+  "started_utc": "2026-11-15T06:29:56.502954+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 7.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "q08",
+      "turns": [
+        {
+          "question": "Em có khoảng 200 nghìn, mua đồ ăn đủ cho hai người một bữa tối được không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "2cefb6bc-110f-43df-a9ae-063d8a1fcb2c",
+            "text": "Với ngân sách 200 nghìn cho hai người, mình chọn phần thịt và rau vừa đủ khẩu phần, kèm một túi gạo nhỏ để nấu cơm. Bạn có thể điều chỉnh lượng thịt tăng hoặc giảm tùy sở thích, nhưng tổng chi phí vẫn nằm trong mức dự kiến.\nMEATDELI Thịt heo xay chuẩn ngon (S) — 300g (42.570đ): Thịt heo xay tiện chế biến nhanh cho bữa tối hai người\nCải bó xôi WinEco gói 300g (20.720đ): Gói rau 300g đủ lượng rau xanh cho hai người ăn kèm\nGạo Ngọc Nương Lức đỏ túi 1kg (51.600đ): Túi gạo 1kg đủ nấu cơm cho bữa tối và có thể dùng thêm cho bữa sau\n\nTổng: 114.890đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10617947",
+              "WIN_10281825",
+              "WIN_10141772"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10617947",
+                "name": "MEATDELI Thịt heo xay chuẩn ngon (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 141900,
+                "stock": 18,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367254Z"
+              },
+              {
+                "product_id": "WIN_10281825",
+                "name": "Cải bó xôi WinEco gói 300g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 20720,
+                "stock": 1,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:50.237993Z"
+              },
+              {
+                "product_id": "WIN_10141772",
+                "name": "Gạo Ngọc Nương Lức đỏ túi 1kg",
+                "category": "Gạo - Nông Sản Khô",
+                "brand": "NGỌC NƯƠNG",
+                "price_vnd": 51600,
+                "stock": 28,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:41.363141Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.836
+        }
+      ]
+    },
+    {
+      "id": "q09",
+      "turns": [
+        {
+          "question": "Có loại dầu gội nào tầm dưới 150 nghìn mà dùng ổn không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.01
+        }
+      ]
+    },
+    {
+      "id": "dinner",
+      "turns": [
+        {
+          "question": "Mua đồ ăn tối cho hai người, tổng khoảng 200 nghìn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "72707742-7663-44f3-8552-91bcbeea65c0",
+            "text": "Mình chọn 3 món chính gồm thịt, rau và cà chua để bạn nấu bữa tối nhanh gọn. Với ngân sách 200 nghìn, bạn có thể thêm trứng nếu muốn tăng đạm, nhưng hiện tại 3 món này đã đủ nguyên liệu cơ bản cho hai người.\nMEATDELI Thịt heo xay chuẩn ngon (S) — 300g (42.570đ): Thịt heo xay tiện lợi để nấu món chính nhanh cho hai người\nRau mầm cải ngọt WinEco 100g × 2 (29.600đ): Rau mầm cải ngọt dùng làm món ăn kèm hoặc xào nhanh, phù hợp khẩu phần hai người\nCà chua chocolate  300g (32.000đ): Cà chua dùng để nấu canh hoặc xào cùng rau, tăng độ tươi mát cho bữa tối\n\nTổng: 104.170đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10617947",
+              "WIN_10281839",
+              "WIN_10242930"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10617947",
+                "name": "MEATDELI Thịt heo xay chuẩn ngon (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 141900,
+                "stock": 18,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367254Z"
+              },
+              {
+                "product_id": "WIN_10281839",
+                "name": "Rau mầm cải ngọt WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 19,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238192Z"
+              },
+              {
+                "product_id": "WIN_10242930",
+                "name": "Cà chua chocolate  300g",
+                "category": "Củ, Quả",
+                "brand": "",
+                "price_vnd": 32000,
+                "stock": 3,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:37.645846Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.849
+        },
+        {
+          "question": "Nhà có gạo rồi, lấy món dễ nấu thôi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "72707742-7663-44f3-8552-91bcbeea65c0",
+            "text": "Bạn có thể nấu thịt heo xay với cà chua và rau cải thành món xào hoặc canh chua nhanh gọn, không cần gạo. Thịt xay chín nhanh, rau cải và cà chua chỉ cần sơ chế đơn giản là dùng được.\nMEATDELI Thịt heo xay chuẩn ngon (S) — 300g (42.570đ): Thịt heo xay chín nhanh, tiện nấu món chính cho hai người mà không cần thái hay sơ chế phức tạp\nRau mầm cải ngọt WinEco 100g × 2 (29.600đ): Rau mầm cải ngọt dùng làm món ăn kèm hoặc xào nhanh, phù hợp khẩu phần hai người\nCà chua chocolate  300g (32.000đ): Cà chua dùng để nấu canh hoặc xào cùng rau, tăng độ tươi mát cho bữa tối\n\nTổng: 104.170đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10617947",
+              "WIN_10281839",
+              "WIN_10242930"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10617947",
+                "name": "MEATDELI Thịt heo xay chuẩn ngon (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 141900,
+                "stock": 18,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367254Z"
+              },
+              {
+                "product_id": "WIN_10281839",
+                "name": "Rau mầm cải ngọt WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 19,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238192Z"
+              },
+              {
+                "product_id": "WIN_10242930",
+                "name": "Cà chua chocolate  300g",
+                "category": "Củ, Quả",
+                "brand": "",
+                "price_vnd": 32000,
+                "stock": 3,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:37.645846Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.022
+        },
+        {
+          "question": "Gợi ý cụ thể và tính tổng giúp t.",
+          "http_status": 200,
+          "response": {
+            "session_id": "72707742-7663-44f3-8552-91bcbeea65c0",
+            "text": "Bạn có thể dùng thịt heo xay kết hợp cà chua và rau mầm cải để làm món xào hoặc canh chua, cả hai cách đều nhanh gọn và không cần gạo. Khi chọn thịt, ưu tiên sản phẩm có nhãn “thịt heo xay” để đảm bảo đã được xay sẵn, dễ chế biến. Rau và cà chua nên chọn loại tươi, có nhãn mô tả rõ ràng về nguồn gốc và ngày thu hoạch để đảm bảo độ tươi ngon.\nMEATDELI Thịt heo xay chuẩn ngon (S) — 300g (42.570đ): Thịt heo xay đã được xay sẵn, tiện lợi cho việc nấu nhanh và không cần thái riêng\nRau mầm cải ngọt WinEco 100g × 2 (29.600đ): Rau mầm cải ngọt tươi, thích hợp làm món ăn kèm hoặc xào nhanh\nCà chua chocolate  300g (32.000đ): Cà chua tươi, phù hợp để nấu canh hoặc xào cùng thịt và rau\nBạn muốn món ăn dạng xào hay canh chua cho bữa tối?\n\nTổng: 104.170đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10617947",
+              "WIN_10281839",
+              "WIN_10242930"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10617947",
+                "name": "MEATDELI Thịt heo xay chuẩn ngon (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 141900,
+                "stock": 18,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367254Z"
+              },
+              {
+                "product_id": "WIN_10281839",
+                "name": "Rau mầm cải ngọt WinEco 100g",
+                "category": "Rau Lá",
+                "brand": "WINECO",
+                "price_vnd": 14800,
+                "stock": 19,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:50.238192Z"
+              },
+              {
+                "product_id": "WIN_10242930",
+                "name": "Cà chua chocolate  300g",
+                "category": "Củ, Quả",
+                "brand": "",
+                "price_vnd": 32000,
+                "stock": 3,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:37.645846Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.886
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T06:30:53.464958+00:00"
+}

@@ -40,6 +40,7 @@ class Search(BaseModel):
     query: str = Field(default="", max_length=100)
     brand: str | None = None
     category: str | None = None
+    role: Literal["core", "pantry"] = "core"
     required_phrases: list[str] = Field(default_factory=list, max_length=5)
     any_phrases: list[str] = Field(default_factory=list, max_length=5)
     excluded_phrases: list[str] = Field(default_factory=list, max_length=5)
@@ -52,6 +53,7 @@ class RequirementUpdate(BaseModel):
     action: Literal["set", "remove"] = "set"
     value: str = Field(default="", max_length=200)
     source_quote: str = Field(min_length=1, max_length=200)
+    purchase_exclusion: Search | None = None
 
 
 class Plan(BaseModel):
@@ -70,15 +72,19 @@ class Plan(BaseModel):
     budget_action: Literal["keep", "set", "remove"] = "keep"
     requirement_updates: list[RequirementUpdate] = Field(default_factory=list, max_length=10)
     requirements: dict[str, str] = Field(default_factory=dict)
+    purchase_exclusions: dict[str, Search] = Field(default_factory=dict)
+    source_user_text: str = Field(default="", max_length=2000)
 
 
 class Choice(BaseModel):
     model_config = ConfigDict(extra="forbid")
     product_id: str
     quantity: int = Field(default=1, ge=1, le=20)
-    weight_g: int | None = Field(default=None, ge=50, le=20000)
+    weight_g: int | None = Field(default=None, ge=50, le=20000,
+        description="Required for uom=kg when buying together; grams purchased, quantity=1.")
     reason: str = Field(default="", max_length=240)
-    evidence: list[str] = Field(default_factory=list, max_length=4)
+    evidence: list[str] = Field(default_factory=list, max_length=4,
+        description="Exact excerpts of this product's name/description/ingredients; no price or field names.")
 
 
 class Composition(BaseModel):
@@ -132,6 +138,9 @@ query is ONE type, e.g. 'sữa tắm', not 'sữa tắm dịu nhẹ, sữa tắm
 Identify the head product, not an ingredient/flavour mentioned inside another product.
 For a cooked dinner prefer ordinary fresh protein plus a vegetable, not several instant
 noodle packages. Do not buy staples/seasonings unless requested or genuinely necessary.
+For a single cooked meal, role=pantry for rice, oil, salt, sauces and other pantry supplies;
+core for the actual protein/vegetable dishes. Only retrieve pantry goods when the customer
+explicitly names them to buy; a recipe using a seasoning is not an instruction to buy a bottle.
 package_constraints: ONLY explicit customer size per package in ml/g/cm, eq/gte/lte.
 source_quote must quote the customer's actual specification. Never invent a package size
 from the number of diners or your own serving suggestion. One 1L bottle = eq1000ml,
@@ -145,8 +154,17 @@ State memory: previous_plan.requirements is the persistent customer ledger. Emit
 requirement_updates for what the CURRENT customer changes: stable key, set/remove,
 value, source_quote copied verbatim from CURRENT text. Keep the same key when changing
 or cancelling that requirement. Record exclusions, already-owned items, people/meals,
-purpose, variants and packaging; do not invent preferences. Output requirements={} (code
-merges the ledger). Untouched requirements remain active beyond recent history.
+purpose, variants and packaging; do not invent preferences. Code merges the ledger.
+Untouched requirements remain active beyond recent history. Omit unchanged/default fields;
+do not echo computed requirements, purchase_exclusions or source_user_text in your output.
+For an already-owned or refused product, add purchase_exclusion to that update: a Search
+describing ONLY the product not to buy (query plus its actual category if known). Do not
+exclude an entire category for one refused subtype. 'Have rice' means no rice purchase,
+not no rice in the meal. Already-owned ingredients may still be used in a recipe.
+The exclusion query must be a verbatim product phrase in source_quote; do not put
+response instructions such as 'không cần quảng cáo' into purchase exclusions.
+Use purchase_exclusion=null for preferences, response style and safety/size constraints.
+Remove the same requirement key when the customer allows buying that product again.
 Build need/searches from that ledger plus the latest correction; an explicit removal
 must remove its old filter. On a new topic discard the old topic's ledger and budget.
 Separate PRODUCT requirements from instructions about YOUR ANSWER. 'Không cần quảng
@@ -222,12 +240,17 @@ Trả Composition JSON, sau khi cân nhắc đầy đủ yêu cầu:
 - choices: chọn 0-3 hàng đúng LOẠI, mục đích và đủ yêu cầu bắt buộc; một nhu cầu
   thì ưu tiên một món. product_id từ candidates, quantity là số gói, weight_g
   chỉ cho hàng cân uom=kg. Không thêm giỏ hay xác nhận đã mua.
+  decision_mode=recommend: chọn đúng một hàng nếu đủ tiêu chí, không đưa ba món
+  rồi bắt khách tự chọn. compare mới so nhiều phương án; guide không chọn hàng.
 - reason của mỗi choice: 1 câu ngắn nói vì sao chọn cho nhu cầu này, không lặp
   tên, mã, giá. evidence: chép nguyên văn các cụm trên tên/nhãn/mô tả chứng minh
   đặc tính đã dùng trong reason. Không suy ra công dụng từ nhãn hiệu/hương vị.
   Nói cụ thể, hữu ích; tránh 'trọng lượng vừa phải', 'đảm bảo đủ khẩu phần',
   'đáp ứng nhu cầu', 'dễ kiểm soát lượng' chỉ để làm câu dài. Nếu đã chọn số
   lượng thì không nói mơ hồ là một khay/một gói khi thực tế chọn nhiều.
+  Khách hỏi điểm cân nhắc: nêu một đánh đổi thực tế (cỡ gói để thử, hương vị khách
+  có thể không thích, cách chế biến), không chỉ lặp 'đúng ngân sách'. g/kg là
+  khối lượng, ml/L là dung tích; chưa rõ thì dùng từ 'quy cách'.
   Kiểm tra cách dùng có khả thi với đúng dạng hàng đang bán: hàng xay, nguyên
   miếng, cắt lát, khô, đông lạnh, ăn liền không hoán đổi cho nhau. Không khuyên
   khách thực hiện thao tác đòi hỏi một dạng hàng khác. Nếu cách dùng không hợp
@@ -239,6 +262,9 @@ Trả Composition JSON, sau khi cân nhắc đầy đủ yêu cầu:
 Mỗi SKU chỉ được in một lần bởi code. Không viết giá/tổng, code tính chính xác.
 Tổng giỏ phải nằm trong budget nếu có. Đừng hứa đủ cả tuần/mấy người khi chưa
 biết số bữa/khẩu phần; được gợi một lượng khởi đầu và nói cách điều chỉnh.
+Đồ khách đã có vẫn dùng trong bữa, chỉ không mua thêm. 'Nhà có gạo rồi' nghĩa
+là chọn thức ăn ăn cùng cơm, không phải bỏ cơm. Khi khách yêu cầu phương án cuối,
+chốt món và cách nấu cụ thể; không mở lại câu hỏi chọn món hay thêm bài giảng chọn nhãn.
 Chọn nguyên liệu món ăn thì dùng kiến thức nấu ăn: thịt thái mỏng nhúng lẩu,
 cá tươi nấu canh chua; không lấy đồ ăn vặt/viên thay thịt cá tươi.
 Thông tin không có KHÔNG có nghĩa phù hợp. Thiếu quy cách bắt buộc thì nói
@@ -329,9 +355,14 @@ async def _json_call(groq, messages, schema, max_tokens, topics=None):
     # nested schema in real calls. JSON mode plus local validation keeps optional
     # fields optional and works across configured fallbacks. Never use the
     # provider's rejected generation as a customer response.
+    generation_schema = _compact_schema(schema.model_json_schema())
+    if schema is Plan:
+        # These are read-only session state, not fields the planner generates.
+        for field in ("requirements", "purchase_exclusions", "source_user_text"):
+            generation_schema["properties"].pop(field, None)
     messages = [{**messages[0], "content": messages[0]["content"] +
         "\nReturn only a JSON object following this schema: " + json.dumps(
-            _compact_schema(schema.model_json_schema()), ensure_ascii=False, separators=(",", ":"),
+            generation_schema, ensure_ascii=False, separators=(",", ":"),
         )}, *messages[1:]]
     for attempt in range(2):
         options = {}
@@ -352,7 +383,7 @@ async def _json_call(groq, messages, schema, max_tokens, topics=None):
             messages.extend([
                 {"role": "assistant", "content": str(result)},
                 {"role": "user", "content": "Sửa JSON theo schema, không thêm dữ liệu: "
-                 + json.dumps(schema.model_json_schema(), ensure_ascii=False)},
+                 + json.dumps(generation_schema, ensure_ascii=False)},
             ])
 
 
@@ -393,6 +424,12 @@ def _invalid_choices(composition, candidates, plan):
     ids = [c.product_id for c in composition.choices]
     if len(set(ids)) != len(ids) or any(pid not in candidates for pid in ids):
         return "Chỉ dùng ID candidates, không trùng ID."
+    if plan.decision_mode == "recommend" and len(ids) > 1:
+        return "Khách cần chọn giúp một loại: chốt một lựa chọn phù hợp, không đưa danh sách."
+    if plan.decision_mode == "guide" and ids:
+        return "Khách chỉ cần hướng dẫn chung; không tự thêm sản phẩm cần mua."
+    if any(_excluded_purchase(candidates[pid], plan.purchase_exclusions.values()) for pid in ids):
+        return "Không đề xuất mua lại đồ khách đã có hoặc đã từ chối. Vẫn được dùng đồ đã có."
     for choice in composition.choices:
         by_weight = (candidates[choice.product_id].uom or "").casefold() == "kg"
         if choice.weight_g is not None and (not by_weight or choice.quantity != 1):
@@ -491,10 +528,21 @@ async def consult(
     explicit_budget = _explicit_budget(text)
     if explicit_budget is None and not plan.topic_changed and plan.budget_action != "remove":
         # A failed provider turn is still a customer instruction. It may not
-        # have produced a previous_plan, so recover its explicit spending limit
-        # from customer turns, never from the assistant's suggested prices.
-        for message in reversed(history[-8:]):
+        # have produced a plan. Recover only instructions after the last
+        # processed turn, so an old topic/removed budget cannot reappear.
+        pending = history[-8:]
+        if previous_plan is not None:
+            source = previous_plan.get("source_user_text")
+            if source:
+                anchors = [i for i, m in enumerate(pending)
+                           if m["role"] == "user" and m["content"] == source]
+                pending = pending[anchors[-1] + 1:] if anchors else []
+        for message in reversed(pending):
             if message["role"] == "user":
+                if re.search(r"\b(?:bo|xoa|huy)\s+(?:gioi han|ngan sach|han muc)\b",
+                             normalize_vietnamese(message["content"])):
+                    explicit_budget = None
+                    break
                 explicit_budget = _explicit_budget(message["content"])
                 if explicit_budget is not None:
                     break
@@ -505,7 +553,7 @@ async def consult(
             "budget_scope": plan.budget_scope if plan.budget_scope != "none" else "item",
         })
     if (previous_plan and not plan.topic_changed and plan.budget_action == "keep"
-        and plan.budget_vnd is None):
+            and (plan.budget_vnd is None or previous_plan.get("source_user_text"))):
         plan = plan.model_copy(update={
             key: previous_plan.get(key, getattr(plan, key))
             for key in ("budget_vnd", "budget_scope", "strict_budget")
@@ -516,23 +564,45 @@ async def consult(
     # intentionally short, so persistent requirements must live in structured
     # state rather than only in prose history.
     ledger = {}
+    exclusions = {}
     if previous_plan and not plan.topic_changed:
         ledger.update(previous_plan.get("requirements") or {})
+        exclusions.update({key: Search.model_validate(value) for key, value in
+                           (previous_plan.get("purchase_exclusions") or {}).items()})
     valid_updates = [update for update in plan.requirement_updates
                      if _label_phrase(text, update.source_quote)]
     for update in valid_updates:
         if update.action == "remove":
             ledger.pop(update.key, None)
+            exclusions.pop(update.key, None)
         else:
             ledger[update.key] = update.value
+            exclusion = update.purchase_exclusion
+            if exclusion and _label_phrase(update.source_quote, exclusion.query or exclusion.category or "") and (
+                    exclusion.query or exclusion.category):
+                exclusions[update.key] = update.purchase_exclusion
+            else:
+                exclusions.pop(update.key, None)
     plan = plan.model_copy(update={"requirements": ledger,
-                                   "requirement_updates": valid_updates})
+                                   "purchase_exclusions": exclusions,
+                                   "requirement_updates": valid_updates,
+                                   "source_user_text": text})
     plan = plan.model_copy(update={"searches": _canonical_searches(plan.searches)})
     if plan.action == "ask" and plan.clarification.strip():
-        return Advice(plan.clarification.strip(), planner_model, (), plan)
+        try:
+            # Clarification is customer-facing text too; it must obey the same
+            # no-internal-logs, no-invented-facts and single-question rules.
+            return _render_structured(Composition(question=plan.clarification.strip()),
+                                      {}, plan, planner_model)
+        except GroqProviderError as exc:
+            exc.consultation_plan = plan.model_dump()
+            raise
     candidates = {}
     for query in plan.searches:
         if not query.query and not query.category:
+            continue
+        if query.role == "pantry" and not any(
+                _label_phrase(turn, query.query or query.category) for turn in customer_texts):
             continue
         criteria = dict(
             brand=query.brand, category=query.category if not query.query else None,
@@ -626,10 +696,15 @@ async def consult(
             or (not plan.strict_budget and p.price_vnd == plan.budget_vnd)
             or (p.uom or "").casefold() == "kg"
         }
+    candidates = {pid: p for pid, p in candidates.items()
+                  if not _excluded_purchase(p, exclusions.values())}
     context.update(
         plan=plan.model_dump(), candidates=[_public_product(p) for p in candidates.values()]
     )
     context.pop("topics", None)
+    # The current plan already incorporates validated state. Sending the full
+    # previous plan again adds tokens and encourages stale constraints.
+    context.pop("previous_plan", None)
     messages = _messages(STRUCTURED_COMPOSER, context)
     try:
         return await _compose_and_review(groq, messages, candidates, plan, text, history)
@@ -643,9 +718,10 @@ async def consult(
 
 async def _compose_and_review(groq, messages, candidates, plan, text, history):
     failures = Counter()
-    # A mechanical formatting/evidence repair must not consume the one repair
-    # available for a substantive product/usage error discovered by review.
-    # At most one repair of each kind, hence at most three drafts in total.
+    seen_failures = set()
+    # Different mechanical errors may need separate repairs, but repeating the
+    # same rejected draft must stop. Keep at most three drafts and one semantic
+    # repair; never release a draft without review.
     for attempt in range(3):
         composition, model = await _json_call(groq, messages, Composition, 900)
         failure_stage = "render"
@@ -662,9 +738,11 @@ async def _compose_and_review(groq, messages, candidates, plan, text, history):
                 return answer
             feedback = "Sửa lý lẽ/lựa chọn trước khi trả khách: " + "; ".join(review.issues[:3])
         failures[failure_stage] += 1
-        if failures[failure_stage] > 1 or attempt == 2:
+        failure_key = (failure_stage, feedback)
+        if (failure_key in seen_failures or failures["review"] > 1 or attempt == 2):
             logger.warning("Consultation rejected stage=%s reason=%s", failure_stage, feedback[:180])
             raise GroqProviderError(feedback)
+        seen_failures.add(failure_key)
         messages.extend([
             {"role": "assistant", "content": composition.model_dump_json()},
             {"role": "user", "content": feedback + "; sửa lại câu trả lời, giữ ý khách. "
@@ -723,9 +801,10 @@ def _explicit_budget(text):
     budgets = []
     for match in MONEY.finditer(normalized):
         prefix = normalize_vietnamese(normalized[:match.start()])
-        cue = re.search(r"\b(duoi|toi da|khong qua|tam|khoang|ngan sach|tong|chi co)\s*$",
+        cue = re.search(r"\b(duoi|toi da|khong qua|tam|khoang|ngan sach(?: len| xuong| con)?|tong|chi co|"
+                        r"giam(?: ngan sach)?(?: xuong| con)?|tang(?: ngan sach)?(?: len)?)\s*$",
                         prefix)
-        if cue:
+        if cue and not re.search(r"\bgia\s*$", prefix[:cue.start()]):
             amount = _money_amount(match)
             if amount is not None and 0 < amount <= 100_000_000:
                 budgets.append((amount, cue.group(1) == "duoi"))
@@ -788,6 +867,17 @@ def _label_phrase(text: str, phrase: str) -> bool:
     return f" {words(phrase)} " in f" {words(text)} "
 
 
+def _excluded_purchase(product: ProductSnapshot, exclusions) -> bool:
+    """Apply source-validated purchase decisions independently of generated prose."""
+    for query in exclusions:
+        # A known category keeps e.g. owned rice separate from rice cakes.
+        if query.category and normalize_vietnamese(product.category) != normalize_vietnamese(query.category):
+            continue
+        if (query.query or query.category) and _matching_candidates([product], query):
+            return True
+    return False
+
+
 def _matching_candidates(products, query: Search, *, type_query=None):
     products = [p for p in products if all(
         _label_phrase(p.name, term) for term in query.required_phrases
@@ -848,10 +938,19 @@ def _render_structured(composition, candidates, plan, model):
     # A copied identity is redundant, not a semantic failure. Remove only the
     # exact selected SKU name; code immediately prints that same verified name.
     # Unknown names and other product identities still fail the checks below.
-    composition = composition.model_copy(update={"choices": [choice.model_copy(update={
-        "reason": re.sub(re.escape(candidates[choice.product_id].name), "", choice.reason,
-                         flags=re.I).strip(" .,:;–—-")
-    }) for choice in composition.choices]})
+    def clean_reason(choice):
+        product = candidates[choice.product_id]
+        reason = re.sub(re.escape(product.name), "", choice.reason, flags=re.I)
+        cost = _choice_cost(product, choice)
+        # Remove only a redundant, exactly verified line price. An invented
+        # price remains visible to the existing rejection checks.
+        reason = re.sub(r"(?:\bgiá\s+)?" + MONEY.pattern,
+            lambda match: "" if _money_amount(MONEY.search(match.group())) == cost
+            else match.group(), reason, flags=re.I)
+        return choice.model_copy(update={"reason": reason.strip(" .,:;–—-()")})
+
+    composition = composition.model_copy(update={
+        "choices": [clean_reason(choice) for choice in composition.choices]})
     if composition.question.strip() and composition.question.strip() in composition.advice:
         composition = composition.model_copy(update={"advice": composition.advice.replace(
             composition.question.strip(), "").strip()})
@@ -859,6 +958,9 @@ def _render_structured(composition, candidates, plan, model):
         raise GroqProviderError("Chỉ hỏi một câu thật cần, đặt trong question và không lặp ở advice.")
     if composition.question.count("?") > 1:
         raise GroqProviderError("Chỉ hỏi một câu ngắn, gộp các chi tiết thật cần trong cùng một câu.")
+    if re.search(r"\b(?:dung tích|thể tích)\s+(?:là\s+)?\d[\d\s.,]*\s*(?:kg|g|gam|gram)\b",
+                 " ".join([composition.advice, *(c.reason for c in composition.choices)]), re.I):
+        raise GroqProviderError("g/kg là khối lượng; dùng đúng đơn vị hoặc gọi là quy cách.")
     prose_lower = normalize_vietnamese(" ".join([composition.advice, composition.question,
                                                   *(c.reason for c in composition.choices)]))
     need_lower = normalize_vietnamese(plan.need)
@@ -1010,10 +1112,10 @@ def _unsupported_claim(text, candidates, chosen):
         r"(?:ho tro )?dieu tri mun", r"chua mun", r"se lo chan long",
         r"khong gay (?:nhon|bit tac|kich ung|di ung)",
         r"giam (?:bit|mun|kich ung|di ung)", r"da it mun", r"can bang do am",
-        r"phu hop (?:nhat )?(?:voi |cho )?toc dau",
+        r"(?:phu hop|thich hop|hop|danh) (?:nhat )?(?:voi |cho )?(?:toc|da dau) dau",
         r"lam sach sau", r"khong bi dai", r"du luong cho",
         r"(?:can bang|kiem soat) (?:dau|ba nhon)",
-        r"phu hop (?:nhat )?(?:voi |cho )?da (?:dau|nhay cam|mun)",
+        r"(?:phu hop|thich hop|hop|danh) (?:nhat )?(?:voi |cho )?da (?:dau|nhay cam|mun)",
         r"it (?:ngot|duong)(?: hon)?", r"khong qua ngot",
         r"(?:an toan|khong doc) (?:cho|voi) (?:meo|thu cung)",
         r"phu hop.{0,30}(?:moi truong|nha|khong gian).{0,15}(?:meo|thu cung)",
