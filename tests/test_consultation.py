@@ -869,3 +869,46 @@ async def test_all_consultation_stages_keep_both_configured_fallback_models():
     assert answer.products
     assert all(options["fallback_models"] == ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
                for _, options in model.calls)
+
+
+def test_comma_separated_label_checklist_does_not_become_a_product_efficacy_claim():
+    advice = "Bạn nên chọn dầu gội có nhãn ghi rõ làm sạch sâu, kiểm soát bã nhờn hoặc dành cho tóc dầu."
+    assert _parse_answer(advice, {}, Plan(need="hướng dẫn", decision_mode="guide")).advice == advice
+    with pytest.raises(GroqProviderError):
+        _parse_answer("Bạn nên xem nhãn. [[P1]] làm sạch sâu, kiểm soát bã nhờn.",
+                      {"P1": Repository().product}, Plan(need="dầu gội"))
+
+
+@pytest.mark.parametrize("text", [
+    "Loại này kiểm soát dầu, bạn nên xem nhãn ghi rõ công dụng.",
+    "Mình chưa xác nhận nó kiểm soát dầu nhưng loại này dịu nhẹ.",
+])
+def test_label_guidance_and_negation_cannot_hide_other_assertions_in_the_sentence(text):
+    with pytest.raises(GroqProviderError):
+        _parse_answer(text, {}, Plan(need="dầu gội", decision_mode="guide"))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("specific", [True, False])
+async def test_deeper_taxonomy_keeps_seasoning_herbs_out_of_generic_meal_vegetables(specific):
+    repo = Repository()
+    repo.product = repo.product.model_copy(update={"name": "Rau Răm 50g", "category": "Rau Lá",
+        "category_hierarchy": "Rau củ > Rau gia vị > Rau gia vị ăn lá"})
+    model = Scripted({"need": "thịt với rau cho bữa tối", "decision_mode": "basket",
+        "searches": [{"query": "rau răm" if specific else "rau", "category": "Rau Lá"}]},
+        {"advice": "Mình chọn rau ăn kèm cơm."})
+    await consult(model, repo, "Mua rau răm" if specific else "Chọn một loại rau cho bữa tối", [], [])
+    context = json.loads(model.calls[1][0][1]["content"].split(": ", 1)[1])
+    assert bool(context["candidates"]) is specific
+
+
+@pytest.mark.asyncio
+async def test_remembered_seasoning_herb_cannot_bypass_meal_taxonomy_filter():
+    repo = Repository()
+    repo.product = repo.product.model_copy(update={"name": "Rau Răm 50g", "category": "Rau Lá",
+        "category_hierarchy": "Rau củ > Rau gia vị > Rau gia vị ăn lá"})
+    model = Scripted({"need": "món rau luộc", "decision_mode": "basket", "reuse_previous": True},
+                    {"advice": "Mình chọn lại rau dùng làm món ăn kèm cơm."})
+    await consult(model, repo, "Giữ phần thịt, đổi rau luộc", [], ["P1"])
+    context = json.loads(model.calls[1][0][1]["content"].split(": ", 1)[1])
+    assert context["candidates"] == []

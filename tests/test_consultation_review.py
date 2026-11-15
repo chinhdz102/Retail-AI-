@@ -124,3 +124,15 @@ async def test_reviewer_receives_verified_purchase_weight_and_cost_for_per_kg_go
         'product_id': 'P1', 'unit': 'Kg', 'unit_price_vnd': 199900,
         'quantity': 1, 'weight_g': 300, 'line_total_vnd': 59970,
     }]
+
+
+@pytest.mark.asyncio
+async def test_unnecessary_followup_clarification_is_reviewed_and_recovers_known_topic():
+    model = RecordedReplies({"need": "thịt bò ăn lẩu", "action": "ask",
+        "clarification": "Bạn muốn mua thịt nào?"},
+        {"acceptable": False, "issues": ["Khách đã chọn thịt bò, không hỏi lại loại thịt."]},
+        GOOD_DRAFT, {"acceptable": True, "issues": []})
+    answer = await consult(model, Repository(), "Nhắc lại phương án giúp mình", [
+        {"role": "user", "content": "Chọn thịt bò ăn lẩu."}], ["P1"],
+        {"need": "thịt bò ăn lẩu", "searches": [{"query": "thịt bò"}]})
+    assert answer.products and "Bạn muốn mua thịt nào?" not in answer.text

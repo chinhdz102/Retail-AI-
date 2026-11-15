@@ -466,6 +466,7 @@ def _public_product(product: ProductSnapshot) -> dict:
         "name": product.name,
         "brand": product.brand,
         "category": product.category,
+        "category_hierarchy": product.category_hierarchy,
         "price_vnd": product.price_vnd,
         "uom": product.uom,
         "ingredients": product.ingredients,
@@ -596,8 +597,19 @@ async def consult(
         try:
             # Clarification is customer-facing text too; it must obey the same
             # no-internal-logs, no-invented-facts and single-question rules.
-            return _render_structured(Composition(question=plan.clarification.strip()),
-                                      {}, plan, planner_model)
+            clarification = _render_structured(Composition(question=plan.clarification.strip()),
+                                              {}, plan, planner_model)
+            if not previous_plan and not remembered:
+                return clarification
+            review = await _review_advice(groq, clarification, text, history)
+            if review.acceptable and not review.issues:
+                return clarification
+            # A fallback planner may ask customers to reselect a product they
+            # already identified. Reuse the known topic and compose instead.
+            plan = plan.model_copy(update={"action": "advise", "clarification": "",
+                "reuse_previous": True,
+                "searches": plan.searches or [Search.model_validate(s)
+                                             for s in (previous_plan or {}).get("searches", [])]})
         except GroqProviderError as exc:
             exc.consultation_plan = plan.model_dump()
             raise
@@ -677,6 +689,14 @@ async def consult(
             broad = [p for p in broad if p.category == query.category]
             found = _matching_candidates(broad, query, type_query="")
             matched_query = ""
+        if plan.decision_mode == "basket" or plan.budget_scope == "basket":
+            named_by_customer = len(query.query.split()) > 1 and any(
+                _label_phrase(turn, query.query) for turn in customer_texts)
+            if not named_by_customer:
+                # Flat categories can call herbs and bulk vegetables the same
+                # thing. The deeper taxonomy distinguishes seasoning leaves.
+                found = [p for p in found if not re.search(r"\bgia vi\b",
+                    normalize_vietnamese(p.category_hierarchy or ""))]
         found.sort(key=lambda p: _product_type_rank(p, matched_query, query.category))
         # Default retrieval should expose individual retail packs before cases
         # of 24/30. Do not manufacture a single-bottle SKU by dividing a case.
@@ -702,6 +722,12 @@ async def consult(
         }
     candidates = {pid: p for pid, p in candidates.items()
                   if not _excluded_purchase(p, exclusions.values())}
+    if plan.decision_mode == "basket" or plan.budget_scope == "basket":
+        explicit_types = [query for query in plan.searches if len(query.query.split()) > 1
+                          and any(_label_phrase(turn, query.query) for turn in customer_texts)]
+        candidates = {pid: p for pid, p in candidates.items()
+            if not re.search(r"\bgia vi\b", normalize_vietnamese(p.category_hierarchy or ""))
+            or any(_matching_candidates([p], query) for query in explicit_types)}
     context.update(
         plan=plan.model_dump(), candidates=[_public_product(p) for p in candidates.values()]
     )
@@ -1132,7 +1158,17 @@ def _unsupported_claim(text, candidates, chosen):
         r"(?:ham|dun|nau|hap|vi song).{0,45}\d.{0,15}(?:giay|phut)",
         r"an lanh", r"khong can nau chin",
     )
-    for clause in re.split(r"[.,;!?\n]|\bnhưng\b", text, flags=re.I):
+    sentence_boundaries = re.compile(r"[.;!?\n]|\bnhưng\b", re.I)
+    for clause_match in re.finditer(r"(?:(?![.,;!?\n]|\bnhưng\b).)+", text, re.I):
+        clause = clause_match.group()
+        # A comma-separated label checklist shares its initial instruction.
+        # Splitting it into unrelated clauses used to turn the second desired
+        # property into an unsupported assertion about a selected SKU.
+        sentence_start = max((m.end() for m in sentence_boundaries.finditer(
+            text, 0, clause_match.start())), default=0)
+        sentence_end = min((m.start() for m in sentence_boundaries.finditer(
+            text, clause_match.end())), default=len(text))
+        sentence = text[sentence_start:sentence_end]
         ids = [m.group(1) for m in REFERENCE.finditer(clause)] or list(chosen)
         evidence_rows = [normalize_vietnamese(" ".join(filter(None, [
             candidates[pid].name, candidates[pid].description, candidates[pid].ingredients,
@@ -1147,6 +1183,15 @@ def _unsupported_claim(text, candidates, chosen):
                 # "chứa" (contains) and "chưa" (not yet) collapse to the same
                 # unaccented token. Negation must be read from the original text.
                 prefix = REFERENCE.sub("", original[:match.start()]).strip()
+                selection_prefix = text[sentence_start:clause_match.start()] + original[:match.start()]
+                label_checklist = (
+                    not REFERENCE.search(sentence)
+                    and re.search(r"\b(?:nên|hãy|cần|ưu tiên)\b.{0,50}\b(?:chọn|tìm|kiểm tra|xem|đọc)\b"
+                                  r".{0,65}\b(?:nhãn|ghi rõ|ghi trên|thành phần)\b", selection_prefix, re.I)
+                    and not re.search(r"\b(?:này|đó|vừa chọn|vì|giúp|nhờ)\b", sentence, re.I)
+                )
+                if label_checklist and not re.search(r"\b(?:dieu tri|chua)\b", match.group()):
+                    continue
                 if re.search(
                     r"\b(?:không|chưa)\s*(?:phải (?:là )?(?:thuốc|sản phẩm|loại)|"
                     r"có tác dụng|dùng để|thể|được|nên)?\s*$|"
