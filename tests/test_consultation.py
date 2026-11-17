@@ -27,7 +27,9 @@ def isolate_structural_checks_from_semantic_reviewer(monkeypatch):
     from backend.services.consultation import AdviceReview
 
     async def accept(*args):
-        return AdviceReview(acceptable=True)
+        return AdviceReview(acceptable=True, checks=[{
+            "criterion": key, "passed": True, "detail": "Kiểm tra cấu trúc độc lập."
+        } for key in ("intent", "decision", "grounding", "usefulness")])
 
     monkeypatch.setattr("backend.services.consultation._review_advice", accept)
 
@@ -197,7 +199,7 @@ async def test_named_type_can_cross_store_category_boundaries():
 def test_precise_scalar_facts_keep_fact_path_but_budget_and_advice_use_llm():
     assert not use_consultation("Dầu gội X giá bao nhiêu?", ("price_vnd",))
     assert not use_consultation("Thành phần sữa này?", ("ingredients",))
-    assert use_consultation("Nước giặt ở đâu?", ("shelf",))
+    assert not use_consultation("Nước giặt ở đâu?", ("shelf",))
     assert use_consultation("Sữa hộp xanh còn hàng không?", ("stock",))
     assert use_consultation("200 nghìn mua đồ ăn tối cho hai người", ("price_vnd",))
     assert use_consultation("Có loại nào điều trị mụn không?", ())
@@ -459,6 +461,7 @@ async def test_verified_models_constrain_choices_to_retrieved_ids_and_use_field_
     model = Scripted({"need": "Mua thịt", "searches": [{"query": "thịt"}]},
                      {"choices": [{"product_id": "P1", "evidence": [], "evidence_fields": ["name"]}]})
     model.settings = SimpleNamespace(groq_model="qwen/qwen3.8-27b",
+        groq_strict_outputs=True,
         groq_fallback_model="openai/gpt-oss-120b", groq_fallback_model_2="openai/gpt-oss-20b")
     await consult(model, Repository(), "Mua thịt", [], [])
     format = model.calls[1][1]["response_format"]

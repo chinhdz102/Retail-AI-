@@ -1,3 +1,5 @@
+import asyncio
+
 import httpx
 import pytest
 
@@ -38,8 +40,6 @@ class FakeAzureSpeechClient:
     ("language", "locale", "voice"),
     [
         ("vi", "vi-VN", "vi-VN-HoaiMyNeural"),
-        ("en", "en-US", "en-US-JennyNeural"),
-        ("zh", "zh-CN", "zh-CN-XiaoxiaoNeural"),
     ],
 )
 @pytest.mark.asyncio
@@ -66,7 +66,10 @@ async def test_synthesize_uses_configured_region_and_language_voice(
     ssml = kwargs["content"].decode("utf-8")
     assert f'xml:lang="{locale}"' in ssml
     assert f'<voice name="{voice}">' in ssml
-    assert "Giá &lt; 20.000đ &amp; mới" in ssml
+    if language == "vi":
+        assert 'Giá &lt; <sub alias="hai mươi nghìn đồng">20.000đ</sub> &amp; mới' in ssml
+    else:
+        assert "Giá &lt; 20.000đ &amp; mới" in ssml
 
 
 @pytest.mark.asyncio
@@ -152,3 +155,33 @@ async def test_open_stream_keeps_audio_incremental_and_closes_upstream() -> None
     assert chunks
     assert seen["request"].headers["Ocp-Apim-Subscription-Key"] == "azure-secret"
     assert stream.voice_id == "vi-VN-HoaiMyNeural"
+
+
+@pytest.mark.asyncio
+async def test_prepare_coalesces_parallel_requests_and_reuses_connection():
+    calls = []
+
+    async def handler(request):
+        calls.append(request)
+        await asyncio.sleep(0)
+        return httpx.Response(200, json=[])
+
+    async with httpx.AsyncClient(base_url="https://test", transport=httpx.MockTransport(handler)) as client:
+        service = AzureSpeechService(
+            Settings(azure_speech_key="test", azure_speech_region="eastus"), client,
+        )
+        await asyncio.gather(*(service.preconnect() for _ in range(5)))
+        await service.preconnect()
+        assert len(calls) == 1
+        assert calls[0].url.path == "/cognitiveservices/voices/list"
+        await service.aclose()
+        assert not client.is_closed
+
+
+@pytest.mark.asyncio
+async def test_owned_synthesis_client_is_closed_at_shutdown():
+    service = AzureSpeechService(Settings(azure_speech_key="test", azure_speech_region="eastus"))
+    client, _ = service._client_or_raise()
+    await service.aclose()
+    await service.aclose()
+    assert client.is_closed and service.client is None

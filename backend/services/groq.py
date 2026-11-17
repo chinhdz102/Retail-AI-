@@ -21,6 +21,11 @@ RATE_LIMIT_HEADER_NAMES = (
     "x-ratelimit-reset-requests",
     "x-ratelimit-reset-tokens",
 )
+# A connection failure is usually a temporarily unhealthy route/key.  Keep it
+# out of the next few requests so a consultation does not pay the same network
+# timeout repeatedly before reaching a healthy key/model.  Rate-limit headers
+# still take precedence and use the provider's reset value below.
+TRANSIENT_CONNECTION_COOLDOWN_SECONDS = 8.0
 
 
 def _retry_delay_seconds(headers: dict[str, str]) -> float:
@@ -44,31 +49,6 @@ def _rate_limit_headers(headers: Any) -> dict[str, str]:
         for name in RATE_LIMIT_HEADER_NAMES
         if (value := headers.get(name)) is not None
     }
-
-
-RETAIL_STT_PROMPT = (
-    "Đây là hội thoại mua hàng tại cửa hàng tiện lợi bằng tiếng Việt. "
-    "Người nói có thể dùng giọng Bắc, Trung hoặc Nam và cách nói địa phương; "
-    "các ví dụ gồm mô/chi (hỏi nào/gì), nhứt (nhất), hông/hem (không). "
-    "Giữ đúng từ thực sự được nói, nhất là tên hàng; chỉ ghi các từ địa phương "
-    "khi nghe thấy, không tự thêm từ hoặc viết lại câu. "
-    "Ưu tiên nhận đúng các từ: Coca-Cola, Coca Zero, sữa, snack, quà vặt, đồ ăn vặt, "
-    "cửa hàng tiện lợi, ngoài cổng trường, dòng tiền, nước, cà phê, giá, kệ, tồn kho, "
-    "hạn dùng, giỏ hàng, thanh toán. Không dịch sang ngôn ngữ khác."
-)
-
-RETAIL_STT_PROMPTS = {
-    "vi": RETAIL_STT_PROMPT,
-    "en": (
-        "This is a retail conversation in English. Prefer accurate recognition of: "
-        "Coca-Cola, Coca Zero, milk, snack, water, coffee, price, shelf, stock, "
-        "cart and checkout. Do not translate into another language."
-    ),
-    "zh": (
-        "这是便利店里的普通话购物对话。请优先准确识别：可口可乐、Coca Zero、牛奶、零食、"
-        "水、咖啡、价格、货架、库存、购物车和结账。不要翻译成其他语言。"
-    ),
-}
 
 
 class GroqConfigurationError(RuntimeError):
@@ -111,24 +91,6 @@ class GroqChatResult(str):
         return result
 
 
-class GroqTranscriptionResult(str):
-    """Transcription carrying its actual model and fallback trace."""
-
-    model: str
-    fallback_trace: list[dict[str, str]]
-
-    def __new__(
-        cls,
-        text: str,
-        model: str,
-        fallback_trace: list[dict[str, Any]] | None = None,
-    ) -> GroqTranscriptionResult:
-        result = super().__new__(cls, text)
-        result.model = model
-        result.fallback_trace = fallback_trace or []
-        return result
-
-
 class GroqService:
     def __init__(self, settings: Settings | None = None, client: Any | None = None) -> None:
         self.settings = settings or get_settings()
@@ -136,6 +98,10 @@ class GroqService:
         self._injected_client = client is not None
         self._fallback_clients: list[Any] | None = None
         self._cooldowns: dict[tuple[str, int], float] = {}
+        # Groq limits are organization-scoped. A real client that receives a
+        # 429 should not retry the same credential through every model; tests
+        # with injected clients retain the exhaustive per-model order.
+        self._credential_cooldowns: dict[int, float] = {}
         self._next_slots: dict[str, int] = {}
 
     def _client_or_raise(self) -> Any:
@@ -159,6 +125,7 @@ class GroqService:
                 for field in (
                     "groq_api_key", "groq_api_key_fallback_1", "groq_api_key_fallback_2",
                     "groq_api_key_fallback_3", "groq_api_key_fallback_4",
+                    "groq_api_key_fallback_5",
                 ) if getattr(self.settings, field).get_secret_value().strip()
             ))
             self._fallback_clients = [AsyncOpenAI(
@@ -166,6 +133,21 @@ class GroqService:
                 timeout=self.settings.groq_timeout_seconds, max_retries=0,
             ) for key in keys[1:]]
         return [primary, *self._fallback_clients]
+
+    def has_available_credentials(self) -> bool:
+        """Return whether a real key is outside its provider cooldown.
+
+        Consultation uses this as a fast outage guard.  It is intentionally a
+        coarse health signal: a request still performs the normal fallback
+        loop, while a known all-key 429 avoids paying another timeout before a
+        deterministic catalog response.
+        """
+        if getattr(self, "_injected_client", True) or getattr(self, "_fallback_clients", None) is None:
+            return True
+        now = time.monotonic()
+        slots = len(self._fallback_clients) + 1
+        return any(self._credential_cooldowns.get(slot, 0.0) <= now
+                   for slot in range(slots))
 
     async def chat(
         self,
@@ -178,6 +160,7 @@ class GroqService:
         response_format: dict[str, Any] | None = None,
         reasoning_effort: str | None = None,
         fallback_models: Sequence[str] | None = None,
+        defer_encoding_errors: bool = False,
     ) -> GroqChatResult:
         client = self._client_or_raise()
         models = list(
@@ -206,12 +189,23 @@ class GroqService:
         for selected_model, credential_slot, client in attempts:
             if credential_slot in blocked_slots or selected_model in failed_models:
                 continue
+            if not self._injected_client:
+                credential_cooldown = self._credential_cooldowns.get(credential_slot, 0) - time.monotonic()
+                if credential_cooldown > 0:
+                    fallback_trace.append({
+                        "model": selected_model,
+                        "credential_slot": credential_slot,
+                        "status": "cooldown",
+                        "retry_after_seconds": round(credential_cooldown, 1),
+                    })
+                    continue
             cooldown = self._cooldowns.get((selected_model, credential_slot), 0) - time.monotonic()
             if cooldown > 0:
                 fallback_trace.append({"model": selected_model, "credential_slot": credential_slot,
                                        "status": "cooldown", "retry_after_seconds": round(cooldown, 1)})
                 continue
             try:
+                attempt_started = time.monotonic()
                 model_options: dict[str, Any] = {}
                 if selected_model.startswith("qwen/"):
                     model_options["reasoning_effort"] = "none"
@@ -266,15 +260,17 @@ class GroqService:
                     "credential_slot": credential_slot,
                     "status": "success",
                 }
+                elapsed_ms = (time.monotonic() - attempt_started) * 1000
                 if response_headers:
                     successful_attempt["rate_limit_headers"] = response_headers
                 fallback_trace.append(successful_attempt)
                 self._next_slots[selected_model] = (credential_slot + 1) % len(clients)
                 logger.info(
-                    "Groq chat completed model=%s credential_slot=%d attempts=%d",
+                    "Groq chat completed model=%s credential_slot=%d attempts=%d elapsed_ms=%.1f",
                     selected_model,
                     credential_slot,
                     len(fallback_trace),
+                    elapsed_ms,
                 )
                 usage = getattr(response, "usage", None)
                 usage_summary = {
@@ -304,6 +300,14 @@ class GroqService:
                     "context_length_exceeded", "model_not_found", "invalid_api_key",
                 }:
                     failed_attempt["provider_code"] = provider_code
+                if defer_encoding_errors and provider_code == "json_validate_failed":
+                    # The structured caller can retry a simpler encoding on
+                    # this model. Trying other keys/models with the same schema
+                    # first added whole reasoning passes to simple text turns.
+                    raise GroqProviderError(
+                        "Provider could not encode the structured response",
+                        fallback_trace=[*fallback_trace, failed_attempt],
+                    ) from exc
                 status = getattr(exc, "status_code", None)
                 if status == 401:
                     blocked_slots.add(credential_slot)
@@ -318,8 +322,19 @@ class GroqService:
                     failed_attempt["rate_limit_headers"] = response_headers
                 if status == 429:
                     delay = _retry_delay_seconds(response_headers)
+                    deadline = time.monotonic() + max(1.0, min(delay, 86400.0))
+                    self._cooldowns[(selected_model, credential_slot)] = deadline
+                    if not self._injected_client:
+                        self._credential_cooldowns[credential_slot] = max(
+                            self._credential_cooldowns.get(credential_slot, 0), deadline,
+                        )
+                elif type(exc).__name__ in {"APIConnectionError", "APITimeoutError"}:
+                    # Do not hammer a route that just failed to connect. Keep
+                    # this short so a transient network blip can recover, but
+                    # long enough to let the current request move to another
+                    # key/model instead of waiting through another timeout.
                     self._cooldowns[(selected_model, credential_slot)] = (
-                        time.monotonic() + max(1.0, min(delay, 86400.0))
+                        time.monotonic() + TRANSIENT_CONNECTION_COOLDOWN_SECONDS
                     )
                 fallback_trace.append(failed_attempt)
                 logger.warning(
@@ -337,60 +352,4 @@ class GroqService:
         raise GroqProviderError(
             "Groq chat request failed for configured models",
             fallback_trace=fallback_trace,
-        ) from last_error
-
-    async def transcribe(
-        self,
-        filename: str,
-        content: bytes,
-        content_type: str,
-        language: str = "vi",
-    ) -> GroqTranscriptionResult:
-        client = self._client_or_raise()
-        models = list(
-            dict.fromkeys(
-                model
-                for model in (
-                    self.settings.groq_stt_model,
-                    self.settings.groq_stt_fallback_model,
-                )
-                if model
-            )
-        )
-
-        last_error: Exception | None = None
-        fallback_trace: list[dict[str, str]] = []
-        for selected_model in models:
-            try:
-                response = await client.audio.transcriptions.create(
-                    file=(filename, content, content_type),
-                    model=selected_model,
-                    language=language,
-                    prompt=RETAIL_STT_PROMPTS.get(language, RETAIL_STT_PROMPT),
-                    response_format="json",
-                )
-                text = getattr(response, "text", "")
-                if not text or not text.strip():
-                    raise ValueError("Groq returned an empty transcription")
-                logger.info("Groq transcription completed model=%s", selected_model)
-                fallback_trace.append({"model": selected_model, "status": "success"})
-                return GroqTranscriptionResult(text.strip(), selected_model, fallback_trace)
-            except Exception as exc:
-                last_error = exc
-                fallback_trace.append(
-                    {
-                        "model": selected_model,
-                        "status": "error",
-                        "error_type": type(exc).__name__,
-                    }
-                )
-                logger.warning(
-                    "Groq transcription model attempt failed model=%s error_type=%s",
-                    selected_model,
-                    type(exc).__name__,
-                )
-
-        logger.error("Groq transcription exhausted configured models attempts=%d", len(models))
-        raise GroqProviderError(
-            "Groq transcription request failed for configured models"
         ) from last_error

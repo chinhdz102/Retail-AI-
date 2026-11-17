@@ -1,0 +1,31 @@
+<!doctype html><meta charset="utf-8">
+<link rel="icon" href="data:,">
+<button id="start">Bật mic</button><button id="stop">Dừng</button>
+<script type="module">
+import { VoiceConversationController } from '/src/voice-controller.ts'
+const nativeContext = window.AudioContext
+const contexts = [], streams = []
+window.AudioContext = new Proxy(nativeContext, { construct(target, args) {
+  const context = Reflect.construct(target, args)
+  contexts.push(context)
+  return context
+}})
+window.probe = { states: [], audio: [], errors: [], levels: 0 }
+const controller = new VoiceConversationController({
+  getUserMedia: async constraints => {
+    const stream = await navigator.mediaDevices.getUserMedia(constraints)
+    streams.push(stream)
+    return stream
+  },
+  onState: state => probe.states.push(state),
+  onAudio: audio => probe.audio.push({ size: audio.size, type: audio.type,
+    allTracksEnded: streams.every(s => s.getTracks().every(t => t.readyState === 'ended')) }),
+  onError: error => probe.errors.push({ kind: error.kind, message: error.message, cause: String(error.cause) }),
+  onLevel: () => probe.levels++,
+})
+probe.snapshot = () => ({ ...probe, active: controller.isActive,
+  contextStates: contexts.map(c => c.state),
+  trackStates: streams.flatMap(s => s.getTracks().map(t => t.readyState)) })
+document.querySelector('#start').onclick = () => { controller.start() }
+document.querySelector('#stop').onclick = () => { controller.stop() }
+</script>

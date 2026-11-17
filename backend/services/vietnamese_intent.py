@@ -44,6 +44,28 @@ def normalize_vietnamese(text: str) -> str:
     return re.sub(r"[^\w\s]", " ", normalized)
 
 
+_GREETING_ONLY_PHRASES = frozenset({
+    "hello", "hi", "hey", "xin chao", "chao", "chao ban", "chao anh",
+    "chao chi", "chao em", "good morning", "good afternoon", "good evening",
+})
+
+
+def is_greeting_only(text: str) -> bool:
+    """Recognize a standalone greeting without swallowing a shopping request."""
+    normalized = " ".join(normalize_vietnamese(text).split())
+    tokens = normalized.split()
+    if not tokens or len(tokens) > 4:
+        return False
+    phrase = " ".join(tokens)
+    if phrase in _GREETING_ONLY_PHRASES:
+        return True
+    return any(
+        phrase.startswith(greeting + " ")
+        and set(phrase[len(greeting):].split()) <= {"sky", "ban", "anh", "chi", "em", "nhe"}
+        for greeting in _GREETING_ONLY_PHRASES
+    )
+
+
 def _has_phrase(text: str, phrases: tuple[str, ...]) -> bool:
     return any(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", text) for phrase in phrases)
 

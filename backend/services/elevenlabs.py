@@ -65,6 +65,8 @@ class ElevenLabsService:
         return [voice for voice in voices if isinstance(voice, dict)]
 
     async def _resolve_voice_id(self, language: str) -> str:
+        if language != "vi":
+            raise ElevenLabsProviderError("Only Vietnamese speech is supported")
         if language in self._voice_cache:
             return self._voice_cache[language]
 
@@ -88,24 +90,6 @@ class ElevenLabsService:
             self._voice_cache[language] = voice_id
             return voice_id
 
-        if language != "vi":
-            language_match = next(
-                (
-                    voice
-                    for voice in voices
-                    if any(
-                        str(item.get("language", "")).lower() == language
-                        for item in voice.get("verified_languages", [])
-                        if isinstance(item, dict)
-                    )
-                    and voice.get("voice_id")
-                ),
-                None,
-            )
-            if language_match:
-                voice_id = str(language_match["voice_id"])
-                self._voice_cache[language] = voice_id
-                return voice_id
 
         raise ElevenLabsProviderError(
             f"ElevenLabs voice is not available for language {language}"
