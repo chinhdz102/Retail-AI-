@@ -82,6 +82,28 @@ def test_catalog_recovery_plan_does_not_replay_old_state():
     assert _catalog_recovery_plan("Có gì ăn đêm không?", {"need": "nước giặt"}, repo) is None
 
 
+def test_catalog_recovery_plan_accepts_explicit_new_product_type_on_followup():
+    repo = get_product_repository(Settings(catalog_repository="snapshot"))
+    plan = _catalog_recovery_plan(
+        "Có mấy loại sữa rửa mặt?",
+        {"need": "nước giặt", "searches": [{"query": "nước giặt"}],
+         "budget_vnd": 150000, "source_user_text": "nước giặt dưới 150 nghìn"},
+        repo,
+    )
+    assert plan and plan.topic_changed
+    assert plan.searches[0].query.casefold() == "sữa rửa mặt"
+    assert plan.budget_vnd is None
+
+
+def test_catalog_recovery_plan_reuses_previous_type_for_short_browse_followup():
+    repo = get_product_repository(Settings(catalog_repository="snapshot"))
+    plan = _catalog_recovery_plan(
+        "Có mấy loại?",
+        {"need": "nước giặt", "searches": [{"query": "nước giặt"}]}, repo,
+    )
+    assert plan and plan.reuse_previous and plan.searches[0].query == "nước giặt"
+
+
 def test_deterministic_fast_advice_stays_catalog_grounded():
     # Use a small explicit fixture to test the renderer without making this
     # unit test depend on the network or the live repository rank.

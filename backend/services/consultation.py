@@ -677,8 +677,43 @@ def _catalog_recovery_plan(text: str, previous_plan: dict | None,
                            repository: ProductRepository) -> Plan | None:
     """Recover a new-turn plan after all provider attempts are exhausted."""
     if previous_plan:
-        # Replaying a previous plan would be more harmful than asking a short
-        # follow-up: it can carry an old budget or product into a new topic.
+        # A new, explicit multi-word product type is safe to recover even in a
+        # follow-up.  Mark a changed type so the normal merge drops the old
+        # budget/exclusions instead of carrying them into the new department.
+        query = _infer_catalog_query(repository, text, allow_broad=True)
+        if query and len(query.split()) >= 2 and _label_phrase(text, query):
+            rows = repository.search(query=query, in_stock=True, limit=301)
+            if rows:
+                prior_scope = normalize_vietnamese(" ".join([
+                    str(previous_plan.get("need", "")),
+                    *(str(item.get("query", ""))
+                      for item in previous_plan.get("searches", [])),
+                ]))
+                changed = not _label_phrase(prior_scope, query)
+                labels = _catalog_label_requirements(repository, text, query)
+                return Plan(
+                    need=text, action="advise", decision_mode="browse",
+                    topic_changed=changed, reuse_previous=not changed,
+                    searches=[Search(query=query,
+                                     category=next((row.category for row in rows
+                                                    if row.category), None),
+                                     required_phrases=labels, role="core")],
+                )
+        # A short follow-up such as “có mấy loại?” can safely reuse the
+        # previous validated product type, but never invent a new one.
+        if previous_plan.get("searches") and re.search(
+                r"\b(?:co may|con loai|loai nao|xem them|them lua chon|nhieu loai)\b",
+                normalize_vietnamese(text)):
+            try:
+                searches = [Search.model_validate(item)
+                            for item in previous_plan.get("searches", [])]
+            except ValidationError:
+                searches = []
+            if searches:
+                return Plan(need=text, action="advise", decision_mode="browse",
+                            reuse_previous=True, searches=searches)
+        # Replaying an unrelated old plan would be more harmful than asking a
+        # short follow-up, so remain fail-closed for ambiguous turns.
         return None
     occasion = _catalog_occasion_plan(text, repository, conservative=False)
     if occasion is not None:
@@ -1007,6 +1042,23 @@ async def consult(
         plan, planner_model = fast_plan, "deterministic-fast-path"
         logger.info("Consultation fast plan topic=%s", plan.searches[0].query
                     if plan.searches else "previous")
+    elif (isinstance(groq, GroqService)
+          and not groq.has_available_credentials()):
+        # The previous turn already put every real credential in cooldown.
+        # Do not spend another request walking the same key/model matrix; use
+        # the bounded catalog recovery (or a natural clarification) directly.
+        recovered = _catalog_recovery_plan(text, previous_plan, repository)
+        if recovered is not None:
+            plan, planner_model = recovered, "catalog-recovery"
+            logger.warning("Consultation planner skipped while all credentials cool down")
+        else:
+            fallback_plan = Plan(
+                need=text, action="ask", decision_mode="guide",
+                clarification="Bạn đang muốn tìm nhóm hàng nào để mình tìm đúng sản phẩm cho bạn?",
+                source_user_text=text,
+            )
+            return Advice(text=fallback_plan.clarification, model="catalog-recovery",
+                          products=(), plan=fallback_plan)
     else:
         try:
             plan, planner_model = await _json_call(
