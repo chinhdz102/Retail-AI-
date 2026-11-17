@@ -17,6 +17,8 @@ htmlcov/
 .vscode/
 .idea/
 .tmp/
+tmp/
+docs/reports/artifacts/
 apps/kiosk-airi/public/vad/
 data/models/
 *.log
