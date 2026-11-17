@@ -1,0 +1,113 @@
+{
+  "started_utc": "2026-11-15T14:10:06.017222+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 20.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "q02",
+      "turns": [
+        {
+          "question": "Em muốn mua cái gì đó ăn sáng cho nhanh mà vẫn no, có loại nào ổn không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "fcad0cbd-9385-4796-83f9-2d3748148db1",
+            "text": "Bánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g (13.000đ): đủ để ăn nhanh, có vị phô mai giúp no lâu",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10140547"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10140547",
+                "name": "Bánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g",
+                "category": "Bánh mì",
+                "brand": "KINH ĐÔ",
+                "price_vnd": 13000,
+                "stock": 23,
+                "uom": "Cái",
+                "data_timestamp": "2026-09-15T13:53:30.496953Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 8.767
+        }
+      ]
+    },
+    {
+      "id": "q05",
+      "turns": [
+        {
+          "question": "Em định mua quà cho mẹ mà chưa biết chọn cái gì, tầm 300 nghìn thôi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "error_code": "assistant_busy",
+          "seconds": 7.383
+        }
+      ]
+    },
+    {
+      "id": "q20",
+      "turns": [
+        {
+          "question": "Da em khá nhạy cảm, có loại sữa tắm nào dịu nhẹ không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "error_code": "assistant_unavailable",
+          "seconds": 5.187
+        }
+      ]
+    },
+    {
+      "id": "hotpot",
+      "turns": [
+        {
+          "question": "Mua thịt về ăn lẩu cho 4 người thì chọn gì?",
+          "http_status": 200,
+          "response": {
+            "session_id": "f256baf8-1cc8-40bc-ad22-743b1d281531",
+            "text": "Bạn nên chọn khoảng 1,5–2 kg thịt bò hoặc thịt lợn, chia đều cho 4 người. Nếu muốn đa dạng, có thể kết hợp thịt gà và hải sản nhỏ để lẩu thêm phong phú.",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.448
+        },
+        {
+          "question": "Thịt bò bình thường hoặc ba chỉ cũng được, khoảng 200 nghìn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "error_code": "assistant_unavailable",
+          "seconds": 3.239
+        },
+        {
+          "question": "Tư vấn giúp t chọn loại nào đi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "error_code": "assistant_unavailable",
+          "seconds": 3.915
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T14:12:39.351932+00:00"
+}

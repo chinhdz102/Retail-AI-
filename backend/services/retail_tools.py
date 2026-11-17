@@ -326,7 +326,9 @@ def _candidate_content(products: tuple[ProductSnapshot, ...], matched: list[str]
 
 
 def _category_for_repository(category: str | None, repository: ProductRepository) -> str | None:
-    if not category or repository.source_name != "winmart_postgres_catalog":
+    if not category or repository.source_name not in {
+        "winmart_postgres_catalog", "winmart_json_snapshot"
+    }:
         return category
     canonical_category = category.strip().casefold()
     # The WinMart source stores Vietnamese taxonomy labels rather than the

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
+from contextlib import asynccontextmanager
 from dataclasses import replace
 from datetime import datetime
 from time import perf_counter
-from uuid import UUID
+from typing import Literal
+from uuid import UUID, uuid4
 
 import asyncpg
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 
@@ -41,6 +44,7 @@ from backend.services.azure_speech import (
     AzureSpeechProviderError,
     AzureSpeechService,
 )
+from backend.services.consultation import consult, use_consultation
 from backend.services.elevenlabs import (
     ElevenLabsConfigurationError,
     ElevenLabsProviderError,
@@ -48,6 +52,7 @@ from backend.services.elevenlabs import (
 )
 from backend.services.groq import GroqConfigurationError, GroqProviderError, GroqService
 from backend.services.organization_profiles import OrganizationAnswer, get_organization_answer
+from backend.services.product_prices import lookup_catalog_products, lookup_price_products
 from backend.services.retail_agent import (
     RetailAgentResult,
     _explicit_recommendation_category,
@@ -83,6 +88,11 @@ from backend.services.shopping_flow import (
     ShoppingActionType,
     classify_shopping_action,
 )
+from backend.services.speech_activity import (
+    SpeechActivityInputError,
+    SpeechActivityUnavailable,
+    warm_speech_models,
+)
 from backend.services.speech_tickets import SpeechTicketStore
 from backend.services.support import (
     SupportIdempotencyConflictError,
@@ -103,6 +113,7 @@ from backend.services.vietnamese_intent import (
     is_recommendation_negated,
     is_recommendation_request,
 )
+from backend.services.vietnamese_intent import is_greeting_only
 from backend.services.vietnamese_intent import (
     normalize_vietnamese as _normalize_request_text,
 )
@@ -111,6 +122,23 @@ from backend.services.vietnamese_intent import (
 )
 from backend.services.vietnamese_intent import (
     unsupported_catalog_attribute_requested as _parse_unsupported_attribute,
+)
+from backend.services.whisper_stt import (
+    MODEL as WHISPER_MODEL,
+)
+from backend.services.whisper_stt import (
+    PIPELINE_VERSION as WHISPER_PIPELINE_VERSION,
+)
+from backend.services.whisper_stt import (
+    WhisperConfigurationError,
+    WhisperProviderError,
+    WhisperSTT,
+    WhisperTimeoutError,
+)
+from backend.services.azure_stt import (
+    AzureVietnameseSTT,
+    MODEL as AZURE_STT_MODEL,
+    PIPELINE_VERSION as AZURE_STT_PIPELINE_VERSION,
 )
 from backend.shared.contracts import HealthResponse, IntentType, SessionState
 
@@ -127,10 +155,27 @@ support_ticket_store = SupportTicketStore()
 speech_ticket_store = SpeechTicketStore()
 logger = logging.getLogger(__name__)
 _groq_service: GroqService | None = None
+_whisper_service: WhisperSTT | None = None
 _azure_speech_service: AzureSpeechService | None = None
 _elevenlabs_service: ElevenLabsService | None = None
 
-app = FastAPI(title="AI Retail Assistant API", version=settings.app_version)
+@asynccontextmanager
+async def lifespan(_app):
+    # Pay local ONNX initialization at process start, never on the first turn.
+    try:
+        await asyncio.wait_for(asyncio.to_thread(warm_speech_models), timeout=8)
+    except Exception as exc:
+        logger.warning("Speech model warmup skipped error_type=%s", type(exc).__name__)
+    try:
+        yield
+    finally:
+        if isinstance(_whisper_service, AzureVietnameseSTT):
+            await _whisper_service.aclose()
+        if _azure_speech_service is not None:
+            await _azure_speech_service.aclose()
+
+
+app = FastAPI(title="AI Retail Assistant API", version=settings.app_version, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -145,6 +190,14 @@ def get_groq_service(settings: Settings = Depends(get_settings)) -> GroqService:
     if _groq_service is None or _groq_service.settings is not settings:
         _groq_service = GroqService(settings=settings)
     return _groq_service
+
+
+def get_whisper_service(settings: Settings = Depends(get_settings)) -> WhisperSTT:
+    global _whisper_service
+    if _whisper_service is None or _whisper_service.settings is not settings:
+        service = AzureVietnameseSTT if settings.stt_provider == "azure" else WhisperSTT
+        _whisper_service = service(settings=settings)
+    return _whisper_service
 
 
 def get_elevenlabs_service(settings: Settings = Depends(get_settings)) -> ElevenLabsService:
@@ -174,6 +227,25 @@ def _session_or_http_error(session_id: UUID):
         ) from exc
     except SessionError as exc:
         raise HTTPException(status_code=404, detail="Session not found") from exc
+
+
+def _chat_provider_http_error(exc: GroqProviderError) -> HTTPException:
+    trace = exc.fallback_trace
+    busy = bool(trace) and all(
+        row.get("status") == "cooldown" or row.get("http_status") == 429
+        for row in trace
+    )
+    code = "assistant_busy" if busy else "assistant_unavailable"
+    logger.warning(
+        "Assistant response failed code=%s attempts=%d provider_codes=%s",
+        code, len(trace), sorted({str(row.get("provider_code")) for row in trace
+                                if row.get("provider_code")}),
+    )
+    return HTTPException(status_code=502, detail={
+        "code": code,
+        "message": ("Sky đang tạm hết lượt trả lời. Bạn thử lại sau một lát nhé."
+                    if busy else "Sky chưa hoàn tất câu trả lời. Bạn thử lại giúp mình nhé."),
+    })
 
 
 def _format_shelf_location(product: ProductSnapshot, language: LanguageCode) -> str:
@@ -446,7 +518,10 @@ def _unsupported_customer_care_action_claim(reply: str) -> bool:
 
 
 def _administrative_action_requested(text: str) -> bool:
-    normalized = _normalize_request_text(text)
+    # "sữa" is a product noun; removing accents made it indistinguishable
+    # from the price-editing verb "sửa" and blocked ordinary milk/bodywash
+    # price questions before the catalog router could see them.
+    normalized = _normalize_request_text(re.sub(r"\bsữa\b", " ", text, flags=re.I))
     patterns = (
         r"\b(?:sua|doi|cap nhat|dieu chinh|change|update|modify|set)\b"
         r".{0,80}\b(?:gia|price)\b",
@@ -1044,7 +1119,7 @@ def _localized_not_found(language: LanguageCode) -> str:
     return {
         "en": "I couldn't find a matching product yet. Try saying its name or category.",
         "zh": "我还没有找到匹配的商品。请再说一次商品名称或类别。",
-        "vi": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "vi": "Mình chưa xác định được loại hàng bạn đang hỏi. Bạn nói giúp mình tên hoặc nhóm hàng cụ thể hơn nhé.",
     }[language]
 
 
@@ -1322,6 +1397,14 @@ def _localized_consultation_clarification(language: LanguageCode) -> str:
             "Được chứ. Bạn đang muốn chọn đồ ăn, đồ uống hay nhóm khác? "
             "Cho mình thêm tầm giá hoặc tiêu chí nhé."
         ),
+    }[language]
+
+
+def _localized_greeting(language: LanguageCode) -> str:
+    return {
+        "en": "Hello! Are you looking for food, drinks, or another product today? I can help you find it.",
+        "zh": "你好！您今天想找食品、饮料还是其他商品？我可以帮您找。",
+        "vi": "Chào bạn! Hôm nay bạn đang cần tìm đồ ăn, đồ uống hay đồ dùng gì để mình tìm giúp?",
     }[language]
 
 
@@ -1821,6 +1904,59 @@ def _localized_product_interest(products, language: LanguageCode) -> str:
     return (
         "Mình tìm thấy " + ", ".join(names) + ". Bạn muốn xem giá, tình trạng hàng hay vị trí kệ?"
     )
+
+
+def _localized_price_list(products, language: LanguageCode) -> str:
+    """Give a useful answer for a broad price question without a model detour."""
+    items = []
+    for product in products[:5]:
+        price = f"{product.price_vnd:,}".replace(",", ".")
+        unit = (product.uom or "").strip()
+        if language == "en":
+            items.append(f"{product.name}: {price} VND" + (f"/{unit}" if unit else ""))
+        elif language == "zh":
+            items.append(f"{product.name}：{price}越南盾" + (f"/{unit}" if unit else ""))
+        else:
+            items.append(f"{product.name}: {price}đ" + (f"/{unit.lower()}" if unit else ""))
+    if language == "en":
+        return "Here are a few options I found: " + "; ".join(items) + "."
+    if language == "zh":
+        return "我找到几种：" + "；".join(items) + "。"
+    return "Một vài loại có giá tham khảo như sau:\n" + "\n".join(f"• {item}" for item in items)
+
+
+def _localized_price_extrema(products, order: str, language: LanguageCode) -> str:
+    """Render code-owned minimum/maximum prices from the full matching set."""
+    if not products:
+        return _localized_not_found(language)
+    lowest = min(products, key=lambda product: product.price_vnd)
+    highest = max(products, key=lambda product: product.price_vnd)
+
+    def line(label: str, product) -> str:
+        price = f"{product.price_vnd:,}".replace(",", ".")
+        unit = f"/{product.uom.lower()}" if product.uom else ""
+        return f"{label}: {product.name} — {price}đ{unit}"
+
+    if language == "en":
+        labels = {"min": "Lowest", "max": "Highest"}
+        if order == "min":
+            return line(labels["min"], lowest) + "."
+        if order == "max":
+            return line(labels["max"], highest) + "."
+        return line(labels["min"], lowest) + "; " + line(labels["max"], highest) + "."
+    if language == "zh":
+        labels = {"min": "最低价", "max": "最高价"}
+        if order == "min":
+            return line(labels["min"], lowest) + "。"
+        if order == "max":
+            return line(labels["max"], highest) + "。"
+        return line(labels["min"], lowest) + "；" + line(labels["max"], highest) + "。"
+    labels = {"min": "Thấp nhất", "max": "Cao nhất"}
+    if order == "min":
+        return line(labels["min"], lowest) + "."
+    if order == "max":
+        return line(labels["max"], highest) + "."
+    return line(labels["min"], lowest) + "; " + line(labels["max"], highest) + "."
 
 
 def _grounded_reply(
@@ -3102,6 +3238,17 @@ async def agent_respond(
     if record.state in {SessionState.CLOSED, SessionState.EXPIRED}:
         raise HTTPException(status_code=409, detail="Session is closed")
 
+    # A standalone greeting is a dialogue turn, not a product search. Keep the
+    # detector narrow so ``hello, cho mình hỏi sữa`` still reaches catalog
+    # routing, while the common ``hello`` case is instant and natural.
+    if is_greeting_only(request.text):
+        return _record_shopping_turn(
+            request,
+            _localized_greeting(request.language),
+            model="local-greeting",
+            state=record.state,
+        )
+
     if _sensitive_internal_information_requested(request.text):
         return _local_policy_response(
             request,
@@ -3289,6 +3436,159 @@ async def agent_respond(
                 campaign_observation,
                 reply,
             )
+    broad_price_lookup = _broad_price_lookup_arguments(request.text, requested_fields)
+    if (
+        requested_fields == ("shelf",)
+        and settings.catalog_repository in {"snapshot", "postgres"}
+        and not use_consultation(request.text, requested_fields)
+        and not prompt_override
+    ):
+        query = (record.last_grounded_product_name if followup_fields else None) or _fact_product_query(request.text)
+        if not query:
+            return _local_policy_response(request, record.state,
+                _localized_product_clarification(request.language))
+        location = await lookup_catalog_products(get_product_repository(settings), query, requested_fields)
+        verified = [p for p in location.products if p.shelf and p.shelf_source not in {
+            "UNKNOWN", "RECOMMENDED_PLANOGRAM"}]
+        if verified:
+            reply = "\n".join(_render_verified_snapshot(replace(location, products=(p,)),
+                              request.language, requested_fields)
+                              for p in verified[:3])
+        else:
+            reply = {
+                "vi": "Mình chưa có vị trí kệ chính xác. Bạn nhờ nhân viên tại quầy chỉ giúp nhé.",
+                "en": "I don't have the exact shelf location. Please ask a colleague at the counter to point it out.",
+                "zh": "我还不清楚准确的货架位置，请柜台同事帮忙指一下。",
+            }[request.language]
+        return _deterministic_tool_response(request, record.state, location, reply, model="catalog")
+    if (
+        broad_price_lookup is not None
+        and settings.catalog_repository in {"snapshot", "postgres"}
+        and promotion_list_arguments is None
+        and catalog_additions_arguments is None
+        and not prompt_override
+        and not unsupported_attribute_requested
+    ):
+        repository = get_product_repository(settings)
+        price_order = broad_price_lookup.get("price_order")
+        price_observation = await lookup_price_products(
+            repository,
+            broad_price_lookup["query"],
+            limit=(len(getattr(repository, "products", ())) if price_order else 5),
+        )
+        if price_observation.status == "SUCCESS" and price_observation.products:
+            if price_order:
+                ordered = sorted(price_observation.products, key=lambda product: product.price_vnd)
+                selected = (ordered[:1] if price_order == "min" else
+                            ordered[-1:] if price_order == "max" else
+                            (ordered[0], ordered[-1]))
+                price_observation = replace(price_observation, products=tuple(selected))
+                reply = _localized_price_extrema(
+                    price_observation.products, price_order, request.language,
+                )
+            elif broad_price_lookup["list_requested"] or price_observation.content["category_match"]:
+                reply = _localized_price_list(price_observation.products, request.language)
+            else:
+                target_id = _unique_product_match_id(
+                    broad_price_lookup["query"], price_observation.products,
+                )
+                if target_id:
+                    price_observation = await lookup_followup_snapshot(target_id, requested_fields)
+                reply = _grounded_reply(
+                    RetailAgentResult(
+                        text="", model="catalog", tools_used=(price_observation.tool_name,),
+                        products=price_observation.products, observations=(price_observation,),
+                    ), request.language, requested_fields,
+                )
+            session_store.add_message(request.session_id, "user", request.text)
+            session_store.add_message(request.session_id, "assistant", reply)
+            products = price_observation.products
+            only = products[0] if len(products) == 1 else None
+            session_store.set_last_grounded_product(
+                request.session_id, only.product_id if only else None, only.name if only else None,
+            )
+            session_store.update_shopping(
+                request.session_id, current_intent=IntentType.PRODUCT_LOOKUP,
+                selected_product_ids=[p.product_id for p in products],
+            )
+            return AgentRespondResponse(
+                session_id=request.session_id,
+                text=reply,
+                model="catalog",
+                grounded_product_ids=[p.product_id for p in price_observation.products],
+                tools_used=list(dict.fromkeys(["search_products", price_observation.tool_name])),
+                products=[_product_card(p) for p in price_observation.products],
+                state=record.state,
+            )
+        reply = (_localized_not_found(request.language)
+                 if price_observation.status == "SUCCESS" else _localized_tool_failure(request.language))
+        session_store.add_message(request.session_id, "user", request.text)
+        session_store.add_message(request.session_id, "assistant", reply)
+        return AgentRespondResponse(
+            session_id=request.session_id,
+            text=reply,
+            model="catalog",
+            grounded_product_ids=[],
+            tools_used=["search_products"],
+            products=[],
+            state=record.state,
+        )
+    # Imported catalogs need semantic advice before the legacy lexical router:
+    # it otherwise treats the whole need as a product name or abstains before LLM.
+    if (
+        request.language == "vi"
+        and settings.catalog_repository in {"snapshot", "postgres"}
+        and promotion_list_arguments is None
+        and catalog_additions_arguments is None
+        and use_consultation(request.text, requested_fields)
+    ):
+        previous_ids = record.shopping.selected_product_ids
+        if not previous_ids and record.last_grounded_product_id:
+            previous_ids = [record.last_grounded_product_id]
+        history = session_store.messages_for_model(request.session_id)
+        # A provider failure must not erase the customer's correction or budget.
+        # A retry of the same unanswered message is represented only once.
+        latest = {"role": "user", "content": request.text}
+        if history and history[-1] == latest:
+            history = history[:-1]
+        else:
+            session_store.add_message(request.session_id, "user", request.text)
+        try:
+            async with asyncio.timeout(settings.groq_timeout_seconds):
+                advice = await consult(
+                    groq, get_product_repository(settings), request.text,
+                    history, previous_ids,
+                    record.shopping.constraints.get("consultation_plan"),
+                )
+        except TimeoutError as exc:
+            raise HTTPException(status_code=504, detail="Consultation timed out") from exc
+        except GroqConfigurationError as exc:
+            raise HTTPException(status_code=503, detail="Consultation is not configured") from exc
+        except GroqProviderError as exc:
+            validated_plan = getattr(exc, "consultation_plan", None)
+            if isinstance(validated_plan, dict):
+                session_store.update_constraints(request.session_id, [{
+                    "action": "SET", "key": "consultation_plan", "value": validated_plan,
+                }])
+            raise _chat_provider_http_error(exc) from exc
+        session_store.add_message(request.session_id, "assistant", advice.text)
+        session_store.update_constraints(request.session_id, [{
+            "action": "SET", "key": "consultation_plan", "value": advice.plan.model_dump(),
+        }])
+        session_store.update_shopping(
+            request.session_id, current_intent=IntentType.RECOMMENDATION,
+            selected_product_ids=[p.product_id for p in advice.products],
+        )
+        only = advice.products[0] if len(advice.products) == 1 else None
+        session_store.set_last_grounded_product(
+            request.session_id, only.product_id if only else None, only.name if only else None,
+        )
+        return AgentRespondResponse(
+            session_id=request.session_id, text=advice.text, model=advice.model,
+            products=[_product_card(p) for p in advice.products],
+            grounded_product_ids=[p.product_id for p in advice.products],
+            tools_used=["search_products"] if advice.plan.searches else [], state=record.state,
+        )
     explicit_grounded_reference = (
         record.last_grounded_product_id
         if requested_fields
@@ -3639,7 +3939,7 @@ async def agent_respond(
             detail="Groq chat provider is not configured",
         ) from exc
     except GroqProviderError as exc:
-        raise HTTPException(status_code=502, detail="Groq chat provider unavailable") from exc
+        raise _chat_provider_http_error(exc) from exc
 
     latest_catalog_observation = next(
         (
@@ -3678,6 +3978,7 @@ async def agent_respond(
         model=model,
         grounded_product_ids=[product.product_id for product in products],
         tools_used=tools_used,
+        products=[_product_card(product) for product in products],
         state=record.state,
     )
 
@@ -3776,6 +4077,7 @@ _FACT_QUERY_STOP_WORDS = {
     "la",
     "me",
     "much",
+    "muc",
     "nao",
     "nam",
     "nhe",
@@ -3814,7 +4116,6 @@ _FACT_QUERY_STOP_WORDS = {
     "trong",
     "giam",
     "khuyen",
-    "mai",
     "uu",
     "dai",
     "discount",
@@ -3866,6 +4167,10 @@ _FACT_QUERY_STOP_WORDS = {
     "ne",
     "giai",
     "khat",
+    "hien",
+    "tai",
+    "loai",
+    "khoang",
     "dang",
     "that",
     "du",
@@ -4077,6 +4382,14 @@ def _fact_product_query(text: str) -> str:
         normalized,
     )
     normalized = re.sub(r"\bben minh\b", " ", normalized)
+    normalized = re.sub(r"\b(?:tim mai|khong thay|nam (?:o )?khu nao|o khu nao)\b", " ", normalized)
+    normalized = re.sub(r"\boi\b", " ", normalized)
+    normalized = re.sub(r"\b(?:bao tien|khuyen mai)\b", " ", normalized)
+    normalized = re.sub(
+        r"\b(?:gia (?:nhu (?:the )?nao|the nao|sao)|(?:cac|nhung|moi|tung) loai|"
+        r"(?:cho (?:minh|toi|em) )?xem|thap nhat|cao nhat|re nhat|dat nhat|"
+        r"(?:tu )?thap den cao|(?:tu )?cao den thap|(?:tu )?re den dat)\b", " ", normalized,
+    )
     requested_fields = _requested_snapshot_fields(text)
     if "stock" in requested_fields and "price_vnd" not in requested_fields:
         normalized = re.sub(r"\b(?:chai|lon|hop|goi)\b", " ", normalized)
@@ -4092,13 +4405,44 @@ def _fact_product_query(text: str) -> str:
     )
     for phrase in _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES:
         normalized = re.sub(rf"\b{re.escape(phrase)}\b", " ", normalized)
+    normalized = re.sub(
+        r"\b(?:bao nhieu(?: tien)?|bao gio|o dau|cho nao|ke nao|han su dung|han dung|"
+        r"lay o|co cay khong|san pham)\b",
+        " ", normalized,
+    )
+    product_words = {"an", "bao", "bo", "dau", "tra", "san"}
     return " ".join(
         word
         for word in normalized.split()
-        if word not in _FACT_QUERY_STOP_WORDS
+        if (word not in _FACT_QUERY_STOP_WORDS or word in product_words)
         and not word.isdigit()
         and not re.fullmatch(r"\d+(?:k|d|dong|vnd)", word)
     )
+
+
+def _broad_price_lookup_arguments(
+    text: str, fields: tuple[str, ...]
+) -> dict | None:
+    """Recognize price lookups before they fall into open advice."""
+    if fields != ("price_vnd",):
+        return None
+    if use_consultation(text, fields):
+        return None
+    normalized = " ".join(_normalize_request_text(text).split())
+    list_requested = bool(re.search(
+        r"\b(?:cac loai|nhung loai|moi loai|tung loai|gia cac|gia tung|gia moi loai|muc gia)\b",
+        normalized,
+    ))
+    low_to_high = bool(re.search(r"\b(?:thap den cao|re den dat|tu thap den cao|tu re den dat)\b", normalized))
+    high_to_low = bool(re.search(r"\b(?:cao den thap|dat den re|tu cao den thap|tu dat den re)\b", normalized))
+    low_requested = bool(re.search(r"\b(?:thap nhat|re nhat|gia re nhat)\b", normalized))
+    high_requested = bool(re.search(r"\b(?:cao nhat|dat nhat|gia dat nhat)\b", normalized))
+    price_order = "range" if (low_requested and high_requested) or low_to_high or high_to_low else (
+        "min" if low_requested else "max" if high_requested else None
+    )
+    query = _fact_product_query(text)
+    return ({"query": query, "list_requested": list_requested,
+             "price_order": price_order} if query else None)
 
 
 def _localized_safe_lookup_prompt(
@@ -4192,7 +4536,8 @@ def _price_constraint_from_text(text: str) -> dict[str, int | str] | None:
     normalized = re.sub(r"(?<=\d)k\b", " k", normalized)
     operator_match = re.search(
         r"\bduoi\b|\btoi da\b|\bkhong qua\b|\bunder\b|\bbelow\b|"
-        r"\bless than\b|\bno more than\b|\bat most\b|\bup to\b",
+        r"\bless than\b|\bno more than\b|\bat most\b|\bup to\b|"
+        r"\bkhoang\b|\btam\b",
         normalized,
     )
     if operator_match is None:
@@ -4721,45 +5066,125 @@ def _unsupported_catalog_attribute_requested(text: str) -> bool:
     )
 
 
+async def _recognize_while_connected(request: Request, recognition):
+    """Cancel cloud decoding when a speculative upload is abandoned."""
+    task = asyncio.create_task(recognition)
+
+    try:
+        while True:
+            done, _ = await asyncio.wait({task}, timeout=.1)
+            if done:
+                return task.result()
+            if await request.is_disconnected():
+                raise HTTPException(status_code=499, detail="Recognition cancelled")
+    finally:
+        if not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+
 @app.post("/audio/transcribe", response_model=TranscriptionResponse)
 async def transcribe_audio(
+    request: Request,
     session_id: UUID = Form(...),
-    language: LanguageCode = Form("vi"),
+    language: Literal["vi"] = Form("vi"),
     file: UploadFile = File(...),
-    groq: GroqService = Depends(get_groq_service),
-    settings: Settings = Depends(get_settings),
+    whisper: WhisperSTT = Depends(get_whisper_service),
 ) -> TranscriptionResponse:
+    request_id = str(uuid4())
+    started = perf_counter()
     _session_or_http_error(session_id)
     content_type = file.content_type or ""
     if not content_type.startswith("audio/"):
         raise HTTPException(status_code=415, detail="Upload an audio file")
-    content = await file.read()
+    content = await file.read(10 * 1024 * 1024 + 1)
     if not content:
         raise HTTPException(status_code=422, detail="Audio file is empty")
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Audio file is too large")
     try:
-        transcription = await groq.transcribe(
-            file.filename or "voice.webm",
-            content,
-            content_type,
-            language=language,
-        )
-        text = str(transcription)
-        transcription_model = getattr(transcription, "model", settings.groq_stt_model)
-    except GroqConfigurationError as exc:
+        if settings.stt_debug_capture and settings.app_env == "development":
+            recognition = whisper.transcribe(content, diagnostic_id=request_id)
+        else:
+            recognition = whisper.transcribe(content)
+        transcription = await _recognize_while_connected(request, recognition)
+    except SpeechActivityInputError as exc:
+        raise HTTPException(
+            status_code=422, detail="Audio could not be decoded or exceeds 60 seconds",
+        ) from exc
+    except SpeechActivityUnavailable as exc:
+        raise HTTPException(
+            status_code=503, detail="Speech verification is temporarily unavailable",
+        ) from exc
+    except WhisperTimeoutError as exc:
+        raise HTTPException(status_code=504, detail="Speech recognition timed out") from exc
+    except WhisperConfigurationError as exc:
         raise HTTPException(status_code=503, detail="Speech recognition is not configured") from exc
-    except GroqProviderError as exc:
+    except WhisperProviderError as exc:
         raise HTTPException(
             status_code=502,
             detail="Speech recognition provider unavailable",
         ) from exc
+    logging.getLogger("uvicorn.error.stt").info(
+        "STT request=%s pipeline=%s model=%s accepted=%s reason=%s "
+        "duration=%.3f speech_frames=%d elapsed_ms=%d",
+        request_id, _stt_pipeline_version(), transcription.model,
+        transcription.speech_detected, transcription.rejection_reason or "accepted",
+        transcription.quality.get("server_vad_duration_seconds", 0),
+        transcription.quality.get("server_vad_positive_frame_count", 0),
+        (perf_counter() - started) * 1000,
+    )
     return TranscriptionResponse(
         session_id=session_id,
-        text=text,
-        language=language,
-        model=transcription_model,
+        text=transcription.text,
+        language="vi",
+        model=transcription.model,
+        speech_detected=transcription.speech_detected,
+        rejection_reason=transcription.rejection_reason,
+        quality=transcription.quality,
+        request_id=request_id,
+        pipeline_version=_stt_pipeline_version(),
+        provider=settings.stt_provider,
     )
+
+
+def _stt_pipeline_version() -> str:
+    return (AZURE_STT_PIPELINE_VERSION if settings.stt_provider == "azure"
+            else WHISPER_PIPELINE_VERSION)
+
+
+@app.get("/audio/config")
+def audio_config() -> dict:
+    """Non-secret identity of the active voice implementation."""
+    return {
+        "provider": settings.stt_provider,
+        "model": AZURE_STT_MODEL if settings.stt_provider == "azure" else WHISPER_MODEL,
+        "language": "vi", "prompt_enabled": False,
+        "pipeline_version": _stt_pipeline_version(),
+        "catalog_source": settings.catalog_repository,
+        "acoustic_models": ["silero-v6", "yamnet-v1"],
+        "local_diagnostics": settings.stt_debug_capture and settings.app_env == "development",
+    }
+
+
+@app.post("/audio/prepare")
+async def prepare_audio(
+    session_id: UUID = Body(..., embed=True),
+    whisper: WhisperSTT = Depends(get_whisper_service),
+    azure_speech: AzureSpeechService = Depends(get_azure_speech_service),
+) -> dict:
+    """Warm local ASR and the reusable TTS connection while the user speaks."""
+    _session_or_http_error(session_id)
+    if isinstance(whisper, AzureVietnameseSTT):
+        whisper._recognition_client()
+    ready = True
+    try:
+        await azure_speech.preconnect("vi")
+    except (AzureSpeechConfigurationError, AzureSpeechProviderError):
+        # Recognition does not depend on TTS; a missing TTS credential should
+        # not turn a usable microphone into an error state.
+        ready = False
+    return {"ready": ready}
 
 
 @app.post("/audio/synthesize", response_class=Response)

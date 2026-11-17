@@ -1,0 +1,23 @@
+{
+  "baseline_commit": "b7feb6e",
+  "workspace_regression": {
+    "passed": 379,
+    "seconds": 6.72
+  },
+  "isolated_staged_snapshot": {
+    "passed": 388,
+    "seconds": 6.88
+  },
+  "different_counts_reason": "Staged snapshot retains legacy STT tests; workspace has separate uncommitted STT changes.",
+  "last_live_artifact": "advice_continue_shipping_20261115.json",
+  "pantry_role_added_after_last_live": true,
+  "human_staff_quality_accepted": false,
+  "sha256": {
+    "backend/services/consultation.py": "e7d4b364f58aa271427d10152ac8835a9ff0c2d3c730ef9889c87661200f46a5",
+    "evaluation/audit_live_consultation.py": "3195422178e2e3b6565f841d9b954e0b13687c86335b81ea5c3789e6f86891da",
+    "evaluation/probe_consultation.py": "c9cb9520da6d8874852b45e881ec055e9ff900ca7a0bb74a15fe52abc5ac999a",
+    "tests/test_consultation.py": "186d05f6f206a92deeb2f6ab24b93e5c8c547f3e2e821adcb63f81f0de7e3714",
+    "tests/test_consultation_review.py": "a37c712cfb5bed99f2b5caf5a6681a269227152c2ee8f6d72e520075d8a36aa0",
+    "data/winmart_products.json": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6"
+  }
+}

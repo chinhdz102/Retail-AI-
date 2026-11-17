@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
+from pathlib import Path
 from typing import Protocol
 
 from backend.config import Settings, get_settings
@@ -87,4 +89,18 @@ def get_product_repository(settings: Settings | None = None) -> ProductRepositor
         from backend.products.postgres_repository import PostgresProductRepository
 
         return PostgresProductRepository(selected.database_url)
+    if selected.catalog_repository == "snapshot":
+        path = Path(selected.catalog_snapshot_path)
+        if not path.is_absolute():
+            path = Path(__file__).resolve().parents[2] / path
+        path = path.resolve()
+        stat = path.stat()
+        return _snapshot_repository(path, stat.st_mtime_ns, stat.st_size)
     raise ValueError(f"Unknown catalog repository: {selected.catalog_repository}")
+
+
+@lru_cache(maxsize=1)
+def _snapshot_repository(path: Path, _mtime_ns: int, _size: int) -> ProductRepository:
+    from backend.products.snapshot_repository import SnapshotProductRepository
+
+    return SnapshotProductRepository(path)

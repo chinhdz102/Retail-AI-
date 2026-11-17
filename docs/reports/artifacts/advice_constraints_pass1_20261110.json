@@ -1,0 +1,338 @@
+{
+  "started_utc": "2026-11-10T16:45:29.957690+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 12.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "hotpot",
+      "turns": [
+        {
+          "question": "Mua thịt về ăn lẩu cho 4 người thì chọn gì?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.691
+        },
+        {
+          "question": "Thịt bò bình thường hoặc ba chỉ cũng được, khoảng 200 nghìn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "965e335d-c4e9-4dc4-a060-39d563906f7b",
+            "text": "Với ngân sách 200k cho 4 người ăn lẩu, mình chọn Ba chỉ bò Mỹ Thiên Vương ACEFOODS  khay 500g (165.000đ) vì ba chỉ bò Mỹ có mỡ xen kẽ nên khi nhúng lẩu sẽ mềm, không bị dai và hương vị đậm đà hơn thịt nạc.\n\nTổng: 165.000đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10404843"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10404843",
+                "name": "Ba chỉ bò Mỹ Thiên Vương ACEFOODS  khay 500g",
+                "category": "Thịt",
+                "brand": "ACEFOODS",
+                "price_vnd": 165000,
+                "stock": 78,
+                "uom": "Khay",
+                "data_timestamp": "2026-09-15T13:53:54.365947Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.33
+        },
+        {
+          "question": "Tư vấn giúp t chọn loại nào đi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "965e335d-c4e9-4dc4-a060-39d563906f7b",
+            "text": "Mình chốt Ba chỉ bò Mỹ Thiên Vương ACEFOODS  khay 500g (165.000đ) cho bạn vì ba chỉ bò Mỹ có mỡ xen kẽ nên nhúng lẩu sẽ mềm, không bị dai và đậm đà hơn thịt nạc. Với 4 người, khay 500g này vừa đủ làm phần thịt chính, tổng 165.000đ vẫn nằm trong ngân sách 200k của bạn.\n\nTổng: 165.000đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10404843"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10404843",
+                "name": "Ba chỉ bò Mỹ Thiên Vương ACEFOODS  khay 500g",
+                "category": "Thịt",
+                "brand": "ACEFOODS",
+                "price_vnd": 165000,
+                "stock": 78,
+                "uom": "Khay",
+                "data_timestamp": "2026-09-15T13:53:54.365947Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.881
+        }
+      ]
+    },
+    {
+      "id": "acne",
+      "turns": [
+        {
+          "question": "Có loại nào điều trị mụn không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "0a930afb-9243-4fc5-8bbd-080f02c4b566",
+            "text": "Mình chọn Kem rửa mặt ngăn ngừa mụn Acnes Medicated tuýt 100g (75.600đ) vì đây là sản phẩm có nhãn ghi rõ chức năng ngăn ngừa mụn, phù hợp với nhu cầu của bạn. Bạn nên dùng sản phẩm này vào buổi sáng và tối để làm sạch da, sau đó kết hợp thêm Nước Hoa Hồng Simple Soothing Facial Toner Giúp Làm Dịu Da 200ml (159.100đ) để giúp làm dịu da.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "WIN_10017342",
+              "WIN_10620385"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10017342",
+                "name": "Kem rửa mặt ngăn ngừa mụn Acnes Medicated tuýt 100g",
+                "category": "Chăm Sóc Da",
+                "brand": "ACNES",
+                "price_vnd": 75600,
+                "stock": 21,
+                "uom": "Tuýp",
+                "data_timestamp": "2026-09-15T13:53:35.398463Z"
+              },
+              {
+                "product_id": "WIN_10620385",
+                "name": "Nước Hoa Hồng Simple Soothing Facial Toner Giúp Làm Dịu Da 200ml",
+                "category": "Chăm Sóc Da",
+                "brand": "SIMPLE",
+                "price_vnd": 159100,
+                "stock": 4,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.411040Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.359
+        },
+        {
+          "question": "Tư vấn cho t với.",
+          "http_status": 200,
+          "response": {
+            "session_id": "0a930afb-9243-4fc5-8bbd-080f02c4b566",
+            "text": "Mình đề xuất 2 sản phẩm sau cho da bạn:  \n\n- Kem rửa mặt ngăn ngừa mụn Acnes Medicated tuýt 100g (75.600đ) – kem rửa mặt ngăn ngừa mụn, dùng mỗi sáng‑tối để làm sạch sâu, giảm bít mụn.  \n- Nước Hoa Hồng Simple Soothing Facial Toner Giúp Làm Dịu Da 200ml (159.100đ) – toner làm dịu da sau khi rửa, giúp cân bằng độ ẩm và giảm kích ứng.  \n\nCách dùng: rửa mặt với kem, rửa sạch, rồi thoa toner lên da ẩm; duy trì 2‑3 tuần sẽ thấy da ít mụn hơn.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10017342",
+              "WIN_10620385"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10017342",
+                "name": "Kem rửa mặt ngăn ngừa mụn Acnes Medicated tuýt 100g",
+                "category": "Chăm Sóc Da",
+                "brand": "ACNES",
+                "price_vnd": 75600,
+                "stock": 21,
+                "uom": "Tuýp",
+                "data_timestamp": "2026-09-15T13:53:35.398463Z"
+              },
+              {
+                "product_id": "WIN_10620385",
+                "name": "Nước Hoa Hồng Simple Soothing Facial Toner Giúp Làm Dịu Da 200ml",
+                "category": "Chăm Sóc Da",
+                "brand": "SIMPLE",
+                "price_vnd": 159100,
+                "stock": 4,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.411040Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.585
+        },
+        {
+          "question": "Da dầu, khoảng 100 nghìn, chọn gì được?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.843
+        }
+      ]
+    },
+    {
+      "id": "shampoo",
+      "turns": [
+        {
+          "question": "Có dầu gội dưới 150 nghìn không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "a8f7c20c-4ff3-4062-82c6-617f62744936",
+            "text": "Dưới 150 nghìn mình có vài lựa chọn, trong đó **Dầu gội cao cấp Romano classic chai 380g (127.600đ)** giá 127 600 ₫ là phù hợp nhất, vừa đủ ngân sách vừa đủ lượng dùng cho thời gian dài. Dầu gội cao cấp Romano classic chai 380g (127.600đ)",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10016873"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10016873",
+                "name": "Dầu gội cao cấp Romano classic chai 380g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "ROMANO",
+                "price_vnd": 127600,
+                "stock": 40,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:33.773402Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.409
+        },
+        {
+          "question": "Tóc t dầu, chọn giúp loại đáng tiền.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.7
+        },
+        {
+          "question": "Có loại nào rẻ hơn mà dung tích tương tự không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "a8f7c20c-4ff3-4062-82c6-617f62744936",
+            "text": "Dưới 150 nghìn, loại **Dầu gội cao cấp Romano classic chai 380g (127.600đ)** là lựa chọn rẻ nhất với dung tích 380 g, phù hợp cho tóc dầu. Nếu muốn tìm giá rẻ hơn, mình cần biết bạn muốn mua bao nhiêu lần hoặc có ưu tiên thương hiệu nào không?",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10016873"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10016873",
+                "name": "Dầu gội cao cấp Romano classic chai 380g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "ROMANO",
+                "price_vnd": 127600,
+                "stock": 40,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:33.773402Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.51
+        }
+      ]
+    },
+    {
+      "id": "drinks",
+      "turns": [
+        {
+          "question": "Có đồ uống nào không quá ngọt dưới 20 nghìn?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 1.816
+        },
+        {
+          "question": "Không lấy nước có ga.",
+          "http_status": 200,
+          "response": {
+            "session_id": "8905c4c0-a2c4-4ba3-85e9-e41066c9e84d",
+            "text": "Bạn có thể chọn Nước ép trái cây thạch Jele Beautie hương berry 125g (14.000đ) hoặc Hồng trà C2 vị đào chai 500ml (8.800đ). Cả hai đều không có ga và giá dưới 20 000 đ.",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [
+              "WIN_10150041",
+              "WIN_10620676"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10150041",
+                "name": "Nước ép trái cây thạch Jele Beautie hương berry 125g",
+                "category": "Nước Ngọt",
+                "brand": "JELE BEAUTIE",
+                "price_vnd": 14000,
+                "stock": 31,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:41.148990Z"
+              },
+              {
+                "product_id": "WIN_10620676",
+                "name": "Hồng trà C2 vị đào chai 500ml",
+                "category": "Nước Ngọt",
+                "brand": "C2",
+                "price_vnd": 8800,
+                "stock": 93,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:40.205394Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.129
+        },
+        {
+          "question": "Loại 1 lít ấy chứ không phải chai nhỏ.",
+          "http_status": 200,
+          "response": {
+            "session_id": "8905c4c0-a2c4-4ba3-85e9-e41066c9e84d",
+            "text": "Bạn muốn loại đồ uống nào 1 lít? Ví dụ nước ép trái cây, nước trái cây, nước khoáng, nước giải khát không ga, hay trà đóng chai?",
+            "model": "openai/gpt-oss-20b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 1.095
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-10T16:48:33.826622+00:00"
+}

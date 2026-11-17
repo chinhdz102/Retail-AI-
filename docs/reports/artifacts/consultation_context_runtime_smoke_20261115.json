@@ -1,0 +1,84 @@
+{
+  "started_utc": "2026-11-15T14:30:23.477833+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 20,
+  "complete": true,
+  "cases": [
+    {
+      "id": "q13",
+      "turns": [
+        {
+          "question": "Em không cần hàng xịn nhất đâu, loại nào đáng tiền là được.",
+          "http_status": 200,
+          "response": {
+            "session_id": "0c85e8ef-afdc-4c8b-b120-edf1db4b7bcc",
+            "text": "Bạn đang muốn tìm sản phẩm thuộc nhóm nào (ví dụ: thực phẩm, mỹ phẩm, đồ gia dụng...)?",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.066
+        }
+      ]
+    },
+    {
+      "id": "q17",
+      "turns": [
+        {
+          "question": "Em thấy hai cái này gần giống nhau, sao giá chênh nhiều thế?",
+          "http_status": 200,
+          "response": {
+            "session_id": "d29aa72b-03ff-46e6-baa1-8fa5b11a4865",
+            "text": "Bạn đang so sánh hai sản phẩm nào? Mình cần biết tên hoặc hình ảnh để giải thích chính xác lý do chênh lệch giá nhé.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.09
+        }
+      ]
+    },
+    {
+      "id": "skin-trial",
+      "turns": [
+        {
+          "question": "Da em khá nhạy cảm, có loại sữa tắm nào dịu nhẹ không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "error_code": "assistant_busy",
+          "seconds": 10.148
+        },
+        {
+          "question": "Mình chưa biết dị ứng thành phần gì, muốn chọn một loại để dùng thử thôi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "error_code": "assistant_busy",
+          "seconds": 1.525
+        },
+        {
+          "question": "Chọn đúng một loại giúp mình, nói cách dùng ngắn thôi, đừng hứa không kích ứng.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "error_code": "assistant_busy",
+          "seconds": 1.722
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T14:32:25.390063+00:00"
+}

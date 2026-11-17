@@ -147,14 +147,20 @@ class ProductSearchResponse(BaseModel):
 class TranscriptionResponse(BaseModel):
     session_id: UUID
     text: str
-    language: LanguageCode = "vi"
+    language: Literal["vi"] = "vi"
     model: str
+    speech_detected: bool
+    rejection_reason: str | None = None
+    quality: dict[str, float] = Field(default_factory=dict)
+    request_id: str = ""
+    pipeline_version: str = ""
+    provider: Literal["groq", "azure"] = "groq"
 
 
 class SynthesizeRequest(BaseModel):
     session_id: UUID
     text: str = Field(min_length=1, max_length=2000)
-    language: LanguageCode = "vi"
+    language: Literal["vi"] = "vi"
 
 
 class SynthesizeTicketResponse(BaseModel):

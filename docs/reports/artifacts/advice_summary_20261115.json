@@ -1,0 +1,1777 @@
+{
+  "reviewer": "assistant qualitative review; not an independent human study",
+  "qualitative_review_is_separate_from_data_checks": true,
+  "runs": [
+    {
+      "artifact": "advice_questions_before_20261115.json",
+      "complete": true,
+      "turns": 35,
+      "http_200": 29,
+      "http_error": 6,
+      "models": {
+        "qwen/qwen3.8-27b": 27,
+        "openai/gpt-oss-120b": 2
+      },
+      "median_seconds_http_200": 0.732,
+      "p95_seconds_http_200": 3.799,
+      "data_integrity_issues": 0,
+      "qualitative_ratings": {
+        "pass": 18,
+        "partial": 8,
+        "fail": 9
+      },
+      "rows": [
+        {
+          "key": "q01:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 101,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi khu vực/mục đích để xác định nhóm hàng."
+          }
+        },
+        {
+          "key": "q02:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 2,
+          "characters": 478,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Chọn được món sáng nhưng dài, suy diễn mức no và chưa phân biệt cách làm nóng."
+          }
+        },
+        {
+          "key": "q03:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502."
+          }
+        },
+        {
+          "key": "q04:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 271,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Gợi hạt nguyên chất cho trẻ khi chưa biết tuổi; chưa chọn được hàng."
+          }
+        },
+        {
+          "key": "q05:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 2,
+          "characters": 410,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Hai phương án quà bị cộng thành giỏ; suy diễn bao bì cao cấp."
+          }
+        },
+        {
+          "key": "q06:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502."
+          }
+        },
+        {
+          "key": "q07:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 4,
+          "characters": 885,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Tự thêm hàng và gán độ bền/khả năng lau bề mặt nhạy cảm cho giấy ăn."
+          }
+        },
+        {
+          "key": "q08:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 536,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Gọi gói phở kèm xốt là một phần xốt riêng; bữa tối không được lập hợp lý."
+          }
+        },
+        {
+          "key": "q09:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 2,
+          "characters": 696,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Câu hỏi bị lặp, đưa danh sách thay vì chọn có lý do cụ thể."
+          }
+        },
+        {
+          "key": "q10:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502."
+          }
+        },
+        {
+          "key": "q11:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 90,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Chưa có ngữ cảnh sản phẩm nên hỏi nhận diện."
+          }
+        },
+        {
+          "key": "q12:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 40,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi sản phẩm đang so sánh, không bịa hàng."
+          }
+        },
+        {
+          "key": "q13:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 71,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi nhóm hàng khi chưa có ngữ cảnh."
+          }
+        },
+        {
+          "key": "q14:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 97,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi tên hai SKU để so sánh."
+          }
+        },
+        {
+          "key": "q15:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 321,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Không bịa hãng giặt sạch hơn, nhưng chưa giúp chọn thực tế."
+          }
+        },
+        {
+          "key": "q16:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 52,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi đối tượng cần so sánh."
+          }
+        },
+        {
+          "key": "q17:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 112,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi hai sản phẩm cụ thể."
+          }
+        },
+        {
+          "key": "q18:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 51,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Không tự chọn sản phẩm khi chưa có ngữ cảnh."
+          }
+        },
+        {
+          "key": "q19:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 42,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi nhóm cần so sánh."
+          }
+        },
+        {
+          "key": "q20:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502."
+          }
+        },
+        {
+          "key": "q21:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502."
+          }
+        },
+        {
+          "key": "q22:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502."
+          }
+        },
+        {
+          "key": "q23:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 502,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Có hàng đúng nhãn không đường nhưng tự đưa thùng/lốc lớn, nhiều lựa chọn."
+          }
+        },
+        {
+          "key": "q24:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 68,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi loại vật dụng khi chưa xác định."
+          }
+        },
+        {
+          "key": "q25:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 80,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Hỏi nhận diện nhưng tự thu hẹp nhóm chăm sóc cá nhân."
+          }
+        },
+        {
+          "key": "q26:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 133,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Không tự đặt vị trí khu kệ chưa xác minh."
+          }
+        },
+        {
+          "key": "q27:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 50,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Hỏi thương hiệu đúng hướng nhưng xưng hô vụng."
+          }
+        },
+        {
+          "key": "q28:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 99,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi nhãn hiệu/bao bì thay vì đoán lần mua cũ."
+          }
+        },
+        {
+          "key": "q29:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 144,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Không bịa vị trí; câu xưng hô còn vụng."
+          }
+        },
+        {
+          "key": "q30:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 46,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi chai một lít của mặt hàng nào."
+          }
+        },
+        {
+          "key": "q31:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 48,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi mặt hàng cần thay thế."
+          }
+        },
+        {
+          "key": "q32:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 96,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Câu hỏi đúng nhưng cách xưng hô thiếu tự nhiên."
+          }
+        },
+        {
+          "key": "q33:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 62,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi nhóm hàng cần mua."
+          }
+        },
+        {
+          "key": "q34:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 55,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi sản phẩm dùng chung nào."
+          }
+        },
+        {
+          "key": "q35:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 69,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Không suy màu bao bì thành SKU đã mua trước."
+          }
+        }
+      ]
+    },
+    {
+      "artifact": "advice_long_before_20261115.json",
+      "complete": true,
+      "turns": 28,
+      "http_200": 10,
+      "http_error": 18,
+      "models": {
+        "qwen/qwen3.8-27b": 7,
+        "openai/gpt-oss-120b": 3
+      },
+      "median_seconds_http_200": 3.2305,
+      "p95_seconds_http_200": 5.899,
+      "data_integrity_issues": 0,
+      "qualitative_ratings": {
+        "fail": 24,
+        "partial": 4
+      },
+      "rows": [
+        {
+          "key": "long-dinner:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 5,
+          "characters": 890,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Tự thêm trứng, hành, nước mắm; dài và lặp."
+          }
+        },
+        {
+          "key": "long-dinner:2",
+          "data_issues": [],
+          "answered": true,
+          "cards": 5,
+          "characters": 849,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Lặp nguyên giỏ và lời tư vấn thay vì xử lý chỉnh ý gọn."
+          }
+        },
+        {
+          "key": "long-dinner:3",
+          "data_issues": [],
+          "answered": true,
+          "cards": 5,
+          "characters": 849,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Tiếp tục lặp nguyên giỏ năm món."
+          }
+        },
+        {
+          "key": "long-dinner:4",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:5",
+          "data_issues": [],
+          "answered": true,
+          "cards": 2,
+          "characters": 312,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Thịt nạc/rau đúng hướng, thiếu bối cảnh khẩu phần."
+          }
+        },
+        {
+          "key": "long-dinner:6",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:7",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:8",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:9",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:10",
+          "data_issues": [],
+          "answered": true,
+          "cards": 1,
+          "characters": 348,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Lốc trà không đường, chưa phân biệt nhu cầu chai riêng và bằng chứng không ga."
+          }
+        },
+        {
+          "key": "long-dinner:11",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 227,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Không có SKU chai riêng dưới ngân sách nhưng lời mời tìm thêm chung chung."
+          }
+        },
+        {
+          "key": "long-dinner:12",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 202,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Nêu thiếu đúng cỡ nhưng gợi chai nhỏ trước khi khách cho phép."
+          }
+        },
+        {
+          "key": "long-dinner:13",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:14",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:15",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:16",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 112,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Không chốt/nhắc lại được phương án sau chuỗi lỗi."
+          }
+        },
+        {
+          "key": "long-household:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:2",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:3",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:4",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:5",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:6",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:7",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:8",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:9",
+          "data_issues": [],
+          "answered": true,
+          "cards": 1,
+          "characters": 254,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Suy hương Lily là nhẹ và phù hợp nhà nuôi mèo."
+          }
+        },
+        {
+          "key": "long-household:10",
+          "data_issues": [],
+          "answered": true,
+          "cards": 1,
+          "characters": 435,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Vẫn khuyên lau khi mèo trong phòng và gán mùi nhẹ không có bằng chứng."
+          }
+        },
+        {
+          "key": "long-household:11",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:12",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        }
+      ]
+    },
+    {
+      "artifact": "advice_full_revision2_20261115.json",
+      "complete": true,
+      "turns": 63,
+      "http_200": 49,
+      "http_error": 14,
+      "models": {
+        "qwen/qwen3.8-27b": 33,
+        "openai/gpt-oss-120b": 16
+      },
+      "median_seconds_http_200": 2.718,
+      "p95_seconds_http_200": 5.981,
+      "data_integrity_issues": 0,
+      "qualitative_ratings": {
+        "pass": 20,
+        "fail": 26,
+        "partial": 17
+      },
+      "rows": [
+        {
+          "key": "q01:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 112,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi khu vực/mục đích để xác định nhóm hàng."
+          }
+        },
+        {
+          "key": "q02:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 2,
+          "characters": 464,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Nói bánh bao mua về ăn ngay không cần chế biến dù thiếu chứng cứ ăn liền."
+          }
+        },
+        {
+          "key": "q03:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502."
+          }
+        },
+        {
+          "key": "q04:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 80,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi tuổi trước khi chọn đồ ăn cho trẻ."
+          }
+        },
+        {
+          "key": "q05:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502."
+          }
+        },
+        {
+          "key": "q06:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 552,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Hàng tiện dùng hợp chủ đề nhưng vẫn dài và suy cách làm nóng bánh bao."
+          }
+        },
+        {
+          "key": "q07:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 501,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Gán nước lau nhà dùng lau kính, chưa có nhãn chứng minh."
+          }
+        },
+        {
+          "key": "q08:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 374,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Chọn xương heo rồi nói là thịt để xé/xào nhanh."
+          }
+        },
+        {
+          "key": "q09:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 582,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Có SKU cụ thể, vẫn tự gán giảm ngứa và đưa nhiều dòng điều trị không được hỏi."
+          }
+        },
+        {
+          "key": "q10:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 92,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi số người trước khi lập đồ ăn cả tuần."
+          }
+        },
+        {
+          "key": "q11:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 88,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Chưa có ngữ cảnh sản phẩm nên hỏi nhận diện."
+          }
+        },
+        {
+          "key": "q12:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 58,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi sản phẩm đang so sánh, không bịa hàng."
+          }
+        },
+        {
+          "key": "q13:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 60,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi nhóm hàng khi chưa có ngữ cảnh."
+          }
+        },
+        {
+          "key": "q14:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 43,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi tên hai SKU để so sánh."
+          }
+        },
+        {
+          "key": "q15:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502."
+          }
+        },
+        {
+          "key": "q16:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 106,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi đối tượng cần so sánh."
+          }
+        },
+        {
+          "key": "q17:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 93,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi hai sản phẩm cụ thể."
+          }
+        },
+        {
+          "key": "q18:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 90,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Không tự chọn sản phẩm khi chưa có ngữ cảnh."
+          }
+        },
+        {
+          "key": "q19:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 50,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi nhóm cần so sánh."
+          }
+        },
+        {
+          "key": "q20:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 369,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Tự đổi sang da bé, hỏi nhiều chi tiết và dạng thanh/bột không rõ."
+          }
+        },
+        {
+          "key": "q21:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 147,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Không bịa ít ngọt nhưng hỏi dồn loại bánh và mức đường; chưa giúp chọn."
+          }
+        },
+        {
+          "key": "q22:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502."
+          }
+        },
+        {
+          "key": "q23:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 400,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Có hàng đúng nhãn không đường nhưng tự đưa thùng/lốc lớn, nhiều lựa chọn."
+          }
+        },
+        {
+          "key": "q24:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 95,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi loại vật dụng khi chưa xác định."
+          }
+        },
+        {
+          "key": "q25:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 57,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Hỏi nhận diện nhưng tự thu hẹp nhóm chăm sóc cá nhân."
+          }
+        },
+        {
+          "key": "q26:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 254,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Không bịa kệ nhưng tự upsell thêm nước giặt và lặp lời mời."
+          }
+        },
+        {
+          "key": "q27:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 273,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Thừa đoạn hướng dẫn chọn hộp màu xanh trước câu hỏi thương hiệu."
+          }
+        },
+        {
+          "key": "q28:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 166,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Hỏi nhận diện đúng nhưng hứa kiểm tra tồn chính xác khi chỉ có snapshot."
+          }
+        },
+        {
+          "key": "q29:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 82,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Hỏi cửa hàng nhưng hứa chỉ vị trí chưa có công cụ/bằng chứng."
+          }
+        },
+        {
+          "key": "q30:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 48,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi chai một lít của mặt hàng nào."
+          }
+        },
+        {
+          "key": "q31:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 56,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi mặt hàng cần thay thế."
+          }
+        },
+        {
+          "key": "q32:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 118,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi tên/loại sản phẩm, không đoán quảng cáo TikTok."
+          }
+        },
+        {
+          "key": "q33:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 68,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi nhóm hàng cần mua."
+          }
+        },
+        {
+          "key": "q34:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 100,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Hỏi sản phẩm dùng chung nào."
+          }
+        },
+        {
+          "key": "q35:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 64,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Không suy màu bao bì thành SKU đã mua trước."
+          }
+        },
+        {
+          "key": "long-dinner:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:2",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 466,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Gọi xương heo là thịt mềm để cắt lát/xào, sai dạng hàng."
+          }
+        },
+        {
+          "key": "long-dinner:3",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:4",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:5",
+          "data_issues": [],
+          "answered": true,
+          "cards": 2,
+          "characters": 228,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Đúng thịt nạc/rau, thiếu tổng khi đang lập bữa."
+          }
+        },
+        {
+          "key": "long-dinner:6",
+          "data_issues": [],
+          "answered": true,
+          "cards": 2,
+          "characters": 502,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Giữ ngân sách, lượng và tổng đúng; còn dài và tư vấn rau mầm sống thiếu cân nhắc."
+          }
+        },
+        {
+          "key": "long-dinner:7",
+          "data_issues": [],
+          "answered": true,
+          "cards": 2,
+          "characters": 260,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Không thêm gia vị nhưng thiếu tổng phương án."
+          }
+        },
+        {
+          "key": "long-dinner:8",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:9",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:10",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 124,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Báo không có trà không đường dù bản cũ có lốc; lọc cứng thiếu bằng chứng không ga."
+          }
+        },
+        {
+          "key": "long-dinner:11",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 194,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Không có chai riêng dưới giá nhưng tiếp tục nói kiểu danh sách."
+          }
+        },
+        {
+          "key": "long-dinner:12",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 173,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Không tự đổi chai nhỏ nhưng dùng lời văn truy xuất, thiếu hướng chọn hữu ích."
+          }
+        },
+        {
+          "key": "long-dinner:13",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 186,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Không thực sự so sánh lựa chọn gần nhất mà hỏi xin tìm tiếp."
+          }
+        },
+        {
+          "key": "long-dinner:14",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:15",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-dinner:16",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 86,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Nói đã chọn chai dù các lượt chọn trước bị lỗi; không có SKU cuối."
+          }
+        },
+        {
+          "key": "long-household:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 293,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Chỉ gợi tiêu chí, chưa giúp chọn hàng và đẩy sang nhân viên quầy."
+          }
+        },
+        {
+          "key": "long-household:2",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:3",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 305,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Hiểu không quảng cáo công dụng thành điều kiện của sản phẩm."
+          }
+        },
+        {
+          "key": "long-household:4",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 203,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Báo thiếu dầu gội >=400ml dù có Thái Dương480ml114900; trạng thái/filter sai."
+          }
+        },
+        {
+          "key": "long-household:5",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:6",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 229,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Giữ sai tiêu chí không quảng cáo và bỏ cuộc."
+          }
+        },
+        {
+          "key": "long-household:7",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 180,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Không chọn được hàng sau khi cho phép chai nhỏ dưới100k."
+          }
+        },
+        {
+          "key": "long-household:8",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 180,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Không chốt được dù còn hàng chai nhỏ phù hợp mức giá."
+          }
+        },
+        {
+          "key": "long-household:9",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được tư vấn."
+          }
+        },
+        {
+          "key": "long-household:10",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 203,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Tách mèo khỏi khu lau, làm theo nhãn, thông thoáng và đợi khô."
+          }
+        },
+        {
+          "key": "long-household:11",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 228,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Giữ mèo khỏi khu lau nhưng tự khuyên giấm/baking soda chưa biết bề mặt."
+          }
+        },
+        {
+          "key": "long-household:12",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 307,
+          "qualitative_review": {
+            "rating": "pass",
+            "reason": "Giữ tư vấn chung, không bán thêm và tách mèo khỏi khu lau."
+          }
+        }
+      ]
+    },
+    {
+      "artifact": "advice_hotfix_questions_20261115.json",
+      "complete": true,
+      "turns": 8,
+      "http_200": 2,
+      "http_error": 6,
+      "models": {
+        "qwen/qwen3.8-27b": 1,
+        "openai/gpt-oss-120b": 1
+      },
+      "median_seconds_http_200": 4.784,
+      "p95_seconds_http_200": 5.015,
+      "data_integrity_issues": 0,
+      "qualitative_ratings": {
+        "partial": 1,
+        "fail": 7
+      },
+      "rows": [
+        {
+          "key": "q02:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 515,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Có món sáng nhưng vẫn ba lựa chọn và phần mô tả mức no chưa rõ cơ sở."
+          }
+        },
+        {
+          "key": "q03:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+          }
+        },
+        {
+          "key": "q05:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+          }
+        },
+        {
+          "key": "q08:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+          }
+        },
+        {
+          "key": "q09:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+          }
+        },
+        {
+          "key": "q20:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+          }
+        },
+        {
+          "key": "q22:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502 trong đợt quota giảm; không thể coi là tư vấn đạt."
+          }
+        },
+        {
+          "key": "q27:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 1,
+          "characters": 120,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Đoán sữa đặc từ mô tả sữa hộp xanh; chưa xác định loại sữa khách muốn."
+          }
+        }
+      ]
+    },
+    {
+      "artifact": "advice_hotfix_long_20261115.json",
+      "complete": false,
+      "turns": 6,
+      "http_200": 3,
+      "http_error": 3,
+      "models": {
+        "openai/gpt-oss-120b": 3
+      },
+      "median_seconds_http_200": 5.162,
+      "p95_seconds_http_200": 7.632,
+      "data_integrity_issues": 0,
+      "qualitative_ratings": {},
+      "rows": [
+        {
+          "key": "long-dinner:1",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 465,
+          "qualitative_review": null
+        },
+        {
+          "key": "long-dinner:2",
+          "data_issues": [],
+          "answered": true,
+          "cards": 3,
+          "characters": 323,
+          "qualitative_review": null
+        },
+        {
+          "key": "long-dinner:3",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": null
+        },
+        {
+          "key": "long-dinner:4",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": null
+        },
+        {
+          "key": "long-dinner:5",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 109,
+          "qualitative_review": null
+        },
+        {
+          "key": "long-dinner:6",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": null
+        }
+      ]
+    },
+    {
+      "artifact": "advice_household_final_20261115.json",
+      "complete": true,
+      "turns": 12,
+      "http_200": 4,
+      "http_error": 8,
+      "models": {
+        "openai/gpt-oss-120b": 4
+      },
+      "median_seconds_http_200": 4.5105,
+      "p95_seconds_http_200": 6.879,
+      "data_integrity_issues": 0,
+      "qualitative_ratings": {
+        "fail": 10,
+        "partial": 2
+      },
+      "rows": [
+        {
+          "key": "long-household:1",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được câu tư vấn."
+          }
+        },
+        {
+          "key": "long-household:2",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được câu tư vấn."
+          }
+        },
+        {
+          "key": "long-household:3",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được câu tư vấn."
+          }
+        },
+        {
+          "key": "long-household:4",
+          "data_issues": [],
+          "answered": true,
+          "cards": 1,
+          "characters": 238,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Đúng480ml/114900 nhưng tự gán phù hợp tóc bết dầu trong advice; lý do vẫn đọc thông số."
+          }
+        },
+        {
+          "key": "long-household:5",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được câu tư vấn."
+          }
+        },
+        {
+          "key": "long-household:6",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 211,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Giữsize/budget nhưng hỏi mở rộng chung chung, chưa kiểm tra được công dụng tóc dầu."
+          }
+        },
+        {
+          "key": "long-household:7",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được câu tư vấn."
+          }
+        },
+        {
+          "key": "long-household:8",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 227,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "Sau khi nới dung tích vẫn bỏ cuộc và nói hệ thống không có; chưa chốt hàng."
+          }
+        },
+        {
+          "key": "long-household:9",
+          "data_issues": [],
+          "answered": true,
+          "cards": 0,
+          "characters": 311,
+          "qualitative_review": {
+            "rating": "partial",
+            "reason": "Tư vấn đọc nhãn có ích nhưng hỏi dung tích không giải quyết tiêu chí an toàn quanh mèo."
+          }
+        },
+        {
+          "key": "long-household:10",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được câu tư vấn."
+          }
+        },
+        {
+          "key": "long-household:11",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được câu tư vấn."
+          }
+        },
+        {
+          "key": "long-household:12",
+          "data_issues": [
+            "http_error"
+          ],
+          "answered": false,
+          "qualitative_review": {
+            "rating": "fail",
+            "reason": "HTTP 502, không trả được câu tư vấn."
+          }
+        }
+      ]
+    }
+  ]
+}

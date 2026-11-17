@@ -1,0 +1,41 @@
+{
+  "started_utc": "2026-11-15T07:47:10.365067+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 15.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "owned-food",
+      "turns": [
+        {
+          "question": "Hai người ăn cơm tối, nhà có gạo và dầu ăn rồi. Chọn thịt heo với một loại rau, tổng tối đa 120 nghìn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 7.695
+        },
+        {
+          "question": "Không lấy thịt xay, chọn miếng thịt nạc để xào và rau luộc thôi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.537
+        },
+        {
+          "question": "Thịt chỉ mua 300 gram, tính tổng hai món giúp mình.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 6.532
+        },
+        {
+          "question": "Giờ bỏ giới hạn tiền, vẫn chỉ cần đúng hai món ăn với cơm. Chọn chốt giúp mình, đừng giới thiệu thêm.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.339
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T07:48:36.359118+00:00"
+}

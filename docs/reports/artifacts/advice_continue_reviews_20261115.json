@@ -1,0 +1,138 @@
+{
+  "advice_continue_before_20261115.json": {
+    "q08:1": {
+      "rating": "partial",
+      "reason": "Có giỏ/tổng đúng nhưng tự mua gạo và giải thích khẩu phần thiếu cơ sở."
+    },
+    "q09:1": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "dinner:1": {
+      "rating": "partial",
+      "reason": "Có thịt và rau, cách nấu còn chung chung, tự mời thêm trứng."
+    },
+    "dinner:2": {
+      "rating": "fail",
+      "reason": "Đã có gạo bị diễn đạt thành không cần gạo; chưa chốt cách nấu rõ."
+    },
+    "dinner:3": {
+      "rating": "fail",
+      "reason": "Lặp giỏ, dài dòng, quay lại hỏi chọn món và nói không cần gạo."
+    }
+  },
+  "advice_continue_after_20261115.json": {
+    "q09:1": {
+      "rating": "fail",
+      "reason": "Tự gán dùng ổn cho tóc thường; lặp tên rút gọn và giá."
+    },
+    "long-dinner:1": {
+      "rating": "partial",
+      "reason": "Không mua lại gạo, giá/tổng đúng; khẩu phần và cách chế biến còn chưa thuyết phục."
+    },
+    "long-dinner:2": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:3": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:4": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:5": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:6": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:7": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:8": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:9": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:10": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:11": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:12": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:13": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:14": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:15": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "long-dinner:16": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    }
+  },
+  "advice_continue_final_20261115.json": {
+    "owned-food:1": {
+      "rating": "partial",
+      "reason": "Giữ đúng hai hàng cần mua; suy tỷ lệ nạc mỡ, intro còn dài."
+    },
+    "owned-food:2": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "owned-food:3": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "owned-food:4": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "one-shampoo:1": {
+      "rating": "fail",
+      "reason": "HTTP lỗi; không có câu tư vấn để đánh giá."
+    },
+    "one-shampoo:2": {
+      "rating": "fail",
+      "reason": "Gọi 180g là dung tích; chỉ đọc thông số và tiền, chưa nói điểm cân nhắc."
+    },
+    "one-shampoo:3": {
+      "rating": "partial",
+      "reason": "Không upsell, có hướng chọn chung; tránh thành phần dưỡng ẩm quá tuyệt đối."
+    }
+  },
+  "advice_continue_shipping_20261115.json": {
+    "dinner:1": {
+      "rating": "fail",
+      "reason": "Gạo lức đỏ bị gọi cơm trắng; tự thêm nước mắm, không có rau."
+    },
+    "dinner:2": {
+      "rating": "partial",
+      "reason": "Bỏ gạo, có thịt và rau; vẫn tự thêm chai nước mắm và thời gian nấu thiếu cơ sở."
+    },
+    "dinner:3": {
+      "rating": "partial",
+      "reason": "Tổng đúng và không hỏi lại; lặp giỏ và tự hứa thời gian nấu."
+    }
+  }
+}

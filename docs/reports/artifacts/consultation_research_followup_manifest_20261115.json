@@ -1,0 +1,80 @@
+{
+  "created_utc": "2026-11-15T14:48:43.644773+00:00",
+  "head": "38a9efb60e7919bcb2b95da5d5493076449591f7",
+  "working_tree_changes": true,
+  "purpose": "Research comparison and follow-up evidence snapshot; no new live LLM/physical microphone run in this research step.",
+  "supersedes_for_followup": "consultation_customer_review_manifest_20261115.json",
+  "prior_manifests_preserved_as_historical": true,
+  "catalog": {
+    "accepted_products": 3081,
+    "quarantined_source_rows": 18,
+    "source_rows": 3099
+  },
+  "existing_test_artifacts": {
+    "backend": {
+      "tests": 890,
+      "failures": 0,
+      "errors": 0,
+      "artifact": "backend_context_retrieval_20261115.xml"
+    },
+    "frontend": {
+      "tests": 66,
+      "passed": 66,
+      "artifact": "apps/kiosk-airi/evaluation/frontend-context-retrieval-20261115.json"
+    },
+    "note": "Counts verified from saved XML/JSON. Tests were run in the preceding implementation audit, not rerun for documentation edits."
+  },
+  "external_repository": {
+    "url": "https://github.com/NVIDIA-AI-Blueprints/retail-shopping-assistant",
+    "commit": "3eca0719c130ecd840ece67b8f285b15a795312b",
+    "commit_date_utc": "2026-11-04T20:50:50Z",
+    "read_paths": [
+      "README.md",
+      "docs/ASSISTANT_ARCHITECTURE.md",
+      "docs/CATALOG_ARCHITECTURE.md",
+      "tests/README.md",
+      "catalog_retriever/src/retriever.py"
+    ]
+  },
+  "files": {
+    "backend/services/consultation.py": "93d8354056acd55910a30f3fa81ddcc94bdb15542bc5df4eb95db6508cc1ba07",
+    "backend/services/product_terms.py": "4965e573de5ad1548cc275b1d7b4b772e10fb296708d15c4ac92ef7ce8536b91",
+    "backend/services/reference_guidance.py": "caf815cf483591869152816c2aa921287fef76a881df573b01e0f2fd96650da1",
+    "backend/services/product_prices.py": "6157fb4594b3d6d11b74257ceeac0fa39d0c4f9b7f26c2b0f1ecd337831c4462",
+    "backend/services/groq.py": "b2c8353b2bf6d124c514d8e560489176fea9481ca7703fb6a916dbf1e003b655",
+    "backend/services/retail_tools.py": "62ee51b792cc99cc83c16358d5b3ec084589c74eea4b80c2a7dcad8d3ae94023",
+    "backend/api/main.py": "41085dc74f2246bc0e62f2192cb186effafb58315796edcbfef6935a4aee74bd",
+    "backend/products/catalog.py": "e82e27a693f6b1441092e93407307a75237a8198fc3159f1825b9f9192b7c296",
+    "backend/products/snapshot_repository.py": "05541de642314dec6211434ea44f92453accb7f35de83492a10bb40c083c8259",
+    "data/winmart_products.json": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "data/vietnamese_product_terms.json": "7662f1bb92cdfbf5affb7832bde3d3b306a44956d01194a574299f099ecced51",
+    "data/retail_reference_guidance.json": "b2e820cab936f14f2fe56cd204981053b1a05b338811fc1e1637456e99c6c552",
+    "tests/test_consultation_customer_review.py": "c6217a2a8abd84ca3c9a69f0a608784a8a6c0239bbd369d669ef6f7641b4e928",
+    "evaluation/audit_live_consultation.py": "382612fab857072a552292e939d516168be66147f115c377aafd8e7e9309f605",
+    "apps/kiosk-airi/src/App.vue": "b49cae86988baa140bc9deb67d1bc8b7eda03646ffb24ce9909309fb2407f300",
+    "apps/kiosk-airi/src/voice-neural.ts": "028e5a600af596623ae581cc7294550cd6eb86e5f5781125f5cd3e8b5f7c424a",
+    "apps/kiosk-airi/src/voice-preview.ts": "98cdbd23b8f196e517d69b7174e0b1d15e1b561a4286bffc9262794cdbedce35",
+    "backend/services/azure_stt.py": "e811bc3a0365f4d439e8299afe3e26685d44384e02e20b634d8c3a5c56d05174",
+    "backend/services/azure_speech.py": "5e6f50bc80c542e9239b88d35b2cd936a9e9d9bc75d3377dd96739cdb7389eb6",
+    "docs/voice-pipeline.md": "89eac6f8e7b0b8f1a80b4f8f69e3e46da4566f785187b316abd792179679f178",
+    "docs/product-consultation-grounding.md": "b2f5caacefa4e855ef16a0c7b43588de2ae691b65f6ccb7a6f8372b402e3e893",
+    "docs/reports/consultation_research_followup_20261115.md": "d891f9bbfadaf57ed3990c3ecd26187169af943f264b79fbf72e92f139ab603d",
+    "docs/reports/architecture_research_comparison_20261115.md": "982820093adf639a873f11059d42f1819011bf62104bf2935fd723b31df4cddb",
+    "docs/reports/artifacts/backend_context_retrieval_20261115.xml": "eb1369f88ac98f6a9df8d4d05fe88d0678957a986a29492e137bfe2075d4dcb5",
+    "docs/reports/artifacts/consultation_context_retrieval_http_20261115.json": "31a09a8cb2613d85cfe6c3779d70a1737c3c339765247e53375499e7676cd22b",
+    "docs/reports/artifacts/consultation_context_retrieval_final_http_20261115.json": "49e5ba2421679bfb6f30a1ef7fdea910f1c3f3c880a43360d78d0e9554093027",
+    "docs/reports/artifacts/consultation_context_runtime_smoke_20261115.json": "fb2d75f9d37111ecf247d28cf4c76e777fc77a0dc19498386032ec2055f9254b",
+    "docs/reports/artifacts/consultation_skin_context_final_trace_20261115.json": "3d99b0a9e452476e0f8eb526b6805a2710638e96bf6bfa3d5f986b84c73999a8",
+    "docs/reports/artifacts/consultation_meat_context_trace_20261115.json": "d8c9ed0f3f838eb0f3718d216da92927dba0392a3b031396ee3dd61d62d502d7",
+    "docs/reports/artifacts/consultation_meat_context_accented_feedback_20261115.json": "f0ead89b1d8d0a1203c35b32e94970a933dbc34dcce87bde323ee8c192939f2b",
+    "docs/reports/artifacts/stt_trace_context_retrieval_20261115.json": "b93388aee7e8d5b1dbe896047c65661092ab8746935288b5c7d29e55d113ab12",
+    "docs/reports/artifacts/voice_latency_context_retrieval_20261115.json": "903e350bb3f55df22ef8535be9971e4c4ee96a0e243cb66d2bea1cbc8ee35430",
+    "docs/reports/artifacts/voice_browser_research_20261115.json": "9b0eef816c739685cdfc2d462ef0eba13bb87fe376df45f6062583c86a22e53d",
+    "apps/kiosk-airi/evaluation/frontend-context-retrieval-20261115.json": "809b977da7d3e074895152a71870c2ed7496f1749c78c9f26304695090317004"
+  },
+  "acceptance": {
+    "consultation_human_level": false,
+    "physical_microphone_verified": false,
+    "proposed_architecture_implemented": false
+  }
+}

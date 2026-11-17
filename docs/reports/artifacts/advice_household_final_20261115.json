@@ -1,0 +1,158 @@
+{
+  "started_utc": "2026-11-15T05:28:56.639466+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 8.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "long-household",
+      "turns": [
+        {
+          "question": "Mình cần dầu gội cho người lớn, dưới 150 nghìn, tóc hay bết dầu.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.98
+        },
+        {
+          "question": "Không cần quảng cáo công dụng, chọn một loại đáng tiền và nói điểm cần cân nhắc.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.131
+        },
+        {
+          "question": "Chai nhỏ quá, có loại tối thiểu 400ml vẫn trong ngân sách không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.625
+        },
+        {
+          "question": "Không lấy gói lẻ, chỉ chai hoặc túi từ 400ml trở lên.",
+          "http_status": 200,
+          "response": {
+            "session_id": "de2a32a6-ce3f-4006-bb8a-06f98a12155b",
+            "text": "Mình chọn loại này vì chai 480 ml, giá dưới 150 nghìn, phù hợp với tóc bết dầu và đáp ứng yêu cầu dung tích tối thiểu.\nDầu gội dược liệu Thái Dương 3 hương hoa chai 480ml (114.900đ): đủ 480ml, giá 114.900, đáp ứng chai ≥400ml và ngân sách",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "WIN_10170560"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "WIN_10170560",
+                "name": "Dầu gội dược liệu Thái Dương 3 hương hoa chai 480ml",
+                "category": "Chăm Sóc Tóc",
+                "brand": "THÁI DƯƠNG",
+                "price_vnd": 114900,
+                "stock": 14,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.396001Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 6.879
+        },
+        {
+          "question": "Đắt quá, đổi ngân sách xuống dưới 100 nghìn nhé.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.208
+        },
+        {
+          "question": "Nếu không đủ tiêu chí thì nói đúng điều còn thiếu, đừng tự đổi sang chai nhỏ.",
+          "http_status": 200,
+          "response": {
+            "session_id": "de2a32a6-ce3f-4006-bb8a-06f98a12155b",
+            "text": "Hiện không có dầu gội nào đáp ứng đồng thời cả ba yêu cầu: dung tích ≥400ml, giá <100.000 đ và phù hợp tóc bết dầu. Bạn có muốn điều chỉnh tiêu chí nào (ví dụ giảm dung tích tối thiểu hoặc tăng ngân sách) không?",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 2.577
+        },
+        {
+          "question": "Thôi cho phép chai nhỏ hơn, vẫn giữ dưới 100 nghìn và không lấy gói lẻ.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.653
+        },
+        {
+          "question": "Chọn chốt một loại giúp mình.",
+          "http_status": 200,
+          "response": {
+            "session_id": "de2a32a6-ce3f-4006-bb8a-06f98a12155b",
+            "text": "Hiện hệ thống không có dầu gội nào đáp ứng các tiêu chí: giá dưới 100.000 đ, không lấy gói lẻ và dung tích bất kỳ (có thể nhỏ hơn 400 ml). Bạn có muốn mở rộng tiêu chí về giá hoặc thương hiệu để mình tìm lựa chọn phù hợp không?",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.794
+        },
+        {
+          "question": "Giờ hỏi chuyện khác: nhà có mèo, cần nước lau sàn không có mùi nồng, tầm 80 nghìn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "de2a32a6-ce3f-4006-bb8a-06f98a12155b",
+            "text": "Bạn nên tìm nước lau sàn có ghi \"không mùi\" hoặc \"hương nhẹ\" trên nhãn, đồng thời xem phần thành phần để tránh hương liệu mạnh. Chọn dạng chai hoặc túi có dung tích phù hợp (ví dụ 500 ml‑1 l) và giá dưới 80.000 đ để phù hợp ngân sách.\nBạn muốn dung tích tối thiểu bao nhiêu cho nước lau sàn (ví dụ 500 ml, 1 l)?",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.227
+        },
+        {
+          "question": "Có thể dùng lúc mèo đang đi lại trong phòng không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.148
+        },
+        {
+          "question": "Vậy nếu chưa xác định được an toàn thì mình nên vệ sinh như nào trước?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.935
+        },
+        {
+          "question": "Mình chỉ cần cách chọn và cách dùng chung, không cần mua thêm sản phẩm.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.867
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T05:31:25.081502+00:00"
+}

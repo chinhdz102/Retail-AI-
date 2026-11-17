@@ -1,0 +1,104 @@
+{
+  "started_utc": "2026-11-10T18:05:15.212794+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 25.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "hotpot",
+      "turns": [
+        {
+          "question": "Mua thịt về ăn lẩu cho 4 người thì chọn gì?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.727
+        },
+        {
+          "question": "Thịt bò bình thường hoặc ba chỉ cũng được, khoảng 200 nghìn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.019
+        },
+        {
+          "question": "Tư vấn giúp t chọn loại nào đi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.018
+        }
+      ]
+    },
+    {
+      "id": "acne",
+      "turns": [
+        {
+          "question": "Có loại nào điều trị mụn không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.009
+        },
+        {
+          "question": "Tư vấn cho t với.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.016
+        },
+        {
+          "question": "Da dầu, khoảng 100 nghìn, chọn gì được?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.016
+        }
+      ]
+    },
+    {
+      "id": "shampoo",
+      "turns": [
+        {
+          "question": "Có dầu gội dưới 150 nghìn không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.01
+        },
+        {
+          "question": "Tóc t dầu, chọn giúp loại đáng tiền.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.394
+        },
+        {
+          "question": "Có loại nào rẻ hơn mà dung tích tương tự không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.017
+        }
+      ]
+    },
+    {
+      "id": "drinks",
+      "turns": [
+        {
+          "question": "Có đồ uống nào không quá ngọt dưới 20 nghìn?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.01
+        },
+        {
+          "question": "Không lấy nước có ga.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.017
+        },
+        {
+          "question": "Loại 1 lít ấy chứ không phải chai nhỏ.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.017
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-10T18:10:21.997621+00:00"
+}

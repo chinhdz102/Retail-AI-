@@ -9,7 +9,8 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_version: str = "0.1.0"
     database_url: str = "postgresql+asyncpg://retail:retail@localhost:5432/retail"
-    catalog_repository: Literal["demo", "postgres"] = "demo"
+    catalog_repository: Literal["demo", "postgres", "snapshot"] = "demo"
+    catalog_snapshot_path: str = "data/winmart_products.json"
     redis_url: str = "redis://localhost:6379/0"
     session_ttl_seconds: int = 1800
 
@@ -18,9 +19,16 @@ class Settings(BaseSettings):
     groq_model: str = "qwen/qwen3.8-27b"
     groq_fallback_model: str = "openai/gpt-oss-120b"
     groq_fallback_model_2: str = "openai/gpt-oss-20b"
-    groq_stt_model: str = "whisper-large-v3-turbo"
-    groq_stt_fallback_model: str = "whisper-large-v3"
     groq_timeout_seconds: float = 45.0
+    groq_strict_outputs: bool = False
+    groq_api_key_fallback_1: SecretStr = SecretStr("")
+    groq_api_key_fallback_2: SecretStr = SecretStr("")
+    groq_api_key_fallback_3: SecretStr = SecretStr("")
+    groq_api_key_fallback_4: SecretStr = SecretStr("")
+    groq_api_key_fallback_5: SecretStr = SecretStr("")
+    whisper_timeout_seconds: float = 25.0
+    stt_provider: Literal["groq", "azure"] = "groq"
+    stt_debug_capture: bool = False
 
     azure_speech_key: SecretStr = SecretStr("")
     azure_speech_region: str = ""
@@ -34,10 +42,6 @@ class Settings(BaseSettings):
     elevenlabs_vi_voice_name: str = "Giang - Northern female Narrator"
     elevenlabs_vi_voice_id: str = ""
     elevenlabs_vi_fallback_voice_id: str = "EXAVITQu4vr4xnSDxMaL"
-    elevenlabs_en_voice_name: str = "Sarah - Mature, Reassuring, Confident"
-    elevenlabs_en_voice_id: str = "EXAVITQu4vr4xnSDxMaL"
-    elevenlabs_zh_voice_name: str = "River - Relaxed, Neutral, Informative"
-    elevenlabs_zh_voice_id: str = "SAz9YHcvj6GT2YYXdXww"
     elevenlabs_timeout_seconds: float = 45.0
 
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"

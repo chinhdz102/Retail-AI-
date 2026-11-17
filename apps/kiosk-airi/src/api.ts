@@ -35,7 +35,7 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000):
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
-      signal: controller.signal,
+      signal: init?.signal ? AbortSignal.any([controller.signal, init.signal]) : controller.signal,
       headers: {
         Accept: 'application/json',
         ...init?.headers,
@@ -43,12 +43,26 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000):
     })
 
     if (!response.ok) {
-      let detail = `Request failed (${response.status})`
+      let detail = 'Chưa thực hiện được yêu cầu. Bạn thử lại nhé.'
+      let errorCode: string | undefined
       try {
-        const body = await response.json() as { detail?: string }
-        detail = body.detail ?? detail
+        const body = await response.json() as { detail?: string | { code?: string; message?: string } }
+        if (typeof body.detail === 'string') detail = body.detail
+        else if (body.detail) {
+          errorCode = body.detail.code
+          detail = body.detail.message ?? detail
+        }
       } catch {
         // Keep the status-based message when the server returns no JSON.
+      }
+      if (path === '/agent/respond' && response.status >= 500) {
+        detail = errorCode === 'assistant_busy'
+          ? 'Sky đang tạm hết lượt trả lời. Bạn thử lại sau một lát nhé.'
+          : response.status === 504
+            ? 'Sky đang trả lời lâu hơn dự kiến. Bạn thử lại giúp mình nhé.'
+            : 'Sky chưa hoàn tất câu trả lời. Bạn thử lại giúp mình nhé.'
+      } else if (response.status === 429) {
+        detail = 'Sky đang nhận nhiều yêu cầu. Bạn thử lại sau một lát nhé.'
       }
       throw new ApiError(detail, response.status)
     }
@@ -166,26 +180,38 @@ export function transcribe(
   sessionId: string,
   audio: Blob,
   language: LanguageCode = 'vi',
+  signal?: AbortSignal,
 ): Promise<TranscriptionResponse> {
   const form = new FormData()
   form.append('session_id', sessionId)
   form.append('language', language)
-  form.append('file', audio, 'voice.webm')
+  form.append('file', audio, 'voice.wav')
   return request<TranscriptionResponse>('/audio/transcribe', {
     method: 'POST',
     body: form,
+    signal,
   })
+}
+
+export function prepareVoice(sessionId: string): Promise<{ ready: boolean }> {
+  return request('/audio/prepare', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session_id: sessionId }),
+  }, 6000)
 }
 
 export async function createSynthesisTicket(
   sessionId: string,
   text: string,
   language: LanguageCode = 'vi',
+  signal?: AbortSignal,
 ): Promise<string> {
   const result = await request<{ audio_url: string }>('/audio/synthesize/tickets', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ session_id: sessionId, text, language }),
+    signal,
   })
   return result.audio_url.startsWith('http') ? result.audio_url : `${API_BASE_URL}${result.audio_url}`
 }
