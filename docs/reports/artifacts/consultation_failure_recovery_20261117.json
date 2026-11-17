@@ -1,0 +1,266 @@
+{
+  "commit": "b9f2e63",
+  "method": "Live HTTP to restarted 127.0.0.1:8000; sequential, no audio; full JSON wall time",
+  "rows": [
+    {
+      "group": "fresh",
+      "question": "hello",
+      "status": 200,
+      "http_ms": 7.27,
+      "model": "local-greeting",
+      "text": "Chào bạn! Hôm nay bạn đang cần tìm đồ ăn, đồ uống hay đồ dùng gì để mình tìm giúp?",
+      "grounded_product_ids": [],
+      "products": []
+    },
+    {
+      "group": "fresh",
+      "question": "có mấy loại sữa rửa mặt",
+      "status": 200,
+      "http_ms": 54.72,
+      "model": "deterministic-fast-path",
+      "text": "Bạn tham khảo vài loại này nhé:\nSữa rửa mặt đất sét trắng Senka Perfect Whiteclay 120g (126.000đ).\nSữa rửa mặt Nivea Men Deep Dry And Clean Feel tuýp 100g (50.900đ).\nSữa rửa mặt ngăn ngừa lão hóa Pond's Age Miracle Facial Foam 100g (122.000đ).",
+      "grounded_product_ids": [
+        "TLM_10230785",
+        "TLM_10603750",
+        "TLM_10017501"
+      ],
+      "products": [
+        {
+          "product_id": "TLM_10230785",
+          "name": "Sữa rửa mặt đất sét trắng Senka Perfect Whiteclay 120g",
+          "price_vnd": 126000,
+          "category": "Chăm Sóc Da",
+          "uom": "Tuýp"
+        },
+        {
+          "product_id": "TLM_10603750",
+          "name": "Sữa rửa mặt Nivea Men Deep Dry And Clean Feel tuýp 100g",
+          "price_vnd": 50900,
+          "category": "Chăm Sóc Da",
+          "uom": "Tuýp"
+        },
+        {
+          "product_id": "TLM_10017501",
+          "name": "Sữa rửa mặt ngăn ngừa lão hóa Pond's Age Miracle Facial Foam 100g",
+          "price_vnd": 122000,
+          "category": "Chăm Sóc Da",
+          "uom": "Hộp"
+        }
+      ]
+    },
+    {
+      "group": "fresh",
+      "question": "Có loại sữa tắm nào dịu nhẹ, mùi không nồng không?",
+      "status": 200,
+      "http_ms": 3753.24,
+      "model": "openai/gpt-oss-20b",
+      "text": "Sữa tắm gội toàn thân không cay mắt Johnson's Baby 500ml (185.000đ).\nSữa tắm nước hoa dưỡng da Enchanteur deluxe charming chai 180g (64.800đ).\nSữa tắm BIORÉ MEN khử mùi thơm mát 440ml (107.200đ).",
+      "grounded_product_ids": [
+        "TLM_10017376",
+        "TLM_10017420",
+        "TLM_10162243"
+      ],
+      "products": [
+        {
+          "product_id": "TLM_10017376",
+          "name": "Sữa tắm gội toàn thân không cay mắt Johnson's Baby 500ml",
+          "price_vnd": 185000,
+          "category": "Sữa Tắm - Gội Cho Bé",
+          "uom": "Chai"
+        },
+        {
+          "product_id": "TLM_10017420",
+          "name": "Sữa tắm nước hoa dưỡng da Enchanteur deluxe charming chai 180g",
+          "price_vnd": 64800,
+          "category": "Chăm Sóc Da",
+          "uom": "Chai"
+        },
+        {
+          "product_id": "TLM_10162243",
+          "name": "Sữa tắm BIORÉ MEN khử mùi thơm mát 440ml",
+          "price_vnd": 107200,
+          "category": "Chăm Sóc Da",
+          "uom": "Chai"
+        }
+      ]
+    },
+    {
+      "group": "fresh",
+      "question": "Em đang hạn chế đường, có đồ uống nào phù hợp không?",
+      "status": 200,
+      "http_ms": 5059.19,
+      "model": "openai/gpt-oss-20b",
+      "text": "Lốc 6 chai trà Oolong không đường Tea+ 455ml (60.500đ): Lắc nhẹ trước khi uống để hòa quyện hương vị trà Oolong; không cần thêm đường\nTổ yến nguyên chất chưng sẵn không đường Yến Việt hộp 65ml (47.500đ): Đóng gói 65ml, tiện lợi khi mang đi; không cần thêm đường khi pha trà hoặc uống trực tiếp\nThùng 24 lon nước giải khát Zero Coca Cola không đường 330ml (254.000đ): Thùng 24 lon, mỗi lon 330ml, dễ chia nhỏ cho từng bữa; không cần thêm đường khi uống trực tiếp",
+      "grounded_product_ids": [
+        "TLM_10638663",
+        "TLM_10011787",
+        "TLM_10011651"
+      ],
+      "products": [
+        {
+          "product_id": "TLM_10638663",
+          "name": "Lốc 6 chai trà Oolong không đường Tea+ 455ml",
+          "price_vnd": 60500,
+          "category": "Nước Ngọt",
+          "uom": "Gói 6"
+        },
+        {
+          "product_id": "TLM_10011787",
+          "name": "Tổ yến nguyên chất chưng sẵn không đường Yến Việt hộp 65ml",
+          "price_vnd": 47500,
+          "category": "Nước Ngọt",
+          "uom": "Lọ"
+        },
+        {
+          "product_id": "TLM_10011651",
+          "name": "Thùng 24 lon nước giải khát Zero Coca Cola không đường 330ml",
+          "price_vnd": 254000,
+          "category": "Nước Ngọt",
+          "uom": "Thùng"
+        }
+      ]
+    },
+    {
+      "group": "fresh",
+      "question": "Mua thịt về ăn lẩu thì nên chọn loại nào?",
+      "status": 200,
+      "http_ms": 2778.0,
+      "model": "openai/gpt-oss-20b",
+      "text": "Thịt Thăn bò (399.000đ/kg).\nThịt bò Úc Kiaora xay khay 200g (68.700đ).\nMEATDELI Thịt heo xay chuẩn ngon (S) (141.900đ/kg).",
+      "grounded_product_ids": [
+        "TLM_10053675",
+        "TLM_10282507",
+        "TLM_10617947"
+      ],
+      "products": [
+        {
+          "product_id": "TLM_10053675",
+          "name": "Thịt Thăn bò",
+          "price_vnd": 399000,
+          "category": "Thịt",
+          "uom": "Kg"
+        },
+        {
+          "product_id": "TLM_10282507",
+          "name": "Thịt bò Úc Kiaora xay khay 200g",
+          "price_vnd": 68700,
+          "category": "Thịt",
+          "uom": "Khay"
+        },
+        {
+          "product_id": "TLM_10617947",
+          "name": "MEATDELI Thịt heo xay chuẩn ngon (S)",
+          "price_vnd": 141900,
+          "category": "Thịt",
+          "uom": "Kg"
+        }
+      ]
+    },
+    {
+      "group": "fresh",
+      "question": "Có gì ăn tiện mà không cần nấu nướng nhiều không?",
+      "status": 200,
+      "http_ms": 3734.51,
+      "model": "openai/gpt-oss-20b",
+      "text": "Bánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g (13.000đ).\nBánh bao nhân thịt heo trứng cút Thọ Phát gói 250g (30.700đ).\nBánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g (25.900đ).",
+      "grounded_product_ids": [
+        "TLM_10140547",
+        "TLM_10005885",
+        "TLM_10016331"
+      ],
+      "products": [
+        {
+          "product_id": "TLM_10140547",
+          "name": "Bánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g",
+          "price_vnd": 13000,
+          "category": "Bánh mì",
+          "uom": "Cái"
+        },
+        {
+          "product_id": "TLM_10005885",
+          "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+          "price_vnd": 30700,
+          "category": "Bánh bao",
+          "uom": "Gói"
+        },
+        {
+          "product_id": "TLM_10016331",
+          "name": "Bánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g",
+          "price_vnd": 25900,
+          "category": "Bánh Snack",
+          "uom": "Lon"
+        }
+      ]
+    },
+    {
+      "group": "fresh",
+      "question": "Em muốn mua đồ để dọn nhà cuối tuần, cần những gì nhỉ?",
+      "status": 200,
+      "http_ms": 3191.2,
+      "model": "catalog-guidance",
+      "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+      "grounded_product_ids": [],
+      "products": []
+    },
+    {
+      "group": "fresh",
+      "question": "Da mình là da dầu, dạo này nổi nhiều mụn, có sản phẩm nào dùng được không?",
+      "status": 200,
+      "http_ms": 498.29,
+      "model": "catalog-guidance",
+      "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+      "grounded_product_ids": [],
+      "products": []
+    },
+    {
+      "group": "flow",
+      "question": "Mình cần dầu gội chống gàu dưới 150 nghìn, chọn giúp mình với.",
+      "status": 200,
+      "http_ms": 22.12,
+      "model": "deterministic-fast-path",
+      "text": "Trong tầm tiền này, bạn có thể chọn loại này nhé:\nDầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml (95.200đ).",
+      "grounded_product_ids": [
+        "TLM_10016912"
+      ],
+      "products": [
+        {
+          "product_id": "TLM_10016912",
+          "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+          "price_vnd": 95200,
+          "category": "Chăm Sóc Tóc",
+          "uom": "Chai"
+        }
+      ]
+    },
+    {
+      "group": "flow",
+      "question": "Thế mua cho nữ thì sao?",
+      "status": 200,
+      "http_ms": 1548.39,
+      "model": "catalog-guidance",
+      "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+      "grounded_product_ids": [],
+      "products": []
+    },
+    {
+      "group": "flow",
+      "question": "Chọn loại từ 400ml trở lên.",
+      "status": 200,
+      "http_ms": 35.82,
+      "model": "deterministic-no-package-match",
+      "text": "Mình chưa chọn được dầu gội chống gàu từ 400ml trở lên với giá dưới 150.000đ.",
+      "grounded_product_ids": [],
+      "products": []
+    },
+    {
+      "group": "flow",
+      "question": "Giá bao nhiêu?",
+      "status": 200,
+      "http_ms": 8.3,
+      "model": "local-clarification",
+      "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+      "grounded_product_ids": [],
+      "products": []
+    }
+  ]
+}
