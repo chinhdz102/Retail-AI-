@@ -128,10 +128,10 @@ class GroqService:
                     "groq_api_key_fallback_5",
                 ) if getattr(self.settings, field).get_secret_value().strip()
             ))
-            self._fallback_clients = [AsyncOpenAI(
-                api_key=key, base_url=self.settings.groq_base_url,
-                timeout=self.settings.groq_timeout_seconds, max_retries=0,
-            ) for key in keys[1:]]
+            # Keys use the same provider URL. SDK copies keep distinct auth
+            # headers but share the primary HTTP/TLS connection pool, avoiding
+            # several expensive SSL/client initializations on the first turn.
+            self._fallback_clients = [primary.with_options(api_key=key) for key in keys[1:]]
         return [primary, *self._fallback_clients]
 
     def has_available_credentials(self) -> bool:

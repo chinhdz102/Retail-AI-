@@ -190,6 +190,25 @@ async def test_diversity_does_not_replace_liquid_detergent_with_cheaper_powder()
     assert candidates and all("nước giặt" in p.name.casefold() for p in candidates.values())
 
 
+@pytest.mark.asyncio
+async def test_generic_planner_property_query_cannot_leak_another_category():
+    repo = get_product_repository(Settings(catalog_repository="snapshot"))
+    plan = Plan(
+        need="Da dầu nhiều mụn thì nên chọn sản phẩm nào?",
+        decision_mode="browse",
+        source_user_text="Da dầu nhiều mụn thì nên chọn sản phẩm nào?",
+        searches=[
+            Search(query="sữa rửa mặt dầu nhờn", category="Chăm sóc da"),
+            Search(query="sản phẩm trị mụn dạng gel", category="Chăm sóc da"),
+        ],
+    )
+    candidates, missing = await _retrieve_candidates(
+        repo, plan, sorted({p.category for p in repo.products}), [plan.need])
+    assert missing == [1]
+    assert candidates
+    assert all(p.category == "Chăm Sóc Da" for p in candidates.values())
+
+
 @pytest.mark.parametrize("name,allowed", [("Nước khoáng LaVie 5", False),
                                         ("Nước khoáng LaVie 500ml", True)])
 def test_number_in_a_truncated_name_does_not_authorize_guessing_pack_size(name, allowed):
@@ -399,3 +418,123 @@ async def test_customer_can_choose_one_even_when_planner_inherits_browse_mode():
         {"need": "Xem đồ ăn", "decision_mode": "browse", "searches": [{"query": "bánh mì"}]})
     assert result.plan.decision_mode == "recommend"
     assert len(result.products) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fields,can_render", [(["name", "price_vnd"], True), (["price_vnd"], False)])
+async def test_local_evidence_schema_cleanup_keeps_render_validation(fields, can_render):
+    model = RecordedReplies({"choices": [{"product_id": "0", "evidence_fields": fields,
+                                          "reason": "Mang theo để dùng khi cần."}]})
+    composition, name = await _json_call(model, [{"role": "system", "content": "JSON"}],
+                                         Composition, 100)
+    assert len(model.calls) == 1
+    assert composition.choices[0].evidence_fields == (["name"] if can_render else [])
+    plan = Plan(need="Chọn một món", decision_mode="recommend")
+    if can_render:
+        assert _render_structured(composition, options(), plan, name).products
+    else:
+        with pytest.raises(GroqProviderError, match="evidence"):
+            _render_structured(composition, options(), plan, name)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("choice,match", [
+    ({"product_id": "unknown", "reason": "Mang theo."}, "ID candidates"),
+    ({"product_id": "0", "reason": "Giúp điều trị mụn."}, "nhãn chứng minh"),
+])
+async def test_local_schema_cleanup_cannot_authorize_unknown_skus_or_claims(choice, match):
+    choice = {**choice, "evidence_fields": ["name", "price_vnd"]}
+    model = RecordedReplies({"choices": [choice]})
+    composition, name = await _json_call(model, [{"role": "system", "content": "JSON"}],
+                                         Composition, 100)
+    with pytest.raises(GroqProviderError, match=match):
+        _render_structured(composition, options(), Plan(need="Chọn một món", decision_mode="recommend"), name)
+
+
+@pytest.mark.asyncio
+async def test_local_schema_cleanup_does_not_hide_other_schema_errors():
+    bad = {"choices": [{"product_id": "0", "quantity": 0,
+                         "evidence_fields": ["name", "price_vnd"]}]}
+    model = RecordedReplies(bad, bad)
+    with pytest.raises(GroqProviderError, match="invalid structured"):
+        await _json_call(model, [{"role": "system", "content": "JSON"}], Composition, 100)
+    assert len(model.calls) == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode,scope,explicit,has_candidates,should_repair", [
+    ("browse", "none", False, True, False),
+    ("recommend", "item", False, True, False),
+    ("browse", "none", True, True, True),
+    ("browse", "none", False, False, True),
+    ("basket", "basket", False, True, True),
+    ("browse", "basket", False, True, True),
+    ("compare", "none", False, True, True),
+])
+async def test_optional_alternative_repair_does_not_skip_required_basket_types(
+        monkeypatch, mode, scope, explicit, has_candidates, should_repair):
+    from types import SimpleNamespace
+    from backend.services.consultation import Advice
+
+    products = options()
+    plan = {"need": "Mua đồ ăn", "decision_mode": mode, "budget_scope": scope,
+            "searches": [{"query": "bánh mì"}, {"query": "ngũ cốc"}]}
+    model = RecordedReplies(plan)
+    repaired_indices = []
+
+    async def retrieve(*args):
+        return ({"0": products["0"]} if has_candidates else {}), [1]
+
+    async def repair(groq, repository, current, missing, *args):
+        repaired_indices.extend(missing)
+        return current.searches
+
+    async def compose(groq, messages, candidates, current, *args):
+        return Advice("Đã kiểm tra luồng.", "test", tuple(candidates.values()), current)
+
+    monkeypatch.setattr("backend.services.consultation._retrieve_candidates", retrieve)
+    monkeypatch.setattr("backend.services.consultation._repair_retrieval", repair)
+    monkeypatch.setattr("backend.services.consultation._compose_and_review", compose)
+    repo = SimpleNamespace(products=tuple(products.values()), get_product_snapshot=products.get)
+    await consult(model, repo, "Mua bánh mì và ngũ cốc" if explicit else "Mua đồ ăn", [], [])
+    assert repaired_indices == ([1] if should_repair else [])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("text,changed,expected", [
+    ("Thế mua cho nữ thì sao?", False, "dầu gội"),
+    ("Dầu gội cho nữ nhé", False, "dầu gội"),
+    ("Giờ mình cần khăn giấy", True, "khăn giấy"),
+])
+async def test_topic_override_requires_a_new_complete_type_in_normalized_spelling(
+        monkeypatch, text, changed, expected):
+    from backend.services.consultation import Advice
+
+    repo = get_product_repository(Settings(catalog_repository="snapshot"))
+    previous = Plan(need="Dầu gội chống gàu", decision_mode="recommend",
+        searches=[Search(query="dầu gội", required_phrases=["chống gàu"])],
+        budget_vnd=150000, budget_scope="item", requirements={"purpose": "chống gàu"},
+        requirement_quotes={"purpose": "chống gàu"}, source_user_text="Dầu gội chống gàu").model_dump()
+    script = RecordedReplies({"need": "Dầu gội chống gàu cho nữ", "decision_mode": "recommend",
+        "reuse_previous": True, "searches": [{"query": "dầu gội",
+                                                  "required_phrases": ["chống gàu"]}]})
+    model = GroqService(Settings(groq_api_key="test"))
+    model.chat = script.chat
+
+    async def compose(groq, messages, candidates, current, *args):
+        return Advice("Đã kiểm tra chủ đề.", "test", tuple(candidates.values()), current)
+
+    monkeypatch.setattr("backend.services.consultation._compose_and_review", compose)
+    prior = repo.search(query="Selsun", in_stock=True, limit=1)
+    result = await consult(model, repo, text, [], [p.product_id for p in prior], previous)
+    assert result.plan.topic_changed is changed
+    assert normalize_vietnamese(result.plan.searches[0].query) == normalize_vietnamese(expected)
+    assert result.products
+    assert all(expected in p.name.casefold() for p in result.products)
+    if changed:
+        assert result.plan.requirements == {}
+    else:
+        assert result.plan.requirements["purpose"] == "chống gàu"
+        if text == "Thế mua cho nữ thì sao?":
+            assert result.plan.requirements["recipient"] == text
+    assert result.plan.budget_vnd == (None if changed else 150000)

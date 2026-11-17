@@ -161,11 +161,22 @@ _elevenlabs_service: ElevenLabsService | None = None
 
 @asynccontextmanager
 async def lifespan(_app):
-    # Pay local ONNX initialization at process start, never on the first turn.
-    try:
-        await asyncio.wait_for(asyncio.to_thread(warm_speech_models), timeout=8)
-    except Exception as exc:
-        logger.warning("Speech model warmup skipped error_type=%s", type(exc).__name__)
+    # Pay local ONNX/catalog/HTTP pool initialization before accepting a turn.
+    # This creates no paid model request and does not warm an external API.
+    def warm_catalog_and_transport():
+        if settings.catalog_repository == "snapshot":
+            get_product_repository(settings)
+        if settings.has_groq_key:
+            service = get_groq_service(settings)
+            service._clients(service._client_or_raise())
+
+    for result in await asyncio.gather(
+        asyncio.wait_for(asyncio.to_thread(warm_speech_models), timeout=8),
+        asyncio.wait_for(asyncio.to_thread(warm_catalog_and_transport), timeout=8),
+        return_exceptions=True,
+    ):
+        if isinstance(result, Exception):
+            logger.warning("Local warmup skipped error_type=%s", type(result).__name__)
     try:
         yield
     finally:
