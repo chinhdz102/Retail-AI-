@@ -25,6 +25,7 @@ from backend.api.main import (
     get_groq_service,
 )
 from backend.products.repository import DemoProductRepository
+from backend.config import Settings
 from backend.services.groq import GroqService
 from backend.services.retail_tools import execute_catalog_tool
 
@@ -303,7 +304,7 @@ async def test_model_customer_care_action_claim_is_replaced_with_safe_fallback(
     )
 
     assert response.status_code == 200
-    assert response.json()["model"] == "qwen/qwen3.8-27b"
+    assert response.json()["model"] == Settings().groq_model
     assert response.json()["tools_used"] == []
     assert "chưa thể ghi nhận phản ánh hay liên hệ nhân viên" in response.json()["text"]
     assert "sẽ hoàn tiền" not in response.json()["text"]

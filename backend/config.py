@@ -16,9 +16,12 @@ class Settings(BaseSettings):
 
     groq_base_url: str = "https://api.groq.com/openai/v1"
     groq_api_key: SecretStr = SecretStr("")
-    groq_model: str = "qwen/qwen3.8-27b"
-    groq_fallback_model: str = "openai/gpt-oss-120b"
-    groq_fallback_model_2: str = "openai/gpt-oss-20b"
+    # Keep the lower-cost OSS model as the first attempt across every key.
+    # The larger/reasoning models remain available as fallbacks for turns that
+    # fail schema or quality gates, so a rate limit does not force a hard stop.
+    groq_model: str = "openai/gpt-oss-20b"
+    groq_fallback_model: str = "qwen/qwen3.8-27b"
+    groq_fallback_model_2: str = "openai/gpt-oss-120b"
     groq_timeout_seconds: float = 45.0
     groq_strict_outputs: bool = False
     groq_api_key_fallback_1: SecretStr = SecretStr("")
@@ -26,6 +29,12 @@ class Settings(BaseSettings):
     groq_api_key_fallback_3: SecretStr = SecretStr("")
     groq_api_key_fallback_4: SecretStr = SecretStr("")
     groq_api_key_fallback_5: SecretStr = SecretStr("")
+    # Optional OpenAI-compatible gateway used for isolated provider tests.
+    # It is intentionally not part of the Groq fallback chain: the gateway
+    # has different model IDs, limits and billing semantics.
+    tokenharbor_base_url: str = "https://tokenharbor.ai/v1"
+    tokenharbor_api_key: SecretStr = SecretStr("")
+    tokenharbor_model: str = "deepseek-v4-flash:free"
     whisper_timeout_seconds: float = 25.0
     stt_provider: Literal["groq", "azure"] = "groq"
     stt_debug_capture: bool = False
