@@ -9,6 +9,7 @@ const apiMocks = vi.hoisted(() => ({
   closeSession: vi.fn().mockResolvedValue({}),
   respond: vi.fn(),
   transcribe: vi.fn(),
+  prepareVoice: vi.fn().mockResolvedValue({ ready: true }),
   createSynthesisTicket: vi.fn(),
   getCart: vi.fn().mockResolvedValue(null),
   addCartItem: vi.fn(),
@@ -20,6 +21,12 @@ const apiMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('./api', () => apiMocks)
+vi.mock('./voice-neural', () => ({
+  createLocalNeuralVad: vi.fn(async (options: any) => {
+    await options.getStream()
+    return { start: vi.fn(), destroy: vi.fn() }
+  }),
+}))
 
 describe('kiosk app', () => {
   beforeEach(() => {
@@ -81,26 +88,12 @@ describe('kiosk app', () => {
     expect(wrapper.find('.text-drawer').exists()).toBe(false)
   })
 
-  it('switches the chat to English and sends the selected language to the API', async () => {
+  it('shows Vietnamese as the only speech language', async () => {
     const wrapper = mount(App)
-
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
     await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
-    await wrapper.get('button[aria-label="English"]').trigger('click')
-
-    expect(wrapper.text()).toContain('What can I help you find?')
-    expect(document.documentElement.lang).toBe('en-US')
-    expect(wrapper.get('textarea').attributes('placeholder')).toBe('Try: How much is Coca Zero?')
-    await wrapper.get('textarea').setValue('How much is Coca-Cola Zero?')
-    await wrapper.get('.composer').trigger('submit')
-    await vi.waitFor(() =>
-      expect(apiMocks.respond).toHaveBeenCalledWith(
-        'session-test',
-        'How much is Coca-Cola Zero?',
-        'en',
-        expect.any(String),
-      ),
-    )
+    expect(wrapper.find('button[aria-label="English"]').exists()).toBe(false)
+    expect(wrapper.find('.language-option').text()).toBe('Tiếng Việt')
   })
 
   it('does not add an unsolicited chat message when the session starts', async () => {
@@ -184,83 +177,25 @@ describe('kiosk app', () => {
     expect(window.localStorage.getItem('retail-ai-microphone-device')).toBe('amd-direct')
   })
 
-  it('waits for the user and prefers the Groq recorder when browser recognition exists', async () => {
-    let recognitionInstance: {
-      lang: string
-      continuous: boolean
-      interimResults: boolean
-      start: ReturnType<typeof vi.fn>
-    } | undefined
-
-    class FakeSpeechRecognition {
-      lang = ''
-      continuous = false
-      interimResults = false
-      onstart: (() => void) | null = null
-      start = vi.fn(() => this.onstart?.())
-      stop = vi.fn()
-
-      constructor() {
-        recognitionInstance = this
-      }
-    }
-
-    const getUserMedia = vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn() }] }))
+  it('opens local capture only after a user click without browser recognition', async () => {
+    const recognition = vi.fn()
+    Object.defineProperty(window, 'SpeechRecognition', { configurable: true, value: recognition })
+    const getUserMedia = vi.fn(async () => ({
+      getTracks: () => [{ stop: vi.fn() }], getAudioTracks: () => [{ label: 'Mic' }],
+    }))
     Object.defineProperty(navigator, 'mediaDevices', {
-      configurable: true,
-      value: { getUserMedia },
+      configurable: true, value: { getUserMedia },
     })
-
-    class FakeMediaRecorder {
-      static isTypeSupported = vi.fn(() => true)
-      state: 'inactive' | 'recording' = 'inactive'
-      ondataavailable: ((event: { data: Blob }) => void) | null = null
-      onstop: (() => void) | null = null
-      onerror: (() => void) | null = null
-      start = vi.fn(() => { this.state = 'recording' })
-      stop = vi.fn(() => { this.state = 'inactive' })
-    }
-
-    class FakeAudioContext {
-      createAnalyser() {
-        return {
-          fftSize: 32,
-          getByteTimeDomainData(data: Uint8Array) { data.fill(128) },
-        }
-      }
-      createMediaStreamSource() {
-        return { connect: vi.fn(), disconnect: vi.fn() }
-      }
-      close = vi.fn(async () => undefined)
-    }
-
-    Object.defineProperty(window, 'SpeechRecognition', {
-      configurable: true,
-      value: FakeSpeechRecognition,
-    })
-    Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: FakeMediaRecorder })
-    Object.defineProperty(window, 'AudioContext', { configurable: true, value: FakeAudioContext })
-
     const wrapper = mount(App)
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
-    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
-    await vi.waitFor(() => expect(wrapper.text()).toContain('Nhập câu hỏi hoặc bấm mic để nói'))
-
-    expect(recognitionInstance).toBeUndefined()
     expect(getUserMedia).not.toHaveBeenCalled()
-    expect(wrapper.text()).toContain('Sẵn sàng')
-
     await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
     await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledWith({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false, channelCount: 1 },
+      video: false,
     }))
-
-    expect(recognitionInstance).toBeUndefined()
-    expect(wrapper.text()).toContain('Đang nghe')
+    expect(recognition).not.toHaveBeenCalled()
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Đang nghe'))
   })
 
   it('sends a quick prompt into the conversation', async () => {
@@ -371,7 +306,17 @@ describe('kiosk app', () => {
 
     await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]')?.trigger('click')
 
-    await vi.waitFor(() => expect(wrapper.text()).toContain('Chưa kết nối được trợ lý'))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Sky chưa trả lời được câu này'))
     expect(wrapper.get('button[aria-label="Thử lại"]')).toBeTruthy()
+  })
+
+  it('keeps chat usable when the optional demo cart is unavailable', async () => {
+    apiMocks.getCart.mockRejectedValueOnce(new Error('Cart unavailable'))
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.getCart).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.text()).toContain('13.000đ'))
+    expect(wrapper.text()).not.toContain('Sky chưa trả lời được câu này')
   })
 })

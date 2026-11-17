@@ -16,4 +16,7 @@ htmlcov/
 .DS_Store
 .vscode/
 .idea/
+.tmp/
+apps/kiosk-airi/public/vad/
+data/models/
 *.log

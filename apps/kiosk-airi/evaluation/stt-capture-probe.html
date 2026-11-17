@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8"><link rel="icon" href="data:,">
+<button id="start">Bật bộ thu kiểm tra</button><button id="stop">Dừng</button>
+<script type="module">
+import { VoiceConversationController } from '/src/voice-controller.ts'
+const contexts = [], streams = [], inputFrames = []
+const NativeContext = window.AudioContext
+const NativeNode = window.AudioWorkletNode
+const raw = new URLSearchParams(location.search).get('processing') === 'raw'
+window.AudioContext = new Proxy(NativeContext, { construct(target, args) {
+  const context = Reflect.construct(target, args)
+  contexts.push(context)
+  return context
+} })
+window.AudioWorkletNode = new Proxy(NativeNode, { construct(target, args) {
+  const node = Reflect.construct(target, args)
+  if (args[1] === 'retail-pcm-capture') {
+    node.port.addEventListener('message', event => inputFrames.push(Array.from(event.data)))
+    node.port.start()
+  }
+  return node
+} })
+window.probe = { ready: true, errors: [], states: [], audio: [], inputSettings: [] }
+const controller = new VoiceConversationController({
+  getUserMedia: async constraints => {
+    if (raw) constraints.audio = { ...constraints.audio,
+      echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    const stream = await navigator.mediaDevices.getUserMedia(constraints)
+    streams.push(stream)
+    probe.inputSettings.push(stream.getAudioTracks()[0].getSettings())
+    return stream
+  },
+  onState: state => probe.states.push({ ...state, at: performance.now() }),
+  onError: error => probe.errors.push({ kind: error.kind, message: error.message }),
+  onAudio: async audio => probe.audio.push({
+    bytes: Array.from(new Uint8Array(await audio.arrayBuffer())),
+    allTracksEnded: streams.every(s => s.getTracks().every(t => t.readyState === 'ended')),
+  }),
+})
+probe.snapshot = () => ({ ...probe, inputFrames, processing: raw ? 'raw' : 'production',
+  contextRates: contexts.map(c => c.sampleRate), active: controller.isActive,
+  trackStates: streams.flatMap(s => s.getTracks().map(t => t.readyState)) })
+document.querySelector('#start').onclick = () => controller.start()
+document.querySelector('#stop').onclick = () => controller.stop()
+</script>

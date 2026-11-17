@@ -326,7 +326,9 @@ def _candidate_content(products: tuple[ProductSnapshot, ...], matched: list[str]
 
 
 def _category_for_repository(category: str | None, repository: ProductRepository) -> str | None:
-    if not category or repository.source_name != "thanh_lam_postgres_catalog":
+    if not category or repository.source_name not in {
+        "thanh_lam_postgres_catalog", "thanh_lam_json_snapshot"
+    }:
         return category
     canonical_category = category.strip().casefold()
     # The Thanh Lam Mart source stores Vietnamese taxonomy labels rather than the

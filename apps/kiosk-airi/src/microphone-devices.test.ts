@@ -18,14 +18,14 @@ describe('microphone device selection', () => {
     ])
   })
 
-  it('defaults to the working AMD physical input and keeps an explicit selection', () => {
+  it('defaults to a physical input and keeps an explicit selection', () => {
     const options = listMicrophoneOptions(devices)
     expect(preferredMicrophoneId(options)).toBe('amd-direct')
     expect(preferredMicrophoneId(options, 'desk-in', 'amd-direct')).toBe('desk-in')
   })
 
-  it('falls back to the first physical input if the preferred mic is absent', () => {
+  it('uses the OS default if only virtual inputs are exposed', () => {
     const options = listMicrophoneOptions(devices.slice(0, 2))
-    expect(preferredMicrophoneId(options)).toBe('desk-in')
+    expect(preferredMicrophoneId(options)).toBe('')
   })
 })

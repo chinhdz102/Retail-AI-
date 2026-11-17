@@ -44,7 +44,6 @@ from backend.services.groq import (
     GroqChatResult,
     GroqProviderError,
     GroqService,
-    GroqTranscriptionResult,
 )
 from backend.services.organization_profiles import get_organization_answer
 from backend.services.retail_information import RetailInformationResult
@@ -656,9 +655,6 @@ class FakeGroqService(GroqService):
         assert "retail_context" in messages[0]["content"]
         return "Coca-Cola Zero 330ml hiện có giá 13.000đ và nằm ở kệ A2-L2."
 
-    async def transcribe(self, filename, content, content_type, language="vi") -> str:
-        return "Cho tôi biết giá Coca Zero."
-
 
 class UngroundedGroqService(GroqService):
     def __init__(self) -> None:
@@ -721,25 +717,6 @@ class SmallTalkGroqService(GroqService):
         return GroqChatResult("Mình có một câu chuyện vui cho bạn.", "qwen/qwen3.8-27b")
 
 
-class FallbackSttGroqService(GroqService):
-    def __init__(self) -> None:
-        pass
-
-    async def transcribe(self, filename, content, content_type, language="vi"):
-        return GroqTranscriptionResult(
-            "Coca còn mười sáu lon.",
-            "whisper-large-v3",
-            [
-                {
-                    "model": "whisper-large-v3-turbo",
-                    "status": "error",
-                    "error_type": "RuntimeError",
-                },
-                {"model": "whisper-large-v3", "status": "success"},
-            ],
-        )
-
-
 class StaticGroqService(GroqService):
     def __init__(self, reply: str) -> None:
         self.reply = reply
@@ -793,10 +770,6 @@ class LanguageAwareGroqService(GroqService):
     async def chat(self, messages, model=None, tools=None, tool_choice=None) -> str:
         self.messages = messages
         return "The product is available in aisle A2-L2."
-
-    async def transcribe(self, filename, content, content_type, language="vi") -> str:
-        self.transcription_language = language
-        return "How much is Coca Zero?"
 
 
 class UnavailableGroqService(GroqService):
@@ -1280,6 +1253,26 @@ async def test_session_creation_and_isolation(client: httpx.AsyncClient) -> None
     assert session_b.status_code == 201
     assert session_a.json()["session_id"] != session_b.json()["session_id"]
     assert session_a.json()["state"] == "BROWSING"
+
+
+@pytest.mark.asyncio
+async def test_standalone_greeting_is_instant_without_losing_shopping_memory(client):
+    class NoProvider(GroqService):
+        async def chat(self, *args, **kwargs):
+            raise AssertionError("A standalone greeting must not call the provider")
+
+    app.dependency_overrides[get_groq_service] = lambda: NoProvider()
+    created = await client.post("/sessions", json={"kiosk_id": "greeting-memory"})
+    sid = created.json()["session_id"]
+    record = session_store.get(UUID(sid))
+    record.shopping.constraints["consultation_plan"] = {"need": "bữa tối"}
+    response = await client.post("/agent/respond", json={"session_id": sid,
+        "text": "hello Sky", "language": "vi"})
+    assert response.status_code == 200
+    assert response.json()["model"] == "local-greeting"
+    assert "chào" in response.json()["text"].casefold()
+    assert record.shopping.constraints["consultation_plan"] == {"need": "bữa tối"}
+    assert session_store.messages_for_model(UUID(sid))[-2]["content"] == "hello Sky"
 
 
 @pytest.mark.asyncio
@@ -2125,26 +2118,6 @@ async def test_audio_endpoint_rejects_non_audio_upload(client: httpx.AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_audio_endpoint_transcribes_vietnamese_audio(client: httpx.AsyncClient) -> None:
-    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
-    session_id = created.json()["session_id"]
-
-    response = await client.post(
-        "/audio/transcribe",
-        data={"session_id": session_id},
-        files={"file": ("voice.webm", BytesIO(b"audio"), "audio/webm")},
-    )
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "session_id": session_id,
-        "text": "Cho tôi biết giá Coca Zero.",
-        "language": "vi",
-        "model": "whisper-large-v3-turbo",
-    }
-
-
-@pytest.mark.asyncio
 async def test_agent_passes_selected_language_to_qwen_prompt(client: httpx.AsyncClient) -> None:
     service = LanguageAwareGroqService()
     app.dependency_overrides[get_groq_service] = lambda: service
@@ -2165,48 +2138,9 @@ async def test_agent_passes_selected_language_to_qwen_prompt(client: httpx.Async
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("language", ["en", "zh"])
-async def test_audio_endpoint_passes_selected_language_to_whisper(
-    client: httpx.AsyncClient,
-    language: str,
-) -> None:
-    service = LanguageAwareGroqService()
-    app.dependency_overrides[get_groq_service] = lambda: service
-    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
-
-    response = await client.post(
-        "/audio/transcribe",
-        data={"session_id": created.json()["session_id"], "language": language},
-        files={"file": ("voice.webm", BytesIO(b"audio"), "audio/webm")},
-    )
-
-    assert response.status_code == 200
-    assert service.transcription_language == language
-    assert response.json()["language"] == language
-
-
-@pytest.mark.asyncio
-async def test_audio_endpoint_reports_actual_whisper_fallback_model(
-    client: httpx.AsyncClient,
-) -> None:
-    app.dependency_overrides[get_groq_service] = lambda: FallbackSttGroqService()
-    created = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
-
-    response = await client.post(
-        "/audio/transcribe",
-        data={"session_id": created.json()["session_id"]},
-        files={"file": ("voice.webm", BytesIO(b"audio"), "audio/webm")},
-    )
-
-    assert response.status_code == 200
-    assert response.json()["text"] == "Coca còn mười sáu lon."
-    assert response.json()["model"] == "whisper-large-v3"
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("language", "text"),
-    [("vi", "Xin chào"), ("en", "Hello")],
+    [("vi", "Xin chào")],
 )
 async def test_synthesize_endpoint_returns_audio_without_exposing_provider_key(
     client: httpx.AsyncClient,

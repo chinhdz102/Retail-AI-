@@ -17,6 +17,12 @@ class RecordedReplies:
         reply = next(self.replies)
         if isinstance(reply, Exception):
             raise reply
+        if "acceptable" in reply and "checks" not in reply:
+            # Complete the current review schema for these scripted flow tests;
+            # none of these fixtures measure a real model's semantic judgement.
+            reply = {**reply, "checks": [{"criterion": criterion,
+                "passed": reply["acceptable"], "detail": "Kết quả kiểm tra theo kịch bản."}
+                for criterion in ("intent", "decision", "grounding", "usefulness")]}
         return GroqChatResult(json.dumps(reply, ensure_ascii=False), "actual-model")
 
 
@@ -70,6 +76,7 @@ async def test_strict_provider_encoding_failure_retries_json_without_releasing_u
             {"http_status": 400, "provider_code": "json_validate_failed"}]),
         GOOD_DRAFT, {"acceptable": True, "issues": []})
     model.settings = SimpleNamespace(groq_model="qwen/qwen3.8-27b",
+        groq_strict_outputs=True,
         groq_fallback_model="openai/gpt-oss-120b", groq_fallback_model_2="openai/gpt-oss-20b")
     result = await consult(model, Repository(), "Chọn thịt giúp", [], [])
     assert result.products
@@ -79,14 +86,17 @@ async def test_strict_provider_encoding_failure_retries_json_without_releasing_u
 
 
 @pytest.mark.asyncio
-async def test_quota_exhaustion_is_not_retried_as_a_schema_failure():
+async def test_quota_exhaustion_uses_verified_catalog_fallback():
     from types import SimpleNamespace
     model = RecordedReplies(PLAN, GroqProviderError("No available provider", fallback_trace=[
         {"http_status": 429, "provider_code": "rate_limit_exceeded"}]))
     model.settings = SimpleNamespace(groq_model="qwen/qwen3.8-27b",
         groq_fallback_model="openai/gpt-oss-120b", groq_fallback_model_2="openai/gpt-oss-20b")
-    with pytest.raises(GroqProviderError):
-        await consult(model, Repository(), "Chọn thịt giúp", [], [])
+    result = await consult(model, Repository(), "Chọn thịt giúp", [], [])
+    assert result.model == "catalog-fallback"
+    assert result.products[0].product_id == "P1"
+    assert "50.000đ" in result.text
+    assert "catalog" not in result.text.casefold()
     assert len(model.calls) == 2
 
 
@@ -183,7 +193,8 @@ async def test_reviewer_receives_verified_purchase_weight_and_cost_for_per_kg_go
 async def test_unnecessary_followup_clarification_is_reviewed_and_recovers_known_topic():
     model = RecordedReplies({"need": "thịt bò ăn lẩu", "action": "ask",
         "clarification": "Bạn muốn mua thịt nào?"},
-        {"acceptable": False, "issues": ["Khách đã chọn thịt bò, không hỏi lại loại thịt."]},
+        {"acceptable": False, "repair_action": "revise",
+         "issues": ["Khách đã chọn thịt bò, không hỏi lại loại thịt."]},
         GOOD_DRAFT, {"acceptable": True, "issues": []})
     answer = await consult(model, Repository(), "Nhắc lại phương án giúp mình", [
         {"role": "user", "content": "Chọn thịt bò ăn lẩu."}], ["P1"],

@@ -1,5 +1,22 @@
 # Quy tắc tư vấn mặt hàng có bằng chứng
 
+> Cập nhật 15/11/2026: [kiểm tra thực tế và lỗi còn lại](reports/consultation_research_followup_20261115.md),
+> [đối chiếu kiến trúc với paper và hệ thống lớn](reports/architecture_research_comparison_20261115.md).
+> Các số liệu cũ bên dưới không phải nghiệm thu chất lượng tư vấn hiện tại.
+
+> Cập nhật 11/11/2026: xem [báo cáo STT và tư vấn](reports/voice_and_advice_20261111.md).
+> Luồng tư vấn có thêm bước LLM kiểm tra lý lẽ và sửa tối đa một lần. Code vẫn
+> kiểm tra mã hàng, giá, quy cách và tổng tiền. Các kết quả lịch sử bên dưới
+> không chứng minh luồng hiện tại đạt mức nhân viên; test hội thoại thật đang
+> bị hạn mức nhà cung cấp chặn ở nhiều lượt.
+
+> Cập nhật 10/11/2026: các kết quả và quy tắc từ chối mọi câu hỏi công dụng
+> bên dưới là hành vi của lần đo 18/10, không mô tả đầy đủ luồng tư vấn mới.
+> [Báo cáo hiện tại](reports/consultation_backend_audit_20261110.md) tách kiến
+> thức chung để tư vấn với thông số riêng của SKU cần bằng chứng. Luồng mới
+> dùng LLM hiểu nhu cầu/lịch sử, hỏi khi cần và chọn hàng; code giữ ID/giá/tổng
+> đúng dữ liệu. Không đọc cảnh báo snapshot ở mọi câu tư vấn.
+
 ## Kết luận nghiệp vụ
 
 Với câu hỏi về sản phẩm, agent cần xác định đúng biến thể/SKU trước, lấy dữ kiện từ catalog, rồi mới trả lời. Tên sản phẩm hoặc thương hiệu không phải bằng chứng cho giá, thành phần, công dụng, lợi ích sức khỏe hay cách dùng. Nếu catalog trả về nhiều biến thể gần giống, agent hỏi rõ vị/khối lượng/bao bì; nếu thuộc tính không có nguồn đáng tin, agent nói chưa xác minh được.

@@ -210,6 +210,14 @@ async def run(args):
                             row["response"] = response.json()
                         else:
                             row["error_type"] = "HTTPError"
+                            try:
+                                detail = response.json().get("detail", {})
+                                if isinstance(detail, dict) and detail.get("code") in {
+                                    "assistant_busy", "assistant_unavailable",
+                                }:
+                                    row["error_code"] = detail["code"]
+                            except ValueError:
+                                pass
                     except httpx.HTTPError as error:
                         row["error_type"] = type(error).__name__
                     row["seconds"] = round(time.monotonic() - started, 3)
@@ -228,6 +236,7 @@ async def run(args):
                                 "model": payload.get("model"),
                                 "seconds": row["seconds"],
                                 "status": row.get("http_status"),
+                                "error_code": row.get("error_code"),
                             },
                             ensure_ascii=False,
                         ),
