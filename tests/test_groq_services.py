@@ -170,7 +170,7 @@ async def test_chat_provider_error_preserves_rate_limit_headers() -> None:
 
     assert error.value.fallback_trace == [
         {
-            "model": "qwen/qwen3.8-27b",
+            "model": Settings().groq_model,
             "credential_slot": 0,
             "status": "error",
             "error_type": "RateLimitFailure",
@@ -321,7 +321,8 @@ async def test_second_fallback_model_is_reached_after_all_keys_rate_limited(monk
     secondary = scripted_client(429, 429, 429)
     service = GroqService(Settings(groq_api_key="test-key"), client=primary)
     monkeypatch.setattr(service, "_clients", lambda _: [primary, secondary])
-    result = await service.chat([], fallback_models=["openai/gpt-oss-120b", "openai/gpt-oss-20b"])
+    result = await service.chat([], model="qwen/primary-model",
+                                fallback_models=["openai/gpt-oss-120b", "openai/gpt-oss-20b"])
     assert result.model == "openai/gpt-oss-20b"
     assert [row["status"] for row in result.fallback_trace] == [
         "error", "error", "error", "error", "success"
