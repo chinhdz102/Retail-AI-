@@ -119,7 +119,9 @@ class Choice(BaseModel):
     quantity: int = Field(default=1, ge=1, le=20)
     weight_g: int | None = Field(default=None, ge=50, le=20000,
         description="Required for uom=kg when buying together; grams purchased, quantity=1.")
-    reason: str = Field(default="", max_length=240)
+    reason: str = Field(default="", max_length=240,
+        description="One practical use/preparation step. No repeated name/price, guessed benefit, "
+                    "scent strength, sweetness or efficacy. Leave empty if unsupported.")
     evidence: list[str] = Field(default_factory=list, max_length=4,
         description="Exact excerpts of this product's name/description/ingredients; no price or field names.")
     evidence_fields: list[Literal["name", "description", "ingredients"]] = Field(
@@ -638,13 +640,15 @@ def _infer_catalog_query(repository: ProductRepository, text: str,
                 continue
             score = (width, len(heads), -len(rows))
             if best is None or score > best[0]:
-                best = (score, query, rows)
+                # Canonicalize from actual head products, not an earlier
+                # filling/flavour hit that happened to share the query words.
+                best = (score, query, heads, len(rows))
         if best is not None:
             break
     if best is None:
         return None
-    _, query, rows = best
-    if len(rows) > 80 and not allow_broad:
+    _, query, rows, raw_count = best
+    if raw_count > 80 and not allow_broad:
         return None
     # Keep the catalog's canonical capitalization for an exact taxonomy head.
     for row in rows:
@@ -693,7 +697,8 @@ def _catalog_occasion_plan(text: str, repository: ProductRepository,
     """
     normalized = normalize_vietnamese(text)
     if not re.search(r"\b(?:an sang|an dem|an toi|an trua|bua sang|bua toi|"
-                     r"do an nhanh|an nhanh|an no|bua an|mon an|do an)\b", normalized):
+                     r"do an nhanh|an nhanh|an tien|khong can nau|khong phai nau|"
+                     r"an no|bua an|mon an|do an)\b", normalized):
         return None
     # Preferences/constraints need the planner in the normal path.  During a
     # provider outage we can still recover useful catalog options, but never
@@ -783,7 +788,7 @@ def _catalog_recovery_plan(text: str, previous_plan: dict | None,
     if occasion is not None:
         return occasion
     query = _infer_catalog_query(repository, text, allow_broad=True)
-    if query is None:
+    if query is None or len(query.split()) < 2:
         return None
     rows = repository.search(query=query, in_stock=True, limit=301)
     if not rows:
@@ -1180,6 +1185,33 @@ def _plan_evidence(plan):
             and value not in (None, "", [], {}, False)}
 
 
+async def consult_customer(
+    groq: GroqService,
+    repository: ProductRepository,
+    text: str,
+    history: list[dict[str, str]],
+    previous_ids: list[str],
+    previous_plan: dict | None = None,
+) -> Advice:
+    try:
+        return await consult(groq, repository, text, history, previous_ids, previous_plan)
+    except GroqProviderError as exc:
+        # A rejected model draft (including invalid planner JSON) is not a
+        # transport failure for the customer's turn. Never release that draft
+        # or select another unreviewed SKU after a semantic rejection. Keep the
+        # validated constraints and return a short purchase-free continuation.
+        saved = getattr(exc, "consultation_plan", None)
+        try:
+            plan = Plan.model_validate(saved) if saved else Plan(need=text)
+        except ValidationError:
+            plan = Plan(need=text)
+        plan = plan.model_copy(update={"source_user_text": text})
+        logger.warning("Consultation recovery stage=%s semantic_rejected=%s products=0",
+                       getattr(exc, "failure_stage", "provider"),
+                       bool(getattr(exc, "semantic_rejected", False)))
+        return _fallback_guidance_advice(plan)
+
+
 async def consult(
     groq: GroqService,
     repository: ProductRepository,
@@ -1217,13 +1249,9 @@ async def consult(
             plan, planner_model = recovered, "catalog-recovery"
             logger.warning("Consultation planner skipped while all credentials cool down")
         else:
-            fallback_plan = Plan(
-                need=text, action="ask", decision_mode="guide",
-                clarification="Bạn đang muốn tìm nhóm hàng nào để mình tìm đúng sản phẩm cho bạn?",
-                source_user_text=text,
-            )
-            return Advice(text=fallback_plan.clarification, model="catalog-recovery",
-                          products=(), plan=fallback_plan)
+            fallback_plan = Plan(need=text, action="advise", decision_mode="guide",
+                                 source_user_text=text)
+            return _fallback_guidance_advice(fallback_plan)
     else:
         try:
             plan, planner_model = await _json_call(
@@ -1246,15 +1274,11 @@ async def consult(
                 logger.warning("Consultation planner outage; recovered catalog plan topic=%s",
                                text[:120])
             elif getattr(exc, "fallback_trace", None):
-                fallback_plan = Plan(need=text, action="ask", decision_mode="guide",
-                                     clarification="Bạn đang muốn tìm nhóm hàng nào để mình tìm đúng sản phẩm cho bạn?")
-                return Advice(
-                    text=fallback_plan.clarification,
-                    model="catalog-recovery",
-                    products=(),
-                    plan=fallback_plan.model_copy(update={"source_user_text": text}),
-                )
+                fallback_plan = Plan(need=text, action="advise", decision_mode="guide",
+                                     source_user_text=text)
+                return _fallback_guidance_advice(fallback_plan)
             else:
+                exc.failure_stage = "planner"
                 exc.consultation_plan = (getattr(exc, "consultation_plan", None)
                                          or context.get("previous_plan") or {})
                 raise
@@ -1492,6 +1516,7 @@ async def consult(
                     "review_feedback": feedback,
                 }), {}, plan, text, history)
         except GroqProviderError as exc:
+            exc.failure_stage = getattr(exc, "failure_stage", "clarification")
             exc.consultation_plan = plan.model_dump()
             raise
     candidates, missing = await _retrieve_candidates(repository, plan, topics, customer_texts)
@@ -1550,6 +1575,7 @@ async def consult(
                 plan = plan.model_copy(update={"searches": repaired})
                 candidates, _ = await _retrieve_candidates(repository, plan, topics, customer_texts)
         except GroqProviderError as exc:
+            exc.failure_stage = "retrieval_repair"
             exc.consultation_plan = plan.model_dump()
             raise
     # Keep previous candidates only when planner explicitly retains their product topic.
@@ -1627,6 +1653,7 @@ async def consult(
         # locally rejected draft has no trace and must continue to fail closed
         # so semantic/grounding safeguards are never bypassed.
         semantic_rejected = getattr(exc, "semantic_rejected", False)
+        failure_stage = getattr(exc, "failure_stage", "provider")
         fallback_eligible = (
             (bool(exc.fallback_trace) and not semantic_rejected)
             or (
@@ -1637,6 +1664,8 @@ async def consult(
                 ))
             )
         )
+        if failure_stage in {"render", "review"} or getattr(exc, "render_rejected", False):
+            fallback_eligible = False
         fallback = (_fallback_grounded_advice(candidates, plan)
                     if fallback_eligible else None)
         if fallback is not None:
@@ -1777,7 +1806,7 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
             if fallback is not None:
                 matched_query, found = fallback
         if (not found and query.category in topics and query.query
-            and category_head_in_query
+            and normalize_vietnamese(query.query.split()[0]) in category_words
             and not _query_named_by_customer(query, customer_texts)):
             # A recipe ingredient chosen by the planner is negotiable; a type
             # named by the customer is not. Missing an unrequested vegetable
@@ -1786,9 +1815,17 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
             broad = await asyncio.to_thread(repository.search, query="",
                 **{**criteria, "category": query.category, "limit": 300})
             broad = [p for p in broad if p.category == query.category]
-            found = _matching_candidates(broad, query, type_query="",
+            # An optional planner subtype may broaden to its head, never to
+            # an arbitrary item in an imported umbrella department. Otherwise
+            # an unavailable tea variant could become cocoa merely because
+            # both are filed under 'Trà - Các Loại Khác'.
+            words = query.query.split()
+            head_query = next((" ".join(words[:width])
+                for width in range(len(words), 0, -1)
+                if _label_phrase(query.category, " ".join(words[:width]))), words[0])
+            found = _matching_candidates(broad, query, type_query=head_query,
                                          category_hard=category_hard)
-            matched_query = ""
+            matched_query = head_query
         # Exclusions must apply before top-k. Removing owned/refused rows only
         # after selection can leave an empty set while useful options exist.
         found = [p for p in found if not _excluded_purchase(p, plan.purchase_exclusions.values())]
@@ -1969,6 +2006,13 @@ def _fallback_grounded_advice(candidates: dict[str, ProductSnapshot], plan: Plan
         return None
 
 
+def _fallback_guidance_advice(plan: Plan) -> Advice:
+    """Last resort after bounded model failure; no SKU or property is inferred."""
+    text = ("Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. "
+            "Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.")
+    return Advice(text=text, model="catalog-guidance", products=(), plan=plan)
+
+
 def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> Advice | None:
     """Render a small, label-safe answer for an unambiguous browse turn.
 
@@ -2045,6 +2089,7 @@ async def _compose_and_review(groq, messages, candidates, plan, text, history,
                              1 if plan.decision_mode == "recommend" else 3))
         except GroqProviderError as exc:
             exc.semantic_rejected = bool(failures["review"])
+            exc.failure_stage = "composition_schema"
             raise
         if plan.action == "ask" and composition.question.strip():
             # This branch's sole output is an identification question. Some
@@ -2057,26 +2102,30 @@ async def _compose_and_review(groq, messages, candidates, plan, text, history,
             # code before rendering/reviewing rather than leaking a SKU.
             composition = composition.model_copy(update={"choices": []})
         failure_stage = "render"
+        answer = None
+        prose_repaired = False
         try:
             answer = _render_structured(composition, candidates, plan, model)
         except GroqProviderError as exc:
             feedback = str(exc)
-            mechanical_degradation = feedback.startswith((
-                "Không khẳng định tồn thực tế",
-                "Sửa lý do chưa có nhãn chứng minh",
-                "Bỏ khẳng định chưa có nhãn chứng minh",
-            ))
-            if (isinstance(groq, GroqService) and candidates
-                    and failures["review"] == 0 and mechanical_degradation):
-                # A live model's first draft failed a local mechanical guard.
-                # Retrying a second network generation can add tens of seconds
-                # during a rate-limit window; the bounded catalog fallback is
-                # already code-validated for IDs, price, stock and budget.
-                error = GroqProviderError(
-                    feedback, fallback_trace=[{"status": "render_rejected"}])
-                error.semantic_rejected = False
-                raise error from exc
-        else:
+            if (isinstance(groq, GroqService) and composition.choices
+                and feedback.startswith(("Sửa lý do chưa có nhãn chứng minh",
+                                         "Bỏ khẳng định chưa có nhãn chứng minh"))):
+                # Keep the model's exact selections/amounts and remove its
+                # unsupported prose. This fresh draft still needs semantic
+                # review. Never replace those choices with the retrieval set.
+                repaired = composition.model_copy(update={"advice": "", "question": "",
+                    "choices": [c.model_copy(update={"reason": ""})
+                                for c in composition.choices]})
+                try:
+                    answer = _render_structured(repaired, candidates, plan, model)
+                except GroqProviderError:
+                    pass
+                else:
+                    composition = repaired
+                    prose_repaired = True
+                    logger.info("Consultation prose repaired; selection awaits semantic review")
+        if answer is not None:
             # Provider failure is not semantic feedback. Do not spend another
             # composition request retrying when review capacity is unavailable.
             # Only literal label facts in a completely parsed fresh query can
@@ -2091,6 +2140,8 @@ async def _compose_and_review(groq, messages, candidates, plan, text, history,
                 review = await _review_advice(groq, answer, text, history, candidates)
             except GroqProviderError as exc:
                 exc.semantic_rejected = bool(failures["review"])
+                exc.render_rejected = prose_repaired
+                exc.failure_stage = "review_provider"
                 raise
             if review.acceptable and not review.issues:
                 return answer
@@ -2158,6 +2209,7 @@ async def _compose_and_review(groq, messages, candidates, plan, text, history,
                                 and failures["review"] == 0 else None),
             )
             error.semantic_rejected = bool(failures["review"])
+            error.failure_stage = failure_stage
             raise error
         seen_failures.add(failure_key)
         if repair_question:
@@ -2232,7 +2284,7 @@ async def _review_advice(groq, answer: Advice, text, history, candidates=None):
         payload["available_candidates"] = [_candidate_evidence(p, answer.plan) for p in candidates.values()]
     policy = (NO_MATCH_REVIEWER if candidates == {} and not answer.products
          and answer.plan.action != "ask"
-         and answer.plan.decision_mode != "guide" else REVIEWER)
+         and (answer.plan.decision_mode != "guide" or answer.plan.searches) else REVIEWER)
     policy += """
 Return checks for exactly intent (current task), decision (essential unknowns),
 grounding (same product type, supported claims, feasible use), usefulness (helps
@@ -2315,6 +2367,13 @@ def _canonical_searches(searches: list[Search]) -> list[Search]:
                 r"\b(?:không|ít)\s+(?:đường|muối|béo|cồn|caffeine|cafein)\b", query, re.I)]
             for variant in variants:
                 query = re.sub(re.escape(variant), " ", query, flags=re.I)
+            # These are subjective choice criteria, not a product identity.
+            # Keep them in the customer's need for composition/review instead
+            # of requiring a product title to contain a whole preference.
+            # Exact variants (sugar, scent names, animal, brand, size) remain.
+            query = re.sub(
+                r"\b(?:(?:có\s+)?mùi\s+(?:hương\s+)?(?:không\s+(?:quá\s+)?nồng|nhẹ|dịu)|"
+                r"dịu nhẹ|đáng tiền|dùng ổn|giá (?:rẻ|hợp lý))\b", " ", query, flags=re.I)
             query = " ".join(query.split())
             def label_filter(phrase):
                 # Hedged/comparative preferences remain in need/constraints
@@ -2357,7 +2416,13 @@ def _product_type_rank(product: ProductSnapshot, query: str, category: str | Non
     it does not contain a recipe, brand or SKU exception list.
     """
     title = normalize_vietnamese(identity_terms(product.name, product.category))
+    # Multipack wrappers describe quantity, not the product head. Without this,
+    # a 'lốc 6 chai trà' lost its head tier while tea-flavoured candy survived
+    # a sugar-free filter. Keep the actual SKU/quantity unchanged for rendering.
+    title = re.sub(r"^(?:thung|loc|combo|bo)\s+\d+\s+(?:chai|lon|hop|goi|tui)\s+", "", title)
     kind = normalize_vietnamese(product.category)
+    leaf = normalize_vietnamese(identity_terms(
+        (product.category_hierarchy or "").split(">")[-1], product.category))
     wanted = normalize_vietnamese(identity_terms(query, product.category)).strip()
     if not wanted:
         return (0, 0)
@@ -2365,14 +2430,17 @@ def _product_type_rank(product: ProductSnapshot, query: str, category: str | Non
     # same type may be split across departments (adult/baby body wash, tools
     # and cleaning supplies). Only the actual type/taxonomy establishes this
     # tier; otherwise a wrong hint hides the best labelled alternative.
+    category_is_leaf = not leaf or leaf == kind
     taxonomy_match = (kind == wanted or wanted.startswith(kind + " ")
-                      or kind.startswith(wanted + " "))
+                      or (category_is_leaf and kind.startswith(wanted + " "))
+                      or leaf == wanted or leaf.startswith(wanted + " "))
+    brand_match = bool(product.brand and wanted == normalize_vietnamese(product.brand))
     position = title.find(wanted)
     prefix_length = len(title[:position].split()) if position >= 0 else len(title.split())
     # An umbrella category may contain several different head products. Prefer
     # the literal head in the title over a category-only match, without losing
     # legitimate type matches whose title begins with a brand or pack word.
-    return (not (taxonomy_match or position == 0),
+    return (not (taxonomy_match or brand_match or position == 0),
             prefix_length if position >= 0 else len(title.split()) + 1)
 
 
@@ -2458,6 +2526,10 @@ def _catalog_head_backoff(repository, query: Search, criteria: dict, *, raw_foun
         counts = Counter(p.category for p in heads if p.category)
         if len(heads) < 3 or not counts:
             continue
+        exact_category = [p for p in heads
+            if normalize_vietnamese(p.category) == normalize_vietnamese(phrase)]
+        if len(exact_category) >= 3:
+            return phrase, exact_category
         category, count = counts.most_common(1)[0]
         if count / len(heads) < 0.65:
             continue
@@ -2660,8 +2732,10 @@ def _matching_candidates(products, query: Search, *, type_query=None,
     # Filling/flavour hits still lose to the type's own name/taxonomy tier.
     if type_query.strip():
         head_products = [p for p in products if not _product_type_rank(p, type_query)[0]]
-        if head_products:
-            products = head_products
+        # No literal/taxonomy/brand head means these are only ingredient or
+        # flavour hits. They must not become recommendations merely because a
+        # mandatory filter removed the last real head product.
+        products = head_products
     if query.category and category_hard is not False:
         same_category = [p for p in products if p.category == query.category]
         if same_category:
@@ -3011,6 +3085,9 @@ def _unsupported_claim(text, candidates, chosen):
         r"(?:khong|it) (?:co )?mui", r"khong nong", r"mui (?:rat )?nhe",
         r"(?:it|khong) gay kich ung", r"diu nhe", r"lanh tinh",
         r"tot cho tieu hoa", r"tot cho suc khoe",
+        r"(?:khong|it) (?:lam|gay) (?:tang|giam).{0,25}(?:duong|huyet ap|cholesterol)",
+        r"(?:ha|giam|on dinh|kiem soat).{0,20}(?:duong huyet|huyet ap|cholesterol)",
+        r"(?:phong|chua|dieu tri|ngan ngua) (?:benh |tinh trang )?(?:tieu duong|tim mach|cao huyet ap)",
         r"giau (?:canxi|vitamin|(?:chat )?dinh duong|chat xo|protein)",
         r"\b(?:bo sung|cung cap|tang|lam tang)\b.{0,35}\b(?:vitamin|dinh duong|huong vi|do ngot)\b",
         r"\b(?:giu|giu duoc|giữ|giữ được)\b.{0,25}\b(?:mem|ngot|thom|ngay|vi)\b",
@@ -3065,6 +3142,14 @@ def _unsupported_claim(text, candidates, chosen):
                     and not re.search(r"\b(?:này|đó|vừa chọn|vì|giúp|nhờ)\b", sentence, re.I)
                 )
                 if label_checklist and not re.search(r"\b(?:dieu tri|chua)\b", match.group()):
+                    continue
+                if (not chosen and not REFERENCE.search(sentence)
+                    and re.match(r"\s*(?:để|khi)\s+(?:chọn|tìm)\b", sentence, re.I)
+                    and not re.search(r"\b(?:này|đó|giúp|đảm bảo|cam kết)\b", sentence, re.I)
+                    and re.search(r"\b(?:mui|huong|khong nong|diu nhe|it ngot|it duong)\b",
+                                  match.group())):
+                    # 'Để chọn ... mùi không nồng, hãy xem nhãn ...' describes
+                    # a desired attribute. It makes no claim about any SKU.
                     continue
                 if re.search(
                     r"\b(?:không|chưa)\s*(?:phải (?:là )?(?:thuốc|sản phẩm|loại)|"

@@ -44,7 +44,7 @@ from backend.services.azure_speech import (
     AzureSpeechProviderError,
     AzureSpeechService,
 )
-from backend.services.consultation import consult, use_consultation
+from backend.services.consultation import consult_customer as consult, use_consultation
 from backend.services.elevenlabs import (
     ElevenLabsConfigurationError,
     ElevenLabsProviderError,
@@ -248,8 +248,10 @@ def _chat_provider_http_error(exc: GroqProviderError) -> HTTPException:
     )
     code = "assistant_busy" if busy else "assistant_unavailable"
     logger.warning(
-        "Assistant response failed code=%s attempts=%d provider_codes=%s",
-        code, len(trace), sorted({str(row.get("provider_code")) for row in trace
+        "Assistant response failed code=%s stage=%s semantic_rejected=%s attempts=%d provider_codes=%s",
+        code, getattr(exc, "failure_stage", "provider"),
+        bool(getattr(exc, "semantic_rejected", False)), len(trace),
+        sorted({str(row.get("provider_code")) for row in trace
                                 if row.get("provider_code")}),
     )
     return HTTPException(status_code=502, detail={
