@@ -1,0 +1,111 @@
+{
+  "mode": "controlled-cooldown-real-network",
+  "real_429_injected": false,
+  "configured_distinct_keys": 5,
+  "models": [
+    "qwen/qwen3.8-27b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b"
+  ],
+  "model": "openai/gpt-oss-20b",
+  "trace": [
+    {
+      "model": "qwen/qwen3.8-27b",
+      "credential_slot": 0,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "qwen/qwen3.8-27b",
+      "credential_slot": 1,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "qwen/qwen3.8-27b",
+      "credential_slot": 2,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "qwen/qwen3.8-27b",
+      "credential_slot": 3,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "qwen/qwen3.8-27b",
+      "credential_slot": 4,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "openai/gpt-oss-120b",
+      "credential_slot": 0,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "openai/gpt-oss-120b",
+      "credential_slot": 1,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "openai/gpt-oss-120b",
+      "credential_slot": 2,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "openai/gpt-oss-120b",
+      "credential_slot": 3,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "openai/gpt-oss-120b",
+      "credential_slot": 4,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "credential_slot": 0,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "credential_slot": 1,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "credential_slot": 2,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "credential_slot": 3,
+      "status": "cooldown",
+      "retry_after_seconds": 30.0
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "credential_slot": 4,
+      "status": "success",
+      "rate_limit_headers": {
+        "x-ratelimit-limit-requests": "1000",
+        "x-ratelimit-limit-tokens": "8000",
+        "x-ratelimit-remaining-requests": "999",
+        "x-ratelimit-remaining-tokens": "7892",
+        "x-ratelimit-reset-requests": "1m26.4s",
+        "x-ratelimit-reset-tokens": "810ms"
+      }
+    }
+  ],
+  "success": true
+}

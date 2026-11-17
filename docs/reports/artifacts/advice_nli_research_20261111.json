@@ -1,0 +1,216 @@
+{
+  "model": "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
+  "revision": "8adb042d524ecd5c26d3e3ba0e3fbcf7e2d0864c",
+  "license": "mit",
+  "production_switch": false,
+  "rows": [
+    {
+      "id": "actual-mince-error",
+      "premise": "Thịt bò Úc Kiaora xay khay 200g.",
+      "hypothesis": "Thịt bò xay mỏng, dễ cắt thành lát mỏng cho lẩu.",
+      "expected": "contradiction",
+      "scores": {
+        "entailment": 0.004553555510938168,
+        "neutral": 0.9911291599273682,
+        "contradiction": 0.004317292477935553
+      },
+      "predicted": "neutral",
+      "seconds": 0.0477
+    },
+    {
+      "id": "unsweetened-error",
+      "premise": "Sữa tươi có đường 1 lít.",
+      "hypothesis": "Sản phẩm này là sữa không đường.",
+      "expected": "contradiction",
+      "scores": {
+        "entailment": 0.008468272164463997,
+        "neutral": 0.0295253936201334,
+        "contradiction": 0.9620063900947571
+      },
+      "predicted": "contradiction",
+      "seconds": 0.0276
+    },
+    {
+      "id": "scent-error",
+      "premise": "Nước lau sàn hương hoa 1 lít.",
+      "hypothesis": "Sản phẩm này không mùi.",
+      "expected": "contradiction",
+      "scores": {
+        "entailment": 0.006735566537827253,
+        "neutral": 0.9734011888504028,
+        "contradiction": 0.019863272085785866
+      },
+      "predicted": "neutral",
+      "seconds": 0.0253
+    },
+    {
+      "id": "size-error",
+      "premise": "Nước uống đóng chai 500ml.",
+      "hypothesis": "Một chai có dung tích 1 lít.",
+      "expected": "contradiction",
+      "scores": {
+        "entailment": 0.35246747732162476,
+        "neutral": 0.4159081280231476,
+        "contradiction": 0.23162436485290527
+      },
+      "predicted": "neutral",
+      "seconds": 0.0236
+    },
+    {
+      "id": "length-error",
+      "premise": "Băng vệ sinh ban đêm dài 30cm.",
+      "hypothesis": "Sản phẩm này dài ít nhất 35cm.",
+      "expected": "contradiction",
+      "scores": {
+        "entailment": 0.03373641520738602,
+        "neutral": 0.9526414275169373,
+        "contradiction": 0.013622176833450794
+      },
+      "predicted": "neutral",
+      "seconds": 0.0271
+    },
+    {
+      "id": "mass-volume-error",
+      "premise": "Dầu gội Clear chai 630g.",
+      "hypothesis": "Chai dầu gội này có dung tích 630ml.",
+      "expected": "neutral",
+      "scores": {
+        "entailment": 0.2516457736492157,
+        "neutral": 0.6983097195625305,
+        "contradiction": 0.05004448816180229
+      },
+      "predicted": "neutral",
+      "seconds": 0.0251
+    },
+    {
+      "id": "pet-safety-error",
+      "premise": "Nước lau sàn hương chanh 1 lít.",
+      "hypothesis": "Sản phẩm này an toàn cho mèo.",
+      "expected": "neutral",
+      "scores": {
+        "entailment": 0.0010736837284639478,
+        "neutral": 0.9976430535316467,
+        "contradiction": 0.0012832126813009381
+      },
+      "predicted": "neutral",
+      "seconds": 0.0277
+    },
+    {
+      "id": "acne-treatment-error",
+      "premise": "Sữa rửa mặt Biore sạch mụn kháng khuẩn 100g.",
+      "hypothesis": "Sản phẩm này điều trị mụn sau hai tuần.",
+      "expected": "neutral",
+      "scores": {
+        "entailment": 0.0010552267776802182,
+        "neutral": 0.9935160875320435,
+        "contradiction": 0.005428692791610956
+      },
+      "predicted": "neutral",
+      "seconds": 0.0362
+    },
+    {
+      "id": "hypoallergenic-error",
+      "premise": "Sữa tắm hương hoa 500ml.",
+      "hypothesis": "Sản phẩm này không gây kích ứng cho da nhạy cảm.",
+      "expected": "neutral",
+      "scores": {
+        "entailment": 0.0020781755447387695,
+        "neutral": 0.9886021018028259,
+        "contradiction": 0.009319733828306198
+      },
+      "predicted": "neutral",
+      "seconds": 0.0338
+    },
+    {
+      "id": "cooking-time-error",
+      "premise": "Bánh bao nhân thịt 300g.",
+      "hypothesis": "Sản phẩm này chỉ cần hâm 30 giây là ăn được.",
+      "expected": "neutral",
+      "scores": {
+        "entailment": 0.0072051663883030415,
+        "neutral": 0.9780484437942505,
+        "contradiction": 0.014746403321623802
+      },
+      "predicted": "neutral",
+      "seconds": 0.0304
+    },
+    {
+      "id": "grounded-plain",
+      "premise": "Sữa tươi không đường 1 lít.",
+      "hypothesis": "Sản phẩm này là sữa không đường.",
+      "expected": "entailment",
+      "scores": {
+        "entailment": 0.6360093951225281,
+        "neutral": 0.3587470054626465,
+        "contradiction": 0.005243638064712286
+      },
+      "predicted": "entailment",
+      "seconds": 0.0274
+    },
+    {
+      "id": "grounded-size",
+      "premise": "Nước uống đóng chai 1 lít.",
+      "hypothesis": "Một chai có dung tích 1000ml.",
+      "expected": "entailment",
+      "scores": {
+        "entailment": 0.5736486911773682,
+        "neutral": 0.3334583044052124,
+        "contradiction": 0.09289294481277466
+      },
+      "predicted": "entailment",
+      "seconds": 0.0244
+    },
+    {
+      "id": "grounded-form",
+      "premise": "Ba chỉ bò cắt lát khay 200g.",
+      "hypothesis": "Thịt đã được cắt thành lát.",
+      "expected": "entailment",
+      "scores": {
+        "entailment": 0.1003696545958519,
+        "neutral": 0.8769084811210632,
+        "contradiction": 0.02272183820605278
+      },
+      "predicted": "neutral",
+      "seconds": 0.0281
+    },
+    {
+      "id": "grounded-scent",
+      "premise": "Nước lau sàn hương chanh 1 lít.",
+      "hypothesis": "Sản phẩm này có hương chanh.",
+      "expected": "entailment",
+      "scores": {
+        "entailment": 0.8368597626686096,
+        "neutral": 0.15764139592647552,
+        "contradiction": 0.005498829763382673
+      },
+      "predicted": "entailment",
+      "seconds": 0.0275
+    },
+    {
+      "id": "general-usage-not-label",
+      "premise": "Ba chỉ bò cắt lát khay 200g.",
+      "hypothesis": "Thịt cắt lát sẵn tiện nhúng lẩu, nhúng chín từng ít một.",
+      "expected": "neutral",
+      "scores": {
+        "entailment": 0.0017471597529947758,
+        "neutral": 0.9946998357772827,
+        "contradiction": 0.003553075948730111
+      },
+      "predicted": "neutral",
+      "seconds": 0.0392
+    },
+    {
+      "id": "general-cleaning-not-label",
+      "premise": "Cây lau nhà và khăn lau.",
+      "hypothesis": "Dùng khăn riêng cho bếp và nhà vệ sinh để tránh lây bẩn.",
+      "expected": "neutral",
+      "scores": {
+        "entailment": 0.0017967334715649486,
+        "neutral": 0.9945061802864075,
+        "contradiction": 0.003697176231071353
+      },
+      "predicted": "neutral",
+      "seconds": 0.035
+    }
+  ]
+}

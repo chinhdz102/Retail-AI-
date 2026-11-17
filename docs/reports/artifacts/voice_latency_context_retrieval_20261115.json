@@ -1,0 +1,80 @@
+{
+  "physical_microphone": false,
+  "stt": [
+    {
+      "fixture": "vi-VN-NamMinhNeural-00-raw.wav",
+      "synthetic_voice": true,
+      "audio_seconds": 4.448,
+      "status": 200,
+      "api_ms": 1375,
+      "text": "Mình cần nước lau sàn, không phải nước giặt.",
+      "speech_detected": true,
+      "stage_ms": {
+        "stt_acoustic_ms": 57.5,
+        "stt_prepare_ms": 0.7,
+        "stt_provider_ms": 1306.4,
+        "stt_trace_ms": 6.9,
+        "stt_total_ms": 1371.7
+      }
+    },
+    {
+      "fixture": "vi-VN-NamMinhNeural-01-raw.wav",
+      "synthetic_voice": true,
+      "audio_seconds": 3.68,
+      "status": 200,
+      "api_ms": 878,
+      "text": "Cho mình thịt bò để nhúng lẩu.",
+      "speech_detected": true,
+      "stage_ms": {
+        "stt_acoustic_ms": 55.9,
+        "stt_prepare_ms": 0.5,
+        "stt_provider_ms": 811.8,
+        "stt_trace_ms": 6.6,
+        "stt_total_ms": 874.8
+      }
+    }
+  ],
+  "tts": [
+    {
+      "characters": 40,
+      "status": 200,
+      "ticket_ms": 2,
+      "first_byte_ms": 890,
+      "complete_ms": 1008,
+      "network_chunks": 27,
+      "bytes": 20736,
+      "headers": {
+        "x-tts-provider": "azure-speech",
+        "content-type": "audio/mpeg",
+        "transfer-encoding": "chunked"
+      }
+    },
+    {
+      "characters": 123,
+      "status": 200,
+      "ticket_ms": 2,
+      "first_byte_ms": 192,
+      "complete_ms": 385,
+      "network_chunks": 57,
+      "bytes": 49968,
+      "headers": {
+        "x-tts-provider": "azure-speech",
+        "content-type": "audio/mpeg",
+        "transfer-encoding": "chunked"
+      }
+    }
+  ],
+  "config": {
+    "provider": "azure",
+    "model": "azure-conversation-vi-VN",
+    "language": "vi",
+    "prompt_enabled": false,
+    "pipeline_version": "vi-azure-20261110-1",
+    "catalog_source": "snapshot",
+    "acoustic_models": [
+      "silero-v6",
+      "yamnet-v1"
+    ],
+    "local_diagnostics": true
+  }
+}

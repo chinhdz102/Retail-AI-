@@ -1,5 +1,5 @@
 export type AssistantStatus = 'idle' | 'listening' | 'transcribing' | 'thinking' | 'speaking' | 'error'
-export type LanguageCode = 'vi' | 'en' | 'zh'
+export type LanguageCode = 'vi'
 
 export interface SessionResponse {
   session_id: string
@@ -110,10 +110,16 @@ export interface SandboxOrder {
 }
 
 export interface TranscriptionResponse {
+  request_id: string
+  pipeline_version: string
+  provider: 'groq' | 'azure'
   session_id: string
   text: string
-  language: string
+  language: 'vi'
   model: string
+  speech_detected: boolean
+  rejection_reason: string | null
+  quality: Record<string, number>
 }
 
 export interface ChatMessage {

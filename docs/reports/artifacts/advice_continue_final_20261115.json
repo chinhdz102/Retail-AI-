@@ -1,0 +1,141 @@
+{
+  "started_utc": "2026-11-15T06:45:51.673783+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 25.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "owned-food",
+      "turns": [
+        {
+          "question": "Hai người ăn cơm tối, nhà có gạo và dầu ăn rồi. Chọn thịt heo với một loại rau, tổng tối đa 120 nghìn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "08e77b1d-ca4f-41de-8ea8-f3c85d14e783",
+            "text": "Với hai người ăn tối, bạn nên chọn khoảng 300-400g thịt heo và một lượng rau vừa đủ để đảm bảo dinh dưỡng. Thịt đùi hoặc thịt xay đều phù hợp để chế biến nhanh như kho, chiên hoặc làm chả, bạn có thể điều chỉnh lượng thịt tùy khẩu vị.\nMEATDELI Thịt đùi heo (S) — 300g (41.670đ): Thịt đùi heo có tỷ lệ nạc mỡ cân bằng, phù hợp để kho hoặc chiên cho bữa cơm gia đình\nCải thảo — 200g (4.380đ): là loại rau phổ biến, dễ chế biến thành canh hoặc xào ăn kèm cơm\n\nTổng: 46.050đ.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "TLM_10617961",
+              "TLM_10053860"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10617961",
+                "name": "MEATDELI Thịt đùi heo (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 138900,
+                "stock": 2,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367650Z"
+              },
+              {
+                "product_id": "TLM_10053860",
+                "name": "Cải thảo",
+                "category": "Rau Lá",
+                "brand": "NOBRAND",
+                "price_vnd": 21900,
+                "stock": 68,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:50.238578Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 6.108
+        },
+        {
+          "question": "Không lấy thịt xay, chọn miếng thịt nạc để xào và rau luộc thôi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.871
+        },
+        {
+          "question": "Thịt chỉ mua 300 gram, tính tổng hai món giúp mình.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 4.973
+        },
+        {
+          "question": "Giờ bỏ giới hạn tiền, vẫn chỉ cần đúng hai món ăn với cơm. Chọn chốt giúp mình, đừng giới thiệu thêm.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 7.174
+        }
+      ]
+    },
+    {
+      "id": "one-shampoo",
+      "turns": [
+        {
+          "question": "Có loại dầu gội nào dưới 150 nghìn không, chọn giúp mình đúng một loại.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.689
+        },
+        {
+          "question": "Đừng quảng cáo công dụng, nói một điểm nên cân nhắc thôi.",
+          "http_status": 200,
+          "response": {
+            "session_id": "f28c10f6-e442-4ebc-8e98-2d7026ec5fb1",
+            "text": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g (80.000đ): dung tích 180 g, đáp ứng ngân sách dưới 150 nghìn",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "TLM_10601171"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10601171",
+                "name": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g",
+                "category": "Chăm Sóc Tóc",
+                "brand": "CLEAR",
+                "price_vnd": 80000,
+                "stock": 8,
+                "uom": "Chai",
+                "data_timestamp": "2026-09-15T13:53:35.397509Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.396
+        },
+        {
+          "question": "Chỉ cần hướng dẫn chọn dầu gội cho tóc dầu, không cần mua thêm sản phẩm.",
+          "http_status": 200,
+          "response": {
+            "session_id": "f28c10f6-e442-4ebc-8e98-2d7026ec5fb1",
+            "text": "Với tóc dầu, nên chọn dầu gội có công thức kiểm soát bã nhờn và không gây nặng đầu, tránh các loại có thành phần dưỡng ẩm mạnh như dầu dừa hoặc bơ hạt.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [],
+            "tools_used": [],
+            "state": "BROWSING",
+            "products": [],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 3.263
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T06:49:24.119844+00:00"
+}

@@ -1,0 +1,30 @@
+{
+  "advice-continue": {
+    "rate_limit_attempts": 41,
+    "exhausted_calls": 11,
+    "rejections": [
+      "Consultation rejected stage=render reason=Hàng cân kg cần ghi khối lượng mua bằng [[ID|500g]] để tính tổng.",
+      "Consultation rejected stage=render reason=Không chép giá/tổng vào advice/reason; code sẽ in giá từ choices.",
+      "Consultation rejected stage=render reason=Không nói về catalog, snapshot hay dữ liệu nội bộ; hãy tư vấn theo nhu cầu khách.",
+      "Consultation rejected stage=review reason=Sửa lý lẽ/lựa chọn trước khi trả khách: The response is a question to the store rather than providing a concrete recommendation and price calculation.; It does not select specific "
+    ],
+    "warning": "Counts are provider/stage attempts, not one-to-one HTTP turn causes."
+  },
+  "advice-final": {
+    "rate_limit_attempts": 17,
+    "exhausted_calls": 0,
+    "rejections": [
+      "Consultation rejected stage=render reason=Không chép giá/tổng vào advice/reason; code sẽ in giá từ choices.",
+      "Consultation rejected stage=render reason=Không chép tên/mã hàng trong advice/reason; chỉ chọn bằng choices.",
+      "Consultation rejected stage=render reason=Không khẳng định tồn thực tế hoặc vị trí trong cửa hàng khi chưa được xác minh.",
+      "Consultation rejected stage=render reason=evidence phải là nguyên văn trên nhãn của chính SKU đã chọn."
+    ],
+    "warning": "Counts are provider/stage attempts, not one-to-one HTTP turn causes."
+  },
+  "advice-shipping": {
+    "rate_limit_attempts": 11,
+    "exhausted_calls": 0,
+    "rejections": [],
+    "warning": "Counts are provider/stage attempts, not one-to-one HTTP turn causes."
+  }
+}

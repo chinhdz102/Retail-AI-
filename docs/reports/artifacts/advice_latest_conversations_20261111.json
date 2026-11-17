@@ -1,0 +1,260 @@
+{
+  "started_utc": "2026-11-10T17:30:34.129221+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 18.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "hotpot",
+      "turns": [
+        {
+          "question": "Mua thịt về ăn lẩu cho 4 người thì chọn gì?",
+          "http_status": 200,
+          "response": {
+            "session_id": "d2de0c8b-8aa5-48d9-b1a7-e65998bd0682",
+            "text": "Bạn nên chọn ít nhất một loại thịt bò mềm, một loại thịt heo có một chút mỡ và một loại thịt gà nạc để có độ đa dạng cho lẩu cho 4 người.\nThịt Thăn bò — 500g (199.500đ): Thịt thăn mềm, ít gân, thích hợp thái mỏng nhúng lẩu.\nMEATDELI Thịt Ba Rọi heo (S) — 500g (99.950đ): Thịt ba rọi có lớp mỡ xen kẽ, giữ độ ẩm khi nhúng lẩu.\nMEATDELI Phi lê ức gà — 400g (45.160đ): Phi lê ức gà nạc, ít mỡ, phù hợp cho người muốn phần thịt nhẹ.\nBạn có muốn ưu tiên thịt bò hay thịt heo hơn, hay muốn cân bằng ba loại?",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "TLM_10053675",
+              "TLM_10617959",
+              "TLM_10283198"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10053675",
+                "name": "Thịt Thăn bò",
+                "category": "Thịt",
+                "brand": "NOBRAND",
+                "price_vnd": 399000,
+                "stock": 60,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.366057Z"
+              },
+              {
+                "product_id": "TLM_10617959",
+                "name": "MEATDELI Thịt Ba Rọi heo (S)",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 199900,
+                "stock": 1,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.367568Z"
+              },
+              {
+                "product_id": "TLM_10283198",
+                "name": "MEATDELI Phi lê ức gà",
+                "category": "Thịt",
+                "brand": "MEAT DELI",
+                "price_vnd": 112900,
+                "stock": 9,
+                "uom": "Kg",
+                "data_timestamp": "2026-09-15T13:53:54.366855Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 8.163
+        },
+        {
+          "question": "Thịt bò bình thường hoặc ba chỉ cũng được, khoảng 200 nghìn.",
+          "http_status": 200,
+          "response": {
+            "session_id": "d2de0c8b-8aa5-48d9-b1a7-e65998bd0682",
+            "text": "Thịt bò Úc Kiaora xay khay 200g (68.700đ): Thịt bò xay mỏng, dễ cắt thành lát mỏng cho lẩu, giá phù hợp cho ngân sách.\nBa chỉ bò Úc  cắt lát  Kiaora khay 200g (87.100đ): Ba chỉ bò cắt lát, có một chút mỡ giúp nước lẩu ngậy, giá vừa trong ngân sách.\n\nTổng: 155.800đ.",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "TLM_10282507",
+              "TLM_10140199"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10282507",
+                "name": "Thịt bò Úc Kiaora xay khay 200g",
+                "category": "Thịt",
+                "brand": "KIAORA",
+                "price_vnd": 68700,
+                "stock": 1,
+                "uom": "Khay",
+                "data_timestamp": "2026-09-15T13:53:54.366843Z"
+              },
+              {
+                "product_id": "TLM_10140199",
+                "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+                "category": "Thịt",
+                "brand": "KIAORA",
+                "price_vnd": 87100,
+                "stock": 6,
+                "uom": "Khay",
+                "data_timestamp": "2026-09-15T13:53:54.366166Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.082
+        },
+        {
+          "question": "Tư vấn giúp t chọn loại nào đi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 1.388
+        }
+      ]
+    },
+    {
+      "id": "acne",
+      "turns": [
+        {
+          "question": "Có loại nào điều trị mụn không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.009
+        },
+        {
+          "question": "Tư vấn cho t với.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.015
+        },
+        {
+          "question": "Da dầu, khoảng 100 nghìn, chọn gì được?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.013
+        }
+      ]
+    },
+    {
+      "id": "shampoo",
+      "turns": [
+        {
+          "question": "Có dầu gội dưới 150 nghìn không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.011
+        },
+        {
+          "question": "Tóc t dầu, chọn giúp loại đáng tiền.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.016
+        },
+        {
+          "question": "Có loại nào rẻ hơn mà dung tích tương tự không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.287
+        }
+      ]
+    },
+    {
+      "id": "drinks",
+      "turns": [
+        {
+          "question": "Có đồ uống nào không quá ngọt dưới 20 nghìn?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.01
+        },
+        {
+          "question": "Không lấy nước có ga.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.298
+        },
+        {
+          "question": "Loại 1 lít ấy chứ không phải chai nhỏ.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.052
+        }
+      ]
+    },
+    {
+      "id": "dinner",
+      "turns": [
+        {
+          "question": "Mua đồ ăn tối cho hai người, tổng khoảng 200 nghìn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 1.731
+        },
+        {
+          "question": "Nhà có gạo rồi, lấy món dễ nấu thôi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 1.616
+        },
+        {
+          "question": "Gợi ý cụ thể và tính tổng giúp t.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.015
+        }
+      ]
+    },
+    {
+      "id": "cleaning",
+      "turns": [
+        {
+          "question": "Nhà t nuôi mèo, cuối tuần muốn mua đồ lau nhà.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.011
+        },
+        {
+          "question": "Không có mùi nồng, tầm dưới 100 nghìn.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.017
+        },
+        {
+          "question": "Tư vấn nên chọn loại nào?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.016
+        }
+      ]
+    },
+    {
+      "id": "stt-typo",
+      "turns": [
+        {
+          "question": "Mua thịt về ăn lấu thì nên chọn gì?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.009
+        },
+        {
+          "question": "Ý t là ăn lẩu ấy.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.012
+        },
+        {
+          "question": "Bỏ bánh bao ra, muốn thịt tươi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 0.012
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-10T17:37:10.513394+00:00"
+}

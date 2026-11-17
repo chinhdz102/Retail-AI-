@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import dataclass
+from time import monotonic
 from typing import Any
-from xml.sax.saxutils import escape
 
 import httpx
 
 from backend.config import Settings, get_settings
 from backend.services.speech_stream import SpeechAudioStream
+from backend.services.speech_text import retail_ssml_text
 
 
 class AzureSpeechConfigurationError(RuntimeError):
@@ -29,14 +31,15 @@ class AzureSpeechAudio:
 class AzureSpeechService:
     VOICES: dict[str, tuple[str, str]] = {
         "vi": ("vi-VN", "vi-VN-HoaiMyNeural"),
-        "en": ("en-US", "en-US-JennyNeural"),
-        "zh": ("zh-CN", "zh-CN-XiaoxiaoNeural"),
     }
     OUTPUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3"
 
     def __init__(self, settings: Settings | None = None, client: Any | None = None) -> None:
         self.settings = settings or get_settings()
         self.client = client
+        self._owns_client = client is None
+        self._prepare_lock = asyncio.Lock()
+        self._warm_until = 0.0
 
     def _client_or_raise(self) -> tuple[Any, str]:
         key = self.settings.azure_speech_key.get_secret_value().strip()
@@ -52,8 +55,51 @@ class AzureSpeechService:
             self.client = httpx.AsyncClient(
                 base_url=f"https://{region}.tts.speech.microsoft.com",
                 timeout=self.settings.azure_speech_timeout_seconds,
+                limits=httpx.Limits(
+                    max_connections=20,
+                    max_keepalive_connections=10,
+                    keepalive_expiry=60.0,
+                ),
             )
         return self.client, key
+
+    async def preconnect(self, language: str = "vi") -> None:
+        """Warm the reusable Azure connection while the customer is speaking."""
+        async with self._prepare_lock:
+            if monotonic() < self._warm_until:
+                return
+            await self._preconnect(language)
+            self._warm_until = monotonic() + 45
+
+    async def _preconnect(self, language: str) -> None:
+        voice = self.VOICES.get(language)
+        if voice is None:
+            raise AzureSpeechProviderError("Azure Speech voice is unavailable")
+
+        client, key = self._client_or_raise()
+        locale, _ = voice
+        try:
+            response = await client.get(
+                "/cognitiveservices/voices/list",
+                params={"language": locale},
+                headers={"Ocp-Apim-Subscription-Key": key},
+                timeout=min(self.settings.azure_speech_timeout_seconds, 5.0),
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise AzureSpeechProviderError(
+                f"Azure Speech preconnect failed with HTTP {exc.response.status_code}"
+            ) from exc
+        except AzureSpeechProviderError:
+            raise
+        except Exception as exc:
+            raise AzureSpeechProviderError("Azure Speech preconnect failed") from exc
+
+    async def aclose(self) -> None:
+        if self._owns_client and self.client is not None:
+            await self.client.aclose()
+            self.client = None
+            self._warm_until = 0
 
     async def synthesize(self, text: str, language: str = "vi") -> AzureSpeechAudio:
         voice = self.VOICES.get(language)
@@ -66,7 +112,8 @@ class AzureSpeechService:
         locale, voice_id = voice
         ssml = (
             '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
-            f'xml:lang="{locale}"><voice name="{voice_id}">{escape(text)}</voice></speak>'
+            f'xml:lang="{locale}"><voice name="{voice_id}">'
+            f'{retail_ssml_text(text, language)}</voice></speak>'
         )
         headers = {
             "Ocp-Apim-Subscription-Key": key,
@@ -86,6 +133,7 @@ class AzureSpeechService:
             content_type = response.headers.get("content-type", "audio/mpeg").split(";", 1)[0]
             if not content_type.startswith("audio/"):
                 raise ValueError("Azure Speech returned a non-audio response")
+            self._warm_until = monotonic() + 45
             return AzureSpeechAudio(
                 content=response.content,
                 content_type=content_type,
@@ -111,7 +159,8 @@ class AzureSpeechService:
         locale, voice_id = voice
         ssml = (
             '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
-            f'xml:lang="{locale}"><voice name="{voice_id}">{escape(text)}</voice></speak>'
+            f'xml:lang="{locale}"><voice name="{voice_id}">'
+            f'{retail_ssml_text(text, language)}</voice></speak>'
         )
         headers = {
             "Ocp-Apim-Subscription-Key": key,
@@ -132,6 +181,7 @@ class AzureSpeechService:
             content_type = response.headers.get("content-type", "audio/mpeg").split(";", 1)[0]
             if not content_type.startswith("audio/"):
                 raise AzureSpeechProviderError("Azure Speech returned a non-audio response")
+            self._warm_until = monotonic() + 45
             return SpeechAudioStream(response, content_type, voice_id)
         except AzureSpeechProviderError:
             if response is not None:

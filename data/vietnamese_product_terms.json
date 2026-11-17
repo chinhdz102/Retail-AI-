@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "purpose": "Verified equivalent product-type terms for retrieval only; no transcript or customer answer rewriting.",
+  "groups": [
+    {
+      "terms": ["thịt heo", "thịt lợn"],
+      "categories": ["Thịt", "Thịt Đông Lạnh"],
+      "source": "https://datacollection.nso.gov.vn/Data/Sites/1/media/vlhuyen/files/gi%C3%A1%20ti%C3%AAu%20d%C3%B9ng%202022/PADT%20GIA%20TIEU%20DUNG%202020-2025%20%28toan%20bo%29.pdf"
+    },
+    {
+      "terms": ["ba rọi", "ba chỉ"],
+      "categories": ["Thịt", "Thịt Đông Lạnh"],
+      "source": "https://datacollection.nso.gov.vn/Data/Sites/1/media/vlhuyen/files/gi%C3%A1%20ti%C3%AAu%20d%C3%B9ng%202022/PADT%20GIA%20TIEU%20DUNG%202020-2025%20%28toan%20bo%29.pdf"
+    },
+    {
+      "terms": ["nước rửa chén", "nước rửa bát"],
+      "categories": ["Nước Rửa Chén"],
+      "source": "https://www.nso.gov.vn/wp-content/uploads/2021/03/2019-PAN-GIA-TIEU-DUNG-2020-2025.pdf"
+    },
+    {
+      "terms": ["bột ngọt", "mì chính"],
+      "categories": ["Gia Vị Khác"],
+      "source": "https://miwon.vn/danh-muc-san-pham/mi-chinh-bot-ngot-40.html?lang=vi"
+    },
+    {
+      "terms": ["đậu phộng", "lạc"],
+      "categories": ["Gạo - Nông Sản Khô", "Hạt - Trái Cây Sấy Khô"],
+      "source": "https://datacollection.nso.gov.vn/Data/Sites/1324/media/ntthuan/files/Phieu%20KSMS%202025%20_PDF.pdf"
+    }
+  ]
+}

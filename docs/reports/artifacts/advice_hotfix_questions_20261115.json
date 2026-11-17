@@ -1,0 +1,176 @@
+{
+  "started_utc": "2026-11-15T05:17:04.305223+00:00",
+  "mode": "real-http-text",
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "stt_used": false,
+  "pause_seconds": 4.0,
+  "complete": true,
+  "cases": [
+    {
+      "id": "q02",
+      "turns": [
+        {
+          "question": "Em muốn mua cái gì đó ăn sáng cho nhanh mà vẫn no, có loại nào ổn không?",
+          "http_status": 200,
+          "response": {
+            "session_id": "8722a215-cebd-48b7-b6bd-bd884a3a4bb3",
+            "text": "Bạn có thể chọn bánh mì sandwich hoặc bánh bao nhân thịt để ăn nhanh, no lâu. Nếu muốn thêm dinh dưỡng, hãy kết hợp một hộp sữa tươi.\nBánh mì sandwich Staff gói 275g (21.000đ): Bánh mì sandwich tiện lợi, có thể ăn ngay hoặc kẹp thêm đồ ăn tùy thích.\nBánh bao nhân thịt heo trứng cút Thọ Phát gói 250g (30.700đ): Bánh bao nhân thịt heo và trứng cút cung cấp đủ chất đạm, giúp no lâu hơn.\nSữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L (50.000đ): Sữa tươi tiệt trùng ít béo giúp bổ sung dinh dưỡng và tạo cảm giác no.",
+            "model": "qwen/qwen3.8-27b",
+            "grounded_product_ids": [
+              "TLM_10140398",
+              "TLM_10005885",
+              "TLM_10010635"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10140398",
+                "name": "Bánh mì sandwich Staff gói 275g",
+                "category": "Bánh mì",
+                "brand": "HỮU NGHỊ",
+                "price_vnd": 21000,
+                "stock": 77,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:30.497500Z"
+              },
+              {
+                "product_id": "TLM_10005885",
+                "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+                "category": "Bánh bao",
+                "brand": "THỌ PHÁT",
+                "price_vnd": 30700,
+                "stock": 18,
+                "uom": "Gói",
+                "data_timestamp": "2026-09-15T13:53:30.238996Z"
+              },
+              {
+                "product_id": "TLM_10010635",
+                "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+                "category": "Sữa Tươi",
+                "brand": "MEADOW FRESH",
+                "price_vnd": 50000,
+                "stock": 52,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:51.763106Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 5.015
+        }
+      ]
+    },
+    {
+      "id": "q03",
+      "turns": [
+        {
+          "question": "Dạo này trời nóng quá, có loại nước nào uống ngon mà không quá ngọt không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.523
+        }
+      ]
+    },
+    {
+      "id": "q05",
+      "turns": [
+        {
+          "question": "Em định mua quà cho mẹ mà chưa biết chọn cái gì, tầm 300 nghìn thôi.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 5.727
+        }
+      ]
+    },
+    {
+      "id": "q08",
+      "turns": [
+        {
+          "question": "Em có khoảng 200 nghìn, mua đồ ăn đủ cho hai người một bữa tối được không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 6.494
+        }
+      ]
+    },
+    {
+      "id": "q09",
+      "turns": [
+        {
+          "question": "Có loại dầu gội nào tầm dưới 150 nghìn mà dùng ổn không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.325
+        }
+      ]
+    },
+    {
+      "id": "q20",
+      "turns": [
+        {
+          "question": "Da em khá nhạy cảm, có loại sữa tắm nào dịu nhẹ không?",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.458
+        }
+      ]
+    },
+    {
+      "id": "q22",
+      "turns": [
+        {
+          "question": "Nhà em có nuôi mèo, muốn mua đồ vệ sinh nhà mà an toàn khi dùng quanh thú cưng.",
+          "http_status": 502,
+          "error_type": "HTTPError",
+          "seconds": 3.939
+        }
+      ]
+    },
+    {
+      "id": "q27",
+      "turns": [
+        {
+          "question": "Có bán cái loại sữa hộp màu xanh xanh không nhỉ?",
+          "http_status": 200,
+          "response": {
+            "session_id": "4866244b-fe47-4d9c-b8b6-2be08935af13",
+            "text": "Sữa đặc có đường Ngôi Sao Phương Nam hộp giấy 380g (Xanh lá) (22.900đ): Hộp giấy có màu xanh lá, đáp ứng yêu cầu màu sắc",
+            "model": "openai/gpt-oss-120b",
+            "grounded_product_ids": [
+              "TLM_10603574"
+            ],
+            "tools_used": [
+              "search_products"
+            ],
+            "state": "BROWSING",
+            "products": [
+              {
+                "product_id": "TLM_10603574",
+                "name": "Sữa đặc có đường Ngôi Sao Phương Nam hộp giấy 380g (Xanh lá)",
+                "category": "Sữa đặc",
+                "brand": "NGÔI SAO PHƯƠNG NAM",
+                "price_vnd": 22900,
+                "stock": 38,
+                "uom": "Hộp",
+                "data_timestamp": "2026-09-15T13:53:52.878443Z"
+              }
+            ],
+            "cart": null,
+            "checkout_quote": null,
+            "order": null,
+            "support_ticket": null
+          },
+          "seconds": 4.553
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-11-15T05:18:14.361904+00:00"
+}

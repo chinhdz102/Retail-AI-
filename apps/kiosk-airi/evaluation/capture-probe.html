@@ -1,0 +1,51 @@
+<!doctype html><meta charset="utf-8"><link rel="icon" href="data:,">
+<button id="run">Kiểm tra bộ thu</button>
+<script type="module">
+import { VoiceConversationController } from '/src/voice-controller.ts'
+window.probe = { ready: true }
+const NativeContext = window.AudioContext
+let captureContext
+window.AudioContext = new Proxy(NativeContext, { construct(target, args) {
+  captureContext = Reflect.construct(target, args)
+  return captureContext
+} })
+// Deterministic synthetic input through the real worklet and WASM. No physical mic.
+probe.run = async (samples) => {
+  let sourceContext, destination
+  const states = [], errors = [], captures = []
+  let frames = 0, lastLevel = 0, maxLevel = 0, maxProbability = 0, positiveFrames = 0
+  const notices = []
+  const started = performance.now()
+  const controller = new VoiceConversationController({
+    getUserMedia: async () => {
+      sourceContext = captureContext
+      destination = sourceContext.createMediaStreamDestination()
+      return destination.stream
+    },
+    onState: state => states.push({ ...state, at: performance.now() - started }),
+    onLevel: value => { frames++; lastLevel = value; maxLevel = Math.max(maxLevel, value) },
+    onVadFrame: probability => { maxProbability = Math.max(maxProbability, probability); if (probability >= .5) positiveFrames++ },
+    onNotice: message => notices.push(message),
+    onError: error => errors.push({ message: error.message, cause: String(error.cause) }),
+    onAudio: async audio => captures.push({
+      bytes: Array.from(new Uint8Array(await audio.arrayBuffer())),
+      duration: (audio.size - 44) / 32000,
+      at: performance.now() - started,
+    }),
+  })
+  await controller.start()
+  const readyMs = performance.now() - started
+  const buffer = sourceContext.createBuffer(1, samples.length + 16000 * 2, 16000)
+  buffer.getChannelData(0).set(samples, 16000 * .3)
+  const source = sourceContext.createBufferSource()
+  source.buffer = buffer
+  source.connect(destination)
+  await sourceContext.resume()
+  source.start(sourceContext.currentTime + .1)
+  await new Promise(done => setTimeout(done, buffer.duration * 1000 + 250))
+  controller.stop()
+  source.disconnect()
+  if (sourceContext.state !== 'closed') await sourceContext.close()
+  return { readyMs, frames, lastLevel, maxLevel, maxProbability, positiveFrames, notices, states, errors, captures }
+}
+</script>

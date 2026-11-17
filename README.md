@@ -121,6 +121,12 @@ writing to the database, run:
 uv run python scripts/import_thanh_lam.py --report evaluation/results/thanh_lam_catalog_import_dry_run.json
 ```
 
+To use the tracked JSON file directly in the app, set `CATALOG_REPOSITORY=snapshot`
+and `CATALOG_SNAPSHOT_PATH=data/thanh_lam_products.json` in `.env`, then restart the API.
+This mode validates the file, excludes the same 18 price anomalies, and serves
+3,081 products without PostgreSQL. Prices and stock are recorded snapshots;
+shopping writes remain disabled for this source.
+
 To create the PostgreSQL catalog tables and import accepted rows, start Docker Compose,
 run the importer with `--apply`, then set `CATALOG_REPOSITORY=postgres` in `.env` and
 restart the API:

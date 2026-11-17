@@ -10,7 +10,6 @@ import argparse
 import asyncio
 import json
 import math
-import mimetypes
 import os
 import re
 import unicodedata
@@ -20,10 +19,10 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from openai import AsyncOpenAI
+import httpx
 
 from backend.config import Settings
-from backend.services.groq import GroqService
+from backend.services.whisper_stt import MODEL, WhisperSTT
 
 
 def normalize_text(text: str) -> str:
@@ -94,7 +93,8 @@ async def run(
     timeout_seconds: float,
 ) -> dict[str, Any]:
     audio_bytes = audio_path.read_bytes()
-    content_type = mimetypes.guess_type(audio_path.name)[0] or "application/octet-stream"
+    if language != "vi":
+        raise ValueError("Only Vietnamese speech is supported")
     report: dict[str, Any] = {
         "kind": "live_groq_stt_benchmark",
         "timestamp_utc": datetime.now(UTC).isoformat(),
@@ -103,8 +103,7 @@ async def run(
         "audio_duration_seconds": audio_duration_seconds(audio_path),
         "source": source,
         "language": language,
-        "primary_model": settings.groq_stt_model,
-        "fallback_model": settings.groq_stt_fallback_model,
+        "model": MODEL,
         "trial_count": trials,
         "timeout_seconds": timeout_seconds,
         "reference": reference,
@@ -115,29 +114,28 @@ async def run(
     }
     save_report(report, output)
 
-    async with AsyncOpenAI(
-        api_key=settings.groq_api_key.get_secret_value(),
-        base_url=settings.groq_base_url,
-        timeout=timeout_seconds,
-        max_retries=0,
-    ) as client:
-        service = GroqService(settings=settings, client=client)
+    async with httpx.AsyncClient(timeout=timeout_seconds) as client:
+        service = WhisperSTT(
+            settings=settings.model_copy(
+                update={
+                    "whisper_timeout_seconds": timeout_seconds,
+                }
+            ),
+            client=client,
+        )
         for trial in range(1, trials + 1):
             started = perf_counter()
             try:
-                transcription = await service.transcribe(
-                    audio_path.name,
-                    audio_bytes,
-                    content_type,
-                    language=language,
-                )
-                text = str(transcription)
+                transcription = await service.transcribe(audio_bytes)
+                text = transcription.text
                 item = {
                     "trial": trial,
                     "status": "success",
                     "latency_ms": round((perf_counter() - started) * 1000),
                     "model": transcription.model,
-                    "fallback_trace": transcription.fallback_trace,
+                    "speech_detected": transcription.speech_detected,
+                    "rejection_reason": transcription.rejection_reason,
+                    "quality": transcription.quality,
                 }
                 if reference is not None:
                     item.update(accuracy(reference, text))
@@ -198,7 +196,7 @@ def main() -> None:
     reference_group.add_argument("--reference")
     reference_group.add_argument("--reference-file", type=Path)
     parser.add_argument("--source")
-    parser.add_argument("--language", default="vi")
+    parser.add_argument("--language", choices=["vi"], default="vi")
     parser.add_argument("--trials", type=int, default=3)
     parser.add_argument("--timeout-seconds", type=float, default=30.0)
     parser.add_argument(
