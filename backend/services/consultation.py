@@ -31,6 +31,29 @@ from backend.services.vietnamese_intent import normalize_vietnamese
 
 logger = logging.getLogger(__name__)
 
+_GENERIC_PRODUCT_WORDS = frozenset(
+    "san pham mat hang hang hoa do mon loai cai thu can tim mua".split()
+)
+
+
+def _generic_product_query(query: str) -> bool:
+    """Return true when a planner query has no product identity at all."""
+    normalized = " ".join(normalize_vietnamese(query).split())
+    words = set(normalized.split())
+    return bool(words) and words <= _GENERIC_PRODUCT_WORDS
+
+
+def _unidentified_product_query(query: str) -> bool:
+    """A commodity placeholder plus a benefit is not an identified head type.
+
+    Such planner queries cannot be repaired by broadening a department: that
+    would turn a property request into arbitrary goods from the same aisle.
+    Concrete sibling searches remain available to the semantic composer.
+    """
+    normalized = normalize_vietnamese(query).strip()
+    return _generic_product_query(query) or bool(re.match(
+        r"^(?:san pham|mat hang|hang hoa)(?:\s|$)", normalized))
+
 
 class PackageConstraint(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -116,7 +139,7 @@ class ReviewCheck(BaseModel):
     model_config = ConfigDict(extra="forbid")
     criterion: Literal["intent", "decision", "grounding", "usefulness"]
     passed: bool
-    detail: str = Field(min_length=1, max_length=600)
+    detail: str = Field(default="", max_length=600)
 
 
 class AdviceReview(BaseModel):
@@ -543,6 +566,47 @@ def _short_topic_followup(text: str) -> bool:
     return len(normalized.split()) <= 8
 
 
+def _recipient_followup(text: str, repository: ProductRepository) -> bool:
+    """Recognize a short recipient change without naming a new product.
+
+    ``cho nữ/mẹ/bé`` modifies the active item in a shopping dialogue. It is not
+    a catalog query by itself, so carrying the old product scope is safer than
+    asking the planner to invent a new gendered SKU.
+    """
+    normalized = unicodedata.normalize("NFC", text).casefold()
+    words = set(re.findall(r"[^\W_]+", normalized))
+    framing = set("thế vậy mua cho dành nam nữ bé trẻ em mẹ bố ba ông bà anh chị "
+                  "người lớn thì sao còn mình em t nhé ạ với".split())
+    if (len(normalized.split()) > 10 or words - framing
+            or not re.search(r"\bcho\b", normalized)):
+        return False
+    if (any(_package_values(text, dimension) for dimension in
+            ("volume_ml", "mass_g", "length_cm")) or MONEY.search(text)):
+        return False
+    return bool(re.search(r"\b(?:nam|nữ|bé|trẻ em|mẹ|bố|ba|ông|bà|anh|chị|người lớn)\b",
+                          normalized))
+
+
+def _recipient_followup_plan(text: str, previous_plan: dict,
+                             repository: ProductRepository) -> Plan | None:
+    if not _recipient_followup(text, repository):
+        return None
+    try:
+        prior = Plan.model_validate(previous_plan)
+    except ValidationError:
+        return None
+    if (prior.action == "ask" or not prior.searches
+            or prior.decision_mode not in {"recommend", "browse", "auto"}
+            or len(prior.need) + len(text) + 2 > 600):
+        return None
+    return prior.model_copy(update={
+        "need": prior.need + "; " + text,
+        "action": "advise", "clarification": "", "topic_changed": False,
+        "reuse_previous": True, "requirement_updates": [
+            RequirementUpdate(key="recipient", value=text, source_quote=text)],
+    })
+
+
 def _infer_catalog_query(repository: ProductRepository, text: str,
                          *, allow_broad: bool = False) -> str | None:
     """Infer a product-type query from terms that actually occur in catalog.
@@ -740,6 +804,8 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
                        repository: ProductRepository) -> Plan | None:
     """Build a plan without a network call only for a clear catalog query."""
     normalized = normalize_vietnamese(text)
+    if re.search(r"\b(?:khong|chua|dung)\s+(?:mua|lay|chon|can|tim)\b", normalized):
+        return None
     if re.search(r"\b(?:khong qua|it|ngon|tot|re|phu hop|dieu tri|nhay cam|an toan|"
                  r"so sanh|khac nhau|dang tien)\b", normalized):
         return None
@@ -747,7 +813,10 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
     # Follow-ups can change a requirement, reference a different option, or
     # answer a pending question. They need semantic state merging, not a copied plan.
     if previous_plan:
-        return None
+        recipient_plan = _recipient_followup_plan(text, previous_plan, repository)
+        if recipient_plan is not None:
+            return recipient_plan
+        return _package_followup_plan(text, previous_plan)
     occasion = _catalog_occasion_plan(text, repository, conservative=True)
     if occasion is not None:
         return occasion
@@ -760,7 +829,7 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
     framing = set("anh em ban minh toi t cho giup ho nhe a oi nay dang can tim "
                   "muon mua xem vai may mot cac nhung loai san pham mat hang thi co "
                   "nao khong ko k de chon tu van goi y voi di dum chot thoi duoi tam "
-                  "khoang toi da gia ngan sach nghin ngan dong vnd can nam nu".split())
+                  "khoang toi da gia ngan sach nghin ngan dong vnd can nam nu nen".split())
     required = _catalog_label_requirements(repository, text, query)
     required_words = set(normalize_vietnamese(" ".join(required)).split())
     remaining = set(normalized.split()) - set(normalize_vietnamese(query).split()) - framing - required_words
@@ -768,14 +837,74 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
     if remaining:
         return None
     choose_one = bool(re.search(
-        r"\b(?:chon (?:giup|ho|cho)|chot|(?:mot|1) (?:loai|mon|san pham))\b", normalized))
+        r"\b(?:nen chon|chon (?:giup|ho|cho)|chot|(?:mot|1) (?:loai|mon|san pham))\b", normalized))
+    explicit_budget = _explicit_budget(text)
     category = None
     rows = repository.search(query=query, in_stock=True, limit=20)
     if rows:
         category = next((row.category for row in rows if row.category), None)
+    budget_vnd, strict_budget = explicit_budget or (None, False)
     return Plan(need=text, action="advise", decision_mode="recommend" if choose_one else "browse",
+                budget_vnd=budget_vnd, strict_budget=strict_budget,
+                budget_scope="item" if budget_vnd is not None else "none",
                 searches=[Search(query=query, category=category, required_phrases=required,
                                  role="core")])
+
+
+def _package_followup_plan(text: str, previous_plan: dict) -> Plan | None:
+    """Apply a fully parsed package-only turn to one validated product scope.
+
+    A size is not a new product identity. Do not ask a planner to rediscover it,
+    and do not reuse an old SKU that fails the new size. Mixed/ambiguous changes
+    still require semantic planning, including baskets and multiple scopes.
+    """
+    if len(text) > 160 or re.search(r"[<>=±]", text):
+        return None
+    try:
+        prior = Plan.model_validate(previous_plan)
+    except ValidationError:
+        return None
+    if (prior.action == "ask" or len(prior.searches) != 1
+            or prior.budget_scope == "basket"
+            or prior.decision_mode not in {"browse", "recommend", "auto"}
+            or not prior.searches[0].query or len(prior.need) + len(text) + 2 > 600):
+        return None
+    measurement = re.search(
+        r"(?<![\w.,])\d+(?:[.,]\d+)?\s*(?:ml|lít|lit|l|kg|gram|gam|g|cm)\b", text, re.I)
+    if not measurement:
+        return None
+    rest = normalize_vietnamese(text[:measurement.start()] + " " + text[measurement.end():])
+    framing = set("chon lay tim xem loai chai goi tui hop lon khay nho lon "
+                  "tu toi thieu toi da tro len tro xuong dung tich khoi luong "
+                  "quy cach chi can minh toi t em ban anh nhe a voi giup duoi tren "
+                  "bang la thi".split())
+    if set(re.findall(r"\w+", rest)) - framing:
+        return None
+    normalized = normalize_vietnamese(text)
+    # Strict inequalities cannot be represented by PackageConstraint; do not
+    # silently treat '<400ml' as '<=400ml'. Negation is not a package update.
+    if re.search(r"\b(?:duoi|tren|khong|tru|bo|nho hon|lon hon)\b", normalized):
+        return None
+    lower = bool(re.search(r"\b(?:tu|toi thieu|tro len)\b", rest))
+    upper = bool(re.search(r"\b(?:toi da|tro xuong)\b", rest))
+    if lower and upper:
+        return None
+    dimensions = [(dimension, _package_values(measurement.group(), dimension))
+                  for dimension in ("volume_ml", "mass_g", "length_cm")]
+    parsed = [(dimension, values.pop()) for dimension, values in dimensions if len(values) == 1]
+    if len(parsed) != 1:
+        return None
+    dimension, value = parsed[0]
+    spec = PackageConstraint(dimension=dimension,
+        operator="gte" if lower else "lte" if upper else "eq", value=value,
+        source_quote=text)
+    search = prior.searches[0].model_copy(update={"package_constraints": [
+        *[old for old in prior.searches[0].package_constraints if old.dimension != dimension], spec]})
+    return prior.model_copy(update={"need": prior.need + "; " + text,
+        "searches": [search], "action": "advise", "clarification": "",
+        "topic_changed": False, "reuse_previous": True, "budget_action": "keep",
+        "requirement_updates": [RequirementUpdate(key="package:" + dimension,
+            value=text, source_quote=text)]})
 
 
 async def _json_call(groq, messages, schema, max_tokens, topics=None, allowed_ids=None,
@@ -801,6 +930,11 @@ async def _json_call(groq, messages, schema, max_tokens, topics=None, allowed_id
             generation_schema["properties"]["choices"]["maxItems"] = 0
     if schema is RetrievalRepair and allowed_indices:
         generation_schema["$defs"]["QueryCorrection"]["properties"]["index"]["enum"] = list(allowed_indices)
+    if schema is AdviceReview:
+        # The online gate needs four verdicts, not four generated diagnostic
+        # paragraphs. Keep details readable from older audit fixtures, but ask
+        # for actionable prose only when a check fails (in issues).
+        generation_schema["$defs"]["ReviewCheck"]["properties"].pop("detail", None)
     response_format = {"type": "json_object"}
     settings = getattr(groq, "settings", None)
     strict_models = {"qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"}
@@ -864,6 +998,37 @@ async def _json_call(groq, messages, schema, max_tokens, topics=None, allowed_id
                 len(getattr(result, "fallback_trace", [])), getattr(result, "usage", {}))
             return validated, result.model
         except ValidationError as exc:
+            # OSS models occasionally copy evidence metadata such as
+            # ``price_vnd`` into evidence_fields. That field is not evidence
+            # for a reason, but the mistake is local and mechanically
+            # repairable; spending two more remote generations to repeat the
+            # same schema error only inflates latency. Drop unknown evidence
+            # fields and let the normal render/evidence gates decide whether
+            # the reason itself is supported.
+            if schema is Composition and all(
+                error.get("type") == "literal_error"
+                and "evidence_fields" in tuple(error.get("loc", ()))
+                for error in exc.errors()
+            ):
+                try:
+                    payload = json.loads(str(result))
+                    changed = False
+                    for choice in payload.get("choices", []):
+                        fields = choice.get("evidence_fields")
+                        if isinstance(fields, list):
+                            filtered = [field for field in fields
+                                        if field in {"name", "description", "ingredients"}]
+                            if filtered != fields:
+                                choice["evidence_fields"] = filtered
+                                changed = True
+                    if changed:
+                        repaired = schema.model_validate(payload)
+                        logging.getLogger("uvicorn.error.consultation").info(
+                            "Consultation local schema repair=%s model=%s elapsed_ms=%.1f",
+                            "evidence_fields", result.model, (perf_counter() - started) * 1000)
+                        return repaired, result.model
+                except (TypeError, ValueError, ValidationError):
+                    pass
             if attempt:
                 raise GroqProviderError(
                     "Consultation returned an invalid structured response"
@@ -1093,6 +1258,23 @@ async def consult(
                 exc.consultation_plan = (getattr(exc, "consultation_plan", None)
                                          or context.get("previous_plan") or {})
                 raise
+    # A short recipient answer is a state update on the active product. Some
+    # planners mark it as a new topic because the word "nữ/mẹ/bé" is salient;
+    # that would erase the verified candidates and turn a useful follow-up into
+    # an empty gendered search. Keep the old type while retaining the current
+    # sentence for the composer and reviewer.
+    if (previous_plan and remembered and plan.topic_changed
+            and _recipient_followup(text, repository)):
+        try:
+            prior_searches = [Search.model_validate(item)
+                              for item in previous_plan.get("searches", [])]
+        except ValidationError:
+            prior_searches = []
+        if prior_searches:
+            plan = plan.model_copy(update={
+                "topic_changed": False, "reuse_previous": True,
+                "searches": prior_searches,
+            })
     # A broad but explicit product noun can signal a topic switch even when a
     # planner incorrectly carries the old SKU/search scope forward.  Compare
     # against the remembered product taxonomy before clearing state; a short
@@ -1105,8 +1287,14 @@ async def consult(
             *(p.name for p in remembered),
             *(p.category_hierarchy or p.category for p in remembered),
         ]))
-        if signal and not any(token in previous_scope for token in signal.split()
-                              if len(token) > 2):
+        signal_words = {word for word in normalize_vietnamese(signal or "").split()
+                        if len(word) > 2}
+        # A one-word overlap can be a discourse word or a fragment of a
+        # multiword label, not an explicit new product. Only a multiword type
+        # may override semantic state. Compare both sides in the same spelling
+        # space: accented product words must not reset their own prior topic.
+        if (signal and len(signal.split()) >= 2 and signal_words
+                and signal_words.isdisjoint(previous_scope.split())):
             plan = plan.model_copy(update={
                 "topic_changed": True, "reuse_previous": False,
                 "searches": [Search(query=signal, role="core")],
@@ -1307,10 +1495,53 @@ async def consult(
             exc.consultation_plan = plan.model_dump()
             raise
     candidates, missing = await _retrieve_candidates(repository, plan, topics, customer_texts)
+    if (not candidates and previous_plan and planner_model == "deterministic-fast-path"
+            and _package_followup_plan(text, previous_plan) is not None):
+        # A literal size change with no matching catalog row is a factual result,
+        # not a generative writing problem. Remote repair/review used to spend
+        # 4-5 calls here and sometimes reintroduced the old, undersized SKU.
+        specifications = []
+        units = {"volume_ml": "ml", "mass_g": "g", "length_cm": "cm"}
+        for query in plan.searches:
+            for spec in query.package_constraints:
+                amount = f"{spec.value:g}{units[spec.dimension]}"
+                specifications.append(
+                    f"từ {amount} trở lên" if spec.operator == "gte" else
+                    f"tối đa {amount}" if spec.operator == "lte" else amount)
+        kind = plan.searches[0].query.casefold()
+        budget = (f" với giá {'dưới' if plan.strict_budget else 'tối đa'} "
+                  f"{plan.budget_vnd:,}đ".replace(",", ".")
+                  if plan.budget_vnd is not None else "")
+        return Advice(text=f"Mình chưa chọn được {kind} {', '.join(specifications)}{budget}.",
+                      model="deterministic-no-package-match", products=(), plan=plan)
     # Retrieval repair needs actual catalog rows as evidence.  A repository
     # adapter that only implements ``search`` (for example a remote/mock
     # adapter) cannot safely ask the model to invent a corrected product term;
     # let the no-match composer give a useful, grounded explanation instead.
+    if (missing and plan.decision_mode in {"browse", "recommend"}
+            and plan.budget_scope != "basket"
+            and getattr(repository, "products", None)):
+        alternatives = (bool(re.search(r"\bhoặc\b", unicodedata.normalize("NFC", text), re.I))
+            and not re.search(r"\b(?:và|kèm|cùng|thêm)\b",
+                              unicodedata.normalize("NFC", text), re.I))
+        repairable_missing = [index for index in missing if
+            _query_named_by_customer(plan.searches[index], customer_texts)]
+        if candidates and alternatives:
+            # An explicit OR is satisfied by an available alternative. A remote
+            # call to repair the other one cannot improve coverage of a basket
+            # or comparison here; those modes are excluded above.
+            logger.info("Consultation retrieval repair skipped matched alternative")
+            missing = []
+        elif repairable_missing or not candidates:
+            missing = repairable_missing if repairable_missing else missing
+        else:
+            # A model-suggested alternative that the customer never named is
+            # optional. If other verified candidates already exist, asking the
+            # LLM to repair that phrase only adds latency and can introduce a
+            # broader, unrelated lexical hit.
+            logger.info("Consultation retrieval repair skipped optional missing searches=%s",
+                        missing)
+            missing = []
     if (missing and plan.decision_mode != "guide"
             and getattr(repository, "products", None)):
         try:
@@ -1349,6 +1580,13 @@ async def consult(
         candidates = {pid: p for pid, p in candidates.items()
             if not re.search(r"\bgia vi\b", normalize_vietnamese(p.category_hierarchy or ""))
             or any(_matching_candidates([p], query) for query in explicit_types)}
+    if planner_model == "deterministic-fast-path":
+        fast_advice = _fast_catalog_advice(candidates, plan)
+        if fast_advice is not None:
+            # No remote writer consumes this context. Avoid constructing its
+            # product evidence, equivalences and duplicated history at all.
+            logger.info("Consultation deterministic response topic=%s", text[:120])
+            return fast_advice
     context.update(
         plan=_plan_evidence(plan), candidates=[_candidate_evidence(p, plan) for p in candidates.values()],
         verified_type_equivalences=relevant_equivalences(text, plan.need,
@@ -1363,11 +1601,6 @@ async def consult(
     # tone/references, not every earlier assistant list repeated as evidence.
     # Keep the planner's full history above for topic recovery and state merge.
     context["history"] = history[-4:]
-    if planner_model == "deterministic-fast-path":
-        fast_advice = _fast_catalog_advice(candidates, plan)
-        if fast_advice is not None:
-            logger.info("Consultation deterministic response topic=%s", text[:120])
-            return fast_advice
     # Once every real credential is already in its provider cooldown, another
     # composition request can only add latency.  The candidate set has been
     # filtered against the active catalog and all budget/exclusion guards, so
@@ -1381,7 +1614,8 @@ async def consult(
     messages = _messages(NO_MATCH_COMPOSER if not candidates and plan.decision_mode != "guide"
                          else STRUCTURED_COMPOSER, context)
     try:
-        return await _compose_and_review(groq, messages, candidates, plan, text, history)
+        return await _compose_and_review(groq, messages, candidates, plan, text, history,
+            planner_model == "deterministic-fast-path" and previous_plan is None)
     except GroqProviderError as exc:
         # A provider/reviewer outage must not turn an already verified product
         # match into a dead-end 502.  The candidate set is code-filtered above,
@@ -1422,6 +1656,21 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
     for index, query in enumerate(plan.searches):
         if not query.query and not query.category:
             continue
+        if query.query and _unidentified_product_query(query.query):
+            missing.append(index)
+            continue
+        # Planner category labels may differ only by accents/case from the
+        # repository taxonomy (for example ``Chăm sóc da`` vs ``Chăm Sóc Da``).
+        # Canonicalize before broad-category backoff so a generic word cannot
+        # leak an unrelated SKU into a correctly scoped answer.
+        if query.category and topics:
+            canonical_category = next(
+                (topic for topic in topics
+                 if normalize_vietnamese(topic) == normalize_vietnamese(query.category)),
+                query.category,
+            )
+            if canonical_category != query.category:
+                query = query.model_copy(update={"category": canonical_category})
         if query.role == "pantry" and not any(
                 _label_phrase(turn, query.query or query.category) for turn in customer_texts):
             continue
@@ -1466,11 +1715,14 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
         if (not found and len(words) > 2
             and not _query_named_by_customer(query, customer_texts)):
             for length in range(min(4, len(words) - 1), 1, -1):
+                prefix = " ".join(words[:length])
+                if _generic_product_query(prefix):
+                    continue
                 found = await asyncio.to_thread(repository.search,
-                    query=" ".join(words[:length]), **criteria)
+                    query=prefix, **criteria)
                 if found:
                     found = _rank_fallback(found, query.query)
-                    matched_query = " ".join(words[:length])
+                    matched_query = prefix
                     break
         if query.category in topics:
             # Category is a ranking hint for a named type, not a hard exclusion:
@@ -1481,7 +1733,15 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
                 found = [p for p in found if p.category == query.category]
         # Back off within the same category, preserving brand/price restrictions.
         # The composer still checks the user's constraints; a broad hit is not a match.
-        if not found and query.query and query.category:
+        # Property/medical phrases such as ``sản phẩm trị mụn dạng gel`` must
+        # not become a category-wide lexical match just because metadata has a
+        # generic word like ``sản phẩm``.  Broaden only when the query contains
+        # a category head term.
+        category_words = set(normalize_vietnamese(query.category or "").split())
+        query_normalized = normalize_vietnamese(query.query)
+        query_words = set(query_normalized.split())
+        category_head_in_query = bool(category_words & query_words)
+        if not found and query.query and query.category and category_head_in_query:
             found = await asyncio.to_thread(
                 repository.search, query="",
                 **{**criteria, "category": query.category, "limit": 300},
@@ -1517,6 +1777,7 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
             if fallback is not None:
                 matched_query, found = fallback
         if (not found and query.category in topics and query.query
+            and category_head_in_query
             and not _query_named_by_customer(query, customer_texts)):
             # A recipe ingredient chosen by the planner is negotiable; a type
             # named by the customer is not. Missing an unrequested vegetable
@@ -1562,8 +1823,14 @@ async def _repair_retrieval(groq, repository, plan, missing, topics, text):
     # from an incomplete basket. Never change brand, label, size or price rules.
     products = getattr(repository, "products", ())
     repairable = {index: plan.searches[index] for index in missing
-        if plan.searches[index].query and topics and (not products or
+        if plan.searches[index].query
+        and not _unidentified_product_query(plan.searches[index].query)
+        and topics and (not products or
             _matching_candidates(products, plan.searches[index], type_query=""))}
+    repairable = {index: query for index, query in repairable.items()
+        if not (query.package_constraints
+            and _matching_candidates(products, query.model_copy(update={"package_constraints": []}))
+            and not _matching_candidates(products, query))}
     if not repairable:
         return plan.searches
     examples = {}
@@ -1707,14 +1974,19 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
 
     A clear "what is available?" request does not need three remote model
     calls.  Retrieval, stock, prices and the choice cardinality remain owned by
-    code; the short reasons use only the product's catalog category and the
-    ordinary instruction to follow its package directions.  Rich constraints
-    never enter this path and continue through planner/composer/reviewer.
+    code; product names and prices are rendered directly from verified rows.
+    Rich constraints never enter this path and continue through semantic review.
     """
+    # Even a recipient-only change can alter safety/suitability (for example
+    # switching an adult's product to a child). It is not a mere display edit.
+    if plan.requirements:
+        return None
     if (not candidates or plan.action == "ask"
             or plan.decision_mode not in {"browse", "recommend"}
-            or plan.constraints or plan.budget_vnd is not None
-            or plan.requirements or plan.purchase_exclusions):
+            or plan.constraints or plan.purchase_exclusions
+            or plan.purchase_weights or plan.budget_scope == "basket"
+            or any(query.required_phrases or query.any_phrases or query.excluded_phrases
+                   or query.package_constraints for query in plan.searches)):
         return None
     ordered = list(candidates.values())
     if plan.decision_mode == "recommend":
@@ -1738,14 +2010,17 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
         return None
     choices = []
     for product in selected:
-        category = (product.category or product.department or "sản phẩm").strip()
         choices.append(Choice(
             product_id=product.product_id,
-            reason=f"Dòng {category.casefold()}, bạn xem cách dùng trên bao bì.",
+            reason="",
             evidence_fields=["name"],
         ))
-    intro = ("Mình gợi ý một loại để bạn chọn nhanh:" if len(choices) == 1
-             else "Mình lọc vài lựa chọn đúng nhóm hàng để bạn xem nhanh:")
+    if plan.budget_vnd is not None:
+        intro = ("Trong tầm tiền này, bạn có thể chọn loại này nhé:" if len(choices) == 1
+                 else "Trong tầm tiền này, bạn tham khảo vài loại này nhé:")
+    else:
+        intro = ("Bạn tham khảo loại này nhé:" if len(choices) == 1
+                 else "Bạn tham khảo vài loại này nhé:")
     try:
         return _render_structured(Composition(advice=intro, choices=choices),
                                   {p.product_id: p for p in selected}, plan,
@@ -1754,7 +2029,8 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
         return None
 
 
-async def _compose_and_review(groq, messages, candidates, plan, text, history):
+async def _compose_and_review(groq, messages, candidates, plan, text, history,
+                              catalog_only=False):
     failures = Counter()
     seen_failures = set()
     # Different mechanical errors may need separate repairs, but repeating the
@@ -1803,6 +2079,13 @@ async def _compose_and_review(groq, messages, candidates, plan, text, history):
         else:
             # Provider failure is not semantic feedback. Do not spend another
             # composition request retrying when review capacity is unavailable.
+            # Only literal label facts in a completely parsed fresh query can
+            # replace the remote review. Free-form usage/benefit prose, even in
+            # an otherwise simple query, still needs semantic verification.
+            if (catalog_only and failures["review"] == 0
+                    and _locally_verified_catalog_composition(composition, candidates, plan)):
+                logger.info("Consultation review=local-catalog-facts")
+                return answer
             failure_stage = "review"
             try:
                 review = await _review_advice(groq, answer, text, history, candidates)
@@ -1891,6 +2174,39 @@ async def _compose_and_review(groq, messages, candidates, plan, text, history):
         ])
 
 
+def _locally_verified_catalog_composition(composition, candidates, plan) -> bool:
+    """Prove a factual answer locally; unknown prose always needs the reviewer.
+
+    This is an allowlist of discourse only, never a benefit/safety blacklist.
+    Reasons must be contiguous, accented source excerpts from their own SKU.
+    A cited field alone does not prove free-form reasoning.
+    """
+    if (not composition.choices or composition.question.strip()
+            or composition.selection_mode != "alternatives"
+            or plan.action != "advise" or plan.decision_mode not in {"recommend", "browse"}
+            or plan.constraints or plan.requirements or plan.purchase_exclusions
+            or plan.purchase_weights or plan.budget_scope == "basket"):
+        return False
+    intro = unicodedata.normalize("NFC", composition.advice).casefold().strip(" .:!\n")
+    if intro not in {"", "mình gợi ý loại này", "mình gợi ý loại này cho bạn",
+                     "bạn có thể chọn loại này", "bạn tham khảo vài loại này",
+                     "mình gợi ý vài loại này"}:
+        return False
+    for choice in composition.choices:
+        if choice.product_id not in candidates or choice.quantity != 1 or choice.weight_g is not None:
+            return False
+        reason = unicodedata.normalize("NFC", choice.reason).casefold().strip(" .,:;\n")
+        if len(reason.split()) < 2:
+            return False
+        product = candidates[choice.product_id]
+        sources = [unicodedata.normalize("NFC", getattr(product, field) or "").casefold()
+                   for field in ("name", "description", "ingredients")]
+        if not any(re.search(r"(?<!\w)" + re.escape(reason) + r"(?!\w)", source)
+                   for source in sources):
+            return False
+    return True
+
+
 async def _review_advice(groq, answer: Advice, text, history, candidates=None):
     # Review the rendered answer, not just overlapping evidence phrases. NLI
     # alone missed real impossible preparation advice and rejected useful
@@ -1918,32 +2234,14 @@ async def _review_advice(groq, answer: Advice, text, history, candidates=None):
          and answer.plan.action != "ask"
          and answer.plan.decision_mode != "guide" else REVIEWER)
     policy += """
-Before the verdict, return checks with exactly these four criteria and concrete
-short details, not generic praise. Each detail is ONE short Vietnamese clause
-(prefer under 100 characters); do not repeat product lists, IDs or prices:
-intent: state the customer's actual task and whether the answer addresses it;
-decision: identify any missing detail that changes the choice (unknown product,
-unidentified comparison, child's age/food form, gift recipient's preferences).
-Ask that detail instead of choosing an arbitrary SKU; don't require preferences
-already given or an age when the customer's task does not depend on it;
-grounding: check actual product form, label support and feasible usage. If a repaired
-search uses an equivalent/regional name, verify it really is the SAME type as the
-customer requested, not a substitution or a different animal/preparation/variant.
-Sugar-free
-does not establish how sweet a food tastes or suitability for every child;
-usefulness: does each reason help decide/use it, rather than merely repeating a
-name, price or vague convenience? Check appropriateness of quantity/pack size.
-For a clarification, evaluate relevance and redundancy, marking SKU checks as
-not applicable when there is no product. All four checks are required. A failed
-check requires acceptable=false and an actionable issue. Never accept by default.
-repair_action=clarify when resolving missing identification/preferences/safety
-information requires ONE customer answer. Use revise for wrong products, false
-claims, repetition or unhelpful reasoning that can be repaired without asking.
-Do not make a history of allergies mandatory merely because someone says their
-skin is sensitive. A target-labelled cosmetic with an appropriate trial/use
-precaution may be a useful recommendation; it must not promise irritation-free
-use, symptom relief or unlisted ingredients. Ask about a specific allergy when
-the customer actually mentions allergy or a known reaction.
+Return checks for exactly intent (current task), decision (essential unknowns),
+grounding (same product type, supported claims, feasible use), usefulness (helps
+choose/use instead of reciting facts). Each check has only criterion and passed.
+Do not generate explanatory details for passing checks. Any failed check requires
+acceptable=false and one actionable Vietnamese issue. Otherwise issues=[].
+repair_action=clarify only when ONE customer answer is essential; otherwise revise.
+Don't demand allergy history without a stated allergy or invent child/age context.
+A labelled target plus a trial/use precaution need not guarantee symptom relief.
 """
     review, _ = await _json_call(groq, [
         {"role": "system", "content": policy},
@@ -1954,7 +2252,8 @@ the customer actually mentions allergy or a known reaction.
     }:
         return review.model_copy(update={"acceptable": False,
             "issues": ["Bước kiểm tra chưa đánh giá đủ nhu cầu, lựa chọn, căn cứ và ích lợi."]})
-    failed = [check.detail for check in review.checks if not check.passed]
+    failed = [check.detail or f"Cần sửa tiêu chí {check.criterion}."
+              for check in review.checks if not check.passed]
     if failed:
         return review.model_copy(update={"acceptable": False,
             "issues": list(dict.fromkeys([*review.issues, *failed]))[:3]})
@@ -2108,15 +2407,17 @@ def _catalog_head_backoff(repository, query: Search, criteria: dict, *, raw_foun
     if not words:
         return None
     context_words = {
-        "an", "uong", "bua", "sang", "trua", "toi", "lau", "nau", "mon",
-        "cho", "voi", "cung", "tai", "ve", "dung", "de", "can", "muon",
-        "mua", "chuyen", "goi", "y", "tu", "van", "loai", "cac", "mot",
+        "ăn", "uống", "bữa", "sáng", "trưa", "tối", "lẩu", "nấu", "món",
+        "cho", "với", "cùng", "tại", "về", "dùng", "để", "cần", "muốn",
+        "mua", "chuyển", "gọi", "ý", "tư", "vấn", "loại", "các", "một",
     }
     # Do not trim an explicitly named subtype merely because its exact search
     # was empty.  Backoff is only for a query that visibly mixes a product
     # phrase with a use/meal context; otherwise the planner's exact subtype
     # remains mandatory and the normal repair path can explain the miss.
-    if not any(normalize_vietnamese(word) in context_words for word in words):
+    # Accents are identity here: gội/gói are not the discourse verb gọi.
+    # Dropping them could turn an unavailable shampoo variant into cooking oil.
+    if not any(word in context_words for word in words):
         return None
     # Prefer the longest phrase made only from product-looking words, while
     # keeping all original words available for the conservative one-token pass.
@@ -2124,8 +2425,7 @@ def _catalog_head_backoff(repository, query: Search, criteria: dict, *, raw_foun
     for width in range(min(4, len(words)), 0, -1):
         for start in range(0, len(words) - width + 1):
             part = words[start:start + width]
-            if width > 1 and any(normalize_vietnamese(word) in context_words
-                                  for word in part):
+            if width > 1 and any(word in context_words for word in part):
                 continue
             phrase = " ".join(part)
             if phrase not in phrases:
@@ -2181,13 +2481,17 @@ def _diverse_candidates(products, query, *, limit=8, context=""):
     if len(products) <= limit:
         return list(products)
     wanted = set(normalize_vietnamese(query).split())
+    rows = list({p.product_id: p for p in products}.values())
+    # MMR compares each row with every selected row repeatedly. Tokenize each
+    # immutable candidate once per call, rather than normalizing the same long
+    # taxonomy thousands of times while selecting a 20-row repair evidence set.
+    token_sets = {product.product_id: set(normalize_vietnamese(" ".join(filter(None, (
+        product.name, product.category_hierarchy, product.brand,
+    )))).split()) for product in rows}
 
     def tokens(product):
-        return set(normalize_vietnamese(" ".join(filter(None, (
-            product.name, product.category_hierarchy, product.brand,
-        )))).split())
+        return token_sets[product.product_id]
 
-    rows = list({p.product_id: p for p in products}.values())
     # Preserve rare customer preference words before top-k. Searching only the
     # head noun can otherwise omit the one labelled variant among many packs.
     # This is a ranking signal, never proof that an unlabelled SKU is suitable.
@@ -2520,6 +2824,14 @@ def _render_structured(composition, candidates, plan, model):
         marker = (f"[[{choice.product_id}|{choice.weight_g}g]]" if choice.weight_g is not None
                   else f"[[{choice.product_id}|{choice.quantity}]]")
         reason = choice.reason.strip()
+        # A recipient preference is not a target printed on this SKU. Check an
+        # explicit label-target assertion locally rather than trusting a reviewer
+        # to infer it from the customer's gender/age in the same prompt.
+        for target in re.finditer(r"\b(?:dành|thiết kế)\s+(?:riêng\s+)?cho\s+"
+                                  r"(?P<group>nam|nữ|trẻ em|trẻ nhỏ|người lớn tuổi)\b", reason, re.I):
+            if not _label_phrase(source, target['group']):
+                raise GroqProviderError(
+                    "Sửa lý do chưa có nhãn chứng minh: đối tượng ghi trên nhãn.")
         if _label_phrase(reason, product.name):
             raise GroqProviderError("Không lặp tên hàng trong lý do; nêu một điểm dùng/chọn thực tế.")
         package_claims = re.findall(

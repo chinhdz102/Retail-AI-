@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from backend.data.catalog_import import analyze_dataset
-from backend.products.catalog import ProductSnapshot, search_products
+from backend.products.catalog import ProductSearchIndex, ProductSnapshot, search_products
 from backend.products.planogram import recommended_shelf
 from backend.products.repository import CatalogAdditions
 
@@ -61,13 +61,16 @@ class SnapshotProductRepository:
                 )
             )
         self.products = tuple(products)
+        self._search_index = ProductSearchIndex(self.products)
         self._by_id = {product.product_id.casefold(): product for product in products}
 
     def search(self, **criteria) -> list[ProductSnapshot]:
         category = criteria.get("category")
         if category:
             criteria["category"] = self.category_aliases.get(category.casefold().strip(), category)
-        return search_products(products=self.products, **criteria)
+        return search_products(
+            products=self._search_index.candidates(criteria.get("query", "")), **criteria,
+        )
 
     def get_product_snapshot(self, product_id: str) -> ProductSnapshot | None:
         return self._by_id.get(product_id.strip().casefold())

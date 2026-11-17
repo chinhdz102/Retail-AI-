@@ -369,13 +369,47 @@ def test_chat_and_whisper_load_six_unique_keys_in_the_same_order(monkeypatch):
 
     def make_client(**kwargs):
         constructed.append(kwargs["api_key"])
-        return FakeClient()
+        client = FakeClient()
+        client.with_options = lambda **changes: make_client(**{**kwargs, **changes})
+        return client
 
     monkeypatch.setattr("backend.services.groq.AsyncOpenAI", make_client)
     service = GroqService(settings)
     clients = service._clients(service._client_or_raise())
     assert len(clients) == 6
     assert constructed == WhisperSTT(settings)._keys() == [f"slot{i}" for i in range(6)]
+
+
+@pytest.mark.asyncio
+async def test_key_pool_shares_transport_without_sharing_authorization_headers():
+    import httpx
+    from openai import AsyncOpenAI
+
+    seen_auth = []
+
+    def respond(request):
+        seen_auth.append(request.headers["authorization"])
+        return httpx.Response(200, json={"id": "test", "object": "chat.completion",
+            "created": 0, "model": "openai/gpt-oss-20b", "choices": [{"index": 0,
+            "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}]})
+
+    settings = Settings(_env_file=None, groq_api_key="slot0", **{
+        f"groq_api_key_fallback_{i}": f"slot{i}" for i in range(1, 6)})
+    transport = httpx.AsyncClient(transport=httpx.MockTransport(respond))
+    primary = AsyncOpenAI(api_key="slot0", base_url=settings.groq_base_url,
+                          http_client=transport, max_retries=0)
+    service = GroqService(settings)
+    service.client = primary
+    try:
+        clients = service._clients(primary)
+        assert len(clients) == 6
+        assert all(client._client is transport for client in clients)
+        for _ in range(7):
+            await service.chat([{"role": "user", "content": "test"}], fallback_models=[])
+        assert seen_auth == [f"Bearer slot{i}" for i in range(6)] + ["Bearer slot0"]
+        assert primary.api_key == "slot0"
+    finally:
+        await primary.close()
 
 
 @pytest.mark.asyncio

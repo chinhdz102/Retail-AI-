@@ -1,0 +1,516 @@
+{
+  "date": "2026-11-17",
+  "measurement": "Local HTTP complete JSON response; not first token or audio",
+  "catalog_rows": 3081,
+  "test_result": {
+    "profile": "CATALOG_REPOSITORY=demo",
+    "passed": 1044,
+    "seconds": 34.68
+  },
+  "runs": {
+    "baseline_before_this_pass": [
+      {
+        "id": "baseline_0_browse",
+        "question": "có mấy loại sữa rửa mặt",
+        "status": 200,
+        "http_ms": 832.23,
+        "text": "Mình lọc vài lựa chọn đúng nhóm hàng để bạn xem nhanh:\nSữa rửa mặt đất sét trắng Senka Perfect Whiteclay 120g (126.000đ): Dòng chăm sóc da, bạn xem cách dùng trên bao bì\nSữa rửa mặt Nivea Men Deep Dry And Clean Feel tuýp 100g (50.900đ): Dòng chăm sóc da, bạn xem cách dùng trên bao bì\nSữa rửa mặt ngăn ngừa lão hóa Pond's Age Miracle Facial Foam 100g (122.000đ): Dòng chăm sóc da, bạn xem cách dùng trên bao bì",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10230785",
+          "WIN_10603750",
+          "WIN_10017501"
+        ]
+      },
+      {
+        "id": "baseline_0_breakfast",
+        "question": "có đồ gì ăn sáng không",
+        "status": 200,
+        "http_ms": 207.78,
+        "text": "Mình lọc vài lựa chọn đúng nhóm hàng để bạn xem nhanh:\nNgũ cốc ăn sáng Corn Flakes Nestlé hộp 275g (72.800đ): Dòng ngũ cốc - yến mạch, bạn xem cách dùng trên bao bì\nBánh Bông Lan Ăn Sáng C'est Bon Sợi Thịt Gà Nhân Kem Phô Mai (Gói 5 cái) (21.000đ): Dòng bánh xốp - bánh quy, bạn xem cách dùng trên bao bì\nNgũ cốc ăn sáng Koko Krunch vị sô cô la Nestlé hộp 330g (115.000đ): Dòng ngũ cốc - yến mạch, bạn xem cách dùng trên bao bì",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10011078",
+          "WIN_10194734",
+          "WIN_10013752"
+        ]
+      },
+      {
+        "id": "baseline_0_budget",
+        "question": "nước giặt dưới 150 nghìn nên chọn loại nào?",
+        "status": 200,
+        "http_ms": 9263.13,
+        "text": "Bạn có thể chọn trong vài loại này:\nNước giặt xả MaxKleen hương vườn sớm mai 2.4kg (148.700đ).\nBột giặt ARIEL đam mê túi 650g (42.300đ).\nNước giặt cửa trước Winmart Home tinh dầu thơm túi 2.9kg (147.700đ).",
+        "model": "catalog-fallback",
+        "grounded_product_ids": [
+          "WIN_10160955",
+          "WIN_10019562",
+          "WIN_10170724"
+        ]
+      },
+      {
+        "id": "baseline_0_skin",
+        "question": "da dầu nhiều mụn thì nên chọn sản phẩm nào?",
+        "status": 200,
+        "http_ms": 4885.86,
+        "text": "Bạn có thể chọn trong vài loại này:\nSữa rửa mặt Biore sạch mụn và kháng khuẩn 100g (54.000đ).\nKem chống nắng dưỡng ẩm Biore 50g SPF 50+ PA++++ (195.400đ).\nSữa rửa mặt Senka sáng da mờ thâm vitamin C tuýp 100g (115.000đ).",
+        "model": "catalog-fallback",
+        "grounded_product_ids": [
+          "WIN_10017633",
+          "WIN_10160078",
+          "WIN_10171157"
+        ]
+      },
+      {
+        "id": "baseline_0_hotpot",
+        "question": "mua thịt ăn lẩu, bò thường hoặc ba chỉ đều được, chọn giúp mình",
+        "status": 200,
+        "http_ms": 7445.66,
+        "text": "Bạn có thể chọn trong vài loại này:\nBa chỉ bò Úc Kiaora cắt lát 375g (148.500đ).\nThịt bò Úc Kiaora xay khay 200g (68.700đ).\nThịt Ba Rọi có da_MH giun quế (245.000đ/kg).",
+        "model": "catalog-fallback",
+        "grounded_product_ids": [
+          "WIN_10140201",
+          "WIN_10282507",
+          "WIN_10323947"
+        ]
+      }
+    ],
+    "final_sequential_10": [
+      {
+        "id": "final_serial_0_browse",
+        "question": "có mấy loại sữa rửa mặt",
+        "status": 200,
+        "http_ms": 111.27,
+        "text": "Bạn tham khảo vài loại này nhé:\nSữa rửa mặt đất sét trắng Senka Perfect Whiteclay 120g (126.000đ).\nSữa rửa mặt Nivea Men Deep Dry And Clean Feel tuýp 100g (50.900đ).\nSữa rửa mặt ngăn ngừa lão hóa Pond's Age Miracle Facial Foam 100g (122.000đ).",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10230785",
+          "WIN_10603750",
+          "WIN_10017501"
+        ]
+      },
+      {
+        "id": "final_serial_0_breakfast",
+        "question": "có đồ gì ăn sáng không",
+        "status": 200,
+        "http_ms": 94.23,
+        "text": "Bạn tham khảo vài loại này nhé:\nNgũ cốc ăn sáng Corn Flakes Nestlé hộp 275g (72.800đ).\nBánh Bông Lan Ăn Sáng C'est Bon Sợi Thịt Gà Nhân Kem Phô Mai (Gói 5 cái) (21.000đ).\nNgũ cốc ăn sáng Koko Krunch vị sô cô la Nestlé hộp 330g (115.000đ).",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10011078",
+          "WIN_10194734",
+          "WIN_10013752"
+        ]
+      },
+      {
+        "id": "final_serial_0_budget",
+        "question": "nước giặt dưới 150 nghìn nên chọn loại nào?",
+        "status": 200,
+        "http_ms": 101.5,
+        "text": "Trong tầm tiền này, bạn có thể chọn loại này nhé:\nNước giặt xả MaxKleen hương vườn sớm mai 2.4kg (148.700đ).",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10160955"
+        ]
+      },
+      {
+        "id": "final_serial_0_skin",
+        "question": "da dầu nhiều mụn thì nên chọn sản phẩm nào?",
+        "status": 200,
+        "http_ms": 2702.75,
+        "text": "Bạn có thể chọn trong vài loại này:\nSữa rửa mặt đất sét trắng Senka Perfect Whiteclay 120g (126.000đ).\nSữa rửa mặt Nivea Men Deep Dry And Clean Feel tuýp 100g (50.900đ).\nSữa rửa mặt ngăn ngừa lão hóa Pond's Age Miracle Facial Foam 100g (122.000đ).",
+        "model": "catalog-fallback",
+        "grounded_product_ids": [
+          "WIN_10230785",
+          "WIN_10603750",
+          "WIN_10017501"
+        ]
+      },
+      {
+        "id": "final_serial_0_hotpot",
+        "question": "mua thịt ăn lẩu, bò thường hoặc ba chỉ đều được, chọn giúp mình",
+        "status": 200,
+        "http_ms": 2835.71,
+        "text": "Bạn có thể chọn trong vài loại này:\nBa chỉ bò cắt lát New Zealand KiaOra 475g (188.900đ).\nThịt bò viên khay Hoa Doanh 300g (42.000đ).\nBa chỉ bò Mỹ Thiên Vương ACEFOODS  khay 500g (165.000đ).",
+        "model": "catalog-fallback",
+        "grounded_product_ids": [
+          "WIN_10626463",
+          "WIN_10620243",
+          "WIN_10404843"
+        ]
+      },
+      {
+        "id": "final_serial_1_browse",
+        "question": "có mấy loại sữa rửa mặt",
+        "status": 200,
+        "http_ms": 103.62,
+        "text": "Bạn tham khảo vài loại này nhé:\nSữa rửa mặt đất sét trắng Senka Perfect Whiteclay 120g (126.000đ).\nSữa rửa mặt Nivea Men Deep Dry And Clean Feel tuýp 100g (50.900đ).\nSữa rửa mặt ngăn ngừa lão hóa Pond's Age Miracle Facial Foam 100g (122.000đ).",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10230785",
+          "WIN_10603750",
+          "WIN_10017501"
+        ]
+      },
+      {
+        "id": "final_serial_1_breakfast",
+        "question": "có đồ gì ăn sáng không",
+        "status": 200,
+        "http_ms": 92.73,
+        "text": "Bạn tham khảo vài loại này nhé:\nNgũ cốc ăn sáng Corn Flakes Nestlé hộp 275g (72.800đ).\nBánh Bông Lan Ăn Sáng C'est Bon Sợi Thịt Gà Nhân Kem Phô Mai (Gói 5 cái) (21.000đ).\nNgũ cốc ăn sáng Koko Krunch vị sô cô la Nestlé hộp 330g (115.000đ).",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10011078",
+          "WIN_10194734",
+          "WIN_10013752"
+        ]
+      },
+      {
+        "id": "final_serial_1_budget",
+        "question": "nước giặt dưới 150 nghìn nên chọn loại nào?",
+        "status": 200,
+        "http_ms": 105.38,
+        "text": "Trong tầm tiền này, bạn có thể chọn loại này nhé:\nNước giặt xả MaxKleen hương vườn sớm mai 2.4kg (148.700đ).",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10160955"
+        ]
+      },
+      {
+        "id": "final_serial_1_skin",
+        "question": "da dầu nhiều mụn thì nên chọn sản phẩm nào?",
+        "status": 502,
+        "http_ms": 5373.31
+      },
+      {
+        "id": "final_serial_1_hotpot",
+        "question": "mua thịt ăn lẩu, bò thường hoặc ba chỉ đều được, chọn giúp mình",
+        "status": 200,
+        "http_ms": 2554.79,
+        "text": "Bạn có thể chọn trong vài loại này:\nBa chỉ bò Úc Kiaora cắt lát 375g (148.500đ).\nBa chỉ bò Úc  cắt lát  Kiaora khay 200g (87.100đ).\nBa chỉ bò Mỹ Thiên Vương ACEFOODS  khay 500g (165.000đ).",
+        "model": "catalog-fallback",
+        "grounded_product_ids": [
+          "WIN_10140201",
+          "WIN_10140199",
+          "WIN_10404843"
+        ]
+      }
+    ],
+    "two_sessions_in_parallel": [
+      {
+        "id": "final_shipping_0_browse",
+        "question": "có mấy loại sữa rửa mặt",
+        "status": 200,
+        "http_ms": 134.42,
+        "text": "Bạn tham khảo vài loại này nhé:\nSữa rửa mặt đất sét trắng Senka Perfect Whiteclay 120g (126.000đ).\nSữa rửa mặt Nivea Men Deep Dry And Clean Feel tuýp 100g (50.900đ).\nSữa rửa mặt ngăn ngừa lão hóa Pond's Age Miracle Facial Foam 100g (122.000đ).",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10230785",
+          "WIN_10603750",
+          "WIN_10017501"
+        ]
+      },
+      {
+        "id": "final_shipping_0_breakfast",
+        "question": "có đồ gì ăn sáng không",
+        "status": 200,
+        "http_ms": 1660.63,
+        "text": "Bạn tham khảo vài loại này nhé:\nNgũ cốc ăn sáng Corn Flakes Nestlé hộp 275g (72.800đ).\nBánh Bông Lan Ăn Sáng C'est Bon Sợi Thịt Gà Nhân Kem Phô Mai (Gói 5 cái) (21.000đ).\nNgũ cốc ăn sáng Koko Krunch vị sô cô la Nestlé hộp 330g (115.000đ).",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10011078",
+          "WIN_10194734",
+          "WIN_10013752"
+        ]
+      },
+      {
+        "id": "final_shipping_0_budget",
+        "question": "nước giặt dưới 150 nghìn nên chọn loại nào?",
+        "status": 200,
+        "http_ms": 124.94,
+        "text": "Trong tầm tiền này, bạn có thể chọn loại này nhé:\nNước giặt xả MaxKleen hương vườn sớm mai 2.4kg (148.700đ).",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10160955"
+        ]
+      },
+      {
+        "id": "final_shipping_0_skin",
+        "question": "da dầu nhiều mụn thì nên chọn sản phẩm nào?",
+        "status": 200,
+        "http_ms": 2835.55,
+        "text": "Bạn có thể chọn trong vài loại này:\nSữa rửa mặt Pond's sáng da sạch sâu tuýp 100g (78.000đ).\nSữa rửa mặt sáng da đất sét Nivea  tuýp 100g (56.900đ).\nKem chống nắng dưỡng ẩm Biore 50g SPF 50+ PA++++ (195.400đ).",
+        "model": "catalog-fallback",
+        "grounded_product_ids": [
+          "WIN_10086759",
+          "WIN_10161336",
+          "WIN_10160078"
+        ]
+      },
+      {
+        "id": "final_shipping_0_hotpot",
+        "question": "mua thịt ăn lẩu, bò thường hoặc ba chỉ đều được, chọn giúp mình",
+        "status": 200,
+        "http_ms": 3259.75,
+        "text": "Ba chỉ bò cắt lát New Zealand KiaOra 475g (188.900đ): Ba chỉ bò cắt lát New Zealand có độ mịn và ít mỡ, thích hợp cho lẩu nhanh chín\nBa chỉ bò Mỹ Thiên Vương ACEFOODS  khay 500g (165.000đ): Ba chỉ bò Mỹ Thiên Vương 500g cung cấp lượng thịt lớn hơn, giá hợp lý cho nhóm đông\nBa chỉ bò Úc  cắt lát  Kiaora khay 200g (87.100đ): Ba chỉ bò Úc 200g là lựa chọn nhỏ gọn, phù hợp nếu muốn thử hương vị mới",
+        "model": "openai/gpt-oss-20b",
+        "grounded_product_ids": [
+          "WIN_10626463",
+          "WIN_10404843",
+          "WIN_10140199"
+        ]
+      }
+    ],
+    "multiturn_in_parallel": [
+      {
+        "id": "final_shipping_flow_0",
+        "question": "Mình muốn mua dầu gội chống gàu dưới 150 nghìn, chọn một loại.",
+        "status": 200,
+        "http_ms": 216.15,
+        "text": "Trong tầm tiền này, bạn có thể chọn loại này nhé:\nDầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml (95.200đ).",
+        "model": "deterministic-fast-path",
+        "grounded_product_ids": [
+          "WIN_10016912"
+        ]
+      },
+      {
+        "id": "final_shipping_flow_1",
+        "question": "Thế mua cho nữ thì sao?",
+        "status": 200,
+        "http_ms": 4722.34,
+        "text": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml (95.200đ): Cỡ chai 100ml phù hợp cho người dùng nữ, dễ dùng thử và tiết kiệm",
+        "model": "openai/gpt-oss-20b",
+        "grounded_product_ids": [
+          "WIN_10016912"
+        ]
+      },
+      {
+        "id": "final_shipping_flow_2",
+        "question": "Chọn loại từ 400ml trở lên.",
+        "status": 200,
+        "http_ms": 136.04,
+        "text": "Mình chưa chọn được dầu gội chống gàu từ 400ml trở lên với giá dưới 150.000đ.",
+        "model": "deterministic-no-package-match",
+        "grounded_product_ids": []
+      },
+      {
+        "id": "final_shipping_flow_3",
+        "question": "Loại đó giá bao nhiêu?",
+        "status": 200,
+        "http_ms": 21.25,
+        "text": "Bạn đang hỏi sản phẩm nào vậy? Nói giúp mình tên món nhé.",
+        "model": "local-clarification",
+        "grounded_product_ids": []
+      }
+    ]
+  },
+  "final_sequential_summary": {
+    "browse": {
+      "samples": 2,
+      "http_statuses": [
+        200,
+        200
+      ],
+      "median_http_ms": 107.445,
+      "min_http_ms": 103.62,
+      "max_http_ms": 111.27
+    },
+    "breakfast": {
+      "samples": 2,
+      "http_statuses": [
+        200,
+        200
+      ],
+      "median_http_ms": 93.48,
+      "min_http_ms": 92.73,
+      "max_http_ms": 94.23
+    },
+    "budget": {
+      "samples": 2,
+      "http_statuses": [
+        200,
+        200
+      ],
+      "median_http_ms": 103.44,
+      "min_http_ms": 101.5,
+      "max_http_ms": 105.38
+    },
+    "skin": {
+      "samples": 2,
+      "http_statuses": [
+        200,
+        502
+      ],
+      "median_http_ms": 4038.03,
+      "min_http_ms": 2702.75,
+      "max_http_ms": 5373.31
+    },
+    "hotpot": {
+      "samples": 2,
+      "http_statuses": [
+        200,
+        200
+      ],
+      "median_http_ms": 2695.25,
+      "min_http_ms": 2554.79,
+      "max_http_ms": 2835.71
+    }
+  },
+  "profiled_stages": [
+    {
+      "id": "after_cut_0_browse",
+      "status": 200,
+      "server_ms": 135.16,
+      "stage_totals_ms": {
+        "search": 4.72,
+        "_fast_catalog_plan": 15.44,
+        "retrieval": 29.15,
+        "_render_structured": 22.14,
+        "_fast_catalog_advice": 24.45
+      },
+      "provider_requests": []
+    },
+    {
+      "id": "after_cut_0_breakfast",
+      "status": 200,
+      "server_ms": 110.58,
+      "stage_totals_ms": {
+        "search": 2.92,
+        "_fast_catalog_plan": 6.75,
+        "retrieval": 14.42,
+        "_render_structured": 27.25,
+        "_fast_catalog_advice": 29.65
+      },
+      "provider_requests": []
+    },
+    {
+      "id": "after_cut_0_budget",
+      "status": 200,
+      "server_ms": 113.16,
+      "stage_totals_ms": {
+        "search": 10.39,
+        "_fast_catalog_plan": 34.32,
+        "retrieval": 13.0,
+        "_render_structured": 17.53,
+        "_fast_catalog_advice": 17.6
+      },
+      "provider_requests": []
+    },
+    {
+      "id": "after_cut_0_skin",
+      "status": 200,
+      "server_ms": 6087.22,
+      "stage_totals_ms": {
+        "search": 121.54,
+        "_fast_catalog_plan": 322.43,
+        "_client_or_raise": 0.04,
+        "_clients": 0.0,
+        "provider": 5388.7,
+        "Plan": 3068.66,
+        "retrieval": 12.78,
+        "RetrievalRepair": 714.62,
+        "Composition": 941.93,
+        "_render_structured": 14.18,
+        "AdviceReview": 678.72
+      },
+      "provider_requests": [
+        {
+          "parent": "Plan",
+          "ms": 3060.46,
+          "model": "openai/gpt-oss-20b",
+          "usage": {
+            "prompt_tokens": 3096,
+            "completion_tokens": 355,
+            "total_tokens": 3451
+          }
+        },
+        {
+          "parent": "RetrievalRepair",
+          "ms": 712.7,
+          "model": "openai/gpt-oss-20b",
+          "usage": {
+            "prompt_tokens": 1124,
+            "completion_tokens": 191,
+            "total_tokens": 1315
+          }
+        },
+        {
+          "parent": "Composition",
+          "ms": 939.09,
+          "model": "openai/gpt-oss-20b",
+          "usage": {
+            "prompt_tokens": 859,
+            "completion_tokens": 103,
+            "total_tokens": 962
+          }
+        },
+        {
+          "parent": "AdviceReview",
+          "ms": 676.45,
+          "model": "openai/gpt-oss-20b",
+          "usage": {
+            "prompt_tokens": 717,
+            "completion_tokens": 83,
+            "total_tokens": 800
+          }
+        }
+      ]
+    },
+    {
+      "id": "after_cut_0_hotpot",
+      "status": 200,
+      "server_ms": 3157.16,
+      "stage_totals_ms": {
+        "search": 95.6,
+        "_fast_catalog_plan": 31.23,
+        "_client_or_raise": 0.03,
+        "_clients": 0.0,
+        "provider": 2831.37,
+        "Plan": 707.27,
+        "retrieval": 192.82,
+        "Composition": 1372.32,
+        "_render_structured": 26.82,
+        "AdviceReview": 764.98
+      },
+      "provider_requests": [
+        {
+          "parent": "Plan",
+          "ms": 699.37,
+          "model": "openai/gpt-oss-20b",
+          "usage": {
+            "prompt_tokens": 3102,
+            "completion_tokens": 242,
+            "total_tokens": 3344
+          }
+        },
+        {
+          "parent": "Composition",
+          "ms": 1369.44,
+          "model": "openai/gpt-oss-20b",
+          "usage": {
+            "prompt_tokens": 2651,
+            "completion_tokens": 138,
+            "total_tokens": 2789
+          }
+        },
+        {
+          "parent": "AdviceReview",
+          "ms": 762.56,
+          "model": "openai/gpt-oss-20b",
+          "usage": {
+            "prompt_tokens": 2826,
+            "completion_tokens": 84,
+            "total_tokens": 2910
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Small synthetic local sample. No production p95 or audio claims.",
+    "Baseline is one run, not a controlled provider-latency experiment.",
+    "Parallel runs include an overlapping semantic turn; the 1.66s breakfast outlier is not proved to be cold start.",
+    "One of ten final sequential requests returned 502. HTTP 200 alone does not establish answer quality.",
+    "Free-form benefits and planner-invented label filters remain unresolved quality risks."
+  ]
+}

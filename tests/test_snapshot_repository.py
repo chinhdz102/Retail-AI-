@@ -87,3 +87,38 @@ def test_snapshot_full_product_names_remain_searchable_across_categories():
     for product in repo.products[::100]:
         results = repo.search(query=product.name, in_stock=False, limit=3)
         assert product.product_id in [item.product_id for item in results], product.name
+
+
+def test_snapshot_index_preserves_reference_search_results_and_tie_order():
+    from backend.products.catalog import search_products
+
+    repo = get_product_repository(Settings(catalog_repository="snapshot"))
+    queries = {"", "!!!", "giá bao nhiêu", "Hảo Hảo", "Hảo Hảo Hảo", "nước lẩu",
+               "nước lau", "nước lau sàn", "nuoc lau san", "Coca-Cola", "价格",
+               "sản phẩm không tồn tại abcxyz"}
+    queries.update(product.category for product in repo.products)
+    for product in repo.products[::100]:
+        queries.update(filter(None, (product.name, product.brand, product.product_id,
+                                      product.item_no, product.barcode)))
+    for query in sorted(queries):
+        criteria = {"query": query, "in_stock": False, "limit": 17}
+        assert repo.search(**criteria) == search_products(products=repo.products, **criteria), query
+
+
+@pytest.mark.parametrize("criteria", [
+    {"query": "nước giặt", "brand": "OMO", "price_operator": "LT", "price_value_vnd": 200000},
+    {"query": "sữa", "max_price_vnd": 20000, "in_stock": True},
+    {"query": "trà", "price_operator": "GTE", "price_value_vnd": 20000},
+    {"query": "", "category": "drink"},
+    {"query": "", "category": "meal"},
+    {"query": "dầu gội", "spicy": False},
+    {"query": "dầu gội", "brand": "Ajinomoto"},
+])
+def test_snapshot_index_keeps_all_existing_filters(criteria):
+    from backend.products.catalog import search_products
+
+    repo = get_product_repository(Settings(catalog_repository="snapshot"))
+    canonical = {**criteria, "limit": 11}
+    if canonical.get("category"):
+        canonical["category"] = repo.category_aliases.get(canonical["category"], canonical["category"])
+    assert repo.search(**criteria, limit=11) == search_products(products=repo.products, **canonical)

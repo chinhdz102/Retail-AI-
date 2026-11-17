@@ -339,6 +339,49 @@ def _search_query_words(query: str) -> tuple[str, ...]:
     return _search_words(normalized)
 
 
+def _search_fields(product: ProductSnapshot) -> tuple[str, ...]:
+    return (
+        product.name, product.brand or "", product.category,
+        product.category_hierarchy or "", product.description or "",
+        product.ingredients or "", PRODUCT_ALIASES.get(product.product_id, ""),
+        DEMO_CATEGORY_ALIASES.get(product.category, ""),
+        product.product_id, product.item_no or "", product.barcode or "",
+    )
+
+
+class ProductSearchIndex:
+    """Narrow immutable catalog rows without changing search ranking or filters.
+
+    A token hit is only a candidate: search_products still applies repeated-word,
+    identifier, price, stock and spelling checks against the original snapshots.
+    Indexes belong to one repository version and never cache a search response.
+    """
+
+    def __init__(self, products: tuple[ProductSnapshot, ...]) -> None:
+        self.products = products
+        self._by_word: dict[str, set[int]] = {}
+        self._by_identifier: dict[str, set[int]] = {}
+        for index, product in enumerate(products):
+            words = {word for field in _search_fields(product) for word in _search_words(field)}
+            for word in words:
+                self._by_word.setdefault(word, set()).add(index)
+            for identifier in (product.product_id, product.item_no, product.barcode):
+                if identifier:
+                    self._by_identifier.setdefault(_normalize(identifier), set()).add(index)
+
+    def candidates(self, query: str) -> tuple[ProductSnapshot, ...]:
+        normalized = _normalize(query).strip()
+        words = set(_search_query_words(normalized))
+        if not words:
+            return self.products if not normalized else ()
+        postings = sorted((self._by_word.get(word, set()) for word in words), key=len)
+        indices = postings[0].intersection(*postings[1:])
+        # Exact IDs bypass the ordinary token-subset check in search_products.
+        indices.update(self._by_identifier.get(normalized, ()))
+        # Preserve input order for ties in the unchanged stable rank sort.
+        return tuple(self.products[index] for index in sorted(indices))
+
+
 def search_products(
     query: str = "",
     category: str | None = None,
@@ -380,14 +423,7 @@ def search_products(
     normalized_brand = " ".join(_search_words(brand or ""))
     matches: list[tuple[tuple[int, ...], ProductSnapshot]] = []
     for product in products:
-        fields = (
-            product.name, product.brand or "", product.category,
-            product.category_hierarchy or "", product.description or "",
-            product.ingredients or "", PRODUCT_ALIASES.get(product.product_id, ""),
-            DEMO_CATEGORY_ALIASES.get(product.category, ""),
-            product.product_id, product.item_no or "", product.barcode or "",
-        )
-        field_words = [_search_words(value) for value in fields]
+        field_words = [_search_words(value) for value in _search_fields(product)]
         words = {word for values in field_words for word in values}
         identifiers = {
             _normalize(value) for value in (product.product_id, product.item_no, product.barcode)
