@@ -68,11 +68,14 @@ class Search(BaseModel):
     query: str = Field(default="", max_length=100)
     brand: str | None = None
     category: str | None = None
+    scope: Literal["product", "category"] = "product"
     role: Literal["core", "pantry"] = "core"
     required_phrases: list[str] = Field(default_factory=list, max_length=5)
     any_phrases: list[str] = Field(default_factory=list, max_length=5)
     excluded_phrases: list[str] = Field(default_factory=list, max_length=5)
     package_constraints: list[PackageConstraint] = Field(default_factory=list, max_length=3)
+    taxonomy_phrases: list[str] = Field(default_factory=list, max_length=3)
+    preparation: Literal["any", "slice", "heat", "no_cook", "hotpot"] = "any"
 
 
 class PurchaseWeight(BaseModel):
@@ -196,6 +199,13 @@ whether to recommend, or require an unmentioned brand/budget before showing good
 in query. Use shopping knowledge to identify useful ingredients/tools, not just literal words.
 Choose category from topics when useful; empty query for a broad category. Raw ingredients
 need not mention the recipe; fresh fish is not fish balls. Do not search snacks for meals.
+taxonomy_phrases is not a product name. Use taxonomy_phrases only for actual hierarchy
+labels; don't put preparation/occasion words in query. preparation=slice for ingredients
+to cut into slices or dip as slices, heat for a quick prepared meal, no_cook for food
+requiring no cooking, any otherwise. Choose practical forms for the customer's cooking
+method: mince needs shaping, bones need simmering, ordinary whole cuts need slicing.
+For a meal occasion offer useful different directions and explain preparation, rather
+than selecting arbitrary foods just because they are edible. Don't add pantry bottles.
 required_phrases/excluded_phrases: customer-required/refused LABEL variants, not subjective
 benefits. 'Không đường' requires that entire phrase, never exclude 'đường'. Do not invent
 label constraints for sensitive skin, pet safety, flavour or quality. Keep follow-up constraints.
@@ -521,7 +531,7 @@ def use_consultation(text: str, fields: tuple[str, ...]) -> bool:
     # standalone catalog lookup.
     if (not advice and "price_vnd" in fields
         and re.search(r"\b(?:duoi|duoi toi da|tam|khoang|tong|ngan sach)\b", normalized)
-        and not re.search(r"\b(?:gia|bao tien|bao nhieu tien|bao gia)\b", normalized)):
+        and _explicit_budget(text) is not None):
         advice = True
     scalar_fields = {"ingredients", "promotion", "expiry_at", "spicy", "shelf"}
     if not advice and set(fields) & scalar_fields:
@@ -609,6 +619,31 @@ def _recipient_followup_plan(text: str, previous_plan: dict,
     })
 
 
+def _availability_query(text: str) -> str | None:
+    """Parse a complete yes/no product request without dropping its subtype.
+
+    Missing types stay missing: never shorten a tablet into a different cleaner,
+    or an absent milk variant into arbitrary milk. Complex needs use the planner.
+    """
+    words = re.findall(r"[^\W_]+", unicodedata.normalize("NFC", text.casefold()))
+    normalized = " ".join(normalize_vietnamese(text).split())
+    match = re.fullmatch(
+        r"(?:(?:o day|ben minh|cua hang|shop|anh oi|ban oi) )?"
+        r"co (?:ban )?(.+?) (?:khong|ko)(?: (?:a|nhi|nhe|vay))?", normalized)
+    if not match:
+        return None
+    phrase = match.group(1)
+    if re.search(r"\b(?:nao|gi|gia|duoi|tren|ngon|tot|phu hop|nhay cam|"
+                 r"an toan|dung cho|de|voi|va|hay|hoac|khuyen mai|khuyen ma i)\b", phrase):
+        return None
+    offset = normalized[:match.start(1)].count(" ")
+    length = len(phrase.split())
+    query = " ".join(words[offset:offset + length])
+    if not query or _generic_product_query(query):
+        return None
+    return query
+
+
 def _infer_catalog_query(repository: ProductRepository, text: str,
                          *, allow_broad: bool = False) -> str | None:
     """Infer a product-type query from terms that actually occur in catalog.
@@ -617,13 +652,19 @@ def _infer_catalog_query(repository: ProductRepository, text: str,
     department or SKU is hard-coded, so the same fast path covers every store
     category while remaining conservative for broad or ambiguous requests.
     """
+    # Availability turns have their own parser.  Reuse its intact phrase so
+    # the trailing yes/no particle ("không", "ko") never becomes part of the
+    # catalog query and cannot make an exact product look unavailable.
+    availability = _availability_query(text)
+    if availability:
+        return availability
     normalized = normalize_vietnamese(text)
     if re.search(
         r"\b(?:so sanh|khac nhau|re hon|dat hon|gio mua|chuyen sang|doi sang|"
         r"ca tuan|an toi|an sang|qua tang|ngan sach|bao nhieu nguoi)\b", normalized
     ):
         return None
-    if not re.search(r"\b(?:san pham|mat hang|loai|mua|can|dung|tu van|goi y|chon|nen)\b",
+    if not re.search(r"\b(?:san pham|mat hang|loai|mua|can|dung|tu van|goi y|chon|nen|ban)\b",
                      normalized):
         return None
     words = re.findall(r"[^\W_]+", unicodedata.normalize("NFC", text.casefold()))
@@ -698,48 +739,110 @@ def _catalog_occasion_plan(text: str, repository: ProductRepository,
     normalized = normalize_vietnamese(text)
     if not re.search(r"\b(?:an sang|an dem|an toi|an trua|bua sang|bua toi|"
                      r"do an nhanh|an nhanh|an tien|khong can nau|khong phai nau|"
-                     r"an no|bua an|mon an|do an)\b", normalized):
+                     r"an no|bua an|mon an|do an|an lau|lau)\b", normalized):
         return None
     # Preferences/constraints need the planner in the normal path.  During a
     # provider outage we can still recover useful catalog options, but never
     # silently discard an explicit variant or safety condition.
-    if conservative and re.search(r"\b(?:nhanh|no|ngon|re|tot|it|qua|"
-                                  r"duoi|tam|khoang|toi da|ngan sach|cho|voi|"
+    if conservative and re.search(r"\b(?:nhanh|no|re|tot|it|qua|"
+                                  r"duoi|tam|khoang|toi da|ngan sach|"
                                   r"khong thich|thich|uu tien)\b", normalized):
         return None
+    def available(category: str, *markers: str) -> bool:
+        return any(
+            row.category == category
+            and (not markers or any(marker in normalize_vietnamese(row.category_hierarchy or "")
+                                    for marker in markers))
+            for row in repository.products
+            if row.sellable_stock > 0
+        )
+
     breakfast = bool(re.search(r"\b(?:an sang|bua sang)\b", normalized))
-    hint = "ăn sáng" if breakfast else "ăn liền"
-    rows = repository.search(query=hint, in_stock=True, limit=301)
-    if not rows:
-        return None
-    marker = "thuc pham an sang" if breakfast else "thuc pham an lien"
-    scoped = [row for row in rows if marker in normalize_vietnamese(
-        row.category_hierarchy or "")]
-    if not scoped:
-        # A small catalog may keep the phrase only in the product name.  Keep
-        # this fallback bounded to rows returned by the catalog query itself.
-        scoped = [row for row in rows if hint.replace(" ", " ") in
-                  normalize_vietnamese(row.name)]
-    if not scoped:
-        return None
-    counts = Counter(row.category for row in scoped if row.category)
-    if not counts:
-        return None
-    top_count = counts.most_common(1)[0][1]
-    # A single unrelated imported row (for example honey carrying an “ăn
-    # sáng” leaf) must not become a second recommendation type.
-    minimum = max(2, math.ceil(top_count * 0.08))
-    categories = [category for category, count in counts.most_common()
-                  if count >= minimum][:3]
-    # Keep the browse set concise while allowing more than one real type (for
-    # example cháo and mì at night).  Search remains lexical evidence; the
-    # category is only a same-type tie-breaker in retrieval.
-    searches = [Search(query=hint, category=category, role="core")
-                for category in categories[:3]]
+    hotpot = bool(re.search(r"\blẩu\b", unicodedata.normalize("NFC", text.casefold()))
+                  or re.search(r"\b(?:an lau|noi lau|mon lau)\b", normalized))
+    late = bool(re.search(r"\b(?:an dem|do an nhanh|an nhanh|an tien|khong can nau|khong phai nau)\b", normalized))
+    if conservative:
+        # An occasion-only request is safe to browse locally. Named ingredients,
+        # dietary conditions and preferences still require semantic planning.
+        framing = set("anh em ban minh toi t the o day ben cua hang cho giup ho nhe "
+                      "a oi muon mua xem vai may mot cac nhung loai san pham mat "
+                      "hang thi co nao gi khong ko k voi di an sang bua dem lau "
+                      "noi mon do ngon khong can nau phai nhanh tien cai an co gi thi voi".split())
+        if set(re.findall(r"\w+", normalized)) - framing:
+            return None
+    searches: list[Search] = []
+    if hotpot:
+        if available("Thịt"):
+            searches.append(Search(query="", category="Thịt", preparation="slice"))
+        if available("Hải Sản") or available("Hải Sản Đông Lạnh"):
+            category = "Hải Sản" if available("Hải Sản") else "Hải Sản Đông Lạnh"
+            searches.append(Search(query="", category=category, preparation="hotpot"))
+        for category, marker in (("Rau Lá", "rau cai"), ("Rau Lá", "nam"), ("Củ, Quả", "rau an qua")):
+            if available(category, marker) and not any(q.category == category and marker in q.taxonomy_phrases for q in searches):
+                searches.append(Search(query="", category=category, taxonomy_phrases=[marker]))
+        searches = searches[:3]
+    elif breakfast or late:
+        occasion_query = "ăn sáng" if breakfast else "ăn liền"
+        if available("Cháo", "thuc pham an lien"):
+            searches.append(Search(query=occasion_query, category="Cháo", scope="category", taxonomy_phrases=["thuc pham an lien"], preparation="heat"))
+        if available("Mì", "thuc pham an lien"):
+            searches.append(Search(query=occasion_query, category="Mì", scope="category", taxonomy_phrases=["thuc pham an lien"], preparation="heat"))
+        if available("Bánh bao"):
+            searches.append(Search(query=occasion_query, category="Bánh bao", scope="category", preparation="heat"))
+        if breakfast and available("Bánh mì"):
+            searches.append(Search(query=occasion_query, category="Bánh mì", scope="category", preparation="no_cook"))
+        searches = searches[:3]
     if not searches:
         return None
     return Plan(need=text, action="advise", decision_mode="browse",
                 searches=searches)
+
+
+def _catalog_family_plan(text: str, repository: ProductRepository) -> Plan | None:
+    """Browse a broad catalog family by its verified category heads.
+
+    A one-word request such as “sữa” is too broad for lexical product search:
+    the first SKU containing that word may be a bánh or a cosmetic.  Derive
+    alternatives from actual category names instead of choosing that first
+    lexical hit.  This works for any family represented by category heads.
+    """
+    query = _infer_catalog_query(repository, text, allow_broad=True)
+    if not query or len(query.split()) != 1:
+        return None
+    normalized = normalize_vietnamese(query)
+    if not re.search(r"\b(?:co may|cac loai|nhung loai|loai nao|xem|goi y|mua|can)\b",
+                     normalize_vietnamese(text)):
+        return None
+    framing = set("anh em ban minh toi t the cho giup ho nhe a oi muon mua can "
+                  "xem vai may mot cac nhung loai san pham mat hang thi co nao "
+                  "khong ko k voi di goi y".split())
+    if set(normalize_vietnamese(text).split()) - framing - {normalized}:
+        return None
+    products = [p for p in getattr(repository, "products", ()) if p.sellable_stock > 0]
+    categories: dict[str, list[ProductSnapshot]] = {}
+    for product in products:
+        category = normalize_vietnamese(product.category)
+        if not category.startswith(normalized):
+            continue
+        categories.setdefault(product.category, []).append(product)
+    # Resolve a broad head through its dominant catalog department.  A
+    # genuinely ambiguous family stays with the semantic planner.
+    departments = Counter(p.department for rows in categories.values() for p in rows if p.department)
+    if departments:
+        department, count = departments.most_common(1)[0]
+        if count < sum(departments.values()) * .7:
+            return None
+        categories = {category: [p for p in rows if p.department == department]
+                      for category, rows in categories.items()}
+        categories = {category: rows for category, rows in categories.items() if rows}
+    if len(categories) < 2:
+        return None
+    ranked = sorted(categories.items(), key=lambda item: (-len(item[1]), item[0]))[:3]
+    return Plan(
+        need=text, action="advise", decision_mode="browse",
+        searches=[Search(query="", category=category, role="core")
+                  for category, _ in ranked],
+    )
 
 
 def _catalog_recovery_plan(text: str, previous_plan: dict | None,
@@ -749,16 +852,29 @@ def _catalog_recovery_plan(text: str, previous_plan: dict | None,
         # A new, explicit multi-word product type is safe to recover even in a
         # follow-up.  Mark a changed type so the normal merge drops the old
         # budget/exclusions instead of carrying them into the new department.
+        family = _catalog_family_plan(text, repository)
+        if family is not None:
+            return family.model_copy(update={"topic_changed": True})
         query = _infer_catalog_query(repository, text, allow_broad=True)
-        if query and len(query.split()) >= 2 and _label_phrase(text, query):
+        if query and _label_phrase(text, query):
             rows = repository.search(query=query, in_stock=True, limit=301)
             if rows:
-                prior_scope = normalize_vietnamese(" ".join([
+                prior_scope = " ".join([
                     str(previous_plan.get("need", "")),
                     *(str(item.get("query", ""))
                       for item in previous_plan.get("searches", [])),
-                ]))
+                ])
                 changed = not _label_phrase(prior_scope, query)
+                # A one-word umbrella such as “sữa” is safe only when the
+                # current turn clearly asks to browse types; otherwise keep
+                # the stricter multi-word recovery rule for ambiguous nouns.
+                if (len(query.split()) == 1 and not re.search(
+                        r"\b(?:co may|cac loai|nhung loai|xem|tim|goi y)\b",
+                        normalize_vietnamese(text))):
+                    changed = False
+                if not changed:
+                    rows = []
+            if rows:
                 labels = _catalog_label_requirements(repository, text, query)
                 return Plan(
                     need=text, action="advise", decision_mode="browse",
@@ -787,6 +903,9 @@ def _catalog_recovery_plan(text: str, previous_plan: dict | None,
     occasion = _catalog_occasion_plan(text, repository, conservative=False)
     if occasion is not None:
         return occasion
+    family = _catalog_family_plan(text, repository)
+    if family is not None:
+        return family
     query = _infer_catalog_query(repository, text, allow_broad=True)
     if query is None or len(query.split()) < 2:
         return None
@@ -809,11 +928,32 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
                        repository: ProductRepository) -> Plan | None:
     """Build a plan without a network call only for a clear catalog query."""
     normalized = normalize_vietnamese(text)
+    availability = _availability_query(text)
+    if availability:
+        return Plan(need=text, action="advise", decision_mode="browse",
+                    topic_changed=bool(previous_plan),
+                    searches=[Search(query=availability)])
     if re.search(r"\b(?:khong|chua|dung)\s+(?:mua|lay|chon|can|tim)\b", normalized):
         return None
-    if re.search(r"\b(?:khong qua|it|ngon|tot|re|phu hop|dieu tri|nhay cam|an toan|"
-                 r"so sanh|khac nhau|dang tien)\b", normalized):
+    if re.search(r"\b(?:it|tot|re|phu hop|dieu tri|nhay cam|an toan|"
+                 r"so sanh|khac nhau|dang tien|khong cay|khong duong)\b", normalized):
         return None
+
+    # An explicit meal occasion is a new scope.  Re-plan it before looking at
+    # remembered product state so a turn such as “đồ ăn đêm” after a hotpot
+    # question cannot inherit the old meat/seafood searches.
+    occasion = _catalog_occasion_plan(text, repository, conservative=True)
+    if occasion is not None:
+        if previous_plan and any(previous_plan.get(key) for key in (
+                "requirements", "constraints", "budget_vnd", "purchase_exclusions")):
+            return None
+        return occasion.model_copy(update={"topic_changed": bool(previous_plan)})
+    family = _catalog_family_plan(text, repository)
+    if family is not None:
+        if previous_plan and any(previous_plan.get(key) for key in (
+                "requirements", "constraints", "budget_vnd", "purchase_exclusions")):
+            return None
+        return family.model_copy(update={"topic_changed": bool(previous_plan)})
 
     # Follow-ups can change a requirement, reference a different option, or
     # answer a pending question. They need semantic state merging, not a copied plan.
@@ -821,10 +961,20 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
         recipient_plan = _recipient_followup_plan(text, previous_plan, repository)
         if recipient_plan is not None:
             return recipient_plan
-        return _package_followup_plan(text, previous_plan)
-    occasion = _catalog_occasion_plan(text, repository, conservative=True)
-    if occasion is not None:
-        return occasion
+        package_plan = _package_followup_plan(text, previous_plan)
+        if package_plan is not None:
+            return package_plan
+        # Only a fully parsed, explicit new product scope can bypass semantic
+        # state merging. Use the same conservative fresh-turn parser, including
+        # its budget and unparsed-word guards, rather than the outage recovery.
+        fresh = _fast_catalog_plan(text, None, [], repository)
+        old_queries = {normalize_vietnamese(item.get("query", ""))
+                       for item in previous_plan.get("searches", [])}
+        if (fresh is not None and old_queries and fresh.searches
+                and all(search.query and normalize_vietnamese(search.query) not in old_queries
+                        for search in fresh.searches)):
+            return fresh.model_copy(update={"topic_changed": True})
+        return None
     query = _infer_catalog_query(repository, text, allow_broad=True)
     if query is None:
         return None
@@ -834,7 +984,7 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
     framing = set("anh em ban minh toi t cho giup ho nhe a oi nay dang can tim "
                   "muon mua xem vai may mot cac nhung loai san pham mat hang thi co "
                   "nao khong ko k de chon tu van goi y voi di dum chot thoi duoi tam "
-                  "khoang toi da gia ngan sach nghin ngan dong vnd can nam nu nen".split())
+                  "khoang toi da gia ngan sach nghin ngan dong vnd can nam nu nen the".split())
     required = _catalog_label_requirements(repository, text, query)
     required_words = set(normalize_vietnamese(" ".join(required)).split())
     remaining = set(normalized.split()) - set(normalize_vietnamese(query).split()) - framing - required_words
@@ -1520,6 +1670,8 @@ async def consult(
             exc.consultation_plan = plan.model_dump()
             raise
     candidates, missing = await _retrieve_candidates(repository, plan, topics, customer_texts)
+    if _availability_query(text) and not candidates:
+        return _availability_no_match_advice(plan)
     if (not candidates and previous_plan and planner_model == "deterministic-fast-path"
             and _package_followup_plan(text, previous_plan) is not None):
         # A literal size change with no matching catalog row is a factual result,
@@ -1713,7 +1865,12 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
             price_value_vnd=plan.budget_vnd,
         )
         matched_query = query.query
-        generic_category = query.category in topics and _label_phrase(query.category, query.query)
+        occasion_scope = query.scope == "category" or bool(
+            query.taxonomy_phrases or query.preparation != "any"
+        )
+        generic_category = query.category in topics and (
+            occasion_scope or _label_phrase(query.category, query.query)
+        )
         found = await asyncio.to_thread(
             repository.search,
             query="" if generic_category else query.query,
@@ -1756,7 +1913,9 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
         if query.category in topics:
             # Category is a ranking hint for a named type, not a hard exclusion:
             # store taxonomies often split cleaning liquids and cleaning tools.
-            if query.query:
+            if occasion_scope:
+                found = [p for p in found if p.category == query.category]
+            elif query.query:
                 found.sort(key=lambda p: p.category != query.category)
             else:
                 found = [p for p in found if p.category == query.category]
@@ -1782,7 +1941,8 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
         # and glass cleaner). It must not turn a different type into a cheap hit.
         category_hard = _category_is_customer_explicit(query, customer_texts)
         raw_found = list(found)
-        found = _matching_candidates(found, query, type_query=matched_query,
+        occasion_type = "" if occasion_scope else matched_query
+        found = _matching_candidates(found, query, type_query=occasion_type,
                                      category_hard=category_hard)
         if (not found and query.any_phrases
             and all(_soft_recipient_variant(phrase) for phrase in query.any_phrases)):
@@ -1790,7 +1950,7 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
             # optional gender tag erase every real anti-dandruff SKU.
             soft_query = query.model_copy(update={"any_phrases": []})
             found = _matching_candidates(raw_found, soft_query,
-                                         type_query=matched_query,
+                                         type_query=occasion_type,
                                          category_hard=category_hard)
         if not found and query.query:
             # A planner may include a use phrase in the lexical query
@@ -1826,6 +1986,7 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
             found = _matching_candidates(broad, query, type_query=head_query,
                                          category_hard=category_hard)
             matched_query = head_query
+        found = _occasion_filtered_products(found, query)
         # Exclusions must apply before top-k. Removing owned/refused rows only
         # after selection can leave an empty set while useful options exist.
         found = [p for p in found if not _excluded_purchase(p, plan.purchase_exclusions.values())]
@@ -1836,20 +1997,31 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
                 # thing. The deeper taxonomy distinguishes seasoning leaves.
                 found = [p for p in found if not re.search(r"\bgia vi\b",
                     normalize_vietnamese(p.category_hierarchy or ""))]
-        found.sort(key=lambda p: _product_type_rank(p, matched_query, query.category))
+        ranking_query = "" if occasion_scope else matched_query
+        found.sort(key=lambda p: _product_type_rank(p, ranking_query, query.category))
         # Do not reintroduce cheap flavour/ingredient hits through diversity.
         # If the taxonomy identifies the head type, keep that tier throughout.
-        if found and not _product_type_rank(found[0], matched_query, query.category)[0]:
-            found = [p for p in found if not _product_type_rank(p, matched_query, query.category)[0]]
+        if found and not _product_type_rank(found[0], ranking_query, query.category)[0]:
+            found = [p for p in found if not _product_type_rank(p, ranking_query, query.category)[0]]
         # Default retrieval should expose individual retail packs before cases
         # of 24/30. Do not manufacture a single-bottle SKU by dividing a case.
         found.sort(key=lambda p: bool(re.match(r"(?:thùng|lốc|combo|bộ)\s+\d", p.name, re.I)))
+        if query.preparation == "slice":
+            found.sort(key=lambda p: not re.search(
+                r"\b(?:cat lat|thai lat|sliced)\b", normalize_vietnamese(p.name)))
+        elif query.preparation == "hotpot":
+            # A labelled retail pack is easier to prepare than an unspecified
+            # whole fish. Preserve real price/weight; never split the SKU.
+            found.sort(key=lambda p: (
+                bool(re.search(r"\bnguyen con\b", normalize_vietnamese(p.name))),
+                (p.uom or "").casefold() == "kg",
+            ))
         if not found:
             missing.append(index)
         preference_context = " ".join([plan.source_user_text, *plan.requirement_quotes.values()]) or plan.need
         diversity_limit = 4 if plan.decision_mode == "browse" else 8
         for product in _diverse_candidates(
-            found, matched_query, limit=diversity_limit, context=preference_context
+            found, ranking_query, limit=diversity_limit, context=preference_context
         ):
             candidates[product.product_id] = product
     return candidates, missing
@@ -2013,6 +2185,17 @@ def _fallback_guidance_advice(plan: Plan) -> Advice:
     return Advice(text=text, model="catalog-guidance", products=(), plan=plan)
 
 
+def _availability_no_match_advice(plan: Plan) -> Advice:
+    """Answer a yes/no availability question without inventing a substitute."""
+    query = next((search.query.strip() for search in plan.searches if search.query.strip()), "loại hàng này")
+    return Advice(
+        text=f"Mình chưa tìm thấy {query} trong danh mục hàng đang tra cứu, nên chưa thể xác nhận cửa hàng có bán loại này.",
+        model="catalog-no-match",
+        products=(),
+        plan=plan,
+    )
+
+
 def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> Advice | None:
     """Render a small, label-safe answer for an unambiguous browse turn.
 
@@ -2054,14 +2237,35 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
         return None
     choices = []
     for product in selected:
+        reason = ""
+        preparation = next((query.preparation for query in plan.searches
+                            if product in _matching_candidates([product], query)), "any")
+        hotpot = bool(re.search(r"\b(?:an lau|lau)\b", normalize_vietnamese(plan.need)))
+        if preparation == "slice" and hotpot:
+            reason = "Thái mỏng nếu cần rồi nhúng chín."
+        elif preparation == "hotpot":
+            reason = "Làm sạch rồi nấu chín trong nước lẩu."
+        elif hotpot and product.category == "Rau Lá":
+            reason = "Rửa sạch rồi nhúng chín cùng lẩu."
+        elif preparation == "heat":
+            reason = "Làm nóng hoặc nấu chín theo hướng dẫn trên gói."
         choices.append(Choice(
             product_id=product.product_id,
-            reason="",
+            reason=reason,
             evidence_fields=["name"],
         ))
+    normalized_need = normalize_vietnamese(plan.need)
     if plan.budget_vnd is not None:
         intro = ("Trong tầm tiền này, bạn có thể chọn loại này nhé:" if len(choices) == 1
                  else "Trong tầm tiền này, bạn tham khảo vài loại này nhé:")
+    elif _availability_query(plan.need):
+        intro = "Có nhé, bạn có thể chọn các loại này:"
+    elif re.search(r"\b(?:an lau|lau)\b", normalized_need):
+        intro = "Ăn lẩu thì ưu tiên thịt cắt lát, thêm hải sản hoặc rau để nhúng; bạn tham khảo các lựa chọn này nhé:"
+    elif re.search(r"\b(?:an dem|an nhanh|an tien|khong can nau)\b", normalized_need):
+        intro = "Ăn đêm nên chọn món gọn, chế biến nhanh theo hướng dẫn trên gói; bạn tham khảo các loại này nhé:"
+    elif re.search(r"\b(?:an sang|bua sang)\b", normalized_need):
+        intro = "Bữa sáng nhanh có thể chọn món ăn liền hoặc bánh; bạn tham khảo các loại này nhé:"
     else:
         intro = ("Bạn tham khảo loại này nhé:" if len(choices) == 1
                  else "Bạn tham khảo vài loại này nhé:")
@@ -2344,7 +2548,9 @@ def _explicit_budget(text):
         cue = re.search(r"\b(duoi|toi da|khong qua|tam|khoang|ngan sach(?: len| xuong| con)?|tong|chi co|"
                         r"giam(?: ngan sach)?(?: xuong| con)?|tang(?: ngan sach)?(?: len)?)\s*$",
                         prefix)
-        if cue and not re.search(r"\bgia\s*$", prefix[:cue.start()]):
+        price_change = (cue and cue.group(1).startswith(("giam", "tang"))
+                        and re.search(r"\bgia\s*$", prefix[:cue.start()]))
+        if cue and not price_change:
             amount = _money_amount(match)
             if amount is not None and 0 < amount <= 100_000_000:
                 budgets.append((amount, cue.group(1) == "duoi"))
@@ -2671,8 +2877,66 @@ def _category_is_customer_explicit(query: Search, customer_texts: list[str]) -> 
     return category in {normalize_vietnamese(cat) for cat in term_categories(query.query)}
 
 
+def _occasion_filtered_products(products: list[ProductSnapshot], query: Search) -> list[ProductSnapshot]:
+    """Apply taxonomy/form constraints after broad category retrieval.
+
+    Taxonomy is the source of truth for an occasion; a lexical product name is
+    not. Form filtering is intentionally conservative: when the catalog has no
+    clearly suitable row it returns no row instead of silently switching to a
+    neighbouring prepared food or seasoning.
+    """
+    result = list(products)
+    if query.taxonomy_phrases:
+        wanted = [normalize_vietnamese(value) for value in query.taxonomy_phrases]
+        result = [p for p in result if all(
+            phrase in normalize_vietnamese(p.category_hierarchy or "")
+            for phrase in wanted
+        )]
+    if query.preparation == "slice":
+        excluded = re.compile(
+            r"\b(?:xay|minced|bam|vien|xuc xich|lap xuong|thit nguoi|banh bao|"
+            r"cha|gio|uop san|ham|pizza|hamburger)\b", re.I)
+        result = [p for p in result if not excluded.search(normalize_vietnamese(p.name))]
+        if result:
+            preferred = re.compile(r"\b(?:ba chi|ba roi|than|gau|nam|bap|bit tet|suon|"
+                                   r"cat lat|thit heo|thit bo)\b", re.I)
+            preferred_rows = [p for p in result if preferred.search(normalize_vietnamese(p.name))]
+            if preferred_rows:
+                result = preferred_rows
+    elif query.preparation == "heat":
+        marker = re.compile(r"\b(?:an lien|dong lanh|banh bao|chao|mi|mien|pho)\b", re.I)
+        result = [p for p in result if marker.search(normalize_vietnamese(
+            f"{p.name} {p.category_hierarchy or ''}"))]
+        # An occasion request is for a serving, not a wholesale case or a
+        # family multipack. Keep those rows out of the quick-food shortlist.
+        result = [p for p in result if not re.search(
+            r"\b(?:thung|combo|bo)\s+\d+\b", normalize_vietnamese(p.name)
+        )]
+    elif query.preparation == "no_cook":
+        # "No cook" is only used for labelled ready bread/snack rows.  Do not
+        # infer it from a generic food category.
+        result = [p for p in result if not re.search(
+            r"\b(?:dong lanh|an lien|mi|chao|banh bao)\b",
+            normalize_vietnamese(f"{p.name} {p.category_hierarchy or ''}"),
+        )]
+    elif query.preparation == "hotpot":
+        excluded = re.compile(r"\b(?:nom|da nau|cha|vien|xuc xich|sot|tam gia vi|kho)\b", re.I)
+        result = [p for p in result if not excluded.search(normalize_vietnamese(p.name))]
+        preferred = re.compile(r"\b(?:tom|muc|ngheu|ca|oc|bach tuoc|cua|ech)\b", re.I)
+        preferred_rows = [p for p in result if preferred.search(normalize_vietnamese(p.name))]
+        if preferred_rows:
+            result = preferred_rows
+    return result
+
+
 def _matching_candidates(products, query: Search, *, type_query=None,
                          category_hard=None):
+    # A category-only scope is exact, including when checking a single row.
+    # Falling back to another category when no same-category row exists made
+    # per-product reasons borrow a previous group's preparation method.
+    if query.category and (query.scope == "category" or not query.query.strip()):
+        products = [p for p in products if p.category == query.category]
+    products = _occasion_filtered_products(products, query)
     products = [p for p in products if all(
         _label_phrase(p.name, term) for term in query.required_phrases
     ) and (not query.any_phrases or any(
@@ -2692,7 +2956,7 @@ def _matching_candidates(products, query: Search, *, type_query=None,
     # Descriptions/category hierarchies contain neighbouring product names.
     # Require the named type on the label or its actual category, preserving
     # accents, instead of treating metadata keyword overlap as an identity.
-    type_query = query.query if type_query is None else type_query
+    type_query = ("" if query.scope == "category" else query.query) if type_query is None else type_query
     normalized_type = normalize_vietnamese(type_query)
     # In Vietnamese grocery language “thịt heo/bò” means edible meat cuts.
     # Bones are catalogued under the meat department but are a different head

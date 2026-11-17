@@ -1,0 +1,109 @@
+"""Regression checks for catalog-wide Vietnamese consultation routing."""
+
+import json
+
+import pytest
+
+from backend.config import Settings
+from backend.products.repository import get_product_repository
+from backend.services.consultation import (
+    Search,
+    _availability_query,
+    _catalog_family_plan,
+    _fast_catalog_advice,
+    _fast_catalog_plan,
+    _matching_candidates,
+    _retrieve_candidates,
+)
+from backend.services.retail_tools import execute_catalog_tool
+
+
+@pytest.fixture(scope="module")
+def snapshot():
+    return get_product_repository(Settings(catalog_repository="snapshot"))
+
+
+def test_availability_parser_drops_yes_no_particle(snapshot):
+    assert _availability_query("Ở đây có bán sữa tươi không?") == "sữa tươi"
+    assert _availability_query("có viên thả bồn cầu không") == "viên thả bồn cầu"
+
+
+def test_broad_milk_family_uses_catalog_category_heads(snapshot):
+    plan = _catalog_family_plan("thế có các loại sữa nào", snapshot)
+    assert plan and len(plan.searches) >= 2
+    assert all(search.category.startswith("Sữa") for search in plan.searches)
+
+
+@pytest.mark.asyncio
+async def test_hotpot_scope_excludes_mince_sauce_and_processed_food(snapshot):
+    plan = _fast_catalog_plan("t muốn ăn lẩu thì ăn với cái gì", None, [], snapshot)
+    candidates, missing = await _retrieve_candidates(
+        snapshot, plan, sorted({p.category for p in snapshot.products}), [plan.need]
+    )
+    assert not missing
+    names = " ".join(p.name.casefold() for p in candidates.values())
+    assert "nước mắm" not in names and "xay" not in names and "nộm" not in names
+    assert {p.category for p in candidates.values()} >= {"Thịt", "Hải Sản"}
+    advice = _fast_catalog_advice(candidates, plan)
+    assert advice and len(advice.products) == 3
+    assert {p.category for p in advice.products} == {"Thịt", "Hải Sản", "Rau Lá"}
+    for line in advice.text.splitlines():
+        if any(p.name in line for p in advice.products if p.category != "Thịt"):
+            assert "Thái mỏng" not in line
+
+
+@pytest.mark.asyncio
+async def test_late_night_scope_keeps_single_serving_quick_food(snapshot):
+    plan = _fast_catalog_plan("đồ ăn đêm có cái gì ngon ko", None, [], snapshot)
+    candidates, missing = await _retrieve_candidates(
+        snapshot, plan, sorted({p.category for p in snapshot.products}), [plan.need]
+    )
+    assert not missing
+    assert {p.category for p in candidates.values()} <= {"Cháo", "Mì", "Bánh bao"}
+    assert all("thùng" not in p.name.casefold() for p in candidates.values())
+
+
+@pytest.mark.asyncio
+async def test_strict_snack_budget_never_reintroduces_over_budget_rows(snapshot):
+    plan = _fast_catalog_plan("có loại snack nào giá dưới 20.000 đồng không?", None, [], snapshot)
+    candidates, missing = await _retrieve_candidates(
+        snapshot, plan, sorted({p.category for p in snapshot.products}), [plan.need]
+    )
+    assert not missing
+    assert candidates and all(p.price_vnd < 20_000 for p in candidates.values())
+
+
+def test_named_promotion_query_filters_before_top_k(snapshot):
+    observation = execute_catalog_tool(
+        "list_product_promotions",
+        json.dumps({"category": "dairy", "query": "sữa tươi", "limit": 5}),
+        repository=snapshot,
+    )
+    assert observation.status == "SUCCESS"
+    assert observation.products
+    assert all("sữa tươi" in product.name.casefold() for product in observation.products)
+
+
+def test_category_only_match_cannot_borrow_another_group(snapshot):
+    fish = next(p for p in snapshot.products if p.category == "Hải Sản")
+    assert not _matching_candidates([fish], Search(category="Thịt", preparation="slice"))
+
+
+def test_cleanup_words_cannot_be_misread_as_a_meal(snapshot):
+    assert _fast_catalog_plan("Mình cần khăn giấy hoặc khăn lau.", None, [], snapshot) is None
+
+
+def test_new_occasion_drops_the_previous_product_scope(snapshot):
+    previous = _fast_catalog_plan("t muốn ăn lẩu thì ăn với cái gì", None, [], snapshot)
+    current = _fast_catalog_plan("đồ ăn đêm có cái gì ngon ko", previous.model_dump(), [], snapshot)
+    assert current.topic_changed and not current.reuse_previous
+    assert {s.category for s in current.searches} == {"Cháo", "Mì", "Bánh bao"}
+
+
+@pytest.mark.parametrize("text", [
+    "Ăn lẩu hải sản thôi, không lấy thịt",
+    "Ăn đêm dưới 30 nghìn, không cay",
+    "Có các loại sữa không đường nào?",
+])
+def test_complex_requirements_keep_the_semantic_planner(text, snapshot):
+    assert _fast_catalog_plan(text, None, [], snapshot) is None

@@ -3428,11 +3428,26 @@ async def agent_respond(
             record.state,
             _localized_prompt_override_denial(request.language),
         )
+    # Unsupported health/use/benefit questions are policy lookups, not open
+    # consultation turns. Resolve them before any provider call so a test/mock
+    # provider outage cannot turn a safe abstention into a 502.
+    if unsupported_attribute_requested and not requested_fields:
+        reply = _localized_unverified_fact(request.language)
+        session_store.add_message(request.session_id, "user", request.text)
+        session_store.add_message(request.session_id, "assistant", reply)
+        return AgentRespondResponse(
+            session_id=request.session_id,
+            text=reply,
+            model="local-policy",
+            grounded_product_ids=[],
+            tools_used=[],
+            state=record.state,
+        )
 
     followup_fields = _implicit_followup_fields(request.text)
     promotion_list_arguments = _promotion_list_tool_arguments(request.text)
     catalog_additions_arguments = _catalog_additions_tool_arguments(request.text)
-    if promotion_list_arguments is not None:
+    if promotion_list_arguments is not None and "query" not in promotion_list_arguments:
         campaign_observation = await lookup_branch_information(
             "list_active_store_promotions",
             record.kiosk_id,
@@ -3480,7 +3495,6 @@ async def agent_respond(
         and promotion_list_arguments is None
         and catalog_additions_arguments is None
         and not prompt_override
-        and not unsupported_attribute_requested
     ):
         repository = get_product_repository(settings)
         price_order = broad_price_lookup.get("price_order")
@@ -3820,6 +3834,8 @@ async def agent_respond(
         if (
             requested_fields
             and not followup_fields
+            and promotion_list_arguments is None
+            and catalog_additions_arguments is None
             and not _administrative_action_requested(request.text)
             and not any(
                 observation.status == "SUCCESS" and observation.products
@@ -4047,6 +4063,8 @@ def _promotion_list_tool_arguments(text: str) -> dict[str, object] | None:
     remaining.difference_update(generic_terms)
     if not remaining:
         return {"category": category, "limit": 5} if category else {"limit": 5}
+    if category:
+        return {"category": category, "query": product_query, "limit": 5}
     return None
 
 
@@ -4440,6 +4458,12 @@ def _broad_price_lookup_arguments(
     if fields != ("price_vnd",):
         return None
     if use_consultation(text, fields):
+        return None
+    # A budgeted recommendation is a product-selection request, not a broad
+    # price lookup.  Let the structured recommendation tool carry the strict
+    # inequality through to the catalog; otherwise the legacy price route can
+    # return arbitrary over-budget rows and label them as "gần giống".
+    if _recommendation_tool_arguments(text) is not None:
         return None
     normalized = " ".join(_normalize_request_text(text).split())
     list_requested = bool(re.search(

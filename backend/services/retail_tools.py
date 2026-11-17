@@ -165,6 +165,10 @@ CATALOG_TOOL_DEFINITIONS: list[dict[str, Any]] = [
                         "type": "string",
                         "description": "Optional product category from the user's question.",
                     },
+                    "query": {
+                        "type": "string",
+                        "description": "Optional exact product/type phrase when the customer names one.",
+                    },
                     "limit": {"type": "integer", "minimum": 1, "maximum": 5},
                 },
                 "additionalProperties": False,
@@ -238,6 +242,7 @@ class ListProductPromotionsArguments(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     category: str | None = Field(default=None, max_length=160)
+    query: str | None = Field(default=None, max_length=160)
     limit: int = Field(default=5, ge=1, le=5)
 
 
@@ -516,7 +521,22 @@ def execute_catalog_tool(
                     terminal=True,
                 )
             category = _category_for_repository(parsed.category, repo)
-            products = tuple(list_promotions(category=category, limit=parsed.limit))
+            if parsed.query:
+                # Filter the full named candidate set before top-k. Applying
+                # the name after the first 5 category promotions incorrectly
+                # hides later matching promotions in every department.
+                products = tuple(
+                    product
+                    for product in repo.search(
+                        query=parsed.query,
+                        category=category,
+                        in_stock=False,
+                        limit=max(100, len(getattr(repo, "products", ()))),
+                    )
+                    if product.promotion
+                )[:parsed.limit]
+            else:
+                products = tuple(list_promotions(category=category, limit=parsed.limit))
             latest_timestamp = max(
                 (product.data_timestamp for product in products),
                 default=None,
