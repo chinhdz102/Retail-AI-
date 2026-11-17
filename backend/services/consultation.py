@@ -1311,6 +1311,11 @@ async def consult(
     # tone/references, not every earlier assistant list repeated as evidence.
     # Keep the planner's full history above for topic recovery and state merge.
     context["history"] = history[-4:]
+    if planner_model == "deterministic-fast-path":
+        fast_advice = _fast_catalog_advice(candidates, plan)
+        if fast_advice is not None:
+            logger.info("Consultation deterministic response topic=%s", text[:120])
+            return fast_advice
     # Once every real credential is already in its provider cooldown, another
     # composition request can only add latency.  The candidate set has been
     # filtered against the active catalog and all budget/exclusion guards, so
@@ -1642,6 +1647,58 @@ def _fallback_grounded_advice(candidates: dict[str, ProductSnapshot], plan: Plan
                                   plan, "catalog-fallback")
     except GroqProviderError:
         # The outage path must still obey size, exclusion and budget guards.
+        return None
+
+
+def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> Advice | None:
+    """Render a small, label-safe answer for an unambiguous browse turn.
+
+    A clear "what is available?" request does not need three remote model
+    calls.  Retrieval, stock, prices and the choice cardinality remain owned by
+    code; the short reasons use only the product's catalog category and the
+    ordinary instruction to follow its package directions.  Rich constraints
+    never enter this path and continue through planner/composer/reviewer.
+    """
+    if (not candidates or plan.action == "ask"
+            or plan.decision_mode not in {"browse", "recommend"}
+            or plan.constraints or plan.budget_vnd is not None
+            or plan.requirements or plan.purchase_exclusions):
+        return None
+    ordered = list(candidates.values())
+    if plan.decision_mode == "recommend":
+        selected = [p for p in ordered if p.sellable_stock > 0][:1]
+    else:
+        selected = []
+        for search in plan.searches:
+            found = _matching_candidates(ordered, search)
+            next_product = next((p for p in found if p.sellable_stock > 0
+                                  and p not in selected), None)
+            if next_product is not None:
+                selected.append(next_product)
+            if len(selected) == 3:
+                break
+        for product in _diverse_candidates(ordered, "", limit=3):
+            if len(selected) == 3:
+                break
+            if product.sellable_stock > 0 and product not in selected:
+                selected.append(product)
+    if not selected or (plan.decision_mode == "browse" and len(selected) < 2):
+        return None
+    choices = []
+    for product in selected:
+        category = (product.category or product.department or "sản phẩm").strip()
+        choices.append(Choice(
+            product_id=product.product_id,
+            reason=f"Dòng {category.casefold()}, bạn xem cách dùng trên bao bì.",
+            evidence_fields=["name"],
+        ))
+    intro = ("Mình gợi ý một loại để bạn chọn nhanh:" if len(choices) == 1
+             else "Mình lọc vài lựa chọn đúng nhóm hàng để bạn xem nhanh:")
+    try:
+        return _render_structured(Composition(advice=intro, choices=choices),
+                                  {p.product_id: p for p in selected}, plan,
+                                  "deterministic-fast-path")
+    except GroqProviderError:
         return None
 
 

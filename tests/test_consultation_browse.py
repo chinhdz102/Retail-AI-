@@ -15,6 +15,7 @@ from backend.services.consultation import (
     _fast_catalog_plan,
     _catalog_occasion_plan,
     _catalog_recovery_plan,
+    _fast_catalog_advice,
     _infer_catalog_query,
     _json_call,
     _product_type_rank,
@@ -79,6 +80,16 @@ def test_occasion_fast_plan_keeps_unparsed_preferences_for_llm():
 def test_catalog_recovery_plan_does_not_replay_old_state():
     repo = get_product_repository(Settings(catalog_repository="snapshot"))
     assert _catalog_recovery_plan("Có gì ăn đêm không?", {"need": "nước giặt"}, repo) is None
+
+
+def test_deterministic_fast_advice_stays_catalog_grounded():
+    # Use a small explicit fixture to test the renderer without making this
+    # unit test depend on the network or the live repository rank.
+    products = options()
+    answer = _fast_catalog_advice(products, Plan(need="Xem vài món", decision_mode="browse",
+        searches=[Search(query="bánh mì"), Search(query="ngũ cốc")]))
+    assert answer and "12.000đ" in answer.text and "35.000đ" in answer.text
+    assert "catalog" not in answer.text.casefold()
 
 
 def options():
