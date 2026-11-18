@@ -87,6 +87,15 @@ Báo cáo nghiên cứu và kết quả text ngày 13/10/2026 nằm ở `evaluat
 
 Các probe `A4_nutrition_unsupported`, `N1_casual_drink` và `N2_reservation_request` kiểm tra thuộc tính catalog chưa có, cách hỏi gián tiếp và yêu cầu giữ hàng. Trace ghi câu trả lời cùng tool call; độ tự nhiên cần người đọc chấm, benchmark không tự động coi một câu trả lời an toàn nhưng né câu hỏi là thành công. Bản đánh giá ngày 04/10/2026 ở `evaluation/results/answer_quality_assessment_20261004.md`.
 
+Bộ `evaluation/cases/vietnamese_catalog_recommendation_v1.json` là ma trận riêng cho tư vấn mặt hàng trên snapshot WinMart. Bộ này chấm theo ràng buộc catalog như tên hàng, category, giá, khuyến mãi, tồn tại trong snapshot, từ chối khi không có hàng và cập nhật trạng thái qua nhiều lượt. Chạy bằng API đang bật:
+
+```powershell
+.venv\Scripts\python.exe evaluation\run_catalog_recommendation_matrix.py `
+  --output docs\reports\consultation_recommendation_matrix_live.json
+```
+
+Kết quả là probe có rubric tự động. Các lượt tư vấn sở thích, an toàn hoặc sức khỏe vẫn cần đọc thủ công và nên lặp nhiều trial nếu cần đo độ ổn định của provider.
+
 Có hai chế độ riêng:
 
 - `system`: giữ fallback bật để đo khả năng hoàn thành tác vụ end-to-end.
