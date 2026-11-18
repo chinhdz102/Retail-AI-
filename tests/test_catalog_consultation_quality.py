@@ -12,6 +12,7 @@ from backend.services.consultation import (
     _catalog_family_plan,
     _fast_catalog_advice,
     _fast_catalog_plan,
+    _hotpot_requested,
     _matching_candidates,
     _retrieve_candidates,
 )
@@ -91,6 +92,29 @@ def test_category_only_match_cannot_borrow_another_group(snapshot):
 
 def test_cleanup_words_cannot_be_misread_as_a_meal(snapshot):
     assert _fast_catalog_plan("Mình cần khăn giấy hoặc khăn lau.", None, [], snapshot) is None
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("t muốn ăn lẩu thì ăn với cái gì", True),
+    ("ăn lấu thì nên mua gì", True),
+    ("khăn lau có loại nào không", False),
+    ("mình cần khăn lau nhà", False),
+    ("nước lau sàn loại nào tốt", False),
+    ("có nước lau kính không", False),
+])
+def test_hotpot_detection_requires_hotpot_context(text, expected):
+    assert _hotpot_requested(text) is expected
+
+
+@pytest.mark.parametrize("text,query", [
+    ("nước giặt dưới 150 nghìn", "nước giặt"),
+    ("dầu gội dưới 150 nghìn", "dầu gội"),
+    ("khăn giấy dưới 30 nghìn", "khăn giấy"),
+])
+def test_budgeted_catalog_heads_do_not_need_filler_words(snapshot, text, query):
+    plan = _fast_catalog_plan(text, None, [], snapshot)
+    assert plan and plan.budget_vnd is not None
+    assert query in plan.searches[0].query.casefold()
 
 
 def test_new_occasion_drops_the_previous_product_scope(snapshot):

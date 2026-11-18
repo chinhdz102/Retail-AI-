@@ -664,8 +664,14 @@ def _infer_catalog_query(repository: ProductRepository, text: str,
         r"ca tuan|an toi|an sang|qua tang|ngan sach|bao nhieu nguoi)\b", normalized
     ):
         return None
-    if not re.search(r"\b(?:san pham|mat hang|loai|mua|can|dung|tu van|goi y|chon|nen|ban)\b",
-                     normalized):
+    has_product_marker = re.search(
+        r"\b(?:san pham|mat hang|loai|mua|can|dung|tu van|goi y|chon|nen|ban)\b",
+        normalized,
+    )
+    # A bare catalog head followed by a concrete budget is still an explicit
+    # product request. Keep this generic so “nước giặt dưới 150 nghìn” and
+    # equivalent forms across categories do not require filler words.
+    if not has_product_marker and _explicit_budget(text) is None:
         return None
     words = re.findall(r"[^\W_]+", unicodedata.normalize("NFC", text.casefold()))
     best = None
@@ -726,6 +732,15 @@ def _catalog_label_requirements(repository: ProductRepository, text: str, query:
     return list(dict.fromkeys(found))[:2]
 
 
+def _hotpot_requested(text: str) -> bool:
+    """Recognize hotpot context without treating unaccented ``lau`` as ``lẩu``."""
+    original = unicodedata.normalize("NFC", text.casefold())
+    if re.search(r"(?<!\w)lẩu(?!\w)", original):
+        return True
+    normalized = normalize_vietnamese(text)
+    return bool(re.search(r"\b(?:an|noi|mon) lau\b", normalized))
+
+
 def _catalog_occasion_plan(text: str, repository: ProductRepository,
                            *, conservative: bool) -> Plan | None:
     """Turn an occasion into catalog-backed product types without an LLM.
@@ -739,7 +754,7 @@ def _catalog_occasion_plan(text: str, repository: ProductRepository,
     normalized = normalize_vietnamese(text)
     if not re.search(r"\b(?:an sang|an dem|an toi|an trua|bua sang|bua toi|"
                      r"do an nhanh|an nhanh|an tien|khong can nau|khong phai nau|"
-                     r"an no|bua an|mon an|do an|an lau|lau)\b", normalized):
+                     r"an no|bua an|mon an|do an)\b", normalized) and not _hotpot_requested(text):
         return None
     # Preferences/constraints need the planner in the normal path.  During a
     # provider outage we can still recover useful catalog options, but never
@@ -758,8 +773,7 @@ def _catalog_occasion_plan(text: str, repository: ProductRepository,
         )
 
     breakfast = bool(re.search(r"\b(?:an sang|bua sang)\b", normalized))
-    hotpot = bool(re.search(r"\blẩu\b", unicodedata.normalize("NFC", text.casefold()))
-                  or re.search(r"\b(?:an lau|noi lau|mon lau)\b", normalized))
+    hotpot = _hotpot_requested(text)
     late = bool(re.search(r"\b(?:an dem|do an nhanh|an nhanh|an tien|khong can nau|khong phai nau)\b", normalized))
     if conservative:
         # An occasion-only request is safe to browse locally. Named ingredients,
@@ -2240,7 +2254,7 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
         reason = ""
         preparation = next((query.preparation for query in plan.searches
                             if product in _matching_candidates([product], query)), "any")
-        hotpot = bool(re.search(r"\b(?:an lau|lau)\b", normalize_vietnamese(plan.need)))
+        hotpot = _hotpot_requested(plan.need)
         if preparation == "slice" and hotpot:
             reason = "Thái mỏng nếu cần rồi nhúng chín."
         elif preparation == "hotpot":
@@ -2260,7 +2274,7 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
                  else "Trong tầm tiền này, bạn tham khảo vài loại này nhé:")
     elif _availability_query(plan.need):
         intro = "Có nhé, bạn có thể chọn các loại này:"
-    elif re.search(r"\b(?:an lau|lau)\b", normalized_need):
+    elif _hotpot_requested(plan.need):
         intro = "Ăn lẩu thì ưu tiên thịt cắt lát, thêm hải sản hoặc rau để nhúng; bạn tham khảo các lựa chọn này nhé:"
     elif re.search(r"\b(?:an dem|an nhanh|an tien|khong can nau)\b", normalized_need):
         intro = "Ăn đêm nên chọn món gọn, chế biến nhanh theo hướng dẫn trên gói; bạn tham khảo các loại này nhé:"

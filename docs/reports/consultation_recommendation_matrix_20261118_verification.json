@@ -1,0 +1,458 @@
+{
+  "started_utc": "2026-11-18T03:32:40.320839+00:00",
+  "dataset_id": "thanh_lam_vietnamese_catalog_recommendation_v1",
+  "base_url": "http://127.0.0.1:8000",
+  "cases": [
+    {
+      "case_id": "budget_oil_one_litre",
+      "suite": "package_constraint",
+      "reasoning_category": "Product Recommendation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "dầu ăn loại 1 lít",
+          "http_status": 200,
+          "elapsed_ms": 3185,
+          "model": "openai/gpt-oss-20b",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10010069",
+            "TLM_10010079",
+            "TLM_10141843"
+          ],
+          "text": "Dầu ăn cao cấp Meizan GOLD 1L (49.900đ): Sử dụng dầu Meizan GOLD cho các món chiên, nướng giúp độ bùi mượt mà\nDầu ăn hảo hạng Cái Lân chai 1L (52.900đ): Dầu Cái Lân có giá hợp lý, phù hợp cho nấu ăn hàng ngày\nDầu gạo lứt Light 5 dưỡng chất Tường An chai 1 lít (86.300đ): Dầu gạo lứt Light thích hợp cho món xào, chiên nhẹ nhàng",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "category_prefix_allow": true,
+              "name_contains_all": true,
+              "name_contains_any": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10010069",
+                "name": "Dầu ăn cao cấp Meizan GOLD 1L",
+                "category": "Dầu Ăn",
+                "price_vnd": 49900,
+                "stock": 167,
+                "promotion": "Giảm 14.400đ (22%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10010079",
+                "name": "Dầu ăn hảo hạng Cái Lân chai 1L",
+                "category": "Dầu Ăn",
+                "price_vnd": 52900,
+                "stock": 120,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10141843",
+                "name": "Dầu gạo lứt Light 5 dưỡng chất Tường An chai 1 lít",
+                "category": "Dầu Ăn",
+                "price_vnd": 86300,
+                "stock": 21,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10010069",
+                "name": "Dầu ăn cao cấp Meizan GOLD 1L",
+                "category": "Dầu Ăn",
+                "price_vnd": 49900,
+                "stock": 167,
+                "promotion": "Giảm 14.400đ (22%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10010079",
+                "name": "Dầu ăn hảo hạng Cái Lân chai 1L",
+                "category": "Dầu Ăn",
+                "price_vnd": 52900,
+                "stock": 120,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10141843",
+                "name": "Dầu gạo lứt Light 5 dưỡng chất Tường An chai 1 lít",
+                "category": "Dầu Ăn",
+                "price_vnd": 86300,
+                "stock": 21,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "homonym_cleaning_lau",
+      "suite": "ambiguity",
+      "reasoning_category": "Conversational Navigation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "khăn lau có loại nào không",
+          "http_status": 200,
+          "elapsed_ms": 43,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10026675",
+            "TLM_10303387",
+            "TLM_10232170"
+          ],
+          "text": "Bạn tham khảo vài loại này nhé:\nKhăn lau micro tiện dụng Scotch Brite 30*30 (39.000đ).\nKhăn lau tay hình váy búp bê 25x31cm (49.000đ).\nKhăn lau siêu mềm Viethop-VN02 30x30cm (19.000đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "name_contains_all": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10026675",
+                "name": "Khăn lau micro tiện dụng Scotch Brite 30*30",
+                "category": "Vệ Sinh Nhà Cửa",
+                "price_vnd": 39000,
+                "stock": 36,
+                "promotion": "Giảm 16.500đ (30%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10303387",
+                "name": "Khăn lau tay hình váy búp bê 25x31cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 49000,
+                "stock": 35,
+                "promotion": "Giảm 8.900đ (15%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10232170",
+                "name": "Khăn lau siêu mềm Viethop-VN02 30x30cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 19000,
+                "stock": 61,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10026675",
+                "name": "Khăn lau micro tiện dụng Scotch Brite 30*30",
+                "category": "Vệ Sinh Nhà Cửa",
+                "price_vnd": 39000,
+                "stock": 36,
+                "promotion": "Giảm 16.500đ (30%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10303387",
+                "name": "Khăn lau tay hình váy búp bê 25x31cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 49000,
+                "stock": 35,
+                "promotion": "Giảm 8.900đ (15%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10232170",
+                "name": "Khăn lau siêu mềm Viethop-VN02 30x30cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 19000,
+                "stock": 61,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "ambiguity_pin_size",
+      "suite": "ambiguity",
+      "reasoning_category": "Shopping Guidance",
+      "turns": [
+        {
+          "number": 1,
+          "question": "cần pin cho điều khiển, không nhớ AA hay AAA, mua sao cho đúng?",
+          "http_status": 200,
+          "elapsed_ms": 4706,
+          "model": "catalog-guidance",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "no_products": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": []
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": []
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "multi_turn_topic_switch",
+      "suite": "multi_turn",
+      "reasoning_category": "Conversational Navigation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "t muốn ăn lẩu thì ăn với cái gì",
+          "http_status": 200,
+          "elapsed_ms": 118,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10140199",
+            "TLM_10053467",
+            "TLM_10281825"
+          ],
+          "text": "Ăn lẩu thì ưu tiên thịt cắt lát, thêm hải sản hoặc rau để nhúng; bạn tham khảo các lựa chọn này nhé:\nBa chỉ bò Úc  cắt lát  Kiaora khay 200g (87.100đ): Thái mỏng nếu cần rồi nhúng chín\nNghêu sạch Lenger khay 1.2kg (87.000đ): Làm sạch rồi nấu chín trong nước lẩu\nCải bó xôi WinEco gói 300g (20.720đ): Rửa sạch rồi nhúng chín cùng lẩu",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10140199",
+                "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+                "category": "Thịt",
+                "price_vnd": 87100,
+                "stock": 6,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10053467",
+                "name": "Nghêu sạch Lenger khay 1.2kg",
+                "category": "Hải Sản",
+                "price_vnd": 87000,
+                "stock": 18,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10281825",
+                "name": "Cải bó xôi WinEco gói 300g",
+                "category": "Rau Lá",
+                "price_vnd": 20720,
+                "stock": 1,
+                "promotion": "Giảm 5.180đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10140199",
+                "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+                "category": "Thịt",
+                "price_vnd": 87100,
+                "stock": 6,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10053467",
+                "name": "Nghêu sạch Lenger khay 1.2kg",
+                "category": "Hải Sản",
+                "price_vnd": 87000,
+                "stock": 18,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10281825",
+                "name": "Cải bó xôi WinEco gói 300g",
+                "category": "Rau Lá",
+                "price_vnd": 20720,
+                "stock": 1,
+                "promotion": "Giảm 5.180đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          }
+        },
+        {
+          "number": 2,
+          "question": "khăn lau có loại nào không",
+          "http_status": 200,
+          "elapsed_ms": 44,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10026675",
+            "TLM_10303387",
+            "TLM_10232170"
+          ],
+          "text": "Bạn tham khảo vài loại này nhé:\nKhăn lau micro tiện dụng Scotch Brite 30*30 (39.000đ).\nKhăn lau tay hình váy búp bê 25x31cm (49.000đ).\nKhăn lau siêu mềm Viethop-VN02 30x30cm (19.000đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "name_contains_all": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10026675",
+                "name": "Khăn lau micro tiện dụng Scotch Brite 30*30",
+                "category": "Vệ Sinh Nhà Cửa",
+                "price_vnd": 39000,
+                "stock": 36,
+                "promotion": "Giảm 16.500đ (30%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10303387",
+                "name": "Khăn lau tay hình váy búp bê 25x31cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 49000,
+                "stock": 35,
+                "promotion": "Giảm 8.900đ (15%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10232170",
+                "name": "Khăn lau siêu mềm Viethop-VN02 30x30cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 19000,
+                "stock": 61,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10026675",
+                "name": "Khăn lau micro tiện dụng Scotch Brite 30*30",
+                "category": "Vệ Sinh Nhà Cửa",
+                "price_vnd": 39000,
+                "stock": 36,
+                "promotion": "Giảm 16.500đ (30%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10303387",
+                "name": "Khăn lau tay hình váy búp bê 25x31cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 49000,
+                "stock": 35,
+                "promotion": "Giảm 8.900đ (15%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10232170",
+                "name": "Khăn lau siêu mềm Viethop-VN02 30x30cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 19000,
+                "stock": 61,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "summary": {
+    "cases": 4,
+    "case_passed": 4,
+    "case_pass_rate": 1.0,
+    "turns": 5,
+    "required_rubric_pass_rate": 1.0,
+    "optional_rubric_pass_rate": 1.0,
+    "by_suite": {
+      "package_constraint": {
+        "cases": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "ambiguity": {
+        "cases": 2,
+        "passed": 2,
+        "pass_rate": 1.0
+      },
+      "multi_turn": {
+        "cases": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      }
+    },
+    "median_elapsed_ms": 118
+  },
+  "finished_utc": "2026-11-18T03:32:48.736203+00:00"
+}

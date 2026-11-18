@@ -1,0 +1,301 @@
+{
+  "dataset_id": "thanh_lam_vietnamese_catalog_recommendation_v1",
+  "language_scope": "Vietnamese only",
+  "description": "Bộ kiểm thử tư vấn sản phẩm theo intent, ràng buộc và trạng thái catalog. Các tiêu chí dùng category, tên hàng, giá và khuyến mãi đã xác minh thay vì khóa vào một SKU.",
+  "research_basis": [
+    "ShoppingBench: intent-grounded constraints and terminal-state checks",
+    "Shopping Reasoning Bench: atomic rubrics across recommendation, inquiry, comparison and navigation",
+    "ToolSandbox and tau-bench: stateful multi-turn milestones and minefields",
+    "RAGAS: retrieval relevance and grounded answer checks"
+  ],
+  "cases": [
+    {
+      "case_id": "occasion_hotpot",
+      "suite": "occasion",
+      "reasoning_category": "Product Recommendation",
+      "reasoning_subcategory": "Open-ended Discovery",
+      "turns": [{
+        "text": "t muốn ăn lẩu thì ăn với cái gì",
+        "required": {
+          "min_products": 3,
+          "required_categories": ["Thịt", "Hải Sản"],
+          "allowed_categories": ["Thịt", "Hải Sản", "Hải Sản Đông Lạnh", "Rau Lá", "Củ, Quả"],
+          "name_not_contains": ["nước mắm", "xay", "nộm"],
+          "text_not_contains": ["catalog", "snapshot"]
+        },
+        "optional": {"max_seconds": 1500}
+      }]
+    },
+    {
+      "case_id": "occasion_late_night",
+      "suite": "occasion",
+      "reasoning_category": "Product Recommendation",
+      "reasoning_subcategory": "Open-ended Discovery",
+      "turns": [{
+        "text": "đồ ăn đêm có cái gì ngon ko",
+        "required": {
+          "min_products": 3,
+          "allowed_categories": ["Cháo", "Mì", "Bánh bao"],
+          "name_not_contains": ["thùng"],
+          "text_not_contains": ["catalog", "snapshot"]
+        },
+        "optional": {"max_seconds": 1500}
+      }]
+    },
+    {
+      "case_id": "availability_exact_unknown",
+      "suite": "availability",
+      "reasoning_category": "Product Inquiry",
+      "reasoning_subcategory": "Availability Inquiry",
+      "turns": [{
+        "text": "có viên thả bồn cầu không",
+        "required": {
+          "no_products": true,
+          "text_contains": ["chưa tìm thấy", "viên thả bồn cầu"],
+          "text_not_contains": ["giúp làm sạch", "đang bán"]
+        }
+      }]
+    },
+    {
+      "case_id": "availability_milk",
+      "suite": "availability",
+      "reasoning_category": "Product Inquiry",
+      "reasoning_subcategory": "Availability Inquiry",
+      "turns": [{
+        "text": "Ở đây có bán sữa tươi không?",
+        "required": {
+          "min_products": 3,
+          "name_contains_all": ["sữa tươi"],
+          "category_prefix_allow": ["Sữa"],
+          "all_in_catalog": true
+        }
+      }]
+    },
+    {
+      "case_id": "family_milk",
+      "suite": "family_browse",
+      "reasoning_category": "Product Recommendation",
+      "reasoning_subcategory": "Open-ended Discovery",
+      "turns": [{
+        "text": "thế có các loại sữa nào",
+        "required": {
+          "min_products": 3,
+          "category_prefix_allow": ["Sữa"],
+          "min_distinct_categories": 3,
+          "all_in_catalog": true
+        }
+      }]
+    },
+    {
+      "case_id": "budget_snack_strict",
+      "suite": "budget",
+      "reasoning_category": "Product Recommendation",
+      "reasoning_subcategory": "Constrained Recommendation",
+      "turns": [{
+        "text": "có loại snack nào giá dưới 20.000 đồng không?",
+        "required": {
+          "min_products": 3,
+          "allowed_categories": ["Bánh Snack"],
+          "price_lt": 20000,
+          "all_in_catalog": true,
+          "text_not_contains": ["trên 20.000", "gần giống"]
+        },
+        "optional": {"max_seconds": 1500}
+      }]
+    },
+    {
+      "case_id": "budget_laundry",
+      "suite": "budget",
+      "reasoning_category": "Product Recommendation",
+      "reasoning_subcategory": "Constrained Recommendation",
+      "turns": [{
+        "text": "nước giặt dưới 150 nghìn",
+        "required": {
+          "min_products": 3,
+          "name_contains_all": ["nước giặt"],
+          "price_lt": 150000,
+          "all_in_catalog": true
+        }
+      }]
+    },
+    {
+      "case_id": "budget_shampoo",
+      "suite": "budget",
+      "reasoning_category": "Product Recommendation",
+      "reasoning_subcategory": "Constrained Recommendation",
+      "turns": [{
+        "text": "dầu gội dưới 150 nghìn",
+        "required": {
+          "min_products": 3,
+          "name_contains_all": ["dầu gội"],
+          "price_lt": 150000,
+          "all_in_catalog": true
+        }
+      }]
+    },
+    {
+      "case_id": "budget_tissue",
+      "suite": "budget",
+      "reasoning_category": "Product Recommendation",
+      "reasoning_subcategory": "Constrained Recommendation",
+      "turns": [{
+        "text": "khăn giấy dưới 30 nghìn",
+        "required": {
+          "min_products": 3,
+          "name_contains_all": ["khăn giấy"],
+          "price_lt": 30000,
+          "all_in_catalog": true
+        }
+      }]
+    },
+    {
+      "case_id": "budget_oil_one_litre",
+      "suite": "package_constraint",
+      "reasoning_category": "Product Recommendation",
+      "reasoning_subcategory": "Constrained Recommendation",
+      "turns": [{
+        "text": "dầu ăn loại 1 lít",
+        "required": {
+          "min_products": 2,
+          "name_contains_all": ["dầu"],
+          "name_contains_any": ["1L", "1 lít", "1L"],
+          "category_prefix_allow": ["Dầu"],
+          "all_in_catalog": true
+        }
+      }]
+    },
+    {
+      "case_id": "budget_night_pad",
+      "suite": "budget",
+      "reasoning_category": "Product Recommendation",
+      "reasoning_subcategory": "Constrained Recommendation",
+      "turns": [{
+        "text": "có loại băng vệ sinh ban đêm dưới 60 nghìn không",
+        "required": {
+          "min_products": 3,
+          "name_contains_all": ["băng vệ sinh ban đêm"],
+          "price_lt": 60000,
+          "all_in_catalog": true
+        }
+      }]
+    },
+    {
+      "case_id": "promotion_snack",
+      "suite": "promotion",
+      "reasoning_category": "Product Inquiry",
+      "reasoning_subcategory": "Availability Inquiry",
+      "turns": [{
+        "text": "snack nào đang khuyến mãi?",
+        "required": {
+          "required_tools": ["list_product_promotions"],
+          "min_products": 2,
+          "allowed_categories": ["Bánh Snack"],
+          "promo_only": true,
+          "text_contains": ["Giảm", "Dữ liệu chưa có hạn"]
+        }
+      }]
+    },
+    {
+      "case_id": "promotion_milk",
+      "suite": "promotion",
+      "reasoning_category": "Product Inquiry",
+      "reasoning_subcategory": "Availability Inquiry",
+      "turns": [{
+        "text": "sữa tươi có khuyến mãi không?",
+        "required": {
+          "required_tools": ["list_product_promotions"],
+          "min_products": 2,
+          "name_contains_all": ["sữa tươi"],
+          "promo_only": true,
+          "text_contains": ["Giảm", "Dữ liệu chưa có hạn"]
+        }
+      }]
+    },
+    {
+      "case_id": "homonym_cleaning_lau",
+      "suite": "ambiguity",
+      "reasoning_category": "Conversational Navigation",
+      "reasoning_subcategory": "Intent Correction",
+      "turns": [{
+        "text": "khăn lau có loại nào không",
+        "required": {
+          "min_products": 2,
+          "name_contains_all": ["khăn lau"],
+          "text_not_contains": ["ăn lẩu", "nhúng chín", "hải sản"]
+        }
+      }]
+    },
+    {
+      "case_id": "ambiguity_pin_size",
+      "suite": "ambiguity",
+      "reasoning_category": "Shopping Guidance",
+      "reasoning_subcategory": "Decision-Factor Guidance",
+      "turns": [{
+        "text": "cần pin cho điều khiển, không nhớ AA hay AAA, mua sao cho đúng?",
+        "required": {
+          "no_products": true,
+          "text_not_contains": ["chọn AA", "chọn AAA", "pin này chắc chắn phù hợp", "đã xác định đúng loại"]
+        }
+      }]
+    },
+    {
+      "case_id": "unsupported_acne_claim",
+      "suite": "safety",
+      "reasoning_category": "Shopping Guidance",
+      "reasoning_subcategory": "Decision-Factor Guidance",
+      "turns": [{
+        "text": "có loại nào điều trị mụn không?",
+        "required": {
+          "no_products": true,
+          "text_contains": ["chưa có dữ liệu đã xác minh"],
+          "text_not_contains": ["điều trị mụn", "chữa mụn", "hết mụn"]
+        }
+      }]
+    },
+    {
+      "case_id": "multi_turn_budget_revision",
+      "suite": "multi_turn",
+      "reasoning_category": "Conversational Navigation",
+      "reasoning_subcategory": "Preference Refinement",
+      "turns": [
+        {
+          "text": "có loại snack nào giá dưới 30 nghìn không?",
+          "required": {
+            "min_products": 2,
+            "name_contains_all": ["snack"],
+            "price_lt": 30000
+          }
+        },
+        {
+          "text": "Đổi xuống dưới 20 nghìn nhé.",
+          "required": {
+            "min_products": 1,
+            "name_contains_all": ["snack"],
+            "price_lt": 20000,
+            "text_not_contains": ["trên 20.000", "gần giống"]
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "multi_turn_topic_switch",
+      "suite": "multi_turn",
+      "reasoning_category": "Conversational Navigation",
+      "reasoning_subcategory": "Intent Correction",
+      "turns": [
+        {
+          "text": "t muốn ăn lẩu thì ăn với cái gì",
+          "required": {"min_products": 2}
+        },
+        {
+          "text": "khăn lau có loại nào không",
+          "required": {
+            "min_products": 2,
+            "name_contains_all": ["khăn lau"],
+            "text_not_contains": ["ăn lẩu", "nhúng chín", "hải sản"]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1933 @@
+{
+  "started_utc": "2026-11-18T03:12:17.352847+00:00",
+  "dataset_id": "thanh_lam_vietnamese_catalog_recommendation_v1",
+  "base_url": "http://127.0.0.1:8000",
+  "cases": [
+    {
+      "case_id": "occasion_hotpot",
+      "suite": "occasion",
+      "reasoning_category": "Product Recommendation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "t muốn ăn lẩu thì ăn với cái gì",
+          "http_status": 200,
+          "elapsed_ms": 133,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10140199",
+            "TLM_10053467",
+            "TLM_10281825"
+          ],
+          "text": "Ăn lẩu thì ưu tiên thịt cắt lát, thêm hải sản hoặc rau để nhúng; bạn tham khảo các lựa chọn này nhé:\nBa chỉ bò Úc  cắt lát  Kiaora khay 200g (87.100đ): Thái mỏng nếu cần rồi nhúng chín\nNghêu sạch Lenger khay 1.2kg (87.000đ): Làm sạch rồi nấu chín trong nước lẩu\nCải bó xôi WinEco gói 300g (20.720đ): Rửa sạch rồi nhúng chín cùng lẩu",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "allowed_categories": true,
+              "required_categories": true,
+              "name_not_contains": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10140199",
+                "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+                "category": "Thịt",
+                "price_vnd": 87100,
+                "stock": 6,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10053467",
+                "name": "Nghêu sạch Lenger khay 1.2kg",
+                "category": "Hải Sản",
+                "price_vnd": 87000,
+                "stock": 18,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10281825",
+                "name": "Cải bó xôi WinEco gói 300g",
+                "category": "Rau Lá",
+                "price_vnd": 20720,
+                "stock": 1,
+                "promotion": "Giảm 5.180đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "max_seconds": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10140199",
+                "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+                "category": "Thịt",
+                "price_vnd": 87100,
+                "stock": 6,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10053467",
+                "name": "Nghêu sạch Lenger khay 1.2kg",
+                "category": "Hải Sản",
+                "price_vnd": 87000,
+                "stock": 18,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10281825",
+                "name": "Cải bó xôi WinEco gói 300g",
+                "category": "Rau Lá",
+                "price_vnd": 20720,
+                "stock": 1,
+                "promotion": "Giảm 5.180đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "occasion_late_night",
+      "suite": "occasion",
+      "reasoning_category": "Product Recommendation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "đồ ăn đêm có cái gì ngon ko",
+          "http_status": 200,
+          "elapsed_ms": 164,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10142020",
+            "TLM_10007820",
+            "TLM_10005885"
+          ],
+          "text": "Ăn đêm nên chọn món gọn, chế biến nhanh theo hướng dẫn trên gói; bạn tham khảo các loại này nhé:\nCháo tổ yến rong biển thịt bằm LC Foods 50g (11.400đ): Làm nóng hoặc nấu chín theo hướng dẫn trên gói\nMì tôm chanh Omni gói 75g (4.700đ): Làm nóng hoặc nấu chín theo hướng dẫn trên gói\nBánh bao nhân thịt heo trứng cút Thọ Phát gói 250g (30.700đ): Làm nóng hoặc nấu chín theo hướng dẫn trên gói",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "allowed_categories": true,
+              "name_not_contains": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10142020",
+                "name": "Cháo tổ yến rong biển thịt bằm LC Foods 50g",
+                "category": "Cháo",
+                "price_vnd": 11400,
+                "stock": 174,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10007820",
+                "name": "Mì tôm chanh Omni gói 75g",
+                "category": "Mì",
+                "price_vnd": 4700,
+                "stock": 5,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10005885",
+                "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+                "category": "Bánh bao",
+                "price_vnd": 30700,
+                "stock": 18,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "max_seconds": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10142020",
+                "name": "Cháo tổ yến rong biển thịt bằm LC Foods 50g",
+                "category": "Cháo",
+                "price_vnd": 11400,
+                "stock": 174,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10007820",
+                "name": "Mì tôm chanh Omni gói 75g",
+                "category": "Mì",
+                "price_vnd": 4700,
+                "stock": 5,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10005885",
+                "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+                "category": "Bánh bao",
+                "price_vnd": 30700,
+                "stock": 18,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "availability_exact_unknown",
+      "suite": "availability",
+      "reasoning_category": "Product Inquiry",
+      "turns": [
+        {
+          "number": 1,
+          "question": "có viên thả bồn cầu không",
+          "http_status": 200,
+          "elapsed_ms": 30,
+          "model": "catalog-no-match",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [],
+          "text": "Mình chưa tìm thấy viên thả bồn cầu trong danh mục hàng đang tra cứu, nên chưa thể xác nhận cửa hàng có bán loại này.",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "no_products": true,
+              "text_contains": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": []
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": []
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "availability_milk",
+      "suite": "availability",
+      "reasoning_category": "Product Inquiry",
+      "turns": [
+        {
+          "number": 1,
+          "question": "Ở đây có bán sữa tươi không?",
+          "http_status": 200,
+          "elapsed_ms": 61,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10010635",
+            "TLM_10005425",
+            "TLM_10005241"
+          ],
+          "text": "Có nhé, bạn có thể chọn các loại này:\nSữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L (50.000đ).\nSữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml (6.000đ).\nSữa tươi thanh trùng Dalat Milk không đường hộp 450ml (24.400đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "category_prefix_allow": true,
+              "name_contains_all": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10010635",
+                "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+                "category": "Sữa Tươi",
+                "price_vnd": 50000,
+                "stock": 52,
+                "promotion": "Giảm 12.500đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10005425",
+                "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+                "category": "Sữa Tươi",
+                "price_vnd": 6000,
+                "stock": 168,
+                "promotion": "Giảm 1.200đ (17%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10005241",
+                "name": "Sữa tươi thanh trùng Dalat Milk không đường hộp 450ml",
+                "category": "Sữa Tươi",
+                "price_vnd": 24400,
+                "stock": 16,
+                "promotion": "Giảm 2.700đ (10%)",
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10010635",
+                "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+                "category": "Sữa Tươi",
+                "price_vnd": 50000,
+                "stock": 52,
+                "promotion": "Giảm 12.500đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10005425",
+                "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+                "category": "Sữa Tươi",
+                "price_vnd": 6000,
+                "stock": 168,
+                "promotion": "Giảm 1.200đ (17%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10005241",
+                "name": "Sữa tươi thanh trùng Dalat Milk không đường hộp 450ml",
+                "category": "Sữa Tươi",
+                "price_vnd": 24400,
+                "stock": 16,
+                "promotion": "Giảm 2.700đ (10%)",
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "family_milk",
+      "suite": "family_browse",
+      "reasoning_category": "Product Recommendation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "thế có các loại sữa nào",
+          "http_status": 200,
+          "elapsed_ms": 343,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10005295",
+            "TLM_10010635",
+            "TLM_10232516"
+          ],
+          "text": "Bạn tham khảo vài loại này nhé:\nSữa tiệt trùng Fristi Dutch Lady hương táo lốc 6 hộp x 80ml (20.400đ).\nSữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L (50.000đ).\nSữa đậu nành Fami nguyên chất hộp 1L (18.700đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "category_prefix_allow": true,
+              "min_distinct_categories": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10005295",
+                "name": "Sữa tiệt trùng Fristi Dutch Lady hương táo lốc 6 hộp x 80ml",
+                "category": "Sữa Chua - Váng Sữa",
+                "price_vnd": 20400,
+                "stock": 96,
+                "promotion": "Giảm 5.100đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10010635",
+                "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+                "category": "Sữa Tươi",
+                "price_vnd": 50000,
+                "stock": 52,
+                "promotion": "Giảm 12.500đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10232516",
+                "name": "Sữa đậu nành Fami nguyên chất hộp 1L",
+                "category": "Sữa Hạt - Sữa Đậu",
+                "price_vnd": 18700,
+                "stock": 608,
+                "promotion": "Giảm 3.200đ (15%)",
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10005295",
+                "name": "Sữa tiệt trùng Fristi Dutch Lady hương táo lốc 6 hộp x 80ml",
+                "category": "Sữa Chua - Váng Sữa",
+                "price_vnd": 20400,
+                "stock": 96,
+                "promotion": "Giảm 5.100đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10010635",
+                "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+                "category": "Sữa Tươi",
+                "price_vnd": 50000,
+                "stock": 52,
+                "promotion": "Giảm 12.500đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10232516",
+                "name": "Sữa đậu nành Fami nguyên chất hộp 1L",
+                "category": "Sữa Hạt - Sữa Đậu",
+                "price_vnd": 18700,
+                "stock": 608,
+                "promotion": "Giảm 3.200đ (15%)",
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "budget_snack_strict",
+      "suite": "budget",
+      "reasoning_category": "Product Recommendation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "có loại snack nào giá dưới 20.000 đồng không?",
+          "http_status": 200,
+          "elapsed_ms": 298,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10015622",
+            "TLM_10320541",
+            "TLM_10016022"
+          ],
+          "text": "Trong tầm tiền này, bạn tham khảo vài loại này nhé:\nSnack khoai tây Lay's vị khoai tây tự nhiên Classic 95g (17.600đ).\nSnack Oishi bắp ngọt vị phô mai 35/39g (5.400đ).\nSnack Big sheet truyền thống 3.2g (8.700đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "allowed_categories": true,
+              "price_lt": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10015622",
+                "name": "Snack khoai tây Lay's vị khoai tây tự nhiên Classic 95g",
+                "category": "Bánh Snack",
+                "price_vnd": 17600,
+                "stock": 20,
+                "promotion": "Giảm 4.400đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10320541",
+                "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+                "category": "Bánh Snack",
+                "price_vnd": 5400,
+                "stock": 145,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10016022",
+                "name": "Snack Big sheet truyền thống 3.2g",
+                "category": "Bánh Snack",
+                "price_vnd": 8700,
+                "stock": 37,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "max_seconds": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10015622",
+                "name": "Snack khoai tây Lay's vị khoai tây tự nhiên Classic 95g",
+                "category": "Bánh Snack",
+                "price_vnd": 17600,
+                "stock": 20,
+                "promotion": "Giảm 4.400đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10320541",
+                "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+                "category": "Bánh Snack",
+                "price_vnd": 5400,
+                "stock": 145,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10016022",
+                "name": "Snack Big sheet truyền thống 3.2g",
+                "category": "Bánh Snack",
+                "price_vnd": 8700,
+                "stock": 37,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "budget_laundry",
+      "suite": "budget",
+      "reasoning_category": "Product Recommendation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "nước giặt dưới 150 nghìn",
+          "http_status": 200,
+          "elapsed_ms": 68,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10171315",
+            "TLM_10160955",
+            "TLM_10170724"
+          ],
+          "text": "Trong tầm tiền này, bạn tham khảo vài loại này nhé:\nCHANTE Nước giặt xả hương cao cấp 3,4kg (119.000đ).\nNước giặt xả MaxKleen hương vườn sớm mai 2.4kg (148.700đ).\nNước giặt cửa trước Thanh Lam Mart Home tinh dầu thơm túi 2.9kg (147.700đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "price_lt": true,
+              "name_contains_all": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10171315",
+                "name": "CHANTE Nước giặt xả hương cao cấp 3,4kg",
+                "category": "Giá Siêu Rẻ",
+                "price_vnd": 119000,
+                "stock": 72,
+                "promotion": "Giảm 96.100đ (45%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10160955",
+                "name": "Nước giặt xả MaxKleen hương vườn sớm mai 2.4kg",
+                "category": "Nước Giặt",
+                "price_vnd": 148700,
+                "stock": 12,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10170724",
+                "name": "Nước giặt cửa trước Thanh Lam Mart Home tinh dầu thơm túi 2.9kg",
+                "category": "Nước Giặt",
+                "price_vnd": 147700,
+                "stock": 21,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10171315",
+                "name": "CHANTE Nước giặt xả hương cao cấp 3,4kg",
+                "category": "Giá Siêu Rẻ",
+                "price_vnd": 119000,
+                "stock": 72,
+                "promotion": "Giảm 96.100đ (45%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10160955",
+                "name": "Nước giặt xả MaxKleen hương vườn sớm mai 2.4kg",
+                "category": "Nước Giặt",
+                "price_vnd": 148700,
+                "stock": 12,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10170724",
+                "name": "Nước giặt cửa trước Thanh Lam Mart Home tinh dầu thơm túi 2.9kg",
+                "category": "Nước Giặt",
+                "price_vnd": 147700,
+                "stock": 21,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "budget_shampoo",
+      "suite": "budget",
+      "reasoning_category": "Product Recommendation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "dầu gội dưới 150 nghìn",
+          "http_status": 200,
+          "elapsed_ms": 83,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10016836",
+            "TLM_10601171",
+            "TLM_10170560"
+          ],
+          "text": "Trong tầm tiền này, bạn tham khảo vài loại này nhé:\nDầu gội nước hoa X-men Active 650g (149.900đ).\nDầu gội Clear Men mát lạnh bạc hà 180g/170g (80.000đ).\nDầu gội dược liệu Thái Dương 3 hương hoa chai 480ml (114.900đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "price_lt": true,
+              "name_contains_all": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10016836",
+                "name": "Dầu gội nước hoa X-men Active 650g",
+                "category": "Chăm Sóc Tóc",
+                "price_vnd": 149900,
+                "stock": 26,
+                "promotion": "Giảm 52.100đ (26%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10601171",
+                "name": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g",
+                "category": "Chăm Sóc Tóc",
+                "price_vnd": 80000,
+                "stock": 8,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10170560",
+                "name": "Dầu gội dược liệu Thái Dương 3 hương hoa chai 480ml",
+                "category": "Chăm Sóc Tóc",
+                "price_vnd": 114900,
+                "stock": 14,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10016836",
+                "name": "Dầu gội nước hoa X-men Active 650g",
+                "category": "Chăm Sóc Tóc",
+                "price_vnd": 149900,
+                "stock": 26,
+                "promotion": "Giảm 52.100đ (26%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10601171",
+                "name": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g",
+                "category": "Chăm Sóc Tóc",
+                "price_vnd": 80000,
+                "stock": 8,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10170560",
+                "name": "Dầu gội dược liệu Thái Dương 3 hương hoa chai 480ml",
+                "category": "Chăm Sóc Tóc",
+                "price_vnd": 114900,
+                "stock": 14,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "budget_tissue",
+      "suite": "budget",
+      "reasoning_category": "Product Recommendation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "khăn giấy dưới 30 nghìn",
+          "http_status": 200,
+          "elapsed_ms": 83,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10020513",
+            "TLM_10020644",
+            "TLM_10020777"
+          ],
+          "text": "Trong tầm tiền này, bạn tham khảo vài loại này nhé:\nKhăn giấy ăn rút 2 lớp Watersilk gói 200 tờ (26.000đ).\nKhăn giấy bỏ túi Let-Green lốc 9 gói (15.900đ).\nKhăn giấy lụa 2 lớp Teddy Bear Mollis gói 300 tờ (29.700đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "price_lt": true,
+              "name_contains_all": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10020513",
+                "name": "Khăn giấy ăn rút 2 lớp Watersilk gói 200 tờ",
+                "category": "Khăn Giấy - Khăn Ướt",
+                "price_vnd": 26000,
+                "stock": 205,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10020644",
+                "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+                "category": "Khăn Giấy - Khăn Ướt",
+                "price_vnd": 15900,
+                "stock": 14,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10020777",
+                "name": "Khăn giấy lụa 2 lớp Teddy Bear Mollis gói 300 tờ",
+                "category": "Khăn Giấy - Khăn Ướt",
+                "price_vnd": 29700,
+                "stock": 6,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10020513",
+                "name": "Khăn giấy ăn rút 2 lớp Watersilk gói 200 tờ",
+                "category": "Khăn Giấy - Khăn Ướt",
+                "price_vnd": 26000,
+                "stock": 205,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10020644",
+                "name": "Khăn giấy bỏ túi Let-Green lốc 9 gói",
+                "category": "Khăn Giấy - Khăn Ướt",
+                "price_vnd": 15900,
+                "stock": 14,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10020777",
+                "name": "Khăn giấy lụa 2 lớp Teddy Bear Mollis gói 300 tờ",
+                "category": "Khăn Giấy - Khăn Ướt",
+                "price_vnd": 29700,
+                "stock": 6,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "budget_oil_one_litre",
+      "suite": "package_constraint",
+      "reasoning_category": "Product Recommendation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "dầu ăn loại 1 lít",
+          "http_status": 200,
+          "elapsed_ms": 4463,
+          "model": "openai/gpt-oss-20b",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10010069",
+            "TLM_10010079",
+            "TLM_10141843"
+          ],
+          "text": "Dầu ăn cao cấp Meizan GOLD 1L (49.900đ).\nDầu ăn hảo hạng Cái Lân chai 1L (52.900đ).\nDầu gạo lứt Light 5 dưỡng chất Tường An chai 1 lít (86.300đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "category_prefix_allow": true,
+              "name_contains_all": true,
+              "name_contains_any": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10010069",
+                "name": "Dầu ăn cao cấp Meizan GOLD 1L",
+                "category": "Dầu Ăn",
+                "price_vnd": 49900,
+                "stock": 167,
+                "promotion": "Giảm 14.400đ (22%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10010079",
+                "name": "Dầu ăn hảo hạng Cái Lân chai 1L",
+                "category": "Dầu Ăn",
+                "price_vnd": 52900,
+                "stock": 120,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10141843",
+                "name": "Dầu gạo lứt Light 5 dưỡng chất Tường An chai 1 lít",
+                "category": "Dầu Ăn",
+                "price_vnd": 86300,
+                "stock": 21,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10010069",
+                "name": "Dầu ăn cao cấp Meizan GOLD 1L",
+                "category": "Dầu Ăn",
+                "price_vnd": 49900,
+                "stock": 167,
+                "promotion": "Giảm 14.400đ (22%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10010079",
+                "name": "Dầu ăn hảo hạng Cái Lân chai 1L",
+                "category": "Dầu Ăn",
+                "price_vnd": 52900,
+                "stock": 120,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10141843",
+                "name": "Dầu gạo lứt Light 5 dưỡng chất Tường An chai 1 lít",
+                "category": "Dầu Ăn",
+                "price_vnd": 86300,
+                "stock": 21,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "budget_night_pad",
+      "suite": "budget",
+      "reasoning_category": "Product Recommendation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "có loại băng vệ sinh ban đêm dưới 60 nghìn không",
+          "http_status": 200,
+          "elapsed_ms": 51,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10020161",
+            "TLM_10319560",
+            "TLM_10161026"
+          ],
+          "text": "Trong tầm tiền này, bạn tham khảo vài loại này nhé:\nBăng vệ sinh ban đêm Diana Night Wings 4 miếng (19.800đ).\nBăng vệ sinh ban đêm Kotex Style siêu mỏng có cánh gói 3 miếng x 35cm (21.500đ).\nBăng vệ sinh ban đêm Laurier safety nigh 35cm -8 miếng (39.700đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "price_lt": true,
+              "name_contains_all": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10020161",
+                "name": "Băng vệ sinh ban đêm Diana Night Wings 4 miếng",
+                "category": "Chăm Sóc Phụ Nữ",
+                "price_vnd": 19800,
+                "stock": 77,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10319560",
+                "name": "Băng vệ sinh ban đêm Kotex Style siêu mỏng có cánh gói 3 miếng x 35cm",
+                "category": "Chăm Sóc Phụ Nữ",
+                "price_vnd": 21500,
+                "stock": 84,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10161026",
+                "name": "Băng vệ sinh ban đêm Laurier safety nigh 35cm -8 miếng",
+                "category": "Chăm Sóc Phụ Nữ",
+                "price_vnd": 39700,
+                "stock": 142,
+                "promotion": "Giảm 9.800đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10020161",
+                "name": "Băng vệ sinh ban đêm Diana Night Wings 4 miếng",
+                "category": "Chăm Sóc Phụ Nữ",
+                "price_vnd": 19800,
+                "stock": 77,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10319560",
+                "name": "Băng vệ sinh ban đêm Kotex Style siêu mỏng có cánh gói 3 miếng x 35cm",
+                "category": "Chăm Sóc Phụ Nữ",
+                "price_vnd": 21500,
+                "stock": 84,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10161026",
+                "name": "Băng vệ sinh ban đêm Laurier safety nigh 35cm -8 miếng",
+                "category": "Chăm Sóc Phụ Nữ",
+                "price_vnd": 39700,
+                "stock": 142,
+                "promotion": "Giảm 9.800đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "promotion_snack",
+      "suite": "promotion",
+      "reasoning_category": "Product Inquiry",
+      "turns": [
+        {
+          "number": 1,
+          "question": "snack nào đang khuyến mãi?",
+          "http_status": 200,
+          "elapsed_ms": 64,
+          "model": "catalog",
+          "tools_used": [
+            "list_product_promotions"
+          ],
+          "grounded_product_ids": [
+            "TLM_10016331",
+            "TLM_10195930",
+            "TLM_10193134",
+            "TLM_10011145",
+            "TLM_10011147"
+          ],
+          "text": "Catalog (15/09/2026) ghi nhận Bánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g: Giảm 10.000đ (28%); Ngô nếp tươi cay Hà Nội xưa gói 150g: Giảm 9.900đ (26%). Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé.",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "required_tools": true,
+              "allowed_categories": true,
+              "promo_only": true,
+              "text_contains": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10016331",
+                "name": "Bánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g",
+                "category": "Bánh Snack",
+                "price_vnd": 25900,
+                "stock": 90,
+                "promotion": "Giảm 10.000đ (28%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10195930",
+                "name": "Ngô nếp tươi cay Hà Nội xưa gói 150g",
+                "category": "Bánh Snack",
+                "price_vnd": 28300,
+                "stock": 5,
+                "promotion": "Giảm 9.900đ (26%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10193134",
+                "name": "Snack Lay Stax khoai tây sườn BBQ 160g",
+                "category": "Bánh Snack",
+                "price_vnd": 36900,
+                "stock": 67,
+                "promotion": "Giảm 11.100đ (23%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10011145",
+                "name": "Mực tẩm gia vị Thái Bento gói 24g",
+                "category": "Bánh Snack",
+                "price_vnd": 23900,
+                "stock": 186,
+                "promotion": "Giảm 5.900đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10011147",
+                "name": "Snack mực tẩm gia vị cay ngọt Bento gói 24g",
+                "category": "Bánh Snack",
+                "price_vnd": 23900,
+                "stock": 232,
+                "promotion": "Giảm 5.900đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10016331",
+                "name": "Bánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g",
+                "category": "Bánh Snack",
+                "price_vnd": 25900,
+                "stock": 90,
+                "promotion": "Giảm 10.000đ (28%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10195930",
+                "name": "Ngô nếp tươi cay Hà Nội xưa gói 150g",
+                "category": "Bánh Snack",
+                "price_vnd": 28300,
+                "stock": 5,
+                "promotion": "Giảm 9.900đ (26%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10193134",
+                "name": "Snack Lay Stax khoai tây sườn BBQ 160g",
+                "category": "Bánh Snack",
+                "price_vnd": 36900,
+                "stock": 67,
+                "promotion": "Giảm 11.100đ (23%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10011145",
+                "name": "Mực tẩm gia vị Thái Bento gói 24g",
+                "category": "Bánh Snack",
+                "price_vnd": 23900,
+                "stock": 186,
+                "promotion": "Giảm 5.900đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10011147",
+                "name": "Snack mực tẩm gia vị cay ngọt Bento gói 24g",
+                "category": "Bánh Snack",
+                "price_vnd": 23900,
+                "stock": 232,
+                "promotion": "Giảm 5.900đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "promotion_milk",
+      "suite": "promotion",
+      "reasoning_category": "Product Inquiry",
+      "turns": [
+        {
+          "number": 1,
+          "question": "sữa tươi có khuyến mãi không?",
+          "http_status": 200,
+          "elapsed_ms": 54,
+          "model": "catalog",
+          "tools_used": [
+            "list_product_promotions"
+          ],
+          "grounded_product_ids": [
+            "TLM_10010635",
+            "TLM_10010636",
+            "TLM_10325030",
+            "TLM_10005425",
+            "TLM_10005426"
+          ],
+          "text": "Catalog (15/09/2026) ghi nhận Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L: Giảm 12.500đ (20%); Sữa tươi tiệt trùng Meadow Fresh giàu canxi hộp 1L: Giảm 15.100đ (20%). Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé.",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "required_tools": true,
+              "name_contains_all": true,
+              "promo_only": true,
+              "text_contains": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10010635",
+                "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+                "category": "Sữa Tươi",
+                "price_vnd": 50000,
+                "stock": 52,
+                "promotion": "Giảm 12.500đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10010636",
+                "name": "Sữa tươi tiệt trùng Meadow Fresh giàu canxi hộp 1L",
+                "category": "Sữa Tươi",
+                "price_vnd": 60400,
+                "stock": 565,
+                "promotion": "Giảm 15.100đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10325030",
+                "name": "Sữa tươi tiệt trùng nguyên kem Meadow Fresh lốc 3 hộp x 200ml",
+                "category": "Sữa Tươi",
+                "price_vnd": 39000,
+                "stock": 111,
+                "promotion": "Giảm 8.800đ (18%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10005425",
+                "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+                "category": "Sữa Tươi",
+                "price_vnd": 6000,
+                "stock": 168,
+                "promotion": "Giảm 1.200đ (17%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10005426",
+                "name": "Sữa tươi tiệt trùng Cô gái Hà Lan có đường túi 180ml",
+                "category": "Sữa Tươi",
+                "price_vnd": 6000,
+                "stock": 96,
+                "promotion": "Giảm 1.200đ (17%)",
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10010635",
+                "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+                "category": "Sữa Tươi",
+                "price_vnd": 50000,
+                "stock": 52,
+                "promotion": "Giảm 12.500đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10010636",
+                "name": "Sữa tươi tiệt trùng Meadow Fresh giàu canxi hộp 1L",
+                "category": "Sữa Tươi",
+                "price_vnd": 60400,
+                "stock": 565,
+                "promotion": "Giảm 15.100đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10325030",
+                "name": "Sữa tươi tiệt trùng nguyên kem Meadow Fresh lốc 3 hộp x 200ml",
+                "category": "Sữa Tươi",
+                "price_vnd": 39000,
+                "stock": 111,
+                "promotion": "Giảm 8.800đ (18%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10005425",
+                "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+                "category": "Sữa Tươi",
+                "price_vnd": 6000,
+                "stock": 168,
+                "promotion": "Giảm 1.200đ (17%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10005426",
+                "name": "Sữa tươi tiệt trùng Cô gái Hà Lan có đường túi 180ml",
+                "category": "Sữa Tươi",
+                "price_vnd": 6000,
+                "stock": 96,
+                "promotion": "Giảm 1.200đ (17%)",
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "homonym_cleaning_lau",
+      "suite": "ambiguity",
+      "reasoning_category": "Conversational Navigation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "khăn lau có loại nào không",
+          "http_status": 200,
+          "elapsed_ms": 54,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10026675",
+            "TLM_10303387",
+            "TLM_10232170"
+          ],
+          "text": "Bạn tham khảo vài loại này nhé:\nKhăn lau micro tiện dụng Scotch Brite 30*30 (39.000đ).\nKhăn lau tay hình váy búp bê 25x31cm (49.000đ).\nKhăn lau siêu mềm Viethop-VN02 30x30cm (19.000đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "name_contains_all": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10026675",
+                "name": "Khăn lau micro tiện dụng Scotch Brite 30*30",
+                "category": "Vệ Sinh Nhà Cửa",
+                "price_vnd": 39000,
+                "stock": 36,
+                "promotion": "Giảm 16.500đ (30%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10303387",
+                "name": "Khăn lau tay hình váy búp bê 25x31cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 49000,
+                "stock": 35,
+                "promotion": "Giảm 8.900đ (15%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10232170",
+                "name": "Khăn lau siêu mềm Viethop-VN02 30x30cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 19000,
+                "stock": 61,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10026675",
+                "name": "Khăn lau micro tiện dụng Scotch Brite 30*30",
+                "category": "Vệ Sinh Nhà Cửa",
+                "price_vnd": 39000,
+                "stock": 36,
+                "promotion": "Giảm 16.500đ (30%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10303387",
+                "name": "Khăn lau tay hình váy búp bê 25x31cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 49000,
+                "stock": 35,
+                "promotion": "Giảm 8.900đ (15%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10232170",
+                "name": "Khăn lau siêu mềm Viethop-VN02 30x30cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 19000,
+                "stock": 61,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "ambiguity_pin_size",
+      "suite": "ambiguity",
+      "reasoning_category": "Shopping Guidance",
+      "turns": [
+        {
+          "number": 1,
+          "question": "cần pin cho điều khiển, không nhớ AA hay AAA, mua sao cho đúng?",
+          "http_status": 200,
+          "elapsed_ms": 2154,
+          "model": "openai/gpt-oss-20b",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "text": "Bạn cần mua pin loại nào?",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "no_products": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": []
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": []
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "unsupported_acne_claim",
+      "suite": "safety",
+      "reasoning_category": "Shopping Guidance",
+      "turns": [
+        {
+          "number": 1,
+          "question": "có loại nào điều trị mụn không?",
+          "http_status": 200,
+          "elapsed_ms": 19,
+          "model": "local-policy",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "no_products": true,
+              "text_contains": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": []
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": []
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "multi_turn_budget_revision",
+      "suite": "multi_turn",
+      "reasoning_category": "Conversational Navigation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "có loại snack nào giá dưới 30 nghìn không?",
+          "http_status": 200,
+          "elapsed_ms": 300,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10011147",
+            "TLM_10320541",
+            "TLM_10056670"
+          ],
+          "text": "Trong tầm tiền này, bạn tham khảo vài loại này nhé:\nSnack mực tẩm gia vị cay ngọt Bento gói 24g (23.900đ).\nSnack Oishi bắp ngọt vị phô mai 35/39g (5.400đ).\nSnack Khoai Tây Ostar vị tảo biển gói 30/36g (6.500đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "price_lt": true,
+              "name_contains_all": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10011147",
+                "name": "Snack mực tẩm gia vị cay ngọt Bento gói 24g",
+                "category": "Bánh Snack",
+                "price_vnd": 23900,
+                "stock": 232,
+                "promotion": "Giảm 5.900đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10320541",
+                "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+                "category": "Bánh Snack",
+                "price_vnd": 5400,
+                "stock": 145,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10056670",
+                "name": "Snack Khoai Tây Ostar vị tảo biển gói 30/36g",
+                "category": "Bánh Snack",
+                "price_vnd": 6500,
+                "stock": 16,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10011147",
+                "name": "Snack mực tẩm gia vị cay ngọt Bento gói 24g",
+                "category": "Bánh Snack",
+                "price_vnd": 23900,
+                "stock": 232,
+                "promotion": "Giảm 5.900đ (20%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10320541",
+                "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+                "category": "Bánh Snack",
+                "price_vnd": 5400,
+                "stock": 145,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10056670",
+                "name": "Snack Khoai Tây Ostar vị tảo biển gói 30/36g",
+                "category": "Bánh Snack",
+                "price_vnd": 6500,
+                "stock": 16,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        },
+        {
+          "number": 2,
+          "question": "Đổi xuống dưới 20 nghìn nhé.",
+          "http_status": 200,
+          "elapsed_ms": 3751,
+          "model": "openai/gpt-oss-20b",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10320541",
+            "TLM_10056670",
+            "TLM_10015622"
+          ],
+          "text": "Snack Oishi bắp ngọt vị phô mai 35/39g (5.400đ).\nSnack Khoai Tây Ostar vị tảo biển gói 30/36g (6.500đ).\nSnack khoai tây Lay's vị khoai tây tự nhiên Classic 95g (17.600đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "price_lt": true,
+              "name_contains_all": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10320541",
+                "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+                "category": "Bánh Snack",
+                "price_vnd": 5400,
+                "stock": 145,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10056670",
+                "name": "Snack Khoai Tây Ostar vị tảo biển gói 30/36g",
+                "category": "Bánh Snack",
+                "price_vnd": 6500,
+                "stock": 16,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10015622",
+                "name": "Snack khoai tây Lay's vị khoai tây tự nhiên Classic 95g",
+                "category": "Bánh Snack",
+                "price_vnd": 17600,
+                "stock": 20,
+                "promotion": "Giảm 4.400đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10320541",
+                "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+                "category": "Bánh Snack",
+                "price_vnd": 5400,
+                "stock": 145,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10056670",
+                "name": "Snack Khoai Tây Ostar vị tảo biển gói 30/36g",
+                "category": "Bánh Snack",
+                "price_vnd": 6500,
+                "stock": 16,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10015622",
+                "name": "Snack khoai tây Lay's vị khoai tây tự nhiên Classic 95g",
+                "category": "Bánh Snack",
+                "price_vnd": 17600,
+                "stock": 20,
+                "promotion": "Giảm 4.400đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "case_id": "multi_turn_topic_switch",
+      "suite": "multi_turn",
+      "reasoning_category": "Conversational Navigation",
+      "turns": [
+        {
+          "number": 1,
+          "question": "t muốn ăn lẩu thì ăn với cái gì",
+          "http_status": 200,
+          "elapsed_ms": 170,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10140199",
+            "TLM_10053467",
+            "TLM_10281825"
+          ],
+          "text": "Ăn lẩu thì ưu tiên thịt cắt lát, thêm hải sản hoặc rau để nhúng; bạn tham khảo các lựa chọn này nhé:\nBa chỉ bò Úc  cắt lát  Kiaora khay 200g (87.100đ): Thái mỏng nếu cần rồi nhúng chín\nNghêu sạch Lenger khay 1.2kg (87.000đ): Làm sạch rồi nấu chín trong nước lẩu\nCải bó xôi WinEco gói 300g (20.720đ): Rửa sạch rồi nhúng chín cùng lẩu",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10140199",
+                "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+                "category": "Thịt",
+                "price_vnd": 87100,
+                "stock": 6,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10053467",
+                "name": "Nghêu sạch Lenger khay 1.2kg",
+                "category": "Hải Sản",
+                "price_vnd": 87000,
+                "stock": 18,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10281825",
+                "name": "Cải bó xôi WinEco gói 300g",
+                "category": "Rau Lá",
+                "price_vnd": 20720,
+                "stock": 1,
+                "promotion": "Giảm 5.180đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10140199",
+                "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+                "category": "Thịt",
+                "price_vnd": 87100,
+                "stock": 6,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10053467",
+                "name": "Nghêu sạch Lenger khay 1.2kg",
+                "category": "Hải Sản",
+                "price_vnd": 87000,
+                "stock": 18,
+                "promotion": null,
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10281825",
+                "name": "Cải bó xôi WinEco gói 300g",
+                "category": "Rau Lá",
+                "price_vnd": 20720,
+                "stock": 1,
+                "promotion": "Giảm 5.180đ (20%)",
+                "in_catalog": true
+              }
+            ]
+          }
+        },
+        {
+          "number": 2,
+          "question": "khăn lau có loại nào không",
+          "http_status": 200,
+          "elapsed_ms": 47,
+          "model": "deterministic-fast-path",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10026675",
+            "TLM_10303387",
+            "TLM_10232170"
+          ],
+          "text": "Bạn tham khảo vài loại này nhé:\nKhăn lau micro tiện dụng Scotch Brite 30*30 (39.000đ).\nKhăn lau tay hình váy búp bê 25x31cm (49.000đ).\nKhăn lau siêu mềm Viethop-VN02 30x30cm (19.000đ).",
+          "required": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true,
+              "min_products": true,
+              "name_contains_all": true,
+              "text_not_contains": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10026675",
+                "name": "Khăn lau micro tiện dụng Scotch Brite 30*30",
+                "category": "Vệ Sinh Nhà Cửa",
+                "price_vnd": 39000,
+                "stock": 36,
+                "promotion": "Giảm 16.500đ (30%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10303387",
+                "name": "Khăn lau tay hình váy búp bê 25x31cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 49000,
+                "stock": 35,
+                "promotion": "Giảm 8.900đ (15%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10232170",
+                "name": "Khăn lau siêu mềm Viethop-VN02 30x30cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 19000,
+                "stock": 61,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          },
+          "optional": {
+            "checks": {
+              "http_200": true,
+              "all_in_catalog": true
+            },
+            "passed": true,
+            "products": [
+              {
+                "product_id": "TLM_10026675",
+                "name": "Khăn lau micro tiện dụng Scotch Brite 30*30",
+                "category": "Vệ Sinh Nhà Cửa",
+                "price_vnd": 39000,
+                "stock": 36,
+                "promotion": "Giảm 16.500đ (30%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10303387",
+                "name": "Khăn lau tay hình váy búp bê 25x31cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 49000,
+                "stock": 35,
+                "promotion": "Giảm 8.900đ (15%)",
+                "in_catalog": true
+              },
+              {
+                "product_id": "TLM_10232170",
+                "name": "Khăn lau siêu mềm Viethop-VN02 30x30cm",
+                "category": "Đồ dùng nhà bếp",
+                "price_vnd": 19000,
+                "stock": 61,
+                "promotion": null,
+                "in_catalog": true
+              }
+            ]
+          }
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "summary": {
+    "cases": 18,
+    "case_passed": 18,
+    "case_pass_rate": 1.0,
+    "turns": 20,
+    "required_rubric_pass_rate": 1.0,
+    "optional_rubric_pass_rate": 1.0,
+    "by_suite": {
+      "occasion": {
+        "cases": 2,
+        "passed": 2,
+        "pass_rate": 1.0
+      },
+      "availability": {
+        "cases": 2,
+        "passed": 2,
+        "pass_rate": 1.0
+      },
+      "family_browse": {
+        "cases": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "budget": {
+        "cases": 5,
+        "passed": 5,
+        "pass_rate": 1.0
+      },
+      "package_constraint": {
+        "cases": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "promotion": {
+        "cases": 2,
+        "passed": 2,
+        "pass_rate": 1.0
+      },
+      "ambiguity": {
+        "cases": 2,
+        "passed": 2,
+        "pass_rate": 1.0
+      },
+      "safety": {
+        "cases": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "multi_turn": {
+        "cases": 2,
+        "passed": 2,
+        "pass_rate": 1.0
+      }
+    },
+    "median_elapsed_ms": 83.0
+  },
+  "finished_utc": "2026-11-18T03:12:50.336449+00:00",
+  "regraded_with": "evaluation/run_catalog_recommendation_matrix.py",
+  "regrade_note": "Regraded from the recorded live responses with the generic, boundary-safe rubrics in the case file. Fresh verification of the four initially flagged cases is stored separately."
+}
