@@ -13,6 +13,20 @@ _DATASET_HASH = re.compile(r"^[a-f0-9]{64}$")
 _LOCATION_CODE = re.compile(r"^A\d{2}-B\d{2}-L\d{2}-P\d{2}$")
 
 
+def friendly_location(location_code: str | None) -> str:
+    """Turn a planogram code into a short locator people can read aloud."""
+    location = (location_code or "").strip()
+    detailed = re.fullmatch(r"A(\d{2})-B(\d{2})-L(\d{2})-P(\d{2})", location)
+    if detailed:
+        aisle, bay, level, slot = detailed.groups()
+        return f"Dãy {aisle} · Khoang {bay} · Tầng {level} · Ô {slot}"
+    simple = re.fullmatch(r"A(\d+)-L(\d+)", location)
+    if simple:
+        aisle, level = simple.groups()
+        return f"Khu A{aisle} · Tầng L{level}"
+    return location
+
+
 @lru_cache(maxsize=1)
 def _load_planogram() -> tuple[str | None, dict[str, str]]:
     """Load recommended locators once; invalid or missing files fail closed."""

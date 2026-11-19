@@ -35,6 +35,37 @@ def test_broad_milk_family_uses_catalog_category_heads(snapshot):
     assert all(search.category.startswith("Sữa") for search in plan.searches)
 
 
+def test_ready_drink_family_is_catalog_browseable_without_llm(snapshot):
+    plan = _fast_catalog_plan("t muốn uống nước giải khát", None, [], snapshot)
+    assert plan and plan.searches
+    assert plan.searches[0].category == "Nước Ngọt"
+
+
+@pytest.mark.asyncio
+async def test_breakfast_no_cook_scope_uses_catalog_food_categories(snapshot):
+    plan = _fast_catalog_plan(
+        "Tôi muốn mua đồ ăn sáng nhanh, không cần nấu nướng.", None, [], snapshot
+    )
+    assert plan and {search.category for search in plan.searches} >= {"Cháo", "Mì", "Bánh bao"}
+    candidates, missing = await _retrieve_candidates(
+        snapshot, plan, sorted({p.category for p in snapshot.products}), [plan.need]
+    )
+    assert not missing
+    advice = _fast_catalog_advice(candidates, plan)
+    assert advice and "Bữa sáng" in advice.text
+
+
+def test_breakfast_followup_can_exclude_bread(snapshot):
+    previous = _fast_catalog_plan(
+        "Tôi muốn mua đồ ăn sáng nhanh, không cần nấu nướng.", None, [], snapshot
+    )
+    current = _fast_catalog_plan(
+        "Tôi không muốn ăn bánh mì, có lựa chọn khác không?",
+        previous.model_dump(), [], snapshot,
+    )
+    assert current and all(search.category != "Bánh mì" for search in current.searches)
+
+
 @pytest.mark.asyncio
 async def test_hotpot_scope_excludes_mince_sauce_and_processed_food(snapshot):
     plan = _fast_catalog_plan("t muốn ăn lẩu thì ăn với cái gì", None, [], snapshot)

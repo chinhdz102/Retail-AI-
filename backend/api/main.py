@@ -35,6 +35,7 @@ from backend.api.schemas import (
     SynthesizeRequest,
     SynthesizeTicketResponse,
     TranscriptionResponse,
+    VisionIdentifyResponse,
 )
 from backend.config import Settings, get_settings
 from backend.products.catalog import DATA_TIMESTAMP, ProductSnapshot
@@ -44,10 +45,21 @@ from backend.services.azure_speech import (
     AzureSpeechProviderError,
     AzureSpeechService,
 )
+from backend.services.azure_stt import (
+    MODEL as AZURE_STT_MODEL,
+)
+from backend.services.azure_stt import (
+    PIPELINE_VERSION as AZURE_STT_PIPELINE_VERSION,
+)
+from backend.services.azure_stt import (
+    AzureVietnameseSTT,
+)
 from backend.services.consultation import (
     _catalog_label_selection_requested,
-    consult_customer as consult,
     use_consultation,
+)
+from backend.services.consultation import (
+    consult_customer as consult,
 )
 from backend.services.elevenlabs import (
     ElevenLabsConfigurationError,
@@ -114,10 +126,10 @@ from backend.services.vietnamese_intent import (
     has_specific_product_reference as _has_specific_product_reference,
 )
 from backend.services.vietnamese_intent import (
+    is_greeting_only,
     is_recommendation_negated,
     is_recommendation_request,
 )
-from backend.services.vietnamese_intent import is_greeting_only
 from backend.services.vietnamese_intent import (
     normalize_vietnamese as _normalize_request_text,
 )
@@ -126,6 +138,11 @@ from backend.services.vietnamese_intent import (
 )
 from backend.services.vietnamese_intent import (
     unsupported_catalog_attribute_requested as _parse_unsupported_attribute,
+)
+from backend.services.vision_retrieval import (
+    TFLiteVisionRetriever,
+    VisionInputError,
+    VisionModelUnavailable,
 )
 from backend.services.whisper_stt import (
     MODEL as WHISPER_MODEL,
@@ -138,11 +155,6 @@ from backend.services.whisper_stt import (
     WhisperProviderError,
     WhisperSTT,
     WhisperTimeoutError,
-)
-from backend.services.azure_stt import (
-    AzureVietnameseSTT,
-    MODEL as AZURE_STT_MODEL,
-    PIPELINE_VERSION as AZURE_STT_PIPELINE_VERSION,
 )
 from backend.shared.contracts import HealthResponse, IntentType, SessionState
 
@@ -162,6 +174,14 @@ _groq_service: GroqService | None = None
 _whisper_service: WhisperSTT | None = None
 _azure_speech_service: AzureSpeechService | None = None
 _elevenlabs_service: ElevenLabsService | None = None
+_vision_retriever: TFLiteVisionRetriever | None = None
+
+
+def get_vision_retriever() -> TFLiteVisionRetriever:
+    global _vision_retriever
+    if _vision_retriever is None:
+        _vision_retriever = TFLiteVisionRetriever(settings.vision_model_dir)
+    return _vision_retriever
 
 @asynccontextmanager
 async def lifespan(_app):
@@ -268,16 +288,24 @@ def _chat_provider_http_error(exc: GroqProviderError) -> HTTPException:
 def _format_shelf_location(product: ProductSnapshot, language: LanguageCode) -> str:
     location = product.shelf or ""
     if product.shelf_source != "RECOMMENDED_PLANOGRAM":
+        match = re.fullmatch(r"A(\d+)-L(\d+)", location)
+        if match:
+            zone, level = match.groups()
+            if language == "en":
+                return f"zone A{zone}, level L{level} (code {location})"
+            if language == "zh":
+                return f"A{zone} 区、L{level} 层（代码 {location}）"
+            return f"khu A{zone}, tầng L{level} (mã {location})"
         return location
     match = re.fullmatch(r"A(\d{2})-B(\d{2})-L(\d{2})-P(\d{2})", location)
     if match is None:
         return location
     aisle, bay, level, slot = match.groups()
     if language == "en":
-        return f"{location} (aisle A{aisle}, bay B{bay}, level L{level}, slot P{slot})"
+        return f"aisle {aisle}, bay {bay}, level {level}, position {slot} (code {location})"
     if language == "zh":
-        return f"{location}（通道 A{aisle}、货架 B{bay}、层 L{level}、位置 P{slot}）"
-    return f"{location} (dãy A{aisle}, khoang B{bay}, tầng L{level}, ô P{slot})"
+        return f"通道 {aisle}、货架 {bay}、层 {level}、位置 {slot}（代码 {location}）"
+    return f"dãy {aisle}, khoang {bay}, tầng {level}, ô {slot} (mã {location})"
 
 
 def _render_verified_snapshot(
@@ -2780,6 +2808,17 @@ async def _handle_shopping_action(
     action = classify_shopping_action(request.text, record.state)
     if action is None:
         return None
+    if action.action == ShoppingActionType.ADD_ITEM:
+        normalized = _normalize_request_text(request.text)
+        explicit_reference = bool(re.search(
+            r"\b(?:loai vua de xuat|loai vua chon|loai nay|mon vua de xuat)\b",
+            normalized,
+        ))
+        consultation_turn = use_consultation(request.text, ())
+        if consultation_turn and not explicit_reference and not re.search(
+            r"\b(?:them|gio hang|cap nhat|checkout|dat hang)\b", normalized
+        ):
+            return None
     current_state = record.state
     idempotency_key = str(request.client_turn_id)
     try:
@@ -5297,6 +5336,48 @@ async def _recognize_while_connected(request: Request, recognition):
         if not task.done():
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
+
+
+@app.post("/vision/identify", response_model=VisionIdentifyResponse)
+async def identify_product_image(
+    file: UploadFile = File(...),
+    top_k: int = 5,
+) -> VisionIdentifyResponse:
+    """Find catalog products and readable shelf locators from an uploaded crop."""
+    content_type = (file.content_type or "").casefold()
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=415, detail="Upload a product image")
+    content = await file.read(10 * 1024 * 1024 + 1)
+    if not content:
+        raise HTTPException(status_code=422, detail="Image file is empty")
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Image file is too large")
+    try:
+        matches, confident, input_size, gallery_size = get_vision_retriever().identify(
+            content, top_k
+        )
+    except VisionInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except VisionModelUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return VisionIdentifyResponse(
+        matches=[
+            {
+                "product_id": match.product_id,
+                "name": match.name,
+                "category": match.category,
+                "brand": match.brand,
+                "score": match.score,
+                "shelf_code": match.shelf_code,
+                "shelf_friendly": match.shelf_friendly,
+            }
+            for match in matches
+        ],
+        top_match_confident=confident,
+        model="tflite-sku-embedder",
+        input_size=input_size,
+        gallery_size=gallery_size,
+    )
 
 
 @app.post("/audio/transcribe", response_model=TranscriptionResponse)

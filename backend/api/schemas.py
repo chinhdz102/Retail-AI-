@@ -144,6 +144,24 @@ class ProductSearchResponse(BaseModel):
     data_timestamp: datetime
 
 
+class VisionMatchResponse(BaseModel):
+    product_id: str
+    name: str
+    category: str | None = None
+    brand: str | None = None
+    score: float
+    shelf_code: str | None = None
+    shelf_friendly: str | None = None
+
+
+class VisionIdentifyResponse(BaseModel):
+    matches: list[VisionMatchResponse]
+    top_match_confident: bool
+    model: str
+    input_size: list[int]
+    gallery_size: int
+
+
 class TranscriptionResponse(BaseModel):
     session_id: UUID
     text: str

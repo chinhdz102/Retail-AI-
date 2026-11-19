@@ -4,6 +4,7 @@ import {
   PhArrowClockwise as ArrowClockwise,
   PhArrowUp as ArrowUp,
   PhBarcode as Barcode,
+  PhImage as ImageIcon,
   PhCaretRight as CaretRight,
   PhMicrophone as Microphone,
   PhPause as Pause,
@@ -22,6 +23,7 @@ import type {
   CheckoutQuote,
   SandboxOrder,
   ShoppingCart,
+  VisionIdentifyResponse,
 } from '../types'
 const props = defineProps<{
   messages: ChatMessage[]
@@ -42,6 +44,7 @@ const props = defineProps<{
   }>
   selectedMicrophone?: string
   activeMicrophone?: string
+  visionResult?: VisionIdentifyResponse | null
 }>()
 const conversation = ref<HTMLElement | null>(null)
 watch(
@@ -69,6 +72,7 @@ const emit = defineEmits<{
   'clear-order': []
   'end-session': []
   'request-support': []
+  'identify-image': [file: File]
 }>()
 
 const copy = computed(() => {
@@ -99,6 +103,8 @@ const copy = computed(() => {
     inputLabel: 'Nhập câu hỏi cho Sky',
     quickPromptsLabel: 'Câu hỏi gợi ý',
     sendLabel: 'Gửi câu hỏi',
+    imageLabel: 'Nhận diện ảnh sản phẩm',
+    imageHint: 'Chụp hoặc chọn ảnh mặt trước sản phẩm',
   }
 })
 const shoppingText = computed(() => {
@@ -147,6 +153,12 @@ function onKeydown(event: KeyboardEvent) {
     event.preventDefault()
     emit('send')
   }
+}
+function onImageChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (file) emit('identify-image', file)
 }
 </script>
 
@@ -305,6 +317,23 @@ function onKeydown(event: KeyboardEvent) {
         </div>
       </div>
     </div>
+
+    <section v-if="visionResult" class="vision-result" aria-live="polite">
+      <div class="vision-result-header">
+        <div>
+          <strong>Nhận diện từ ảnh</strong>
+          <span>{{ visionResult.top_match_confident ? 'Độ khớp tốt' : 'Cần đối chiếu thêm' }}</span>
+        </div>
+        <small>{{ visionResult.gallery_size.toLocaleString('vi-VN') }} sản phẩm trong catalog</small>
+      </div>
+      <article v-for="match in visionResult.matches" :key="match.product_id" class="vision-match-card">
+        <div>
+          <strong>{{ match.name }}</strong>
+          <span>{{ Math.round(match.score * 100) }}% khớp · {{ match.shelf_friendly || 'Chưa có vị trí kệ' }}</span>
+        </div>
+      </article>
+      <p class="vision-result-note">Ảnh toàn kệ cần tách từng sản phẩm trước khi nhận diện.</p>
+    </section>
 
     <section
       v-if="
@@ -487,6 +516,10 @@ function onKeydown(event: KeyboardEvent) {
         @keydown="onKeydown"
       ></textarea>
       <div class="composer-actions">
+        <label class="image-upload-button" :aria-label="copy.imageLabel" :title="copy.imageHint">
+          <ImageIcon :size="19" weight="duotone" aria-hidden="true" />
+          <input type="file" accept="image/*" @change="onImageChange" />
+        </label>
         <button
           type="button"
           class="mic-button"

@@ -749,7 +749,7 @@ def _catalog_label_selection_requested(text: str) -> bool:
     """
     normalized = normalize_vietnamese(text)
     if not re.search(
-        r"\b(?:it duong|khong duong|khong qua ngot|do ngot|giam ngot)\b",
+        r"\b(?:it duong|khong duong|khong qua ngot|do ngot|giam ngot|han che duong)\b",
         normalized,
     ):
         return False
@@ -801,11 +801,14 @@ def _catalog_label_followup_plan(
     label_names = {
         "khong duong": "không đường",
         "it duong": "ít đường",
+        "han che duong": "ít đường",
         "zero": "zero",
         "light": "light",
     }
     labels = [label_names[term] for term in label_names
               if re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", normalized)]
+    if "han che duong" in normalized:
+        labels.extend(["không đường", "ít đường"])
     if not labels:
         labels = _catalog_label_requirements(repository, text, "")
     if not labels:
@@ -900,6 +903,24 @@ def _hotpot_requested(text: str) -> bool:
     return bool(re.search(r"\b(?:an|noi|mon) lau\b", normalized))
 
 
+def _catalog_ready_drink_plan(text: str, repository: ProductRepository) -> Plan | None:
+    """Browse ready-to-drink rows when the customer names that family directly."""
+    normalized = normalize_vietnamese(text)
+    if not re.search(r"\b(?:nuoc giai khat|nuoc ngot|do uong)\b", normalized):
+        return None
+    if _catalog_label_selection_requested(text):
+        return None
+    if not any(product.category == "Nước Ngọt" and product.sellable_stock > 0
+               for product in repository.products):
+        return None
+    return Plan(
+        need=text,
+        action="advise",
+        decision_mode="browse",
+        searches=[Search(query="", category="Nước Ngọt", role="core")],
+    )
+
+
 def _catalog_occasion_plan(text: str, repository: ProductRepository,
                            *, conservative: bool) -> Plan | None:
     """Turn an occasion into catalog-backed product types without an LLM.
@@ -918,7 +939,7 @@ def _catalog_occasion_plan(text: str, repository: ProductRepository,
     # Preferences/constraints need the planner in the normal path.  During a
     # provider outage we can still recover useful catalog options, but never
     # silently discard an explicit variant or safety condition.
-    if conservative and re.search(r"\b(?:nhanh|no|re|tot|it|qua|"
+    if conservative and re.search(r"\b(?:no|re|tot|it|qua|"
                                   r"duoi|tam|khoang|toi da|ngan sach|"
                                   r"khong thich|thich|uu tien)\b", normalized):
         return None
@@ -941,7 +962,7 @@ def _catalog_occasion_plan(text: str, repository: ProductRepository,
                       "a oi muon mua xem vai may mot cac nhung loai san pham mat "
                       "hang thi co nao gi khong ko k voi di an sang bua dem lau "
                       "noi mon do ngon khong can nau phai nhanh tien de lam cai an co gi thi voi va "
-                      "cung".split())
+                      "cung do nuong".split())
         if set(re.findall(r"\w+", normalized)) - framing:
             return None
     searches: list[Search] = []
@@ -968,7 +989,9 @@ def _catalog_occasion_plan(text: str, repository: ProductRepository,
             searches.append(Search(query=occasion_query, category="Mì", scope="category", taxonomy_phrases=["thuc pham an lien"], preparation="heat"))
         if available("Bánh bao"):
             searches.append(Search(query=occasion_query, category="Bánh bao", scope="category", preparation="heat"))
-        if breakfast and available("Bánh mì"):
+        if breakfast and available("Bánh mì") and not re.search(
+            r"\b(?:khong (?:muon|thich|an)|tranh) banh mi\b", normalized
+        ):
             searches.append(Search(query=occasion_query, category="Bánh mì", scope="category", preparation="no_cook"))
         searches = searches[:3]
     if not searches:
@@ -1245,7 +1268,8 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
     )
     if label_followup is not None:
         return label_followup
-    if re.search(r"\b(?:khong|chua|dung)\s+(?:mua|lay|chon|can|tim)\b", normalized):
+    if (re.search(r"\b(?:khong|chua|dung)\s+(?:mua|lay|chon|can|tim)\b", normalized)
+            and not re.search(r"\bkhong can nau\b", normalized)):
         return None
     comparison = _catalog_comparison_plan(text, repository)
     if comparison is not None:
@@ -1256,6 +1280,9 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
     cleaning = _catalog_cleaning_plan(text, repository)
     if cleaning is not None:
         return cleaning
+    drink_family = _catalog_ready_drink_plan(text, repository)
+    if drink_family is not None:
+        return drink_family
     if re.search(r"\b(?:it|tot|re|phu hop|dieu tri|nhay cam|an toan|"
                  r"so sanh|khac nhau|dang tien|khong cay|khong duong)\b", normalized):
         return None
@@ -1285,6 +1312,35 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
         package_plan = _package_followup_plan(text, previous_plan)
         if package_plan is not None:
             return package_plan
+        if re.search(r"\b(?:khong|ko)\s+(?:muon|thich|an|uong|lay|chon)\b", normalized):
+            try:
+                prior_searches = [Search.model_validate(item)
+                                  for item in previous_plan.get("searches", [])]
+            except (TypeError, ValidationError):
+                prior_searches = []
+            negative_scope = normalized[normalized.find("khong"):]
+            catalog_labels = {
+                normalize_vietnamese(product.category)
+                for product in repository.products
+                if product.category
+            }
+            negative_label = next(
+                (label for label in sorted(catalog_labels, key=len, reverse=True)
+                 if label and label in negative_scope),
+                None,
+            )
+            if negative_label:
+                filtered = [search for search in prior_searches
+                            if normalize_vietnamese(search.category or search.query)
+                            != negative_label]
+                if filtered:
+                    return Plan(
+                        need=text,
+                        action="advise",
+                        decision_mode="browse",
+                        reuse_previous=True,
+                        searches=filtered,
+                    )
         # Only a fully parsed, explicit new product scope can bypass semantic
         # state merging. Use the same conservative fresh-turn parser, including
         # its budget and unparsed-word guards, rather than the outage recovery.
@@ -2531,8 +2587,9 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
     """
     # Comparison turns need one verified row per named brand and a neutral
     # limitation statement. Catalog labels do not prove cleaning performance.
-    if (re.search(r"\b(?:so sanh|khac nhau|chenh|loai nao)\b",
-                  normalize_vietnamese(plan.need))
+    if (not _catalog_label_selection_requested(plan.need)
+            and re.search(r"\b(?:so sanh|khac nhau|chenh|loai nao)\b",
+                          normalize_vietnamese(plan.need))
             and len(plan.searches) >= 2 and candidates):
         selected = []
         for search in plan.searches:
@@ -2669,15 +2726,17 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
                  else "Trong tầm tiền này, bạn tham khảo vài loại này nhé:")
     elif _availability_query(plan.need):
         intro = "Có nhé, bạn có thể chọn các loại này:"
-    elif re.search(r"\b(?:so sanh|khac nhau|chenh|loai nao)\b", normalized_need):
+    elif _catalog_label_selection_requested(plan.need):
+        intro = "Mình tìm thấy các lựa chọn mang nhãn ít hoặc không đường; bạn vẫn nên đối chiếu bảng dinh dưỡng trên bao bì:"
+    elif re.search(r"\b(?:so sanh|khac nhau|chenh)\b", normalized_need):
         intro = ("Mình thấy các dòng bạn hỏi trong catalog; dữ liệu hiện chưa có phép thử "
                  "để khẳng định loại nào giặt sạch hơn, bạn tham khảo từng dòng này nhé:")
     elif hotpot:
         intro = "Ăn lẩu thì ưu tiên thịt cắt lát, thêm hải sản, rau/nấm hoặc đồ thả lẩu; bạn tham khảo các lựa chọn này nhé:"
-    elif re.search(r"\b(?:an dem|an nhanh|an tien|khong can nau)\b", normalized_need):
-        intro = "Ăn đêm nên chọn món gọn, chế biến nhanh theo hướng dẫn trên gói; bạn tham khảo các loại này nhé:"
     elif re.search(r"\b(?:an sang|bua sang)\b", normalized_need):
         intro = "Bữa sáng nhanh có thể chọn món ăn liền hoặc bánh; bạn tham khảo các loại này nhé:"
+    elif re.search(r"\b(?:an dem|an nhanh|an tien|khong can nau)\b", normalized_need):
+        intro = "Ăn đêm nên chọn món gọn, chế biến nhanh theo hướng dẫn trên gói; bạn tham khảo các loại này nhé:"
     else:
         intro = ("Bạn tham khảo loại này nhé:" if len(choices) == 1
                  else "Bạn tham khảo vài loại này nhé:")
