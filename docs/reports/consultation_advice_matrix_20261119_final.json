@@ -1,0 +1,425 @@
+[
+  {
+    "id": "low_sugar",
+    "question": "Trời nóng, có nước nào uống ngon mà không quá ngọt không?",
+    "elapsed_ms": 187,
+    "status": 200,
+    "model": "deterministic-fast-path",
+    "text": "Bạn tham khảo vài loại này nhé:\nCOCA-COLA Nc Zero SS.pet 390ml (179.800đ).\nLốc 6 chai trà Oolong không đường Tea+ 455ml (60.500đ).\nNước Giải Khát Coca-Cola Zero Pet 600ml (9.900đ).",
+    "products": [
+      {
+        "product_id": "WIN_10194712",
+        "name": "COCA-COLA Nc Zero SS.pet 390ml",
+        "category": "Nước Ngọt",
+        "brand": "COCA-COLA",
+        "price_vnd": 179800,
+        "stock": 6,
+        "uom": "Thùng",
+        "data_timestamp": "2026-09-15T13:53:40.205139Z"
+      },
+      {
+        "product_id": "WIN_10638663",
+        "name": "Lốc 6 chai trà Oolong không đường Tea+ 455ml",
+        "category": "Nước Ngọt",
+        "brand": "TEA+",
+        "price_vnd": 60500,
+        "stock": 38,
+        "uom": "Gói 6",
+        "data_timestamp": "2026-09-15T13:53:41.152438Z"
+      },
+      {
+        "product_id": "WIN_10194711",
+        "name": "Nước Giải Khát Coca-Cola Zero Pet 600ml",
+        "category": "Nước Ngọt",
+        "brand": "COCA-COLA",
+        "price_vnd": 9900,
+        "stock": 232,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:41.149864Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "WIN_10194712",
+      "WIN_10638663",
+      "WIN_10194711"
+    ],
+    "tools_used": [
+      "search_products"
+    ]
+  },
+  {
+    "id": "pet_cleaning",
+    "question": "Nhà có mèo, cần đồ vệ sinh nhà an toàn khi dùng quanh thú cưng.",
+    "elapsed_ms": 72,
+    "status": 200,
+    "model": "deterministic-pet-cleaning",
+    "text": "Nhà có mèo, bạn xem trên nhãn sản phẩm có ghi phù hợp khi dùng quanh thú cưng trước khi chọn nhé:\nNước lau sàn Gift pink sakura can 3,8kg (94.000đ): Kiểm tra hướng dẫn trên nhãn trước khi dùng\nNước lau kính Gift 540ml/580ml (23.800đ): Kiểm tra hướng dẫn trên nhãn trước khi dùng\nNước lau nhà MaxKleen hương ban mai thanh mát chai 1.01 lít (34.400đ): Kiểm tra hướng dẫn trên nhãn trước khi dùng",
+    "products": [
+      {
+        "product_id": "WIN_10019680",
+        "name": "Nước lau sàn Gift pink sakura can 3,8kg",
+        "category": "Nước Lau Sàn - Lau Kính",
+        "brand": "GIFT",
+        "price_vnd": 94000,
+        "stock": 7,
+        "uom": "Can",
+        "data_timestamp": "2026-09-15T13:53:44.063228Z"
+      },
+      {
+        "product_id": "WIN_10019689",
+        "name": "Nước lau kính Gift 540ml/580ml",
+        "category": "Nước Lau Sàn - Lau Kính",
+        "brand": "GIFT",
+        "price_vnd": 23800,
+        "stock": 52,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:44.063248Z"
+      },
+      {
+        "product_id": "WIN_10170559",
+        "name": "Nước lau nhà MaxKleen hương ban mai thanh mát chai 1.01 lít",
+        "category": "Nước Lau Sàn - Lau Kính",
+        "brand": "MAXKLEEN",
+        "price_vnd": 34400,
+        "stock": 21,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:44.063531Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "WIN_10019680",
+      "WIN_10019689",
+      "WIN_10170559"
+    ],
+    "tools_used": [
+      "search_products"
+    ]
+  },
+  {
+    "id": "late_night",
+    "question": "Đồ ăn đêm có gì ngon và dễ làm?",
+    "elapsed_ms": 170,
+    "status": 200,
+    "model": "deterministic-fast-path",
+    "text": "Ăn đêm nên chọn món gọn, chế biến nhanh theo hướng dẫn trên gói; bạn tham khảo các loại này nhé:\nCháo tổ yến rong biển thịt bằm LC Foods 50g (11.400đ): Làm nóng hoặc nấu chín theo hướng dẫn trên gói\nMì tôm chanh Omni gói 75g (4.700đ): Làm nóng hoặc nấu chín theo hướng dẫn trên gói\nBánh bao nhân thịt heo trứng cút Thọ Phát gói 250g (30.700đ): Làm nóng hoặc nấu chín theo hướng dẫn trên gói",
+    "products": [
+      {
+        "product_id": "WIN_10142020",
+        "name": "Cháo tổ yến rong biển thịt bằm LC Foods 50g",
+        "category": "Cháo",
+        "brand": "LC FOOD",
+        "price_vnd": 11400,
+        "stock": 174,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:37.512467Z"
+      },
+      {
+        "product_id": "WIN_10007820",
+        "name": "Mì tôm chanh Omni gói 75g",
+        "category": "Mì",
+        "brand": "OMNI",
+        "price_vnd": 4700,
+        "stock": 5,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:46.026923Z"
+      },
+      {
+        "product_id": "WIN_10005885",
+        "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+        "category": "Bánh bao",
+        "brand": "THỌ PHÁT",
+        "price_vnd": 30700,
+        "stock": 18,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.238996Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "WIN_10142020",
+      "WIN_10007820",
+      "WIN_10005885"
+    ],
+    "tools_used": [
+      "search_products"
+    ]
+  },
+  {
+    "id": "child_snack",
+    "question": "Nhà có trẻ con, đồ ăn vặt đỡ ngọt chọn gì?",
+    "elapsed_ms": 121,
+    "status": 200,
+    "model": "deterministic-fast-path",
+    "text": "Bạn tham khảo vài loại này nhé:\nBánh xốp Gullon ăn kiêng không đường 210g/180g (112.500đ).\nBánh Gullon ăn kiêng không đường nhiều chất xơ 170g (72.000đ).",
+    "products": [
+      {
+        "product_id": "WIN_10013679",
+        "name": "Bánh xốp Gullon ăn kiêng không đường 210g/180g",
+        "category": "Bánh Xốp - Bánh Quy",
+        "brand": "GULLON",
+        "price_vnd": 112500,
+        "stock": 13,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.448871Z"
+      },
+      {
+        "product_id": "WIN_10013682",
+        "name": "Bánh Gullon ăn kiêng không đường nhiều chất xơ 170g",
+        "category": "Bánh Xốp - Bánh Quy",
+        "brand": "GULLON",
+        "price_vnd": 72000,
+        "stock": 8,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.448884Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "WIN_10013679",
+      "WIN_10013682"
+    ],
+    "tools_used": [
+      "search_products"
+    ]
+  },
+  {
+    "id": "comparison",
+    "question": "OMO với Ariel thì loại nào giặt sạch hơn?",
+    "elapsed_ms": 127,
+    "status": 200,
+    "model": "deterministic-comparison",
+    "text": "Mình chưa thể kết luận loại nào sạch hơn chỉ từ thông tin trên nhãn. Bạn tham khảo hai dòng này nhé:\nBột giặt thông minh Omo gói 800g/770g (42.300đ): Đúng thương hiệu bạn hỏi\nNước giặt Ariel Downy hương oải túi 3.9kg (265.100đ): Đúng thương hiệu bạn hỏi",
+    "products": [
+      {
+        "product_id": "WIN_10406728",
+        "name": "Bột giặt thông minh Omo gói 800g/770g",
+        "category": "Nước Giặt",
+        "brand": "OMO",
+        "price_vnd": 42300,
+        "stock": 68,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:44.062094Z"
+      },
+      {
+        "product_id": "WIN_10171075",
+        "name": "Nước giặt Ariel Downy hương oải túi 3.9kg",
+        "category": "Nước Giặt",
+        "brand": "ARIEL",
+        "price_vnd": 265100,
+        "stock": 52,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:44.059632Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "WIN_10406728",
+      "WIN_10171075"
+    ],
+    "tools_used": [
+      "search_products"
+    ]
+  },
+  {
+    "id": "dandruff",
+    "question": "Dầu gội chống gàu nào đang bán?",
+    "elapsed_ms": 45,
+    "status": 200,
+    "model": "deterministic-fast-path",
+    "text": "Bạn tham khảo loại này nhé:\nDầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml (95.200đ).",
+    "products": [
+      {
+        "product_id": "WIN_10016912",
+        "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+        "category": "Chăm Sóc Tóc",
+        "brand": "SELSUN",
+        "price_vnd": 95200,
+        "stock": 31,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:33.773419Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "WIN_10016912"
+    ],
+    "tools_used": [
+      "search_products"
+    ]
+  },
+  {
+    "id": "no_match",
+    "question": "Có viên thả bồn cầu không?",
+    "elapsed_ms": 34,
+    "status": 200,
+    "model": "catalog-no-match",
+    "text": "Mình chưa tìm thấy viên thả bồn cầu trong danh mục hàng đang tra cứu, nên chưa thể xác nhận cửa hàng có bán loại này.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [
+      "search_products"
+    ]
+  },
+  {
+    "id": "availability",
+    "question": "Ở đây có bán sữa tươi không?",
+    "elapsed_ms": 83,
+    "status": 200,
+    "model": "deterministic-fast-path",
+    "text": "Có nhé, bạn có thể chọn các loại này:\nSữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L (50.000đ).\nSữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml (6.000đ).\nSữa tươi thanh trùng Dalat Milk không đường hộp 450ml (24.400đ).",
+    "products": [
+      {
+        "product_id": "WIN_10010635",
+        "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+        "category": "Sữa Tươi",
+        "brand": "MEADOW FRESH",
+        "price_vnd": 50000,
+        "stock": 52,
+        "uom": "Hộp",
+        "data_timestamp": "2026-09-15T13:53:51.763106Z"
+      },
+      {
+        "product_id": "WIN_10005425",
+        "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+        "category": "Sữa Tươi",
+        "brand": "DUTCH LADY",
+        "price_vnd": 6000,
+        "stock": 168,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:51.763962Z"
+      },
+      {
+        "product_id": "WIN_10005241",
+        "name": "Sữa tươi thanh trùng Dalat Milk không đường hộp 450ml",
+        "category": "Sữa Tươi",
+        "brand": "ĐÀ LẠT MILK",
+        "price_vnd": 24400,
+        "stock": 16,
+        "uom": "Hộp",
+        "data_timestamp": "2026-09-15T13:53:51.765744Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "WIN_10010635",
+      "WIN_10005425",
+      "WIN_10005241"
+    ],
+    "tools_used": [
+      "search_products"
+    ]
+  },
+  {
+    "id": "snack_budget",
+    "question": "Có loại snack nào giá dưới 20.000 đồng không?",
+    "elapsed_ms": 301,
+    "status": 200,
+    "model": "deterministic-fast-path",
+    "text": "Trong tầm tiền này, bạn tham khảo vài loại này nhé:\nSnack khoai tây Lay's vị khoai tây tự nhiên Classic 95g (17.600đ).\nSnack Oishi bắp ngọt vị phô mai 35/39g (5.400đ).\nSnack Big sheet truyền thống 3.2g (8.700đ).",
+    "products": [
+      {
+        "product_id": "WIN_10015622",
+        "name": "Snack khoai tây Lay's vị khoai tây tự nhiên Classic 95g",
+        "category": "Bánh Snack",
+        "brand": "LAY'S",
+        "price_vnd": 17600,
+        "stock": 20,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.293389Z"
+      },
+      {
+        "product_id": "WIN_10320541",
+        "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+        "category": "Bánh Snack",
+        "brand": "OISHI",
+        "price_vnd": 5400,
+        "stock": 145,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.460299Z"
+      },
+      {
+        "product_id": "WIN_10016022",
+        "name": "Snack Big sheet truyền thống 3.2g",
+        "category": "Bánh Snack",
+        "brand": "TAO KAE NOI",
+        "price_vnd": 8700,
+        "stock": 37,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.459346Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "WIN_10015622",
+      "WIN_10320541",
+      "WIN_10016022"
+    ],
+    "tools_used": [
+      "search_products"
+    ]
+  },
+  {
+    "id": "promotion",
+    "question": "Sữa tươi có khuyến mãi không?",
+    "elapsed_ms": 54,
+    "status": 200,
+    "model": "catalog",
+    "text": "Catalog (15/09/2026) ghi nhận Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L: Giảm 12.500đ (20%); Sữa tươi tiệt trùng Meadow Fresh giàu canxi hộp 1L: Giảm 15.100đ (20%). Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé.",
+    "products": [
+      {
+        "product_id": "WIN_10010635",
+        "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+        "category": "Sữa Tươi",
+        "brand": "MEADOW FRESH",
+        "price_vnd": 50000,
+        "stock": 52,
+        "uom": "Hộp",
+        "data_timestamp": "2026-09-15T13:53:51.763106Z"
+      },
+      {
+        "product_id": "WIN_10010636",
+        "name": "Sữa tươi tiệt trùng Meadow Fresh giàu canxi hộp 1L",
+        "category": "Sữa Tươi",
+        "brand": "MEADOW FRESH",
+        "price_vnd": 60400,
+        "stock": 565,
+        "uom": "Hộp",
+        "data_timestamp": "2026-09-15T13:53:51.763188Z"
+      },
+      {
+        "product_id": "WIN_10325030",
+        "name": "Sữa tươi tiệt trùng nguyên kem Meadow Fresh lốc 3 hộp x 200ml",
+        "category": "Sữa Tươi",
+        "brand": "MEADOW FRESH",
+        "price_vnd": 39000,
+        "stock": 111,
+        "uom": "Gói 3",
+        "data_timestamp": "2026-09-15T13:53:51.763347Z"
+      },
+      {
+        "product_id": "WIN_10005425",
+        "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+        "category": "Sữa Tươi",
+        "brand": "DUTCH LADY",
+        "price_vnd": 6000,
+        "stock": 168,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:51.763962Z"
+      },
+      {
+        "product_id": "WIN_10005426",
+        "name": "Sữa tươi tiệt trùng Cô gái Hà Lan có đường túi 180ml",
+        "category": "Sữa Tươi",
+        "brand": "DUTCH LADY",
+        "price_vnd": 6000,
+        "stock": 96,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:51.764037Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "WIN_10010635",
+      "WIN_10010636",
+      "WIN_10325030",
+      "WIN_10005425",
+      "WIN_10005426"
+    ],
+    "tools_used": [
+      "list_product_promotions"
+    ]
+  }
+]

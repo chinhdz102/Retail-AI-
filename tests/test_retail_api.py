@@ -1310,6 +1310,60 @@ def client() -> httpx.AsyncClient:
 
 
 @pytest.mark.asyncio
+async def test_label_selection_followup_is_catalog_grounded_without_llm(
+    client: httpx.AsyncClient,
+) -> None:
+    app.dependency_overrides[get_settings] = lambda: Settings(catalog_repository="snapshot")
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "catalog-label-followup"})
+    session_id = UUID(created.json()["session_id"])
+    session_store.update_constraints(session_id, [{
+        "action": "SET",
+        "key": "consultation_plan",
+        "value": {
+            "need": "t muốn uống nước giải khát",
+            "searches": [{"query": "nước giải khát", "category": "Nước Ngọt"}],
+        },
+    }])
+
+    response = await client.post(
+        "/agent/respond",
+        json={"session_id": str(session_id), "text": "cáo nào ít đường"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["model"] == "deterministic-fast-path"
+    assert response.json()["tools_used"] == ["search_products"]
+    assert "không đường" in response.json()["text"].casefold()
+    assert "Tea+" in response.json()["text"]
+
+
+@pytest.mark.asyncio
+async def test_fresh_label_selection_is_catalog_grounded_without_llm(
+    client: httpx.AsyncClient,
+) -> None:
+    app.dependency_overrides[get_settings] = lambda: Settings(catalog_repository="snapshot")
+    app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
+    created = await client.post("/sessions", json={"kiosk_id": "catalog-label-fresh"})
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "các loại nước giải khát không đường dưới 100k",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["model"] == "deterministic-fast-path"
+    assert payload["tools_used"] == ["search_products"]
+    assert payload["products"]
+    assert all(item["price_vnd"] < 100_000 for item in payload["products"])
+    assert all("không đường" in item["name"].casefold() for item in payload["products"])
+    assert "Tea+" in payload["text"]
+
+
+@pytest.mark.asyncio
 async def test_session_creation_and_isolation(client: httpx.AsyncClient) -> None:
     session_a = await client.post("/sessions", json={"kiosk_id": "kiosk-a"})
     session_b = await client.post("/sessions", json={"kiosk_id": "kiosk-b"})
