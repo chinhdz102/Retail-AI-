@@ -27,6 +27,24 @@ export interface ProductSearchResponse {
   data_timestamp: string
 }
 
+export interface VisionMatch {
+  product_id: string
+  name: string
+  category: string | null
+  brand: string | null
+  score: number
+  shelf_code: string | null
+  shelf_friendly: string | null
+}
+
+export interface VisionIdentifyResponse {
+  matches: VisionMatch[]
+  top_match_confident: boolean
+  model: string
+  input_size: number[]
+  gallery_size: number
+}
+
 export interface AgentResponse {
   session_id: string
   text: string

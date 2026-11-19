@@ -23,6 +23,7 @@ import {
   createSession,
   createSynthesisTicket,
   getCart,
+  identifyProductImage,
   prepareVoice,
   prepareCheckout,
   respond,
@@ -31,7 +32,7 @@ import {
   transcribe,
 } from './api'
 import ChatPanel from './components/ChatPanel.vue'
-import type { CheckoutQuote, SandboxOrder, ShoppingCart } from './types'
+import type { CheckoutQuote, SandboxOrder, ShoppingCart, VisionIdentifyResponse } from './types'
 const SkyAvatar = defineAsyncComponent(
   () => import('./components/SkyAvatar.vue'),
 )
@@ -53,6 +54,7 @@ const messages = ref<ChatMessage[]>([])
 const cart = ref<ShoppingCart | null>(null)
 const checkoutQuote = ref<CheckoutQuote | null>(null)
 const sandboxOrder = ref<SandboxOrder | null>(null)
+const visionResult = ref<VisionIdentifyResponse | null>(null)
 const draft = ref('')
 const status = ref<AssistantStatus>('idle')
 const errorMessage = ref<string | null>(null)
@@ -806,6 +808,36 @@ async function sendMessage(value = draft.value, fromVoice = false) {
     status.value = 'error'
   }
 }
+async function handleIdentifyImage(file: File) {
+  if (status.value === 'thinking' || status.value === 'transcribing') return
+  if (!file.type.startsWith('image/')) {
+    errorMessage.value = 'Bạn chọn tệp ảnh sản phẩm giúp mình nhé.'
+    return
+  }
+  errorMessage.value = null
+  visionResult.value = null
+  status.value = 'thinking'
+  voiceHint.value = 'Đang đối chiếu ảnh với catalog'
+  try {
+    const result = await identifyProductImage(file)
+    visionResult.value = result
+    const top = result.matches[0]
+    pushMessage(
+      'assistant',
+      top
+        ? result.top_match_confident
+          ? `Mình nhận diện được ${top.name}. Vị trí gợi ý là ${top.shelf_friendly || 'chưa có dữ liệu kệ'}.`
+          : `Mình tìm thấy vài sản phẩm gần giống. Bạn xem danh sách nhận diện để xác nhận giúp mình nhé.`
+        : 'Mình chưa tìm thấy sản phẩm đủ giống trong catalog.',
+    )
+    status.value = 'idle'
+    voiceHint.value = voiceCopy.ready
+  } catch (error) {
+    errorMessage.value = toErrorMessage(error, 'Chưa nhận diện được ảnh sản phẩm')
+    status.value = 'error'
+    voiceHint.value = voiceCopy.retry
+  }
+}
 function handleQuickPrompt(value: string) {
   void sendMessage(value)
 }
@@ -1086,6 +1118,7 @@ onUnmounted(() => {
           :microphone-devices="microphoneDevices"
           :selected-microphone="selectedMicrophone"
           :active-microphone="activeMicrophone"
+          :vision-result="visionResult"
           @update:draft="draft = $event"
           @send="sendMessage()"
           @quick-prompt="handleQuickPrompt"
@@ -1102,6 +1135,7 @@ onUnmounted(() => {
           @clear-order="clearSandboxOrder"
           @end-session="handleEndSession"
           @request-support="handleRequestSupport"
+          @identify-image="handleIdentifyImage"
         />
       </aside>
     </Transition>

@@ -1,0 +1,625 @@
+{
+  "milk": [
+    {
+      "q": "Cửa hàng có những loại sữa tươi nào?",
+      "status": 200,
+      "ms": 3602,
+      "model": "openai/gpt-oss-20b",
+      "text": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L (50.000đ): Sữa hộp 1L tiện lợi cho gia đình, có thể dùng ngay trong cà phê hoặc nấu ăn\nSữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml (6.000đ): Túi 180ml nhỏ gọn, thích dùng khi đi du lịch hoặc làm bánh\nSữa tươi thanh trùng Mộc Châu có đường chai 880ml (41.500đ): Chai 880ml có đường, phù hợp khi muốn thêm vị ngọt",
+      "products": [
+        {
+          "product_id": "WIN_10010635",
+          "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+          "category": "Sữa Tươi",
+          "brand": "MEADOW FRESH",
+          "price_vnd": 50000,
+          "stock": 52,
+          "uom": "Hộp",
+          "data_timestamp": "2026-09-15T13:53:51.763106Z"
+        },
+        {
+          "product_id": "WIN_10005425",
+          "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+          "category": "Sữa Tươi",
+          "brand": "DUTCH LADY",
+          "price_vnd": 6000,
+          "stock": 168,
+          "uom": "Gói",
+          "data_timestamp": "2026-09-15T13:53:51.763962Z"
+        },
+        {
+          "product_id": "WIN_10005238",
+          "name": "Sữa tươi thanh trùng Mộc Châu có đường chai 880ml",
+          "category": "Sữa Tươi",
+          "brand": "MỘC CHÂU",
+          "price_vnd": 41500,
+          "stock": 8,
+          "uom": "Chai",
+          "data_timestamp": "2026-09-15T13:53:52.882366Z"
+        }
+      ],
+      "cart": null
+    },
+    {
+      "q": "Trong số đó, loại nào ít đường hoặc không đường?",
+      "status": 200,
+      "ms": 384,
+      "model": "deterministic-comparison",
+      "text": "Mình chưa thể kết luận loại nào sạch hơn chỉ từ thông tin trên nhãn. Bạn tham khảo hai dòng này nhé:\nSữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml (6.000đ): Đúng thương hiệu bạn hỏi\nSữa tươi thanh trùng Dalat Milk không đường hộp 450ml (24.400đ): Đúng thương hiệu bạn hỏi",
+      "products": [
+        {
+          "product_id": "WIN_10005425",
+          "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+          "category": "Sữa Tươi",
+          "brand": "DUTCH LADY",
+          "price_vnd": 6000,
+          "stock": 168,
+          "uom": "Gói",
+          "data_timestamp": "2026-09-15T13:53:51.763962Z"
+        },
+        {
+          "product_id": "WIN_10005241",
+          "name": "Sữa tươi thanh trùng Dalat Milk không đường hộp 450ml",
+          "category": "Sữa Tươi",
+          "brand": "ĐÀ LẠT MILK",
+          "price_vnd": 24400,
+          "stock": 16,
+          "uom": "Hộp",
+          "data_timestamp": "2026-09-15T13:53:51.765744Z"
+        }
+      ],
+      "cart": null
+    },
+    {
+      "q": "Loại nào có giá rẻ nhất?",
+      "status": 200,
+      "ms": 34,
+      "model": "catalog",
+      "text": "Thấp nhất: Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml — 6.000đ/gói.",
+      "products": [
+        {
+          "product_id": "WIN_10005425",
+          "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+          "category": "Sữa Tươi",
+          "brand": "DUTCH LADY",
+          "price_vnd": 6000,
+          "stock": 168,
+          "uom": "Gói",
+          "data_timestamp": "2026-09-15T13:53:51.763962Z"
+        }
+      ],
+      "cart": null
+    },
+    {
+      "q": "So sánh thành phần dinh dưỡng của hai loại rẻ nhất.",
+      "status": 200,
+      "ms": 4288,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Nếu tôi muốn mua cho người đang hạn chế đường thì nên chọn loại nào?",
+      "status": 200,
+      "ms": 1644,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Vậy lấy cho tôi 2 hộp loại bạn vừa đề xuất, tổng tiền bao nhiêu?",
+      "status": 200,
+      "ms": 43,
+      "model": "catalog",
+      "text": "Mình chưa xác định được loại hàng bạn đang hỏi. Bạn nói giúp mình tên hoặc nhóm hàng cụ thể hơn nhé.",
+      "products": [],
+      "cart": null
+    }
+  ],
+  "breakfast": [
+    {
+      "q": "Tôi muốn mua đồ ăn sáng nhanh, không cần nấu nướng.",
+      "status": 200,
+      "ms": 6,
+      "model": "shopping-controller",
+      "text": "Mình chưa tìm thấy do an sang nhanh đang bán được trong catalog; giỏ được giữ nguyên nhé.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Có món nào vừa rẻ vừa đủ no không?",
+      "status": 200,
+      "ms": 32,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Tôi không muốn ăn bánh mì, có lựa chọn khác không?",
+      "status": 200,
+      "ms": 137,
+      "model": "catalog-fallback",
+      "text": "Bạn có thể chọn trong vài loại này:\nBánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g (13.000đ).\nBánh mì chà bông Staff gói 60g (9.500đ).\nBánh trứng tươi sợi thịt gà Fasty túi 6gói x 26g (37.900đ).",
+      "products": [
+        {
+          "product_id": "WIN_10140547",
+          "name": "Bánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g",
+          "category": "Bánh mì",
+          "brand": "KINH ĐÔ",
+          "price_vnd": 13000,
+          "stock": 23,
+          "uom": "Cái",
+          "data_timestamp": "2026-09-15T13:53:30.496953Z"
+        },
+        {
+          "product_id": "WIN_10224919",
+          "name": "Bánh mì chà bông Staff gói 60g",
+          "category": "Bánh mì",
+          "brand": "HỮU NGHỊ",
+          "price_vnd": 9500,
+          "stock": 161,
+          "uom": "Gói",
+          "data_timestamp": "2026-09-15T13:53:30.497634Z"
+        },
+        {
+          "product_id": "WIN_10281159",
+          "name": "Bánh trứng tươi sợi thịt gà Fasty túi 6gói x 26g",
+          "category": "Bánh mì",
+          "brand": "TRÀNG AN",
+          "price_vnd": 37900,
+          "stock": 50,
+          "uom": "Gói 6",
+          "data_timestamp": "2026-09-15T13:53:30.497719Z"
+        }
+      ],
+      "cart": null
+    },
+    {
+      "q": "Trong những món vừa gợi ý, món nào có nhiều protein nhất?",
+      "status": 200,
+      "ms": 30,
+      "model": "local-policy",
+      "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Món đó còn hàng không? Nếu hết thì tìm giúp tôi món tương tự.",
+      "status": 200,
+      "ms": 35,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Tôi có ngân sách 50.000đ, hãy chọn một bữa sáng gồm món đó và một loại nước uống phù hợp.",
+      "status": 200,
+      "ms": 30,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    }
+  ],
+  "cart": [
+    {
+      "q": "Tôi muốn mua 3 chai nước suối, 2 gói mì và 1 hộp sữa.",
+      "status": 200,
+      "ms": 6,
+      "model": "shopping-controller",
+      "text": "Mình thấy nhiều món khớp với nuoc suoi: Thùng 24 chai nước khoáng thiên nhiên Vivant 500ml — 79.000đ; Nước uống đóng chai Aquafina thùng 24 chai x 355ml — 130.000đ; Nước uống Aquafina chai 5L — 26.900đ; Nước ion I-On Life 450ml — 5.500đ; Nước uống đóng chai Aquafina 1.5 lít — 10.900đ. Bạn nói rõ món đó giúp mình; giỏ vẫn giữ nguyên nhé.",
+      "products": [
+        {
+          "product_id": "WIN_10615687",
+          "name": "Thùng 24 chai nước khoáng thiên nhiên Vivant 500ml",
+          "category": "Nước Suối",
+          "brand": "VIVANT",
+          "price_vnd": 79000,
+          "stock": 43,
+          "uom": "Thùng",
+          "data_timestamp": "2026-09-15T13:53:40.203761Z"
+        },
+        {
+          "product_id": "WIN_10011215",
+          "name": "Nước uống đóng chai Aquafina thùng 24 chai x 355ml",
+          "category": "Nước Suối",
+          "brand": "AQUAFINA",
+          "price_vnd": 130000,
+          "stock": 74,
+          "uom": "Thùng",
+          "data_timestamp": "2026-09-15T13:53:40.205470Z"
+        },
+        {
+          "product_id": "WIN_10011218",
+          "name": "Nước uống Aquafina chai 5L",
+          "category": "Nước Suối",
+          "brand": "AQUAFINA",
+          "price_vnd": 26900,
+          "stock": 213,
+          "uom": "Chai",
+          "data_timestamp": "2026-09-15T13:53:40.206575Z"
+        },
+        {
+          "product_id": "WIN_10011695",
+          "name": "Nước ion I-On Life 450ml",
+          "category": "Nước Suối",
+          "brand": "I-ON LIFE",
+          "price_vnd": 5500,
+          "stock": 34,
+          "uom": "Chai",
+          "data_timestamp": "2026-09-15T13:53:40.206591Z"
+        },
+        {
+          "product_id": "WIN_10011217",
+          "name": "Nước uống đóng chai Aquafina 1.5 lít",
+          "category": "Nước Suối",
+          "brand": "AQUAFINA",
+          "price_vnd": 10900,
+          "stock": 324,
+          "uom": "Chai",
+          "data_timestamp": "2026-09-15T13:53:40.207341Z"
+        }
+      ],
+      "cart": null
+    },
+    {
+      "q": "Tổng tiền hiện tại của tôi là bao nhiêu?",
+      "status": 200,
+      "ms": 2,
+      "model": "shopping-controller",
+      "text": "Catalog hiện tại chưa phải dữ liệu chi nhánh được xác minh, nên mình chưa thể tạo giỏ hoặc checkout.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Trong giỏ hàng có sản phẩm nào đang được giảm giá không?",
+      "status": 200,
+      "ms": 20,
+      "model": "local-policy",
+      "text": "Catalog hiện tại chưa phải dữ liệu chi nhánh được xác minh, nên mình chưa thể tra khuyến mãi theo giỏ giao dịch.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Nếu tôi tăng số lượng mì lên 5 gói thì có được khuyến mãi gì không?",
+      "status": 502,
+      "ms": 36,
+      "model": null,
+      "text": "",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Vậy cập nhật thành 5 gói mì, nhưng bỏ hộp sữa ra khỏi giỏ hàng.",
+      "status": 200,
+      "ms": 5,
+      "model": "shopping-controller",
+      "text": "Catalog hiện tại chưa phải dữ liệu chi nhánh được xác minh, nên mình chưa thể tạo giỏ hoặc checkout.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Tính lại tổng tiền sau khuyến mãi và cho tôi biết còn thiếu bao nhiêu để đạt mức miễn phí vận chuyển, nếu cửa hàng có chính sách đó.",
+      "status": 502,
+      "ms": 43,
+      "model": null,
+      "text": "",
+      "products": [],
+      "cart": null
+    }
+  ],
+  "constraints": [
+    {
+      "q": "Tôi có 200.000đ để mua đồ ăn và nước uống cho 3 người.",
+      "status": 200,
+      "ms": 38,
+      "model": "catalog",
+      "text": "Mình chưa xác định được loại hàng bạn đang hỏi. Bạn nói giúp mình tên hoặc nhóm hàng cụ thể hơn nhé.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Hãy chọn các sản phẩm đang có trong cửa hàng sao cho không vượt quá ngân sách.",
+      "status": 200,
+      "ms": 12,
+      "model": "local-policy",
+      "text": "Mình chưa có dữ liệu địa điểm đã xác minh để tra cứu. Bạn có thể hỏi về sản phẩm hoặc thông tin cửa hàng.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Một người trong nhóm không ăn cay, hãy điều chỉnh danh sách.",
+      "status": 200,
+      "ms": 21,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Tôi muốn thêm nước trái cây nhưng vẫn giữ tổng tiền dưới 200.000đ.",
+      "status": 200,
+      "ms": 64,
+      "model": "catalog-fallback",
+      "text": "Mình gợi ý loại này:\nNước Trái Cây Cao Cấp Fruit Love Kiwi Táo - Hộp 1L (71.800đ).",
+      "products": [
+        {
+          "product_id": "WIN_10150722",
+          "name": "Nước Trái Cây Cao Cấp Fruit Love Kiwi Táo - Hộp 1L",
+          "category": "Nước Ngọt",
+          "brand": "VFRESH",
+          "price_vnd": 71800,
+          "stock": 20,
+          "uom": "Hộp",
+          "data_timestamp": "2026-09-15T13:53:41.149594Z"
+        }
+      ],
+      "cart": null
+    },
+    {
+      "q": "Nếu bỏ sản phẩm đắt nhất thì tôi có thể mua thêm những gì?",
+      "status": 200,
+      "ms": 648,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Chốt giúp tôi danh sách cuối cùng, số lượng từng món, tổng tiền và số tiền còn dư.",
+      "status": 200,
+      "ms": 30,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    }
+  ],
+  "catalog_admin": [
+    {
+      "q": "Hôm nay cửa hàng bán được bao nhiêu đơn hàng?",
+      "status": 200,
+      "ms": 12,
+      "model": "local-policy",
+      "text": "Mình chưa có dữ liệu đơn hàng, doanh thu, tốc độ bán hoặc nhập hàng đã xác minh của cửa hàng này.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Tổng doanh thu của những đơn hàng đó là bao nhiêu?",
+      "status": 200,
+      "ms": 3,
+      "model": "local-policy",
+      "text": "Mình chưa có dữ liệu đơn hàng, doanh thu, tốc độ bán hoặc nhập hàng đã xác minh của cửa hàng này.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Trong hôm nay, 5 sản phẩm nào bán chạy nhất theo số lượng?",
+      "status": 200,
+      "ms": 3,
+      "model": "local-policy",
+      "text": "Mình chưa có dữ liệu đơn hàng, doanh thu, tốc độ bán hoặc nhập hàng đã xác minh của cửa hàng này.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Trong 5 sản phẩm đó, sản phẩm nào hiện có tồn kho thấp nhất?",
+      "status": 200,
+      "ms": 3,
+      "model": "local-policy",
+      "text": "Mình chưa có dữ liệu đơn hàng, doanh thu, tốc độ bán hoặc nhập hàng đã xác minh của cửa hàng này.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Nếu tốc độ bán duy trì như hôm nay thì sản phẩm đó có nguy cơ hết hàng trong bao nhiêu ngày?",
+      "status": 200,
+      "ms": 3,
+      "model": "local-policy",
+      "text": "Mình chưa có dữ liệu đơn hàng, doanh thu, tốc độ bán hoặc nhập hàng đã xác minh của cửa hàng này.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "Hãy đề xuất số lượng cần nhập thêm để đủ bán trong 7 ngày tới, dựa trên tốc độ bán hiện tại.",
+      "status": 200,
+      "ms": 3,
+      "model": "local-policy",
+      "text": "Mình chưa có dữ liệu đơn hàng, doanh thu, tốc độ bán hoặc nhập hàng đã xác minh của cửa hàng này.",
+      "products": [],
+      "cart": null
+    }
+  ],
+  "extra": [
+    {
+      "q": "t muốn ăn lẩu thì ăn với cái gì",
+      "status": 200,
+      "ms": 181,
+      "model": "deterministic-fast-path",
+      "text": "Ăn lẩu thì ưu tiên thịt cắt lát, thêm hải sản, rau/nấm hoặc đồ thả lẩu; bạn tham khảo các lựa chọn này nhé:\nBa chỉ bò Úc  cắt lát  Kiaora khay 200g (87.100đ): Thái mỏng nếu cần rồi nhúng chín\nNghêu sạch Lenger khay 1.2kg (87.000đ): Làm sạch rồi nấu chín trong nước lẩu\nCải bó xôi WinEco gói 300g (20.720đ): Rửa sạch rồi nhúng chín cùng lẩu\nNấm kim châm 150g (14.900đ): Rửa sạch rồi nhúng chín cùng lẩu\nViên thả lẩu Kitkool 500g (96.900đ).",
+      "products": [
+        {
+          "product_id": "WIN_10140199",
+          "name": "Ba chỉ bò Úc  cắt lát  Kiaora khay 200g",
+          "category": "Thịt",
+          "brand": "KIAORA",
+          "price_vnd": 87100,
+          "stock": 6,
+          "uom": "Khay",
+          "data_timestamp": "2026-09-15T13:53:54.366166Z"
+        },
+        {
+          "product_id": "WIN_10053467",
+          "name": "Nghêu sạch Lenger khay 1.2kg",
+          "category": "Hải Sản",
+          "brand": "LENGER",
+          "price_vnd": 87000,
+          "stock": 18,
+          "uom": "Hộp",
+          "data_timestamp": "2026-09-15T13:53:43.272781Z"
+        },
+        {
+          "product_id": "WIN_10281825",
+          "name": "Cải bó xôi WinEco gói 300g",
+          "category": "Rau Lá",
+          "brand": "WINECO",
+          "price_vnd": 20720,
+          "stock": 1,
+          "uom": "Gói",
+          "data_timestamp": "2026-09-15T13:53:50.237993Z"
+        },
+        {
+          "product_id": "WIN_10053991",
+          "name": "Nấm kim châm 150g",
+          "category": "Rau Lá",
+          "brand": "NOBRAND",
+          "price_vnd": 14900,
+          "stock": 149,
+          "uom": "Gói",
+          "data_timestamp": "2026-09-15T13:53:50.238649Z"
+        },
+        {
+          "product_id": "WIN_10183494",
+          "name": "Viên thả lẩu Kitkool 500g",
+          "category": "Cá - Bò Viên",
+          "brand": "KITKOOL",
+          "price_vnd": 96900,
+          "stock": 2,
+          "uom": "Gói",
+          "data_timestamp": "2026-09-15T13:53:32.492424Z"
+        }
+      ],
+      "cart": null
+    },
+    {
+      "q": "t muốn uống nước giải khát",
+      "status": 200,
+      "ms": 217,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "cáo nào ít đường",
+      "status": 200,
+      "ms": 32,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "snack nào giá dưới 20.000 đồng?",
+      "status": 200,
+      "ms": 308,
+      "model": "catalog-guidance",
+      "text": "Bạn đang muốn tìm nhóm hàng nào và khoảng ngân sách bao nhiêu để mình lọc đúng sản phẩm trong cửa hàng cho bạn?",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "sữa tươi có khuyến mãi không?",
+      "status": 200,
+      "ms": 47,
+      "model": "catalog",
+      "text": "Catalog (15/09/2026) ghi nhận Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L: Giảm 12.500đ (20%); Sữa tươi tiệt trùng Meadow Fresh giàu canxi hộp 1L: Giảm 15.100đ (20%). Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé.",
+      "products": [
+        {
+          "product_id": "WIN_10010635",
+          "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+          "category": "Sữa Tươi",
+          "brand": "MEADOW FRESH",
+          "price_vnd": 50000,
+          "stock": 52,
+          "uom": "Hộp",
+          "data_timestamp": "2026-09-15T13:53:51.763106Z"
+        },
+        {
+          "product_id": "WIN_10010636",
+          "name": "Sữa tươi tiệt trùng Meadow Fresh giàu canxi hộp 1L",
+          "category": "Sữa Tươi",
+          "brand": "MEADOW FRESH",
+          "price_vnd": 60400,
+          "stock": 565,
+          "uom": "Hộp",
+          "data_timestamp": "2026-09-15T13:53:51.763188Z"
+        },
+        {
+          "product_id": "WIN_10325030",
+          "name": "Sữa tươi tiệt trùng nguyên kem Meadow Fresh lốc 3 hộp x 200ml",
+          "category": "Sữa Tươi",
+          "brand": "MEADOW FRESH",
+          "price_vnd": 39000,
+          "stock": 111,
+          "uom": "Gói 3",
+          "data_timestamp": "2026-09-15T13:53:51.763347Z"
+        },
+        {
+          "product_id": "WIN_10005425",
+          "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+          "category": "Sữa Tươi",
+          "brand": "DUTCH LADY",
+          "price_vnd": 6000,
+          "stock": 168,
+          "uom": "Gói",
+          "data_timestamp": "2026-09-15T13:53:51.763962Z"
+        },
+        {
+          "product_id": "WIN_10005426",
+          "name": "Sữa tươi tiệt trùng Cô gái Hà Lan có đường túi 180ml",
+          "category": "Sữa Tươi",
+          "brand": "DUTCH LADY",
+          "price_vnd": 6000,
+          "stock": 96,
+          "uom": "Gói",
+          "data_timestamp": "2026-09-15T13:53:51.764037Z"
+        }
+      ],
+      "cart": null
+    },
+    {
+      "q": "có viên thả bồn cầu không",
+      "status": 200,
+      "ms": 30,
+      "model": "catalog-no-match",
+      "text": "Mình chưa tìm thấy viên thả bồn cầu trong danh mục hàng đang tra cứu, nên chưa thể xác nhận cửa hàng có bán loại này.",
+      "products": [],
+      "cart": null
+    },
+    {
+      "q": "dầu gội chống gàu nào đang bán?",
+      "status": 200,
+      "ms": 40,
+      "model": "deterministic-fast-path",
+      "text": "Bạn tham khảo loại này nhé:\nDầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml (95.200đ).",
+      "products": [
+        {
+          "product_id": "WIN_10016912",
+          "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+          "category": "Chăm Sóc Tóc",
+          "brand": "SELSUN",
+          "price_vnd": 95200,
+          "stock": 31,
+          "uom": "Chai",
+          "data_timestamp": "2026-09-15T13:53:33.773419Z"
+        }
+      ],
+      "cart": null
+    },
+    {
+      "q": "Coca Zero để quầy nào ấy nhỉ?",
+      "status": 200,
+      "ms": 33,
+      "model": "catalog",
+      "text": "Mình chưa có vị trí kệ chính xác. Bạn nhờ nhân viên tại quầy chỉ giúp nhé.",
+      "products": [],
+      "cart": null
+    }
+  ]
+}

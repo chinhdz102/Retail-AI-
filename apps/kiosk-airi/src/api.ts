@@ -7,6 +7,7 @@ import type {
   ProductSearchResponse,
   SessionResponse,
   TranscriptionResponse,
+  VisionIdentifyResponse,
 } from './types'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '')
@@ -219,4 +220,16 @@ export async function createSynthesisTicket(
 export function searchProducts(query = '', limit = 6): Promise<ProductSearchResponse> {
   const params = new URLSearchParams({ q: query, limit: String(limit) })
   return request<ProductSearchResponse>(`/products/search?${params.toString()}`)
+}
+
+export function identifyProductImage(
+  image: File,
+  topK = 5,
+): Promise<VisionIdentifyResponse> {
+  const form = new FormData()
+  form.append('file', image, image.name || 'product-image')
+  return request<VisionIdentifyResponse>(`/vision/identify?top_k=${topK}`, {
+    method: 'POST',
+    body: form,
+  })
 }
