@@ -1,5 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from backend.services import retail_information
 from backend.services.retail_information import PostgresRetailInformationRepository
 
@@ -146,3 +148,27 @@ def test_empty_campaign_result_requires_complete_current_feed(monkeypatch):
 
     assert result.status == "DATA_UNAVAILABLE"
     assert "complete current coverage" in result.reason
+
+
+@pytest.mark.parametrize("ops_feed_path", ["", "ops_feed.json"])
+def test_snapshot_catalog_reads_branch_facts_only_with_the_ops_feed_enabled(
+    monkeypatch, ops_feed_path
+):
+    from backend import config
+
+    connection = FakeRetailInformationConnection()
+    _use_fake_connection(monkeypatch, connection)
+    settings = config.Settings(
+        _env_file=None, catalog_repository="snapshot", ops_feed_path=ops_feed_path,
+        database_url="postgresql+asyncpg://retail:retail@localhost:5432/retail",
+    )
+    monkeypatch.setattr(config, "get_settings", lambda: settings)
+
+    result = retail_information.lookup_retail_information("store", "kiosk-01")
+
+    if ops_feed_path:
+        assert result.status == "SUCCESS"
+        assert result.store["store_code"] == "BRANCH_12"
+    else:
+        assert result.status == "DATA_UNAVAILABLE"
+        assert result.reason == "Branch information is not available in the active demo repository."
