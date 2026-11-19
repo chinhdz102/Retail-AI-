@@ -5,10 +5,11 @@ import logging
 import re
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from time import perf_counter
 from typing import Literal
 from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import asyncpg
 from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -1584,12 +1585,19 @@ def _localized_retail_information_observation(
     store = observation.content.get("store") or {}
     items = observation.content.get("items") or []
     source_updated_at = observation.content.get("source_updated_at")
+    try:
+        local_zone = ZoneInfo(str(store.get("timezone") or "Asia/Ho_Chi_Minh"))
+    except (ZoneInfoNotFoundError, ValueError):
+        # No tz database (Windows without tzdata): Vietnam has used UTC+7 without DST since 1975.
+        local_zone = timezone(timedelta(hours=7))
 
     def date_text(value: object, include_time: bool = False) -> str:
         if not value:
             return ""
         try:
             parsed = datetime.fromisoformat(str(value))
+            if parsed.tzinfo is not None:  # show customers the store's local time, not UTC
+                parsed = parsed.astimezone(local_zone)
             return parsed.strftime("%d/%m/%Y %H:%M" if include_time else "%d/%m/%Y")
         except ValueError:
             return ""
@@ -1677,38 +1685,33 @@ def _localized_retail_information_observation(
         return f"Ưu đãi đang áp dụng tại {store_name}: " + "; ".join(summaries)
 
     if kind == "receipts":
-        if not items:
-            checked_en = f" (checked {checked})" if checked else ""
-            checked_zh = f"（检查时间 {checked}）" if checked else ""
+        # Shopper wording: "new arrivals", never back-office terms such as receiving slips.
+        if not items:  # only reached when the feed confirms full 7-day coverage
+            checked_en = f" (updated {checked})" if checked else ""
+            checked_zh = f"（更新时间 {checked}）" if checked else ""
             checked_vi = f" (cập nhật {checked})" if checked else ""
             if language == "en":
-                return (
-                    f"The verified receiving feed for {store_name} records no arrivals "
-                    f"in its covered period{checked_en}."
-                )
+                return f"In the past 7 days, {store_name} has had no new arrivals{checked_en}."
             if language == "zh":
-                return f"{store_name} 的已验证收货数据在覆盖时段内没有记录新到货{checked_zh}。"
-            return (
-                f"Nguồn phiếu nhận hàng đã xác minh của {store_name} không ghi nhận "
-                f"hàng mới trong khoảng dữ liệu được phủ{checked_vi}."
-            )
+                return f"过去 7 天，{store_name} 没有新到的商品{checked_zh}。"
+            return f"Trong 7 ngày qua, {store_name} chưa ghi nhận hàng mới về{checked_vi}."
         if language == "en":
             summaries = [
-                f"{item.get('product_name')} (received {date_text(item.get('received_at'), True)})"
+                f"{item.get('product_name')} (arrived {date_text(item.get('received_at'), True)})"
                 for item in items[:5]
             ]
-            return f"Recent verified arrivals at {store_name}: " + "; ".join(summaries)
+            return f"Recent new arrivals at {store_name}: " + "; ".join(summaries)
         if language == "zh":
             summaries = [
                 f"{item.get('product_name')}（到货时间 {date_text(item.get('received_at'), True)}）"
                 for item in items[:5]
             ]
-            return f"{store_name} 最近确认到货：" + "；".join(summaries)
+            return f"{store_name} 最近新到的商品：" + "；".join(summaries)
         summaries = [
-            f"{item.get('product_name')} (nhận lúc {date_text(item.get('received_at'), True)})"
+            f"{item.get('product_name')} (về lúc {date_text(item.get('received_at'), True)})"
             for item in items[:5]
         ]
-        return f"Các phiếu nhận hàng gần đây đã xác minh tại {store_name}: " + "; ".join(summaries)
+        return f"Hàng mới về gần đây tại {store_name}: " + "; ".join(summaries)
 
     if not items:
         if language == "en":

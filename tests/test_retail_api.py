@@ -2275,3 +2275,78 @@ async def test_azure_failure_does_not_silently_use_potentially_billable_elevenla
 
 def test_story_request_does_not_map_to_shelf_intent() -> None:
     assert _requested_snapshot_fields("Kể chuyện vui đi.") == ()
+
+
+def _receipt_observation(items, store_timezone=None, updated_at="2026-11-19T02:00:00+00:00"):
+    from backend.services.retail_tools import ToolObservation
+
+    store = {"store_code": "TLM-DEMO-01", "store_name": "Thanh Lam Mart Demo"}
+    if store_timezone:
+        store["timezone"] = store_timezone
+    return ToolObservation(
+        content={"store": store, "items": list(items), "source_updated_at": updated_at},
+        tool_name="list_recent_stock_receipts",
+    )
+
+
+def test_new_arrivals_use_shopper_wording_and_store_local_time() -> None:
+    from backend.api.main import _localized_retail_information_observation as render
+
+    observation = _receipt_observation([
+        {"product_name": "Cà chua chocolate 300g", "received_at": "2026-11-18T15:06:15+00:00"},
+        # 18:30 UTC is already the next day in Vietnam.
+        {"product_name": "Cải ngọt gói 500g", "received_at": "2026-11-18T18:30:00+00:00"},
+    ], store_timezone="Asia/Ho_Chi_Minh")
+
+    assert render(observation, "receipts", "vi") == (
+        "Hàng mới về gần đây tại Thanh Lam Mart Demo: Cà chua chocolate 300g (về lúc 18/11/2026 22:06); "
+        "Cải ngọt gói 500g (về lúc 19/11/2026 01:30)"
+    )
+    assert render(observation, "receipts", "en") == (
+        "Recent new arrivals at Thanh Lam Mart Demo: Cà chua chocolate 300g (arrived 18/11/2026 22:06); "
+        "Cải ngọt gói 500g (arrived 19/11/2026 01:30)"
+    )
+    zh = render(observation, "receipts", "zh")
+    assert zh.startswith("Thanh Lam Mart Demo 最近新到的商品：")
+    assert "到货时间 18/11/2026 22:06" in zh and "到货时间 19/11/2026 01:30" in zh
+    for language in ("vi", "en", "zh"):
+        text = render(observation, "receipts", language)
+        assert "phiếu" not in text and "verified" not in text and "15:06" not in text
+
+
+def test_no_new_arrivals_in_a_fully_covered_week() -> None:
+    from backend.api.main import _localized_retail_information_observation as render
+
+    observation = _receipt_observation([])  # no store timezone: Asia/Ho_Chi_Minh by default
+    assert render(observation, "receipts", "vi") == (
+        "Trong 7 ngày qua, Thanh Lam Mart Demo chưa ghi nhận hàng mới về (cập nhật 19/11/2026 09:00)."
+    )
+    assert render(observation, "receipts", "en") == (
+        "In the past 7 days, Thanh Lam Mart Demo has had no new arrivals (updated 19/11/2026 09:00)."
+    )
+    assert render(observation, "receipts", "zh") == (
+        "过去 7 天，Thanh Lam Mart Demo 没有新到的商品（更新时间 19/11/2026 09:00）。"
+    )
+
+
+def test_branch_times_follow_the_store_timezone_and_leave_naive_values_alone() -> None:
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    from backend.api.main import _localized_retail_information_observation as render
+
+    naive = _receipt_observation([{"product_name": "Sữa", "received_at": "2026-11-18T08:30:00"}])
+    assert "(về lúc 18/11/2026 08:30)" in render(naive, "receipts", "vi")
+    unknown = _receipt_observation(
+        [{"product_name": "Sữa", "received_at": "2026-11-18T01:30:00+00:00"}],
+        store_timezone="Not/AZone",
+    )
+    assert "(về lúc 18/11/2026 08:30)" in render(unknown, "receipts", "vi")  # falls back to UTC+7
+    try:
+        ZoneInfo("Asia/Tokyo")
+    except ZoneInfoNotFoundError:
+        pytest.skip("no tz database for Asia/Tokyo on this machine")
+    tokyo = _receipt_observation(
+        [{"product_name": "Sữa", "received_at": "2026-11-18T01:30:00+00:00"}],
+        store_timezone="Asia/Tokyo",
+    )
+    assert "(về lúc 18/11/2026 10:30)" in render(tokyo, "receipts", "vi")
