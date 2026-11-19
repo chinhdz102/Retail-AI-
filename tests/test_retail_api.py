@@ -10,6 +10,7 @@ from backend.api.main import (
     _administrative_action_requested,
     _catalog_additions_requested,
     _catalog_additions_tool_arguments,
+    _cart_promotion_requested,
     _fact_product_query,
     _generic_nearby_places_requested,
     _implicit_followup_fields,
@@ -17,6 +18,7 @@ from backend.api.main import (
     _localized_catalog_promotions,
     _new_stock_arrival_requested,
     _price_constraint_from_text,
+    _price_order_from_text,
     _product_ranking_requested,
     _promotion_list_tool_arguments,
     _prompt_override_requested,
@@ -24,6 +26,7 @@ from backend.api.main import (
     _requested_snapshot_fields,
     _retail_chain_operator_question,
     _sensitive_internal_information_requested,
+    _store_sales_analytics_requested,
     _system_prompt,
     _text_mentions_product,
     _unsupported_catalog_attribute_requested,
@@ -48,6 +51,8 @@ from backend.services.groq import (
 from backend.services.organization_profiles import get_organization_answer
 from backend.services.retail_information import RetailInformationResult
 from backend.services.retail_tools import ToolObservation
+from backend.services.shopping_flow import classify_shopping_action
+from backend.shared.contracts import SessionState
 
 
 def test_pack_size_in_catalog_name_is_not_an_unverified_stock_claim() -> None:
@@ -80,6 +85,66 @@ def test_pack_size_in_catalog_name_is_not_an_unverified_stock_claim() -> None:
 )
 def test_product_query_ignores_conversational_greeting(text: str, expected: str) -> None:
     assert _fact_product_query(text) == expected
+
+
+def test_referenced_product_purchase_keeps_quantity_for_the_latest_grounded_item() -> None:
+    action = classify_shopping_action(
+        "Vậy lấy cho tôi 2 hộp loại vừa đề xuất, tổng tiền bao nhiêu?",
+        SessionState.BROWSING,
+    )
+    assert action is not None
+    assert action.action.value == "ADD_ITEM"
+    assert action.quantity == 2
+    assert action.query == ""
+
+
+def test_multi_product_purchase_without_explicit_cart_words_parses_each_line() -> None:
+    action = classify_shopping_action(
+        "Tôi muốn mua 3 chai nước suối, 2 gói mì và 1 hộp sữa.",
+        SessionState.BROWSING,
+    )
+    assert action is not None
+    assert action.action.value == "ADD_ITEM"
+    assert action.line_items == (("nuoc suoi", 3), ("mi", 2), ("sua", 1))
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Loại nào có giá rẻ nhất?", "min"),
+        ("Loại nào đắt nhất?", "max"),
+        ("Có những loại nào?", None),
+    ],
+)
+def test_context_price_order_parser_keeps_followup_extrema_generic(
+    text: str, expected: str | None
+) -> None:
+    assert _price_order_from_text(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Trong giỏ hàng có sản phẩm nào đang được giảm giá không?", True),
+        ("Sữa tươi có khuyến mãi không?", False),
+    ],
+)
+def test_cart_promotion_query_is_scoped_to_the_current_cart(
+    text: str, expected: bool
+) -> None:
+    assert _cart_promotion_requested(text) is expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Hôm nay cửa hàng bán được bao nhiêu đơn hàng?",
+        "Tổng doanh thu của những đơn hàng đó là bao nhiêu?",
+        "Đề xuất số lượng cần nhập thêm cho 7 ngày.",
+    ],
+)
+def test_store_sales_questions_are_separated_from_product_search(text: str) -> None:
+    assert _store_sales_analytics_requested(text)
 
 
 @pytest.mark.parametrize(

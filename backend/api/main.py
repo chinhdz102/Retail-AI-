@@ -1010,6 +1010,26 @@ def _interaction_analytics_requested(text: str) -> bool:
     return any(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized) for phrase in phrases)
 
 
+def _store_sales_analytics_requested(text: str) -> bool:
+    normalized = _normalize_request_text(text)
+    phrases = (
+        "ban duoc bao nhieu don",
+        "so don hang",
+        "tong doanh thu",
+        "ban chay nhat theo so luong",
+        "ton kho thap nhat",
+        "toc do ban",
+        "nguy co het hang",
+        "nhap them",
+        "doanh thu",
+        "sales today",
+        "daily revenue",
+        "top selling products",
+        "inventory turnover",
+    )
+    return any(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized) for phrase in phrases)
+
+
 def _sensitive_internal_information_requested(text: str) -> bool:
     normalized = _normalize_request_text(text)
     protected_phrases = (
@@ -1785,6 +1805,17 @@ def _localized_interaction_analytics_unavailable(language: LanguageCode) -> str:
         "vi": (
             "Mình chưa có dữ liệu tương tác đã xác minh để thống kê câu hỏi "
             "hoặc sản phẩm được hỏi nhiều."
+        ),
+    }[language]
+
+
+def _localized_store_sales_unavailable(language: LanguageCode) -> str:
+    return {
+        "en": "I don't have a verified order, revenue, sales-velocity, or replenishment feed for this store.",
+        "zh": "我目前没有经过核实的门店订单、收入、销售速度或补货数据。",
+        "vi": (
+            "Mình chưa có dữ liệu đơn hàng, doanh thu, tốc độ bán hoặc nhập hàng "
+            "đã xác minh của cửa hàng này."
         ),
     }[language]
 
@@ -2856,6 +2887,8 @@ async def _handle_shopping_action(
                 return _record_shopping_turn(request, reply, model="shopping-controller")
 
             query = action.query
+            if action.action == ShoppingActionType.ADD_ITEM and not query:
+                query = record.last_grounded_product_id or record.last_grounded_product_name or ""
             selected_products: list[ProductSnapshot] = []
             if action.action == ShoppingActionType.ADD_ITEM and action.line_items:
                 resolved_lines: dict[str, tuple[ProductSnapshot, int]] = {}
@@ -3053,6 +3086,22 @@ async def _handle_shopping_action(
                 selected_products = [product] if product else []
 
             if action.action == ShoppingActionType.ADD_ITEM:
+                if settings.catalog_repository in {"snapshot", "postgres"}:
+                    product = selected_products[0]
+                    total = product.price_vnd * quantity
+                    formatted_total = f"{total:,}".replace(",", ".")
+                    reply = (
+                        f"Catalog hiện tại chưa phải dữ liệu chi nhánh được xác minh, nên mình "
+                        f"chưa thể tạo giỏ. Theo giá tham khảo, {quantity} × {product.name} "
+                        f"là {formatted_total}đ."
+                    )
+                    return _record_shopping_turn(
+                        request,
+                        reply,
+                        model="shopping-controller",
+                        tools_used=["search_products", "shopping_policy"],
+                        products=selected_products,
+                    )
                 cart_snapshot = shopping_service.add_item(
                     request.session_id,
                     product_id,
@@ -3410,6 +3459,12 @@ async def agent_respond(
             record.state,
             _localized_interaction_analytics_unavailable(request.language),
         )
+    if _store_sales_analytics_requested(request.text):
+        return _local_policy_response(
+            request,
+            record.state,
+            _localized_store_sales_unavailable(request.language),
+        )
     if _foreign_currency_budget_requested(
         request.text
     ) or _unparsed_recommendation_budget_requested(request.text):
@@ -3444,6 +3499,65 @@ async def agent_respond(
             state=record.state,
         )
 
+    if _cart_promotion_requested(request.text):
+        if settings.catalog_repository != "demo":
+            return _local_policy_response(
+                request,
+                record.state,
+                "Catalog hiện tại chưa phải dữ liệu chi nhánh được xác minh, nên mình "
+                "chưa thể tra khuyến mãi theo giỏ giao dịch.",
+            )
+        try:
+            cart_snapshot = shopping_service.get_cart(request.session_id)
+            repository = get_product_repository(settings)
+        except ShoppingError:
+            return _local_policy_response(
+                request,
+                record.state,
+                "Mình chưa đọc được giỏ giao dịch để kiểm tra khuyến mãi.",
+            )
+        promoted = tuple(
+            product
+            for item in cart_snapshot.items
+            for product in [repository.get_product_snapshot(item.product_id)]
+            if product is not None and product.promotion
+        )
+        latest_timestamp = max(
+            (product.data_timestamp for product in promoted), default=None
+        )
+        observation = ToolObservation(
+            content={
+                "items": [
+                    {
+                        "product_id": product.product_id,
+                        "name": product.name,
+                        "promotion": product.promotion,
+                        "data_timestamp": product.data_timestamp.isoformat(),
+                    }
+                    for product in promoted
+                ],
+                "count": len(promoted),
+                "latest_snapshot_at": (
+                    latest_timestamp.isoformat() if latest_timestamp else None
+                ),
+                "snapshot_only": True,
+                "campaign_validity_verified": False,
+            },
+            products=promoted,
+            tool_name="list_product_promotions",
+            source=repository.source_name,
+            requested_fields=("promotion",),
+        )
+        reply = _localized_catalog_promotions(observation, request.language)
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="catalog",
+            tools_used=["get_cart", "list_product_promotions"],
+            products=list(promoted),
+            cart=_cart_response(cart_snapshot),
+        )
+
     followup_fields = _implicit_followup_fields(request.text)
     promotion_list_arguments = _promotion_list_tool_arguments(request.text)
     catalog_additions_arguments = _catalog_additions_tool_arguments(request.text)
@@ -3465,6 +3579,42 @@ async def agent_respond(
                 reply,
             )
     broad_price_lookup = _broad_price_lookup_arguments(request.text, requested_fields)
+    context_price_order = _price_order_from_text(request.text)
+    if (
+        requested_fields == ("price_vnd",)
+        and context_price_order
+        and record.shopping.selected_product_ids
+        and promotion_list_arguments is None
+        and catalog_additions_arguments is None
+        and not prompt_override
+    ):
+        repository = get_product_repository(settings)
+        selected = [
+            repository.get_product_snapshot(product_id)
+            for product_id in record.shopping.selected_product_ids
+        ]
+        selected = [product for product in selected if product is not None]
+        if selected:
+            chosen = (
+                min(selected, key=lambda product: product.price_vnd)
+                if context_price_order == "min"
+                else max(selected, key=lambda product: product.price_vnd)
+            )
+            reply = _localized_price_extrema((chosen,), context_price_order, request.language)
+            session_store.add_message(request.session_id, "user", request.text)
+            session_store.add_message(request.session_id, "assistant", reply)
+            session_store.set_last_grounded_product(
+                request.session_id, chosen.product_id, chosen.name
+            )
+            return AgentRespondResponse(
+                session_id=request.session_id,
+                text=reply,
+                model="catalog",
+                grounded_product_ids=[chosen.product_id],
+                tools_used=["search_products"],
+                products=[_product_card(chosen)],
+                state=record.state,
+            )
     if (
         requested_fields == ("shelf",)
         and settings.catalog_repository in {"snapshot", "postgres"}
@@ -4068,6 +4218,15 @@ def _promotion_list_tool_arguments(text: str) -> dict[str, object] | None:
     return None
 
 
+def _cart_promotion_requested(text: str) -> bool:
+    normalized = " ".join(_normalize_request_text(text).split())
+    has_cart = re.search(r"\b(?:trong|cua)\s+(?:gio|gio hang)\b", normalized)
+    has_promotion = re.search(
+        r"\b(?:khuyen mai|giam gia|uu dai|discount|promotion|sale)\b", normalized
+    )
+    return bool(has_cart and has_promotion)
+
+
 def _catalog_additions_tool_arguments(text: str) -> dict[str, object] | None:
     if not _catalog_additions_requested(text):
         return None
@@ -4480,6 +4639,15 @@ def _broad_price_lookup_arguments(
     query = _fact_product_query(text)
     return ({"query": query, "list_requested": list_requested,
              "price_order": price_order} if query else None)
+
+
+def _price_order_from_text(text: str) -> str | None:
+    normalized = " ".join(_normalize_request_text(text).split())
+    if re.search(r"\b(?:thap nhat|re nhat|gia re nhat)\b", normalized):
+        return "min"
+    if re.search(r"\b(?:cao nhat|dat nhat|gia dat nhat)\b", normalized):
+        return "max"
+    return None
 
 
 def _localized_safe_lookup_prompt(

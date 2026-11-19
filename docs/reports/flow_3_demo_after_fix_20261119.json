@@ -1,0 +1,304 @@
+{
+  "catalog_mode": "demo",
+  "exact": [
+    {
+      "n": 13,
+      "question": "Tôi muốn mua 3 chai nước suối, 2 gói mì và 1 hộp sữa.",
+      "status": 200,
+      "model": "shopping-controller",
+      "state": "BROWSING",
+      "text": "Mình chưa tìm thấy sua đang bán được trong catalog; giỏ được giữ nguyên nhé.",
+      "ids": [],
+      "cart": {
+        "cart_id": "38254a14-040c-4cc8-ae50-7e41def43bb4",
+        "session_id": "9c797739-ec6d-4b3a-8ec8-bee5f86e2e9e",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "n": 14,
+      "question": "Tổng tiền hiện tại của tôi là bao nhiêu?",
+      "status": 200,
+      "model": "shopping-controller",
+      "state": "BROWSING",
+      "text": "Giỏ hàng demo đang trống. Bạn nói tên món muốn thêm nhé.",
+      "ids": [],
+      "cart": {
+        "cart_id": "38254a14-040c-4cc8-ae50-7e41def43bb4",
+        "session_id": "9c797739-ec6d-4b3a-8ec8-bee5f86e2e9e",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "n": 15,
+      "question": "Trong giỏ hàng có sản phẩm nào đang được giảm giá không?",
+      "status": 200,
+      "model": "catalog",
+      "state": "BROWSING",
+      "text": "Catalog hiện chưa ghi nhận khuyến mãi phù hợp; mình chưa xác minh được các ưu đãi khác tại cửa hàng.",
+      "ids": [],
+      "cart": {
+        "cart_id": "38254a14-040c-4cc8-ae50-7e41def43bb4",
+        "session_id": "9c797739-ec6d-4b3a-8ec8-bee5f86e2e9e",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "n": 16,
+      "question": "Nếu tôi tăng số lượng mì lên 5 gói thì có được khuyến mãi gì không?",
+      "status": 200,
+      "model": "openai/gpt-oss-20b",
+      "state": "BROWSING",
+      "text": "Catalog hiện chưa ghi nhận khuyến mãi phù hợp; mình chưa xác minh được các ưu đãi khác tại cửa hàng.",
+      "ids": [],
+      "cart": {
+        "cart_id": "38254a14-040c-4cc8-ae50-7e41def43bb4",
+        "session_id": "9c797739-ec6d-4b3a-8ec8-bee5f86e2e9e",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "n": 17,
+      "question": "Vậy cập nhật thành 5 gói mì, nhưng bỏ hộp sữa ra khỏi giỏ hàng.",
+      "status": 200,
+      "model": "shopping-controller",
+      "state": "BROWSING",
+      "text": "Bạn nói rõ tên món trong giỏ giúp mình nhé.",
+      "ids": [],
+      "cart": {
+        "cart_id": "38254a14-040c-4cc8-ae50-7e41def43bb4",
+        "session_id": "9c797739-ec6d-4b3a-8ec8-bee5f86e2e9e",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "n": 18,
+      "question": "Tính lại tổng tiền sau khuyến mãi và cho tôi biết còn thiếu bao nhiêu để đạt mức miễn phí vận chuyển, nếu cửa hàng có chính sách đó.",
+      "status": 200,
+      "model": "openai/gpt-oss-20b",
+      "state": "BROWSING",
+      "text": "Catalog (31/08/2026) ghi nhận Sữa tươi ít đường 180ml: Mua 2 hộp giảm 1.000đ. Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé.",
+      "ids": [
+        "MILK01"
+      ],
+      "cart": {
+        "cart_id": "38254a14-040c-4cc8-ae50-7e41def43bb4",
+        "session_id": "9c797739-ec6d-4b3a-8ec8-bee5f86e2e9e",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    }
+  ],
+  "control": [
+    {
+      "n": "P1",
+      "question": "Tôi muốn mua 3 chai nước suối và 2 gói mì.",
+      "status": 200,
+      "model": "shopping-controller",
+      "state": "CART_ACTIVE",
+      "text": "Mình đã thêm 2 mặt hàng vào giỏ demo. Giỏ demo của bạn có:\n3 × Nước suối 500ml: 21.000đ\n2 × Mì ly bò hầm cay: 34.000đ\nTổng tạm tính: 55.000đ. Đây là dữ liệu sandbox.",
+      "ids": [
+        "WATER01",
+        "NOODLE01"
+      ],
+      "cart": {
+        "cart_id": "399dbcc6-7ca4-449f-8198-01325198750a",
+        "session_id": "601a2dac-5750-4b6e-b2cb-2ef17b355fcc",
+        "items": [
+          {
+            "product_id": "WATER01",
+            "name": "Nước suối 500ml",
+            "category": "drink",
+            "brand": null,
+            "unit_price_vnd": 7000,
+            "quantity": 3,
+            "line_total_vnd": 21000,
+            "available_stock": 40,
+            "uom": "chai",
+            "data_timestamp": "2026-08-31T00:00:00Z"
+          },
+          {
+            "product_id": "NOODLE01",
+            "name": "Mì ly bò hầm cay",
+            "category": "meal",
+            "brand": null,
+            "unit_price_vnd": 17000,
+            "quantity": 2,
+            "line_total_vnd": 34000,
+            "available_stock": 9,
+            "uom": "ly",
+            "data_timestamp": "2026-08-31T00:00:00Z"
+          }
+        ],
+        "item_count": 5,
+        "subtotal_vnd": 55000,
+        "total_vnd": 55000,
+        "version": 2,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "n": "P2",
+      "question": "Tổng tiền hiện tại của tôi là bao nhiêu?",
+      "status": 200,
+      "model": "shopping-controller",
+      "state": "CART_ACTIVE",
+      "text": "Giỏ demo của bạn có:\n3 × Nước suối 500ml: 21.000đ\n2 × Mì ly bò hầm cay: 34.000đ\nTổng tạm tính: 55.000đ. Đây là dữ liệu sandbox.",
+      "ids": [],
+      "cart": {
+        "cart_id": "399dbcc6-7ca4-449f-8198-01325198750a",
+        "session_id": "601a2dac-5750-4b6e-b2cb-2ef17b355fcc",
+        "items": [
+          {
+            "product_id": "WATER01",
+            "name": "Nước suối 500ml",
+            "category": "drink",
+            "brand": null,
+            "unit_price_vnd": 7000,
+            "quantity": 3,
+            "line_total_vnd": 21000,
+            "available_stock": 40,
+            "uom": "chai",
+            "data_timestamp": "2026-08-31T00:00:00Z"
+          },
+          {
+            "product_id": "NOODLE01",
+            "name": "Mì ly bò hầm cay",
+            "category": "meal",
+            "brand": null,
+            "unit_price_vnd": 17000,
+            "quantity": 2,
+            "line_total_vnd": 34000,
+            "available_stock": 9,
+            "uom": "ly",
+            "data_timestamp": "2026-08-31T00:00:00Z"
+          }
+        ],
+        "item_count": 5,
+        "subtotal_vnd": 55000,
+        "total_vnd": 55000,
+        "version": 2,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "n": "P3",
+      "question": "Cập nhật mì lên 5 trong giỏ.",
+      "status": 200,
+      "model": "shopping-controller",
+      "state": "CART_ACTIVE",
+      "text": "Mình đã cập nhật giỏ demo. Giỏ demo của bạn có:\n3 × Nước suối 500ml: 21.000đ\n5 × Mì ly bò hầm cay: 85.000đ\nTổng tạm tính: 106.000đ. Đây là dữ liệu sandbox.",
+      "ids": [
+        "NOODLE01"
+      ],
+      "cart": {
+        "cart_id": "399dbcc6-7ca4-449f-8198-01325198750a",
+        "session_id": "601a2dac-5750-4b6e-b2cb-2ef17b355fcc",
+        "items": [
+          {
+            "product_id": "WATER01",
+            "name": "Nước suối 500ml",
+            "category": "drink",
+            "brand": null,
+            "unit_price_vnd": 7000,
+            "quantity": 3,
+            "line_total_vnd": 21000,
+            "available_stock": 40,
+            "uom": "chai",
+            "data_timestamp": "2026-08-31T00:00:00Z"
+          },
+          {
+            "product_id": "NOODLE01",
+            "name": "Mì ly bò hầm cay",
+            "category": "meal",
+            "brand": null,
+            "unit_price_vnd": 17000,
+            "quantity": 5,
+            "line_total_vnd": 85000,
+            "available_stock": 9,
+            "uom": "ly",
+            "data_timestamp": "2026-08-31T00:00:00Z"
+          }
+        ],
+        "item_count": 8,
+        "subtotal_vnd": 106000,
+        "total_vnd": 106000,
+        "version": 3,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "n": "P4",
+      "question": "Xóa mì khỏi giỏ hàng.",
+      "status": 200,
+      "model": "shopping-controller",
+      "state": "CART_ACTIVE",
+      "text": "Mình đã cập nhật giỏ demo. Giỏ demo của bạn có:\n3 × Nước suối 500ml: 21.000đ\nTổng tạm tính: 21.000đ. Đây là dữ liệu sandbox.",
+      "ids": [
+        "NOODLE01"
+      ],
+      "cart": {
+        "cart_id": "399dbcc6-7ca4-449f-8198-01325198750a",
+        "session_id": "601a2dac-5750-4b6e-b2cb-2ef17b355fcc",
+        "items": [
+          {
+            "product_id": "WATER01",
+            "name": "Nước suối 500ml",
+            "category": "drink",
+            "brand": null,
+            "unit_price_vnd": 7000,
+            "quantity": 3,
+            "line_total_vnd": 21000,
+            "available_stock": 40,
+            "uom": "chai",
+            "data_timestamp": "2026-08-31T00:00:00Z"
+          }
+        ],
+        "item_count": 3,
+        "subtotal_vnd": 21000,
+        "total_vnd": 21000,
+        "version": 4,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    }
+  ]
+}

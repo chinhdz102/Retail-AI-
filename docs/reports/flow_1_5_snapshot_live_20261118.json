@@ -1,0 +1,787 @@
+{
+  "base_url": "http://127.0.0.1:8000",
+  "catalog_mode": "snapshot",
+  "flows": [
+    {
+      "flow": "flow1",
+      "session_id": "eb28aadf-585e-4a7f-9f98-00e2ca949549",
+      "turns": [
+        {
+          "number": 1,
+          "question": "Cửa hàng có những loại sữa tươi nào?",
+          "http_status": 200,
+          "elapsed_ms": 20358,
+          "text": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L (50.000đ).\nSữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml (6.000đ).\nSữa tươi thanh trùng Mộc Châu có đường chai 880ml (41.500đ).",
+          "model": "openai/gpt-oss-20b",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10010635",
+            "TLM_10005425",
+            "TLM_10005238"
+          ],
+          "state": "BROWSING",
+          "products": [
+            {
+              "product_id": "TLM_10010635",
+              "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+              "category": "Sữa Tươi",
+              "brand": "MEADOW FRESH",
+              "price_vnd": 50000,
+              "stock": 52,
+              "uom": "Hộp",
+              "data_timestamp": "2026-09-15T13:53:51.763106Z"
+            },
+            {
+              "product_id": "TLM_10005425",
+              "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+              "category": "Sữa Tươi",
+              "brand": "DUTCH LADY",
+              "price_vnd": 6000,
+              "stock": 168,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:51.763962Z"
+            },
+            {
+              "product_id": "TLM_10005238",
+              "name": "Sữa tươi thanh trùng Mộc Châu có đường chai 880ml",
+              "category": "Sữa Tươi",
+              "brand": "MỘC CHÂU",
+              "price_vnd": 41500,
+              "stock": 8,
+              "uom": "Chai",
+              "data_timestamp": "2026-09-15T13:53:52.882366Z"
+            }
+          ],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 2,
+          "question": "Trong số đó, loại nào ít đường hoặc không đường?",
+          "http_status": 200,
+          "elapsed_ms": 17,
+          "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+          "model": "local-policy",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 3,
+          "question": "Loại nào có giá rẻ nhất?",
+          "http_status": 200,
+          "elapsed_ms": 27,
+          "text": "Được chứ. Bạn đang muốn chọn đồ ăn, đồ uống hay nhóm khác? Cho mình thêm tầm giá hoặc tiêu chí nhé.",
+          "model": "local-clarification",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 4,
+          "question": "So sánh thành phần dinh dưỡng của hai loại rẻ nhất.",
+          "http_status": 200,
+          "elapsed_ms": 33883,
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "model": "catalog-guidance",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 5,
+          "question": "Nếu tôi muốn mua cho người đang hạn chế đường thì nên chọn loại nào?",
+          "http_status": 200,
+          "elapsed_ms": 12934,
+          "text": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml (6.000đ): Sữa tươi tiệt trùng 180ml có thể dùng ngay trong sinh tố hoặc pha với cà phê mà không cần thêm đường",
+          "model": "openai/gpt-oss-20b",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10005425"
+          ],
+          "state": "BROWSING",
+          "products": [
+            {
+              "product_id": "TLM_10005425",
+              "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+              "category": "Sữa Tươi",
+              "brand": "DUTCH LADY",
+              "price_vnd": 6000,
+              "stock": 168,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:51.763962Z"
+            }
+          ],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 6,
+          "question": "Vậy lấy cho tôi 2 hộp loại bạn vừa đề xuất, tổng tiền bao nhiêu?",
+          "http_status": 200,
+          "elapsed_ms": 46,
+          "text": "Mình chưa xác định được loại hàng bạn đang hỏi. Bạn nói giúp mình tên hoặc nhóm hàng cụ thể hơn nhé.",
+          "model": "catalog",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        }
+      ]
+    },
+    {
+      "flow": "flow2",
+      "session_id": "bbb2412d-4a06-4893-b5dc-fa72f36061e1",
+      "turns": [
+        {
+          "number": 1,
+          "question": "Tôi muốn mua đồ ăn sáng nhanh, không cần nấu nướng.",
+          "http_status": 200,
+          "elapsed_ms": 7903,
+          "text": "Bánh cốm Bảo Minh hộp 85g (11.900đ).\nBánh Dorayaki Marukyo truyền thống 310g (143.500đ).\nSnack Oishi bắp ngọt vị phô mai 35/39g (5.400đ).",
+          "model": "openai/gpt-oss-20b",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10055440",
+            "TLM_10140693",
+            "TLM_10320541"
+          ],
+          "state": "BROWSING",
+          "products": [
+            {
+              "product_id": "TLM_10055440",
+              "name": "Bánh cốm Bảo Minh hộp 85g",
+              "category": "Bánh mì",
+              "brand": "BẢO MINH",
+              "price_vnd": 11900,
+              "stock": 10,
+              "uom": "Hộp",
+              "data_timestamp": "2026-09-15T13:53:30.496930Z"
+            },
+            {
+              "product_id": "TLM_10140693",
+              "name": "Bánh Dorayaki Marukyo truyền thống 310g",
+              "category": "Bánh mì",
+              "brand": "MARUKYO",
+              "price_vnd": 143500,
+              "stock": 3,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:30.496968Z"
+            },
+            {
+              "product_id": "TLM_10320541",
+              "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+              "category": "Bánh Snack",
+              "brand": "OISHI",
+              "price_vnd": 5400,
+              "stock": 145,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:30.460299Z"
+            }
+          ],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 2,
+          "question": "Có món nào vừa rẻ vừa đủ no không?",
+          "http_status": 200,
+          "elapsed_ms": 11719,
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "model": "catalog-guidance",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 3,
+          "question": "Tôi không muốn ăn bánh mì, có lựa chọn khác không?",
+          "http_status": 200,
+          "elapsed_ms": 8359,
+          "text": "Bạn không thể tìm thấy sản phẩm nào phù hợp với yêu cầu “không ăn bánh mì” trong kho hiện tại. Bạn có thể thử các loại bánh ngọt, bánh quy hoặc bánh snack khác như bánh tráng trộn, bánh kẹo, hoặc bánh mì chảo không chứa bánh mì.",
+          "model": "openai/gpt-oss-20b",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 4,
+          "question": "Trong những món vừa gợi ý, món nào có nhiều protein nhất?",
+          "http_status": 200,
+          "elapsed_ms": 18,
+          "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+          "model": "local-policy",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 5,
+          "question": "Món đó còn hàng không? Nếu hết thì tìm giúp tôi món tương tự.",
+          "http_status": 200,
+          "elapsed_ms": 11761,
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "model": "catalog-guidance",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 6,
+          "question": "Tôi có ngân sách 50.000đ, hãy chọn một bữa sáng gồm món đó và một loại nước uống phù hợp.",
+          "http_status": 200,
+          "elapsed_ms": 8845,
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "model": "catalog-guidance",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        }
+      ]
+    },
+    {
+      "flow": "flow3",
+      "session_id": "55ab68d7-12cc-4a07-941b-6d6f1133d389",
+      "turns": [
+        {
+          "number": 1,
+          "question": "Tôi muốn mua 3 chai nước suối, 2 gói mì và 1 hộp sữa.",
+          "http_status": 200,
+          "elapsed_ms": 10492,
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "model": "catalog-guidance",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 2,
+          "question": "Tổng tiền hiện tại của tôi là bao nhiêu?",
+          "http_status": 200,
+          "elapsed_ms": 32,
+          "text": "Mình tìm thấy vài mặt hàng gần giống: Bánh Mochi nhân tổng hợp Yuki& Love  450g, Thạch trái cây Vfoods tổng hợp 1kg, Bánh bao chỉ tổng hợp 300g. Bạn muốn hỏi đúng vị hoặc khối lượng nào để mình tra cho chuẩn?",
+          "model": "catalog",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10014047",
+            "TLM_10014602",
+            "TLM_10607316",
+            "TLM_10014648",
+            "TLM_10015143"
+          ],
+          "state": "BROWSING",
+          "products": [
+            {
+              "product_id": "TLM_10014047",
+              "name": "Bánh Mochi nhân tổng hợp Yuki& Love  450g",
+              "category": "Bánh Xốp - Bánh Quy",
+              "brand": "YUKI&LOVE",
+              "price_vnd": 152000,
+              "stock": 10,
+              "uom": "Hộp",
+              "data_timestamp": "2026-09-15T13:53:30.449715Z"
+            },
+            {
+              "product_id": "TLM_10014602",
+              "name": "Thạch trái cây Vfoods tổng hợp 1kg",
+              "category": "Kẹo - Chocolate",
+              "brand": "VFOODS",
+              "price_vnd": 46000,
+              "stock": 5,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:30.453596Z"
+            },
+            {
+              "product_id": "TLM_10607316",
+              "name": "Bánh bao chỉ tổng hợp 300g",
+              "category": "Bánh Xốp - Bánh Quy",
+              "brand": "NGUYÊN HUY",
+              "price_vnd": 159600,
+              "stock": 11,
+              "uom": "Hộp",
+              "data_timestamp": "2026-09-15T13:53:30.451879Z"
+            },
+            {
+              "product_id": "TLM_10014648",
+              "name": "Kẹo dẻo LOT 100 tổng hợp 320g",
+              "category": "Kẹo - Chocolate",
+              "brand": "LOT 100",
+              "price_vnd": 92700,
+              "stock": 22,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:30.454024Z"
+            },
+            {
+              "product_id": "TLM_10015143",
+              "name": "Thạch dừa tổng hợp Nanaco vỉ 6 hộp 80g",
+              "category": "Kẹo - Chocolate",
+              "brand": "NANACO",
+              "price_vnd": 64500,
+              "stock": 37,
+              "uom": "VỈ",
+              "data_timestamp": "2026-09-15T13:53:30.454956Z"
+            }
+          ],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 3,
+          "question": "Trong giỏ hàng có sản phẩm nào đang được giảm giá không?",
+          "http_status": 200,
+          "elapsed_ms": 51,
+          "text": "Catalog (15/09/2026) ghi nhận Bánh quế vị kem dâu Cosy gói 132g: Giảm 4.300đ (28%); Bánh quế vị kem lá dứa Cosy gói 132g: Giảm 4.300đ (28%). Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé.",
+          "model": "catalog",
+          "tools_used": [
+            "list_product_promotions"
+          ],
+          "grounded_product_ids": [
+            "TLM_10013649",
+            "TLM_10013650",
+            "TLM_10013652",
+            "TLM_10197436",
+            "TLM_10016331"
+          ],
+          "state": "BROWSING",
+          "products": [
+            {
+              "product_id": "TLM_10013649",
+              "name": "Bánh quế vị kem dâu Cosy gói 132g",
+              "category": "Bánh Xốp - Bánh Quy",
+              "brand": "COSY",
+              "price_vnd": 10900,
+              "stock": 57,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:30.291695Z"
+            },
+            {
+              "product_id": "TLM_10013650",
+              "name": "Bánh quế vị kem lá dứa Cosy gói 132g",
+              "category": "Bánh Xốp - Bánh Quy",
+              "brand": "COSY",
+              "price_vnd": 10900,
+              "stock": 20,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:30.291786Z"
+            },
+            {
+              "product_id": "TLM_10013652",
+              "name": "Bánh quế vị kem socola Cosy Kinh Đô gói 132g",
+              "category": "Bánh Xốp - Bánh Quy",
+              "brand": "COSY",
+              "price_vnd": 10900,
+              "stock": 21,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:30.291869Z"
+            },
+            {
+              "product_id": "TLM_10197436",
+              "name": "Bánh quế Cosy xoài xí muội 126/117,6g",
+              "category": "Bánh Xốp - Bánh Quy",
+              "brand": "COSY",
+              "price_vnd": 10900,
+              "stock": 12,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:30.291888Z"
+            },
+            {
+              "product_id": "TLM_10016331",
+              "name": "Bánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g",
+              "category": "Bánh Snack",
+              "brand": "LAY'S",
+              "price_vnd": 25900,
+              "stock": 90,
+              "uom": "Lon",
+              "data_timestamp": "2026-09-15T13:53:30.291906Z"
+            }
+          ],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 4,
+          "question": "Nếu tôi tăng số lượng mì lên 5 gói thì có được khuyến mãi gì không?",
+          "http_status": 200,
+          "elapsed_ms": 2244,
+          "text": "Catalog (15/09/2026) ghi nhận Lốc 6 gói bánh trứng Karo chà bông 26g: Giảm 6.100đ (15%); Bánh trứng tươi sợi thịt gà Fasty túi 6gói x 26g: Giảm 3.600đ (9%). Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé.",
+          "model": "openai/gpt-oss-20b",
+          "tools_used": [
+            "list_product_promotions"
+          ],
+          "grounded_product_ids": [
+            "TLM_10140247",
+            "TLM_10281159",
+            "TLM_10281742",
+            "TLM_10010027",
+            "TLM_10010026"
+          ],
+          "state": "BROWSING",
+          "products": [
+            {
+              "product_id": "TLM_10140247",
+              "name": "Lốc 6 gói bánh trứng Karo chà bông 26g",
+              "category": "Bánh mì",
+              "brand": "HOÀN HẢO",
+              "price_vnd": 33900,
+              "stock": 206,
+              "uom": "Gói 6",
+              "data_timestamp": "2026-09-15T13:53:30.497438Z"
+            },
+            {
+              "product_id": "TLM_10281159",
+              "name": "Bánh trứng tươi sợi thịt gà Fasty túi 6gói x 26g",
+              "category": "Bánh mì",
+              "brand": "TRÀNG AN",
+              "price_vnd": 37900,
+              "stock": 50,
+              "uom": "Gói 6",
+              "data_timestamp": "2026-09-15T13:53:30.497719Z"
+            },
+            {
+              "product_id": "TLM_10281742",
+              "name": "Bịch 6 gói Karo Bánh trứng chà bông phô mai 26g",
+              "category": "Bánh mì",
+              "brand": "HOÀN HẢO",
+              "price_vnd": 33900,
+              "stock": 58,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:30.497781Z"
+            },
+            {
+              "product_id": "TLM_10010027",
+              "name": "Bột mì đa dụng Meizan gói 1kg",
+              "category": "Bột Các Loại",
+              "brand": "MEIZAN",
+              "price_vnd": 27100,
+              "stock": 221,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:32.401925Z"
+            },
+            {
+              "product_id": "TLM_10010026",
+              "name": "Bột mì đa dụng Meizan gói 500g",
+              "category": "Bột Các Loại",
+              "brand": "MEIZAN",
+              "price_vnd": 14500,
+              "stock": 134,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:32.402000Z"
+            }
+          ],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 5,
+          "question": "Vậy cập nhật thành 5 gói mì, nhưng bỏ hộp sữa ra khỏi giỏ hàng.",
+          "http_status": 200,
+          "elapsed_ms": 7,
+          "text": "Catalog hiện tại chưa phải dữ liệu chi nhánh được xác minh, nên mình chưa thể tạo giỏ hoặc checkout.",
+          "model": "shopping-controller",
+          "tools_used": [
+            "shopping_policy"
+          ],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 6,
+          "question": "Tính lại tổng tiền sau khuyến mãi và cho tôi biết còn thiếu bao nhiêu để đạt mức miễn phí vận chuyển, nếu cửa hàng có chính sách đó.",
+          "http_status": 200,
+          "elapsed_ms": 1432,
+          "text": "Mình chưa xác định được loại hàng bạn đang hỏi. Bạn nói giúp mình tên hoặc nhóm hàng cụ thể hơn nhé.",
+          "model": "openai/gpt-oss-20b",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        }
+      ]
+    },
+    {
+      "flow": "flow4",
+      "session_id": "3b325b23-68a5-436d-9dc7-adf89b649545",
+      "turns": [
+        {
+          "number": 1,
+          "question": "Tôi có 200.000đ để mua đồ ăn và nước uống cho 3 người.",
+          "http_status": 200,
+          "elapsed_ms": 37,
+          "text": "Mình chưa xác định được loại hàng bạn đang hỏi. Bạn nói giúp mình tên hoặc nhóm hàng cụ thể hơn nhé.",
+          "model": "catalog",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 2,
+          "question": "Hãy chọn các sản phẩm đang có trong cửa hàng sao cho không vượt quá ngân sách.",
+          "http_status": 200,
+          "elapsed_ms": 12,
+          "text": "Mình chưa có dữ liệu địa điểm đã xác minh để tra cứu. Bạn có thể hỏi về sản phẩm hoặc thông tin cửa hàng.",
+          "model": "local-policy",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 3,
+          "question": "Một người trong nhóm không ăn cay, hãy điều chỉnh danh sách.",
+          "http_status": 200,
+          "elapsed_ms": 7622,
+          "text": "Mình ghép nhanh các món theo nhu cầu của bạn:\nDa cá vị trứng muối Feddy G gói 25g (14.900đ).\nThịt bò Úc Kiaora xay khay 200g (68.700đ).\nRau mầm cải xanh  WinEco 100g (14.800đ).\n\nTổng: 98.400đ.",
+          "model": "catalog-fallback",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10281241",
+            "TLM_10282507",
+            "TLM_10281840"
+          ],
+          "state": "BROWSING",
+          "products": [
+            {
+              "product_id": "TLM_10281241",
+              "name": "Da cá vị trứng muối Feddy G gói 25g",
+              "category": "Thực Phẩm Chế Biến Khác",
+              "brand": "FEDDY",
+              "price_vnd": 14900,
+              "stock": 4,
+              "uom": "Gói",
+              "data_timestamp": "2026-09-15T13:53:55.092798Z"
+            },
+            {
+              "product_id": "TLM_10282507",
+              "name": "Thịt bò Úc Kiaora xay khay 200g",
+              "category": "Thịt",
+              "brand": "KIAORA",
+              "price_vnd": 68700,
+              "stock": 1,
+              "uom": "Khay",
+              "data_timestamp": "2026-09-15T13:53:54.366843Z"
+            },
+            {
+              "product_id": "TLM_10281840",
+              "name": "Rau mầm cải xanh  WinEco 100g",
+              "category": "Rau Lá",
+              "brand": "WINECO",
+              "price_vnd": 14800,
+              "stock": 33,
+              "uom": "Hộp",
+              "data_timestamp": "2026-09-15T13:53:50.238132Z"
+            }
+          ],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 4,
+          "question": "Tôi muốn thêm nước trái cây nhưng vẫn giữ tổng tiền dưới 200.000đ.",
+          "http_status": 200,
+          "elapsed_ms": 60,
+          "text": "Mình gợi ý loại này:\nNước Trái Cây Cao Cấp Fruit Love Kiwi Táo - Hộp 1L (71.800đ).",
+          "model": "catalog-fallback",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [
+            "TLM_10150722"
+          ],
+          "state": "BROWSING",
+          "products": [
+            {
+              "product_id": "TLM_10150722",
+              "name": "Nước Trái Cây Cao Cấp Fruit Love Kiwi Táo - Hộp 1L",
+              "category": "Nước Ngọt",
+              "brand": "VFRESH",
+              "price_vnd": 71800,
+              "stock": 20,
+              "uom": "Hộp",
+              "data_timestamp": "2026-09-15T13:53:41.149594Z"
+            }
+          ],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 5,
+          "question": "Nếu bỏ sản phẩm đắt nhất thì tôi có thể mua thêm những gì?",
+          "http_status": 200,
+          "elapsed_ms": 645,
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "model": "catalog-guidance",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 6,
+          "question": "Chốt giúp tôi danh sách cuối cùng, số lượng từng món, tổng tiền và số tiền còn dư.",
+          "http_status": 200,
+          "elapsed_ms": 10,
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "model": "catalog-guidance",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        }
+      ]
+    },
+    {
+      "flow": "flow5",
+      "session_id": "9d434965-fa8d-4350-881a-c3b04adb601f",
+      "turns": [
+        {
+          "number": 1,
+          "question": "Hôm nay cửa hàng bán được bao nhiêu đơn hàng?",
+          "http_status": 200,
+          "elapsed_ms": 23,
+          "text": "Mình chưa xác định được loại hàng bạn đang hỏi. Bạn nói giúp mình tên hoặc nhóm hàng cụ thể hơn nhé.",
+          "model": "catalog",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 2,
+          "question": "Tổng doanh thu của những đơn hàng đó là bao nhiêu?",
+          "http_status": 200,
+          "elapsed_ms": 36,
+          "text": "Mình chưa xác định được loại hàng bạn đang hỏi. Bạn nói giúp mình tên hoặc nhóm hàng cụ thể hơn nhé.",
+          "model": "catalog",
+          "tools_used": [
+            "search_products"
+          ],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 3,
+          "question": "Trong hôm nay, 5 sản phẩm nào bán chạy nhất theo số lượng?",
+          "http_status": 200,
+          "elapsed_ms": 30892,
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "model": "catalog-guidance",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 4,
+          "question": "Trong 5 sản phẩm đó, sản phẩm nào hiện có tồn kho thấp nhất?",
+          "http_status": 200,
+          "elapsed_ms": 1271,
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "model": "catalog-guidance",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        },
+        {
+          "number": 5,
+          "question": "Nếu tốc độ bán duy trì như hôm nay thì sản phẩm đó có nguy cơ hết hàng trong bao nhiêu ngày?",
+          "http_status": 502,
+          "elapsed_ms": 34,
+          "body": "{\"detail\":{\"code\":\"assistant_busy\",\"message\":\"Sky đang tạm hết lượt trả lời. Bạn thử lại sau một lát nhé.\"}}"
+        },
+        {
+          "number": 6,
+          "question": "Hãy đề xuất số lượng cần nhập thêm để đủ bán trong 7 ngày tới, dựa trên tốc độ bán hiện tại.",
+          "http_status": 200,
+          "elapsed_ms": 308,
+          "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+          "model": "catalog-guidance",
+          "tools_used": [],
+          "grounded_product_ids": [],
+          "state": "BROWSING",
+          "products": [],
+          "cart": null,
+          "order": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+{
+  "catalog_mode": "demo",
+  "flow": "flow3",
+  "turns": [
+    {
+      "number": 13,
+      "question": "Tôi muốn mua 3 chai nước suối, 2 gói mì và 1 hộp sữa.",
+      "http_status": 200,
+      "response": {
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "text": "Mình chưa tìm thấy sua đang bán được trong catalog; giỏ được giữ nguyên nhé.",
+        "model": "shopping-controller",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cart_after": {
+        "cart_id": "0bebb04d-c49b-45bf-9a2a-bb96f167bb71",
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "number": 14,
+      "question": "Tổng tiền hiện tại của tôi là bao nhiêu?",
+      "http_status": 200,
+      "response": {
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "text": "Giỏ hàng demo đang trống. Bạn nói tên món muốn thêm nhé.",
+        "model": "shopping-controller",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "get_cart"
+        ],
+        "state": "BROWSING",
+        "products": [],
+        "cart": {
+          "cart_id": "0bebb04d-c49b-45bf-9a2a-bb96f167bb71",
+          "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+          "items": [],
+          "item_count": 0,
+          "subtotal_vnd": 0,
+          "total_vnd": 0,
+          "version": 1,
+          "sandbox": true,
+          "data_source": "DEMO_CATALOG"
+        },
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cart_after": {
+        "cart_id": "0bebb04d-c49b-45bf-9a2a-bb96f167bb71",
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "number": 15,
+      "question": "Trong giỏ hàng có sản phẩm nào đang được giảm giá không?",
+      "http_status": 200,
+      "response": {
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "text": "Catalog hiện chưa ghi nhận khuyến mãi phù hợp; mình chưa xác minh được các ưu đãi khác tại cửa hàng.",
+        "model": "catalog",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "get_cart",
+          "list_product_promotions"
+        ],
+        "state": "BROWSING",
+        "products": [],
+        "cart": {
+          "cart_id": "0bebb04d-c49b-45bf-9a2a-bb96f167bb71",
+          "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+          "items": [],
+          "item_count": 0,
+          "subtotal_vnd": 0,
+          "total_vnd": 0,
+          "version": 1,
+          "sandbox": true,
+          "data_source": "DEMO_CATALOG"
+        },
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cart_after": {
+        "cart_id": "0bebb04d-c49b-45bf-9a2a-bb96f167bb71",
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "number": 16,
+      "question": "Nếu tôi tăng số lượng mì lên 5 gói thì có được khuyến mãi gì không?",
+      "http_status": 200,
+      "response": {
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "text": "Catalog hiện chưa ghi nhận khuyến mãi phù hợp; mình chưa xác minh được các ưu đãi khác tại cửa hàng.",
+        "model": "openai/gpt-oss-20b",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "list_product_promotions",
+          "search_products"
+        ],
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cart_after": {
+        "cart_id": "0bebb04d-c49b-45bf-9a2a-bb96f167bb71",
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "number": 17,
+      "question": "Vậy cập nhật thành 5 gói mì, nhưng bỏ hộp sữa ra khỏi giỏ hàng.",
+      "http_status": 200,
+      "response": {
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "text": "Bạn nói rõ tên món trong giỏ giúp mình nhé.",
+        "model": "shopping-controller",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "get_cart"
+        ],
+        "state": "BROWSING",
+        "products": [],
+        "cart": {
+          "cart_id": "0bebb04d-c49b-45bf-9a2a-bb96f167bb71",
+          "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+          "items": [],
+          "item_count": 0,
+          "subtotal_vnd": 0,
+          "total_vnd": 0,
+          "version": 1,
+          "sandbox": true,
+          "data_source": "DEMO_CATALOG"
+        },
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cart_after": {
+        "cart_id": "0bebb04d-c49b-45bf-9a2a-bb96f167bb71",
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    },
+    {
+      "number": 18,
+      "question": "Tính lại tổng tiền sau khuyến mãi và cho tôi biết còn thiếu bao nhiêu để đạt mức miễn phí vận chuyển, nếu cửa hàng có chính sách đó.",
+      "http_status": 200,
+      "response": {
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "text": "Mình chưa xác định được loại hàng bạn đang hỏi. Bạn nói giúp mình tên hoặc nhóm hàng cụ thể hơn nhé.",
+        "model": "openai/gpt-oss-20b",
+        "grounded_product_ids": [],
+        "tools_used": [
+          "search_products"
+        ],
+        "state": "BROWSING",
+        "products": [],
+        "cart": null,
+        "checkout_quote": null,
+        "order": null,
+        "support_ticket": null
+      },
+      "cart_after": {
+        "cart_id": "0bebb04d-c49b-45bf-9a2a-bb96f167bb71",
+        "session_id": "5ce6c5c6-692d-4f0b-a049-38f20c45a2f5",
+        "items": [],
+        "item_count": 0,
+        "subtotal_vnd": 0,
+        "total_vnd": 0,
+        "version": 1,
+        "sandbox": true,
+        "data_source": "DEMO_CATALOG"
+      }
+    }
+  ]
+}
