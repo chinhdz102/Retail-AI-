@@ -2350,3 +2350,28 @@ def test_branch_times_follow_the_store_timezone_and_leave_naive_values_alone() -
         store_timezone="Asia/Tokyo",
     )
     assert "(về lúc 18/11/2026 10:30)" in render(tokyo, "receipts", "vi")
+
+
+def test_missing_new_arrival_data_is_explained_in_shopper_language() -> None:
+    from backend.api.main import _localized_retail_information_observation as render
+    from backend.services.retail_tools import ToolObservation
+
+    observation = ToolObservation(
+        content={"error": "No fresh verified receiving feed is configured for this branch."},
+        tool_name="list_recent_stock_receipts",
+        status="DATA_UNAVAILABLE",
+    )
+    assert render(observation, "receipts", "vi") == (
+        "Hiện mình chưa có thông tin hàng mới về của cửa hàng nên chưa thể cho bạn biết "
+        "món nào vừa về. Bạn có thể hỏi nhân viên cửa hàng nhé."
+    )
+    assert render(observation, "receipts", "en") == (
+        "I don't have up-to-date new-arrival information for this store right now, "
+        "so I can't tell you what just came in. Store staff can help."
+    )
+    assert render(observation, "receipts", "zh") == (
+        "目前没有本店的最新到货信息，暂时无法告诉您哪些商品刚到。可以咨询店内工作人员。"
+    )
+    for language in ("vi", "en", "zh"):
+        text = render(observation, "receipts", language)
+        assert not any(term in text for term in ("phiếu", "nhập kho", "receiving", "收货"))

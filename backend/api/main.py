@@ -1554,12 +1554,13 @@ def _localized_organization_answer(
 def _localized_stock_arrival_unavailable(language: LanguageCode) -> str:
     return {
         "en": (
-            "I don't have verified receiving records, so I can't confirm which items "
-            "were just delivered."
+            "I don't have up-to-date new-arrival information for this store right now, "
+            "so I can't tell you what just came in. Store staff can help."
         ),
-        "zh": "我没有经过核实的收货记录，因此无法确认哪些商品刚刚到货。",
+        "zh": "目前没有本店的最新到货信息，暂时无法告诉您哪些商品刚到。可以咨询店内工作人员。",
         "vi": (
-            "Mình chưa có phiếu nhận hàng đã xác minh nên chưa thể xác nhận món nào vừa nhập kho."
+            "Hiện mình chưa có thông tin hàng mới về của cửa hàng nên chưa thể cho bạn biết "
+            "món nào vừa về. Bạn có thể hỏi nhân viên cửa hàng nhé."
         ),
     }[language]
 
