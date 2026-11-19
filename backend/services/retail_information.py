@@ -247,7 +247,7 @@ def lookup_retail_information(
         from backend.config import get_settings
 
         settings = get_settings()
-        if settings.catalog_repository != "postgres":
+        if settings.catalog_repository != "postgres" and not settings.ops_feed_path:
             return RetailInformationResult(
                 "DATA_UNAVAILABLE", kind,
                 reason="Branch information is not available in the active demo repository.",
