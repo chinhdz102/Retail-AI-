@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://retail:retail@localhost:5432/retail"
     catalog_repository: Literal["demo", "postgres", "snapshot"] = "demo"
     catalog_snapshot_path: str = "data/winmart_products.json"
+    ops_feed_path: str = ""  # ops-feed v1 JSON overlaid on the snapshot; empty = off
     redis_url: str = "redis://localhost:6379/0"
     session_ttl_seconds: int = 1800
 
