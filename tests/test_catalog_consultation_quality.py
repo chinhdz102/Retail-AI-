@@ -46,11 +46,56 @@ async def test_hotpot_scope_excludes_mince_sauce_and_processed_food(snapshot):
     assert "nước mắm" not in names and "xay" not in names and "nộm" not in names
     assert {p.category for p in candidates.values()} >= {"Thịt", "Hải Sản"}
     advice = _fast_catalog_advice(candidates, plan)
-    assert advice and len(advice.products) == 3
-    assert {p.category for p in advice.products} == {"Thịt", "Hải Sản", "Rau Lá"}
+    assert advice and len(advice.products) == 5
+    assert {p.category for p in advice.products} >= {
+        "Thịt", "Hải Sản", "Rau Lá", "Cá - Bò Viên",
+    }
+    assert any("nấm" in p.name.casefold() for p in advice.products)
+    assert any("viên" in p.name.casefold() for p in advice.products)
     for line in advice.text.splitlines():
         if any(p.name in line for p in advice.products if p.category != "Thịt"):
             assert "Thái mỏng" not in line
+
+
+@pytest.mark.asyncio
+async def test_label_followup_keeps_zero_sugar_rows_across_drink_taxonomy(snapshot):
+    previous = {
+        "need": "t muốn uống nước giải khát",
+        "searches": [{"query": "nước giải khát", "category": "Nước Ngọt"}],
+    }
+    plan = _fast_catalog_plan("cáo nào ít đường", previous, [], snapshot)
+    assert plan and len(plan.searches) >= 1
+    candidates, missing = await _retrieve_candidates(
+        snapshot, plan, sorted({p.category for p in snapshot.products}), [plan.need]
+    )
+    assert not missing
+    assert candidates
+    assert all(
+        any(label.casefold() in product.name.casefold()
+            for label in ("ít đường", "không đường"))
+        for product in candidates.values()
+    )
+    advice = _fast_catalog_advice(candidates, plan)
+    assert advice and len(advice.products) >= 2
+    assert any("không đường" in product.name.casefold() for product in advice.products)
+
+
+@pytest.mark.asyncio
+async def test_fresh_drink_label_query_excludes_functional_drinks_and_honors_budget(snapshot):
+    plan = _fast_catalog_plan(
+        "các loại nước giải khát không đường dưới 100k", None, [], snapshot
+    )
+    assert plan and plan.budget_vnd == 100_000 and plan.strict_budget
+    candidates, missing = await _retrieve_candidates(
+        snapshot, plan, sorted({p.category for p in snapshot.products}), [plan.need]
+    )
+    assert missing and all(index < len(plan.searches) for index in missing)
+    assert candidates
+    assert all(product.price_vnd < 100_000 for product in candidates.values())
+    assert all("chức năng" not in product.category_hierarchy.casefold()
+               for product in candidates.values())
+    assert all("không đường" in product.name.casefold()
+               for product in candidates.values())
 
 
 @pytest.mark.asyncio

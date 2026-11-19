@@ -44,7 +44,11 @@ from backend.services.azure_speech import (
     AzureSpeechProviderError,
     AzureSpeechService,
 )
-from backend.services.consultation import consult_customer as consult, use_consultation
+from backend.services.consultation import (
+    _catalog_label_selection_requested,
+    consult_customer as consult,
+    use_consultation,
+)
 from backend.services.elevenlabs import (
     ElevenLabsConfigurationError,
     ElevenLabsProviderError,
@@ -3484,9 +3488,20 @@ async def agent_respond(
             _localized_prompt_override_denial(request.language),
         )
     # Unsupported health/use/benefit questions are policy lookups, not open
-    # consultation turns. Resolve them before any provider call so a test/mock
-    # provider outage cannot turn a safe abstention into a 502.
-    if unsupported_attribute_requested and not requested_fields:
+    # consultation turns. Resolve them before any provider call. Label-based
+    # product selection is exempted by the intent parser below.
+    normalized_request = _normalize_request_text(request.text)
+    contextual_selection = bool(re.search(
+        r"\b(?:nha co|troi nong|an dem|an sang|bua an|do an|thu cung|da nhay cam|"
+        r"tre con|meo|ngan sach|duoi \d+)\b", normalized_request
+    ))
+    selection_turn = (
+        _catalog_label_selection_requested(request.text)
+        or _explicit_recommendation_category(request.text) is not None
+        or bool(re.search(r"\b(?:can|muon|tim|mua|chon|goi y|co gi)\b",
+                          normalized_request))
+    ) and (contextual_selection or not _has_specific_product_reference(request.text))
+    if unsupported_attribute_requested and not requested_fields and not selection_turn:
         reply = _localized_unverified_fact(request.language)
         session_store.add_message(request.session_id, "user", request.text)
         session_store.add_message(request.session_id, "assistant", reply)
@@ -3498,7 +3513,6 @@ async def agent_respond(
             tools_used=[],
             state=record.state,
         )
-
     if _cart_promotion_requested(request.text):
         if settings.catalog_repository != "demo":
             return _local_policy_response(
@@ -3809,19 +3823,6 @@ async def agent_respond(
             tools_used=[],
             state=record.state,
         )
-    if unsupported_attribute_requested and not requested_fields:
-        reply = _localized_unverified_fact(request.language)
-        session_store.add_message(request.session_id, "user", request.text)
-        session_store.add_message(request.session_id, "assistant", reply)
-        return AgentRespondResponse(
-            session_id=request.session_id,
-            text=reply,
-            model="local-policy",
-            grounded_product_ids=[],
-            tools_used=[],
-            state=record.state,
-        )
-
     retail_context = "Chưa có dữ liệu catalog; gọi công cụ catalog để tra cứu khi cần."
     messages = [
         {"role": "system", "content": _system_prompt(retail_context, request.language)},
@@ -4102,7 +4103,7 @@ async def agent_respond(
             reply = _localized_action_denial(request.language)
         elif _unsupported_catalog_attribute_requested(request.text):
             unverified = _localized_unverified_fact(request.language)
-            reply = f"{reply} {unverified}" if requested_fields else unverified
+            reply = f"{reply} {unverified}" if agent_result.products else unverified
         elif _unsupported_catalog_fact_claim(reply, agent_result.observations):
             reply = _localized_unverified_fact(request.language)
         if _reservation_requested(request.text) and not _reply_already_refuses_reservation(
@@ -5255,8 +5256,18 @@ def _unsupported_catalog_attribute_requested(text: str) -> bool:
     normalized = _normalize_request_text(text)
     normalized = " ".join(normalized.split())
     token_set = set(normalized.split())
+    label_selection = (
+        bool(re.search(r"\b(?:it|khong)\s+\w+\b", normalized))
+        and (
+            bool(re.search(r"\b\w+\s+nao\b", normalized))
+            or bool(re.search(
+                r"\b(?:cac loai|nhung loai|trong so|chon|tim|mua|goi y|tu van)\b",
+                normalized,
+            ))
+        )
+    )
     return (
-        _parse_unsupported_attribute(text)
+        (_parse_unsupported_attribute(text) and not label_selection)
         or any(phrase in normalized for phrase in _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES)
         or bool(token_set & {"calo", "kcal", "calorie", "calories", "protein", "sugar"})
         or "dinh duong" in normalized

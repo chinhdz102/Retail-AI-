@@ -804,10 +804,13 @@ def unsupported_catalog_attribute_requested(text: str) -> bool:
     # a verified nutrition field.
     label_filter = (
         _has_phrase(normalized, ("it duong", "khong duong"))
-        and _has_phrase(normalized, (
-            "loai nao", "cac loai", "nhung loai", "chon", "tim", "mua",
-            "goi y", "tu van", "trong so",
-        ))
+        and (
+            bool(re.search(r"\b\w+\s+nao\b", normalized))
+            or _has_phrase(normalized, (
+                "cac loai", "nhung loai", "chon", "tim", "mua", "goi y",
+                "tu van", "trong so",
+            ))
+        )
     )
     if label_filter:
         unsupported_phrases = tuple(

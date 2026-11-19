@@ -1,0 +1,771 @@
+[
+  {
+    "id": "drink_low_sugar",
+    "question": "Trời nóng, có nước nào uống ngon mà không quá ngọt không?",
+    "status": 200,
+    "elapsed_ms": 24,
+    "model": "local-policy",
+    "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [],
+    "cues": [
+      "drink",
+      "water",
+      "trà"
+    ],
+    "cue_hits": []
+  },
+  {
+    "id": "drink_budget",
+    "question": "Nước uống dưới 15 nghìn có gì?",
+    "status": 200,
+    "elapsed_ms": 3594,
+    "model": "openai/gpt-oss-20b",
+    "text": "Nước uống tinh khiết Dasani chai 1.5 lít (10.000đ): Đóng chai 1.5 lít tiện lợi cho nhiều người dùng trong một ngày\nNước uống đóng chai Aquafina 1.5 lít (10.900đ): Cũng 1.5 lít, giá rẻ hơn và phù hợp cho gia đình\nNước uống tăng lực Việt Redbull lon 250ml (12.800đ): Lon 250ml dễ mang theo, thích hợp cho khi đi làm hoặc học",
+    "products": [
+      {
+        "product_id": "TLM_10011221",
+        "name": "Nước uống tinh khiết Dasani chai 1.5 lít",
+        "category": "Nước Suối",
+        "brand": "DASANI",
+        "price_vnd": 10000,
+        "stock": 191,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:41.144523Z"
+      },
+      {
+        "product_id": "TLM_10011217",
+        "name": "Nước uống đóng chai Aquafina 1.5 lít",
+        "category": "Nước Suối",
+        "brand": "AQUAFINA",
+        "price_vnd": 10900,
+        "stock": 324,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:40.207341Z"
+      },
+      {
+        "product_id": "TLM_10011210",
+        "name": "Nước uống tăng lực Việt Redbull lon 250ml",
+        "category": "Nước Ngọt",
+        "brand": "RED BULL",
+        "price_vnd": 12800,
+        "stock": 388,
+        "uom": "Lon",
+        "data_timestamp": "2026-09-15T13:53:41.145813Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "TLM_10011221",
+      "TLM_10011217",
+      "TLM_10011210"
+    ],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "drink",
+      "nước",
+      "15"
+    ],
+    "cue_hits": [
+      "nước"
+    ]
+  },
+  {
+    "id": "dairy_types",
+    "question": "Có những loại sữa tươi nào?",
+    "status": 200,
+    "elapsed_ms": 184,
+    "model": "deterministic-fast-path",
+    "text": "Bạn tham khảo vài loại này nhé:\nSữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L (50.000đ).\nSữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml (6.000đ).\nSữa tươi tiệt trùng sô cô la nguyên chất TH True Milk lốc 4 hộp x 180ml (40.100đ).",
+    "products": [
+      {
+        "product_id": "TLM_10010635",
+        "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+        "category": "Sữa Tươi",
+        "brand": "MEADOW FRESH",
+        "price_vnd": 50000,
+        "stock": 52,
+        "uom": "Hộp",
+        "data_timestamp": "2026-09-15T13:53:51.763106Z"
+      },
+      {
+        "product_id": "TLM_10005425",
+        "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+        "category": "Sữa Tươi",
+        "brand": "DUTCH LADY",
+        "price_vnd": 6000,
+        "stock": 168,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:51.763962Z"
+      },
+      {
+        "product_id": "TLM_10010609",
+        "name": "Sữa tươi tiệt trùng sô cô la nguyên chất TH True Milk lốc 4 hộp x 180ml",
+        "category": "Sữa Tươi",
+        "brand": "TH MILK",
+        "price_vnd": 40100,
+        "stock": 312,
+        "uom": "Gói 4",
+        "data_timestamp": "2026-09-15T13:53:52.884283Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "TLM_10010635",
+      "TLM_10005425",
+      "TLM_10010609"
+    ],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "sữa tươi"
+    ],
+    "cue_hits": [
+      "sữa tươi"
+    ]
+  },
+  {
+    "id": "hair_dandruff",
+    "question": "Dầu gội chống gàu nào đang bán?",
+    "status": 200,
+    "elapsed_ms": 2074,
+    "model": "openai/gpt-oss-20b",
+    "text": "Dầu gội chống gàu hiện đang có trong kho là Selsun Anti-Dandruff Shampoo 100ml. Nếu bạn muốn thử nhiều thương hiệu khác nhau, hãy tìm các dòng dầu gội chống gàu có thành phần selenium sulfide hoặc ketoconazole.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "dầu gội",
+      "gàu"
+    ],
+    "cue_hits": [
+      "dầu gội",
+      "gàu"
+    ]
+  },
+  {
+    "id": "hair_budget",
+    "question": "Dầu gội dưới 150 nghìn loại nào ổn?",
+    "status": 200,
+    "elapsed_ms": 3198,
+    "model": "openai/gpt-oss-20b",
+    "text": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g (80.000đ).\nDầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml (95.200đ).\nDầu gội dược liệu Thái Dương 3 hương hoa chai 480ml (114.900đ).",
+    "products": [
+      {
+        "product_id": "TLM_10601171",
+        "name": "Dầu gội Clear Men mát lạnh bạc hà 180g/170g",
+        "category": "Chăm Sóc Tóc",
+        "brand": "CLEAR",
+        "price_vnd": 80000,
+        "stock": 8,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:35.397509Z"
+      },
+      {
+        "product_id": "TLM_10016912",
+        "name": "Dầu gội chống gàu Selsun Anti-Dandruff Shampoo 100ml",
+        "category": "Chăm Sóc Tóc",
+        "brand": "SELSUN",
+        "price_vnd": 95200,
+        "stock": 31,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:33.773419Z"
+      },
+      {
+        "product_id": "TLM_10170560",
+        "name": "Dầu gội dược liệu Thái Dương 3 hương hoa chai 480ml",
+        "category": "Chăm Sóc Tóc",
+        "brand": "THÁI DƯƠNG",
+        "price_vnd": 114900,
+        "stock": 14,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:35.396001Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "TLM_10601171",
+      "TLM_10016912",
+      "TLM_10170560"
+    ],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "dầu gội"
+    ],
+    "cue_hits": [
+      "dầu gội"
+    ]
+  },
+  {
+    "id": "sensitive_skin",
+    "question": "Da em khá nhạy cảm, có loại sữa tắm nào dịu nhẹ không?",
+    "status": 200,
+    "elapsed_ms": 3233,
+    "model": "openai/gpt-oss-20b",
+    "text": "Bạn có thể thử các sữa tắm không chứa hương liệu hoặc có nhãn “dưỡng da nhạy cảm”.\nBạn có muốn tìm thêm các thương hiệu khác không?",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "sữa tắm"
+    ],
+    "cue_hits": [
+      "sữa tắm"
+    ]
+  },
+  {
+    "id": "pet_cleaning",
+    "question": "Nhà có mèo, cần đồ vệ sinh nhà an toàn khi dùng quanh thú cưng.",
+    "status": 200,
+    "elapsed_ms": 43,
+    "model": "local-policy",
+    "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [],
+    "cues": [
+      "vệ sinh",
+      "mèo"
+    ],
+    "cue_hits": []
+  },
+  {
+    "id": "breakfast",
+    "question": "Em muốn mua đồ ăn sáng nhanh mà vẫn no.",
+    "status": 200,
+    "elapsed_ms": 3178,
+    "model": "openai/gpt-oss-20b",
+    "text": "Bánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g (13.000đ).\nBánh bao nhân thịt heo trứng cút Thọ Phát gói 250g (30.700đ).\nBánh xốp nhân phô mai Nabati gói 52g (6.800đ).",
+    "products": [
+      {
+        "product_id": "TLM_10140547",
+        "name": "Bánh mì tươi Kinh Đô xốt Pizza XX phô mai 70g",
+        "category": "Bánh mì",
+        "brand": "KINH ĐÔ",
+        "price_vnd": 13000,
+        "stock": 23,
+        "uom": "Cái",
+        "data_timestamp": "2026-09-15T13:53:30.496953Z"
+      },
+      {
+        "product_id": "TLM_10005885",
+        "name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+        "category": "Bánh bao",
+        "brand": "THỌ PHÁT",
+        "price_vnd": 30700,
+        "stock": 18,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.238996Z"
+      },
+      {
+        "product_id": "TLM_10014286",
+        "name": "Bánh xốp nhân phô mai Nabati gói 52g",
+        "category": "Bánh Xốp - Bánh Quy",
+        "brand": "NABATI",
+        "price_vnd": 6800,
+        "stock": 54,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.447460Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "TLM_10140547",
+      "TLM_10005885",
+      "TLM_10014286"
+    ],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "cháo",
+      "mì",
+      "bánh"
+    ],
+    "cue_hits": [
+      "mì",
+      "bánh"
+    ]
+  },
+  {
+    "id": "late_night",
+    "question": "Đồ ăn đêm có gì ngon và dễ làm?",
+    "status": 200,
+    "elapsed_ms": 43,
+    "model": "local-policy",
+    "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [],
+    "cues": [
+      "cháo",
+      "mì",
+      "bánh bao"
+    ],
+    "cue_hits": [
+      "mì"
+    ]
+  },
+  {
+    "id": "child_snack",
+    "question": "Nhà có trẻ con, đồ ăn vặt đỡ ngọt chọn gì?",
+    "status": 200,
+    "elapsed_ms": 23,
+    "model": "local-policy",
+    "text": "Mình chưa có dữ liệu đã xác minh cho thông tin đó. Bạn kiểm tra giúp mình trên nhãn sản phẩm nhé.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [],
+    "cues": [
+      "snack",
+      "bánh"
+    ],
+    "cue_hits": []
+  },
+  {
+    "id": "gift_budget",
+    "question": "Mua quà cho mẹ khoảng 300 nghìn, chọn gì?",
+    "status": 200,
+    "elapsed_ms": 2527,
+    "model": "openai/gpt-oss-20b",
+    "text": "Sữa tắm dưỡng ẩm người lớn pH 5.5 Johnson's 2 in 1 750ml (196.000đ).\nSữa tắm nước hoa dưỡng da Enchanteur deluxe charming chai 180g (64.800đ).\nSữa tắm Lifebuoy detox matcha & khổ qua chai 850g/800g (189.900đ).",
+    "products": [
+      {
+        "product_id": "TLM_10017380",
+        "name": "Sữa tắm dưỡng ẩm người lớn pH 5.5 Johnson's 2 in 1 750ml",
+        "category": "Chăm Sóc Da",
+        "brand": "JOHNSON'S",
+        "price_vnd": 196000,
+        "stock": 35,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:35.398690Z"
+      },
+      {
+        "product_id": "TLM_10017420",
+        "name": "Sữa tắm nước hoa dưỡng da Enchanteur deluxe charming chai 180g",
+        "category": "Chăm Sóc Da",
+        "brand": "ENCHANTEUR",
+        "price_vnd": 64800,
+        "stock": 27,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:35.398707Z"
+      },
+      {
+        "product_id": "TLM_10604486",
+        "name": "Sữa tắm Lifebuoy detox matcha & khổ qua chai 850g/800g",
+        "category": "Chăm Sóc Da",
+        "brand": "LIFEBUOY",
+        "price_vnd": 189900,
+        "stock": 194,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:35.410457Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "TLM_10017380",
+      "TLM_10017420",
+      "TLM_10604486"
+    ],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "300",
+      "quà"
+    ],
+    "cue_hits": []
+  },
+  {
+    "id": "dinner_two",
+    "question": "Có khoảng 200 nghìn, mua đồ ăn đủ cho hai người một bữa tối được không?",
+    "status": 200,
+    "elapsed_ms": 181,
+    "model": "catalog-no-match",
+    "text": "Mình chưa tìm thấy khoảng 200 nghìn mua đồ ăn đủ cho hai người một bữa tối được trong danh mục hàng đang tra cứu, nên chưa thể xác nhận cửa hàng có bán loại này.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "200",
+      "bữa"
+    ],
+    "cue_hits": [
+      "200",
+      "bữa"
+    ]
+  },
+  {
+    "id": "value",
+    "question": "Loại nào vừa rẻ vừa dùng được lâu?",
+    "status": 200,
+    "elapsed_ms": 3553,
+    "model": "catalog-guidance",
+    "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [],
+    "cues": [
+      "giá",
+      "loại"
+    ],
+    "cue_hits": [
+      "loại"
+    ]
+  },
+  {
+    "id": "comparison",
+    "question": "OMO với Ariel thì loại nào giặt sạch hơn?",
+    "status": 200,
+    "elapsed_ms": 2760,
+    "model": "catalog-fallback",
+    "text": "Mình gợi ý loại này:\nOMO NG Cửa trước Khử mùi ẩm mốc 3.8kg (193.000đ).",
+    "products": [
+      {
+        "product_id": "TLM_10275943",
+        "name": "OMO NG Cửa trước Khử mùi ẩm mốc 3.8kg",
+        "category": "Giá Siêu Rẻ",
+        "brand": "OMO",
+        "price_vnd": 193000,
+        "stock": 243,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:41.614768Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "TLM_10275943"
+    ],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "OMO",
+      "Ariel"
+    ],
+    "cue_hits": [
+      "OMO"
+    ]
+  },
+  {
+    "id": "location",
+    "question": "Anh ơi, nước giặt ở đâu vậy?",
+    "status": 200,
+    "elapsed_ms": 137,
+    "model": "catalog",
+    "text": "Mình chưa có vị trí kệ chính xác. Bạn nhờ nhân viên tại quầy chỉ giúp nhé.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "nước giặt",
+      "kệ"
+    ],
+    "cue_hits": [
+      "kệ"
+    ]
+  },
+  {
+    "id": "availability",
+    "question": "Ở đây có bán sữa tươi không?",
+    "status": 200,
+    "elapsed_ms": 87,
+    "model": "deterministic-fast-path",
+    "text": "Có nhé, bạn có thể chọn các loại này:\nSữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L (50.000đ).\nSữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml (6.000đ).\nSữa tươi thanh trùng Dalat Milk không đường hộp 450ml (24.400đ).",
+    "products": [
+      {
+        "product_id": "TLM_10010635",
+        "name": "Sữa tươi tiệt trùng ít béo Meadow Fresh hộp 1L",
+        "category": "Sữa Tươi",
+        "brand": "MEADOW FRESH",
+        "price_vnd": 50000,
+        "stock": 52,
+        "uom": "Hộp",
+        "data_timestamp": "2026-09-15T13:53:51.763106Z"
+      },
+      {
+        "product_id": "TLM_10005425",
+        "name": "Sữa tươi tiệt trùng Cô gái Hà Lan không đường túi 180ml",
+        "category": "Sữa Tươi",
+        "brand": "DUTCH LADY",
+        "price_vnd": 6000,
+        "stock": 168,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:51.763962Z"
+      },
+      {
+        "product_id": "TLM_10005241",
+        "name": "Sữa tươi thanh trùng Dalat Milk không đường hộp 450ml",
+        "category": "Sữa Tươi",
+        "brand": "ĐÀ LẠT MILK",
+        "price_vnd": 24400,
+        "stock": 16,
+        "uom": "Hộp",
+        "data_timestamp": "2026-09-15T13:53:51.765744Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "TLM_10010635",
+      "TLM_10005425",
+      "TLM_10005241"
+    ],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "sữa tươi"
+    ],
+    "cue_hits": [
+      "sữa tươi"
+    ]
+  },
+  {
+    "id": "no_match",
+    "question": "Có viên thả bồn cầu không?",
+    "status": 200,
+    "elapsed_ms": 411,
+    "model": "catalog-no-match",
+    "text": "Mình chưa tìm thấy viên thả bồn cầu trong danh mục hàng đang tra cứu, nên chưa thể xác nhận cửa hàng có bán loại này.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "chưa tìm thấy",
+      "viên thả bồn cầu"
+    ],
+    "cue_hits": [
+      "chưa tìm thấy",
+      "viên thả bồn cầu"
+    ]
+  },
+  {
+    "id": "snack_budget",
+    "question": "Có loại snack nào giá dưới 20.000 đồng không?",
+    "status": 200,
+    "elapsed_ms": 450,
+    "model": "deterministic-fast-path",
+    "text": "Trong tầm tiền này, bạn tham khảo vài loại này nhé:\nSnack khoai tây Lay's vị khoai tây tự nhiên Classic 95g (17.600đ).\nSnack Oishi bắp ngọt vị phô mai 35/39g (5.400đ).\nSnack Big sheet truyền thống 3.2g (8.700đ).",
+    "products": [
+      {
+        "product_id": "TLM_10015622",
+        "name": "Snack khoai tây Lay's vị khoai tây tự nhiên Classic 95g",
+        "category": "Bánh Snack",
+        "brand": "LAY'S",
+        "price_vnd": 17600,
+        "stock": 20,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.293389Z"
+      },
+      {
+        "product_id": "TLM_10320541",
+        "name": "Snack Oishi bắp ngọt vị phô mai 35/39g",
+        "category": "Bánh Snack",
+        "brand": "OISHI",
+        "price_vnd": 5400,
+        "stock": 145,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.460299Z"
+      },
+      {
+        "product_id": "TLM_10016022",
+        "name": "Snack Big sheet truyền thống 3.2g",
+        "category": "Bánh Snack",
+        "brand": "TAO KAE NOI",
+        "price_vnd": 8700,
+        "stock": 37,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.459346Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "TLM_10015622",
+      "TLM_10320541",
+      "TLM_10016022"
+    ],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "snack",
+      "20"
+    ],
+    "cue_hits": [
+      "snack"
+    ]
+  },
+  {
+    "id": "promotion",
+    "question": "Snack nào đang khuyến mãi?",
+    "status": 200,
+    "elapsed_ms": 211,
+    "model": "catalog",
+    "text": "Catalog (15/09/2026) ghi nhận Bánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g: Giảm 10.000đ (28%); Ngô nếp tươi cay Hà Nội xưa gói 150g: Giảm 9.900đ (26%). Dữ liệu chưa có hạn và điều kiện áp dụng, bạn xác nhận tại cửa hàng nhé.",
+    "products": [
+      {
+        "product_id": "TLM_10016331",
+        "name": "Bánh snack khoai tây miếng vị mực cay Lay's Stax lon 100g",
+        "category": "Bánh Snack",
+        "brand": "LAY'S",
+        "price_vnd": 25900,
+        "stock": 90,
+        "uom": "Lon",
+        "data_timestamp": "2026-09-15T13:53:30.291906Z"
+      },
+      {
+        "product_id": "TLM_10195930",
+        "name": "Ngô nếp tươi cay Hà Nội xưa gói 150g",
+        "category": "Bánh Snack",
+        "brand": "MCGOODS",
+        "price_vnd": 28300,
+        "stock": 5,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.291921Z"
+      },
+      {
+        "product_id": "TLM_10193134",
+        "name": "Snack Lay Stax khoai tây sườn BBQ 160g",
+        "category": "Bánh Snack",
+        "brand": "LAY'S",
+        "price_vnd": 36900,
+        "stock": 67,
+        "uom": "Lon",
+        "data_timestamp": "2026-09-15T13:53:30.292305Z"
+      },
+      {
+        "product_id": "TLM_10011145",
+        "name": "Mực tẩm gia vị Thái Bento gói 24g",
+        "category": "Bánh Snack",
+        "brand": "BENTO",
+        "price_vnd": 23900,
+        "stock": 186,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.293229Z"
+      },
+      {
+        "product_id": "TLM_10011147",
+        "name": "Snack mực tẩm gia vị cay ngọt Bento gói 24g",
+        "category": "Bánh Snack",
+        "brand": "BENTO",
+        "price_vnd": 23900,
+        "stock": 232,
+        "uom": "Gói",
+        "data_timestamp": "2026-09-15T13:53:30.293316Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "TLM_10016331",
+      "TLM_10195930",
+      "TLM_10193134",
+      "TLM_10011145",
+      "TLM_10011147"
+    ],
+    "tools_used": [
+      "list_product_promotions"
+    ],
+    "cues": [
+      "snack",
+      "giảm",
+      "khuyến mãi"
+    ],
+    "cue_hits": [
+      "snack",
+      "giảm"
+    ]
+  },
+  {
+    "id": "price_min",
+    "question": "Giá thấp nhất của nước suối là bao nhiêu?",
+    "status": 200,
+    "elapsed_ms": 210,
+    "model": "catalog",
+    "text": "Thấp nhất: Nước ion I-On Life 450ml — 5.500đ/chai.",
+    "products": [
+      {
+        "product_id": "TLM_10011695",
+        "name": "Nước ion I-On Life 450ml",
+        "category": "Nước Suối",
+        "brand": "I-ON LIFE",
+        "price_vnd": 5500,
+        "stock": 34,
+        "uom": "Chai",
+        "data_timestamp": "2026-09-15T13:53:40.206591Z"
+      }
+    ],
+    "grounded_product_ids": [
+      "TLM_10011695"
+    ],
+    "tools_used": [
+      "search_products"
+    ],
+    "cues": [
+      "thấp nhất",
+      "nước"
+    ],
+    "cue_hits": [
+      "thấp nhất",
+      "nước"
+    ]
+  },
+  {
+    "id": "ambiguous",
+    "question": "Loại tốt tốt một chút nhưng đừng đắt quá.",
+    "status": 200,
+    "elapsed_ms": 193,
+    "model": "catalog-guidance",
+    "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [],
+    "cues": [
+      "hỏi",
+      "loại",
+      "ngân sách"
+    ],
+    "cue_hits": [
+      "loại"
+    ]
+  },
+  {
+    "id": "similar",
+    "question": "Có sản phẩm nào tương tự nếu cái này hết hàng?",
+    "status": 200,
+    "elapsed_ms": 638,
+    "model": "catalog-guidance",
+    "text": "Mình chưa xác nhận được lựa chọn đáp ứng đủ yêu cầu bạn vừa nêu. Khi chọn, bạn đối chiếu đúng loại hàng, quy cách và thông tin trên nhãn nhé.",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [],
+    "cues": [
+      "tương tự",
+      "hết hàng"
+    ],
+    "cue_hits": []
+  },
+  {
+    "id": "hello",
+    "question": "hello",
+    "status": 200,
+    "elapsed_ms": 638,
+    "model": "local-greeting",
+    "text": "Chào bạn! Hôm nay bạn đang cần tìm đồ ăn, đồ uống hay đồ dùng gì để mình tìm giúp?",
+    "products": [],
+    "grounded_product_ids": [],
+    "tools_used": [],
+    "cues": [
+      "chào"
+    ],
+    "cue_hits": [
+      "chào"
+    ]
+  }
+]
