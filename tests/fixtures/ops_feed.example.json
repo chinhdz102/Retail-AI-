@@ -1,0 +1,65 @@
+{
+  "contract": "ops-feed",
+  "version": 1,
+  "published_at": "2026-11-19T09:00:00+07:00",
+  "ops_business_date": "2024-06-26",
+  "date_shift_days": 876,
+  "store_name": "Thanh Lam Mart",
+  "items": [
+    {
+      "product_id": "TLM_10140279",
+      "ops_sku": "F0004",
+      "status": "IN_STOCK",
+      "sellable_qty": 12,
+      "earliest_expiry": "2026-11-21",
+      "unit_price_vnd": 168900,
+      "sale_price_vnd": 168900,
+      "promotion_text": null,
+      "coverage_complete": true,
+      "lots": [
+        {"qty": 12, "expiry": "2026-11-21", "markdown_pct": 0.0}
+      ]
+    },
+    {
+      "product_id": "TLM_10283202",
+      "ops_sku": "F0005",
+      "status": "IN_STOCK",
+      "sellable_qty": 9,
+      "earliest_expiry": "2026-11-20",
+      "unit_price_vnd": 123900,
+      "sale_price_vnd": 123900,
+      "promotion_text": null,
+      "coverage_complete": false,
+      "lots": [
+        {"qty": 5, "expiry": "2026-11-20", "markdown_pct": 0.0}
+      ]
+    },
+    {
+      "product_id": "TLM_10242930",
+      "ops_sku": "F0006",
+      "status": "OUT_OF_STOCK",
+      "sellable_qty": 0,
+      "earliest_expiry": null,
+      "unit_price_vnd": 32000,
+      "sale_price_vnd": 32000,
+      "promotion_text": null,
+      "coverage_complete": true,
+      "lots": []
+    },
+    {
+      "product_id": "TLM_10281708",
+      "ops_sku": "F0016",
+      "status": "IN_STOCK",
+      "sellable_qty": 16,
+      "earliest_expiry": "2026-11-19",
+      "unit_price_vnd": 19000,
+      "sale_price_vnd": 13300,
+      "promotion_text": "Giảm 30% cho 6 sản phẩm HSD 19/11",
+      "coverage_complete": true,
+      "lots": [
+        {"qty": 6, "expiry": "2026-11-19", "markdown_pct": 0.3},
+        {"qty": 10, "expiry": "2026-11-20", "markdown_pct": 0.0}
+      ]
+    }
+  ]
+}

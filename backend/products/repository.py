@@ -83,6 +83,8 @@ class DemoProductRepository:
 
 def get_product_repository(settings: Settings | None = None) -> ProductRepository:
     selected = settings or get_settings()
+    if selected.ops_feed_path and selected.catalog_repository != "snapshot":
+        raise ValueError("OPS_FEED_PATH is only supported with CATALOG_REPOSITORY=snapshot")
     if selected.catalog_repository == "demo":
         return DemoProductRepository()
     if selected.catalog_repository == "postgres":
@@ -95,7 +97,12 @@ def get_product_repository(settings: Settings | None = None) -> ProductRepositor
             path = Path(__file__).resolve().parents[2] / path
         path = path.resolve()
         stat = path.stat()
-        return _snapshot_repository(path, stat.st_mtime_ns, stat.st_size)
+        repository = _snapshot_repository(path, stat.st_mtime_ns, stat.st_size)
+        if selected.ops_feed_path:
+            from backend.products.ops_overlay_repository import ops_overlay_repository
+
+            return ops_overlay_repository(repository, selected.ops_feed_path)
+        return repository
     raise ValueError(f"Unknown catalog repository: {selected.catalog_repository}")
 
 
