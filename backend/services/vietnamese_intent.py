@@ -798,6 +798,22 @@ def unsupported_catalog_attribute_requested(text: str) -> bool:
             normalized,
         )
     )
+    # Label filters such as “loại nào ít đường” are product-selection
+    # constraints. Keep them in the consultation planner, while a factual
+    # question about whether one item is low-sugar remains unsupported without
+    # a verified nutrition field.
+    label_filter = (
+        _has_phrase(normalized, ("it duong", "khong duong"))
+        and _has_phrase(normalized, (
+            "loai nao", "cac loai", "nhung loai", "chon", "tim", "mua",
+            "goi y", "tu van", "trong so",
+        ))
+    )
+    if label_filter:
+        unsupported_phrases = tuple(
+            phrase for phrase in unsupported_phrases
+            if phrase not in {"it duong", "co it duong"}
+        )
     return (
         contextual_use_or_safety
         or _has_phrase(normalized, unsupported_phrases)

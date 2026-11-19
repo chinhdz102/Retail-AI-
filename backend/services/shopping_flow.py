@@ -183,12 +183,49 @@ def classify_shopping_action(text: str, state: SessionState) -> ShoppingAction |
             "trong gio co gi",
             "gio hang cua toi",
             "gio hang cua minh",
+            "tong tien hien tai",
+            "tong tien gio",
+            "tong tam tinh",
+            "gio hang bao nhieu",
             "cart summary",
             "show my cart",
             "view cart",
         )
     ):
         return ShoppingAction(ShoppingActionType.VIEW_CART)
+
+    purchase_match = re.search(
+        r"\b(?:muốn|muon)\s+mua\s+(.+?)(?:[.!?]|$)", text, flags=re.IGNORECASE
+    )
+    if purchase_match:
+        cleaned_query = _strip_filler(purchase_match.group(1))
+        parts = re.split(
+            r"\s*(?:,|;|\bvà\b|\bva\b|\bvới\b|\bvoi\b|\bcùng\b|\bcung\b|\band\b|\bplus\b)\s*",
+            cleaned_query,
+            flags=re.IGNORECASE,
+        )
+        parsed_items = tuple(
+            (query, quantity)
+            for part in parts
+            for quantity, query in [_quantity_and_query(part)]
+            if query and 1 <= quantity <= 20
+        )
+        if len(parts) > 1 and len(parsed_items) == len(parts):
+            return ShoppingAction(ShoppingActionType.ADD_ITEM, line_items=parsed_items)
+
+    if state == SessionState.BROWSING and re.search(
+        r"\b(?:lay|mua|chon)\b.*\b(?:loai vua de xuat|loai vua chon|loai nay|mon vua de xuat)\b",
+        compact,
+    ):
+        quantity = 1
+        quantity_match = re.search(
+            r"\b(\d+|" + "|".join(_NUMBER_WORDS) + r")\s+(?:" + "|".join(_UNIT_WORDS) + r")\b",
+            compact,
+        )
+        if quantity_match:
+            token = quantity_match.group(1)
+            quantity = int(token) if token.isdigit() else _NUMBER_WORDS[token]
+        return ShoppingAction(ShoppingActionType.ADD_ITEM, quantity=quantity)
 
     add_match = re.search(
         r"\b(?:them|bo sung|cho)\s+(.+?)\s+(?:vao|vo)\s+(?:cai\s+)?gio(?:\s+hang)?\b|"

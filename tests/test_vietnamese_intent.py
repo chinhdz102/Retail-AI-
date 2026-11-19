@@ -107,6 +107,15 @@ def test_supported_product_facts_are_not_mistaken_for_unsupported_attributes(tex
     assert not _unsupported_catalog_attribute_requested(text)
 
 
+@pytest.mark.parametrize("text", [
+    "Trong số đó, loại nào ít đường hoặc không đường?",
+    "Tìm các loại sữa ít đường giúp mình.",
+    "Chọn sữa không đường cho mình.",
+])
+def test_sugar_label_filters_stay_in_product_consultation(text: str) -> None:
+    assert not _unsupported_catalog_attribute_requested(text)
+
+
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
