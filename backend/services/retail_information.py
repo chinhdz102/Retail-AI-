@@ -147,7 +147,8 @@ class PostgresRetailInformationRepository:
                     )
                 rows = await conn.fetch(
                     """
-                    SELECT r.event_id, p.name AS product_name, r.quantity, r.received_at,
+                    SELECT r.event_id, r.product_id, p.name AS product_name, r.quantity,
+                           r.received_at,
                            r.receiving_step, r.source_name, r.source_document_id, r.source_uri
                     FROM inventory_receipts r
                     JOIN products p ON p.product_id = r.product_id
@@ -162,7 +163,7 @@ class PostgresRetailInformationRepository:
                       )
                       AND ($4::text IS NULL OR p.name ILIKE '%' || $4 || '%')
                     ORDER BY r.received_at DESC
-                    LIMIT 5
+                    LIMIT 30
                     """,
                     store["store_code"], feed["coverage_start_at"],
                     feed["coverage_end_at"], category,
