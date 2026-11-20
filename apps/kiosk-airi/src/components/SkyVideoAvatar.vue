@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   state: 'idle',
   poster: '/avatars/sky-anime-reference.png',
-  videoBase: '/avatars/mai-clip-v2',
+  videoBase: '/avatars/mai-clip-v3',
   enabled: true,
 })
 
@@ -20,10 +20,8 @@ const videoFailed = ref(false)
 const reducedMotion = ref(false)
 
 const clipForState: Record<AssistantStatus, string> = {
-  // The supplied idle and listening clips contain occasional open-mouth
-  // frames. Keep every silent state on the verified closed-mouth clip.
-  idle: '03-thinking',
-  listening: '03-thinking',
+  idle: '01-idle',
+  listening: '02-listening',
   transcribing: '03-thinking',
   thinking: '03-thinking',
   speaking: '04-speaking',
