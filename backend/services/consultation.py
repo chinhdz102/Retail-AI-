@@ -1067,13 +1067,18 @@ def _catalog_family_plan(text: str, repository: ProductRepository) -> Plan | Non
     if not query or len(query.split()) != 1:
         return None
     normalized = normalize_vietnamese(query)
-    if not re.search(r"\b(?:co may|bao nhieu|cac loai|nhung loai|loai nao|xem|goi y|mua|can)\b",
-                     normalize_vietnamese(text)):
+    normalized_text = normalize_vietnamese(text)
+    if not re.search(
+        r"\b(?:co may|bao nhieu|cac loai|nhung loai|loai nao|xem|goi y|mua|can)\b"
+        r"|\bco\b.*\b(?:nao|gi|loai|mon)\b",
+        normalized_text,
+    ):
         return None
-    framing = set("anh em ban minh toi t the cho giup ho nhe a oi muon mua can "
+    framing = set("anh em ban minh toi t tao the cho giup ho nhe a oi muon mua can "
                   "xem vai may mot cac nhung loai san pham mat hang thi co nao "
-                  "khong ko k voi di goi y bao nhieu bao so nhieu ta hoi".split())
-    if set(normalize_vietnamese(text).split()) - framing - {normalized}:
+                  "khong ko k voi di goi y bao nhieu bao so nhieu ta hoi biet la mon "
+                  "nhieu nhi vay".split())
+    if set(normalized_text.split()) - framing - {normalized}:
         return None
     products = [p for p in getattr(repository, "products", ()) if p.sellable_stock > 0]
     categories: dict[str, list[ProductSnapshot]] = {}
@@ -1370,6 +1375,9 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
         recipient_plan = _recipient_followup_plan(text, previous_plan, repository)
         if recipient_plan is not None:
             return recipient_plan
+        weight_plan = _purchase_weight_followup_plan(text, previous_plan, repository)
+        if weight_plan is not None:
+            return weight_plan
         package_plan = _package_followup_plan(text, previous_plan)
         if package_plan is not None:
             return package_plan
@@ -1507,6 +1515,55 @@ def _package_followup_plan(text: str, previous_plan: dict) -> Plan | None:
         "topic_changed": False, "reuse_previous": True, "budget_action": "keep",
         "requirement_updates": [RequirementUpdate(key="package:" + dimension,
             value=text, source_quote=text)]})
+
+
+def _purchase_weight_followup_plan(
+    text: str, previous_plan: dict | None, repository: ProductRepository,
+) -> Plan | None:
+    """Keep a catalog scope when the customer adds a loose purchase weight."""
+    if not previous_plan or len(text) > 180:
+        return None
+    values = _package_values(text, "mass_g")
+    if len(values) != 1 or re.search(
+        r"\b(?:gói|khay|chai|hộp|túi|bịch|lon|lốc|thùng)\b",
+        normalize_vietnamese(text),
+    ):
+        return None
+    try:
+        prior = Plan.model_validate(previous_plan)
+    except ValidationError:
+        return None
+    if prior.action == "ask" or not prior.searches:
+        return None
+    named = [search for search in prior.searches if search.query and _label_phrase(text, search.query)]
+    if len(named) == 1:
+        search = named[0]
+    elif len(prior.searches) == 1 and prior.searches[0].query:
+        search = prior.searches[0]
+    else:
+        return None
+    rows = repository.search(query=search.query, in_stock=True, limit=120)
+    if not _matching_candidates(rows, search):
+        return None
+    weight_g = int(values.pop())
+    weight = PurchaseWeight(query=search.query, weight_g=weight_g)
+    update = RequirementUpdate(
+        key="purchase_weight:" + normalize_vietnamese(search.query).strip(),
+        value=f"Mua {search.query} {weight_g}g",
+        source_quote=text,
+        purchase_weight=weight,
+    )
+    return prior.model_copy(update={
+        "need": prior.need + "; " + text,
+        "action": "advise",
+        "decision_mode": "browse",
+        "clarification": "",
+        "searches": [search],
+        "topic_changed": False,
+        "reuse_previous": True,
+        "budget_action": "keep",
+        "requirement_updates": [update],
+    })
 
 
 async def _json_call(groq, messages, schema, max_tokens, topics=None, allowed_ids=None,
@@ -2222,6 +2279,13 @@ async def consult(
                 context=plan.source_user_text or plan.need,
             )
         }
+        if plan.purchase_weights:
+            for weight in plan.purchase_weights.values():
+                weighted = next((product for product in catalog_candidates.values()
+                    if (product.uom or "").casefold() == "kg"
+                    and _matching_candidates([product], Search(query=weight.query))), None)
+                if weighted is not None:
+                    candidates.setdefault(weighted.product_id, weighted)
     if planner_model == "deterministic-fast-path":
         fast_advice = _fast_catalog_advice(candidates, plan)
         if fast_advice is not None:
@@ -2798,6 +2862,44 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
             return _render_structured(composition,
                                       {p.product_id: p for p in selected}, plan,
                                       "deterministic-sugar-guidance")
+        except GroqProviderError:
+            return None
+
+    if plan.purchase_weights and candidates and plan.decision_mode == "browse":
+        weight = next(iter(plan.purchase_weights.values()))
+        ordered = list(candidates.values())
+        selected = [product for product in ordered
+                    if (product.uom or "").casefold() == "kg"][:1]
+        for product in _diverse_candidates(
+            ordered, "", limit=3, context=plan.source_user_text or plan.need,
+        ):
+            if product not in selected:
+                selected.append(product)
+            if len(selected) == 3:
+                break
+        choices = []
+        for product in selected:
+            product_weight = (
+                weight.weight_g
+                if (product.uom or "").casefold() == "kg"
+                and _matching_candidates([product], Search(query=weight.query))
+                else None
+            )
+            choices.append(Choice(
+                product_id=product.product_id,
+                weight_g=product_weight,
+                evidence_fields=["name"],
+            ))
+        try:
+            return _render_structured(
+                Composition(
+                    advice=f"Với khoảng {weight.weight_g:g}g, bạn tham khảo các loại này:",
+                    choices=choices,
+                ),
+                {product.product_id: product for product in selected},
+                plan,
+                "deterministic-weight-browse",
+            )
         except GroqProviderError:
             return None
 
