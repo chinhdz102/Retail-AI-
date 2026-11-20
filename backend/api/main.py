@@ -3816,6 +3816,7 @@ async def agent_respond(
         return AgentRespondResponse(
             session_id=request.session_id, text=advice.text, model=advice.model,
             products=[_product_card(p) for p in advice.products],
+            catalog_products=[_product_card(p) for p in advice.catalog_products],
             grounded_product_ids=[p.product_id for p in advice.products],
             tools_used=["search_products"] if advice.plan.searches else [], state=record.state,
         )

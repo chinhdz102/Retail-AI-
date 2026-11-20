@@ -91,6 +91,8 @@ let speakerTailTimer: ReturnType<typeof setTimeout> | undefined
 let voiceController: VoiceConversationController | null = null
 // The same AEC-enabled capture listens for a customer's next turn during TTS.
 let isBargeInCapture = false
+let bargeInCandidate = false
+let pendingBargeInTranscription = false
 let listeningStartedAt = 0
 let sessionExpiryTimer: ReturnType<typeof setTimeout> | undefined
 let sessionIdleTimeoutMs = 30 * 60 * 1000
@@ -169,7 +171,7 @@ function handleVoiceState(state: VoiceState) {
   }
   if (state.phase === 'recording') {
     recognitionNotice = null
-    interruptOnSpeechStart()
+    if (isBargeInCapture && status.value === 'speaking') bargeInCandidate = true
     status.value = 'listening'
     voiceHint.value = voiceCopy.recording
     return
@@ -192,6 +194,8 @@ function handleVoiceError(error: VoiceControllerError) {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
   }
   isBargeInCapture = false
+  bargeInCandidate = false
+  pendingBargeInTranscription = false
   isVoiceActive.value = false
   isHandsFree.value = false
   isRecording.value = false
@@ -202,12 +206,13 @@ function handleVoiceError(error: VoiceControllerError) {
   status.value = 'error'
 }
 async function handleVoiceAudio(audio: Blob, previewId?: number) {
+  const wasBargeIn = bargeInCandidate && status.value === 'speaking'
   if (
     !sessionId.value ||
     isUnmounted ||
     !isHandsFree.value ||
     speakerTailTimer ||
-    ['transcribing', 'thinking', 'speaking'].includes(status.value)
+    (['transcribing', 'thinking', 'speaking'].includes(status.value) && !wasBargeIn)
   )
     return
   const epoch = voiceEpoch
@@ -216,8 +221,13 @@ async function handleVoiceAudio(audio: Blob, previewId?: number) {
   const request = preview?.controller ?? new AbortController()
   transcriptionRequest?.abort()
   transcriptionRequest = request
-  status.value = 'transcribing'
-  voiceHint.value = voiceCopy.transcribing
+  pendingBargeInTranscription = wasBargeIn
+  if (!wasBargeIn) {
+    status.value = 'transcribing'
+    voiceHint.value = voiceCopy.transcribing
+  } else {
+    voiceHint.value = 'Mình đang kiểm tra câu nói trước khi dừng Sky'
+  }
   try {
     let result = preview ? await preview.result : null
     if (epoch !== voiceEpoch || isUnmounted || request.signal.aborted) return
@@ -232,6 +242,7 @@ async function handleVoiceAudio(audio: Blob, previewId?: number) {
       accepted: result.speech_detected, reason: result.rejection_reason, quality: result.quality,
     })
     if (!result.speech_detected || !result.text.trim()) {
+      pendingBargeInTranscription = false
       status.value = 'idle'
       recognitionNotice = result.rejection_reason === 'no_speech'
         ? 'Chưa thu rõ giọng nói. Bạn nói gần mic hơn và thử lại nhé.'
@@ -240,14 +251,18 @@ async function handleVoiceAudio(audio: Blob, previewId?: number) {
       void resumeHandsFree()
       return
     }
+    pendingBargeInTranscription = false
+    if (wasBargeIn) interruptOnSpeechStart()
     await sendMessage(result.text, true)
   } catch (error) {
     if (epoch !== voiceEpoch || isUnmounted || request.signal.aborted) return
     errorMessage.value = toErrorMessage(error, 'Không nhận diện được tiếng nói')
+    pendingBargeInTranscription = false
     status.value = 'error'
     voiceHint.value = voiceCopy.retry
     void resumeHandsFree()
   } finally {
+    pendingBargeInTranscription = false
     if (transcriptionRequest === request) transcriptionRequest = null
   }
 }
@@ -257,7 +272,7 @@ function ensureVoiceController(): VoiceConversationController {
       deviceId: selectedMicrophone.value,
       onState: handleVoiceState,
       onSpeechStart: () => {
-        interruptOnSpeechStart()
+        if (isBargeInCapture && status.value === 'speaking') bargeInCandidate = true
         if (sessionId.value) warmVoiceConnection(sessionId.value)
       },
       onAudioPreview: (audio, id) => {
@@ -389,6 +404,7 @@ function pauseVoice() {
   transcriptionPreview.cancel()
   voiceController?.pause()
   isBargeInCapture = false
+  bargeInCandidate = false
   isVoiceActive.value = false
   isRecording.value = false
   microphoneLevel.value = 0
@@ -399,11 +415,13 @@ function cancelVoiceTurn() {
   voiceEpoch += 1
   transcriptionRequest?.abort()
   transcriptionRequest = null
+  pendingBargeInTranscription = false
   clearTimeout(speakerTailTimer)
   speakerTailTimer = undefined
 }
 function finishSpeech(requestId: number, afterSpeech?: () => void) {
   if (requestId !== speechRequestId || isUnmounted) return
+  if (pendingBargeInTranscription) return
   isBargeInCapture = false
   // A warm listener preserves pre-roll and any speech starting at the end of
   // TTS. Reopening the input here used to create a dead zone on every turn.
@@ -422,8 +440,9 @@ function finishSpeech(requestId: number, afterSpeech?: () => void) {
   }, 400)
 }
 function interruptOnSpeechStart() {
-  if (!isBargeInCapture || status.value !== 'speaking' || !isHandsFree.value) return
+  if (status.value !== 'speaking' || !isHandsFree.value) return
   isBargeInCapture = false
+  bargeInCandidate = false
   ++speechRequestId
   pendingSpeechText.value = null
   needsAudioUnlock.value = false
@@ -549,6 +568,7 @@ async function startBargeInCapture() {
     !voiceController
   ) return
   isBargeInCapture = true
+  bargeInCandidate = false
   try {
     await voiceController.start()
   } catch {
@@ -786,6 +806,7 @@ async function sendMessage(value = draft.value, fromVoice = false) {
       model: response.model,
       groundedProductIds: response.grounded_product_ids,
       products: response.products,
+      catalogProducts: response.catalog_products,
       supportTicket: response.support_ticket ?? undefined,
     })
     if (response.cart) cart.value = response.cart

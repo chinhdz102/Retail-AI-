@@ -133,6 +133,7 @@ class AgentRespondResponse(BaseModel):
     tools_used: list[str] = Field(default_factory=list)
     state: SessionState
     products: list[ProductCardResponse] = Field(default_factory=list)
+    catalog_products: list[ProductCardResponse] = Field(default_factory=list)
     cart: CartResponse | None = None
     checkout_quote: CheckoutQuoteResponse | None = None
     order: SandboxOrderResponse | None = None

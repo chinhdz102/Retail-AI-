@@ -9,6 +9,7 @@ from backend.products.repository import get_product_repository
 from backend.services.consultation import (
     Search,
     _availability_query,
+    _attach_catalog_options,
     _catalog_family_plan,
     _fast_catalog_advice,
     _fast_catalog_plan,
@@ -39,6 +40,23 @@ def test_ready_drink_family_is_catalog_browseable_without_llm(snapshot):
     plan = _fast_catalog_plan("t muốn uống nước giải khát", None, [], snapshot)
     assert plan and plan.searches
     assert plan.searches[0].category == "Nước Ngọt"
+
+
+@pytest.mark.asyncio
+async def test_browse_keeps_full_catalog_for_chat_expansion(snapshot):
+    plan = _fast_catalog_plan("t muốn uống nước giải khát", None, [], snapshot)
+    shortlist, missing = await _retrieve_candidates(
+        snapshot, plan, sorted({p.category for p in snapshot.products}), [plan.need]
+    )
+    full_catalog, full_missing = await _retrieve_candidates(
+        snapshot, plan, sorted({p.category for p in snapshot.products}), [plan.need], 0
+    )
+    assert not missing and not full_missing
+    assert len(full_catalog) > len(shortlist) >= 3
+    advice = _fast_catalog_advice(shortlist, plan)
+    assert advice
+    expanded = _attach_catalog_options(advice, shortlist, plan, full_catalog)
+    assert len(expanded.catalog_products) == len(full_catalog)
 
 
 @pytest.mark.asyncio
