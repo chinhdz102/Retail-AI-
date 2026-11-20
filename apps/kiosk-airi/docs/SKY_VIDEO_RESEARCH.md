@@ -6,10 +6,10 @@ Với kiosk bán lẻ, avatar không cần lip-sync chính xác theo từng âm 
 
 Hiện đã có **4 clip local** dùng được cho demo:
 
-- `mai-clip-v2-01-idle.mp4`
-- `mai-clip-v2-02-listening.mp4`
-- `mai-clip-v2-03-thinking.mp4`
-- `mai-clip-v2-04-speaking.mp4`
+- `mai-clip-v3-01-idle.mp4`
+- `mai-clip-v3-02-listening.mp4`
+- `mai-clip-v3-03-thinking.mp4`
+- `mai-clip-v3-04-speaking.mp4`
 
 Muse.ai đã nhận ảnh reference nhưng trả lỗi video generation unavailable for the current account region, nên **số clip tạo trực tiếp trong Muse.ai hiện là 0**. Bốn clip hiện tại là video Gemini người dùng cung cấp, đã được chuẩn hóa vào app và tắt audio để dùng với TTS của Mai.
 
@@ -54,7 +54,7 @@ Mỗi clip dài 10 giây và lặp vô hạn. Không đưa câu trả lời cụ
 
 `SkyVideoAvatar.vue` chỉ giữ một thẻ `<video>`, tải clip đang cần, đặt `muted`, `playsinline`, `loop`, `preload="metadata"` và dùng poster khi clip lỗi. Trạng thái TTS trong `App.vue` điều khiển cùng state video. Cách này tránh tải cả bốn clip cùng lúc và không tạo hai nguồn âm thanh.
 
-QA các frame cho thấy clip idle và listening có một số frame miệng mở ngoài ý muốn. Clip `mai-clip-v2-03-thinking.mp4` giữ miệng đóng trong các frame đã kiểm, nên app dùng clip này cho mọi trạng thái im lặng. Clip speaking có một động tác vẫy tay ngắn cùng frame miệng mở. Bố cục, nhân vật, màu tóc, đồng phục và nền giữ đồng nhất giữa bốn clip.
+QA các frame mới cho thấy clip `mai-clip-v3-01-idle.mp4` phù hợp idle với blink nhẹ, clip `mai-clip-v3-02-listening.mp4` phù hợp listening với chuyển động mắt nhẹ, cả hai giữ miệng đóng trong các frame đã kiểm. Clip thinking dùng bản closed-mouth ổn định, clip speaking có một động tác vẫy tay ngắn cùng frame miệng mở. Bố cục, nhân vật, màu tóc, đồng phục và nền giữ đồng nhất giữa bốn clip.
 
 ### 5. Khớp chuyển động với script
 

@@ -14,19 +14,19 @@ Reference image: `/avatars/sky-anime-reference.png`
 
 ## Prompts
 
-### `mai-clip-v2-01-idle.mp4`
+### `mai-clip-v3-01-idle.mp4`
 
 Subtle breathing and one natural blink. Closed mouth, neutral friendly expression, almost no head movement, fixed camera.
 
-### `mai-clip-v2-02-listening.mp4`
+### `mai-clip-v3-02-listening.mp4`
 
 Attentive listening pose. Look at the camera, blink once, make one very small nod, closed mouth, fixed camera.
 
-### `mai-clip-v2-03-thinking.mp4`
+### `mai-clip-v3-03-thinking.mp4`
 
 Thinking pose. Look slightly upward for a moment, blink once, return eyes to camera, closed mouth, tiny shoulder movement, fixed camera.
 
-### `mai-clip-v2-04-speaking.mp4`
+### `mai-clip-v3-04-speaking.mp4`
 
 Natural gentle Vietnamese speaking motion. Small mouth movement, occasional blink, tiny nods, stable face and outfit, fixed camera, no sound.
 
