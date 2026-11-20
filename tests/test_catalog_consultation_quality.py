@@ -10,6 +10,7 @@ from backend.services.consultation import (
     Search,
     _availability_query,
     _attach_catalog_options,
+    _catalog_price_followup_plan,
     _catalog_family_plan,
     _fast_catalog_advice,
     _fast_catalog_plan,
@@ -40,6 +41,27 @@ def test_ready_drink_family_is_catalog_browseable_without_llm(snapshot):
     plan = _fast_catalog_plan("t muốn uống nước giải khát", None, [], snapshot)
     assert plan and plan.searches
     assert plan.searches[0].category == "Nước Ngọt"
+
+
+def test_family_count_uses_catalog_taxonomy(snapshot):
+    plan = _fast_catalog_plan("Cho ta hỏi có bao nhiêu loài thịt?", None, [], snapshot)
+    assert plan and "family_count" in plan.constraints
+    assert [search.category for search in plan.searches] == ["Thịt", "Thịt Đông Lạnh"]
+
+
+def test_noisy_multiword_product_phrase_stays_catalog_grounded(snapshot):
+    plan = _fast_catalog_plan("Ồ, tôi đau thịt bò đi.", None, [], snapshot)
+    assert plan and plan.searches[0].query == "Thịt bò"
+
+
+def test_price_followup_sorts_the_active_catalog_scope(snapshot):
+    previous = _fast_catalog_plan(
+        "Ờ thì cho tao hỏi là có loại dầu gội đầu nào không?", None, [], snapshot
+    )
+    assert previous
+    current = _catalog_price_followup_plan("Loại nào rẻ nhất?", previous.model_dump())
+    assert current and current.decision_mode == "recommend"
+    assert "price_order:min" in current.constraints
 
 
 @pytest.mark.asyncio
