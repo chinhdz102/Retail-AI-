@@ -82,6 +82,9 @@ p, h1, h2 { margin: 0; }
   box-shadow: 0 0 0 40px #77e0d204; pointer-events: none;
 }
 .sky-model { width: min(100%, 410px); height: 100%; min-height: 120px; --poster-color: transparent; --progress-bar-color: var(--accent); }
+.sky-video { width: min(100%, 520px); height: 100%; min-height: 120px; object-fit: contain; display: block; border-radius: 24px; filter: saturate(1.02); }
+.sky-video-poster { width: min(100%, 520px); height: 100%; min-height: 120px; object-fit: contain; display: block; border-radius: 24px; }
+.sky-video-avatar.is-speaking .sky-video { filter: saturate(1.06) drop-shadow(0 12px 28px #0002); }
 .voice-feedback {
   position: absolute; left: 24px; right: 24px; bottom: 107px; z-index: 3; text-align: center;
 }
@@ -255,6 +258,7 @@ p, h1, h2 { margin: 0; }
   .text-is-open .vrm-stage { width: 100%; height: 225px; }
   .text-is-open .sky-avatar { inset: 69px 0 5px; }
   .text-is-open .sky-model { width: 170px; height: 155px; min-height: 0; }
+  .text-is-open .sky-video, .text-is-open .sky-video-poster { width: 170px; height: 155px; min-height: 0; }
   .text-is-open .avatar-wrap::before { width: 135px; box-shadow: none; }
   .text-is-open .vrm-controls, .text-is-open .voice-feedback { display: none; }
   .text-drawer { top: 232px; right: 16px; left: 16px; bottom: max(12px, env(safe-area-inset-bottom)); width: auto; }
@@ -281,6 +285,7 @@ p, h1, h2 { margin: 0; }
   .text-is-open .vrm-stage { height: 162px; }
   .text-is-open .sky-avatar { inset: 49px 0 0; }
   .text-is-open .sky-model { width: 127px; height: 111px; }
+  .text-is-open .sky-video, .text-is-open .sky-video-poster { width: 127px; height: 111px; }
   .text-is-open .avatar-wrap::before { width: 105px; }
   .text-drawer { top: 171px; left: 9px; right: 9px; bottom: 9px; }
   .chat-header { padding: 16px 16px 11px; gap: 10px; }
