@@ -88,7 +88,10 @@ def test_product_query_ignores_conversational_greeting(text: str, expected: str)
         ("Có chương trình khuyến mãi gì?", {"limit": 5}),
         ("Nước uống có khuyến mãi gì?", {"category": "drink", "limit": 5}),
         ("Hôm nay có giảm giá cho sữa không?", {"category": "dairy", "limit": 5}),
+        ("có món nào đang giảm giá không?", {"limit": 5}),
+        ("Mặt hàng nào đang giảm giá vậy?", {"limit": 5}),
         ("Coca Zero có khuyến mãi không?", None),
+        ("Táo Rockit có giảm giá không?", None),
     ],
 )
 def test_broad_promotion_intent_lists_records_but_named_product_uses_snapshot(
@@ -2375,3 +2378,18 @@ def test_missing_new_arrival_data_is_explained_in_shopper_language() -> None:
     for language in ("vi", "en", "zh"):
         text = render(observation, "receipts", language)
         assert not any(term in text for term in ("phiếu", "nhập kho", "receiving", "收货"))
+
+
+def test_sold_out_arrival_is_marked_for_the_shopper() -> None:
+    from backend.api.main import _localized_retail_information_observation as render
+
+    observation = _receipt_observation([
+        {"product_name": "Củ nghệ 100g", "received_at": "2026-11-18T15:06:15+00:00"},
+        {"product_name": "Cải ngọt gói 500g", "received_at": "2026-11-18T15:06:15+00:00",
+         "sold_out": True},
+    ], store_timezone="Asia/Ho_Chi_Minh")
+    vi = render(observation, "receipts", "vi")
+    assert "Củ nghệ 100g (về lúc 18/11/2026 22:06);" in vi
+    assert "Cải ngọt gói 500g (về lúc 18/11/2026 22:06, đã bán hết)" in vi
+    assert "now sold out" in render(observation, "receipts", "en")
+    assert "已售完" in render(observation, "receipts", "zh")

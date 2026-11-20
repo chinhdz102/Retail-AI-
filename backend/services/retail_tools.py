@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import uuid4
@@ -23,6 +24,7 @@ from backend.services.vietnamese_intent import (
 )
 from backend.shared.contracts import SessionState
 
+logger = logging.getLogger(__name__)
 MAX_PRODUCT_RESULTS = 10
 FactField = Literal["price_vnd", "stock", "shelf", "promotion", "expiry_at", "ingredients", "spicy"]
 ToolStatus = Literal[
@@ -752,6 +754,33 @@ def execute_catalog_tool(
     )
 
 
+RECEIPT_ITEMS_SHOWN = 5
+
+
+def _rank_arrivals_by_stock(items: tuple[dict, ...]) -> tuple[dict, ...]:
+    """Shoppers ask "what just came in?" to go and buy it: list arrivals still on sale first
+    (most recent first) and mark sold-out ones, which only fill the list when few are left."""
+    try:
+        repo = get_product_repository()
+    except Exception:  # noqa: BLE001 - ranking is best effort; the receipts stay correct without it
+        logger.warning("Could not load the catalog to rank new arrivals by stock", exc_info=True)
+        return items[:RECEIPT_ITEMS_SHOWN]
+    in_stock: list[dict] = []
+    sold_out: list[dict] = []
+    seen: set[str] = set()
+    for item in items:
+        product_id = str(item.get("product_id") or "")
+        if product_id in seen:  # one line per product: the most recent arrival
+            continue
+        seen.add(product_id)
+        product = repo.get_product_snapshot(product_id) if product_id else None
+        if product is not None and product.sellable_stock <= 0:
+            sold_out.append({**item, "sold_out": True})
+        else:
+            in_stock.append(item)
+    return tuple((in_stock + sold_out)[:RECEIPT_ITEMS_SHOWN])
+
+
 def execute_retail_information_tool(
     name: str,
     raw_arguments: str,
@@ -790,6 +819,8 @@ def execute_retail_information_tool(
         )
 
     result = lookup_retail_information(kind, kiosk_id, parsed.category)
+    if kind == "receipts" and result.status == "SUCCESS" and result.items:
+        result = replace(result, items=_rank_arrivals_by_stock(result.items))
 
     def json_safe(value: Any) -> Any:
         if isinstance(value, datetime):
