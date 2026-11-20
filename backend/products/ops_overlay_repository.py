@@ -39,9 +39,14 @@ class _State:
     published_at: datetime | None = None
 
 
-def _today() -> date:
-    # Same clock as ProductSnapshot.sellable_stock.
-    return datetime.now(UTC).date()
+def _now(tz) -> datetime:
+    return datetime.now(tz)
+
+
+def _today(published_at: datetime) -> date:
+    """Today on the store's clock. Feed dates are local store dates and `published_at` carries the
+    store's UTC offset; the UTC date would keep yesterday's lots sellable until 07:00 in Vietnam."""
+    return _now(published_at.tzinfo or UTC).date()
 
 
 def _overlay(
@@ -53,6 +58,8 @@ def _overlay(
     stock = max(0, int(item["sellable_qty"]))
     expiry = item.get("earliest_expiry")
     lots = item.get("lots") or []
+    if item.get("status") == "INACTIVE":  # delisted: never advertise stock or markdowns
+        stock, expiry, lots, promotion, sale = 0, None, [], None, unit
     expired = [lot for lot in lots if date.fromisoformat(lot["expiry"]) < today]
     if expired:  # stale feed: lots past expiry are no longer sellable
         live = [lot for lot in lots if lot not in expired]
@@ -65,7 +72,9 @@ def _overlay(
     return product.model_copy(update={
         "stock": stock,
         "expiry_at": expiry,
-        "price_vnd": unit,
+        # Same convention as SnapshotProductRepository: price_vnd is the price a shopper pays now
+        # (the marked-down price when a markdown is live), list_price_vnd the regular price.
+        "price_vnd": min(unit, sale),
         "list_price_vnd": unit,
         "sale_price_vnd": sale,
         "promotion": promotion,
@@ -126,10 +135,13 @@ class OpsOverlayRepository:
         products = tuple(patched.get(p.product_id.casefold(), p) for p in self._base.products)
         by_id = {p.product_id.casefold(): p for p in products}
         # Near-expiry markdowns first: deepest discount, then earliest expiry.
+        def discount(p: ProductSnapshot) -> float:
+            regular = max(p.list_price_vnd or p.price_vnd, 1)
+            return 1 - (p.sale_price_vnd or p.price_vnd) / regular
+
         promoted = tuple(sorted(
             (p for p in patched.values() if p.promotion),
-            key=lambda p: (-(1 - (p.sale_price_vnd or p.price_vnd) / max(p.price_vnd, 1)),
-                           p.expiry_at or "9999-12-31", p.product_id),
+            key=lambda p: (-discount(p), p.expiry_at or "9999-12-31", p.product_id),
         ))
         return _State(signature, products, by_id, frozenset(p.product_id for p in patched.values()),
                       promoted, published_at)
@@ -140,7 +152,6 @@ class OpsOverlayRepository:
             file_signature = (stat.st_mtime_ns, stat.st_size)
         except OSError:
             file_signature = None
-        today = _today()
         with self._lock:
             if file_signature is not None:
                 self._read_feed(file_signature)
@@ -150,6 +161,7 @@ class OpsOverlayRepository:
             for feed in (self._feed, self._good_feed):
                 if feed is None:
                     continue
+                today = _today(datetime.fromisoformat(feed["published_at"]))
                 signature = (id(feed), today)
                 if self._state.signature == signature:
                     break
