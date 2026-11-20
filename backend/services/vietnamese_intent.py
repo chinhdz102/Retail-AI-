@@ -61,7 +61,7 @@ def is_greeting_only(text: str) -> bool:
         return True
     return any(
         phrase.startswith(greeting + " ")
-        and set(phrase[len(greeting):].split()) <= {"sky", "ban", "anh", "chi", "em", "nhe"}
+        and set(phrase[len(greeting):].split()) <= {"sky", "mai", "ban", "anh", "chi", "em", "nhe"}
         for greeting in _GREETING_ONLY_PHRASES
     )
 

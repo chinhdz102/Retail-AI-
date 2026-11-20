@@ -306,7 +306,7 @@ describe('kiosk app', () => {
 
     await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]')?.trigger('click')
 
-    await vi.waitFor(() => expect(wrapper.text()).toContain('Sky chưa trả lời được câu này'))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Mai chưa trả lời được câu này'))
     expect(wrapper.get('button[aria-label="Thử lại"]')).toBeTruthy()
   })
 
@@ -317,6 +317,6 @@ describe('kiosk app', () => {
     await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
     await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
     await vi.waitFor(() => expect(wrapper.text()).toContain('13.000đ'))
-    expect(wrapper.text()).not.toContain('Sky chưa trả lời được câu này')
+    expect(wrapper.text()).not.toContain('Mai chưa trả lời được câu này')
   })
 })

@@ -82,7 +82,7 @@ onMounted(() => {
   <section
     class="sky-avatar sky-video-avatar"
     :class="['is-' + state, { 'is-fallback': !videoSource }]"
-    aria-label="Avatar Sky"
+    aria-label="Avatar Mai"
   >
     <div class="avatar-wrap">
       <video
@@ -95,7 +95,7 @@ onMounted(() => {
         loop
         playsinline
         preload="metadata"
-        aria-label="Sky đang cử động"
+        aria-label="Mai đang cử động"
         @error="handleVideoError"
         @canplay="playVideo"
       ></video>
@@ -103,7 +103,7 @@ onMounted(() => {
         v-else
         class="sky-video-poster"
         :src="poster"
-        alt="Avatar Sky đang hỗ trợ mua sắm"
+        alt="Avatar Mai đang hỗ trợ mua sắm"
       />
     </div>
   </section>

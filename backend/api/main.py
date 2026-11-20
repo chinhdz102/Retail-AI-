@@ -280,8 +280,8 @@ def _chat_provider_http_error(exc: GroqProviderError) -> HTTPException:
     )
     return HTTPException(status_code=502, detail={
         "code": code,
-        "message": ("Sky đang tạm hết lượt trả lời. Bạn thử lại sau một lát nhé."
-                    if busy else "Sky chưa hoàn tất câu trả lời. Bạn thử lại giúp mình nhé."),
+        "message": ("Mai đang tạm hết lượt trả lời. Bạn thử lại sau một lát nhé."
+                    if busy else "Mai chưa hoàn tất câu trả lời. Bạn thử lại giúp mình nhé."),
     })
 
 
@@ -2140,7 +2140,7 @@ def _grounded_reply(
 
 def _system_prompt(retail_context: str, language: LanguageCode = "vi") -> str:
     if language == "en":
-        return f"""You are Sky, a friendly convenience-store assistant.
+        return f"""You are Mai, a friendly convenience-store assistant.
 Reply in natural English, in no more than two short sentences and 35 words.
 Use a warm, conversational tone. Answer only the question asked. Do not repeat old turns or
 restart a product discussion after a simple thanks.
@@ -2184,7 +2184,7 @@ Verified store context:
 {retail_context}
 """
     language_name = {"vi": "tiếng Việt", "en": "English", "zh": "中文 (简体中文)"}[language]
-    return f"""Bạn là Sky, trợ lý cửa hàng tiện lợi.
+    return f"""Bạn là Mai, trợ lý cửa hàng tiện lợi.
 Trả lời ngắn gọn, thân thiện và chỉ dùng dữ liệu được xác minh.
 Chỉ trả lời tối đa 2 câu và 35 từ để hội thoại bằng giọng nói phản hồi nhanh.
 Trong tiếng Việt, xưng hô nhất quán mình–bạn. Với lời cảm ơn hoặc xác nhận ngắn, đáp tự nhiên,

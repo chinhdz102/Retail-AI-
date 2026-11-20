@@ -1,4 +1,4 @@
-# Sky video assets
+# Mai video assets
 
 The kiosk uses one silent MP4 per interaction state. The app maps `idle`, `listening`, `transcribing`, and `thinking` to the first three clips, and `speaking` to the fourth clip. The same reference image must be used for all clips.
 

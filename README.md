@@ -12,7 +12,7 @@ The vertical slice is in place:
 - shared Pydantic wire enums/contracts;
 - `uv` dependency manifest;
 - PostgreSQL + pgvector and Redis Compose definition;
-- One-screen Vue kiosk with a lightweight state-based Sky video avatar, hands-free conversation, and selectable
+- One-screen Vue kiosk with a lightweight state-based Mai video avatar, hands-free conversation, and selectable
   Vietnamese, English or Chinese speech/chat.
 
 English is supported across the chat interface, Groq Whisper transcription, catalog
@@ -20,7 +20,7 @@ intent routing and speech synthesis. English category and product terms such as 
 `coffee`, `snacks` and `instant noodles` are mapped to the Vietnamese Thanh Lam Mart taxonomy
 when needed; product facts still come from the active catalog. Prices are in VND. The
 catalog does not contain loyalty rules, return policies, store hours, sales rankings,
-taste ratings or interaction analytics. Sky states that those facts are unverified and
+taste ratings or interaction analytics. Mai states that those facts are unverified and
 suggests asking store staff instead of guessing.
 
 ## Prerequisites
@@ -61,7 +61,7 @@ npm --prefix apps/kiosk-airi install
 npm --prefix apps/kiosk-airi run dev
 ```
 
-Open `http://127.0.0.1:5173`. Sky waits in a ready state without adding a chat bubble or
+Open `http://127.0.0.1:5173`. Mai waits in a ready state without adding a chat bubble or
 requesting microphone access. Open the text panel to type a question or select a quick
 prompt. Voice capture starts only after the visitor clicks the microphone button.
 The microphone recorder sends captured speech to Groq Whisper (`whisper-large-v3-turbo`,
@@ -69,7 +69,7 @@ then `whisper-large-v3` on provider failure). Local adaptive voice detection tri
 and very short noise before upload. Cloud TTS streams through a short-lived, one-use URL;
 see [the voice pipeline notes](docs/voice-pipeline.md).
 If the browser blocks autoplay, click \`Bật âm thanh\` once; the same gesture unlocks the
-audio element and resumes the pending reply. The supplied Sky clips are silent because
+audio element and resumes the pending reply. The supplied Mai clips are silent because
 the kiosk's browser TTS provides the only speech audio. See
 `apps/kiosk-airi/docs/SKY_VIDEO_MUSE_PROMPTS.md` for the Muse workflow and clip prompts.
 If the API runs on another origin, copy

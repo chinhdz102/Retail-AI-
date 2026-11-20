@@ -1,11 +1,11 @@
-# SKY / RETAIL kiosk
+# MAI / RETAIL kiosk
 
 Vue 3 + TypeScript one-screen kiosk for a multilingual retail assistant. Sky uses a
 small state-based video avatar with the generated `public/avatars/sky-anime-reference.png`
-poster and four silent MP4 clips. Sky opens in a ready
+poster and four silent MP4 clips. Mai opens in a ready
 state without adding a chat message or requesting microphone access. Visitors can type
 in the text panel; voice capture starts only after they click the microphone button.
-Sky supports Vietnamese, English and Chinese replies. Voice input uses the recorder and
+Mai supports Vietnamese, English and Chinese replies. Voice input uses the recorder and
 Groq Whisper first; the browser's built-in Speech Recognition is not used for the main
 transcription path. Selecting EN sends the English locale through transcription, the
 retail agent and speech synthesis; the microphone controls and chat labels follow the
