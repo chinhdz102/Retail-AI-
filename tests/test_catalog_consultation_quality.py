@@ -12,6 +12,7 @@ from backend.services.consultation import (
     _attach_catalog_options,
     _catalog_price_followup_plan,
     _catalog_family_plan,
+    _purchase_weight_followup_plan,
     _fast_catalog_advice,
     _fast_catalog_plan,
     _hotpot_requested,
@@ -37,6 +38,12 @@ def test_broad_milk_family_uses_catalog_category_heads(snapshot):
     assert all(search.category.startswith("Sữa") for search in plan.searches)
 
 
+def test_broad_meat_question_with_món_framing_uses_catalog_category_heads(snapshot):
+    plan = _catalog_family_plan("Cho tao biết là có món thịt nào nhỉ?", snapshot)
+    assert plan and len(plan.searches) >= 2
+    assert all(search.category.startswith("Thịt") for search in plan.searches)
+
+
 def test_ready_drink_family_is_catalog_browseable_without_llm(snapshot):
     plan = _fast_catalog_plan("t muốn uống nước giải khát", None, [], snapshot)
     assert plan and plan.searches
@@ -52,6 +59,18 @@ def test_family_count_uses_catalog_taxonomy(snapshot):
 def test_noisy_multiword_product_phrase_stays_catalog_grounded(snapshot):
     plan = _fast_catalog_plan("Ồ, tôi đau thịt bò đi.", None, [], snapshot)
     assert plan and plan.searches[0].query == "Thịt bò"
+
+
+def test_loose_weight_followup_keeps_catalog_scope(snapshot):
+    previous = _fast_catalog_plan("Ở tao muốn mua thịt bò.", None, [], snapshot)
+    assert previous
+    current = _purchase_weight_followup_plan(
+        "Vào tầm 1 cân thịt bò ấy.", previous.model_dump(), snapshot,
+    )
+    assert current and current.requirement_updates
+    assert current.requirement_updates[0].purchase_weight
+    assert current.requirement_updates[0].purchase_weight.weight_g == 1000
+    assert current.searches[0].query == previous.searches[0].query
 
 
 def test_price_followup_sorts_the_active_catalog_scope(snapshot):
