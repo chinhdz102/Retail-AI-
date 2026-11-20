@@ -20,12 +20,14 @@ const videoFailed = ref(false)
 const reducedMotion = ref(false)
 
 const clipForState: Record<AssistantStatus, string> = {
-  idle: '01-idle',
-  listening: '02-listening',
+  // The supplied idle and listening clips contain occasional open-mouth
+  // frames. Keep every silent state on the verified closed-mouth clip.
+  idle: '03-thinking',
+  listening: '03-thinking',
   transcribing: '03-thinking',
   thinking: '03-thinking',
   speaking: '04-speaking',
-  error: '01-idle',
+  error: '03-thinking',
 }
 
 const videoSource = computed(() => {

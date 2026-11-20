@@ -54,7 +54,7 @@ Mỗi clip dài 10 giây và lặp vô hạn. Không đưa câu trả lời cụ
 
 `SkyVideoAvatar.vue` chỉ giữ một thẻ `<video>`, tải clip đang cần, đặt `muted`, `playsinline`, `loop`, `preload="metadata"` và dùng poster khi clip lỗi. Trạng thái TTS trong `App.vue` điều khiển cùng state video. Cách này tránh tải cả bốn clip cùng lúc và không tạo hai nguồn âm thanh.
 
-QA các frame cho thấy clip idle có blink rõ, clip listening có chuyển động mắt nhẹ, clip thinking giữ nét mặt ổn định và clip speaking có một động tác vẫy tay ngắn cùng một frame miệng mở. Bố cục, nhân vật, màu tóc, đồng phục và nền giữ đồng nhất giữa bốn clip.
+QA các frame cho thấy clip idle và listening có một số frame miệng mở ngoài ý muốn. Clip `mai-clip-v2-03-thinking.mp4` giữ miệng đóng trong các frame đã kiểm, nên app dùng clip này cho mọi trạng thái im lặng. Clip speaking có một động tác vẫy tay ngắn cùng frame miệng mở. Bố cục, nhân vật, màu tóc, đồng phục và nền giữ đồng nhất giữa bốn clip.
 
 ### 5. Khớp chuyển động với script
 
