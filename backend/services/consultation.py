@@ -693,7 +693,12 @@ def _infer_catalog_query(repository: ProductRepository, text: str,
     # A bare catalog head followed by a concrete budget is still an explicit
     # product request. Keep this generic so “nước giặt dưới 150 nghìn” and
     # equivalent forms across categories do not require filler words.
-    if not has_product_marker and _explicit_budget(text) is None:
+    # A multiword catalog head can remain identifiable inside a noisy or
+    # elliptical utterance such as “tôi muốn thịt bò”.  The caller still
+    # applies its own constraint checks, while single-word heads stay gated by
+    # explicit shopping language.
+    if (not has_product_marker and _explicit_budget(text) is None
+            and not allow_broad):
         return None
     words = re.findall(r"[^\W_]+", unicodedata.normalize("NFC", text.casefold()))
     best = None
@@ -772,6 +777,42 @@ def _catalog_label_selection_requested(text: str) -> bool:
         r"goi y|tu van)\b",
         normalized,
     ))
+
+
+def _price_order_requested(text: str) -> str | None:
+    """Read a relative price request without tying it to a product family."""
+    normalized = normalize_vietnamese(text)
+    if re.search(r"\b(?:thap nhat|re nhat|gia re nhat|it tien nhat)\b", normalized):
+        return "min"
+    if re.search(r"\b(?:cao nhat|dat nhat|gia dat nhat|nhieu tien nhat)\b", normalized):
+        return "max"
+    return None
+
+
+def _catalog_price_followup_plan(text: str, previous_plan: dict | None) -> Plan | None:
+    """Sort the active catalog scope when a customer asks a relative price follow-up."""
+    order = _price_order_requested(text)
+    if not order or not previous_plan:
+        return None
+    try:
+        prior = Plan.model_validate(previous_plan)
+    except ValidationError:
+        return None
+    if prior.action == "ask" or not prior.searches:
+        return None
+    constraints = [constraint for constraint in prior.constraints
+                   if not constraint.startswith("price_order:")]
+    constraints.append(f"price_order:{order}")
+    return prior.model_copy(update={
+        "need": text,
+        "action": "advise",
+        "clarification": "",
+        "decision_mode": "recommend",
+        "reuse_previous": True,
+        "topic_changed": False,
+        "constraints": constraints,
+        "source_user_text": text,
+    })
 
 
 def _catalog_label_variants(repository: ProductRepository, labels: list[str]) -> list[str]:
@@ -1026,12 +1067,12 @@ def _catalog_family_plan(text: str, repository: ProductRepository) -> Plan | Non
     if not query or len(query.split()) != 1:
         return None
     normalized = normalize_vietnamese(query)
-    if not re.search(r"\b(?:co may|cac loai|nhung loai|loai nao|xem|goi y|mua|can)\b",
+    if not re.search(r"\b(?:co may|bao nhieu|cac loai|nhung loai|loai nao|xem|goi y|mua|can)\b",
                      normalize_vietnamese(text)):
         return None
     framing = set("anh em ban minh toi t the cho giup ho nhe a oi muon mua can "
                   "xem vai may mot cac nhung loai san pham mat hang thi co nao "
-                  "khong ko k voi di goi y".split())
+                  "khong ko k voi di goi y bao nhieu bao so nhieu ta hoi".split())
     if set(normalize_vietnamese(text).split()) - framing - {normalized}:
         return None
     products = [p for p in getattr(repository, "products", ()) if p.sellable_stock > 0]
@@ -1054,8 +1095,11 @@ def _catalog_family_plan(text: str, repository: ProductRepository) -> Plan | Non
     if len(categories) < 2:
         return None
     ranked = sorted(categories.items(), key=lambda item: (-len(item[1]), item[0]))[:3]
+    family_count = bool(re.search(r"\b(?:bao nhieu|co may|nhieu loai|cac loai|"
+                                  r"nhung loai)\b", normalize_vietnamese(text)))
     return Plan(
         need=text, action="advise", decision_mode="browse",
+        constraints=["family_count"] if family_count else [],
         searches=[Search(query="", category=category, role="core")
                   for category, _ in ranked],
     )
@@ -1277,6 +1321,9 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
         return Plan(need=text, action="advise", decision_mode="browse",
                     topic_changed=bool(previous_plan),
                     searches=[Search(query=availability)])
+    price_followup = _catalog_price_followup_plan(text, previous_plan)
+    if price_followup is not None:
+        return price_followup
     label_followup = _catalog_label_followup_plan(
         text, previous_plan, repository, remembered=remembered,
     )
@@ -1375,12 +1422,21 @@ def _fast_catalog_plan(text: str, previous_plan: dict | None,
     framing = set("anh em ban minh toi t cho giup ho nhe a oi nay dang can tim "
                   "muon mua xem vai may mot cac nhung loai san pham mat hang thi co "
                   "nao khong ko k de chon tu van goi y voi di dum chot thoi duoi tam "
-                  "khoang toi da gia ngan sach nghin ngan dong vnd can nam nu nen the".split())
+                  "khoang toi da gia ngan sach nghin ngan dong vnd can nam nu nen the "
+                  "doi hoi tao ma bao nhieu so nhieu o thi la".split())
     required = _catalog_label_requirements(repository, text, query)
     required_words = set(normalize_vietnamese(" ".join(required)).split())
     remaining = set(normalized.split()) - set(normalize_vietnamese(query).split()) - framing - required_words
     remaining = {word for word in remaining if not word.isdigit()}
-    if remaining:
+    noisy_product_span = (
+        len(query.split()) >= 2
+        and _label_phrase(text, query)
+        and len(remaining) <= 4
+        and not re.search(r"\b(?:khong|ko|it|nhieu|duoi|tren|toi da|ngan sach|"
+                          r"khong cay|khong duong|nhay cam|an toan|cho be|"
+                          r"hoac|hay|va|gio|tu|den|nghin|dong|vnd|gia|tam|khoang)\b", normalized)
+    )
+    if remaining and not noisy_product_span:
         return None
     choose_one = bool(re.search(
         r"\b(?:nen chon|chon (?:giup|ho|cho)|chot|(?:mot|1) (?:loai|mon|san pham))\b", normalized))
@@ -2633,6 +2689,54 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
     code; product names and prices are rendered directly from verified rows.
     Rich constraints never enter this path and continue through semantic review.
     """
+    price_order = next((constraint.removeprefix("price_order:")
+                        for constraint in plan.constraints
+                        if constraint.startswith("price_order:")), None)
+    if price_order in {"min", "max"} and candidates:
+        sellable = [product for product in candidates.values()
+                    if product.sellable_stock > 0]
+        packed = [product for product in sellable if (product.uom or "").casefold() != "kg"]
+        pool = packed or sellable
+        selected = ([min(pool, key=lambda product: product.price_vnd)]
+                    if price_order == "min" else
+                    [max(pool, key=lambda product: product.price_vnd)])
+        label = "thấp nhất" if price_order == "min" else "cao nhất"
+        try:
+            return _render_structured(
+                Composition(advice=f"Trong nhóm hàng đang xem, mức giá {label} là:",
+                            choices=[Choice(product_id=selected[0].product_id,
+                                            evidence_fields=["name"])]),
+                {product.product_id: product for product in selected}, plan,
+                "deterministic-price-order",
+            )
+        except GroqProviderError:
+            return None
+
+    if "family_count" in plan.constraints and candidates:
+        selected = []
+        for search in plan.searches:
+            found = _matching_candidates(list(candidates.values()), search)
+            product = next((row for row in found if row.sellable_stock > 0), None)
+            if product is not None and product not in selected:
+                selected.append(product)
+        selected = selected[:5]
+        categories = [search.category for search in plan.searches if search.category]
+        category_text = ", ".join(categories)
+        try:
+            return _render_structured(
+                Composition(
+                    advice=f"Mình thấy {len(categories)} nhóm trong phạm vi bạn hỏi"
+                    f" ({category_text}). Bạn tham khảo các sản phẩm sau:",
+                    choices=[Choice(product_id=product.product_id,
+                                    evidence_fields=["name"])
+                             for product in selected],
+                ),
+                {product.product_id: product for product in selected}, plan,
+                "deterministic-family-count",
+            )
+        except GroqProviderError:
+            return None
+
     # Comparison turns need one verified row per named brand and a neutral
     # limitation statement. Catalog labels do not prove cleaning performance.
     if (not _catalog_label_selection_requested(plan.need)
@@ -2713,7 +2817,8 @@ def _fast_catalog_advice(candidates: dict[str, ProductSnapshot], plan: Plan) -> 
     )
     if (not candidates or plan.action == "ask"
             or plan.decision_mode not in {"browse", "recommend"}
-            or plan.constraints or plan.purchase_exclusions
+            or any(constraint not in {"family_count"} for constraint in plan.constraints)
+            or plan.purchase_exclusions
             or plan.purchase_weights or plan.budget_scope == "basket"
             or any(query.excluded_phrases or query.package_constraints for query in plan.searches)
             or (label_filters and not label_browse)):
