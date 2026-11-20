@@ -34,7 +34,7 @@ import {
 import ChatPanel from './components/ChatPanel.vue'
 import type { CheckoutQuote, SandboxOrder, ShoppingCart, VisionIdentifyResponse } from './types'
 const SkyAvatar = defineAsyncComponent(
-  () => import('./components/SkyAvatar.vue'),
+  () => import('./components/SkyVideoAvatar.vue'),
 )
 import {
   listMicrophoneOptions,
@@ -1036,7 +1036,7 @@ onUnmounted(() => {
         </div>
       </header>
 
-      <SkyAvatar src="/avatars/sky.glb" :state="status" />
+      <SkyAvatar :state="status" />
 
       <div v-if="messages.length === 0 && !isTextOpen" class="vrm-welcome">
         <p class="vrm-welcome-kicker">Xin chào, mình là Sky</p>

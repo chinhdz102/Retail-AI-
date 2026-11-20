@@ -65,7 +65,7 @@ describe('kiosk app', () => {
     const wrapper = mount(App)
 
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
-    await vi.waitFor(() => expect(wrapper.get('model-viewer')).toBeTruthy())
+    await vi.waitFor(() => expect(wrapper.get('.sky-video-avatar')).toBeTruthy())
 
     expect(wrapper.find('.top-bar').exists()).toBe(false)
     expect(wrapper.find('.stage-features').exists()).toBe(false)

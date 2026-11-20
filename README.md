@@ -12,7 +12,7 @@ The vertical slice is in place:
 - shared Pydantic wire enums/contracts;
 - `uv` dependency manifest;
 - PostgreSQL + pgvector and Redis Compose definition;
-- One-screen Vue kiosk with local `sky.glb`, hands-free conversation, and selectable
+- One-screen Vue kiosk with a lightweight state-based Sky video avatar, hands-free conversation, and selectable
   Vietnamese, English or Chinese speech/chat.
 
 English is supported across the chat interface, Groq Whisper transcription, catalog
@@ -69,9 +69,10 @@ then `whisper-large-v3` on provider failure). Local adaptive voice detection tri
 and very short noise before upload. Cloud TTS streams through a short-lived, one-use URL;
 see [the voice pipeline notes](docs/voice-pipeline.md).
 If the browser blocks autoplay, click \`Bật âm thanh\` once; the same gesture unlocks the
-audio element and resumes the pending reply. The supplied \`sky.glb\` includes
-its own \`talk\` animation, which the kiosk uses directly while Sky is speaking. If the API
-runs on another origin, copy
+audio element and resumes the pending reply. The supplied Sky clips are silent because
+the kiosk's browser TTS provides the only speech audio. See
+`apps/kiosk-airi/docs/SKY_VIDEO_MUSE_PROMPTS.md` for the Muse workflow and clip prompts.
+If the API runs on another origin, copy
 `apps/kiosk-airi/.env.example` to `apps/kiosk-airi/.env` and set `VITE_API_BASE_URL`.
 
 Start infrastructure when Docker Desktop is installed:
