@@ -1,4 +1,4 @@
-# Nghiên cứu avatar video Sky
+# Nghiên cứu avatar video Mai
 
 ## Kết luận nhanh
 
@@ -19,7 +19,7 @@ Muse.ai đã nhận ảnh reference nhưng trả lỗi video generation unavaila
 2. Muốn giữ nhân vật ổn định nên dùng cùng ảnh reference, cùng khung hình, cùng nền, cùng quần áo và camera cố định cho mọi clip. [Animate Anyone](https://openaccess.thecvf.com/content/CVPR2024/papers/Hu_Animate_Anyone_Consistent_and_Controllable_Image-to-Video_Synthesis_for_Character_Animation_CVPR_2024_paper.pdf) cũng xem consistency theo thời gian là thách thức chính của image-to-video.
 3. Lip-sync thật là một bài toán khác. Các hướng như [StyleTalker](https://arxiv.org/abs/2208.10922) nhận audio làm điều kiện để tạo khẩu hình. Cách đó phù hợp khi cần khớp âm vị, nhưng không cần thiết cho avatar kiosk nói câu thay đổi liên tục và ưu tiên tải nhanh.
 
-## Pipeline nên dùng cho Sky
+## Pipeline nên dùng cho Mai
 
 ### 1. Khóa reference
 
@@ -59,7 +59,7 @@ Mỗi clip 4–6 giây và lặp vô hạn. Không đưa câu trả lời cụ t
 Dùng cùng ảnh reference cho mọi lần render. Chỉ thay đoạn chuyển động:
 
 ```text
-Use the attached Sky image as the only character reference. Preserve the exact same face,
+Use the attached Mai image as the only character reference. Preserve the exact same face,
 hair, single teal-and-cream uniform, coral star hair clip, coral chest badge, navy-teal
 gradient background, lighting, crop, and fixed front camera. No new clothes, props, text,
 logo, watermark, extra people, camera cuts, or audio. Generate a subtle 5-second 16:9

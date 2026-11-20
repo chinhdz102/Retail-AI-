@@ -58,12 +58,12 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000):
       }
       if (path === '/agent/respond' && response.status >= 500) {
         detail = errorCode === 'assistant_busy'
-          ? 'Sky đang tạm hết lượt trả lời. Bạn thử lại sau một lát nhé.'
+          ? 'Mai đang tạm hết lượt trả lời. Bạn thử lại sau một lát nhé.'
           : response.status === 504
-            ? 'Sky đang trả lời lâu hơn dự kiến. Bạn thử lại giúp mình nhé.'
-            : 'Sky chưa hoàn tất câu trả lời. Bạn thử lại giúp mình nhé.'
+            ? 'Mai đang trả lời lâu hơn dự kiến. Bạn thử lại giúp mình nhé.'
+            : 'Mai chưa hoàn tất câu trả lời. Bạn thử lại giúp mình nhé.'
       } else if (response.status === 429) {
-        detail = 'Sky đang nhận nhiều yêu cầu. Bạn thử lại sau một lát nhé.'
+        detail = 'Mai đang nhận nhiều yêu cầu. Bạn thử lại sau một lát nhé.'
       }
       throw new ApiError(detail, response.status)
     }

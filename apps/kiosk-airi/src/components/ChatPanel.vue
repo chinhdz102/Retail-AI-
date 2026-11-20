@@ -78,7 +78,7 @@ const emit = defineEmits<{
 
 const copy = computed(() => {
   return {
-    eyebrow: 'Cùng Sky mua sắm',
+    eyebrow: 'Cùng Mai mua sắm',
     title: 'Mình có thể giúp gì bạn?',
     emptyTitle: 'Bạn muốn tìm gì hôm nay?',
     emptyBody:
@@ -86,22 +86,22 @@ const copy = computed(() => {
     user: 'Bạn',
     thinking: 'Mình đang tìm câu trả lời',
     transcribing: 'Mình đang nghe lại câu nói của bạn',
-    errorTitle: 'Sky chưa trả lời được câu này',
-    placeholder: 'Hỏi Sky về sản phẩm bạn cần…',
+    errorTitle: 'Mai chưa trả lời được câu này',
+    placeholder: 'Hỏi Mai về sản phẩm bạn cần…',
     hint: 'Enter để gửi',
     hintSecond: 'Shift + Enter để xuống dòng',
     retry: 'Thử lại',
     micStart: 'Bắt đầu nói',
     micStop: 'Dừng ghi âm',
     voiceStop: 'Dừng nghe',
-    stopSpeaking: 'Dừng Sky nói',
+    stopSpeaking: 'Dừng Mai nói',
     languageLabel: 'Ngôn ngữ hội thoại',
-    sectionLabel: 'Trò chuyện với Sky',
+    sectionLabel: 'Trò chuyện với Mai',
     microphone: 'Micro đầu vào',
     defaultMicrophone: 'Micro mặc định',
     microphoneAriaLabel: 'Chọn micro đầu vào',
     microphoneLevel: 'Mức tín hiệu micro',
-    inputLabel: 'Nhập câu hỏi cho Sky',
+    inputLabel: 'Nhập câu hỏi cho Mai',
     quickPromptsLabel: 'Câu hỏi gợi ý',
     sendLabel: 'Gửi câu hỏi',
     imageLabel: 'Nhận diện ảnh sản phẩm',
@@ -273,7 +273,7 @@ function toggleCatalog(messageId: string) {
       >
         <div class="message-meta">
           <span class="message-author">{{
-            message.role === 'assistant' ? 'Sky' : copy.user
+            message.role === 'assistant' ? 'Mai' : copy.user
           }}</span>
         </div>
         <p class="message-bubble">{{ message.text }}</p>
@@ -332,7 +332,7 @@ function toggleCatalog(messageId: string) {
         v-if="status === 'thinking' || status === 'transcribing'"
         class="message-row message-assistant"
       >
-        <div class="message-meta"><span class="message-author">Sky</span></div>
+        <div class="message-meta"><span class="message-author">Mai</span></div>
         <div class="message-bubble typing-bubble" role="status">
           <span>{{
             status === 'transcribing' ? copy.transcribing : copy.thinking

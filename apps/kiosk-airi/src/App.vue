@@ -119,7 +119,7 @@ const audioUnlockLabel = computed(() => {
   return 'Bật âm thanh'
 })
 const audioUnlockHint = computed(() => {
-  return 'Bấm một lần để cho phép Sky phát giọng nói.'
+  return 'Bấm một lần để cho phép Mai phát giọng nói.'
 })
 const textPanelLabel = computed(() => {
   return isTextOpen.value ? 'Đóng phần chữ' : 'Mở phần chữ'
@@ -162,7 +162,7 @@ function handleVoiceState(state: VoiceState) {
     void refreshMicrophones()
     if (status.value === 'speaking') {
       isVoiceActive.value = true
-      voiceHint.value = 'Bạn có thể nói chen để Sky dừng lại'
+      voiceHint.value = 'Bạn có thể nói chen để Mai dừng lại'
       return
     }
     status.value = 'listening'
@@ -226,7 +226,7 @@ async function handleVoiceAudio(audio: Blob, previewId?: number) {
     status.value = 'transcribing'
     voiceHint.value = voiceCopy.transcribing
   } else {
-    voiceHint.value = 'Mình đang kiểm tra câu nói trước khi dừng Sky'
+    voiceHint.value = 'Mình đang kiểm tra câu nói trước khi dừng Mai'
   }
   try {
     let result = preview ? await preview.result : null
@@ -1023,11 +1023,11 @@ onUnmounted(() => {
 
 <template>
   <main class="vrm-only-shell" :class="{ 'text-is-open': isTextOpen }">
-    <section class="vrm-stage" aria-label="Avatar Sky">
+    <section class="vrm-stage" aria-label="Avatar Mai">
       <header class="vrm-brand-bar">
         <div class="vrm-brand-mark" aria-hidden="true">S</div>
         <div class="vrm-brand-copy">
-          <strong>Sky</strong>
+          <strong>Mai</strong>
           <span>Trợ lý mua sắm</span>
         </div>
         <div class="vrm-live-pill" :class="`is-${status}`">
@@ -1039,7 +1039,7 @@ onUnmounted(() => {
       <SkyAvatar :state="status" />
 
       <div v-if="messages.length === 0 && !isTextOpen" class="vrm-welcome">
-        <p class="vrm-welcome-kicker">Xin chào, mình là Sky</p>
+        <p class="vrm-welcome-kicker">Xin chào, mình là Mai</p>
         <h1>Bạn đang tìm gì hôm nay?</h1>
         <p>Nói tự nhiên hoặc mở khung chat để xem câu trả lời và sản phẩm.</p>
       </div>
@@ -1057,7 +1057,7 @@ onUnmounted(() => {
         ></meter>
       </div>
 
-      <div class="vrm-controls" aria-label="Điều khiển Sky">
+      <div class="vrm-controls" aria-label="Điều khiển Mai">
         <button
           v-if="needsAudioUnlock"
           type="button"
@@ -1091,7 +1091,7 @@ onUnmounted(() => {
           v-if="status === 'speaking'"
           type="button"
           class="vrm-control"
-          aria-label="Dừng Sky nói"
+          aria-label="Dừng Mai nói"
           @click="stopSpeaking"
         >
           <Pause :size="21" weight="fill" aria-hidden="true" />

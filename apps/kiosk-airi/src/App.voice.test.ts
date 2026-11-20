@@ -378,10 +378,10 @@ describe('Whisper voice integration and TTS isolation', () => {
     expect(store.controller.startCalls).toBe(2)
   })
 
-  it('allows Stop Sky without restarting a warm microphone', async () => {
+  it('allows Stop Mai without restarting a warm microphone', async () => {
     const w = await start()
     audio(); await flushPromises()
-    await w.get('button[aria-label="Dừng Sky nói"]').trigger('click')
+    await w.get('button[aria-label="Dừng Mai nói"]').trigger('click')
     expect(store.controller.startCalls).toBe(2)
     await vi.advanceTimersByTimeAsync(400)
     expect(store.controller.startCalls).toBe(2)
