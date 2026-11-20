@@ -11,7 +11,7 @@ Hiện đã có **4 clip local** dùng được cho demo:
 - `sky-clip-03-thinking.mp4`
 - `sky-clip-04-speaking.mp4`
 
-Muse.ai đã nhận ảnh reference nhưng trả lỗi video generation unavailable for the current account region, nên **số clip tạo trực tiếp trong Muse.ai hiện là 0**. Bốn clip local là fallback để app chạy được ngay. Khi Muse cho phép render, chỉ cần thay bốn file bằng file cùng tên.
+Muse.ai đã nhận ảnh reference nhưng trả lỗi video generation unavailable for the current account region, nên **số clip tạo trực tiếp trong Muse.ai hiện là 0**. Bốn clip hiện tại là video Gemini người dùng cung cấp, đã được chuẩn hóa vào app và tắt audio để dùng với TTS của Mai.
 
 ## Điều các hướng dẫn và paper thống nhất
 
@@ -39,7 +39,7 @@ Giữ một ảnh chính diện 16:9 với một bộ đồng phục duy nhất.
 - `thinking` — nhìn hơi lên, chớp mắt, miệng đóng
 - `speaking` — khẩu hình nhẹ, chớp mắt, gật rất nhỏ
 
-Mỗi clip 4–6 giây và lặp vô hạn. Không đưa câu trả lời cụ thể vào video vì nội dung TTS thay đổi theo mỗi truy vấn.
+Mỗi clip dài 10 giây và lặp vô hạn. Không đưa câu trả lời cụ thể vào video vì nội dung TTS thay đổi theo mỗi truy vấn.
 
 ### 3. Xuất file nhẹ
 
@@ -54,7 +54,7 @@ Mỗi clip 4–6 giây và lặp vô hạn. Không đưa câu trả lời cụ t
 
 `SkyVideoAvatar.vue` chỉ giữ một thẻ `<video>`, tải clip đang cần, đặt `muted`, `playsinline`, `loop`, `preload="metadata"` và dùng poster khi clip lỗi. Trạng thái TTS trong `App.vue` điều khiển cùng state video. Cách này tránh tải cả bốn clip cùng lúc và không tạo hai nguồn âm thanh.
 
-Bản fallback hiện tại đã được làm lại bằng các frame trạng thái riêng cho blink, listening và thinking, cùng frame miệng nói. Đây là motion preview local, không phải kết quả render native của Muse.ai.
+QA các frame cho thấy clip idle có blink rõ, clip listening có chuyển động mắt nhẹ, clip thinking giữ nét mặt ổn định và clip speaking có một động tác vẫy tay ngắn cùng một frame miệng mở. Bố cục, nhân vật, màu tóc, đồng phục và nền giữ đồng nhất giữa bốn clip.
 
 ## Prompt mẫu cho Muse
 

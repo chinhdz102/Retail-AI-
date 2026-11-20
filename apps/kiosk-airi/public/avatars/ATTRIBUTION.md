@@ -10,3 +10,7 @@ The source repository does not expose a `LICENSE` file or SPDX license metadata 
 ## Mai anime reference
 
 `sky-anime-reference.png` is an original generated character reference for the Sky kiosk assistant. It is kept in the repository so image-to-video tools can use the same character and the same single teal-and-cream uniform for every state clip.
+
+## Mai video clips
+
+The four `sky-clip-*.mp4` files were supplied by the user from Gemini video generation and normalized locally to remove audio before kiosk playback. The app uses browser TTS for speech.
