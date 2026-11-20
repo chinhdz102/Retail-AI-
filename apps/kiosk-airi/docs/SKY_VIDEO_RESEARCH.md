@@ -6,10 +6,10 @@ Với kiosk bán lẻ, avatar không cần lip-sync chính xác theo từng âm 
 
 Hiện đã có **4 clip local** dùng được cho demo:
 
-- `sky-clip-01-idle.mp4`
-- `sky-clip-02-listening.mp4`
-- `sky-clip-03-thinking.mp4`
-- `sky-clip-04-speaking.mp4`
+- `mai-clip-v2-01-idle.mp4`
+- `mai-clip-v2-02-listening.mp4`
+- `mai-clip-v2-03-thinking.mp4`
+- `mai-clip-v2-04-speaking.mp4`
 
 Muse.ai đã nhận ảnh reference nhưng trả lỗi video generation unavailable for the current account region, nên **số clip tạo trực tiếp trong Muse.ai hiện là 0**. Bốn clip hiện tại là video Gemini người dùng cung cấp, đã được chuẩn hóa vào app và tắt audio để dùng với TTS của Mai.
 

@@ -13,4 +13,4 @@ The source repository does not expose a `LICENSE` file or SPDX license metadata 
 
 ## Mai video clips
 
-The four `sky-clip-*.mp4` files were supplied by the user from Gemini video generation and normalized locally to remove audio before kiosk playback. The app uses browser TTS for speech.
+The four `mai-clip-v2-*.mp4` files were supplied by the user from Gemini video generation and normalized locally to remove audio before kiosk playback. The app uses browser TTS for speech.
