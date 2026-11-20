@@ -53,6 +53,7 @@ export interface AgentResponse {
   tools_used?: string[]
   state: string
   products?: ProductCard[]
+  catalog_products?: ProductCard[]
   cart?: ShoppingCart | null
   checkout_quote?: CheckoutQuote | null
   order?: SandboxOrder | null
@@ -147,5 +148,6 @@ export interface ChatMessage {
   model?: string
   groundedProductIds?: string[]
   products?: ProductCard[]
+  catalogProducts?: ProductCard[]
   supportTicket?: SupportTicket
 }

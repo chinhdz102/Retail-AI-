@@ -257,7 +257,7 @@ describe('Whisper voice integration and TTS isolation', () => {
     expect(store.controller.isActive).toBe(true)
   })
 
-  it('stops TTS at confirmed onset before the full next utterance is uploaded', async () => {
+  it('keeps TTS until the interrupt audio is confirmed by transcription', async () => {
     const pending = deferred<any>()
     api.respond.mockReturnValue(pending.promise)
     const w = await start()
@@ -270,11 +270,13 @@ describe('Whisper voice integration and TTS isolation', () => {
     const pause = vi.mocked(HTMLMediaElement.prototype.pause)
     const previousPauses = pause.mock.calls.length
     speechStart()
+    expect(pause.mock.calls.length).toBe(previousPauses)
+    expect(element.hasAttribute('src')).toBe(true)
+    audio(); await flushPromises()
     expect(pause.mock.calls.length).toBeGreaterThan(previousPauses)
-    expect(element.hasAttribute('src')).toBe(false)
     expect(HTMLMediaElement.prototype.load).toHaveBeenCalled()
     expect(store.controller.isActive).toBe(true)
-    expect(api.transcribe).toHaveBeenCalledTimes(1)
+    expect(api.transcribe).toHaveBeenCalledTimes(2)
     oldEnded.call(element, new Event('ended'))
     audio()
     audio()
@@ -303,11 +305,13 @@ describe('Whisper voice integration and TTS isolation', () => {
     expect(store.controller.isActive).toBe(true)
     const signal = api.createSynthesisTicket.mock.calls[0]?.[3] as AbortSignal
     speechStart()
+    expect(signal.aborted).toBe(false)
+    audio(); await flushPromises()
     expect(signal.aborted).toBe(true)
     ticket.resolve('http://localhost/old-audio')
     await flushPromises()
-    expect(w.get('audio').attributes('src')).toBeUndefined()
-    expect(api.transcribe).toHaveBeenCalledTimes(1)
+    expect(api.respond).toHaveBeenCalled()
+    expect(api.transcribe).toHaveBeenCalledTimes(2)
     audio(); await flushPromises()
     expect(api.transcribe).toHaveBeenCalledTimes(2)
     w.unmount()
@@ -342,10 +346,12 @@ describe('Whisper voice integration and TTS isolation', () => {
     const utterance = synthesis.speak.mock.calls[0]![0] as any
     const cancellations = synthesis.cancel.mock.calls.length
     speechStart()
+    expect(synthesis.cancel.mock.calls.length).toBe(cancellations)
+    audio(); await flushPromises()
     expect(synthesis.cancel.mock.calls.length).toBe(cancellations + 1)
     utterance.onend()
     expect(store.controller.isActive).toBe(true)
-    expect(api.transcribe).toHaveBeenCalledTimes(1)
+    expect(api.transcribe).toHaveBeenCalledTimes(2)
     audio(); await flushPromises()
     expect(api.transcribe).toHaveBeenCalledTimes(2)
     w.unmount()

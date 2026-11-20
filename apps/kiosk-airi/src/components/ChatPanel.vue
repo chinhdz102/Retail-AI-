@@ -47,6 +47,7 @@ const props = defineProps<{
   visionResult?: VisionIdentifyResponse | null
 }>()
 const conversation = ref<HTMLElement | null>(null)
+const expandedCatalogMessages = ref(new Set<string>())
 watch(
   () => [props.messages.length, props.status],
   async () => {
@@ -159,6 +160,21 @@ function onImageChange(event: Event) {
   const file = input.files?.[0]
   input.value = ''
   if (file) emit('identify-image', file)
+}
+function visibleProducts(message: ChatMessage) {
+  const products = message.catalogProducts?.length
+    ? message.catalogProducts
+    : message.products ?? []
+  if (!message.catalogProducts?.length || expandedCatalogMessages.value.has(message.id)) {
+    return products
+  }
+  return products.slice(0, 6)
+}
+function toggleCatalog(messageId: string) {
+  const next = new Set(expandedCatalogMessages.value)
+  if (next.has(messageId)) next.delete(messageId)
+  else next.add(messageId)
+  expandedCatalogMessages.value = next
 }
 </script>
 
@@ -275,9 +291,9 @@ function onImageChange(event: Event) {
             message.supportTicket.demo ? shoppingText.ticketDemo : ''
           }}</small>
         </div>
-        <div v-if="message.products?.length" class="message-product-list">
+        <div v-if="message.products?.length || message.catalogProducts?.length" class="message-product-list">
           <article
-            v-for="product in message.products"
+            v-for="product in visibleProducts(message)"
             :key="product.product_id"
             class="message-product-card"
           >
@@ -299,6 +315,16 @@ function onImageChange(event: Event) {
               {{ shoppingText.add }}
             </button>
           </article>
+          <button
+            v-if="message.catalogProducts && message.catalogProducts.length > 6"
+            type="button"
+            class="catalog-more-button"
+            @click="toggleCatalog(message.id)"
+          >
+            {{ expandedCatalogMessages.has(message.id)
+              ? 'Thu gọn'
+              : `Xem thêm ${message.catalogProducts.length - 6} sản phẩm` }}
+          </button>
         </div>
       </article>
 

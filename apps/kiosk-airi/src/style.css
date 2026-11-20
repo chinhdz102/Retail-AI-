@@ -177,6 +177,7 @@ p, h1, h2 { margin: 0; }
 .message-product-card { display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid #29404f; border-radius: 12px; background: #132330; }
 .message-product-copy { display: grid; flex: 1; gap: 6px; min-width: 0; }
 .message-product-copy strong { font-size: 12px; font-weight: 650; line-height: 1.5; }
+.catalog-more-button { width: 100%; padding: 9px 10px; color: var(--accent); background: #77e0d210; border: 1px solid #77e0d222; border-radius: 8px; font-size: 11px; cursor: pointer; }
 .product-card-price { color: var(--accent); font-size: 13px; font-weight: 800; }
 .typing-bubble { display: flex; align-items: center; gap: 9px; color: var(--text-muted); font-size: 12px; }
 .typing-dots { display: inline-flex; gap: 3px; }

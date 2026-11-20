@@ -13,7 +13,7 @@ import math
 import re
 import unicodedata
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from time import perf_counter
 from typing import Literal
 
@@ -177,6 +177,20 @@ class Advice:
     products: tuple[ProductSnapshot, ...]
     plan: Plan
     purchase_lines: tuple[dict, ...] = ()
+    catalog_products: tuple[ProductSnapshot, ...] = ()
+
+
+def _attach_catalog_options(
+    advice: Advice,
+    candidates: dict[str, ProductSnapshot],
+    plan: Plan,
+    catalog_candidates: dict[str, ProductSnapshot] | None = None,
+) -> Advice:
+    """Expose every grounded browse result for the chat's expandable list."""
+    if plan.decision_mode != "browse" or not candidates:
+        return advice
+    options = catalog_candidates or candidates
+    return replace(advice, catalog_products=tuple(options.values()))
 
 
 @dataclass(frozen=True)
@@ -2046,7 +2060,11 @@ async def consult(
             exc.failure_stage = getattr(exc, "failure_stage", "clarification")
             exc.consultation_plan = plan.model_dump()
             raise
-    candidates, missing = await _retrieve_candidates(repository, plan, topics, customer_texts)
+    candidates, missing = await _retrieve_candidates(
+        repository, plan, topics, customer_texts,
+        0 if plan.decision_mode == "browse" else None,
+    )
+    catalog_candidates: dict[str, ProductSnapshot] = {}
     if _availability_query(text) and not candidates:
         return _availability_no_match_advice(plan)
     if (not candidates and previous_plan and planner_model == "deterministic-fast-path"
@@ -2102,7 +2120,10 @@ async def consult(
             repaired = await _repair_retrieval(groq, repository, plan, missing, topics, text)
             if repaired != plan.searches:
                 plan = plan.model_copy(update={"searches": repaired})
-                candidates, _ = await _retrieve_candidates(repository, plan, topics, customer_texts)
+                candidates, _ = await _retrieve_candidates(
+                    repository, plan, topics, customer_texts,
+                    0 if plan.decision_mode == "browse" else None,
+                )
         except GroqProviderError as exc:
             exc.failure_stage = "retrieval_repair"
             exc.consultation_plan = plan.model_dump()
@@ -2135,13 +2156,23 @@ async def consult(
         candidates = {pid: p for pid, p in candidates.items()
             if not re.search(r"\bgia vi\b", normalize_vietnamese(p.category_hierarchy or ""))
             or any(_matching_candidates([p], query) for query in explicit_types)}
+    if plan.decision_mode == "browse":
+        catalog_candidates = dict(candidates)
+        composition_limit = max(4, 4 * len(plan.searches))
+        candidates = {
+            product.product_id: product
+            for product in _diverse_candidates(
+                list(candidates.values()), "", limit=composition_limit,
+                context=plan.source_user_text or plan.need,
+            )
+        }
     if planner_model == "deterministic-fast-path":
         fast_advice = _fast_catalog_advice(candidates, plan)
         if fast_advice is not None:
             # No remote writer consumes this context. Avoid constructing its
             # product evidence, equivalences and duplicated history at all.
             logger.info("Consultation deterministic response topic=%s", text[:120])
-            return fast_advice
+            return _attach_catalog_options(fast_advice, candidates, plan, catalog_candidates)
     context.update(
         plan=_plan_evidence(plan), candidates=[_candidate_evidence(p, plan) for p in candidates.values()],
         verified_type_equivalences=relevant_equivalences(text, plan.need,
@@ -2165,12 +2196,15 @@ async def consult(
         fallback = _fallback_grounded_advice(candidates, plan)
         if fallback is not None:
             logger.warning("Consultation all credentials cooling down; serving catalog fallback")
-            return fallback
+            return _attach_catalog_options(fallback, candidates, plan, catalog_candidates)
     messages = _messages(NO_MATCH_COMPOSER if not candidates and plan.decision_mode != "guide"
                          else STRUCTURED_COMPOSER, context)
     try:
-        return await _compose_and_review(groq, messages, candidates, plan, text, history,
-            planner_model == "deterministic-fast-path" and previous_plan is None)
+        composed = await _compose_and_review(
+            groq, messages, candidates, plan, text, history,
+            planner_model == "deterministic-fast-path" and previous_plan is None,
+        )
+        return _attach_catalog_options(composed, candidates, plan, catalog_candidates)
     except GroqProviderError as exc:
         # A provider/reviewer outage must not turn an already verified product
         # match into a dead-end 502.  The candidate set is code-filtered above,
@@ -2200,7 +2234,7 @@ async def consult(
         if fallback is not None:
             logger.warning("Consultation provider failure; serving catalog fallback reason=%s",
                            str(exc)[:180])
-            return fallback
+            return _attach_catalog_options(fallback, candidates, plan, catalog_candidates)
         # Validated customer intent survives a provider/render failure too.
         # Otherwise a run of failed responses erases earlier exclusions when
         # their original turns leave the rolling history window.
@@ -2208,7 +2242,13 @@ async def consult(
         raise
 
 
-async def _retrieve_candidates(repository, plan, topics, customer_texts):
+async def _retrieve_candidates(
+    repository,
+    plan,
+    topics,
+    customer_texts,
+    candidate_limit: int | None = None,
+):
     candidates = {}
     missing = []
     for index, query in enumerate(plan.searches):
@@ -2396,10 +2436,18 @@ async def _retrieve_candidates(repository, plan, topics, customer_texts):
         if not found:
             missing.append(index)
         preference_context = " ".join([plan.source_user_text, *plan.requirement_quotes.values()]) or plan.need
-        diversity_limit = 4 if plan.decision_mode == "browse" else 8
-        for product in _diverse_candidates(
-            found, ranking_query, limit=diversity_limit, context=preference_context
-        ):
+        if candidate_limit is None:
+            diversity_limit = 4 if plan.decision_mode == "browse" else 8
+            selected = _diverse_candidates(
+                found, ranking_query, limit=diversity_limit, context=preference_context
+            )
+        elif candidate_limit <= 0:
+            selected = list(dict.fromkeys(found))
+        else:
+            selected = _diverse_candidates(
+                found, ranking_query, limit=candidate_limit, context=preference_context
+            )
+        for product in selected:
             candidates[product.product_id] = product
     return candidates, missing
 
