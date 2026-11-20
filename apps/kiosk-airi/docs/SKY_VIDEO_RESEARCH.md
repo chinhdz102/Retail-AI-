@@ -56,6 +56,12 @@ Mỗi clip dài 10 giây và lặp vô hạn. Không đưa câu trả lời cụ
 
 QA các frame cho thấy clip idle có blink rõ, clip listening có chuyển động mắt nhẹ, clip thinking giữ nét mặt ổn định và clip speaking có một động tác vẫy tay ngắn cùng một frame miệng mở. Bố cục, nhân vật, màu tóc, đồng phục và nền giữ đồng nhất giữa bốn clip.
 
+### 5. Khớp chuyển động với script
+
+Image-to-video chỉ tạo chuyển động từ ảnh và prompt. Nó không biết câu TTS phát sau đó. Các phương pháp talking face khớp âm vị phải nhận audio làm điều kiện riêng, nên một clip Gemini có miệng mở sẵn không thể khớp mọi câu trả lời động.
+
+App giữ `thinking` với miệng đóng trong lúc lấy audio TTS. App chỉ chuyển sang `speaking` sau `audio.onplay()` hoặc `speechSynthesis.onstart()`. Phản hồi chào `local-greeting` có script cố định “Chào bạn! Mình là Mai. Hôm nay bạn đang cần tìm đồ ăn, đồ uống hay đồ dùng gì để mình tìm giúp?” và được đọc sau khi khách gửi lời chào.
+
 ## Prompt mẫu cho Muse
 
 Dùng cùng ảnh reference cho mọi lần render. Chỉ thay đoạn chuyển động:

@@ -1469,7 +1469,7 @@ def _localized_greeting(language: LanguageCode) -> str:
     return {
         "en": "Hello! Are you looking for food, drinks, or another product today? I can help you find it.",
         "zh": "你好！您今天想找食品、饮料还是其他商品？我可以帮您找。",
-        "vi": "Chào bạn! Hôm nay bạn đang cần tìm đồ ăn, đồ uống hay đồ dùng gì để mình tìm giúp?",
+        "vi": "Chào bạn! Mình là Mai. Hôm nay bạn đang cần tìm đồ ăn, đồ uống hay đồ dùng gì để mình tìm giúp?",
     }[language]
 
 

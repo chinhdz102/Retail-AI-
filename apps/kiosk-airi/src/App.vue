@@ -93,6 +93,7 @@ let voiceController: VoiceConversationController | null = null
 let isBargeInCapture = false
 let bargeInCandidate = false
 let pendingBargeInTranscription = false
+let ttsPreparing = false
 let listeningStartedAt = 0
 let sessionExpiryTimer: ReturnType<typeof setTimeout> | undefined
 let sessionIdleTimeoutMs = 30 * 60 * 1000
@@ -165,13 +166,19 @@ function handleVoiceState(state: VoiceState) {
       voiceHint.value = 'Bạn có thể nói chen để Mai dừng lại'
       return
     }
+    if (ttsPreparing) {
+      voiceHint.value = 'Mình đang chuẩn bị giọng nói'
+      return
+    }
     status.value = 'listening'
     voiceHint.value = recognitionNotice ?? voiceCopy.listening
     return
   }
   if (state.phase === 'recording') {
     recognitionNotice = null
-    if (isBargeInCapture && status.value === 'speaking') bargeInCandidate = true
+    if (isBargeInCapture && (status.value === 'speaking' || ttsPreparing)) {
+      bargeInCandidate = true
+    }
     status.value = 'listening'
     voiceHint.value = voiceCopy.recording
     return
@@ -206,7 +213,7 @@ function handleVoiceError(error: VoiceControllerError) {
   status.value = 'error'
 }
 async function handleVoiceAudio(audio: Blob, previewId?: number) {
-  const wasBargeIn = bargeInCandidate && status.value === 'speaking'
+  const wasBargeIn = bargeInCandidate && (status.value === 'speaking' || ttsPreparing)
   if (
     !sessionId.value ||
     isUnmounted ||
@@ -440,7 +447,7 @@ function finishSpeech(requestId: number, afterSpeech?: () => void) {
   }, 400)
 }
 function interruptOnSpeechStart() {
-  if (status.value !== 'speaking' || !isHandsFree.value) return
+  if ((!ttsPreparing && status.value !== 'speaking') || !isHandsFree.value) return
   isBargeInCapture = false
   bargeInCandidate = false
   ++speechRequestId
@@ -507,6 +514,7 @@ function isAutoplayBlocked(error: unknown): boolean {
   )
 }
 function releaseAudioPlayback() {
+  ttsPreparing = false
   synthesisRequest?.abort()
   synthesisRequest = null
   if (audioPlayback) {
@@ -546,7 +554,9 @@ function speakWithBrowser(
     .find((voice) => voice.lang.toLowerCase().startsWith(preferredLanguage))
   if (preferredVoice) utterance.voice = preferredVoice
   utterance.onstart = () => {
-    if (requestId === speechRequestId && !isUnmounted) status.value = 'speaking'
+    if (requestId !== speechRequestId || isUnmounted) return
+    status.value = 'speaking'
+    void startBargeInCapture()
   }
   const finish = () => {
     if (requestId !== speechRequestId || isUnmounted) return
@@ -554,21 +564,21 @@ function speakWithBrowser(
   }
   utterance.onend = finish
   utterance.onerror = finish
-  status.value = 'speaking'
+  status.value = 'thinking'
   synthesis.speak(utterance)
-  void startBargeInCapture()
   return true
 }
-async function startBargeInCapture() {
+async function startBargeInCapture(allowBeforeSpeech = false) {
   if (
     !isHandsFree.value ||
     isUnmounted ||
     !sessionId.value ||
-    status.value !== 'speaking' ||
+    (!allowBeforeSpeech && status.value !== 'speaking') ||
     !voiceController
   ) return
   isBargeInCapture = true
   bargeInCandidate = false
+  if (voiceController.isActive) return
   try {
     await voiceController.start()
   } catch {
@@ -584,10 +594,10 @@ async function speak(text: string, afterSpeech?: () => void) {
   releaseAudioPlayback()
   const request = new AbortController()
   synthesisRequest = request
-  status.value = 'speaking'
+  status.value = 'thinking'
   voiceHint.value = 'Mình đang trả lời bằng giọng nói'
-  // Open before requesting audio, so speech can interrupt TTS startup too.
-  void startBargeInCapture()
+  ttsPreparing = true
+  void startBargeInCapture(true)
   try {
     if (!sessionId.value || typeof Audio === 'undefined') {
       throw new Error('Cloud audio playback is unavailable')
@@ -606,7 +616,9 @@ async function speak(text: string, afterSpeech?: () => void) {
       if (requestId !== speechRequestId || isUnmounted) return
       audioUnlocked.value = true
       needsAudioUnlock.value = false
+      ttsPreparing = false
       status.value = 'speaking'
+      void startBargeInCapture()
     }
     audio.onended = () => {
       if (requestId !== speechRequestId || isUnmounted) return
@@ -622,6 +634,12 @@ async function speak(text: string, afterSpeech?: () => void) {
     }
     try {
       await audio.play()
+      if (requestId !== speechRequestId || isUnmounted) return
+      // Some browsers resolve play() before dispatching the play event. The
+      // promise still means playback has started, so sync the avatar here too.
+      ttsPreparing = false
+      status.value = 'speaking'
+      void startBargeInCapture()
     } catch (error) {
       if (requestId !== speechRequestId || isUnmounted) return
       if (isAutoplayBlocked(error)) {
@@ -812,8 +830,9 @@ async function sendMessage(value = draft.value, fromVoice = false) {
     if (response.cart) cart.value = response.cart
     if (response.checkout_quote) checkoutQuote.value = response.checkout_quote
     if (response.order) sandboxOrder.value = response.order
-    if (fromVoice) {
-      void speak(response.text, resumeHandsFree)
+    const shouldSpeak = fromVoice || response.model === 'local-greeting'
+    if (shouldSpeak) {
+      void speak(response.text, fromVoice ? resumeHandsFree : undefined)
     } else {
       status.value = 'idle'
       voiceHint.value = voiceCopy.ready
@@ -1044,7 +1063,7 @@ onUnmounted(() => {
       <SkyAvatar :state="status" />
 
       <div v-if="messages.length === 0 && !isTextOpen" class="vrm-welcome">
-        <p class="vrm-welcome-kicker">Xin chào, mình là Mai</p>
+        <p class="vrm-welcome-kicker">Mai · Trợ lý mua sắm</p>
         <h1>Bạn đang tìm gì hôm nay?</h1>
         <p>Nói tự nhiên hoặc mở khung chat để xem câu trả lời và sản phẩm.</p>
       </div>
