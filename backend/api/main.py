@@ -1698,18 +1698,21 @@ def _localized_retail_information_observation(
             return f"Trong 7 ngày qua, {store_name} chưa ghi nhận hàng mới về{checked_vi}."
         if language == "en":
             summaries = [
-                f"{item.get('product_name')} (arrived {date_text(item.get('received_at'), True)})"
+                f"{item.get('product_name')} (arrived {date_text(item.get('received_at'), True)}"
+                f"{', now sold out' if item.get('sold_out') else ''})"
                 for item in items[:5]
             ]
             return f"Recent new arrivals at {store_name}: " + "; ".join(summaries)
         if language == "zh":
             summaries = [
-                f"{item.get('product_name')}（到货时间 {date_text(item.get('received_at'), True)}）"
+                f"{item.get('product_name')}（到货时间 {date_text(item.get('received_at'), True)}"
+                f"{'，已售完' if item.get('sold_out') else ''}）"
                 for item in items[:5]
             ]
             return f"{store_name} 最近新到的商品：" + "；".join(summaries)
         summaries = [
-            f"{item.get('product_name')} (về lúc {date_text(item.get('received_at'), True)})"
+            f"{item.get('product_name')} (về lúc {date_text(item.get('received_at'), True)}"
+            f"{', đã bán hết' if item.get('sold_out') else ''})"
             for item in items[:5]
         ]
         return f"Hàng mới về gần đây tại {store_name}: " + "; ".join(summaries)
@@ -4032,6 +4035,8 @@ def _promotion_list_tool_arguments(text: str) -> dict[str, object] | None:
         "meal": {"mi", "noodles", "meal", "meals", "food", "thuc", "an"},
     }
     generic_terms = {"hom", "nay", "hien", "tai", "today", "current", "currently"}
+    # "món nào / mặt hàng nào / sản phẩm nào đang giảm giá?" asks for the list, not one product.
+    generic_terms |= {"mon", "mat", "hang", "san", "pham", "loai", "thu", "items", "products"}
     remaining = set(re.findall(r"\w+", _normalize_request_text(product_query)))
     if category:
         remaining.difference_update(category_terms.get(category, set()))
