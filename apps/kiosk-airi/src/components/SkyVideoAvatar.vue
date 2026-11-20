@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   state: 'idle',
   poster: '/avatars/sky-anime-reference.png',
-  videoBase: '/avatars/mai-clip-v3',
+  videoBase: '/avatars/mai-clip-v4',
   enabled: true,
 })
 

@@ -44,6 +44,18 @@ def test_broad_meat_question_with_món_framing_uses_catalog_category_heads(snaps
     assert all(search.category.startswith("Thịt") for search in plan.searches)
 
 
+def test_broad_meat_question_with_filler_particle_stays_catalog_grounded(snapshot):
+    plan = _fast_catalog_plan("Ờ cho tao biết là có món thịt nào nhỉ?", None, [], snapshot)
+    assert plan and len(plan.searches) >= 2
+    assert all(search.category.startswith("Thịt") for search in plan.searches)
+
+
+def test_broad_family_variants_keep_catalog_grounded(snapshot):
+    for text in ("Ờ ở đây bán thịt gì?", "Có món gà nào nhỉ?"):
+        plan = _fast_catalog_plan(text, None, [], snapshot)
+        assert plan and plan.searches
+
+
 def test_ready_drink_family_is_catalog_browseable_without_llm(snapshot):
     plan = _fast_catalog_plan("t muốn uống nước giải khát", None, [], snapshot)
     assert plan and plan.searches
