@@ -36,4 +36,4 @@ Natural gentle Vietnamese speaking motion. Small mouth movement, occasional blin
 
 ## Current demo assets
 
-Muse.ai accepted the reference image but reported that video generation is unavailable for the current account region. The four MP4 files currently in `public/avatars/` are lightweight local fallback clips made from the same reference and speaking-mouth frame so the kiosk can be reviewed now. Replace those four files with Muse exports using the same names when the account can render video; no Vue code change is required.
+Muse.ai accepted the reference image but reported that video generation is unavailable for the current account region. The four MP4 files currently in `public/avatars/` are lightweight local motion-preview clips made from the same reference plus state frames for blink, listening, thinking and speaking so the kiosk can be reviewed now. Replace those four files with Muse exports using the same names when the account can render video; no Vue code change is required.

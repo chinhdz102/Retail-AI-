@@ -54,6 +54,8 @@ Mỗi clip 4–6 giây và lặp vô hạn. Không đưa câu trả lời cụ t
 
 `SkyVideoAvatar.vue` chỉ giữ một thẻ `<video>`, tải clip đang cần, đặt `muted`, `playsinline`, `loop`, `preload="metadata"` và dùng poster khi clip lỗi. Trạng thái TTS trong `App.vue` điều khiển cùng state video. Cách này tránh tải cả bốn clip cùng lúc và không tạo hai nguồn âm thanh.
 
+Bản fallback hiện tại đã được làm lại bằng các frame trạng thái riêng cho blink, listening và thinking, cùng frame miệng nói. Đây là motion preview local, không phải kết quả render native của Muse.ai.
+
 ## Prompt mẫu cho Muse
 
 Dùng cùng ảnh reference cho mọi lần render. Chỉ thay đoạn chuyển động:
