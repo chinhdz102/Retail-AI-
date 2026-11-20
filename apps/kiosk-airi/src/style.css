@@ -320,3 +320,15 @@ p, h1, h2 { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Mai's generated background is the stage backdrop. Keep the character centered
+   while allowing the same video to fill the available kiosk surface. */
+.sky-video-avatar,
+.text-is-open .sky-video-avatar { inset: 0; pointer-events: none; }
+.sky-video-avatar .avatar-wrap { width: 100%; height: 100%; }
+.sky-video-avatar .avatar-wrap::before { display: none; }
+.sky-video-avatar .sky-video,
+.sky-video-avatar .sky-video-poster {
+  width: 100%; height: 100%; max-width: none; min-height: 0;
+  object-fit: cover; border-radius: 0;
+}

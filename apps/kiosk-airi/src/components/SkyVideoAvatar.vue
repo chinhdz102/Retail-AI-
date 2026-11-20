@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   state: 'idle',
   poster: '/avatars/sky-anime-reference.png',
-  videoBase: '/avatars/sky-clip',
+  videoBase: '/avatars/mai-clip-v2',
   enabled: true,
 })
 
@@ -41,6 +41,9 @@ function resetVideo() {
   const element = video.value
   if (!element || !videoSource.value) return
 
+  element.muted = true
+  element.defaultMuted = true
+  element.volume = 0
   element.pause()
   element.currentTime = 0
   element.load()
@@ -91,7 +94,9 @@ onMounted(() => {
         class="sky-video"
         :src="videoSource"
         :poster="poster"
-        muted
+        :muted="true"
+        :default-muted="true"
+        volume="0"
         loop
         playsinline
         preload="metadata"

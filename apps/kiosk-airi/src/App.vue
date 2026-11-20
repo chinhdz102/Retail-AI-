@@ -1002,6 +1002,11 @@ function retryLastPrompt() {
 }
 
 onMounted(() => {
+  // A previous page instance can leave a browser speech queue or media element
+  // alive during a hot reload. Start the kiosk with a silent media state.
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  releaseAudioPlayback()
+  pendingSpeechText.value = null
   void bootKiosk()
   void refreshMicrophones()
   navigator.mediaDevices?.addEventListener?.('devicechange', refreshMicrophones)
