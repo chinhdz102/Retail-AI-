@@ -14,21 +14,21 @@ Reference image: `/avatars/sky-anime-reference.png`
 
 ## Prompts
 
-### `mai-clip-v3-01-idle.mp4`
+### `mai-clip-v4-01-idle.mp4`
 
 Subtle breathing and one natural blink. Closed mouth, neutral friendly expression, almost no head movement, fixed camera.
 
-### `mai-clip-v3-02-listening.mp4`
+### `mai-clip-v4-02-listening.mp4`
 
 Attentive listening pose. Look at the camera, blink once, make one very small nod, closed mouth, fixed camera.
 
-### `mai-clip-v3-03-thinking.mp4`
+### `mai-clip-v4-03-thinking.mp4`
 
 Thinking pose. Look slightly upward for a moment, blink once, return eyes to camera, closed mouth, tiny shoulder movement, fixed camera.
 
-### `mai-clip-v3-04-speaking.mp4`
+### `mai-clip-v4-04-speaking.mp4`
 
-Natural gentle Vietnamese speaking motion. Small mouth movement, occasional blink, tiny nods, stable face and outfit, fixed camera, no sound.
+Natural gentle Vietnamese speaking motion. Small mouth movement only, occasional blink, stable face and outfit, fixed camera, both hands and arms out of frame, no wave or gesture, no sound.
 
 ## Runtime behavior
 
@@ -36,4 +36,4 @@ Natural gentle Vietnamese speaking motion. Small mouth movement, occasional blin
 
 ## Current demo assets
 
-Muse.ai accepted the reference image but reported that video generation is unavailable for the current account region. The four MP4 files currently in `public/avatars/` are user-provided Gemini videos, normalized to silent H.264 MP4 for the kiosk. They use the same Mai reference and map to idle, listening, thinking and speaking. Replace those four files with Muse exports using the same names when the account can render video; no Vue code change is required.
+Muse.ai accepted the reference image but reported that video generation is unavailable for the current account region. The v4 idle, listening and thinking MP4 files are verified copies of the user-provided Gemini clips, normalized to silent H.264 MP4. The v4 speaking clip is a local silent mouth-state loop using the matching closed-mouth and speaking-mouth Mai frames, so it has no hand wave. Replace these files with Muse exports using the same names when the account can render video; no Vue code change is required.

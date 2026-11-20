@@ -13,4 +13,4 @@ The source repository does not expose a `LICENSE` file or SPDX license metadata 
 
 ## Mai video clips
 
-The four `mai-clip-v3-*.mp4` files were supplied by the user from Gemini video generation and normalized locally to remove audio before kiosk playback. The app uses browser TTS for speech.
+The `mai-clip-v3-*.mp4` files were supplied by the user from Gemini video generation and normalized locally to remove audio before kiosk playback. The app uses the v3 closed-mouth clips for idle, listening, and thinking states. The v4 idle, listening, and thinking files are copies of those verified clips. The v4 speaking clip is a local silent mouth-state loop built from the matching closed-mouth and speaking-mouth Mai reference frames, with no hand gesture. Browser TTS provides speech audio.

@@ -1069,12 +1069,12 @@ def _catalog_family_plan(text: str, repository: ProductRepository) -> Plan | Non
     normalized = normalize_vietnamese(query)
     normalized_text = normalize_vietnamese(text)
     if not re.search(
-        r"\b(?:co may|bao nhieu|cac loai|nhung loai|loai nao|xem|goi y|mua|can)\b"
-        r"|\bco\b.*\b(?:nao|gi|loai|mon)\b",
+        r"\b(?:co may|bao nhieu|cac loai|nhung loai|loai nao|xem|goi y|mua|can|ban)\b"
+        r"|\b(?:co|ban)\b.*\b(?:nao|gi|loai|mon)\b",
         normalized_text,
     ):
         return None
-    framing = set("anh em ban minh toi t tao the cho giup ho nhe a oi muon mua can "
+    framing = set("anh em ban minh toi t tao the cho giup ho nhe a oi o muon mua can day gi "
                   "xem vai may mot cac nhung loai san pham mat hang thi co nao "
                   "khong ko k voi di goi y bao nhieu bao so nhieu ta hoi biet la mon "
                   "nhieu nhi vay".split())
@@ -1098,15 +1098,42 @@ def _catalog_family_plan(text: str, repository: ProductRepository) -> Plan | Non
                       for category, rows in categories.items()}
         categories = {category: rows for category, rows in categories.items() if rows}
     if len(categories) < 2:
-        return None
+        # Some catalog families are represented inside a broader department
+        # instead of having a category head of their own, for example “gà”
+        # appears on meat, mì and cháo labels.  For a broad browse question,
+        # keep only exact title matches and group those rows by their real
+        # catalog categories.  This avoids turning an accented term into the
+        # unrelated normalized token “ga” found in “có ga”.
+        raw_query = query.casefold().strip()
+        exact_rows = [
+            product for product in products
+            if re.search(rf"(?<!\w){re.escape(raw_query)}(?!\w)",
+                         product.name.casefold())
+        ]
+        departments = Counter(product.department for product in exact_rows
+                              if product.department)
+        if departments:
+            department, count = departments.most_common(1)[0]
+            if count >= len(exact_rows) * .7:
+                categories = {}
+                for product in exact_rows:
+                    if product.department == department:
+                        categories.setdefault(product.category, []).append(product)
+        if len(categories) < 2:
+            return None
     ranked = sorted(categories.items(), key=lambda item: (-len(item[1]), item[0]))[:3]
     family_count = bool(re.search(r"\b(?:bao nhieu|co may|nhieu loai|cac loai|"
                                   r"nhung loai)\b", normalize_vietnamese(text)))
+    searches = [Search(query="", category=category, role="core")
+                for category, _ in ranked]
+    if not any(normalize_vietnamese(category).startswith(normalized)
+               for category, _ in ranked):
+        searches = [Search(query=query, category=category, role="core")
+                    for category, _ in ranked]
     return Plan(
         need=text, action="advise", decision_mode="browse",
         constraints=["family_count"] if family_count else [],
-        searches=[Search(query="", category=category, role="core")
-                  for category, _ in ranked],
+        searches=searches,
     )
 
 
