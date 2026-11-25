@@ -224,6 +224,27 @@ def test_crawled_thanh_lam_details_surface_ingredients_and_usage_for_chin_su_1kg
     assert facts["usage"].evidence_scope.value == "RETAILER_LISTING"
 
 
+def test_enriched_details_surface_selsun_ingredients_usage_and_origin(
+    snapshot_repository: SnapshotProductRepository,
+) -> None:
+    selsun = snapshot_repository.get_product_snapshot("TLM_10016912")
+    assert selsun is not None
+    facts = {
+        fact.attribute: fact
+        for fact in product_knowledge_facts(
+            selsun,
+            ("ingredients", "usage", "origin"),
+            source="thanh_lam_snapshot",
+            catalog_version=snapshot_repository.dataset_sha256,
+        )
+    }
+    assert facts["ingredients"].status.value == "VERIFIED"
+    assert "selenium sulfide" in str(facts["ingredients"].value).casefold()
+    assert facts["usage"].status.value == "VERIFIED"
+    assert "lắc kỹ" in str(facts["usage"].value).casefold()
+    assert facts["origin"].status.value == "VERIFIED"
+
+
 def test_cleaned_thanh_lam_product_details_meets_zero_defect_quality_gate() -> None:
     details_path = (
         Path(__file__).resolve().parents[1] / "data" / "thanh_lam_product_details.json"

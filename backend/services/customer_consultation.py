@@ -503,7 +503,8 @@ _STREAM_PROMO_BROWSE_RE = re.compile(
 )
 _STREAM_BASKET_OR_MEAL_RE = re.compile(
     r"\b(?:lau|combo|gio\s+(?:hang|do)|mua\s+kem|ket\s+hop|nau\s+an|nau\s+|"
-    r"lam\s+mon|bua\s+(?:sang|trua|toi|an)|an\s+sang|an\s+trua|an\s+toi|tiec|picnic)\b"
+    r"lam\s+mon|bua\s+(?:sang|trua|toi|an)|an\s+sang|an\s+trua|an\s+toi|tiec|picnic|"
+    r"xem\s+bong\s+da|xem\s+phim|thuc\s+khuya|du\s+lich|di\s+choi|cam\s+trai)\b"
 )
 _STREAM_VALUE_RANK_RE = re.compile(
     r"\b(?:tiet kiem nhat|tiet kiem|loi nhat|don gia thap|re nhat|gia tot nhat)\b"
@@ -517,6 +518,7 @@ _STREAM_FILLER_TOKENS = frozenset({
     "hang", "ngay", "hien", "tai", "hom", "nay", "dang", "duoc", "khuyen",
     "giam", "uu", "dai", "la", "gi", "the", "sao", "muon", "can", "lay",
     "so", "sanh", "giua", "va", "hay", "hoac", "duoi", "tren", "tam", "khoang",
+    "hoi", "nhi", "vay", "vang", "chu", "cung", "kia", "day", "do", "chung",
 })
 
 

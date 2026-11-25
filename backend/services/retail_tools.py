@@ -4822,6 +4822,20 @@ def execute_catalog_tool(
             terminal=True,
         )
 
+    if "ingredients" in parsed.fields and product.ingredients is None:
+        ing_facts = product_knowledge_facts(
+            product,
+            ("ingredients",),
+            source=repo.source_name,
+        )
+        if (
+            ing_facts
+            and ing_facts[0].status.value == "VERIFIED"
+            and isinstance(ing_facts[0].value, str)
+            and ing_facts[0].value.strip()
+        ):
+            product = product.model_copy(update={"ingredients": ing_facts[0].value.strip()})
+
     unavailable = [
         field_name
         for field_name in parsed.fields

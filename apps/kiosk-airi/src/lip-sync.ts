@@ -494,6 +494,23 @@ export function ensureAudioLipSyncTap(audio: HTMLAudioElement): AudioTapHandle |
 }
 
 /**
+ * Reads the instantaneous output RMS (0..1) of an active `HTMLAudioElement`
+ * through its existing Web Audio `AnalyserNode` tap, or returns `null` when
+ * no tap is attached yet (for example in non-WebAudio environments).
+ */
+export function sampleAudioElementRms(audio: HTMLAudioElement | null): number | null {
+  if (!audio || audio.paused || audio.ended) return 0
+  const tap = audioTapCache.get(audio)
+  if (!tap) return null
+  if (tap.context.state === 'suspended') {
+    void tap.context.resume().catch(() => undefined)
+    return null
+  }
+  tap.analyser.getFloatTimeDomainData(tap.timeBuffer)
+  return computeTimeDomainRms(tap.timeBuffer)
+}
+
+/**
  * Reads the live speech RMS & spectral formant bands from an attached `HTMLAudioElement`
  * and steps the `LipSyncAnalyzerState` forward by `dtMs`.
  */

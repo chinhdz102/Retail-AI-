@@ -13,6 +13,7 @@ Run:
 
 from __future__ import annotations
 
+import html
 import json
 import re
 import unicodedata
@@ -122,7 +123,11 @@ _TRAILING_NON_SECTION_RE = re.compile(
 _VALID_INCI_RE = re.compile(
     r"\b(?:sorbitol|hydrated silica|sodium lauryl sulfate|sodium fluoride|"
     r"glycerin|niacinamide|titanium dioxide|stearic acid|peg-\d+|disodium edta|"
-    r"zinc citrate|cellulose gum|panthenol|tocopherol)\b",
+    r"zinc citrate|cellulose gum|panthenol|tocopherol|selenium sulfide|"
+    r"dipotassium glycyrrhizate|ketoconazole|piroctone olamine|zinc pyrithione|"
+    r"polyquaternium|ammonium laureth|dimethicone|cocamidopropyl betaine|"
+    r"menthol|salicylic acid|allantoin|cetyl alcohol|stearyl alcohol|"
+    r"phenoxyethanol|tocopheryl acetate|sodium chloride|citric acid)\b",
     re.IGNORECASE,
 )
 _REAL_HTML_JUNK_RE = re.compile(r"</?[a-zA-Z][^>]*>|&(?:amp|nbsp|lt|gt|quot);")
@@ -149,6 +154,8 @@ _REAL_SUBSTANCE_RE = re.compile(
     r"lô\s+hội|nha\s+đam|bạc\s+hà|oải\s+hương|hoa\s+hồng|hoa\s+cúc|hương\s+thảo|tơ\s+tằm|"
     r"ngọc\s+trai|yến\s+sào|nhân\s+sâm|linh\s+chi|cốm|hạt\s+sen|hạt\s+chia|hạt\s+điều|macca|"
     r"hoạt\s+chất|enzyme|enzim|surfactant|alcohol|cồn|ethanol|chlorine|clo|javel|"
+    r"selenium|sulfide|glycyrrhizate|ketoconazole|piroctone|pyrithione|polyquaternium|"
+    r"dimethicone|betaine|menthol|allantoin|phenoxyethanol|chlorhexidine|"
     r"caffeine|taurine|inositol|ginseng|probiotic|lợi\s+khuẩn|prebiotic|fos|inulin|dha|epa)\b",
     re.IGNORECASE,
 )
@@ -184,7 +191,8 @@ _EN_FOOD_WORDS_RE = re.compile(
 def normalize_typography(text: str) -> str:
     if not text:
         return ""
-    s = unicodedata.normalize("NFC", text)
+    s = html.unescape(text)
+    s = unicodedata.normalize("NFC", s)
     s = _ZERO_WIDTH_RE.sub("", s)
     s = _HTML_TAG_RE.sub(" ", s)
     s = _EMPTY_PARENS_RE.sub("", s)
@@ -453,6 +461,19 @@ def clean_ingredients(
     return joined, bleed
 
 
+_STORAGE_ONLY_PREFIX_RE = re.compile(
+    r"^(?:hướng\s+dẫn\s+bảo\s+quản|bảo\s+quản|nơi\s+khô\s+ráo|khô\s+ráo|"
+    r"ở\s+nhiệt\s+độ\s+phòng|ngăn\s+mát|ngăn\s+đông|tránh\s+ánh\s+nắng)\b",
+    re.IGNORECASE,
+)
+_REAL_USAGE_VERB_RE = re.compile(
+    r"\b(?:dùng\s+trực\s+tiếp|ăn\s+trực\s+tiếp|ăn\s+ngay|dùng\s+ngay|uống\s+trực\s+tiếp|"
+    r"lắc\s+(?:đều|kỹ)|thoa|gội|xả|tắm|rửa|chải|đánh\s+răng|súc\s+miệng|giặt|lau|"
+    r"xịt|bôi|đắp|pha|nấu|hấp|chiên|xào|luộc|nướng|chấm|ướp|trộn|bóc\s+vỏ|mở\s+gói|mở\s+nắp)\b",
+    re.IGNORECASE,
+)
+
+
 def clean_usage(raw_usage: str, product_name: str) -> tuple[str | None, str | None]:
     """Clean usage instructions; split out trailing storage clause if mixed."""
     if not raw_usage:
@@ -462,6 +483,10 @@ def clean_usage(raw_usage: str, product_name: str) -> tuple[str | None, str | No
     s = _LEADING_LABEL_RE.sub("", s).strip()
     if not s or len(s) < 8 or _PLACEHOLDER_ING_RE.search(s):
         return None, None
+
+    # Migrate misclassified storage-only text out of usage into storage.
+    if _STORAGE_ONLY_PREFIX_RE.search(s) and not _REAL_USAGE_VERB_RE.search(s):
+        return None, s
 
     extracted_storage: str | None = None
     m_sto = re.search(
@@ -483,6 +508,14 @@ def clean_usage(raw_usage: str, product_name: str) -> tuple[str | None, str | No
     return s, extracted_storage
 
 
+_VALID_STORAGE_CUE_RE = re.compile(
+    r"(?:(?<!chất\s)bảo\s+quản|khô\s+ráo|thoáng\s+mát|nhiệt\s+độ|tủ\s+lạnh|ngăn\s+mát|"
+    r"ngăn\s+đông|ánh\s+nắng|ánh\s+sáng|đậy\s+kín|đóng\s+kín|tránh\s+nhiệt|tránh\s+ẩm|"
+    r"để\s+nơi|\d+\s*°?\s*c\b|lạnh\s+từ|cấp\s+đông|trữ\s+đông|nơi\s+mát|độ\s+ẩm)",
+    re.IGNORECASE,
+)
+
+
 def clean_storage(raw_storage: str, product_name: str) -> str | None:
     if not raw_storage:
         return None
@@ -490,6 +523,8 @@ def clean_storage(raw_storage: str, product_name: str) -> str | None:
     s = strip_title_echo(s, product_name)
     s = _LEADING_LABEL_RE.sub("", s).strip()
     if not s or len(s) < 6 or _PLACEHOLDER_ING_RE.search(s):
+        return None
+    if not _VALID_STORAGE_CUE_RE.search(s):
         return None
 
     # Restore clipped "Bảo quản " prefix when section splitter consumed the verb.
@@ -501,7 +536,7 @@ def clean_storage(raw_storage: str, product_name: str) -> str | None:
     s = repair_merged_bullets(s)
     s = _capitalize_first(normalize_typography(s))
     s = trim_clean_sentence(s, max_len=280)
-    return s if len(s) >= 10 else None
+    return s if len(s) >= 10 and _VALID_STORAGE_CUE_RE.search(s) else None
 
 
 def clean_summary(raw_summary: str, product_name: str) -> str | None:
@@ -555,6 +590,8 @@ def audit_dataset(records: dict[str, dict[str, Any]]) -> dict[str, int]:
             metrics["count_usage"] += 1
         if sto:
             metrics["count_storage"] += 1
+            if not _VALID_STORAGE_CUE_RE.search(sto):
+                metrics["defect_non_storage_in_storage"] += 1
         if summ:
             metrics["count_summary"] += 1
 
@@ -631,12 +668,24 @@ def main() -> None:
         if usage_clean:
             entry["usage"] = usage_clean
             stats["usage"] += 1
+            if rec.get("usage_source"):
+                entry["usage_source"] = rec["usage_source"]
+            if rec.get("usage_source_url"):
+                entry["usage_source_url"] = rec["usage_source_url"]
         if storage_clean:
             entry["storage"] = storage_clean
             stats["storage"] += 1
+            if rec.get("storage_source"):
+                entry["storage_source"] = rec["storage_source"]
+            if rec.get("storage_source_url"):
+                entry["storage_source_url"] = rec["storage_source_url"]
         if origin_clean:
             entry["origin"] = origin_clean
             stats["origin"] += 1
+            if rec.get("origin_source"):
+                entry["origin_source"] = rec["origin_source"]
+            if rec.get("origin_source_url"):
+                entry["origin_source_url"] = rec["origin_source_url"]
         if summary_clean:
             entry["summary"] = summary_clean
             stats["summary"] += 1

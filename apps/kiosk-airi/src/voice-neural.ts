@@ -20,17 +20,20 @@ export async function createLocalNeuralVad(callbacks: NeuralVadCallbacks): Promi
   const { MicVAD } = await import('@ricky0123/vad-web')
   const base = import.meta.env.BASE_URL
   return MicVAD.new({
-    // v6 retains the 512-sample interface. Stricter speech thresholds reject
-    // continuous fan/HVAC airflow while 750ms redemption avoids cutting off
-    // natural mid-sentence Vietnamese pauses.
+    // v6 retains the 512-sample (32 ms) interface. Calibrated to match the backend
+    // Silero v6 profile: 0.58 positive / 0.35 negative hysteresis lets softer
+    // Vietnamese syllables reset the silence counter instead of chopping clauses
+    // mid-sentence, while 950 ms redemption + Smart Turn v3 hold absorb natural
+    // thinking pauses. Noise rejection is handled by the 90 Hz HPF + SNR/ZCR
+    // continuity gate in VoiceConversationController.
     model: 'v6',
     processorType: 'AudioWorklet',
     baseAssetPath: `${base}vad/`,
     onnxWASMBasePath: `${base}vad/onnx/`,
-    positiveSpeechThreshold: 0.72,
-    negativeSpeechThreshold: 0.45,
-    redemptionMs: 750,
-    preSpeechPadMs: 280,
+    positiveSpeechThreshold: 0.58,
+    negativeSpeechThreshold: 0.35,
+    redemptionMs: 950,
+    preSpeechPadMs: 360,
     minSpeechMs: 320,
     submitUserSpeechOnPause: false,
     ...callbacks,

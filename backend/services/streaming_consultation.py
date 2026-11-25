@@ -18,6 +18,7 @@ from typing import Literal
 
 from backend.products.catalog import ProductSnapshot
 from backend.products.category_taxonomy import normalize_category_text
+from backend.products.knowledge import product_knowledge_facts
 from backend.products.repository import ProductRepository
 from backend.services.bounded_work import run_catalog_work
 from backend.services.customer_consultation import (
@@ -71,6 +72,48 @@ _SNACK_JUNK_FOR_MEAL_RE = re.compile(
 _NEG_TRAILING_FILLER_RE = re.compile(
     r"\s+(?:co\s+loai\s+nao|loai\s+nao|cai\s+nao|mon\s+nao|nao|khong|nhe|nha|a|giup|voi)\b.*$"
 )
+_NATIVE_STREAM_OPENER_RE = re.compile(
+    r"(?i)(?:^|(?<=[\s,.;:!?]))"
+    r"(?:chúng\s+tôi|chúng\s+ta|bọn\s+mình|bọn\s+tao|"
+    r"cho\s+(?:tao|mình|tôi|em)\s+biết(?:\s+là)?|"
+    r"muốn\s+hỏi(?:\s+về)?(?:\s+sản\s+phẩm)?|"
+    r"hỏi\s+về(?:\s+sản\s+phẩm)?|nói\s+về|tìm\s+hiểu(?:\s+về)?|"
+    r"tao|mày|thì(?!\s+là)|về(?!\s+sinh)|biết(?=\s|$|[.,?!]))"
+    r"(?=$|[\s,.;:!?])"
+)
+_STREAM_DETAIL_QUERY_RE = re.compile(
+    r"\b(?:cach\s+(?:su\s+)?dung|huong\s+dan\s+su\s+dung|"
+    r"(?:su\s+)?dung\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao)|"
+    r"(?:goi|pha|nau|che\s+bien)\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao)|"
+    r"thanh\s+phan|lam\s+tu\s+gi|bao\s+quan|xuat\s+xu|san\s+xuat\s+o\s+dau)\b"
+)
+_STREAM_DETAIL_STRIP_RE = re.compile(
+    r"\b(?:cach\s+(?:su\s+)?dung|huong\s+dan\s+su\s+dung|"
+    r"(?:su\s+)?dung\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao)|"
+    r"(?:goi|pha|nau|che\s+bien)\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao)|"
+    r"thanh\s+phan|lam\s+tu\s+gi|bao\s+quan(?:\s+nhu\s+the\s+nao|\s+the\s+nao|\s+sao)?|"
+    r"xuat\s+xu(?:\s+o\s+dau|\s+tu\s+dau)?|san\s+xuat\s+o\s+dau|"
+    r"nhu\s+the\s+nao|the\s+nao|ra\s+sao|chai\s+nay|hop\s+nay|goi\s+nay|loai\s+nay|cai\s+nay)\b"
+)
+_STREAM_DETAIL_ATTR_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "usage",
+        re.compile(
+            r"\b(?:cach\s+(?:su\s+)?dung|huong\s+dan\s+su\s+dung|"
+            r"(?:su\s+)?dung\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao)|"
+            r"(?:goi|pha|nau|che\s+bien)\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao))\b"
+        ),
+    ),
+    ("ingredients", re.compile(r"\b(?:thanh\s+phan|lam\s+tu\s+gi|co\s+chat\s+gi)\b")),
+    ("storage", re.compile(r"\b(?:bao\s+quan|cat\s+giu|de\s+o\s+dau)\b")),
+    ("origin", re.compile(r"\b(?:xuat\s+xu|san\s+xuat\s+o\s+dau|cua\s+nuoc\s+nao)\b")),
+)
+_DETAIL_ATTR_LABELS_VI: dict[str, str] = {
+    "usage": "hướng dẫn sử dụng",
+    "ingredients": "bảng thành phần",
+    "storage": "hướng dẫn bảo quản",
+    "origin": "thông tin xuất xứ",
+}
 
 
 def _clean_negative_terms(parsed) -> list[str]:
@@ -158,7 +201,8 @@ def _lean_streaming_product_card(
 
 def _clean_lexical_query(text: str) -> str:
     """Strip Vietnamese conversational fillers & budgets to isolate product keywords."""
-    stripped = normalize_category_text(strip_retrieval_budget(text))
+    cleaned_native = _NATIVE_STREAM_OPENER_RE.sub(" ", text)
+    stripped = normalize_category_text(strip_retrieval_budget(cleaned_native))
     tokens = [
         tok
         for tok in stripped.split()
@@ -188,7 +232,12 @@ def _filter_streaming_candidates(
         hay = normalize_category_text(
             f"{item.name} {item.brand or ''} {item.category or ''}"
         )
-        hits = sum(1 for tok in focus if tok in hay)
+        hay_compact = hay.replace(" ", "")
+        hits = sum(
+            1
+            for tok in focus
+            if tok in hay or (len(tok) >= 4 and tok in hay_compact)
+        )
         if hits > 0:
             scores[item.product_id] = hits
     if not scores:
@@ -653,6 +702,280 @@ async def _prepare_slim_basket_streaming(
     )
 
 
+async def _prepare_product_detail_streaming(
+    *,
+    text: str,
+    answer_text: str,
+    norm_answer: str,
+    visible: list[ProductSnapshot],
+    repository: ProductRepository,
+    previous_memory: dict,
+) -> StreamingConsultationPlan | None:
+    """Path F: Verified product detail/usage/ingredient/storage streaming (0 planner calls)."""
+    requested_attrs = [
+        attr for attr, pat in _STREAM_DETAIL_ATTR_PATTERNS if pat.search(norm_answer)
+    ]
+    if not requested_attrs:
+        return None
+    cleaned_first = _clean_lexical_query(answer_text)
+    stripped_query = _STREAM_DETAIL_STRIP_RE.sub(" ", cleaned_first)
+    detail_stop = frozenset(
+        {
+            "cach", "nhu", "su", "huong", "dan", "thanh",
+            "phan", "bao", "quan", "xuat", "xu",
+        }
+    )
+    target_lex = " ".join(
+        tok
+        for tok in stripped_query.split()
+        if len(tok) >= 2 and tok not in _STREAM_FILLER_TOKENS and tok not in detail_stop
+    )
+    target: ProductSnapshot | None = None
+    related: list[ProductSnapshot] = []
+    if target_lex:
+        lex_hits = await run_catalog_work(
+            repository.search, query=target_lex, limit=8, timeout_seconds=3
+        )
+        if lex_hits:
+            focused, focus_scores = _filter_streaming_candidates(lex_hits, target_lex, None)
+            ordered = _rank_streaming_candidates(focused, target_lex, focus_scores=focus_scores)
+            target = ordered[0]
+            related = _related_candidates(ordered, [target], limit=4)
+    elif visible:
+        target = visible[0]
+        related = visible[1:5]
+    if target is None:
+        return None
+
+    # Re-run guidance safety gate with the resolved product name & category so clinical/
+    # sensitive/chemical/infant/compatibility items still route to the strict reviewer.
+    combined_guidance = shopping_guidance(
+        f"{answer_text} {target.name} {target.category or ''}", limit=32
+    )
+    if any(
+        item.get("domain") in _STREAM_HIGH_RISK_DOMAINS
+        and item.get("id") not in _STREAM_SAFE_GUIDANCE_IDS
+        for item in combined_guidance
+    ):
+        return None
+
+    facts = await run_catalog_work(
+        product_knowledge_facts,
+        target,
+        ("usage", "ingredients", "storage", "origin", "summary"),
+        source="snapshot",
+        timeout_seconds=3,
+    )
+    verified_details: dict[str, str] = {
+        fact.attribute: str(fact.value).strip()
+        for fact in facts
+        if fact.status == "VERIFIED" and str(fact.value or "").strip()
+    }
+    missing_fields = [attr for attr in requested_attrs if attr not in verified_details]
+    ordinary_guidance = [
+        {"source": str(item.get("source") or ""), "summary": str(item.get("summary") or "")}
+        for item in combined_guidance
+        if item.get("domain") == "ordinary" and item.get("summary")
+    ][:2]
+
+    product_card = _lean_streaming_product_card(target)
+    if target.category:
+        product_card["category"] = target.category
+    payload_obj: dict[str, object] = {
+        "customer_request": text,
+        "product": product_card,
+        "requested_fields": requested_attrs,
+        "verified_details": verified_details,
+        "missing_verified_fields": missing_fields,
+    }
+    if ordinary_guidance and missing_fields:
+        payload_obj["general_guidance"] = ordinary_guidance
+
+    system_prompt = (
+        "Bạn là Mai, trợ lý siêu thị thân thiện. Trả lời trực tiếp bằng tiếng Việt tự nhiên, "
+        "ngắn gọn trong 2–3 câu liền mạch (không gạch đầu dòng, không markdown **). "
+        "XƯNG HÔ BẮT BUỘC: luôn xưng 'mình' và gọi khách là 'bạn' nhất quán trong toàn bộ câu "
+        "(TUYỆT ĐỐI KHÔNG xưng 'em' hay 'tôi', mở đầu tự nhiên bằng 'Dạ, ...'). "
+        "QUY TẮC NGHIÊM NGẶT: "
+        "(1) CHỈ sử dụng thông tin có thật trong verified_details của JSON. "
+        "(2) Nếu mục khách hỏi nằm trong missing_verified_fields, nói rõ là hệ thống chưa có "
+        "thông tin riêng in trên bao bì của sản phẩm này và khuyên khách đọc kỹ nhãn trước khi "
+        "dùng; TUYỆT ĐỐI KHÔNG tự bịa hướng dẫn sử dụng, thành phần, liều lượng hay xuất xứ. "
+        "(3) Nếu có general_guidance, có thể chia sẻ ngắn gọn 1 ý tham khảo chung (nêu rõ là "
+        "hướng dẫn chung, không thay thế nhãn bao bì sản phẩm)."
+    )
+
+    if not missing_fields:
+        joined = "; ".join(
+            f"{_DETAIL_ATTR_LABELS_VI.get(attr, attr)}: {verified_details[attr]}"
+            for attr in requested_attrs
+        )
+        fallback_text = (
+            f"Dạ, với {target.name} ({target.price_vnd:,}đ), thông tin mình có là {joined}. "
+            "Bạn xem thêm trên bao bì khi sử dụng để đảm bảo chính xác nhất nhé."
+        ).replace(",", ".")
+    else:
+        missing_vi = ", ".join(_DETAIL_ATTR_LABELS_VI.get(attr, attr) for attr in missing_fields)
+        fallback_text = (
+            f"Dạ, hiện tại hệ thống mình chưa có {missing_vi} riêng in trên bao bì của "
+            f"{target.name}, nên bạn vui lòng xem kỹ nhãn và hướng dẫn trên bao bì "
+            "trước khi dùng nhé."
+        )
+
+    memory = {
+        "need": previous_memory.get("need") or text[:500],
+        "last_action": "recommend",
+        "last_question": "",
+        "pending_question": None,
+        "answered_slots": previous_memory.get("answered_slots", []),
+        "constraints": previous_memory.get("constraints", {}),
+        "selection": {"picks": [{"candidate": 0}]},
+    }
+    return StreamingConsultationPlan(
+        products=[target],
+        related_products=related,
+        memory=memory,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": json.dumps(payload_obj, ensure_ascii=False, separators=(",", ":")),
+            },
+        ],
+        fallback_text=fallback_text,
+    )
+
+
+async def _prepare_open_need_streaming(
+    *,
+    text: str,
+    answer_text: str,
+    repository: ProductRepository,
+    groq: GroqService,
+    previous_memory: dict,
+    parsed,
+) -> StreamingConsultationPlan | None:
+    """Path G: 1-call Groq LPU keyword expansion for open/situational needs -> live stream.
+
+    Handles novel or situational Vietnamese requests that do not literally name a catalog
+    product (e.g. 'đau họng mua gì dễ chịu', 'quà biếu bố mẹ tầm 300k', 'say xe mua gì')
+    in ~1.0-1.4s total while abstaining back to the full planner for medical/unsafe requests.
+    """
+    prompt_messages = [
+        {
+            "role": "system",
+            "content": (
+                "Bạn là bộ ánh xạ sản phẩm siêu thị Thanh Lam Mart. Nếu yêu cầu của khách hỏi thuốc "
+                "điều trị bệnh, bệnh lý nặng, dị ứng nghiêm trọng, trẻ sơ sinh, hóa chất nguy "
+                "hiểm hoặc ngoài phạm vi siêu thị, trả đúng []. Ngược lại, gợi ý 1 đến 3 từ "
+                "khóa sản phẩm siêu thị phổ biến (tiếng Việt ngắn gọn) phù hợp nhất với nhu cầu "
+                "đời thường của khách (ví dụ đau rát họng nhẹ -> [\"trà gừng\", \"mật ong\", "
+                "\"kẹo ngậm\"], quà biếu -> [\"trà\", \"bánh quy\", \"cà phê\"], trời nóng -> "
+                "[\"trà bí đao\", \"nước dừa\", \"nước suối\"]). CHỈ trả đúng 1 JSON array "
+                "chuỗi, không giải thích."
+            ),
+        },
+        {"role": "user", "content": text[:240]},
+    ]
+    try:
+        result = await asyncio.wait_for(
+            groq.fast_chat(prompt_messages, max_tokens=80, temperature=0.1),
+            timeout=4.0,
+        )
+        raw_val = getattr(result, "text", None) or getattr(result, "content", None) or result
+        raw = str(raw_val).strip()
+        start_idx = raw.find("[")
+        end_idx = raw.rfind("]")
+        if start_idx < 0 or end_idx <= start_idx:
+            return None
+        keywords = json.loads(raw[start_idx : end_idx + 1])
+        if not isinstance(keywords, list):
+            return None
+        clean_keywords = [
+            str(item).strip()[:50]
+            for item in keywords
+            if isinstance(item, str) and str(item).strip()
+        ][:3]
+        if not clean_keywords:
+            return None
+    except Exception:
+        return None
+
+    def _search_open() -> list[ProductSnapshot]:
+        seen_ids: set[str] = set()
+        merged: list[ProductSnapshot] = []
+        for kw in clean_keywords:
+            norm_kw = normalize_category_text(kw)
+            hits = repository.search(query=kw, limit=10)
+            hits = _apply_streaming_constraints(hits, answer_text, parsed)
+            # Prefer products whose title starts with the keyword or whose category matches
+            # it directly (e.g. 'Trà gừng' / 'Mật ong', not 'Chân gà vị mật ong').
+            head_hits = [
+                item
+                for item in hits
+                if normalize_category_text(item.name).startswith(norm_kw)
+                or norm_kw in normalize_category_text(item.category or "")
+            ]
+            chosen_hits = head_hits or hits
+            for item in chosen_hits[:2]:
+                if item.product_id not in seen_ids:
+                    seen_ids.add(item.product_id)
+                    merged.append(item)
+        return merged
+
+    candidates = await run_catalog_work(_search_open, timeout_seconds=3)
+    if not candidates:
+        return None
+    top = candidates[0]
+    post_guidance = shopping_guidance(f"{answer_text} {top.name} {top.category or ''}", limit=16)
+    if any(
+        item.get("domain") in _STREAM_HIGH_RISK_DOMAINS
+        and item.get("id") not in _STREAM_SAFE_GUIDANCE_IDS
+        for item in post_guidance
+    ):
+        return None
+
+    primary_products = candidates[:1]
+    related_products = _related_candidates(candidates, primary_products, limit=4)
+    open_plan = ConsultationDecision(
+        action="recommend",
+        need=text[:500],
+        searches=[
+            SearchNeed(
+                category=primary_products[0].category or clean_keywords[0],
+                role=clean_keywords[0],
+                excluded=_clean_negative_terms(parsed),
+            )
+        ],
+        max_price_vnd=parsed.budget_vnd,
+        sugar=_explicit_sugar_level(answer_text) or "any",
+    )
+    memory = {
+        "need": text[:500],
+        "last_action": "recommend",
+        "last_question": "",
+        "pending_question": None,
+        "answered_slots": previous_memory.get("answered_slots", []),
+        "constraints": open_plan.model_dump(
+            exclude={
+                "question", "need", "guidance", "action",
+                "pending_question", "clarification_answer",
+            }
+        ),
+        "selection": {"picks": [{"candidate": 0}]},
+    }
+    return _build_streaming_plan_payload(
+        text=text,
+        primary_products=primary_products,
+        related_products=related_products,
+        repository=repository,
+        sources={primary_products[0].product_id: [0]},
+        memory=memory,
+        plan_for_fallback=open_plan,
+        mode="recommend",
+    )
+
+
 async def prepare_streaming_consultation(
     *,
     text: str,
@@ -663,9 +986,9 @@ async def prepare_streaming_consultation(
     """Prepare a strictly grounded, low-risk consultation for live token streaming.
 
     Eliminates unnecessary multi-call planner round-trips for single-category,
-    brand, sugar/attribute, lexical product, comparison, promo, follow-up, and
-    budget basket queries while preserving strict safety routing for clinical/
-    allergy/infant/chemical-safety requests.
+    brand, sugar/attribute, lexical product, comparison, promo, follow-up,
+    verified product detail, and budget basket queries while preserving strict
+    safety routing for clinical/allergy/infant/chemical-safety requests.
     """
     if not isinstance(groq, GroqService) or not callable(getattr(groq, "stream_chat", None)):
         return None
@@ -677,13 +1000,16 @@ async def prepare_streaming_consultation(
         or previous_memory.get("unprocessed_answer")
     ):
         return None
-    if _advice_followup(text) and previous_memory.get("need"):
-        return None
 
     normalize_noisy = getattr(repository, "normalize_noisy_query", None)
     answer_text = normalize_noisy(text) if callable(normalize_noisy) else text
     norm_answer = normalize_category_text(answer_text)
     if _STREAM_LABEL_OR_EFFICACY_RE.search(norm_answer):
+        return None
+
+    is_detail_query = bool(_STREAM_DETAIL_QUERY_RE.search(norm_answer))
+    is_advice_followup = bool(_advice_followup(text) and previous_memory.get("need"))
+    if is_advice_followup and not is_detail_query:
         return None
 
     visible = [
@@ -713,6 +1039,21 @@ async def prepare_streaming_consultation(
         for item in guidance_items
     ):
         return None
+
+    # Path F: Direct or follow-up verified product details (usage/ingredients/storage/origin).
+    if is_detail_query:
+        detail_plan = await _prepare_product_detail_streaming(
+            text=text,
+            answer_text=answer_text,
+            norm_answer=norm_answer,
+            visible=visible,
+            repository=repository,
+            previous_memory=previous_memory,
+        )
+        if detail_plan is not None:
+            return detail_plan
+        if is_advice_followup:
+            return None
 
     # Path A: Direct 2-target / 2-brand comparison (0 planner calls).
     comp_targets = tuple(getattr(parsed, "comparison_targets", ()) or ())
@@ -841,6 +1182,22 @@ async def prepare_streaming_consultation(
             focused, focus_scores = _filter_streaming_candidates(
                 candidates, answer_text, parsed.product_type
             )
+            if not focus_scores and _focus_tokens_for_streaming(answer_text, parsed.product_type):
+                cleaned_focus_q = _clean_lexical_query(answer_text)
+                if cleaned_focus_q:
+                    lex_extra = await run_catalog_work(
+                        repository.search, query=cleaned_focus_q, limit=12, timeout_seconds=3
+                    )
+                    lex_extra = _apply_streaming_constraints(lex_extra, answer_text, parsed)
+                    if lex_extra:
+                        lex_ids = {item.product_id for item in lex_extra}
+                        combined = [
+                            *lex_extra,
+                            *(item for item in candidates if item.product_id not in lex_ids),
+                        ]
+                        focused, focus_scores = _filter_streaming_candidates(
+                            combined, answer_text, parsed.product_type
+                        )
             if other_followup and visible:
                 visible_ids = {item.product_id for item in visible}
                 unseen = [item for item in focused if item.product_id not in visible_ids]
@@ -946,5 +1303,24 @@ async def prepare_streaming_consultation(
                 plan_for_fallback=lex_plan,
                 mode="recommend",
             )
+
+    # Path G: Open/situational 1-call keyword expansion on Groq LPU fast-lane (~1.1s total).
+    can_fast_lane = getattr(groq, "_can_use_groq_fast_lane", None)
+    if (
+        callable(can_fast_lane)
+        and can_fast_lane()
+        and len(norm_answer.split()) >= 3
+        and not is_advice_followup
+    ):
+        open_plan = await _prepare_open_need_streaming(
+            text=text,
+            answer_text=answer_text,
+            repository=repository,
+            groq=groq,
+            previous_memory=previous_memory,
+            parsed=parsed,
+        )
+        if open_plan is not None:
+            return open_plan
 
     return None

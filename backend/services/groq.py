@@ -986,16 +986,43 @@ class GroqService:
                 if selected_model
             )
         )
-        # Use ONLY the configured dedicated chat LLM (DeepSeek) when present —
-        # never silently fall back to Groq chat models.
-        provider_stages: list[tuple[tuple[tuple[str, str], ...], list[str], bool]] = [
-            (primary_credentials, primary_models, False),
-        ]
-
         # Conservative estimate of request token footprint for selecting a key
         # that still has enough remaining TPM budget before attempting a call.
         msg_chars = sum(len(str(m.get("content", ""))) for m in messages)
         estimated_tokens = max(256, msg_chars // 3 + min(max_tokens or 512, 1200))
+
+        # When the Groq LPU fast-lane is explicitly opted in (stream_llm_use_groq_lpu=True)
+        # and no explicit model override was requested, run Groq LPU first (~350-800ms) for
+        # prompts that fit Groq's free-tier per-request TPM cap, then fail over to the
+        # dedicated chat LLM. Large (>22k char) prompts skip instant-413 Groq attempts.
+        provider_stages: list[tuple[tuple[tuple[str, str], ...], list[str], bool]] = []
+        if model is None and self._can_use_groq_fast_lane() and msg_chars <= 22_000:
+            rf_schema_name = (
+                str((response_format.get("json_schema") or {}).get("name") or "")
+                if isinstance(response_format, dict)
+                else ""
+            )
+            prefer_strong_groq = (
+                msg_chars > 15_500
+                or rf_schema_name in {"GroundedSelection", "SelectionReview"}
+            )
+            candidate_groq_models = (
+                (self.settings.groq_fallback_model, self.settings.groq_fallback_model_2)
+                if prefer_strong_groq
+                else (
+                    self.settings.groq_model,
+                    self.settings.groq_fallback_model,
+                    self.settings.groq_fallback_model_2,
+                )
+            )
+            groq_fast_models = list(
+                dict.fromkeys(m for m in candidate_groq_models if m)
+            )
+            if groq_fast_models:
+                provider_stages.append(
+                    (self.settings.groq_api_credentials, groq_fast_models, True)
+                )
+        provider_stages.append((primary_credentials, primary_models, False))
 
         last_error: Exception | None = None
         fallback_trace: list[dict[str, Any]] = []
@@ -1024,8 +1051,11 @@ class GroqService:
                         )
                         if selected_model.startswith("qwen/"):
                             model_options["reasoning_effort"] = (
-                                configured_effort
-                                if response_format is not None else "none"
+                                "none"
+                                if use_groq_pool and reasoning_effort is None
+                                else configured_effort
+                                if response_format is not None
+                                else "none"
                             )
                         elif selected_model.startswith("openai/gpt-oss-"):
                             model_options["reasoning_effort"] = (
@@ -1074,7 +1104,11 @@ class GroqService:
                         completion_endpoint = client.chat.completions
                         raw_endpoint = getattr(completion_endpoint, "with_raw_response", None)
                         response_headers: dict[str, str] = {}
-                        base_attempt_timeout = self.settings.groq_chat_attempt_timeout_seconds
+                        base_attempt_timeout = (
+                            min(self.settings.groq_chat_attempt_timeout_seconds, 6.0)
+                            if use_groq_pool
+                            else self.settings.groq_chat_attempt_timeout_seconds
+                        )
                         if (
                             not use_groq_pool
                             and self.settings.effective_chat_base_url != self.settings.groq_base_url

@@ -911,4 +911,53 @@ describe('voice transcript integration', () => {
     await vi.waitFor(() => expect(controllerStore.current.bargeInMode).toBe(false))
     wrapper.unmount()
   })
+
+  it('discards short tone-distorted and price-unit echoes right after Mai finishes speaking', async () => {
+    setupCloudReply()
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Tương ớt Chin Su chai 1kg có giá tham khảo 62.200đ, thành phần gồm nước, đường, ớt tươi. Bạn xem trên nhãn sản phẩm nhé.',
+      grounded_product_ids: [],
+      state: 'BROWSING',
+    })
+    const wrapper = await startSpokenReply()
+    const audio = wrapper.get('audio').element as HTMLAudioElement
+    await vi.waitFor(() => expect(audio.onended).toBeTypeOf('function'))
+    const mic = controllerStore.current
+    vi.useFakeTimers()
+    audio.onended?.call(audio, new Event('ended'))
+    await vi.advanceTimersByTimeAsync(400)
+    expect(mic.bargeInMode).toBe(false)
+    vi.useRealTimers()
+
+    // Short price-unit & tone-shifted loudspeaker echo snippets arriving within the strict post-speech window are dropped.
+    apiMocks.transcribe.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: '62.200 đồng',
+      language: 'vi',
+      speech_detected: true,
+    })
+    mic.options.onAudio(new Blob(['tail price echo']))
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(wrapper.get('.voice-feedback strong').text()).toBe('Đang nghe'))
+    expect(apiMocks.respond).toHaveBeenCalledTimes(1)
+
+    // Genuine short customer command right after Mai finishes still submits normally.
+    apiMocks.transcribe.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Thêm vào giỏ',
+      language: 'vi',
+      speech_detected: true,
+    })
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Mình đã thêm sản phẩm vào giỏ demo.',
+      grounded_product_ids: [],
+      state: 'BROWSING',
+    })
+    mic.options.onAudio(new Blob(['customer command']))
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledTimes(2))
+    expect(apiMocks.respond.mock.calls[1][1]).toBe('Thêm vào giỏ')
+    wrapper.unmount()
+  })
 })

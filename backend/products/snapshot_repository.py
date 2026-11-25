@@ -53,6 +53,14 @@ _FILLER_WORDS = QUERY_STOP_WORDS | frozenset(
         "container",
         "package",
         "packaging",
+        "chung",
+        "tao",
+        "ve",
+        "thi",
+        "biet",
+        "muon",
+        "dang",
+        "cung",
     }
 )
 _PACKAGING_WORDS = frozenset(
@@ -459,6 +467,42 @@ _DIACRITIC_PRODUCT_WORDS = frozenset(
         "ý",
         "số",
         "bao",
+        "táo",
+        "tảo",
+        "tạo",
+        "vệ",
+        "thị",
+        "chưng",
+        "đắng",
+        "dạng",
+        "cứng",
+        "cưng",
+    }
+)
+_TAO_PRODUCT_NEIGHBORS = frozenset(
+    {
+        "nuoc",
+        "ep",
+        "vi",
+        "envy",
+        "fuji",
+        "do",
+        "xanh",
+        "my",
+        "uc",
+        "bien",
+        "xoan",
+        "kieu",
+        "bot",
+        "gion",
+        "say",
+        "mut",
+        "dam",
+        "giam",
+        "nhap",
+        "nho",
+        "le",
+        "cam",
     }
 )
 _DAU_PRODUCT_FOLLOWERS = frozenset(
@@ -587,11 +631,31 @@ def _query_terms(query: str) -> tuple[tuple[str, ...], bool, bool]:
             protected_tokens.add("bao")
         elif tok == "hoi" and prev_tok == "lo":
             protected_tokens.add("hoi")
+        elif tok == "ve" and next_tok == "sinh":
+            protected_tokens.add("ve")
+        elif tok == "thi" and next_tok == "la":
+            protected_tokens.add("thi")
+        elif tok == "chung" and prev_tok == "banh":
+            protected_tokens.add("chung")
+        elif tok == "biet" and prev_tok == "dac":
+            protected_tokens.add("biet")
+        elif tok == "tao" and (
+            prev_tok in _TAO_PRODUCT_NEIGHBORS or next_tok in _TAO_PRODUCT_NEIGHBORS
+        ):
+            protected_tokens.add("tao")
+        elif tok == "dang" and (
+            prev_tok in {"socola", "chocolate", "muop", "kho", "qua", "ca", "phe"}
+            or next_tok in {"goi", "chai", "bot", "long", "vien", "tui", "hop"}
+        ):
+            protected_tokens.add("dang")
+        elif tok == "cung" and prev_tok in {"keo", "thu", "long"}:
+            protected_tokens.add("cung")
         elif tok == "tui" and (
             next_tok in {"lon", "nho", "to", "cham", "refill"}
             or (bool(next_tok) and next_tok[0].isdigit())
         ):
             protected_tokens.add("tui")
+    normalized = re.sub(r"\bbon\s+(?:minh|tao)\b", " ", normalized)
     normalized = re.sub(r"\bkhong\s+duong\b", "zero", normalized)
     normalized = re.sub(
         r"\b(?:sugar[\s-]*free|no\s+sugar|without\s+sugar)\b",
@@ -922,6 +986,31 @@ def _score_prepared(
         score += 1.5 * native_exact_hits
     if title_hits >= 2:
         score += 2.0
+    if len(terms) >= 2 and candidate.title_space_text:
+        leaf_cat = candidate.category_segment_texts[-1] if candidate.category_segment_texts else ""
+        non_phrase_words = (
+            _PACKAGING_WORDS | _SIZE_PREFERENCE_WORDS | _LARGE_SIZE_PREFERENCE_WORDS
+        )
+        prefix_boosted = False
+        cat_boosted = False
+        for idx in range(len(terms) - 1):
+            t1, t2 = terms[idx], terms[idx + 1]
+            if (
+                t1.isdigit()
+                or t2.isdigit()
+                or t1 in non_phrase_words
+                or t2 in non_phrase_words
+            ):
+                continue
+            bigram = f"{t1} {t2}"
+            if not prefix_boosted and candidate.title_space_text.startswith(bigram):
+                score += 0.5
+                prefix_boosted = True
+            if not cat_boosted and leaf_cat and (
+                leaf_cat == bigram or f" {bigram} " in f" {leaf_cat} "
+            ):
+                score += 0.6
+                cat_boosted = True
     if pq.snack_slang and "snack" in category_words:
         score += 5.0
         if "bim" in title_words:
@@ -1351,6 +1440,18 @@ class SnapshotProductRepository:
         baby_audience = audience_evidence in {"child", "newborn"}
         title_tokens = _tokens(title)
         brand_tokens = _tokens(brand)
+        title_compact_brand_tokens: tuple[str, ...] = ()
+        if (
+            dehyp_brand_tokens
+            and len(brand_tokens) == 2
+            and all(tok.isalpha() and len(tok) >= 2 for tok in brand_tokens)
+            and len(title_tokens) >= 2
+        ):
+            joined_brand = "".join(brand_tokens)
+            if joined_brand in dehyp_brand_tokens and any(
+                title_tokens[i : i + 2] == brand_tokens for i in range(len(title_tokens) - 1)
+            ):
+                title_compact_brand_tokens = (joined_brand,)
         category_tokens = _tokens(category)
         uom_tokens = _tokens(uom)
         words = tuple(
@@ -1358,6 +1459,7 @@ class SnapshotProductRepository:
                 (
                     *title_tokens,
                     *dehyp_title_tokens,
+                    *title_compact_brand_tokens,
                     *brand_tokens,
                     *dehyp_brand_tokens,
                     *category_tokens,
@@ -1370,7 +1472,7 @@ class SnapshotProductRepository:
             for value in (product.product_id, product.item_no, product.barcode)
             if value
         )
-        title_words = frozenset((*title_tokens, *dehyp_title_tokens))
+        title_words = frozenset((*title_tokens, *dehyp_title_tokens, *title_compact_brand_tokens))
         uom_words = frozenset(uom_tokens)
         native_words = frozenset(
             _native_tokens(

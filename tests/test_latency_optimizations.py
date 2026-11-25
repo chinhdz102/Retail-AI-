@@ -303,3 +303,176 @@ async def test_streaming_system_prompt_enforces_consistent_minh_ban_pronouns(
     assert "mình" in sys_prompt and "bạn" in sys_prompt
     assert "KHÔNG xưng 'em'" in sys_prompt
 
+
+def test_conversational_chinsu_and_selsun_search_and_diacritic_preservation(
+    snapshot: SnapshotProductRepository,
+) -> None:
+    # Conversational fillers + space/hyphen brand normalization must find Tương ớt Chin-su #1.
+    chinsu_hits = snapshot.search("Thì chúng tôi hỏi về tương ớt Chinsu.", limit=6)
+    assert len(chinsu_hits) >= 3
+    assert all("tương ớt" in p.name.casefold() for p in chinsu_hits[:3])
+    assert all(
+        "chin-su" in p.name.casefold() or "chin su" in p.name.casefold()
+        for p in chinsu_hits[:3]
+    )
+
+    selsun_hits = snapshot.search("Tao muốn hỏi về sản phẩm Selsun.", limit=5)
+    assert selsun_hits
+    assert "selsun" in selsun_hits[0].name.casefold()
+
+    # Diacritic product words (táo, giấy vệ sinh) must NEVER be stripped as fillers.
+    apple_hits = snapshot.search("kẹo vị táo", limit=5)
+    assert apple_hits and any("táo" in p.name.casefold() for p in apple_hits[:3])
+    tissue_hits = snapshot.search("giấy vệ sinh", limit=5)
+    assert tissue_hits and any("vệ sinh" in p.name.casefold() for p in tissue_hits[:3])
+
+
+@pytest.mark.asyncio
+async def test_streaming_fast_paths_cover_chinsu_selsun_and_detail_followups(
+    snapshot: SnapshotProductRepository,
+) -> None:
+    class _NoPlannerStub(GroqService):
+        def __init__(self) -> None:
+            super().__init__(settings=Settings(_env_file=None, chat_llm_api_key="test"))
+
+        async def chat(self, *_args, **_kwargs):
+            raise AssertionError("Zero-planner streaming path must not call groq.chat()")
+
+    stub = _NoPlannerStub()
+    store = InMemorySessionStore()
+
+    # 1. Colloquial Chin-su chili sauce lookup
+    rec_cs = store.create("chinsu-stream")
+    plan_cs = await prepare_streaming_consultation(
+        text="Thì chúng tôi hỏi về tương ớt Chinsu.",
+        record=rec_cs,
+        repository=snapshot,
+        groq=stub,
+    )
+    assert plan_cs is not None
+    assert "tương ớt" in plan_cs.products[0].name.casefold()
+    assert (
+        "chin-su" in plan_cs.products[0].name.casefold()
+        or "chin su" in plan_cs.products[0].name.casefold()
+    )
+
+    # 2. Direct verified ingredients detail query on Chin-su 1kg
+    rec_ing = store.create("chinsu-ing")
+    plan_ing = await prepare_streaming_consultation(
+        text="Tương ớt Chinsu chai 1kg thành phần là gì?",
+        record=rec_ing,
+        repository=snapshot,
+        groq=stub,
+    )
+    assert plan_ing is not None
+    payload_ing = plan_ing.messages[1]["content"]
+    assert "verified_details" in payload_ing
+    assert '"ingredients":' in payload_ing
+
+    # 3. Colloquial Selsun lookup + follow-up usage question (0 planner calls)
+    rec_sel = store.create("selsun-stream")
+    plan_sel = await prepare_streaming_consultation(
+        text="Tao muốn hỏi về sản phẩm Selsun.",
+        record=rec_sel,
+        repository=snapshot,
+        groq=stub,
+    )
+    assert plan_sel is not None
+    assert "selsun" in plan_sel.products[0].name.casefold()
+
+    rec_sel.shopping.selected_product_ids = [plan_sel.products[0].product_id]
+    rec_sel.shopping.consultation = plan_sel.memory
+    plan_usage = await prepare_streaming_consultation(
+        text="Cho tao biết là cách dùng như thế nào.",
+        record=rec_sel,
+        repository=snapshot,
+        groq=stub,
+    )
+    assert plan_usage is not None
+    assert plan_usage.products[0].product_id == plan_sel.products[0].product_id
+    assert '"missing_verified_fields":[]' in plan_usage.messages[1]["content"]
+    assert "Lắc kỹ trước khi dùng" in plan_usage.messages[1]["content"]
+
+    # 3b. Unenriched SKU usage follow-up still transparently reports missing_verified_fields
+    rec_missing = store.create("missing-usage-stream")
+    rec_missing.shopping.selected_product_ids = ["TLM_10007184"]
+    rec_missing.shopping.consultation = {"need": "Bánh bao Malai"}
+    plan_missing = await prepare_streaming_consultation(
+        text="Cho tao biết là cách dùng như thế nào.",
+        record=rec_missing,
+        repository=snapshot,
+        groq=stub,
+    )
+    assert plan_missing is not None
+    assert plan_missing.products[0].product_id == "TLM_10007184"
+    assert '"missing_verified_fields":["usage"]' in plan_missing.messages[1]["content"]
+
+    # 4. Clinical/allergy follow-up must STILL bypass streaming for strict safety review
+    plan_unsafe = await prepare_streaming_consultation(
+        text="Chai này có dùng cho da đầu nhạy cảm bị viêm không?",
+        record=rec_sel,
+        repository=snapshot,
+        groq=stub,
+    )
+    assert plan_unsafe is None
+
+
+@pytest.mark.asyncio
+async def test_groq_chat_uses_groq_lpu_fast_lane_only_when_opted_in() -> None:
+    calls: list[tuple[str, str, str | None]] = []
+
+    class _FakePoolCompletions:
+        def __init__(self, label: str) -> None:
+            self.label = label
+
+        async def create(self, **kwargs):
+            calls.append((self.label, kwargs["model"], kwargs.get("reasoning_effort")))
+            return SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        finish_reason="stop",
+                        message=SimpleNamespace(content=f"ok-from-{self.label}"),
+                    )
+                ]
+            )
+
+    def _make_service(*, fast_lane: bool) -> GroqService:
+        svc = GroqService(
+            settings=Settings(
+                _env_file=None,
+                groq_api_key="groq-test-key",
+                groq_model="qwen/qwen3.8-27b",
+                groq_fallback_model="openai/gpt-oss-120b",
+                groq_fallback_model_2="openai/gpt-oss-20b",
+                chat_llm_api_key="deepseek-test-key",
+                chat_llm_base_url="https://tokenharbor.ai/v1",
+                chat_llm_model="deepseek-v4.1-flash:free",
+                stream_llm_use_groq_lpu=fast_lane,
+            )
+        )
+        groq_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=_FakePoolCompletions("groq"))
+        )
+        chat_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=_FakePoolCompletions("chat"))
+        )
+        svc._client_for_credential = lambda _s, _k: groq_client  # type: ignore[method-assign]
+        svc._chat_client_for_credential = lambda _s, _k: chat_client  # type: ignore[method-assign]
+        return svc
+
+    # Default (opt-out): stays strictly on dedicated chat LLM.
+    svc_off = _make_service(fast_lane=False)
+    res_off = await svc_off.chat([{"role": "user", "content": "hi"}])
+    assert res_off == "ok-from-chat"
+    assert calls[-1][0] == "chat"
+
+    # Opt-in: runs Groq LPU fast-lane first with reasoning_effort="none" on Qwen.
+    svc_on = _make_service(fast_lane=True)
+    res_on = await svc_on.chat(
+        [{"role": "user", "content": "hi"}],
+        response_format={"type": "json_object"},
+    )
+    assert res_on == "ok-from-groq"
+    assert calls[-1] == ("groq", "qwen/qwen3.8-27b", "none")
+
+

@@ -28,9 +28,19 @@ from backend.services.azure_stt import (
     _build_phrase_list,
 )
 from backend.services.catalog_transcription import correct_catalog_words
-from backend.services.groq import _has_repeated_phrase
+from backend.services.groq import (
+    _has_insufficient_acoustic_support,
+    _has_repeated_phrase,
+    _is_impulsive_non_speech,
+    _is_low_level_non_speech,
+    _is_near_silence,
+    _is_steady_tone,
+    _is_steady_unvoiced_noise,
+    _wav_signal_quality,
+)
 from backend.services.sessions import SessionClosedError, SessionExpiredError, SessionNotFoundError
-from backend.services.speech_activity import SAMPLE_RATE, analyze_speech_activity
+from backend.services.smart_turn import predict_turn_completion
+from backend.services.speech_activity import SAMPLE_RATE, analyze_speech_audio
 from backend.services.speech_denoiser import estimate_clip_snr_db
 
 logger = logging.getLogger(__name__)
@@ -134,11 +144,14 @@ async def transcribe_audio_stream(
         def _start_recognizer() -> tuple[Any, Any]:
             cfg = speechsdk.SpeechConfig(subscription=key, region=region)
             cfg.speech_recognition_language = locale
+            # Frontend Silero VAD + Smart Turn v3 control end-of-turn via `push.close()`.
+            # Using 1200 ms stops Azure from prematurely chopping natural mid-sentence pauses
+            # without adding any post-end latency once EOF arrives.
             cfg.set_property(
-                speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "550"
+                speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "1200"
             )
             cfg.set_property(
-                speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "550"
+                speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "1200"
             )
             fmt = speechsdk.audio.AudioStreamFormat(
                 samples_per_second=SAMPLE_RATE, bits_per_sample=16, channels=1
@@ -238,6 +251,26 @@ async def transcribe_audio_stream(
                 except ValueError:
                     cmd = {"type": text_frame.strip()}
                 action = str(cmd.get("type") or "").lower()
+                if action == "check_turn":
+                    current_text = " ".join([*final_segments, last_partial]).strip()
+                    turn_samples = _pcm16_to_float32(bytes(pcm_buffer))
+                    turn_res = await asyncio.to_thread(
+                        predict_turn_completion,
+                        turn_samples,
+                        partial_text=current_text,
+                        language=language,
+                    )
+                    _enqueue(
+                        {
+                            "type": "turn_status",
+                            "complete": turn_res.complete,
+                            "probability": turn_res.probability,
+                            "reason": turn_res.reason,
+                            "model": turn_res.model_used,
+                            "hold_ms": 0 if turn_res.complete else 1050,
+                        }
+                    )
+                    continue
                 if action == "end":
                     stream_ended = True
                     end_received_at = perf_counter()
@@ -271,29 +304,61 @@ async def transcribe_audio_stream(
         used_model = f"azure-ws-stream:{locale}"
         rescued = False
 
-        # Heavy-noise DPDFNet2 rescue using the already-buffered in-RAM PCM (no re-upload).
-        if len(pcm_buffer) >= SAMPLE_RATE * 2 * 0.35:
+        # Heavy-noise DPDFNet2 rescue + acoustic non-speech verification using
+        # the already-buffered in-RAM PCM (no extra client upload).
+        if len(pcm_buffer) >= SAMPLE_RATE * 2 * 0.25:
             samples = _pcm16_to_float32(bytes(pcm_buffer))
             est_snr = estimate_clip_snr_db(samples) if samples.size else 25.0
-            # Guard against fan/HVAC airflow triggering phantom 1-2 word Azure
-            # hallucinations over WebSocket: verify real speech via local Silero VAD.
+            # Guard against fan/HVAC airflow, desk clicks, or quiet room noise
+            # producing phantom Azure transcripts over WebSocket.
             ws_has_real_speech = True
-            if samples.size and (est_snr < 10.0 or len(final_text.split()) <= 2):
+            vad_quality: dict[str, float] = {}
+            word_count = len(final_text.split())
+            if samples.size and (est_snr < 15.0 or word_count <= 3 or not final_text):
+                wav_bytes_check = _pcm16_to_wav(bytes(pcm_buffer))
                 try:
-                    vad_check = await asyncio.to_thread(
-                        analyze_speech_activity,
-                        _pcm16_to_wav(bytes(pcm_buffer)),
+                    analyzed = await asyncio.to_thread(
+                        analyze_speech_audio,
+                        wav_bytes_check,
                     )
-                    ws_has_real_speech = bool(vad_check.speech_detected)
+                    vad_quality = dict(analyzed.activity.quality)
+                    ws_has_real_speech = bool(analyzed.activity.speech_detected)
                 except Exception:
                     ws_has_real_speech = True
+                if ws_has_real_speech:
+                    strong_vad = (
+                        vad_quality.get("server_vad_positive_frame_ratio", 0.0) >= 0.35
+                        and vad_quality.get("server_vad_max_probability", 0.0) >= 0.85
+                        and vad_quality.get("server_vad_max_speech_frames", 0.0) >= 12.0
+                    )
+                    if not strong_vad:
+                        sig_q = await asyncio.to_thread(
+                            _wav_signal_quality,
+                            wav_bytes_check,
+                            vad_quality.get("server_vad_analysis_gain", 1.0),
+                        )
+                        if sig_q is not None and any(
+                            pred(sig_q)
+                            for pred in (
+                                _is_near_silence,
+                                _is_low_level_non_speech,
+                                _is_steady_unvoiced_noise,
+                                _is_steady_tone,
+                                _is_impulsive_non_speech,
+                            )
+                        ):
+                            ws_has_real_speech = False
             if not ws_has_real_speech:
                 final_text = ""
             else:
+                if final_text and vad_quality and _has_insufficient_acoustic_support(
+                    final_text, vad_quality, language
+                ):
+                    final_text = ""
                 needs_rescue = (
                     not final_text
                     or bool(canceled_error)
-                    or (est_snr < 13.0 and len(final_text.split()) < 2)
+                    or (est_snr < 14.0 and len(final_text.split()) <= 2)
                 )
                 if needs_rescue:
                     try:

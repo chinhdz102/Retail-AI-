@@ -1094,4 +1094,349 @@ describe('VoiceConversationController', () => {
     controller.stop()
   })
 
+  it('rejects calibrated loud speaker bleed while allowing normal human barge-in when AEC is clean', async () => {
+    let now = 1_000
+    let playbackRms = 0.28
+    const onAudio = vi.fn()
+    const onBargeIn = vi.fn(() => { playbackRms = 0 })
+    const onSpeechMisfire = vi.fn()
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getPlaybackLevel: () => playbackRms,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (hooks) => {
+        callbacks = hooks
+        return { start: vi.fn().mockResolvedValue(undefined), destroy: vi.fn().mockResolvedValue(undefined) }
+      },
+      onAudio, onBargeIn, onSpeechMisfire, onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+      now: () => now,
+    })
+
+    controller.setBargeInMode(true, 450)
+    await controller.start()
+
+    // Calibrate loud speaker bleed (~0.085 RMS on mic) during the 450ms grace window.
+    for (let i = 0; i < 14; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.85 }, new Float32Array(512).fill(0.085))
+    }
+
+    // Zero-frame onset in barge-in mode never bypasses confirmation.
+    now = 1_600
+    callbacks.onSpeechStart()
+    callbacks.onSpeechRealStart()
+    expect(onBargeIn).not.toHaveBeenCalled()
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.085))
+    expect(onAudio).not.toHaveBeenCalled()
+
+    // Loud Mai loudspeaker bleed (~0.09 RMS) after grace must NOT trigger barge-in.
+    callbacks.onSpeechStart()
+    for (let i = 0; i < 10; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.96 }, new Float32Array(512).fill(0.09))
+      if (i === 2) callbacks.onSpeechRealStart()
+    }
+    expect(onBargeIn).not.toHaveBeenCalled()
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.09))
+    expect(onAudio).not.toHaveBeenCalled()
+
+    // Genuine human interruption (~0.15 RMS, with a realistic 1-frame Vietnamese consonant dip)
+    // interrupts Mai cleanly in ~190ms even before Silero's 320ms onSpeechRealStart fires.
+    callbacks.onSpeechStart()
+    const humanPattern = [0.15, 0.16, 0.15, 0.03, 0.16, 0.15, 0.16]
+    for (const level of humanPattern) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: level > 0.05 ? 0.92 : 0.4 }, new Float32Array(512).fill(level))
+    }
+    expect(onBargeIn).toHaveBeenCalledOnce()
+    // Human finishes short interrupting phrase after Mai stops.
+    for (let i = 0; i < 8; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.9 }, new Float32Array(512).fill(0.11))
+    }
+    callbacks.onSpeechEnd(new Float32Array(9_000).fill(0.11))
+    expect(onAudio).toHaveBeenCalledOnce()
+    controller.stop()
+  })
+
+  it('allows normal-volume human voice (~0.08 RMS) to interrupt even when digital TTS RMS is high', async () => {
+    let now = 1_000
+    let playbackRms = 0.30 // Loud studio-normalized TTS MP3, suppressed by Chrome AEC on the mic
+    const onAudio = vi.fn()
+    const onBargeIn = vi.fn(() => { playbackRms = 0 })
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getPlaybackLevel: () => playbackRms,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (hooks) => {
+        callbacks = hooks
+        return { start: vi.fn().mockResolvedValue(undefined), destroy: vi.fn().mockResolvedValue(undefined) }
+      },
+      onAudio, onBargeIn, onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+      now: () => now,
+    })
+
+    controller.setBargeInMode(true, 450)
+    await controller.start()
+
+    // Grace period: Chrome AEC keeps actual mic bleed low (~0.015 RMS).
+    for (let i = 0; i < 14; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.2 }, new Float32Array(512).fill(0.015))
+    }
+
+    // Shopper speaks normally at 0.08 RMS ("Khoan đã...") to interrupt Mai.
+    now = 1_600
+    callbacks.onSpeechStart()
+    for (let i = 0; i < 6; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.90 }, new Float32Array(512).fill(0.08))
+    }
+    expect(onBargeIn).toHaveBeenCalledOnce()
+    for (let i = 0; i < 8; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.88 }, new Float32Array(512).fill(0.08))
+    }
+    callbacks.onSpeechEnd(new Float32Array(9_000).fill(0.08))
+    expect(onAudio).toHaveBeenCalledOnce()
+    controller.stop()
+  })
+
+  it('drops lingering Silero segment opened during Mai speech after barge-in mode disarms', async () => {
+    let now = 1_000
+    const onAudio = vi.fn()
+    const onBargeIn = vi.fn()
+    const onSpeechStartFrame = vi.fn()
+    const onSpeechMisfire = vi.fn()
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getPlaybackLevel: () => 0.18,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (hooks) => {
+        callbacks = hooks
+        return { start: vi.fn().mockResolvedValue(undefined), destroy: vi.fn().mockResolvedValue(undefined) }
+      },
+      onAudio, onBargeIn, onSpeechStartFrame, onSpeechMisfire,
+      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+      now: () => now,
+    })
+
+    controller.setBargeInMode(true, 450)
+    await controller.start()
+
+    // Calibrate speaker bleed (~0.09 RMS) during the grace window.
+    for (let i = 0; i < 14; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.85 }, new Float32Array(512).fill(0.09))
+    }
+
+    // Mai's loud last word opens Silero VAD without confirming barge-in.
+    now = 1_600
+    callbacks.onSpeechStart()
+    for (let i = 0; i < 5; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.92 }, new Float32Array(512).fill(0.11))
+    }
+    callbacks.onSpeechRealStart()
+    expect(onBargeIn).not.toHaveBeenCalled()
+
+    // Mai finishes speaking and resumeAfterSpeech disarms barge-in after 400ms
+    // while Silero's 750ms redemption window is still open.
+    now = 2_000
+    controller.setBargeInMode(false)
+    for (let i = 0; i < 10; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.1 }, new Float32Array(512).fill(0.005))
+    }
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.11))
+    expect(onSpeechStartFrame).not.toHaveBeenCalled()
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(onSpeechMisfire).toHaveBeenCalled()
+    controller.stop()
+  })
+
+  it('drops a false barge-in spike when no human keeps speaking after Mai stops', async () => {
+    let now = 1_000
+    const onAudio = vi.fn()
+    const onBargeIn = vi.fn()
+    const onSpeechMisfire = vi.fn()
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (hooks) => {
+        callbacks = hooks
+        return { start: vi.fn().mockResolvedValue(undefined), destroy: vi.fn().mockResolvedValue(undefined) }
+      },
+      onAudio, onBargeIn, onSpeechMisfire, onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+      now: () => now,
+    })
+
+    controller.setBargeInMode(true, 450)
+    await controller.start()
+
+    // Transient spike triggers barge-in (silencing Mai's audio), then only decay + silence follows.
+    now = 2_000
+    callbacks.onSpeechStart()
+    callbacks.onFrameProcessed({ isSpeech: 0.95 }, new Float32Array(512).fill(0.13))
+    callbacks.onSpeechRealStart()
+    expect(onBargeIn).toHaveBeenCalledOnce()
+
+    // 5 frames of fading reverb tail + 10 frames of room silence (no human voice).
+    for (let i = 0; i < 5; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.7 }, new Float32Array(512).fill(0.03))
+    }
+    for (let i = 0; i < 10; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.05 }, new Float32Array(512).fill(0.004))
+    }
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.08))
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(onSpeechMisfire).toHaveBeenCalled()
+    controller.stop()
+  })
+
+  it('drops sparse noise clicks and high-ZCR hiss without opening streaming STT', async () => {
+    let now = 1_000
+    const onAudio = vi.fn()
+    const onSpeechStartFrame = vi.fn()
+    const onSpeechMisfire = vi.fn()
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (hooks) => {
+        callbacks = hooks
+        return { start: vi.fn().mockResolvedValue(undefined), destroy: vi.fn().mockResolvedValue(undefined) }
+      },
+      onAudio, onSpeechStartFrame, onSpeechMisfire,
+      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+      now: () => now,
+    })
+
+    await controller.start()
+
+    // 1) High-ZCR alternating hiss (air/fan/paper rustle, zcr = 1.0 > 0.42) is rejected.
+    const hissFrame = new Float32Array(512)
+    for (let i = 0; i < hissFrame.length; i += 1) hissFrame[i] = i % 2 === 0 ? 0.04 : -0.04
+    callbacks.onSpeechStart()
+    for (let i = 0; i < 12; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.85 }, hissFrame)
+      if (i === 9) callbacks.onSpeechRealStart()
+    }
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.04))
+    expect(onSpeechStartFrame).not.toHaveBeenCalled()
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(onSpeechMisfire).toHaveBeenCalled()
+
+    // 2) Sparse isolated 1-frame clicks scattered across silence are also rejected.
+    callbacks.onSpeechStart()
+    for (let i = 0; i < 18; i += 1) {
+      now += 32
+      const click = i === 2 || i === 10
+      callbacks.onFrameProcessed(
+        { isSpeech: click ? 0.82 : 0.4 },
+        new Float32Array(512).fill(click ? 0.05 : 0.005),
+      )
+      if (i === 10) callbacks.onSpeechRealStart()
+    }
+    callbacks.onSpeechEnd(new Float32Array(9_000).fill(0.01))
+    expect(onSpeechStartFrame).not.toHaveBeenCalled()
+    expect(onAudio).not.toHaveBeenCalled()
+    controller.stop()
+  })
+
+  it('silently resets unconfirmed neutral-zone room noise instead of failing at 12s', async () => {
+    let now = 1_000
+    const onAudio = vi.fn()
+    const onError = vi.fn()
+    const onSpeechStartFrame = vi.fn()
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (hooks) => {
+        callbacks = hooks
+        return { start: vi.fn().mockResolvedValue(undefined), destroy: vi.fn().mockResolvedValue(undefined) }
+      },
+      onAudio, onError, onSpeechStartFrame,
+      onTranscript: vi.fn(), onState: vi.fn(),
+      now: () => now,
+    })
+
+    await controller.start()
+    callbacks.onSpeechStart()
+    // Soft room noise stays stuck in Silero neutral zone for 3 seconds without real speech.
+    for (let i = 0; i < 95; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.48 }, new Float32Array(512).fill(0.009))
+    }
+    expect(onError).not.toHaveBeenCalled()
+    expect(onSpeechStartFrame).not.toHaveBeenCalled()
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(controller.isActive).toBe(true)
+    controller.stop()
+  })
+
+  it('holds and merges a mid-sentence pause when Smart Turn signals an incomplete clause', async () => {
+    vi.useFakeTimers()
+    let now = 1_000
+    const onAudio = vi.fn()
+    const onSpeechStartFrame = vi.fn()
+    let holdResponses = [1_000, 0]
+    const shouldHoldTurnEnd = vi.fn(() => holdResponses.shift() ?? 0)
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      shouldHoldTurnEnd,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (hooks) => {
+        callbacks = hooks
+        return { start: vi.fn().mockResolvedValue(undefined), destroy: vi.fn().mockResolvedValue(undefined) }
+      },
+      onAudio, onSpeechStartFrame,
+      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+      now: () => now,
+    })
+
+    await controller.start()
+
+    // First half of sentence: "Cho mình hỏi là..."
+    callbacks.onSpeechStart()
+    for (let i = 0; i < 8; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.9 }, new Float32Array(512).fill(0.08))
+      if (i === 5) callbacks.onSpeechRealStart()
+    }
+    callbacks.onSpeechEnd(new Float32Array(6_400).fill(0.08))
+    expect(shouldHoldTurnEnd).toHaveBeenCalledTimes(1)
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(controller.isActive).toBe(true)
+
+    // User resumes after 400ms pause: "...tương ớt Chin Su giá bao nhiêu?"
+    now += 400
+    await vi.advanceTimersByTimeAsync(400)
+    callbacks.onSpeechStart()
+    for (let i = 0; i < 8; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.92 }, new Float32Array(512).fill(0.09))
+      if (i === 5) callbacks.onSpeechRealStart()
+    }
+    callbacks.onSpeechEnd(new Float32Array(6_400).fill(0.09))
+
+    expect(shouldHoldTurnEnd).toHaveBeenCalledTimes(2)
+    expect(onAudio).toHaveBeenCalledOnce()
+    // Single WS session opened once and merged WAV exceeds both chunks combined.
+    expect(onSpeechStartFrame).toHaveBeenCalledOnce()
+    const mergedBlob = onAudio.mock.calls[0][0] as Blob
+    expect(mergedBlob.size).toBeGreaterThan(44 + 12_800 * 2)
+    controller.stop()
+    vi.useRealTimers()
+  })
+
 })

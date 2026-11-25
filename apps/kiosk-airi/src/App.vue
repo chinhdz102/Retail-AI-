@@ -33,8 +33,12 @@ import {
 } from './api'
 import ChatPanel from './components/ChatPanel.vue'
 import type { CheckoutQuote, SandboxOrder, ShoppingCart } from './types'
-import { isLikelyAssistantEcho, isLikelyRepeatedSpeechTranscript } from './transcript-quality'
-import { ensureAudioLipSyncTap } from './lip-sync'
+import {
+  classifyVietnameseTurnCompleteness,
+  isLikelyAssistantEcho,
+  isLikelyRepeatedSpeechTranscript,
+} from './transcript-quality'
+import { ensureAudioLipSyncTap, sampleAudioElementRms } from './lip-sync'
 import { extractSpeakableChunks } from './speech-queue'
 const MaiAvatar = defineAsyncComponent(() => import('./components/MaiVideoAvatar.vue'))
 import { isLikelyVirtualMicrophone, listMicrophoneOptions, preferredMicrophoneId } from './microphone-devices'
@@ -105,12 +109,14 @@ let startedSpeechRequestId = 0
 // Leave a short tail after TTS finishes so room reverberation settles before
 // normal low-threshold listening resumes.
 const SPEAKER_SETTLE_MS = 400
-const ECHO_GUARD_WINDOW_MS = 12_000
+const ECHO_GUARD_WINDOW_MS = 25_000
+const ECHO_STRICT_WINDOW_MS = 4_500
 let speechResumeTimer: ReturnType<typeof setTimeout> | undefined
 let currentSpeechText: string | null = null
 let bargeInEligible = false
 let lastSpokenText = ''
 let lastSpokenAt = 0
+let lastBargeInAt = 0
 let recentSpokenHistory: Array<{ text: string; at: number }> = []
 const activePrefetchedBlobUrls = new Set<string>()
 let voiceController: VoiceConversationController | null = null
@@ -257,27 +263,46 @@ function recordSpokenEchoText(text: string | null | undefined) {
   recentSpokenHistory = recentSpokenHistory
     .filter((entry) => now - entry.at < ECHO_GUARD_WINDOW_MS && entry.text !== trimmed)
   recentSpokenHistory.push({ text: trimmed, at: now })
-  if (recentSpokenHistory.length > 4) recentSpokenHistory.shift()
+  if (recentSpokenHistory.length > 12) recentSpokenHistory.shift()
 }
 
-function isEchoOfRecentAssistantSpeech(transcript: string): boolean {
+function getCurrentPlaybackLevel(): number {
+  if (!isAudioPlaying.value && status.value !== 'speaking') return 0
+  if (speechSourceMode.value === 'cloud') {
+    if (!audioPlayback || audioPlayback.paused || audioPlayback.ended) return 0
+    const rms = sampleAudioElementRms(audioPlayback)
+    return rms !== null ? rms : 0.08
+  }
+  if (speechSourceMode.value === 'browser' && isAudioPlaying.value) {
+    return 0.12
+  }
+  return 0
+}
+
+function isEchoOfRecentAssistantSpeech(transcript: string, forceStrict = false): boolean {
   const now = Date.now()
-  if (currentSpeechText && isLikelyAssistantEcho(transcript, currentSpeechText)) return true
-  if (now - lastSpokenAt < ECHO_GUARD_WINDOW_MS && isLikelyAssistantEcho(transcript, lastSpokenText)) {
+  const strict = forceStrict
+    || currentSpeechText !== null
+    || now - lastSpokenAt < ECHO_STRICT_WINDOW_MS
+    || now - lastBargeInAt < ECHO_STRICT_WINDOW_MS
+  const echoOptions = { strict }
+  if (currentSpeechText && isLikelyAssistantEcho(transcript, currentSpeechText, echoOptions)) return true
+  if (now - lastSpokenAt < ECHO_GUARD_WINDOW_MS && isLikelyAssistantEcho(transcript, lastSpokenText, echoOptions)) {
     return true
   }
   const activeHistory = recentSpokenHistory.filter((entry) => now - entry.at < ECHO_GUARD_WINDOW_MS)
   if (!activeHistory.length) return false
   for (const entry of activeHistory) {
-    if (isLikelyAssistantEcho(transcript, entry.text)) return true
+    if (isLikelyAssistantEcho(transcript, entry.text, echoOptions)) return true
   }
   const combined = activeHistory.map((entry) => entry.text).join(' ')
-  return isLikelyAssistantEcho(transcript, combined)
+  return isLikelyAssistantEcho(transcript, combined, echoOptions)
 }
 
 function handleVoiceBargeIn() {
   if (!isHandsFree.value || isUnmounted || !bargeInEligible) return
   if (status.value !== 'speaking' && currentSpeechText === null && !audioPlayback) return
+  lastBargeInAt = Date.now()
   if (currentSpeechText) {
     recordSpokenEchoText(currentSpeechText)
   }
@@ -470,12 +495,29 @@ function ensureVoiceController(): VoiceConversationController {
       preferNeuralVad: true,
       validateSpeechEnvelope: true,
       deviceId: selectedMicrophone.value,
+      getPlaybackLevel: getCurrentPlaybackLevel,
+      shouldHoldTurnEnd: async () => {
+        const stream = activeStreamStt
+        const partial = stream?.latestPartialText ?? ''
+        if (language.value === 'vi' && partial) {
+          const lexical = classifyVietnameseTurnCompleteness(partial)
+          if (lexical === 'complete') return 0
+          if (lexical === 'incomplete') return 1_050
+        }
+        if (stream && stream.isHealthy) {
+          const turn = await stream.checkTurn(240)
+          if (turn && !turn.complete) {
+            return Math.max(0, Math.min(1_200, turn.holdMs || 1_050))
+          }
+        }
+        return 0
+      },
       onState: handleVoiceState,
       onBargeIn: handleVoiceBargeIn,
       onTranscript: (text) => {
         if (!isHandsFree.value || isUnmounted) return
         if (bargeInEligible && (status.value === 'speaking' || currentSpeechText !== null)) {
-          if (isLikelyAssistantEcho(text, currentSpeechText)) return
+          if (isLikelyAssistantEcho(text, currentSpeechText, { strict: true })) return
           handleVoiceBargeIn()
         }
         if (voiceInputBlocked()) return
@@ -510,6 +552,7 @@ function ensureVoiceController(): VoiceConversationController {
           language: sttLanguage,
           onPartial: (partial) => {
             if (isUnmounted || sttEpoch !== voiceTurnEpoch || !isHandsFree.value) return
+            if (isEchoOfRecentAssistantSpeech(partial, true)) return
             if (status.value === 'listening' || status.value === 'transcribing') {
               voiceHint.value = sttLanguage === 'en'
                 ? `Hearing: "${partial}"`
@@ -837,7 +880,7 @@ function speakWithBrowser(text: string, afterSpeech?: () => void, requestId = sp
     isAudioPlaying.value = false
     speechSourceMode.value = 'none'
     bargeInEligible = false
-    lastSpokenAt = Date.now()
+    recordSpokenEchoText(text)
     if (currentSpeechText === text) currentSpeechText = null
     pendingSpeechText.value = null
     status.value = 'idle'
@@ -855,7 +898,6 @@ function startStreamedSpeech(afterSpeech?: () => void): number {
   const requestId = ++speechRequestId
   startedSpeechRequestId = 0
   currentSpeechText = ''
-  lastSpokenText = ''
   bargeInEligible = false
   isAudioPlaying.value = false
   speechSourceMode.value = 'none'
@@ -936,6 +978,8 @@ function speakChunkWithBrowser(text: string, requestId: number, onDone: () => vo
   if (preferredVoice) utterance.voice = preferredVoice
   speechSourceMode.value = 'browser'
   utterance.onstart = () => {
+    recordSpokenEchoText(text)
+    if (currentSpeechText) recordSpokenEchoText(currentSpeechText)
     markSpeechPlaybackStarted(requestId, currentSpeechText || text)
   }
   utterance.onboundary = (event) => {
@@ -947,7 +991,7 @@ function speakChunkWithBrowser(text: string, requestId: number, onDone: () => vo
   }
   const finish = () => {
     if (requestId !== speechRequestId || isUnmounted) return
-    lastSpokenAt = Date.now()
+    recordSpokenEchoText(text)
     onDone()
   }
   utterance.onend = finish
@@ -964,7 +1008,8 @@ async function drainSpeechQueue(requestId: number) {
       isAudioPlaying.value = false
       speechSourceMode.value = 'none'
       bargeInEligible = false
-      lastSpokenAt = Date.now()
+      if (currentSpeechText) recordSpokenEchoText(currentSpeechText)
+      else lastSpokenAt = Date.now()
       releaseAudioPlayback()
       pendingSpeechText.value = null
       currentSpeechText = null
@@ -980,7 +1025,8 @@ async function drainSpeechQueue(requestId: number) {
   const onChunkDone = () => {
     if (requestId !== speechRequestId || isUnmounted) return
     speechChunkPlaying = false
-    lastSpokenAt = Date.now()
+    recordSpokenEchoText(next.text)
+    if (currentSpeechText) recordSpokenEchoText(currentSpeechText)
     void drainSpeechQueue(requestId)
   }
 
@@ -1004,6 +1050,8 @@ async function drainSpeechQueue(requestId: number) {
       isAudioPlaying.value = true
       speechSourceMode.value = 'cloud'
       ensureAudioLipSyncTap(audio)
+      recordSpokenEchoText(next.text)
+      if (currentSpeechText) recordSpokenEchoText(currentSpeechText)
       markSpeechPlaybackStarted(requestId, currentSpeechText || next.text)
     }
     audio.onended = () => {
@@ -1022,6 +1070,8 @@ async function drainSpeechQueue(requestId: number) {
       isAudioPlaying.value = true
       speechSourceMode.value = 'cloud'
       ensureAudioLipSyncTap(audio)
+      recordSpokenEchoText(next.text)
+      if (currentSpeechText) recordSpokenEchoText(currentSpeechText)
       markSpeechPlaybackStarted(requestId, currentSpeechText || next.text)
     } catch (error) {
       if (requestId !== speechRequestId || isUnmounted) return
@@ -1083,7 +1133,7 @@ async function speak(text: string, afterSpeech?: () => void) {
       isAudioPlaying.value = false
       speechSourceMode.value = 'none'
       bargeInEligible = false
-      lastSpokenAt = Date.now()
+      recordSpokenEchoText(text)
       releaseAudioPlayback()
       pendingSpeechText.value = null
       if (currentSpeechText === text) currentSpeechText = null
@@ -1267,6 +1317,7 @@ async function resetKioskSession(notice?: string) {
   isAudioPlaying.value = false
   lastSpokenText = ''
   lastSpokenAt = 0
+  lastBargeInAt = 0
   recentSpokenHistory = []
   activeSpeechQueue = []
   speechStreamOpen = false

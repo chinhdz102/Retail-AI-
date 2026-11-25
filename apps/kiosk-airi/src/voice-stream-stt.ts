@@ -43,6 +43,13 @@ export function float32ToPcm16Buffer(frame: Float32Array): ArrayBuffer {
  * live partial captions, and resolves cleanly to ``null`` on any error/fallback
  * so the caller transparently falls back to ``POST /audio/transcribe``.
  */
+export interface SmartTurnStatus {
+  complete: boolean
+  probability: number
+  holdMs: number
+  reason?: string
+}
+
 export class StreamingSttSession {
   private ws: WebSocket | null = null
   private readonly pendingFrames: ArrayBuffer[] = []
@@ -50,6 +57,9 @@ export class StreamingSttSession {
   private closed = false
   private failed = false
   private endRequested = false
+  private latestPartial = ''
+  private resolveTurnCheck: ((value: SmartTurnStatus | null) => void) | null = null
+  private turnCheckTimer: ReturnType<typeof setTimeout> | null = null
   private resolveFinal: ((value: TranscriptionResponse | null) => void) | null = null
   private finalPromise: Promise<TranscriptionResponse | null> | null = null
   private finishTimer: ReturnType<typeof setTimeout> | null = null
@@ -77,6 +87,10 @@ export class StreamingSttSession {
             session_id?: string
             model?: string
             speech_detected?: boolean
+            complete?: boolean
+            probability?: number
+            hold_ms?: number
+            reason?: string
           }
           if (msg.type === 'ready') {
             this.isReady = true
@@ -85,7 +99,17 @@ export class StreamingSttSession {
             return
           }
           if (msg.type === 'partial' && typeof msg.text === 'string' && msg.text.trim()) {
-            options.onPartial?.(msg.text.trim())
+            this.latestPartial = msg.text.trim()
+            options.onPartial?.(this.latestPartial)
+            return
+          }
+          if (msg.type === 'turn_status') {
+            this.settleTurnCheck({
+              complete: msg.complete !== false,
+              probability: typeof msg.probability === 'number' ? msg.probability : 0.5,
+              holdMs: typeof msg.hold_ms === 'number' ? msg.hold_ms : 0,
+              reason: typeof msg.reason === 'string' ? msg.reason : undefined,
+            })
             return
           }
           if (msg.type === 'final') {
@@ -128,6 +152,35 @@ export class StreamingSttSession {
 
   get isHealthy(): boolean {
     return !this.failed && !this.closed
+  }
+
+  get latestPartialText(): string {
+    return this.latestPartial
+  }
+
+  checkTurn(timeoutMs = 240): Promise<SmartTurnStatus | null> {
+    if (
+      this.closed
+      || this.failed
+      || this.endRequested
+      || !this.isReady
+      || !this.ws
+      || this.ws.readyState !== WebSocket.OPEN
+    ) {
+      return Promise.resolve(null)
+    }
+    this.settleTurnCheck(null)
+    return new Promise<SmartTurnStatus | null>((resolve) => {
+      this.resolveTurnCheck = resolve
+      this.turnCheckTimer = setTimeout(() => {
+        this.settleTurnCheck(null)
+      }, timeoutMs)
+      try {
+        this.ws?.send(JSON.stringify({ type: 'check_turn' }))
+      } catch {
+        this.settleTurnCheck(null)
+      }
+    })
   }
 
   pushFrame(frame: Float32Array): void {
@@ -205,9 +258,20 @@ export class StreamingSttSession {
     }
   }
 
+  private settleTurnCheck(result: SmartTurnStatus | null): void {
+    if (this.turnCheckTimer) {
+      clearTimeout(this.turnCheckTimer)
+      this.turnCheckTimer = null
+    }
+    const resolve = this.resolveTurnCheck
+    this.resolveTurnCheck = null
+    resolve?.(result)
+  }
+
   private settle(result: TranscriptionResponse | null): void {
     if (this.closed) return
     this.closed = true
+    this.settleTurnCheck(null)
     this.pendingFrames.length = 0
     if (this.finishTimer) {
       clearTimeout(this.finishTimer)

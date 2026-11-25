@@ -100,4 +100,33 @@ describe('voice-stream-stt', () => {
     ws.emit({ type: 'fallback', reason: 'azure_stt_disabled' })
     expect(await promise).toBeNull()
   })
+
+  it('tracks latestPartialText and resolves Smart Turn check_turn responses', async () => {
+    const session = new StreamingSttSession({
+      sessionId: 'sess-3',
+      language: 'vi',
+      WebSocketCtor: FakeWebSocket as unknown as typeof WebSocket,
+    })
+    const ws = FakeWebSocket.last!
+    ws.emit({ type: 'ready', locale: 'vi-VN' })
+    ws.emit({ type: 'partial', text: 'Cho mình hỏi là' })
+    expect(session.latestPartialText).toBe('Cho mình hỏi là')
+
+    const turnPromise = session.checkTurn(500)
+    expect(ws.sent[ws.sent.length - 1]).toBe(JSON.stringify({ type: 'check_turn' }))
+    ws.emit({
+      type: 'turn_status',
+      complete: false,
+      probability: 0.12,
+      hold_ms: 1050,
+      reason: 'smart_turn_incomplete',
+    })
+    expect(await turnPromise).toEqual({
+      complete: false,
+      probability: 0.12,
+      holdMs: 1050,
+      reason: 'smart_turn_incomplete',
+    })
+    session.cancel()
+  })
 })

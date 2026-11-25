@@ -66,6 +66,13 @@ _BASE_RETAIL_PHRASES_VI: tuple[str, ...] = (
     "Head & Shoulders",
     "Hảo Hảo",
     "Nam Ngư",
+    "Chin-su",
+    "Chinsu",
+    "tương ớt Chin-su",
+    "Cholimex",
+    "Nam Dương",
+    "Selsun",
+    "dầu gội Selsun",
     "Sensodyne",
     "Lifebuoy",
     "Comfort",
@@ -164,11 +171,15 @@ class AzureSTTService:
 
         cfg = speechsdk.SpeechConfig(subscription=key, region=region)
         cfg.speech_recognition_language = locale
+        # PushAudioInputStream calls push.close() right after writing the full WAV,
+        # so EOF triggers immediate finalization without waiting on silence timers.
+        # Keeping 1200 ms prevents recognize_once_async() from chopping off the
+        # second half of a sentence whenever the shopper pauses briefly mid-clause.
         cfg.set_property(
-            speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "250"
+            speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "1200"
         )
         cfg.set_property(
-            speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "250"
+            speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "1200"
         )
         fmt = speechsdk.audio.AudioStreamFormat(
             samples_per_second=SAMPLE_RATE, bits_per_sample=16, channels=1

@@ -267,6 +267,14 @@ async def _lifespan(_app: FastAPI):
             except Exception:
                 pass
 
+        async def _warm_smart_turn() -> None:
+            try:
+                from backend.services.smart_turn import warm_smart_turn
+
+                await asyncio.to_thread(warm_smart_turn)
+            except Exception:
+                pass
+
         async def _warm_azure_tts() -> None:
             if not settings.has_azure_speech:
                 return
@@ -299,6 +307,7 @@ async def _lifespan(_app: FastAPI):
             _warm_azure_tts(),
             _warm_azure_stt(),
             _warm_denoiser(),
+            _warm_smart_turn(),
             return_exceptions=True,
         )
 
@@ -9030,6 +9039,68 @@ async def agent_respond(
             _localized_prompt_override_denial(request.language),
         )
     if _storage_condition_requested(request.text, catalog_hierarchies):
+        norm_storage_req = " ".join(_normalize_request_text(request.text).split())
+        is_category_storage_filter = bool(
+            re.search(
+                r"\b(?:co loai nao|loai nao|nhung loai nao|cai nao|san pham nao|"
+                r"which ones?|what kinds?|co duoc khong)\b",
+                norm_storage_req,
+            )
+            or re.search(r"\bde ngoai duoc\b", norm_storage_req)
+        )
+        if not is_category_storage_filter:
+            from backend.products.knowledge import product_knowledge_facts
+
+            storage_repo = get_product_repository()
+            stripped_storage_q = re.sub(
+                r"\b(?:huong dan bao quan|cach bao quan|bao quan|nhu the nao|the nao|"
+                r"ra sao|sao|o dau|duoc khong|chai nay|hop nay|goi nay|loai nay|"
+                r"san pham nay|cai nay|cho minh hoi|cho toi hoi|cho tao hoi|hoi ve)\b",
+                " ",
+                norm_storage_req,
+            )
+            stripped_storage_q = " ".join(stripped_storage_q.split())
+            storage_target: ProductSnapshot | None = None
+            if stripped_storage_q:
+                hits = storage_repo.search(stripped_storage_q, limit=3)
+                if hits:
+                    storage_target = hits[0]
+            elif record.shopping.selected_product_ids:
+                storage_target = storage_repo.get_product_snapshot(
+                    record.shopping.selected_product_ids[0]
+                )
+            if storage_target is not None:
+                storage_facts = product_knowledge_facts(
+                    storage_target,
+                    ("storage",),
+                    source=storage_repo.source_name,
+                )
+                if (
+                    storage_facts
+                    and storage_facts[0].status.value == "VERIFIED"
+                    and isinstance(storage_facts[0].value, str)
+                    and storage_facts[0].value.strip()
+                ):
+                    sto_fact = storage_facts[0]
+                    sto_source = sto_fact.source or "thông tin sản phẩm Thanh Lam Mart"
+                    sto_reply = (
+                        f"Theo {sto_source}, với {storage_target.name}: "
+                        f"{sto_fact.value.strip()} Bạn xem thêm nhãn trên bao bì khi bảo quản nhé."
+                    )
+                    session_store.update_shopping(
+                        request.session_id,
+                        selected_product_ids=[storage_target.product_id],
+                    )
+                    session_store.add_message(request.session_id, "assistant", sto_reply)
+                    return AgentRespondResponse(
+                        session_id=request.session_id,
+                        text=sto_reply,
+                        model="catalog",
+                        products=[_product_card(storage_target)],
+                        grounded_product_ids=[storage_target.product_id],
+                        tools_used=["get_product_knowledge"],
+                        state=record.state,
+                    )
         return _local_policy_response(
             request,
             record.state,

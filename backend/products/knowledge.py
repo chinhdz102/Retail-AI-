@@ -480,6 +480,15 @@ def product_knowledge_facts(
                 )
                 continue
             if requested == "usage" and isinstance(retailer_record.get("usage"), str):
+                usage_source = (
+                    str(retailer_record.get("usage_source") or "").strip()
+                    or "thông tin sản phẩm Thanh Lam Mart"
+                )
+                usage_url = (
+                    str(retailer_record.get("usage_source_url") or "").strip()
+                    or str(retailer_record.get("source_url") or "").strip()
+                    or _safe_source_url(product)
+                )
                 result.append(
                     ProductKnowledgeFact(
                         product_id=product.product_id,
@@ -487,9 +496,8 @@ def product_knowledge_facts(
                         value=retailer_record["usage"],
                         status=EvidenceStatus.VERIFIED,
                         evidence_scope=EvidenceScope.RETAILER_LISTING,
-                        source="thông tin sản phẩm Thanh Lam Mart",
-                        source_url=str(retailer_record.get("source_url") or "")
-                        or _safe_source_url(product),
+                        source=usage_source,
+                        source_url=usage_url,
                         source_field="thanh_lam.longDescription.usage",
                         observed_at=retailer_observed_at or product.data_timestamp,
                         verified_at=retailer_observed_at or product.data_timestamp,
@@ -498,8 +506,74 @@ def product_knowledge_facts(
                         product_match_scope="EXACT_VARIANT",
                         confidence=0.85,
                         note=(
-                            "Usage instructions extracted from the official Thanh Lam Mart product "
-                            "listing; follow the physical package label if different."
+                            "Usage instructions extracted from verified retailer listing; "
+                            "follow the physical package label if different."
+                        ),
+                    )
+                )
+                continue
+            if requested == "storage" and isinstance(retailer_record.get("storage"), str):
+                storage_source = (
+                    str(retailer_record.get("storage_source") or "").strip()
+                    or "thông tin sản phẩm Thanh Lam Mart"
+                )
+                storage_url = (
+                    str(retailer_record.get("storage_source_url") or "").strip()
+                    or str(retailer_record.get("source_url") or "").strip()
+                    or _safe_source_url(product)
+                )
+                result.append(
+                    ProductKnowledgeFact(
+                        product_id=product.product_id,
+                        attribute="storage",
+                        value=retailer_record["storage"],
+                        status=EvidenceStatus.VERIFIED,
+                        evidence_scope=EvidenceScope.RETAILER_LISTING,
+                        source=storage_source,
+                        source_url=storage_url,
+                        source_field="thanh_lam.longDescription.storage",
+                        observed_at=retailer_observed_at or product.data_timestamp,
+                        verified_at=retailer_observed_at or product.data_timestamp,
+                        catalog_version=version,
+                        evidence_version=f"thanh_lam-retailer-details-v1:{retailer_sha256}",
+                        product_match_scope="EXACT_VARIANT",
+                        confidence=0.85,
+                        note=(
+                            "Storage instructions extracted from verified retailer listing; "
+                            "follow the physical package label if different."
+                        ),
+                    )
+                )
+                continue
+            if requested == "origin" and isinstance(retailer_record.get("origin"), str):
+                origin_source = (
+                    str(retailer_record.get("origin_source") or "").strip()
+                    or "thông tin sản phẩm Thanh Lam Mart"
+                )
+                origin_url = (
+                    str(retailer_record.get("origin_source_url") or "").strip()
+                    or str(retailer_record.get("source_url") or "").strip()
+                    or _safe_source_url(product)
+                )
+                result.append(
+                    ProductKnowledgeFact(
+                        product_id=product.product_id,
+                        attribute="origin",
+                        value=retailer_record["origin"],
+                        status=EvidenceStatus.VERIFIED,
+                        evidence_scope=EvidenceScope.RETAILER_LISTING,
+                        source=origin_source,
+                        source_url=origin_url,
+                        source_field="thanh_lam.longDescription.origin",
+                        observed_at=retailer_observed_at or product.data_timestamp,
+                        verified_at=retailer_observed_at or product.data_timestamp,
+                        catalog_version=version,
+                        evidence_version=f"thanh_lam-retailer-details-v1:{retailer_sha256}",
+                        product_match_scope="EXACT_VARIANT",
+                        confidence=0.85,
+                        note=(
+                            "Origin extracted from verified retailer listing; "
+                            "check the physical package label for batch origin."
                         ),
                     )
                 )
