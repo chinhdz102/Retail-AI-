@@ -21,6 +21,7 @@ class SessionResponse(BaseModel):
     kiosk_id: str
     state: SessionState
     expires_at: datetime
+    cart_available: bool = False
 
 
 class AgentRespondRequest(BaseModel):

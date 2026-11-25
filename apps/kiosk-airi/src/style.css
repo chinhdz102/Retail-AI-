@@ -1963,8 +1963,12 @@ body {
   max-width: calc(100vw - 32px);
   min-height: 0;
   overflow: hidden;
+  border: 1px solid rgb(179 208 230 / 0.14);
   border-radius: 24px;
-  background: transparent;
+  background: linear-gradient(180deg, rgb(7 14 24 / 0.48) 0%, rgb(7 14 24 / 0.72) 100%);
+  box-shadow: 0 18px 44px rgb(3 8 15 / 0.34);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 @media (prefers-color-scheme: light) {

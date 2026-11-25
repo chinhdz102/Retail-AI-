@@ -1824,10 +1824,11 @@ def _catalog_product_title_match(
         return None
     if explicit_group_browse:
         return None
+    hierarchies: tuple[tuple[str, ...], ...] = ()
     list_hierarchies = getattr(repository, "list_category_hierarchies", None)
     if callable(list_hierarchies):
         try:
-            hierarchies = list_hierarchies()
+            hierarchies = tuple(list_hierarchies())
         except (OSError, RuntimeError, TimeoutError, ValueError):
             hierarchies = ()
         taxonomy_match = resolve_catalog_category(identity_query, hierarchies)
@@ -1847,12 +1848,15 @@ def _catalog_product_title_match(
                 # Exact catalog titles have already been returned above.
                 return None
     normalized_identity = normalize_category_text(identity_query)
+    stripped_category_alias = False
     if category_alias_phrase:
-        normalized_identity = re.sub(
+        updated_identity = re.sub(
             rf"(?<!\w){re.escape(category_alias_phrase)}(?!\w)",
             " ",
             normalized_identity,
         )
+        stripped_category_alias = updated_identity != normalized_identity
+        normalized_identity = updated_identity
     query_tokens = {
         token
         for token in normalized_identity.split()
@@ -1891,7 +1895,22 @@ def _catalog_product_title_match(
     }
     if len(best_titles) != 1:
         return None
-    return next(iter(best_titles))
+    matched_title = next(iter(best_titles))
+    if stripped_category_alias and hierarchies and products:
+        alias_match = resolve_catalog_category_alias(query, hierarchies)
+        if alias_match is not None:
+            expected_alias_cat = normalize_category_text(alias_match.category)
+            matched_in_scope = any(
+                product.name.strip() == matched_title
+                and expected_alias_cat
+                in normalize_category_text(
+                    f"{product.category_hierarchy} {product.category} {product.name}"
+                )
+                for product in products
+            )
+            if not matched_in_scope:
+                return None
+    return matched_title
 
 
 _CATALOG_PRODUCT_DETAIL_TAIL = re.compile(

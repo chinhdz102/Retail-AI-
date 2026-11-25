@@ -1254,20 +1254,24 @@ async function bootKiosk() {
       if (generation === sessionGeneration && sessionId.value === session.session_id) {
         voiceHint.value = languageSettings[language.value].ready
       }
-      // Fetch initial cart in the background so mobile QR boot becomes interactive
-      // immediately after createSession() without waiting on a second RTT.
-      void getCart(session.session_id)
-        .then((initialCart) => {
-          if (generation === sessionGeneration && sessionId.value === session.session_id) {
-            cart.value = initialCart
-          }
-        })
-        .catch(() => {
-          // Catalog configuration can disable sandbox carts while text lookup is still available.
-          if (generation === sessionGeneration && sessionId.value === session.session_id) {
-            cart.value = null
-          }
-        })
+      // Fetch initial cart in the background only when the active catalog supports
+      // branch-verified cart transactions (avoids unnecessary 503 calls in snapshot mode).
+      if (session.cart_available === false) {
+        cart.value = null
+      } else {
+        void getCart(session.session_id)
+          .then((initialCart) => {
+            if (generation === sessionGeneration && sessionId.value === session.session_id) {
+              cart.value = initialCart
+            }
+          })
+          .catch(() => {
+            // Catalog configuration can disable sandbox carts while text lookup is still available.
+            if (generation === sessionGeneration && sessionId.value === session.session_id) {
+              cart.value = null
+            }
+          })
+      }
     } catch (error) {
       if (generation === sessionGeneration && !isUnmounted) {
         errorMessage.value = toErrorMessage(error, 'Không mở được phiên kiosk')

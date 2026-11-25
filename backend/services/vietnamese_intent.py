@@ -1898,7 +1898,10 @@ def is_recommendation_request(text: str) -> bool:
         and not re.search(
             r"\b(?:gia bao nhieu|bao nhieu tien|o ke nao|o dau|con bao nhieu|"
             r"han dung|hsd|chung nhan|xuat xu|co chua|thanh phan|"
-            r"san pham nay|loai nay|hop nay|chai nay|goi nay)\b",
+            r"san pham nay|loai nay|hop nay|chai nay|goi nay|"
+            r"nhan nao|nhung nhan nao|thuong hieu nao|hang nao|nhung hang nao|"
+            r"san pham moi|hang moi|mon moi|"
+            r"khong cay khong|cay khong)\b",
             normalized,
         )
     )

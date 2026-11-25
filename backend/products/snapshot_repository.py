@@ -703,6 +703,8 @@ def _query_terms(query: str) -> tuple[tuple[str, ...], bool, bool]:
             protected_tokens.add("dang")
         elif tok == "cung" and prev_tok in {"keo", "thu", "long"}:
             protected_tokens.add("cung")
+        elif tok == "san" and prev_tok == "lau":
+            protected_tokens.add("san")
         elif tok == "tui" and (
             next_tok in {"lon", "nho", "to", "cham", "refill"}
             or (bool(next_tok) and next_tok[0].isdigit())

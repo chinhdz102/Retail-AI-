@@ -6,6 +6,7 @@ export interface SessionResponse {
   kiosk_id: string
   state: string
   expires_at: string
+  cart_available?: boolean
 }
 
 export interface ProductSnapshot {

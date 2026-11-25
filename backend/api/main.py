@@ -5076,11 +5076,16 @@ def create_session(request: SessionCreateRequest) -> SessionResponse:
         raise HTTPException(
             status_code=503, detail="Session store is temporarily unavailable"
         ) from exc
+    try:
+        cart_available = bool(getattr(get_product_repository(), "supports_current_stock", False))
+    except Exception:
+        cart_available = False
     return SessionResponse(
         session_id=record.session_id,
         kiosk_id=record.kiosk_id,
         state=record.state,
         expires_at=record.expires_at,
+        cart_available=cart_available,
     )
 
 
@@ -5089,11 +5094,16 @@ def close_session(session_id: UUID) -> SessionResponse:
     _session_or_http_error(session_id)
     shopping_service.close_session(session_id)
     record = session_store.close(session_id)
+    try:
+        cart_available = bool(getattr(get_product_repository(), "supports_current_stock", False))
+    except Exception:
+        cart_available = False
     return SessionResponse(
         session_id=record.session_id,
         kiosk_id=record.kiosk_id,
         state=record.state,
         expires_at=record.expires_at,
+        cart_available=cart_available,
     )
 
 
@@ -10817,7 +10827,12 @@ async def agent_respond(
             observation.tool_name == "recommend_products"
             for observation in agent_result.observations
         )
-        if recommendation_arguments and not has_recommendation_observation:
+        if (
+            recommendation_arguments
+            and not has_recommendation_observation
+            and catalog_additions_arguments is None
+            and promotion_list_arguments is None
+        ):
             recommendation_observation = await lookup_recommendation_products(
                 recommendation_arguments,
                 previous_queries=previous_user_queries,

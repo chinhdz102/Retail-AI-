@@ -335,10 +335,14 @@ async def test_model_customer_care_action_claim_is_replaced_with_safe_fallback(
 @pytest.mark.asyncio
 async def test_customer_care_api_routes_to_safe_specific_fallback_without_llm(
     client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
     text: str,
     language: str,
     expected_fragment: str,
 ) -> None:
+    from backend.config import Settings
+
+    monkeypatch.setattr(Settings, "has_manager_notifier", property(lambda _self: False))
     groq = NoCallGroqService()
     app.dependency_overrides[get_groq_service] = lambda: groq
     created = await client.post("/sessions", json={"kiosk_id": f"care-{uuid4()}"})

@@ -365,6 +365,8 @@ def _build_streaming_plan_payload(
         "nhiên như 'Dạ, mình gợi ý...' hoặc 'Với nhu cầu này, mình gợi ý...'). "
         "QUY TẮC: (1) CHỈ nêu tên sản phẩm, giá VND, khuyến mãi, quy cách, đơn giá có thật "
         "trong JSON. (2) " + mode_hint + " "
+        "LUÔN giới thiệu ĐÚNG sản phẩm trong primary_products làm gợi ý chính trước tiên "
+        "(KHÔNG lấy sản phẩm từ other_catalog_products làm gợi ý chính để khớp thẻ trên màn hình). "
         "(3) Nếu có other_catalog_products, nhắc nhẹ 1 ý rằng bên dưới còn các mẫu khác để chọn. "
         "(4) Không bịa thành phần, công dụng chữa bệnh, cam kết dị ứng, số bán thật hay tồn kho."
         + exclusion_rule
