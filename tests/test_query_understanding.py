@@ -23,6 +23,49 @@ def _snapshot() -> SnapshotProductRepository:
     return SnapshotProductRepository(ROOT / "data" / "thanh_lam_products.json")
 
 
+@pytest.mark.parametrize("query", [
+    "Cùng một mức giá thì loại nào dùng thích hơn?",
+    "Giá như nhau thì cái nào đáng mua?",
+    "Ngang tầm tiền, sản phẩm nào dùng tốt hơn?",
+    "Cùng mức giá, nước giặt loại nào dùng ổn hơn?",
+])
+def test_equal_price_quality_choice_is_comparison_not_a_price_lookup(query):
+    result = understand_catalog_query(query, _snapshot().list_category_hierarchies())
+    assert result.intent == "comparison"
+    assert not result.comparison_targets
+
+
+@pytest.mark.parametrize("query", [
+    "Nước giặt giá bao nhiêu?", "Cho mình hỏi giá chai nước mắm này?",
+])
+def test_factual_price_question_remains_a_price_lookup(query):
+    assert understand_catalog_query(query).intent == "price"
+
+
+@pytest.mark.parametrize("query", [
+    "Mình cần đồ ăn sáng nhanh mà vẫn no.", "Ăn no bụng rồi hãy đi.",
+    "Có món gì ăn thật no không?", "Ăn sáng no lâu một chút.",
+    "Ăn trưa no lâu một chút.", "Ăn tối no lâu một chút.",
+])
+def test_satiety_is_not_a_reference_to_a_previous_product(query):
+    result = understand_catalog_query(query, _snapshot().list_category_hierarchies())
+    assert result.conversation_reference is None
+    assert "alternative" not in result.secondary_intents
+    assert not result.negative_constraints
+
+
+@pytest.mark.parametrize("query", [
+    "Tìm mãi không thấy khăn giấy, nó nằm khu nào vậy?",
+    "Không thấy bóng đèn ở đâu cả, chỉ giúp mình với.",
+    "Mình không tìm thấy cà phê ở đâu vậy?",
+    "Không tìm được nước rửa chén, khu nào thế?",
+])
+def test_not_finding_a_product_is_not_an_excluded_product_attribute(query):
+    result = understand_catalog_query(query, _snapshot().list_category_hierarchies())
+    assert not result.negative_constraints
+    assert not result.hard_constraints
+
+
 def test_query_understanding_separates_product_type_from_use_case() -> None:
     repository = _snapshot()
     result = understand_catalog_query(
@@ -72,7 +115,7 @@ def test_unverified_customer_needs_stay_separate_across_catalog_groups(
     assert observation.status == "SUCCESS"
     assert observation.content["use_case_verified"] is False
     assert expected_need.casefold() == observation.content["use_case"].casefold()
-    assert "Catalog chưa có đủ thông tin xác minh" in answer
+    assert "Mình chưa đủ thông tin để xác nhận" in answer
     assert "Mình gợi ý" not in answer
 
 
@@ -1200,10 +1243,97 @@ def test_unverified_need_is_not_rendered_as_a_suitability_recommendation() -> No
     answer = _localized_recommendation_candidates(observation, "vi")
 
     assert observation.content["use_case_verified"] is False
-    assert "Catalog chưa có đủ thông tin" in answer
+    assert "Mình chưa đủ thông tin để xác nhận" in answer
     assert "phù hợp với nhu cầu này" in answer
     assert "Da đầu mình nhanh bết" not in answer
     assert "Mình gợi ý" not in answer
+
+
+@pytest.mark.parametrize("product_count", [1, 2])
+def test_title_only_preference_reply_is_customer_facing_without_selection_log(
+    product_count: int,
+) -> None:
+    products = tuple(
+        ProductSnapshot(
+            product_id=f"TITLE-{index}",
+            name=name,
+            category="Đồ ăn",
+            price_vnd=20_000 + index * 5_000,
+            stock=5,
+            stock_is_current=False,
+            uom="Gói",
+        )
+        for index, name in enumerate(("Bánh không đường 1", "Bánh không đường 2"))
+    )[:product_count]
+    observation = ToolObservation(
+        content={"preference_evidence": "PRODUCT_TITLE_ONLY"},
+        products=products,
+        tool_name="recommend_products",
+    )
+
+    answer = _localized_recommendation_candidates(observation, "vi")
+
+    assert answer.startswith("Dạ, mình tìm thấy")
+    assert "Bạn muốn xem" in answer
+    assert "Mình chọn theo" not in answer
+    assert "Giá tại cửa hàng có thể khác catalog" not in answer
+    assert "Tồn hiện tại chưa được xác minh" not in answer
+
+
+@pytest.mark.parametrize("language", ["vi", "en", "zh"])
+@pytest.mark.parametrize("content", [
+    {},
+    {"browse_mode": "CATEGORY_OVERVIEW", "category_label": "Đồ uống"},
+    {"use_case": "nhu cầu riêng", "use_case_verified": False},
+    {"family_details_unverified": True},
+    {"preparation_alternatives_unverified": True},
+])
+def test_recommendations_keep_reference_prices_without_routine_stock_and_source_logs(
+    language, content,
+) -> None:
+    row = ProductSnapshot(
+        product_id="REFERENCE-OPTION", name="Mặt hàng để tham khảo", category="Nhóm hàng",
+        price_vnd=25_000, stock=4, stock_is_current=False,
+    )
+    answer = _localized_recommendation_candidates(
+        ToolObservation(content=content, products=(row,), tool_name="recommend_products"),
+        language,
+    )
+
+    assert row.name in answer and "25.000" in answer
+    assert {"vi": "giá tham khảo", "en": "reference price", "zh": "参考价"}[language] in answer
+    for phrase in (
+        "Giá tại cửa hàng có thể khác catalog", "Tồn hiện tại chưa được xác minh",
+        "Mình chưa kiểm tra được hàng còn tại cửa hàng", "Store price may differ",
+        "Store prices may differ", "Current availability has not been verified",
+        "门店价格可能与目录不同", "门店实际价格可能与目录不同", "当前库存尚未核实",
+    ):
+        assert phrase not in answer
+
+
+@pytest.mark.parametrize("query,product_type,budget", [
+    ("Tìm bánh quy dưới 50 nghìn.", "bánh quy", 50_000),
+    ("Tìm nước giặt dưới 150 nghìn.", "nước giặt", 150_000),
+    ("Tìm kem đánh răng dưới 50 nghìn.", "kem đánh răng", 50_000),
+    ("Gợi ý mì ăn liền dưới 20 nghìn.", "mì ăn liền", 20_000),
+    ("Tìm nước rửa chén dưới 50 nghìn.", "nước rửa chén", 50_000),
+])
+def test_budget_filter_is_not_reported_as_missing_product_information(
+    query, product_type, budget,
+) -> None:
+    observation = execute_catalog_tool(
+        "recommend_products",
+        json.dumps({"query": product_type, "preference_text": query, "limit": 3}),
+        repository=_snapshot(), current_user_text=query,
+    )
+
+    assert observation.status == "SUCCESS" and observation.products
+    assert all(row.price_vnd < budget for row in observation.products)
+    assert not observation.content.get("family_details_unverified")
+    assert not observation.content.get("unverified_constraints")
+    answer = _localized_recommendation_candidates(observation, "vi")
+    assert "chưa đủ thông tin" not in answer
+    assert "các tiêu chí khác" not in answer
 
 
 def test_single_unverified_catalog_match_is_described_as_one_option() -> None:
@@ -1315,3 +1445,11 @@ def test_snapshot_spice_exclusion_is_reported_as_unavailable() -> None:
 
     assert observation.status == "DATA_UNAVAILABLE"
     assert observation.content["unavailable_fields"] == ["product_attributes"]
+
+
+@pytest.mark.parametrize("product", ["khăn giấy", "dầu gội", "nước rửa tay", "bút bi"])
+def test_difficulty_finding_is_removed_from_location_identity(product):
+    parsed = understand_catalog_query(f"Em tìm mãi không thấy {product}, nó nằm khu nào vậy?")
+    assert parsed.intent == "location"
+    assert parsed.product_reference == product
+    assert parsed.negative_constraints == ()

@@ -213,11 +213,8 @@ async def test_actual_customer_request_returns_grounded_titles_and_prices(snapsh
                 assert card["name"] == original.name
                 assert card["price_vnd"] == original.price_vnd
                 assert original.name in payload["text"]
-            assert "tên hàng" in payload["text"]
-            assert any(
-                phrase in payload["text"]
-                for phrase in ("chưa xác nhận", "cần kiểm tra thêm trên nhãn")
-            )
+            assert "Mình chọn theo" not in payload["text"]
+            assert "tên hàng" not in payload["text"]
             assert "chắc chắn hết" not in payload["text"]
     finally:
         api.app.dependency_overrides.pop(api.get_groq_service, None)
@@ -355,9 +352,9 @@ async def test_soft_preferences_are_ranked_only_after_family_and_taxonomy_scope(
                 assert payload["grounded_product_ids"]
                 assert payload["tools_used"] == ["recommend_products"]
                 if "dịu nhẹ" in text or "khô xơ" in text:
-                    assert "chưa xác" in payload["text"] or "chưa có đủ thông tin" in payload[
-                        "text"
-                    ]
+                    assert any(phrase in payload["text"] for phrase in (
+                        "chưa xác", "chưa có đủ thông tin", "chưa đủ thông tin để xác nhận",
+                    ))
                 for card in payload["products"]:
                     original = snapshot.get_product_snapshot(card["product_id"])
                     hierarchy = normalize_category_text(original.category_hierarchy)

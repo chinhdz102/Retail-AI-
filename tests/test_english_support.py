@@ -188,6 +188,10 @@ def test_customer_care_intents_are_routed_without_overmatching_product_questions
         ("Mình chưa thể ghi nhận phản hồi hay gọi nhân viên thay bạn.", False),
         ("Bạn hỏi nhân viên tại quầy để được hỗ trợ nhé.", False),
         ("Bạn hỏi nhân viên về điều kiện hoàn tiền nhé.", False),
+        ("Dạ, mình tìm thấy dầu gội để bạn tham khảo.", False),
+        ("Dạ, bạn có thể xem bánh bao nhân thịt.", False),
+        ("Dạ, mình đã gọi nhân viên giúp bạn rồi.", True),
+        ("Da ghi nhan phan anh va gui nhan vien.", True),
     ],
 )
 def test_unavailable_customer_care_actions_cannot_be_claimed(reply: str, expected: bool) -> None:

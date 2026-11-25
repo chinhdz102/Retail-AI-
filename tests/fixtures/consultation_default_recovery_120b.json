@@ -1,0 +1,25 @@
+{
+  "action": "recommend",
+  "basket": false,
+  "child_snack": false,
+  "clarification_answer": {
+    "question_id": null,
+    "slot_key": null,
+    "source_quote": null,
+    "status": "unresolved",
+    "value": null
+  },
+  "guidance": "Với ngân sách khoảng 200.000 đồng, bạn có thể chọn các loại thịt thái mỏng như thăn bò, thăn heo hoặc thịt bò cắt lát (thịt bò nội địa, thăn bò) – chúng nhanh chín trong lẩu và không cần thời gian nấu lâu. Nếu muốn đa dạng, có thể bổ sung một ít thịt bò viên hoặc chả lụa thái sợi để tăng hương vị mà vẫn giữ chi phí trong mức cho phép.",
+  "label_requirement_quote": null,
+  "max_price_vnd": 200000,
+  "need": "Tìm thịt phù hợp cho lẩu, giá khoảng 200k mỗi gói, dễ nhúng, nhanh chín.",
+  "needs_label_verification": false,
+  "pending_question": null,
+  "question": null,
+  "question_priority": "optional",
+  "searches": [],
+  "strict_price_limit": true,
+  "sugar": "any",
+  "total_budget_vnd": null,
+  "use_visible_products": false
+}

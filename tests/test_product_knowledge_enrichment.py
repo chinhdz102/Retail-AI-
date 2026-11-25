@@ -174,3 +174,80 @@ def test_invalid_or_overstated_enrichment_fails_closed(
 
     assert fact.status.value == "UNKNOWN"
     assert fact.value is None
+
+
+def test_all_enriched_registry_records_bind_to_live_thanh_lam_snapshot(
+    snapshot_repository: SnapshotProductRepository,
+) -> None:
+    registry_path = (
+        Path(__file__).resolve().parents[1] / "data" / "product_knowledge_enrichment_pilot.json"
+    )
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    assert len(registry["records"]) >= 20
+    for record in registry["records"]:
+        product = snapshot_repository.get_product_snapshot(record["product_id"])
+        assert product is not None, f"Missing product {record['product_id']}"
+        attributes = tuple(fact["attribute"] for fact in record["facts"])
+        facts = product_knowledge_facts(
+            product,
+            attributes,
+            source="thanh_lam_snapshot",
+            catalog_version=snapshot_repository.dataset_sha256,
+        )
+        assert len(facts) == len(attributes)
+        assert all(fact.status.value != "UNKNOWN" for fact in facts)
+        assert all(fact.source_url and fact.source_url.startswith("https://") for fact in facts)
+
+
+def test_crawled_thanh_lam_details_surface_ingredients_and_usage_for_chin_su_1kg(
+    snapshot_repository: SnapshotProductRepository,
+) -> None:
+    chinsu = snapshot_repository.get_product_snapshot("TLM_10141747")
+    assert chinsu is not None
+
+    facts = {
+        fact.attribute: fact
+        for fact in product_knowledge_facts(
+            chinsu,
+            ("ingredients", "usage"),
+            source="thanh_lam_snapshot",
+            catalog_version=snapshot_repository.dataset_sha256,
+        )
+    }
+    assert facts["ingredients"].status.value == "VERIFIED"
+    assert facts["ingredients"].evidence_scope.value == "RETAILER_LISTING"
+    ing_lower = str(facts["ingredients"].value).casefold()
+    assert "ớt 110 g/kg" in ing_lower
+    assert "1422" in ing_lower
+    assert "cà chua cô đặc" in ing_lower
+    assert facts["usage"].status.value == "VERIFIED"
+    assert facts["usage"].evidence_scope.value == "RETAILER_LISTING"
+
+
+def test_cleaned_thanh_lam_product_details_meets_zero_defect_quality_gate() -> None:
+    details_path = (
+        Path(__file__).resolve().parents[1] / "data" / "thanh_lam_product_details.json"
+    )
+    payload = json.loads(details_path.read_text(encoding="utf-8"))
+    assert payload["enriched_products"] >= 2000
+    assert payload["field_counts"]["ingredients"] >= 1200
+    audit = payload.get("quality_audit_after", {})
+    remaining_defects = {k: v for k, v in audit.items() if k.startswith("defect_") and v > 0}
+    assert remaining_defects == {}, f"Expected 0 defects, found: {remaining_defects}"
+
+
+def test_product_card_exposes_safe_https_image_url(
+    snapshot_repository: SnapshotProductRepository,
+) -> None:
+    from backend.api.main import _product_card, _safe_product_image_url
+
+    chinsu = snapshot_repository.get_product_snapshot("TLM_10141747")
+    assert chinsu is not None
+    card = _product_card(chinsu)
+    assert card.image_url is not None
+    assert card.image_url.startswith("https://")
+    assert _safe_product_image_url("javascript:alert(1)") is None
+    assert _safe_product_image_url("https://example.com/a b.jpg") is None
+
+
+

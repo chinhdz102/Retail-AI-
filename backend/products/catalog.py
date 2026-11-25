@@ -119,7 +119,9 @@ def product_audience_evidence(product: ProductSnapshot) -> str | None:
     ):
         return "newborn"
     if re.search(
-        r"\b(?:tre em|tre nho|em be|kids|children|child|baby|babies|toddler)\b",
+        r"\b(?:tre em|tre nho|em be|cho be|danh cho be|be an dam|be trai|be gai|"
+        r"hoc sinh|school supplies|schoolchildren|"
+        r"kids|children|child|baby|babies|toddler)\b",
         searchable,
     ):
         return "child"

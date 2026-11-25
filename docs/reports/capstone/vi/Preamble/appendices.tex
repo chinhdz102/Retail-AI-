@@ -1,0 +1,92 @@
+\appendix
+
+\chapter{Lược đồ Danh mục, Cổng An toàn và Bộ Công cụ của \texttt{Retail-AI-}}
+\label{app:retail_ai}
+
+\section*{A.1 Lược đồ Danh mục Chuẩn hóa và Chính sách Cách ly}
+\texttt{Retail-AI-} nạp \code{data/thanh_lam_products.csv} qua mô hình Pydantic \code{ThanhLamRow}~\cite{retail_ai_repo,thanh_lam_snapshot}. Các trường lõi gồm \code{product_id}, \code{name}, \code{brand}, \code{regular_price}, \code{sale_price}, \code{promo_text}, \code{unit}, \code{pack_spec} và \code{category_path} (346 nhánh ngành hàng). Mười tám trên 3.099 bản ghi có \code{sale_price > regular_price} được cách ly sạch, giữ lại 3.081 SKU hợp lệ. Các cột thống kê minh họa (\code{sold_count_30d}, \code{revenue_30d}, \code{is_bestseller}) lưu riêng tại \code{data/demo_sales.sqlite3} với siêu dữ liệu nguồn \texttt{SIMULATED}.
+
+\section*{A.2 Cổng An toàn Xác định và 7 Năng lực Công cụ Chỉ đọc}
+Trước khi gọi LLM, mọi lượt thoại đi qua các cổng xác định ($<3$\,ms): (i)~xử lý giỏ hàng/thanh toán phiên, (ii)~từ chối tư vấn thuốc và điều trị lâm sàng (giữ nguyên thực phẩm vô hại, XSTest 10/10), (iii)~điều hướng câu hỏi ngoài phạm vi, (iv)~chặn tiêm lệnh và rò rỉ prompt theo chuẩn OWASP (10/10 red-team), và (v)~chào hỏi xã giao tức thì (\code{smalltalk.py}). Bảng~\ref{tab:retail_tools} liệt kê 7 năng lực công cụ chỉ đọc trong lõi tư vấn.
+
+\begin{table}[H]
+\centering
+\caption{Danh mục 7 năng lực công cụ chỉ đọc trong \texttt{Retail-AI-}}
+\label{tab:retail_tools}
+\footnotesize
+\begin{tabularx}{\textwidth}{L{0.7cm} L{4.2cm} Y}
+\toprule
+\textbf{\#} & \textbf{Công cụ / Năng lực} & \textbf{Hành vi Xác định \& Giao ước Căn cứ} \\
+\midrule
+1 & \code{search_products} & Tìm kiếm lai chỉ mục đảo không dấu trên 3.081 SKU Thanh Lam Mart hợp lệ \\
+2 & \code{get_product_detail} & Tra cứu chính xác giá niêm yết, giá khuyến mãi, quy cách và đơn giá quy đổi \\
+3 & \code{compare_products} & So sánh song song giá bán, đơn giá chuẩn (Công thức~\ref{eq:unit_price}), thương hiệu và ưu đãi \\
+4 & \code{list_promotions} & Lọc các mã hàng đang giảm giá theo ngành hàng hoặc mức chiết khấu \\
+5 & \code{rank_bestsellers} & Xếp hạng bán chạy 30 ngày từ \code{demo_sales.sqlite3} kèm nhãn bắt buộc \texttt{SIMULATED} \\
+6 & \code{assemble_budget_basket} & Lắp giỏ món ăn/combo theo nhóm món thỏa ràng buộc $\sum P(p) \le B$ \\
+7 & \code{manage_kiosk_cart} & Thêm/bớt/kiểm tra tổng tiền giỏ hàng phiên cục bộ (không ghi vào ERP) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Danh mục 31 Công cụ, Quy tắc Hàng Tươi và Quản trị HITL của \texttt{ops\_chest}}
+\label{app:ops_chest}
+
+\section*{B.1 Danh mục Đầy đủ 31 Công cụ Tác nhân (0 Công cụ Tự thực thi)}
+Trong \code{backend/app/agent/tools.py}~\cite{ops_chest_repo}, tác nhân Cửa hàng trưởng sở hữu đúng 31 công cụ có kiểu chặt chẽ chia thành 22 công cụ đọc/mở biểu mẫu và 9 công cụ tạo/sửa đề xuất (Bảng~\ref{tab:ops_tools}). Mọi thao tác thực thi trực tiếp ra bên ngoài (gửi email nhà cung cấp, cập nhật giá kệ, xuất hủy lô, gỡ bỏ SKU) đều bị loại bỏ hoàn toàn khỏi lược đồ LLM.
+
+\begin{table}[H]
+\centering
+\caption{Phân nhóm 31 công cụ có kiểu chặt chẽ của tác nhân \texttt{ops\_chest}}
+\label{tab:ops_tools}
+\footnotesize
+\begin{tabularx}{\textwidth}{L{3.3cm} r Y}
+\toprule
+\textbf{Nhóm Công cụ} & \textbf{SL} & \textbf{Tên Công cụ Đăng ký} \\
+\midrule
+Đọc Tồn kho \& Lô hàng & 5 & \code{get_inventory_summary}, \code{search_inventory}, \code{get_expiring_lots}, \code{get_stock_flow}, \code{get_sku_cost} \\
+Đọc Doanh số, Biên lãi \& Chiến lược & 6 & \code{get_sales_summary}, \code{get_abc_xyz_classification}, \code{get_delist_candidates}, \code{get_suppliers}, \code{get_return_eligible_lots}, \code{get_store_scorecard} \\
+Đọc Kế hoạch, Kiểm toán \& Học hỏi & 6 & \code{preview_purchase_order}, \code{list_proposals}, \code{get_kpi_dashboard}, \code{list_hypotheses}, \code{get_edit_patterns}, \code{render_chart} \\
+Mở Biểu mẫu UI Nội tuyến & 5 & \code{open_receive_goods_form}, \code{open_stock_count_form}, \code{open_date_check_form}, \code{open_shelf_pull_form}, \code{open_ocr_label_scan} \\
+Tạo \& Sửa Đề xuất (HITL) & 9 & \code{propose_po}, \code{propose_markdown}, \code{propose_return}, \code{propose_dispose}, \code{propose_write_off}, \code{propose_delist}, \code{revise_proposal}, \code{propose_hypothesis}, \code{propose_adjustment} \\
+\textbf{Công cụ Tự thực thi} & \textbf{0} & \textit{Loại bỏ có chủ đích; thực thi bắt buộc qua API phê duyệt có xác thực của Quản lý} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section*{B.2 Máy Trạng thái Đề xuất HITL và Quy tắc Hàng Tươi sống}
+Mọi thay đổi nghiệp vụ được lưu bền vững trong PostgreSQL (bảng \code{proposals}) cùng nhật ký kiểm toán bất biến:
+\begin{itemize}
+    \item \textbf{Chuyển trạng thái:} \texttt{PENDING} $\to$ \texttt{APPROVED} $\to$ \texttt{EXECUTED} (gửi email đơn PO qua Mailpit/SMTP, cập nhật giá giảm cận hạn hoặc ghi sổ điều chỉnh tồn), hoặc \texttt{PENDING} $\to$ \texttt{REJECTED} / \texttt{REVISED}.
+    \item \textbf{Quy tắc bảo vệ nghiệp vụ:} Kiểm kê mù ẩn số tồn sổ sách khi nhân viên đếm thực tế; giá bán có biên lãi âm tự động báo cảnh báo; động cơ giảm giá FEFO chỉ giảm các lô có tồn dự kiến vượt cầu bán nguyên giá trước HSD; và \code{guard.py} chặn mọi con số không căn cứ ($\ge 1.000$) cũng như phát ngôn \code{FALSE_EXEC}.
+\end{itemize}
+
+\chapter{Giao ước Tích hợp Liên Phân hệ và Lệnh Tái lập Kiểm chuẩn}
+\label{app:integration}
+
+\section*{C.1 Giao ước API Chỉ đọc Liên kết \texttt{ops\_chest} và \texttt{Retail-AI-}}
+Để đồng bộ gợi ý mua sắm tại sàn bán hàng với trạng thái tồn kho hậu cần mà không phá vỡ ranh giới HITL, \texttt{Retail-AI-} tiêu thụ ba điểm cuối chỉ đọc do \texttt{ops\_chest} cung cấp (Bảng~\ref{tab:cross_contract}).
+
+\begin{table}[H]
+\centering
+\caption{Giao ước API chỉ đọc liên phân hệ giữa \texttt{ops\_chest} và \texttt{Retail-AI-}}
+\label{tab:cross_contract}
+\footnotesize
+\begin{tabularx}{\textwidth}{L{4.8cm} L{2.8cm} Y}
+\toprule
+\textbf{Điểm cuối \texttt{ops\_chest}} & \textbf{Chiều dữ liệu} & \textbf{Ứng dụng tại Kiosk \texttt{Retail-AI-}} \\
+\midrule
+\code{GET /api/inventory/items?sku=...} & \texttt{ops\_chest} $\to$ Kiosk & Ẩn các SKU đang hết hàng khỏi thẻ gợi ý và đề xuất mã thay thế còn kệ \\
+\code{GET /api/inventory/expiring} & \texttt{ops\_chest} $\to$ Kiosk & Đưa các lô giảm giá cận hạn FEFO đã được quản lý duyệt lên mục khuyến mãi \\
+\code{GET /api/inventory/summary} & \texttt{ops\_chest} $\to$ Kiosk & Cung cấp chỉ số tình trạng tươi mới và ưu đãi chi nhánh cho thanh trạng thái \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section*{C.2 Lệnh Tái lập Toàn bộ Kết quả Thực nghiệm}
+Mọi chỉ số định lượng trong Chương~5 có thể được tái lập độc lập bằng các lệnh kiểm chuẩn có sẵn trong hai kho mã nguồn:
+\begin{itemize}
+    \item \textbf{Kiểm thử Backend \& Giọng nói \texttt{Retail-AI-}:} \code{pytest tests/ -q} (hơn 2.900 ca; nhánh tư vấn/giọng nói 1.038 ca), \code{ruff check backend tests}, và kiểm định trực tiếp độ trễ SSE / WebSocket STT trên \code{127.0.0.1:8000}.
+    \item \textbf{Kiểm thử Frontend \texttt{Retail-AI-}:} \texttt{cd apps/kiosk-airi \&\& npx vitest run \&\& npm run build} (148/148 Vitest đạt, biên dịch TypeScript/Vite sạch lỗi).
+    \item \textbf{Kiểm thử Backend, Backtest \& Guard \texttt{ops\_chest}:} \code{pytest backend/tests/ -q} (20 bộ test), \code{python -m app.sim.frn_backtest} (backtest 50 cửa hàng FreshRetailNet-50K 2-fold CV), và kiểm toán \code{eval_failover.json} (20 lượt đo độ căn cứ).
+\end{itemize}

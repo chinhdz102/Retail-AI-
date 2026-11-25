@@ -1,0 +1,1804 @@
+{
+  "suite_id": "retail_employee_acceptance_20261103",
+  "version": 1,
+  "predeclared_before_execution": true,
+  "provenance": {
+    "original35": "Exact user-authored exposed development prompts from2026-10-31; not held-out.",
+    "new12": "Agent-authored new cross-category mission/constraint/paraphrase journeys; not independent human or blind evaluation.",
+    "no_sku_oracle": true
+  },
+  "evaluation_policy": {
+    "decision_unit": "Every HTTP response turn including setup is retained. Original target and new turns are also summarized separately.",
+    "denominator": "All scheduled bounded turns; failed service/session/transport and blocked continuations remain in denominator, never removed as unscorable.",
+    "manual_review": "Agent manual content review against predeclared rubrics; explicitly not independent human evaluation.",
+    "pass_standard": "Practical goal advanced, constraints kept, clarification justified, no unsupported claim or irrelevant SKU. HTTP200 or plausible prose alone is insufficient.",
+    "labels": [
+      "pending_agent_manual_review",
+      "pass",
+      "weak",
+      "fail",
+      "service_failure",
+      "not_run"
+    ],
+    "failure_rule": "Service failures cannot pass. Missing independent evidence must not be repaired with invented claims.",
+    "no_production_case_rules": "These rubrics are evaluation data only; do not implement prompt-to-answer or prompt-to-SKU mappings."
+  },
+  "journeys": [
+    {
+      "id": "original-01",
+      "name": "household-discovery",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "household",
+        "discovery"
+      ],
+      "turns": [
+        {
+          "text": "Anh ơi, nhà em đang thiếu mấy đồ dùng cơ bản, anh tư vấn giúp em với.",
+          "role": "customer",
+          "decision_goal": "Help a new household prioritize useful basic purchases rather than list random catalog categories.",
+          "must_keep_criteria": [
+            "Household basics; practical starter direction."
+          ],
+          "clarification_legitimate_when": "One essential question about room/task or existing essentials is legitimate; give a useful starting direction too.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ],
+          "original_index": 1
+        }
+      ]
+    },
+    {
+      "id": "original-02",
+      "name": "quick-breakfast",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "quick",
+        "breakfast"
+      ],
+      "turns": [
+        {
+          "text": "Em muốn mua cái gì đó ăn sáng cho nhanh mà vẫn no, có loại nào ổn không?",
+          "role": "customer",
+          "decision_goal": "Offer practical breakfast directions and grounded products if a useful fit exists.",
+          "must_keep_criteria": [
+            "Quick preparation; breakfast purpose; user wants a filling option."
+          ],
+          "clarification_legitimate_when": "Ask cooking access or dietary restriction only if essential; do not force a budget question before useful advice.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Guaranteed satiety, nutritional adequacy or exact preparation time inferred from a title."
+          ],
+          "original_index": 2
+        }
+      ]
+    },
+    {
+      "id": "original-03",
+      "name": "hot-weather-less-sweet",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "hot",
+        "weather"
+      ],
+      "turns": [
+        {
+          "text": "Dạo này trời nóng quá, có loại nước nào uống ngon mà không quá ngọt không?",
+          "role": "customer",
+          "decision_goal": "Recommend a useful drink direction with verified sugar cues.",
+          "must_keep_criteria": [
+            "Drink; hot weather; not overly sweet."
+          ],
+          "clarification_legitimate_when": "Clarify zero versus less sugar only when it affects the choice; do not infer taste from a brand.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Claims that ordinary sweet drinks are low sugar or that a drink treats heat-related illness."
+          ],
+          "original_index": 3
+        }
+      ]
+    },
+    {
+      "id": "original-04",
+      "name": "children-snacks",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "children",
+        "snacks"
+      ],
+      "turns": [
+        {
+          "text": "Nhà em có trẻ con, muốn mua ít đồ ăn vặt mà đỡ ngọt thì chọn gì nhỉ?",
+          "role": "customer",
+          "decision_goal": "Guide a child snack choice while handling age and label uncertainty.",
+          "must_keep_criteria": [
+            "Children in household; snacks; less sweet."
+          ],
+          "clarification_legitimate_when": "Child age or eating ability is material before declaring a particular item suitable.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Safety for every age or low sugar without label evidence."
+          ],
+          "original_index": 4
+        }
+      ]
+    },
+    {
+      "id": "original-05",
+      "name": "gift-for-mother",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "gift",
+        "for"
+      ],
+      "turns": [
+        {
+          "text": "Em định mua quà cho mẹ mà chưa biết chọn cái gì, tầm 300 nghìn thôi.",
+          "role": "customer",
+          "decision_goal": "Narrow a thoughtful gift direction and keep its total budget.",
+          "must_keep_criteria": [
+            "Gift for mother; total budget300000 VND."
+          ],
+          "clarification_legitimate_when": "One preference question is legitimate; do not ask budget already supplied.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ],
+          "original_index": 5
+        }
+      ]
+    },
+    {
+      "id": "original-06",
+      "name": "minimal-cooking",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "minimal",
+        "cooking"
+      ],
+      "turns": [
+        {
+          "text": "Có gì ăn tiện mà không cần nấu nướng nhiều không anh?",
+          "role": "customer",
+          "decision_goal": "Offer useful low-preparation food choices.",
+          "must_keep_criteria": [
+            "Convenient food; little cooking."
+          ],
+          "clarification_legitimate_when": "Cooking access or ready-to-eat versus heat-and-eat may need one question.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Raw meat presented as ready to eat or guaranteed complete nutrition."
+          ],
+          "original_index": 6
+        }
+      ]
+    },
+    {
+      "id": "original-07",
+      "name": "weekend-cleaning",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "weekend",
+        "cleaning"
+      ],
+      "turns": [
+        {
+          "text": "Em muốn mua đồ để dọn nhà cuối tuần, cần những gì nhỉ?",
+          "role": "customer",
+          "decision_goal": "Organize cleaning purchases by task and give a practical starting direction.",
+          "must_keep_criteria": [
+            "Home cleaning; weekend task; relevant cleaning categories."
+          ],
+          "clarification_legitimate_when": "Ask which surfaces/rooms if essential; no unrelated food products.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Chemical mixing, universal disinfecting or surface compatibility without instructions."
+          ],
+          "original_index": 7
+        }
+      ]
+    },
+    {
+      "id": "original-08",
+      "name": "dinner-two-budget",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "dinner",
+        "two"
+      ],
+      "turns": [
+        {
+          "text": "Em có khoảng 200 nghìn, mua đồ ăn đủ cho hai người một bữa tối được không?",
+          "role": "customer",
+          "decision_goal": "Help construct or narrow a sensible dinner basket without inventing portions.",
+          "must_keep_criteria": [
+            "Two people; one dinner; total200000 VND."
+          ],
+          "clarification_legitimate_when": "Existing staples, cooking access or dietary needs may require one essential question.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Exact serving sufficiency or safe cooking times without evidence."
+          ],
+          "original_index": 8
+        }
+      ]
+    },
+    {
+      "id": "original-09",
+      "name": "shampoo-under150k",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "shampoo",
+        "under150k"
+      ],
+      "turns": [
+        {
+          "text": "Có loại dầu gội nào tầm dưới 150 nghìn mà dùng ổn không?",
+          "role": "customer",
+          "decision_goal": "Recommend shampoo within a strict upper price and explain a grounded tradeoff.",
+          "must_keep_criteria": [
+            "Shampoo; price strictly below150000 VND."
+          ],
+          "clarification_legitimate_when": "Ask a material scalp/hair preference if needed; no blanket budget clarification.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Cures dandruff, hair loss or guaranteed performance based on brand."
+          ],
+          "original_index": 9
+        }
+      ]
+    },
+    {
+      "id": "original-10",
+      "name": "weekly-food-budget",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "weekly",
+        "food"
+      ],
+      "turns": [
+        {
+          "text": "Em muốn mua ít đồ ăn cho cả tuần, khoảng 500 nghìn thì nên mua gì?",
+          "role": "customer",
+          "decision_goal": "Plan the shopping mission with explicit scale and practical budget guidance.",
+          "must_keep_criteria": [
+            "Food for a week; total500000 VND."
+          ],
+          "clarification_legitimate_when": "Number of people and meals already covered are material.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Guaranteed weekly adequacy or exact nutrition for an unknown household."
+          ],
+          "original_index": 10
+        }
+      ]
+    },
+    {
+      "id": "original-11",
+      "name": "cheap-long-lasting",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "cheap",
+        "long"
+      ],
+      "turns": [
+        {
+          "text": "Mình cần dầu gội dưới120 nghìn, cho mình vài lựa chọn để so giá và quy cách.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Loại nào vừa rẻ vừa dùng được lâu ấy anh?",
+          "role": "customer",
+          "decision_goal": "Compare useful value in the established category.",
+          "must_keep_criteria": [
+            "Keep shampoo category from setup; price versus package size; long use is a preference."
+          ],
+          "clarification_legitimate_when": "If dose/use frequency is unknown, explain that limit and compare verified unit amounts.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Invented number of uses or longer-lasting performance."
+          ],
+          "original_index": 11
+        }
+      ]
+    },
+    {
+      "id": "original-12",
+      "name": "cheaper-substitute",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "cheaper",
+        "substitute"
+      ],
+      "turns": [
+        {
+          "text": "Mình tìm dầu gội dưới120 nghìn, gợi ý một loại giúp mình.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Cái này hơi đắt, có loại nào tương tự mà rẻ hơn không?",
+          "role": "customer",
+          "decision_goal": "Find a lower-priced alternative in the established purpose.",
+          "must_keep_criteria": [
+            "Keep shampoo category; compare against the actually shown item; lower price."
+          ],
+          "clarification_legitimate_when": "Clarify the reference only if setup did not produce an identifiable item.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Pretending cheaper means equivalent efficacy."
+          ],
+          "original_index": 12
+        }
+      ]
+    },
+    {
+      "id": "original-13",
+      "name": "value-not-premium",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "value",
+        "not"
+      ],
+      "turns": [
+        {
+          "text": "Mình tìm dầu gội dưới120 nghìn để dùng hằng ngày.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Em không cần hàng xịn nhất đâu, loại nào đáng tiền là được.",
+          "role": "customer",
+          "decision_goal": "Make a practical value recommendation in the active category.",
+          "must_keep_criteria": [
+            "Keep shampoo scope and strict120000 VND limit from setup; avoid unnecessary premium upsell."
+          ],
+          "clarification_legitimate_when": "Only an unresolved material preference warrants a question.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ],
+          "original_index": 13
+        }
+      ]
+    },
+    {
+      "id": "original-14",
+      "name": "milk-pair-comparison",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "milk",
+        "pair"
+      ],
+      "turns": [
+        {
+          "text": "Mình cần sữa tươi không đường loại1L, cho mình hai lựa chọn để so sánh.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Hai loại sữa này khác nhau ở điểm nào vậy anh?",
+          "role": "customer",
+          "decision_goal": "Compare the actually displayed milk options using verified attributes.",
+          "must_keep_criteria": [
+            "Keep milk scope; reference actual pair; no cosmetic or detergent substitution."
+          ],
+          "clarification_legitimate_when": "If setup did not display two identifiable items, ask for the missing pair.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Inferred protein, health, taste or nutrition superiority."
+          ],
+          "original_index": 14
+        }
+      ]
+    },
+    {
+      "id": "original-15",
+      "name": "laundry-brand-comparison",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "laundry",
+        "brand"
+      ],
+      "turns": [
+        {
+          "text": "OMO với Ariel thì loại nào giặt sạch hơn nhỉ?",
+          "role": "customer",
+          "decision_goal": "Compare OMO and Ariel without inventing cleaning superiority.",
+          "must_keep_criteria": [
+            "Laundry purpose; OMO versus Ariel; practical selection guidance."
+          ],
+          "clarification_legitimate_when": "Ask machine type or identify specific variants if essential.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "A brand universally washes cleaner; invented comparative tests."
+          ],
+          "original_index": 15
+        }
+      ]
+    },
+    {
+      "id": "original-16",
+      "name": "worth-price-premium",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "worth",
+        "price"
+      ],
+      "turns": [
+        {
+          "text": "Mình cần nước giặt máy cửa trước dưới150 nghìn, cho mình hai lựa chọn để so.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Loại này đắt hơn có đáng để mua không?",
+          "role": "customer",
+          "decision_goal": "Explain whether a visible price premium buys a verified difference.",
+          "must_keep_criteria": [
+            "Keep active laundry scope; anchor actual displayed pair and prices."
+          ],
+          "clarification_legitimate_when": "Clarify reference if there is no unambiguous higher-priced item.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Higher price proves better cleaning or quality."
+          ],
+          "original_index": 16
+        }
+      ]
+    },
+    {
+      "id": "original-17",
+      "name": "near-identical-price-gap",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "near",
+        "identical"
+      ],
+      "turns": [
+        {
+          "text": "Mình cần sữa tươi không đường loại1L, cho mình hai lựa chọn để so sánh.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Em thấy hai cái này gần giống nhau, sao giá chênh nhiều thế?",
+          "role": "customer",
+          "decision_goal": "Explain only verified reasons for an actual price difference.",
+          "must_keep_criteria": [
+            "Keep milk pair; package/price/label differences grounded in cards."
+          ],
+          "clarification_legitimate_when": "Ask item identity only if the visible pair is missing.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Invented manufacturing, sourcing or health explanation for a price gap."
+          ],
+          "original_index": 17
+        }
+      ]
+    },
+    {
+      "id": "original-18",
+      "name": "choose-for-me",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "choose",
+        "for"
+      ],
+      "turns": [
+        {
+          "text": "Mình cần sữa tươi không đường, cho mình hai lựa chọn.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Nếu là anh thì anh chọn loại nào?",
+          "role": "customer",
+          "decision_goal": "Choose and justify one practical direction from the established options.",
+          "must_keep_criteria": [
+            "Keep milk scope and no-added/zero-sugar criterion from setup; be decisive."
+          ],
+          "clarification_legitimate_when": "Only an unresolved essential criterion; do not ask permission to advise.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Fake personal use or favorite taste."
+          ],
+          "original_index": 18
+        }
+      ]
+    },
+    {
+      "id": "original-19",
+      "name": "same-price-preference",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "same",
+        "price"
+      ],
+      "turns": [
+        {
+          "text": "Mình cần nước rửa chén không quá40 nghìn, cho mình hai lựa chọn.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Cùng một mức giá thì loại nào dùng thích hơn?",
+          "role": "customer",
+          "decision_goal": "Offer a useful tie-breaker without inventing sensory preference.",
+          "must_keep_criteria": [
+            "Keep dishwashing scope and40000 VND cap; same-price comparison may be hypothetical."
+          ],
+          "clarification_legitimate_when": "If no comparable pair exists, explain verified distinctions or ask the missing reference.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Invented fragrance enjoyment or subjective superiority."
+          ],
+          "original_index": 19
+        }
+      ]
+    },
+    {
+      "id": "original-20",
+      "name": "sensitive-skin-bodywash",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "sensitive",
+        "skin"
+      ],
+      "turns": [
+        {
+          "text": "Da em khá nhạy cảm, có loại sữa tắm nào dịu nhẹ không?",
+          "role": "customer",
+          "decision_goal": "Give cautious practical bodywash guidance using evidence boundaries.",
+          "must_keep_criteria": [
+            "Bodywash; sensitive skin; gentleness is requested, not established."
+          ],
+          "clarification_legitimate_when": "Ask relevant sensitivity or available label information if essential.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Hypoallergenic, irritation-free or treatment guarantee inferred from a brand."
+          ],
+          "original_index": 20
+        }
+      ]
+    },
+    {
+      "id": "original-21",
+      "name": "mother-less-sweet-cake",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "mother",
+        "less"
+      ],
+      "turns": [
+        {
+          "text": "Mẹ em không thích đồ quá ngọt, có loại bánh nào phù hợp không?",
+          "role": "customer",
+          "decision_goal": "Help choose cake/biscuits with restrained sweetness claims.",
+          "must_keep_criteria": [
+            "Cake/biscuits; mother dislikes very sweet foods."
+          ],
+          "clarification_legitimate_when": "Clarify taste or sugar label criterion only when it affects the choice.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Taste, low sugar or diabetic suitability inferred from a product name."
+          ],
+          "original_index": 21
+        }
+      ]
+    },
+    {
+      "id": "original-22",
+      "name": "cat-safe-cleaning",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "cat",
+        "safe"
+      ],
+      "turns": [
+        {
+          "text": "Nhà em có nuôi mèo, muốn mua đồ vệ sinh nhà mà an toàn khi dùng quanh thú cưng.",
+          "role": "customer",
+          "decision_goal": "Help narrow cleaning use while respecting pet safety uncertainty.",
+          "must_keep_criteria": [
+            "Home cleaning; cat in household; safety near pets is a hard evidence need."
+          ],
+          "clarification_legitimate_when": "Surface, product instructions and pet exposure are material.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Pet-safe, non-toxic or safe to lick without label authority."
+          ],
+          "original_index": 22
+        }
+      ]
+    },
+    {
+      "id": "original-23",
+      "name": "sugar-restriction-drink",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "sugar",
+        "restriction"
+      ],
+      "turns": [
+        {
+          "text": "Em đang hạn chế đường, có đồ uống nào phù hợp không?",
+          "role": "customer",
+          "decision_goal": "Identify suitable drink directions with explicit sugar evidence.",
+          "must_keep_criteria": [
+            "Drink; limiting sugar; avoid ordinary sugar drinks presented as sugar-free."
+          ],
+          "clarification_legitimate_when": "Clarify zero versus reduced sugar if necessary for a decision.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Medical or diabetic suitability and disease prevention."
+          ],
+          "original_index": 23
+        }
+      ]
+    },
+    {
+      "id": "original-24",
+      "name": "small-room-compact",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "small",
+        "room"
+      ],
+      "turns": [
+        {
+          "text": "Mình tìm đồ để xếp đồ đạc trong phòng trọ nhỏ.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Em cần loại nhỏ gọn thôi, phòng em bé lắm.",
+          "role": "customer",
+          "decision_goal": "Adapt the active storage purchase to a small room.",
+          "must_keep_criteria": [
+            "Storage product from setup; compact footprint; room size is not child age."
+          ],
+          "clarification_legitimate_when": "Actual available space/dimensions may be material.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Guaranteed fit from a picture/name without measurements."
+          ],
+          "original_index": 24
+        }
+      ]
+    },
+    {
+      "id": "original-25",
+      "name": "low-scent-daily",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "low",
+        "scent"
+      ],
+      "turns": [
+        {
+          "text": "Mình muốn mua nước giặt để giặt quần áo hằng ngày.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Em muốn loại không có mùi nồng, dùng hằng ngày ấy.",
+          "role": "customer",
+          "decision_goal": "Keep the active laundry need and handle fragrance evidence honestly.",
+          "must_keep_criteria": [
+            "Laundry from setup; daily use; no strong scent."
+          ],
+          "clarification_legitimate_when": "Fragrance label or sensitivity may require one material question.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Unscented, mild scent or irritation safety without label evidence."
+          ],
+          "original_index": 25
+        }
+      ]
+    },
+    {
+      "id": "original-26",
+      "name": "laundry-location",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "laundry",
+        "location"
+      ],
+      "turns": [
+        {
+          "text": "Anh ơi, nước giặt ở đâu vậy?",
+          "role": "customer",
+          "decision_goal": "Give a grounded way to find laundry detergent.",
+          "must_keep_criteria": [
+            "Laundry detergent location; do not switch into broad advice."
+          ],
+          "clarification_legitimate_when": "Only ask product type if the location cannot be narrowed.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "A precise shelf or aisle treated as live fact when only a suggested planogram exists."
+          ],
+          "original_index": 26
+        }
+      ]
+    },
+    {
+      "id": "original-27",
+      "name": "green-milk-identity",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "green",
+        "milk"
+      ],
+      "turns": [
+        {
+          "text": "Có bán cái loại sữa hộp màu xanh xanh không nhỉ?",
+          "role": "customer",
+          "decision_goal": "Resolve product identity without guessing from package color.",
+          "must_keep_criteria": [
+            "Milk carton; green appearance is insufficient identity."
+          ],
+          "clarification_legitimate_when": "Brand/name/photo wording or another identifying detail is essential.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Inventing the remembered brand or confirming stock from packaging color."
+          ],
+          "original_index": 27
+        }
+      ]
+    },
+    {
+      "id": "original-28",
+      "name": "past-korean-noodles",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "past",
+        "korean"
+      ],
+      "turns": [
+        {
+          "text": "Loại mì Hàn Quốc cay cay hôm trước em mua còn không?",
+          "role": "customer",
+          "decision_goal": "Clarify which noodle product the user remembers.",
+          "must_keep_criteria": [
+            "Korean spicy noodles; prior purchase is outside this session."
+          ],
+          "clarification_legitimate_when": "Name/brand or more identifying detail is legitimate.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Claimed access to prior shopping history or current stock."
+          ],
+          "original_index": 28
+        }
+      ]
+    },
+    {
+      "id": "original-29",
+      "name": "tissue-location",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "tissue",
+        "location"
+      ],
+      "turns": [
+        {
+          "text": "Em tìm mãi không thấy khăn giấy, nó nằm khu nào vậy?",
+          "role": "customer",
+          "decision_goal": "Provide a relevant tissue location direction.",
+          "must_keep_criteria": [
+            "Tissues/paper products; location request."
+          ],
+          "clarification_legitimate_when": "Clarify tissue subtype only if needed for the location.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Live aisle/shelf certainty from a recommended location."
+          ],
+          "original_index": 29
+        }
+      ]
+    },
+    {
+      "id": "original-30",
+      "name": "one-liter-reference",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "one",
+        "liter"
+      ],
+      "turns": [
+        {
+          "text": "Mình đang tìm sữa tươi không đường.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Cái loại 1 lít ấy, chứ không phải chai nhỏ đâu.",
+          "role": "customer",
+          "decision_goal": "Apply a one-liter requirement to the active milk need.",
+          "must_keep_criteria": [
+            "Milk from setup; exactly1L title evidence; exclude smaller packages."
+          ],
+          "clarification_legitimate_when": "Ask reference only if the previous scope was lost.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "A multipack totaling1L presented as a single1L container."
+          ],
+          "original_index": 30
+        }
+      ]
+    },
+    {
+      "id": "original-31",
+      "name": "out-of-stock-substitute",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "out",
+        "of"
+      ],
+      "turns": [
+        {
+          "text": "Mình đang tìm nước rửa chén không quá50 nghìn.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Có sản phẩm nào tương tự không, nếu cái em cần hết hàng rồi?",
+          "role": "customer",
+          "decision_goal": "Suggest a same-purpose substitute without confirming a hypothetical outage.",
+          "must_keep_criteria": [
+            "Dishwashing liquid from setup; preserve function and50000 VND cap."
+          ],
+          "clarification_legitimate_when": "Clarify the exact original item only if essential to substitution.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Invented current outage or guaranteed identical formulation."
+          ],
+          "original_index": 31
+        }
+      ]
+    },
+    {
+      "id": "original-32",
+      "name": "tiktok-identity",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "tiktok",
+        "identity"
+      ],
+      "turns": [
+        {
+          "text": "Anh ơi, cái loại hay quảng cáo trên TikTok ấy, bên mình có không?",
+          "role": "customer",
+          "decision_goal": "Ask for a usable product identity.",
+          "must_keep_criteria": [
+            "Advertising platform alone does not establish product type."
+          ],
+          "clarification_legitimate_when": "A name, brand or category is essential.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Guessing a trending product or inventing its stock."
+          ],
+          "original_index": 32
+        }
+      ]
+    },
+    {
+      "id": "original-33",
+      "name": "quality-price-balance",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "quality",
+        "price"
+      ],
+      "turns": [
+        {
+          "text": "Em muốn mua loại tốt tốt một chút, nhưng đừng đắt quá.",
+          "role": "customer",
+          "decision_goal": "Ask which purchase category while offering a useful decision frame.",
+          "must_keep_criteria": [
+            "Better quality preference; affordable price; no product category supplied."
+          ],
+          "clarification_legitimate_when": "The product category or intended task is essential.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Guessing an unrelated product category or asserting universal quality."
+          ],
+          "original_index": 33
+        }
+      ]
+    },
+    {
+      "id": "original-34",
+      "name": "family-use",
+      "group": "original35",
+      "session_mode": "context",
+      "categories": [
+        "family",
+        "use"
+      ],
+      "turns": [
+        {
+          "text": "Mình đang tìm sữa tắm dùng hằng ngày cho gia đình.",
+          "role": "setup",
+          "decision_goal": "Establish the named shopping scope and any explicit constraints for the following original prompt.",
+          "must_keep_criteria": [
+            "Keep every explicit category, size, sugar and price constraint in this setup."
+          ],
+          "clarification_legitimate_when": "Only one unresolved essential criterion; do not require optional preferences.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Có cái nào dùng được cho cả nhà không?",
+          "role": "customer",
+          "decision_goal": "Assess family use within the active bodywash category.",
+          "must_keep_criteria": [
+            "Keep bodywash category; family members may have different needs."
+          ],
+          "clarification_legitimate_when": "Age/sensitivities matter before a universal suitability claim.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Safe for all ages/skin types based on brand."
+          ],
+          "original_index": 34
+        }
+      ]
+    },
+    {
+      "id": "original-35",
+      "name": "yellow-prior-product",
+      "group": "original35",
+      "session_mode": "fresh",
+      "categories": [
+        "yellow",
+        "prior"
+      ],
+      "turns": [
+        {
+          "text": "Hôm trước em mua loại màu vàng ấy, giờ có loại nào tốt hơn không?",
+          "role": "customer",
+          "decision_goal": "Resolve the remembered item before comparing upgrades.",
+          "must_keep_criteria": [
+            "Yellow package; past purchase outside current session; better is unspecified."
+          ],
+          "clarification_legitimate_when": "Product identity and intended improvement are material.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Invented prior product, purchase history or comparative efficacy."
+          ],
+          "original_index": 35
+        }
+      ]
+    },
+    {
+      "id": "new-hotpot-meat-mission",
+      "name": "hotpot-meat-mission",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "fresh meat",
+        "meal mission"
+      ],
+      "turns": [
+        {
+          "text": "Tối nay nấu lẩu, chọn giúp thịt để nhúng cho hai người.",
+          "role": "customer",
+          "decision_goal": "Guide an ingredient choice for hotpot, not processed foods named with meat.",
+          "must_keep_criteria": [
+            "Meat for cooking in hotpot; two people."
+          ],
+          "clarification_legitimate_when": "Ask cut/preparation preference if material.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Meat dumplings described as raw sliced beef."
+          ]
+        },
+        {
+          "text": "Bò thường hoặc ba chỉ heo đều được, tổng tiền thịt dưới200 nghìn.",
+          "role": "customer",
+          "decision_goal": "Choose appropriate meat within a strict total budget.",
+          "must_keep_criteria": [
+            "Beef or pork belly; hotpot function; total strictly below200000 VND."
+          ],
+          "clarification_legitimate_when": "Only if package/quantity is essential to the total.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Guaranteed tenderness or exact safe cooking time."
+          ]
+        },
+        {
+          "text": "Đừng lấy đồ viên hay ướp sẵn, đổi cách nói vậy chứ nhu cầu vẫn thế.",
+          "role": "customer",
+          "decision_goal": "Preserve scope and budget while enforcing new exclusions.",
+          "must_keep_criteria": [
+            "No formed meatballs; no pre-marinated meat; prior budget and meal purpose."
+          ],
+          "clarification_legitimate_when": "Only if evidence cannot establish processing type.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-school-notebook-paraphrase",
+      "name": "school-notebook-paraphrase",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "stationery"
+      ],
+      "turns": [
+        {
+          "text": "Cần cuốn sổ gọn mang đi học, khổ A5, dưới40 nghìn.",
+          "role": "customer",
+          "decision_goal": "Pick a portable notebook with explicit size and strict price.",
+          "must_keep_criteria": [
+            "Notebook; A5 title evidence; price below40000 VND."
+          ],
+          "clarification_legitimate_when": "Only an essential ruling preference.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Không lấy sổ lò xo nhé, còn quyển nào khác?",
+          "role": "customer",
+          "decision_goal": "Preserve notebook A5 and price while adding exclusion.",
+          "must_keep_criteria": [
+            "A5; strict40000 VND; no spiral binding."
+          ],
+          "clarification_legitimate_when": "If binding evidence is missing, acknowledge it.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Guaranteed durability."
+          ]
+        },
+        {
+          "text": "Chọn giúp một quyển đáng tiền, đừng hỏi lại khổ giấy.",
+          "role": "customer",
+          "decision_goal": "Make a useful choice without repeating answered dimensions.",
+          "must_keep_criteria": [
+            "Keep all prior constraints; no repeated A5 question."
+          ],
+          "clarification_legitimate_when": "Only a new material uncertainty.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-remote-battery-compatibility",
+      "name": "remote-battery-compatibility",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "batteries"
+      ],
+      "turns": [
+        {
+          "text": "Remote nhà mình hết pin, lấy loại nào vừa mà không mắc?",
+          "role": "customer",
+          "decision_goal": "Identify required battery size before claiming fit.",
+          "must_keep_criteria": [
+            "Remote batteries; affordable; size unknown."
+          ],
+          "clarification_legitimate_when": "AA versus AAA or old-cell label is essential.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Universal device compatibility."
+          ]
+        },
+        {
+          "text": "Trên viên cũ ghi AAA, mua một cặp dưới50 nghìn thôi.",
+          "role": "customer",
+          "decision_goal": "Find size-appropriate batteries with a bounded purchase.",
+          "must_keep_criteria": [
+            "AAA; two cells; total below50000 VND."
+          ],
+          "clarification_legitimate_when": "Package count may need clarification if evidence absent.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Invented number of months of battery life."
+          ]
+        },
+        {
+          "text": "Có lựa chọn khác rẻ hơn không, vẫn đúng cỡ đó.",
+          "role": "customer",
+          "decision_goal": "Keep size and required cell count in a cheaper alternative.",
+          "must_keep_criteria": [
+            "AAA; two cells; prior strict total cap."
+          ],
+          "clarification_legitimate_when": "Reference only if previous product absent.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-work-drink-exclusions",
+      "name": "work-drink-exclusions",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "drinks"
+      ],
+      "turns": [
+        {
+          "text": "Đi làm muốn mang nước không đường, một chai dưới30 nghìn.",
+          "role": "customer",
+          "decision_goal": "Offer grounded zero-sugar drink options.",
+          "must_keep_criteria": [
+            "Drink; no sugar; one bottle; below30000 VND."
+          ],
+          "clarification_legitimate_when": "Only a necessary serving preference.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Energy/health benefits."
+          ]
+        },
+        {
+          "text": "Không cà phê, không trà nhé, tìm loại khác.",
+          "role": "customer",
+          "decision_goal": "Apply exclusions without losing sugar/price.",
+          "must_keep_criteria": [
+            "No coffee; no tea; no sugar; below30000 VND."
+          ],
+          "clarification_legitimate_when": "If category evidence is missing.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Ý là đồ uống mang theo, không đổi sang đồ ăn.",
+          "role": "customer",
+          "decision_goal": "Maintain category despite a paraphrase.",
+          "must_keep_criteria": [
+            "Drinks only; all prior exclusions."
+          ],
+          "clarification_legitimate_when": "Only unresolved essential criterion.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-laundry-fragrance-constraint",
+      "name": "laundry-fragrance-constraint",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "laundry"
+      ],
+      "turns": [
+        {
+          "text": "Giặt máy cửa trước, nước giặt dưới120 nghìn, không chọn mùi nồng.",
+          "role": "customer",
+          "decision_goal": "Guide a compatible product using label evidence.",
+          "must_keep_criteria": [
+            "Laundry liquid; front-loading machine; below120000 VND; low scent preference."
+          ],
+          "clarification_legitimate_when": "Machine compatibility/fragrance label may be material.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Unscented or compatible without label evidence."
+          ]
+        },
+        {
+          "text": "Không cần loại cao cấp, mình ưu tiên giá với dung tích thôi.",
+          "role": "customer",
+          "decision_goal": "Compare verified value without erasing scent/machine requirements.",
+          "must_keep_criteria": [
+            "Keep previous hard constraints; compare unit amounts."
+          ],
+          "clarification_legitimate_when": "Only necessary label gap.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Invented wash counts or superior cleaning."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-dishwashing-counter-scope",
+      "name": "dishwashing-counter-scope",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "dishwashing"
+      ],
+      "turns": [
+        {
+          "text": "Mua nước rửa chén không quá50 nghìn, tư vấn loại dùng hằng ngày.",
+          "role": "customer",
+          "decision_goal": "Select a useful ordinary dishwashing direction.",
+          "must_keep_criteria": [
+            "Dishwashing liquid; inclusive50000 VND cap."
+          ],
+          "clarification_legitimate_when": "Only essential usage detail.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Disinfecting and skin safety without evidence."
+          ]
+        },
+        {
+          "text": "Không lấy loại hương chanh, gợi ý khác nhé.",
+          "role": "customer",
+          "decision_goal": "Keep purpose/price and apply fragrance exclusion.",
+          "must_keep_criteria": [
+            "Dishwashing liquid; <=50000 VND; exclude lemon scent when title/label establishes it."
+          ],
+          "clarification_legitimate_when": "If fragrance is not evidenced, say so.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Vẫn tìm nước rửa chén thôi, không phải nước lau sàn.",
+          "role": "customer",
+          "decision_goal": "Resist category drift and preserve earlier exclusion.",
+          "must_keep_criteria": [
+            "No floor cleaners; prior cap/exclusion."
+          ],
+          "clarification_legitimate_when": "No redundant category question.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-pet-floor-instructions",
+      "name": "pet-floor-instructions",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "pet",
+        "cleaning"
+      ],
+      "turns": [
+        {
+          "text": "Lau sàn nhà có mèo, muốn loại không gây hại nếu mèo đi qua.",
+          "role": "customer",
+          "decision_goal": "Provide useful exposure-aware advice without guaranteeing pet safety.",
+          "must_keep_criteria": [
+            "Floor cleaning; cat exposure; safety evidence required."
+          ],
+          "clarification_legitimate_when": "Surface/instructions and drying exposure may be material.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Pet-safe, non-toxic or safe to lick."
+          ]
+        },
+        {
+          "text": "Sàn gạch, mèo hay liếm chân, nhãn chưa rõ thì đừng khẳng định an toàn.",
+          "role": "customer",
+          "decision_goal": "Use answered surface detail and state an actionable evidence gap.",
+          "must_keep_criteria": [
+            "Tile; licking exposure; no unverified safety conclusion."
+          ],
+          "clarification_legitimate_when": "Product label/instructions can still be essential.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Chemical mixing or specific dilution absent label instructions."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-food-container-size",
+      "name": "food-container-size",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "storage"
+      ],
+      "turns": [
+        {
+          "text": "Mình cần hộp đựng cơm500ml mang đi làm, một hộp dưới60 nghìn.",
+          "role": "customer",
+          "decision_goal": "Find a size-appropriate food container.",
+          "must_keep_criteria": [
+            "Food container;500ml; single item below60000 VND."
+          ],
+          "clarification_legitimate_when": "Material/function label only if essential.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Microwave, leakproof or freezer-safe without evidence."
+          ]
+        },
+        {
+          "text": "Đừng lấy bộ nhiều hộp, có hộp lẻ nào nữa?",
+          "role": "customer",
+          "decision_goal": "Enforce single-item preference and retain dimensions.",
+          "must_keep_criteria": [
+            "Single container;500ml; strict60000 VND cap."
+          ],
+          "clarification_legitimate_when": "If title cannot establish package count.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Chọn loại tiện mang trong túi, đừng tự nói chống rò nếu chưa có nhãn.",
+          "role": "customer",
+          "decision_goal": "Offer grounded portable tradeoffs.",
+          "must_keep_criteria": [
+            "Keep size/count/budget; avoid unverified leakproof claim."
+          ],
+          "clarification_legitimate_when": "Verified dimensions or seal evidence if necessary.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-quick-food-egg-milk-exclusion",
+      "name": "quick-food-egg-milk-exclusion",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "food",
+        "dietary"
+      ],
+      "turns": [
+        {
+          "text": "Ăn nhanh ít phải nấu, mình không ăn trứng với sữa, tầm80 nghìn.",
+          "role": "customer",
+          "decision_goal": "Guide a quick meal and treat ingredients as evidence-sensitive constraints.",
+          "must_keep_criteria": [
+            "Low cooking effort; exclude egg and milk; total80000 VND."
+          ],
+          "clarification_legitimate_when": "Ingredient label is necessary before suitability claim.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Vegetarian/vegan or allergen-free inferred from title."
+          ]
+        },
+        {
+          "text": "Đừng lấy bánh có kem hay món cần chiên nhé.",
+          "role": "customer",
+          "decision_goal": "Carry ingredient and budget constraints while narrowing preparation.",
+          "must_keep_criteria": [
+            "No cream cakes; no frying-required foods; prior egg/milk exclusion."
+          ],
+          "clarification_legitimate_when": "Ready-to-eat versus heat-and-eat evidence may be material.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Gợi ý cách chọn cũng được, chưa cần ép chốt món.",
+          "role": "customer",
+          "decision_goal": "Give practical useful guidance within evidence limits.",
+          "must_keep_criteria": [
+            "Keep dietary exclusions and quick preparation; no forced unsupported SKU."
+          ],
+          "clarification_legitimate_when": "No repetitive broad preference question.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-rainy-entry-cleaning",
+      "name": "rainy-entry-cleaning",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "cleaning",
+        "household"
+      ],
+      "turns": [
+        {
+          "text": "Mưa làm nền cửa ra vào hay bẩn, mua gì dọn gọn dưới100 nghìn?",
+          "role": "customer",
+          "decision_goal": "Identify a practical entry-floor cleaning purchase.",
+          "must_keep_criteria": [
+            "Entry-floor dirt; total below100000 VND; cleaning function."
+          ],
+          "clarification_legitimate_when": "Floor material or existing tools can be material.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Guaranteed anti-slip performance."
+          ]
+        },
+        {
+          "text": "Nhà có cây lau rồi, không mua thêm chổi hay cây lau.",
+          "role": "customer",
+          "decision_goal": "Avoid redundant tools and retain budget.",
+          "must_keep_criteria": [
+            "Exclude broom and mop; keep cleaning task and total cap."
+          ],
+          "clarification_legitimate_when": "Only essential surface/product instruction gap.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-older-relative-snack-label",
+      "name": "older-relative-snack-label",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "snacks"
+      ],
+      "turns": [
+        {
+          "text": "Mua đồ ăn vặt cho bố lớn tuổi, không quá ngọt, dưới70 nghìn.",
+          "role": "customer",
+          "decision_goal": "Offer restrained practical snack guidance.",
+          "must_keep_criteria": [
+            "Older relative; not overly sweet; below70000 VND."
+          ],
+          "clarification_legitimate_when": "Chewing ability or sugar label preference may be material.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Diabetes, heart health or medical suitability."
+          ]
+        },
+        {
+          "text": "Bố nhai đồ cứng không tiện, tránh hạt cứng.",
+          "role": "customer",
+          "decision_goal": "Use answered chewing constraint without inventing softness.",
+          "must_keep_criteria": [
+            "No hard nuts; prior sugar/price; verify texture if claiming fit."
+          ],
+          "clarification_legitimate_when": "Texture evidence can still be needed.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "All older adults can safely eat a selected snack."
+          ]
+        },
+        {
+          "text": "Không phải mua thuốc, chỉ chọn hướng ăn vặt dễ cân nhắc thôi.",
+          "role": "customer",
+          "decision_goal": "Stay in ordinary snack advice, with evidence restraint.",
+          "must_keep_criteria": [
+            "No medical claims or category drift; keep prior exclusions."
+          ],
+          "clarification_legitimate_when": "Only unresolved essential suitability evidence.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "new-cross-category-budget-reset",
+      "name": "cross-category-budget-reset",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh_then_context",
+      "categories": [
+        "laundry",
+        "stationery",
+        "drinks"
+      ],
+      "turns": [
+        {
+          "text": "Mình cần nước giặt dưới150 nghìn, không chọn loại hương hoa.",
+          "role": "customer",
+          "decision_goal": "Establish a constrained laundry need.",
+          "must_keep_criteria": [
+            "Laundry; below150000 VND; no floral scent."
+          ],
+          "clarification_legitimate_when": "Only essential machine/label detail.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        },
+        {
+          "text": "Thôi chuyển sang sổ A5 dưới35 nghìn, không lấy lò xo.",
+          "role": "customer",
+          "decision_goal": "Switch category and replace category-specific constraints.",
+          "must_keep_criteria": [
+            "Notebook;A5;below35000 VND;no spiral; drop laundry fragrance constraint."
+          ],
+          "clarification_legitimate_when": "Only necessary notebook detail.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice.",
+            "Applying detergent properties to notebooks."
+          ]
+        },
+        {
+          "text": "Đổi hẳn sang nước uống không đường dưới25 nghìn, đừng lấy trà.",
+          "role": "customer",
+          "decision_goal": "Handle another explicit scope/budget replacement.",
+          "must_keep_criteria": [
+            "Drinks;zero sugar;below25000 VND;exclude tea;drop notebook size/binding."
+          ],
+          "clarification_legitimate_when": "Only essential sugar evidence gap.",
+          "disallowed_unsupported_claims": [
+            "Invented SKU attributes, ingredient evidence, efficacy, suitability, sensory preference or personal experience.",
+            "Current stock, purchase history, exact shelf location, best-seller status or treatment/safety guarantees without authoritative evidence.",
+            "Product price or quantity inconsistent with product cards; treating a service fallback as completed advice."
+          ]
+        }
+      ]
+    }
+  ]
+}

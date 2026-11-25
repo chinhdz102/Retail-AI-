@@ -7,6 +7,14 @@ import {
   type MediaStreamLike,
   type SpeechRecognitionLike,
 } from './voice-controller'
+import type { NeuralVadSession } from './voice-neural'
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail })
+  return { promise, resolve, reject }
+}
 
 class FakeRecognition implements SpeechRecognitionLike {
   lang = ''
@@ -64,32 +72,42 @@ describe('VoiceConversationController', () => {
     const trackStop = vi.fn()
     const onAudio = vi.fn()
     const onState = vi.fn()
+    const onCapture = vi.fn()
     const destroy = vi.fn().mockResolvedValue(undefined)
     let callbacks!: import('./voice-neural').NeuralVadCallbacks
     const controller = new VoiceConversationController({
       locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
-      getUserMedia: async () => ({ getTracks: () => [{ stop: trackStop, label: 'USB mic' }] }),
+      getUserMedia: async () => ({ getTracks: () => [{ stop: trackStop, label: 'USB mic',
+        getSettings: () => ({ sampleRate: 48000, echoCancellation: true, deviceId: 'private' }),
+      }] }),
       createNeuralVad: async (value) => {
         callbacks = value
         return { start: vi.fn().mockResolvedValue(undefined), destroy }
       },
-      onAudio, onTranscript: vi.fn(), onState, onError: vi.fn(),
+      onAudio, onCapture, onTranscript: vi.fn(), onState, onError: vi.fn(),
     })
     await controller.start()
     expect(controller.phase).toBe('listening')
     callbacks.onVADMisfire()
     expect(onAudio).not.toHaveBeenCalled()
     callbacks.onSpeechStart()
+    expect(controller.phase).toBe('listening')
+    callbacks.onVADMisfire()
+    expect(onState).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'recording' }))
+    callbacks.onSpeechStart()
+    callbacks.onSpeechRealStart()
     expect(controller.phase).toBe('recording')
     callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.24))
     expect(onAudio).toHaveBeenCalledOnce()
+    expect(onCapture).toHaveBeenCalledWith({ source: 'silero-v6', settings: { sampleRate: 48000, echoCancellation: true } })
     const audio = onAudio.mock.calls[0][0] as Blob
     expect(audio.type).toBe('audio/wav')
     expect(audio.size).toBe(44 + 8_000 * 2)
-    expect(destroy).toHaveBeenCalledOnce()
+    await vi.waitFor(() => expect(destroy).toHaveBeenCalledOnce())
     expect(trackStop).toHaveBeenCalledOnce()
     callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.7))
     expect(onAudio).toHaveBeenCalledOnce()
+    expect(onCapture).toHaveBeenCalledOnce()
     controller.stop()
   })
 
@@ -140,6 +158,7 @@ describe('VoiceConversationController', () => {
 
   it('drops delayed neural callback when the user cancels microphone capture', async () => {
     const onAudio = vi.fn()
+    const onCapture = vi.fn()
     const destroy = vi.fn().mockResolvedValue(undefined)
     let callbacks!: import('./voice-neural').NeuralVadCallbacks
     const controller = new VoiceConversationController({
@@ -149,13 +168,124 @@ describe('VoiceConversationController', () => {
         callbacks = value
         return { start: vi.fn().mockResolvedValue(undefined), destroy }
       },
-      onAudio, onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+      onAudio, onCapture, onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
     })
     await controller.start()
     controller.pause()
     callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.4))
     expect(onAudio).not.toHaveBeenCalled()
-    expect(destroy).toHaveBeenCalled()
+    expect(onCapture).not.toHaveBeenCalled()
+    await vi.waitFor(() => expect(destroy).toHaveBeenCalledOnce())
+    controller.stop()
+  })
+
+  it.each(['factory', 'start'] as const)('keeps the new microphone when an old neural %s resolves', async (stage) => {
+    const pendingFactory = deferred<NeuralVadSession>()
+    const pendingStart = deferred<void>()
+    const oldDestroy = vi.fn().mockResolvedValue(undefined)
+    const newDestroy = vi.fn().mockResolvedValue(undefined)
+    const newTrackStop = vi.fn()
+    const oldVad = { start: vi.fn(() => stage === 'start' ? pendingStart.promise : undefined), destroy: oldDestroy }
+    const factory = vi.fn()
+      .mockImplementationOnce(() => stage === 'factory' ? pendingFactory.promise : Promise.resolve(oldVad))
+      .mockResolvedValue({ start: vi.fn(), destroy: newDestroy })
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferNeuralVad: true,
+      getUserMedia: vi.fn().mockResolvedValueOnce(fakeStream())
+        .mockResolvedValue({ getTracks: () => [{ stop: newTrackStop }] }),
+      createNeuralVad: factory,
+      onAudio: vi.fn(), onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+    })
+    const oldStart = controller.start()
+    await vi.waitFor(() => expect(stage === 'factory' ? factory : oldVad.start).toHaveBeenCalled())
+    controller.pause()
+    await controller.start()
+    pendingFactory.resolve(oldVad)
+    pendingStart.resolve()
+    await oldStart
+    expect(controller.phase).toBe('listening')
+    expect(controller.isActive).toBe(true)
+    expect(newTrackStop).not.toHaveBeenCalled()
+    expect(newDestroy).not.toHaveBeenCalled()
+    await vi.waitFor(() => expect(oldDestroy).toHaveBeenCalledOnce())
+    controller.stop()
+  })
+
+  it.each(['neural', 'worklet'] as const)('retains the new startup watchdog when old %s initialization rejects', async (mode) => {
+    vi.useFakeTimers()
+    const oldInit = deferred<any>()
+    const newInit = deferred<any>()
+    const onError = vi.fn()
+    const pending = vi.fn().mockReturnValueOnce(oldInit.promise).mockReturnValueOnce(newInit.promise)
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: mode === 'neural', preferPcmWorklet: true,
+      getUserMedia: async () => fakeStream(), MediaRecorder: FakeRecorder,
+      createNeuralVad: mode === 'neural' ? pending : undefined,
+      createAudioContext: () => ({
+        ...fakeAudioContext({ fftSize: 32, getByteTimeDomainData: (data) => data.fill(128) }),
+        sampleRate: 16000, destination: {}, audioWorklet: { addModule: pending },
+      }),
+      onAudio: vi.fn(), onTranscript: vi.fn(), onState: vi.fn(), onError,
+    })
+    const oldStart = controller.start()
+    await vi.advanceTimersByTimeAsync(0)
+    controller.pause()
+    const newStart = controller.start()
+    await vi.advanceTimersByTimeAsync(0)
+    oldInit.reject(new Error('old initialization failed'))
+    await oldStart
+    await vi.advanceTimersByTimeAsync(12_001)
+    expect(onError).toHaveBeenCalledOnce()
+    expect(controller.isActive).toBe(false)
+    newInit.reject(new Error('late initialization failed'))
+    await newStart
+    controller.stop()
+  })
+
+  it('does not close a new audio context when an old worklet module finishes loading', async () => {
+    const oldModule = deferred<void>()
+    const newTrackStop = vi.fn()
+    const makeContext = () => ({
+      ...fakeAudioContext({ fftSize: 32, getByteTimeDomainData: (data) => data.fill(128) }),
+      sampleRate: 16000, destination: {},
+      audioWorklet: { addModule: vi.fn().mockResolvedValue(undefined) },
+    })
+    const oldContext = makeContext()
+    oldContext.audioWorklet.addModule.mockReturnValue(oldModule.promise)
+    const newContext = makeContext()
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferPcmWorklet: true, MediaRecorder: FakeRecorder,
+      getUserMedia: vi.fn().mockResolvedValueOnce(fakeStream())
+        .mockResolvedValue({ getTracks: () => [{ stop: newTrackStop }] }),
+      createAudioContext: vi.fn().mockReturnValueOnce(oldContext).mockReturnValue(newContext),
+      createPcmWorkletNode: () => ({ port: { onmessage: null }, connect: vi.fn(), disconnect: vi.fn() }),
+      onAudio: vi.fn(), onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+    })
+    const oldStart = controller.start()
+    await vi.waitFor(() => expect(oldContext.audioWorklet.addModule).toHaveBeenCalled())
+    controller.pause()
+    await controller.start()
+    oldModule.resolve()
+    await oldStart
+    expect(controller.isActive).toBe(true)
+    expect(newContext.close).not.toHaveBeenCalled()
+    expect(newTrackStop).not.toHaveBeenCalled()
+    controller.stop()
+  })
+
+  it('releases the microphone when the AudioContext constructor fails', async () => {
+    const stop = vi.fn()
+    const onError = vi.fn()
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, MediaRecorder: FakeRecorder,
+      getUserMedia: async () => ({ getTracks: () => [{ stop }] }),
+      createAudioContext: () => { throw new Error('AudioContext allocation failed') },
+      onAudio: vi.fn(), onTranscript: vi.fn(), onState: vi.fn(), onError,
+    })
+    await controller.start()
+    expect(stop).toHaveBeenCalledOnce()
+    expect(onError).toHaveBeenCalledOnce()
+    expect(controller.isActive).toBe(false)
     controller.stop()
   })
 
@@ -283,6 +413,7 @@ describe('VoiceConversationController', () => {
     await controller.start()
     expect(getUserMedia).toHaveBeenCalledWith({ audio: {
       echoCancellation: true, noiseSuppression: true, autoGainControl: true,
+      channelCount: { ideal: 1 }, sampleRate: { ideal: 48000 }, sampleSize: { ideal: 16 }, voiceIsolation: true,
       deviceId: { exact: 'headset-input' },
     } })
     expect(onInputDevice).toHaveBeenCalledWith('Headset microphone')
@@ -343,20 +474,40 @@ describe('VoiceConversationController', () => {
     controller.stop()
   })
 
-  it('submits uninterrupted speech at the maximum segment duration', async () => {
+  it('rejects overlong fallback speech rather than submitting a partial request', async () => {
     vi.useFakeTimers()
     const onAudio = vi.fn()
+    const onError = vi.fn()
     const analyser = { fftSize: 32, getByteTimeDomainData: (data: Uint8Array) => { data.fill(255) } }
     const controller = new VoiceConversationController({
       locale: 'vi-VN', preferRecorder: true,
       getUserMedia: async () => fakeStream(), MediaRecorder: FakeRecorder,
       createAudioContext: () => fakeAudioContext(analyser),
-      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(), onAudio,
+      onTranscript: vi.fn(), onState: vi.fn(), onError, onAudio,
     })
     await controller.start()
     await vi.advanceTimersByTimeAsync(12_100)
-    expect(onAudio).toHaveBeenCalledOnce()
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'runtime', message: expect.stringContaining('12 giây'),
+    }))
     controller.stop()
+  })
+
+  it('still releases the microphone when AudioContext close rejects', async () => {
+    const trackStop = vi.fn()
+    const context = fakeAudioContext({ fftSize: 32, getByteTimeDomainData: data => data.fill(128) })
+    context.close = vi.fn().mockRejectedValue(new Error('device already closed'))
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true,
+      getUserMedia: async () => ({ getTracks: () => [{ stop: trackStop }] }),
+      MediaRecorder: FakeRecorder, createAudioContext: () => context,
+      onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(), onAudio: vi.fn(),
+    })
+    await controller.start()
+    controller.stop()
+    await Promise.resolve()
+    expect(trackStop).toHaveBeenCalledOnce()
   })
 
   it('starts SpeechRecognition in the selected locale and emits final transcripts', async () => {
@@ -382,10 +533,10 @@ describe('VoiceConversationController', () => {
 
     recognition.onresult?.({
       resultIndex: 0,
-      results: [{ isFinal: true, 0: { transcript: '  Xin chào Sky  ' } }],
+      results: [{ isFinal: true, 0: { transcript: '  Xin chào Mai  ' } }],
     })
 
-    expect(onTranscript).toHaveBeenCalledWith('Xin chào Sky')
+    expect(onTranscript).toHaveBeenCalledWith('Xin chào Mai')
     expect(onState).toHaveBeenCalledWith(expect.objectContaining({ mode: 'idle', phase: 'idle' }))
   })
 
@@ -590,6 +741,7 @@ describe('VoiceConversationController', () => {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
+        channelCount: { ideal: 1 }, sampleRate: { ideal: 48000 }, sampleSize: { ideal: 16 }, voiceIsolation: true,
       },
     }))
 
@@ -682,6 +834,7 @@ describe('VoiceConversationController', () => {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
+        channelCount: { ideal: 1 }, sampleRate: { ideal: 48000 }, sampleSize: { ideal: 16 }, voiceIsolation: true,
       },
     })
     controller.stop()
@@ -814,6 +967,131 @@ describe('VoiceConversationController', () => {
     await vi.advanceTimersByTimeAsync(80)
     controller.stopCapture()
     expect(onAudio).toHaveBeenCalledOnce()
+  })
+
+  it('guards neural VAD barge-in during AEC grace window and weak echo, then interrupts on real speech', async () => {
+    let now = 1_000
+    const onAudio = vi.fn()
+    const onBargeIn = vi.fn()
+    const onState = vi.fn()
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (hooks) => {
+        callbacks = hooks
+        return { start: vi.fn().mockResolvedValue(undefined), destroy: vi.fn().mockResolvedValue(undefined) }
+      },
+      onAudio, onBargeIn, onTranscript: vi.fn(), onState, onError: vi.fn(),
+      now: () => now,
+    })
+
+    controller.setBargeInMode(true, 450)
+    await controller.start()
+
+    // 1) Echo burst inside 450ms grace window is ignored and dropped.
+    now = 1_200
+    callbacks.onSpeechStart()
+    callbacks.onFrameProcessed({ isSpeech: 0.9 }, new Float32Array(512).fill(0.08))
+    callbacks.onSpeechRealStart()
+    expect(onBargeIn).not.toHaveBeenCalled()
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.08))
+    expect(onAudio).not.toHaveBeenCalled()
+
+    // 2) Moderate loudspeaker bleed (< 0.065 RMS) after grace window does not interrupt Mai.
+    now = 1_600
+    callbacks.onSpeechStart()
+    callbacks.onFrameProcessed({ isSpeech: 0.82 }, new Float32Array(512).fill(0.045))
+    callbacks.onSpeechRealStart()
+    expect(onBargeIn).not.toHaveBeenCalled()
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.045))
+    expect(onAudio).not.toHaveBeenCalled()
+
+    // 3) Real user speaking loudly (>= 0.11 RMS, high speech prob) after grace window confirms barge-in immediately.
+    now = 2_000
+    callbacks.onSpeechStart()
+    callbacks.onFrameProcessed({ isSpeech: 0.95 }, new Float32Array(512).fill(0.12))
+    callbacks.onSpeechRealStart()
+    expect(onBargeIn).toHaveBeenCalledOnce()
+    expect(controller.phase).toBe('recording')
+
+    // 4) Full interrupting utterance is emitted for Whisper transcription.
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.12))
+    expect(onAudio).toHaveBeenCalledOnce()
+    controller.stop()
+  })
+
+  it('drops steady fan noise in neural VAD listening mode without emitting false audio', async () => {
+    let now = 1_000
+    const onAudio = vi.fn()
+    const onSpeechMisfire = vi.fn()
+    let callbacks!: import('./voice-neural').NeuralVadCallbacks
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true, preferNeuralVad: true,
+      getUserMedia: async () => fakeStream(),
+      createNeuralVad: async (hooks) => {
+        callbacks = hooks
+        return { start: vi.fn().mockResolvedValue(undefined), destroy: vi.fn().mockResolvedValue(undefined) }
+      },
+      onAudio, onSpeechMisfire, onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+      now: () => now,
+    })
+
+    await controller.start()
+    // Calibrate continuous desk fan floor (~0.020 RMS) during silence.
+    for (let i = 0; i < 8; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.1 }, new Float32Array(512).fill(0.020))
+    }
+
+    // Fan gust briefly fools Silero VAD at 0.022 RMS (still flat / near noise floor).
+    callbacks.onSpeechStart()
+    for (let i = 0; i < 14; i += 1) {
+      now += 32
+      callbacks.onFrameProcessed({ isSpeech: 0.74 }, new Float32Array(512).fill(0.022))
+    }
+    callbacks.onSpeechRealStart()
+    callbacks.onSpeechEnd(new Float32Array(8_000).fill(0.022))
+    expect(onAudio).not.toHaveBeenCalled()
+    expect(onSpeechMisfire).toHaveBeenCalled()
+    controller.stop()
+  })
+
+  it('confirms fallback recorder barge-in only after grace window and sustained speech', async () => {
+    vi.useFakeTimers()
+    const onAudio = vi.fn()
+    const onBargeIn = vi.fn()
+    const startedAt = Date.now()
+    const analyser = {
+      fftSize: 32,
+      getByteTimeDomainData(data: Uint8Array) {
+        const elapsed = Date.now() - startedAt
+        // Loudspeaker burst during first 300ms (ignored), then real user speech from 600ms to 920ms.
+        const speaking = elapsed < 260 || (elapsed >= 600 && elapsed < 920)
+        data.fill(speaking ? 235 : 128)
+      },
+    }
+    const controller = new VoiceConversationController({
+      locale: 'vi-VN', preferRecorder: true,
+      getUserMedia: async () => fakeStream(), MediaRecorder: FakeRecorder,
+      createAudioContext: () => fakeAudioContext(analyser),
+      onAudio, onBargeIn, onTranscript: vi.fn(), onState: vi.fn(), onError: vi.fn(),
+      now: () => Date.now(),
+    })
+
+    controller.setBargeInMode(true, 450)
+    await controller.start()
+
+    // During grace window: never interrupts.
+    await vi.advanceTimersByTimeAsync(400)
+    expect(onBargeIn).not.toHaveBeenCalled()
+    expect(onAudio).not.toHaveBeenCalled()
+
+    // Sustained user speech after grace window confirms barge-in and emits full segment after pause.
+    await vi.advanceTimersByTimeAsync(1_300)
+    expect(onBargeIn).toHaveBeenCalledOnce()
+    expect(onAudio).toHaveBeenCalledOnce()
+    controller.stop()
   })
 
 })

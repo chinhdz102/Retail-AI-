@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.products.category_taxonomy import (
     CatalogCategoryMatch,
+    catalog_category_alias_source_phrase,
     catalog_leaf_query_phrase,
     category_alias_refines_explicit_audience,
     category_is_parent,
@@ -24,6 +25,7 @@ from backend.products.category_taxonomy import (
     resolve_catalog_category_alias,
     resolve_catalog_category_with_explicit_audience,
 )
+from backend.services.shopping_language import resolve_possessive_size
 from backend.services.vietnamese_intent import normalize_vietnamese
 
 QueryIntent = Literal[
@@ -81,9 +83,10 @@ _RANKING_CUES: tuple[tuple[RankingCriterion, re.Pattern[str]], ...] = (
     (
         "sales_popularity",
         re.compile(
-            r"\b(?:ban chay(?: nhat| nhut)?|duoc mua nhieu|mua nhieu(?: nhat| nhut)?|"
-            r"pho bien nhat|nhieu nguoi chon|duoc ua chuong nhat|best seller|"
-            r"bestseller|most popular|most sold)\b"
+            r"\b(?:ban chay(?: nhat| nhut)?|ban (?:duoc )?nhieu (?:nhat|nhut)|"
+            r"luot ban (?:cao|nhieu) (?:nhat|nhut)|duoc mua nhieu(?: nhat| nhut)?|"
+            r"mua nhieu(?: nhat| nhut)?|pho bien nhat|nhieu nguoi chon|"
+            r"duoc ua chuong nhat|best seller|bestseller|most popular|most sold)\b"
         ),
     ),
     (
@@ -115,8 +118,8 @@ _PURPOSE_MARKER = re.compile(
     r"danh cho nhu cau|dung cho nhu cau|for the purpose of)\s+(.+)$"
 )
 _DIRECT_USE_CASE = re.compile(
-    r"\b(?:an|nau|che bien|pha|uong|boi|thoa|rua|giat|lau|nhung)\s+"
-    r"(?:mon\s+)?(?:lau|nuong|chien|xao|hap|ham|luoc|ran|tiec|da kho|"
+    r"\b(?:an|nau|lam|che bien|pha|uong|boi|thoa|rua|giat|lau|nhung)\s+"
+    r"(?:mon\s+)?(?:lau|nuong|chien|xao|hap|ham|luoc|ran|chao|canh|sup|banh|salad|tiec|da kho|"
     r"toc dau|da nhay cam)\b"
 )
 _PERSONAL_CARE_NEED = re.compile(
@@ -132,9 +135,11 @@ _PERSONAL_CARE_CONTEXT_TAIL = re.compile(
 )
 _NEGATION = re.compile(
     r"\b(?:khong|ko|khum|tranh|loai bo|loai tru|bo qua|avoid|without|except|no|"
-    r"dung(?=\s+(?:lay|mua|chon|dung|su\s+dung|use|buy|choose)\b))\s+"
+    r"dung)\s+"
+    r"(?!thay\b|tim\s+(?:thay|duoc)\b)"
     r"(?:(?:thich|muon|can|lay|mua|dung|chon|co|tim|use|buy|choose|want)\s+){0,2}"
-    r"(?!biet\b|ro\b|nho\b|can\s+gi\b)([^,.;!?]{1,80})"
+    r"(?!biet\b|ro\b|nho\b|can\s+gi\b|thay\b|tim\s+(?:thay|duoc)\b|"
+    r"bao\s+nhieu\b|bnhiu\b|nhieu\s+tien\b|gia\b)([^,.;!?]{1,80})"
 )
 _NEGATED_CATEGORY_CORRECTION = re.compile(
     r"\b(?:khong|ko|khum)\s+phai\s+(?:loai\s+)?(.+?)(?:[,.!?;:]|$)"
@@ -143,8 +148,12 @@ _COURTESY_TAIL_PARTICLES = frozenset({"a", "ha", "nha", "nhe", "nhi", "please"})
 _NEGATION_TAIL_STOP = re.compile(
     r"\b(?:uu\s+tien|prefer|truoc\s+tien|sau\s+do|va|nhung|con|hay|hoac|neu|if|doi\s+(?:thanh|sang)|but|and|or|please|nhe|nha|duoi|tren|"
     r"toi\s+da|khong\s+qua|ngan\s+sach|qua|under|up\s+to|less\s+than|budget|"
+    r"bao\s+nhieu|bao\s+nhiu|bnhiu|gia|tien|an\s+toan|tot\s+cho|"
+    r"goi\s+y|tu\s+van|de\s+xuat|chon\s+(?:giup|ho)|"
+    r"cho\s+(?:be|da|tre|nguoi)|de\s+(?:uong|an|nau|dung)|"
     r"cho\s+(?:minh|toi|em|anh|chi|ban)\s+(?:xem|hoi|biet)|"
     r"cho\s+xem|xem\s+giup|tim|minh|toi|em|anh|chi|ban|biet|noi|hoi)\b"
+    r"|\b(?:trong(?:\s+(?:muc|tam|khoang))?|tam|khoang)\s+(?=\d)"
     r"|\b\d+(?:[.,]\d+)?\s*(?:trieu|tr|k|ngan|nghin|dong|vnd)\b"
 )
 _FINAL_SELECTION = re.compile(
@@ -172,7 +181,7 @@ _QUANTITY = re.compile(
     rf"quyen|qua|mieng|vien|ly)\b"
 )
 _BUDGET = re.compile(
-    rf"\b(?:duoi|toi da|khong qua|dung qua|tam|khoang|trong muc|trong tam|"
+    rf"\b(?:duoi|toi da|khong qua|dung qua|tam|khoang|trong(?:\s+(?:muc|tam|khoang))?|"
     rf"ngan sach(?: la| tam)?|under|up to|less than)\s+"
     rf"({_BUDGET_AMOUNT})\s*(trieu|tr|k|ngan|nghin|dong|vnd|d)\b"
 )
@@ -182,7 +191,8 @@ _BUDGET_WITH_MONEY = re.compile(
     r"(trieu|tr|k|ngan|nghin|dong|vnd|d)\b"
 )
 _BUDGET_TOTAL_SCOPE = re.compile(
-    r"\b(?:tong\s+(?:cong|tien)|ca\s+(?:don|gio\s+hang)|"
+    r"\b(?:tong\s+(?:cong|tien)|tong(?=\s+(?:duoi|toi da|khong qua|tam|khoang|\d))|"
+    r"ca\s+(?:don|gio\s+hang)|"
     r"toan\s+bo(?:\s+don)?|in\s+total|total\s+budget|whole\s+order|entire\s+order)\b"
 )
 _BUDGET_PER_ITEM_SCOPE = re.compile(
@@ -202,11 +212,24 @@ _CONVERSATION_REFERENCE = re.compile(
 )
 _GENERIC_REFERENCES = frozenset(
     {
+        "san pham",
+        "mat hang",
+        "hang hoa",
+        "loai",
+        "mon",
+        "cai",
+        "do",
         "cai nao",
         "loai nao",
         "mon nao",
         "san pham nao",
         "hang nao",
+        "cai gi",
+        "loai gi",
+        "mon gi",
+        "san pham gi",
+        "do gi",
+        "thuoc gi",
         "lua chon nao khac",
         "phuong an nao khac",
         "loai khac",
@@ -240,12 +263,14 @@ _GENERIC_REFERENCES = frozenset(
     }
 )
 _GENERIC_FOLLOW_UP = re.compile(
-    r"^(?:co\s+)?(?:loai nao(?: khac)?|cai nao(?: khac)?|mon nao(?: khac)?|"
-    r"san pham nao(?: khac)?|loai khac|cai khac|mon khac|san pham khac|"
+    r"^(?:co\s+)?(?:loai (?:nao|gi)(?: khac)?|cai (?:nao|gi)(?: khac)?|mon (?:nao|gi)(?: khac)?|"
+    r"san pham (?:nao|gi)(?: khac)?|do (?:nao|gi)(?: khac)?|thuoc (?:nao|gi)(?: khac)?|"
+    r"loai khac|cai khac|mon khac|san pham khac|"
     r"lua chon nao khac|phuong an nao khac|lua chon khac|phuong an khac|"
     r"loai dau tien|mon dau tien|san pham dau tien|first item|first product|first one|"
     r"re hon|dat hon|nho hon|cai do|mon do|san pham do|"
-    r"that one|the other one|cheaper|more expensive)(?:\s+(?:khong|nua|khong a))?$"
+    r"that one|the other one|cheaper|more expensive)"
+    r"(?:\s+(?:khong|ko|k|khum|nua|khong a|ko a))?$"
 )
 
 
@@ -266,15 +291,23 @@ def prior_product_page_reference_kind(text: str) -> str | None:
 _COMPARISON = re.compile(
     r"\b(?:so sanh|phan biet|co gi khac|khac gi|khac nhau|vs|versus|compare|difference)\b"
 )
+_EQUAL_PRICE = re.compile(
+    r"\b(?:(?:cung|ngang|bang)\s+(?:mot\s+)?(?:muc\s+)?(?:gia|tam tien)|"
+    r"(?:gia|muc gia|tam tien)\s+(?:nhu nhau|bang nhau|ngang nhau))\b"
+)
+_SUBJECTIVE_CHOICE = re.compile(
+    r"\b(?:loai|cai|mon|hang|san pham|ben)\s+nao\b.{0,65}"
+    r"\b(?:thich|tot|ngon|hop|on|dang (?:mua|tien))\b"
+)
 _LOCATION = re.compile(
-    r"\b(?:o dau|o day|nam o dau|ke nao|day nao|khu nao|ngan nao|vi tri nao|"
+    r"\b(?:o dau|nam o dau|ke nao|day nao|khu nao|ngan nao|vi tri nao|"
     r"vi tri (?:quay|ke|day|khu|ngan)|gan (?:quay|ke|day|khu) nao|"
     r"ben nao|o (?:ke|day|khu|ngan|quay|tu mat|tu lanh)|"
     r"nam (?:o|trong|gan|khu)\b|"
     r"chi (?:minh )?(?:vi tri|duong)|where is|where can i find)\b"
 )
 _LOCATION_REFERENCE_SUFFIX = re.compile(
-    r"\b(?:nam\s+(?:o|trong|tren|gan|khu)\b|"
+    r"\b(?:o\s+dau\b|nam\s+(?:o|trong|tren|gan|khu)\b|"
     r"(?:o|tai|trong|gan)\s+(?:khu|ke|day|ngan|quay|tu|tu\s+mat|tu\s+lanh))\b"
 )
 _EXPLICIT_NAMED_LOCATION_SUFFIX = re.compile(r"\bnằm\s+(?:ở|trong|trên|gần|khu)\b", re.IGNORECASE)
@@ -307,6 +340,7 @@ _VARIANT_QUESTION = re.compile(
 )
 _ATTRIBUTE_QUESTION = re.compile(
     r"\b(?:(?<!tong )cong dung|thanh phan|huong dan su dung|dung nhu the nao|"
+    r"han su dung|han dung|het han|ngay het han|expiry|expiration|"
     r"ingredients|benefits?|usage instructions|specifications?|"
     r"an toan|di ung|sensitive skin|safe|co giup\b|giup .{1,100}\bkhong\b|"
     r"does it help|will it help)\b"
@@ -315,12 +349,48 @@ _BROAD_UNRESOLVED_REQUEST = re.compile(
     r"\b(?:do an|do uong|mon gi|hang hoa|loai nao|cai nao|san pham nao|"
     r"mua gi|can gi|recommendation|something to eat|something to drink)\b"
 )
+# Questions about the calendar are general knowledge requests.  Keep this
+# narrow so product expiry/offer-date questions (which include a product
+# reference) continue through catalog routing.
+_CALENDAR_QUESTION = re.compile(
+    r"\b(?:hom nay|hien nay|today|ngay nay)\b.{0,30}"
+    r"\b(?:thu may|thu nao|ngay may|ngay bao nhieu|what day|what date|date is it)\b|"
+    r"\b(?:what day|what date|what s the date)\b.{0,30}\b(?:today|is it)\b"
+)
+
+
+def non_catalog_question_kind(text: str) -> str | None:
+    """Recognize standalone general questions before fuzzy product retrieval.
+
+    Product or shopping clauses retain their usual route; a calendar word
+    alone must never swallow expiry, opening hours, or promotion questions.
+    """
+    normalized = " ".join(normalize_vietnamese(text).split())
+    if re.search(
+        r"\b(?:mua|tim|het han|khuyen mai|san pham|gia|o dau|"
+        r"buy|find|expiry|offer|price|where)\b", normalized,
+    ):
+        return None
+    if _CALENDAR_QUESTION.search(normalized):
+        return "calendar"
+    if _GENERAL_CHAT_QUESTION.search(normalized):
+        return "conversation"
+    return None
+
+
+_GENERAL_CHAT_QUESTION = re.compile(
+    r"\b(?:cho|noi)\s+(?:tao|toi|minh|ban)\s+biet\s+(?:ban|may)\s+la\s+ai\b|"
+    r"\b(?:tao|toi|minh)\s+(?:dang)\s+(?:met|buon|vui|chan)\b|"
+    r"\b(?:tao|toi|minh)\s+muon\s+(?:noi chuyen)\b"
+)
 _REQUEST_PREFIX = re.compile(
-    r"^(?:(?:minh|toi|em|anh|chi|ban)\s+)?"
-    r"(?:dang\s+)?(?:muon(?:\s+tim)?|can(?:\s+tim)?|tim\s+giup(?:\s+(?:minh|toi|em|anh|chi))?|"
-    r"tim|cho\s+(?:minh|toi|em|anh|chi)\s+(?:xem|tim|hoi(?:\s+ve)?)|"
+    r"^(?:(?:minh|toi|tui|em|anh|chi|ban|t|m|mik|mk)\s+)?"
+    r"(?:dang\s+)?(?:muon(?:\s+(?:tim|mua))?|can(?:\s+(?:tim|mua))?|"
+    r"goi\s+y|gioi\s+thieu|tu\s+van|trong\s+(?:cac\s+)?(?:loai|nhom|san\s+pham)|"
+    r"tim\s+giup(?:\s+(?:minh|toi|em|anh|chi|t|m))?|"
+    r"tim|mua|cho\s+(?:minh|toi|tui|em|anh|chi|t|m)\s+(?:xem|tim|hoi(?:\s+ve)?)|"
     r"cho\s+xem|xem\s+giup|show\s+me|looking\s+for|"
-    r"please\s+(?:find|show)|find\s+me|find)\b\s*"
+    r"please\s+(?:find|show)|where\s+can\s+i\s+find|find\s+me|find)\b\s*"
 )
 _CATEGORY_REQUEST_CONNECTOR = re.compile(
     r"(?:^|\s)(?:co|can|muon|tim|mua|dung|goi y|tu van|recommend|suggest)"
@@ -334,22 +404,30 @@ _RAW_CATEGORY_REQUEST_CONNECTOR = re.compile(
 )
 _IMPLICIT_NEED_FILLER = frozenset(
     "minh toi em anh chi ban minh tui muon can co tim mua dung goi tu van cho xem hang "
-    "loai nhom san pham nao nay trong cua tai o duoc khong a nhe nha please find show "
-    "looking for product products category type um uhm neu hoi danh muc ay the if ask "
-    "this that me i".split()
+    "loai nhom san pham nao gi nay trong cua tai o duoc khong ko k khum a nhe nha "
+    "please find show looking for product products category type um uhm neu hoi "
+    "danh muc ay the if ask this that me i".split()
 )
 _IMPLICIT_QUERY_TAIL_FILLER = frozenset(
-    "nao nay do trong cua tai o hang co khong a vay nhe nha please".split()
+    "nao gi nay do trong cua tai o hang co khong ko k khum a vay nhe nha please".split()
 )
 _USE_CASE_REQUEST_CLOSINGS = (
     "co loai nao khong",
+    "co loai nao ko",
     "co loai nao",
     "co mon nao khong",
+    "co mon nao ko",
     "co mon nao",
     "co san pham nao khong",
+    "co san pham nao ko",
     "co san pham nao",
+    "co san pham gi khong",
+    "co san pham gi ko",
+    "co san pham gi",
     "co loai gi khong",
+    "co loai gi ko",
     "co mon gi khong",
+    "co mon gi ko",
     "giup cho minh",
     "giup cho toi",
     "giup cho em",
@@ -454,6 +532,22 @@ def _strip_matches(raw: str, normalized: str, pattern: re.Pattern[str]) -> tuple
         cleaned = f"{raw[:start]} {raw[end:]}"
         return " ".join(cleaned.split()).strip(" ,.!?;:"), use_case
     return raw, None
+
+
+def strip_retrieval_budget(text: str) -> str:
+    """A recognized money filter is not part of a product or brand identity.
+
+    Preserve every other token, including unknown brands and numeric model
+    names. Use the parser's budget grammar rather than a second money regex.
+    """
+    result = text
+    for pattern in (_BUDGET, _BUDGET_WITH_MONEY):
+        while pattern.search(normalize_vietnamese(result)):
+            cleaned, _ = _strip_matches(result, normalize_vietnamese(result), pattern)
+            if cleaned == result:
+                break
+            result = cleaned
+    return result.strip(" ,.!?;:")
 
 
 def _strip_purpose_clause(raw: str, normalized: str) -> tuple[str, str | None]:
@@ -856,12 +950,56 @@ def _single_word_category_is_primary(product_type: str, query: str) -> bool:
     return not preceding
 
 
+def _negative_matches(text: str):
+    # A captured object may contain a coordinated second negative instruction.
+    # Start the next search at the object, not the end of the whole match.
+    cursor = 0
+    while match := _NEGATION.search(text, cursor):
+        yield match
+        cursor = match.start(1)
+
+
 def _negative_constraints(normalized: str, raw: str | None = None) -> tuple[str, ...]:
     values: list[str] = []
     # A request not to claim an unverified fact is an epistemic instruction,
     # not a request to filter products by the last word in that sentence.
     constraint_text = re.sub(r"\b(?:nhung\s+)?dung\s+khang\s+dinh\b.*$", " ", normalized)
-    for match in _NEGATION.finditer(constraint_text):
+    for match in _negative_matches(constraint_text):
+        if raw:
+            # Keep native operator spelling: "loại bơ" and "loại bò" are
+            # category phrases, while "loại bỏ" is a negative instruction.
+            marker_start, marker_end = _raw_span_for_normalized_span(
+                raw, normalized, match.start(), match.start(1),
+            )
+            native_tokens = raw[marker_start:marker_end].casefold().split()
+            if (
+                match.group().startswith("no ")
+                and native_tokens
+                and native_tokens[0].strip(",.;:!?") != "no"
+            ):
+                continue
+            if match.group().startswith("no ") and re.search(
+                r"\b(?:an(?:\s+(?:sang|trua|toi|dem|khuya))?|van|du|cho|that|rat|sieu)\s*$",
+                normalized[max(0, match.start() - 24):match.start()],
+            ):
+                # Vietnamese satiety (ăn no/vẫn no) is not the English
+                # exclusion operator, even when followed by another clause.
+                continue
+            marker = next((cue for cue in ("loai bo", "loai tru", "bo qua", "dung")
+                           if match.group().startswith(cue + " ")), None)
+            if marker:
+                expected = {"loai bo": "loại bỏ", "loai tru": "loại trừ",
+                            "bo qua": "bỏ qua", "dung": "đừng"}[marker].split()
+                if any(token.strip(",.;:!?") not in {native, normalize_vietnamese(native)}
+                       for token, native in zip(native_tokens, expected)):
+                    continue
+                if marker == "dung" and native_tokens[:1] == ["dung"] and not re.match(
+                    r"dung\s+(?:lay|mua|chon|dung|su\s+dung|use|buy|choose)\b", match.group(),
+                ):
+                    # An unaccented noun such as 'Dung dịch' must not become
+                    # the bare accented operator 'đừng'. Retain the established
+                    # verb-bearing ASCII instruction as an explicit exclusion.
+                    continue
         # A question particle such as ``không?`` asks whether a product exists;
         # the words after it may start a separate request and are not a filter.
         if raw and match.group().startswith("khong "):
@@ -898,14 +1036,17 @@ def _negative_constraints(normalized: str, raw: str | None = None) -> tuple[str,
                 match.end(1),
             )
             raw_clause = raw[raw_start:raw_end]
-            clause_boundary = re.search(r"[,;!?\n]", raw_clause)
+            # A following sentence is not part of the excluded product type.
+            # Preserve decimal measurements and abbreviations inside a word.
+            clause_boundary = re.search(r"[,;!?\n]|\.(?=\s|$)", raw_clause)
             if clause_boundary:
                 raw_clause = raw_clause[: clause_boundary.start()]
             phrase = " ".join(normalize_vietnamese(raw_clause).split()).strip(" ,.!?;:")
         # ``không cần gợi ý`` and similar meta instructions control the
         # assistant's response style; they do not describe a product filter.
         if re.match(
-            r"^(?:goi y|de xuat|tu van|recommend(?:ation|ations)?|suggest(?:ion|ions)?|advice)\b",
+            r"^(?:chi\s+)?(?:goi y|de xuat|tu van|liet ke|noi|ke|nhac|lap|khang dinh|"
+            r"recommend(?:ation|ations)?|suggest(?:ion|ions)?|advice)\b",
             phrase,
         ):
             continue
@@ -932,6 +1073,20 @@ def _negative_constraints(normalized: str, raw: str | None = None) -> tuple[str,
         # determiner ``no``. Accent removal makes those forms lexically collide.
         if match.group().startswith("no ") and phrase == "bung":
             continue
+        # Skin/body comfort expectations ("không hại da tay", "không kích ứng",
+        # "không làm khô da") describe gentleness, not a literal ingredient name.
+        if phrase in {
+            "hai da tay",
+            "hai da",
+            "kich ung",
+            "kich ung da",
+            "kho da",
+            "lam kho da",
+            "cay mat",
+            "gay hai",
+            "doc hai",
+        }:
+            continue
         if (
             phrase
             and not re.search(r"(?:^|\s)(?:khong|ko|khum)$", phrase)
@@ -953,6 +1108,36 @@ def _negative_constraints(normalized: str, raw: str | None = None) -> tuple[str,
             }
         ):
             values.append(phrase)
+    # Allergy statements ("dị ứng đậu phộng", "bị dị ứng hải sản") are hard
+    # negative exclusions on the allergen rather than positive search terms.
+    for allergy_match in re.finditer(
+        r"\b(?:bi\s+)?di\s+ung(?:\s+voi)?\s+([^,.;!?]{1,40})",
+        constraint_text,
+    ):
+        allergen = allergy_match.group(1).strip()
+        stop = _NEGATION_TAIL_STOP.search(allergen)
+        if stop:
+            allergen = allergen[: stop.start()].strip()
+        allergen = " ".join(allergen.split())
+        if allergen and allergen not in values:
+            values.append(allergen)
+    # Vietnamese also places the exclusion operator after its object. Keep
+    # this limited to a whole rejection clause: 'bỏ vào giỏ' is an action,
+    # and an accented 'bò' is a noun, not the verb 'bỏ'.
+    if raw:
+        for clause in re.split(r"[,;.!?\n]", raw.casefold()):
+            rejection = re.fullmatch(
+                r"\s*(?P<object>[\w\s-]{1,65}?)\s+(?:thì|thi)\s+(?:bỏ|bo)"
+                r"(?:\s+qua)?(?:\s+(?:nhé|nhe|nha|đi|di))?\s*", clause,
+            )
+            if not rejection:
+                continue
+            phrase = normalize_vietnamese(rejection["object"]).strip()
+            phrase = re.sub(
+                r"^(?:(?:con|nhung|va|may|cac|nhung|cai|loai|mon|dang)\s+)+", "", phrase,
+            )
+            if phrase and len(phrase.split()) <= 6:
+                values.append(phrase)
     return tuple(dict.fromkeys(values))
 
 
@@ -965,6 +1150,18 @@ def _trim_courtesy_tail(value: str) -> str:
 
 def _strip_request_prefix(raw: str, normalized: str) -> tuple[str, str]:
     """Remove common request wrappers without rewriting the product wording."""
+    # Search difficulty describes the act of finding, not product identity or
+    # negation. Match the whole wrapper before the shorter 'tìm' prefix.
+    difficulty = re.match(
+        r"^(?:(?:minh|toi|tui|em|anh|chi|ban)\s+)?"
+        r"(?:(?:tim|kiem)(?:\s+mai)?\s+khong\s+(?:thay|duoc)|"
+        r"khong\s+(?:tim|kiem)\s+(?:thay|duoc))\s+",
+        normalized,
+    )
+    if difficulty:
+        count = len(difficulty.group().split())
+        raw = " ".join(raw.split()[count:]).strip(" ,.!?;:")
+        normalized = " ".join(normalize_vietnamese(raw).split())
     match = _REQUEST_PREFIX.match(normalized)
     if match is None:
         return raw, normalized
@@ -1169,8 +1366,28 @@ def understand_catalog_query(
     clauses are retained as soft context and removed from the strict product
     search phrase; ranking cues are surfaced separately from product identity.
     """
-    raw = " ".join((text or "").split())[:2000]
+    hier_key = (
+        category_hierarchies
+        if isinstance(category_hierarchies, tuple)
+        else tuple(tuple(path) for path in category_hierarchies)
+    )
+    prev_key = (
+        previous_queries if isinstance(previous_queries, tuple) else tuple(previous_queries)
+    )
+    return _understand_catalog_query_cached(text or "", hier_key, previous_query, prev_key)
+
+
+@lru_cache(maxsize=1024)
+def _understand_catalog_query_cached(
+    text: str,
+    category_hierarchies: tuple[tuple[str, ...], ...] = (),
+    previous_query: str | None = None,
+    previous_queries: tuple[str, ...] = (),
+) -> QueryUnderstandingResult:
+    raw = resolve_possessive_size(" ".join((text or "").split())[:2000])
     normalized = " ".join(normalize_vietnamese(raw).split())
+    if non_catalog_question_kind(raw):
+        return QueryUnderstandingResult(intent="general")
     ranking = _ranking_criterion(normalized)
     product_reference, _ = (
         _strip_matches(
@@ -1256,8 +1473,23 @@ def understand_catalog_query(
 
     explicit_location = _EXPLICIT_NAMED_LOCATION_SUFFIX.search(product_reference)
     location_suffix = _LOCATION_REFERENCE_SUFFIX.search(normalized_reference)
+    if location_suffix and normalized_reference.startswith("nam ", location_suffix.start()):
+        native_start, native_end = _raw_span_for_normalized_span(
+            product_reference, normalized_reference,
+            location_suffix.start(), location_suffix.start() + 3,
+        )
+        if product_reference[native_start:native_end].casefold() not in {"nam", "nằm"}:
+            # A native noun sharing the folded spelling of a location verb
+            # belongs to the product reference, not to the location clause.
+            location_suffix = _LOCATION_REFERENCE_SUFFIX.search(
+                normalized_reference, location_suffix.start() + 3,
+            )
     if explicit_location:
         product_reference = product_reference[: explicit_location.start()].strip(" ,.!?;:")
+        product_reference = re.sub(
+            r"[,;]\s*(?:nó|loại đó|cái đó|món đó)\s*$", "", product_reference,
+            flags=re.IGNORECASE,
+        ).strip(" ,.!?;:")
         normalized_reference = " ".join(normalize_vietnamese(product_reference).split())
     elif location_suffix:
         suffix_start = location_suffix.start()
@@ -1284,6 +1516,17 @@ def understand_catalog_query(
             len(normalized_reference),
         )
         product_reference = product_reference[:raw_start].strip(" ,.!?;:")
+        normalized_reference = " ".join(normalize_vietnamese(product_reference).split())
+
+    recipient = re.search(
+        r"\s+(?:cho|danh cho)\s+(?:con|be)(?:\s+(?:minh|toi|tui|em|anh|chi))?$",
+        normalized_reference,
+    )
+    if recipient:
+        _, recipient_start = _raw_span_for_normalized_span(
+            product_reference, normalized_reference, 0, recipient.start(),
+        )
+        product_reference = product_reference[:recipient_start].strip(" ,.!?;:")
         normalized_reference = " ".join(normalize_vietnamese(product_reference).split())
 
     reference_key = re.sub(r"[^\w\s]", " ", normalized_reference).strip()
@@ -1324,12 +1567,40 @@ def understand_catalog_query(
             normalize_vietnamese(category_reference).split()
         )
 
+    # Also keep explicit exclusion/allergy clauses ("tránh vị thịt bò",
+    # "dị ứng đậu phộng", "không lấy sữa đậu nành") from hijacking positive
+    # category resolution when the utterance still has a positive product scope.
+    exclusion_stripped_norm = re.sub(
+        r"\b(?:tranh|loai\s+bo|loai\s+tru|bo\s+qua|(?:bi\s+)?di\s+ung(?:\s+voi)?|"
+        r"khong\s+(?:lay|mua|dung|chon|an|uong))\b[^,.;!?]*",
+        " ",
+        normalized_category_reference,
+    )
+    exclusion_stripped_tokens = [
+        token
+        for token in exclusion_stripped_norm.split()
+        if token not in _PRIMARY_TYPE_FILLERS
+    ]
+    positive_category_query = (
+        " ".join(exclusion_stripped_norm.split())
+        if exclusion_stripped_tokens
+        and exclusion_stripped_norm.strip() != normalized_category_reference.strip()
+        else category_reference
+    )
+
     try:
         # An exact taxonomy label must win over a shorter synonym embedded in
         # it (for example, "cá nước ngọt tươi" contains the alias "nước ngọt").
-        exact_match = resolve_catalog_category(category_reference, category_hierarchies)
-        alias_match = resolve_catalog_category_alias(category_reference, category_hierarchies)
-        exact_leaf_phrase = catalog_leaf_query_phrase(category_reference, category_hierarchies)
+        # Conversely, a longer shopper compound phrase (e.g. "nước ép trái cây",
+        # "kẹo dẻo trái cây", "socola ... quà tặng", "củ quả") must win over
+        # an unrelated parent/prefix match ("Trái cây", "Quà tặng", "Củ quả lá khô").
+        exact_match = resolve_catalog_category(positive_category_query, category_hierarchies)
+        alias_match = resolve_catalog_category_alias(positive_category_query, category_hierarchies)
+        alias_source = catalog_category_alias_source_phrase(positive_category_query)
+        alias_source_tokens = (
+            set(normalize_vietnamese(alias_source).split()) if alias_source else set()
+        )
+        exact_leaf_phrase = catalog_leaf_query_phrase(positive_category_query, category_hierarchies)
         exact_leaf_is_named = bool(
             exact_match is not None
             and exact_leaf_phrase
@@ -1341,24 +1612,41 @@ def understand_catalog_query(
             exact_match is not None
             and alias_match is not None
             and category_alias_refines_explicit_audience(
-                category_reference,
+                positive_category_query,
                 exact_match.category,
                 alias_match.category,
             )
         )
         audience_match = resolve_catalog_category_with_explicit_audience(
-            category_reference,
+            positive_category_query,
             category_hierarchies,
             alias_match or exact_match,
+        )
+        alias_overrides_unrelated_exact = bool(
+            alias_match is not None
+            and exact_match is not None
+            and (
+                not exact_match.exact_phrase
+                or len(alias_source_tokens) > len(exact_match.matched_tokens)
+                or (
+                    normalize_vietnamese(exact_match.category) in {"qua tang", "khan", "banh"}
+                    and not (alias_source_tokens <= exact_match.matched_tokens)
+                )
+            )
         )
         alias_refines_type = bool(
             alias_match is not None
             and alias_match.exact_phrase
-            and not category_is_parent(alias_match.category, category_hierarchies)
             and (
-                exact_match is None
-                or category_is_parent(exact_match.category, category_hierarchies)
-                or len(alias_match.matched_tokens) > len(exact_match.matched_tokens)
+                alias_overrides_unrelated_exact
+                or (
+                    not category_is_parent(alias_match.category, category_hierarchies)
+                    and (
+                        exact_match is None
+                        or category_is_parent(exact_match.category, category_hierarchies)
+                        or len(alias_match.matched_tokens) > len(exact_match.matched_tokens)
+                    )
+                )
             )
         )
         category_match = audience_match or (
@@ -1436,9 +1724,26 @@ def understand_catalog_query(
     ):
         product_type = None
 
-    comparison = _intent_cue_outside_exact_category(normalized, category_match, _COMPARISON)
+    comparison = (
+        _intent_cue_outside_exact_category(normalized, category_match, _COMPARISON)
+        or bool(_EQUAL_PRICE.search(normalized) and _SUBJECTIVE_CHOICE.search(normalized))
+    )
     price_cue = _intent_cue_outside_exact_category(normalized, category_match, _PRICE)
-    reference_match = _CONVERSATION_REFERENCE.search(normalized)
+    reference_match = None
+    for candidate_reference in _CONVERSATION_REFERENCE.finditer(normalized):
+        if candidate_reference.group() == "no":
+            prefix = normalized[
+                max(0, candidate_reference.start() - 30):candidate_reference.start()
+            ]
+            suffix = normalized[candidate_reference.end():candidate_reference.end() + 15]
+            # Accent folding collides "nó" (it) with "no" (satiated). Use
+            # surrounding grammar; keep unaccented pronoun follow-ups working.
+            if re.search(r"\b(?:an|van|du|cho|that|rat|sieu)\s*$", prefix) or re.match(
+                r"\s+(?:bung|lau|cang|roi)\b", suffix
+            ):
+                continue
+        reference_match = candidate_reference
+        break
     context_query = previous_query
     context_product_type = None
     context_use_case = None
@@ -1587,11 +1892,17 @@ def understand_catalog_query(
             normalized,
         )
     )
+    # Accent-folding collapses "ở đây" ("here") and "ở dãy" ("in aisle") to
+    # "o day". Strip explicit "ở đây" before checking shelf-location patterns.
+    location_normalized = " ".join(
+        normalize_vietnamese(re.sub(r"\bở\s+đây\b", " ", raw, flags=re.IGNORECASE)).split()
+    )
+    has_location_cue = bool(_LOCATION.search(location_normalized))
     if _PURCHASE_ACTION.search(normalized):
         intent = "purchase_action"
     elif comparison:
         intent = "comparison"
-    elif _LOCATION.search(normalized):
+    elif has_location_cue:
         intent = "location"
     elif price_cue and (
         not strong_recommendation or _DIRECT_PRICE_QUESTION.search(normalized)
@@ -1692,7 +2003,7 @@ def understand_catalog_query(
         detected_intents.append("purchase_action")
     if comparison:
         detected_intents.append("comparison")
-    if _LOCATION.search(normalized):
+    if has_location_cue:
         detected_intents.append("location")
     if (
         price_cue

@@ -32,12 +32,6 @@ export default defineConfig({
         })
       },
     },
-    vue({
-      template: {
-        compilerOptions: {
-          isCustomElement: (tag) => tag === 'model-viewer',
-        },
-      },
-    }),
+    vue(),
   ],
 })

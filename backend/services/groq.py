@@ -1,20 +1,33 @@
 from __future__ import annotations
 
+import asyncio
 import inspect
 import io
+import json
 import logging
 import math
 import re
 import sys
 import wave
 from array import array
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Callable, Sequence
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from time import perf_counter
 from typing import Any
 
+import httpx
 from openai import AsyncOpenAI
 
 from backend.config import Settings, get_settings
+from backend.services.speech_activity import (
+    SpeechActivityInputError,
+    SpeechActivityUnavailable,
+    analyze_speech_activity,
+    analyze_speech_audio,
+)
+
+_DEFAULT_ANALYZE_SPEECH_ACTIVITY = analyze_speech_activity
 
 logger = logging.getLogger(__name__)
 RATE_LIMIT_HEADER_NAMES = (
@@ -26,9 +39,16 @@ RATE_LIMIT_HEADER_NAMES = (
     "x-ratelimit-reset-requests",
     "x-ratelimit-reset-tokens",
 )
+CHAT_ERROR_CODES = frozenset({
+    "tool_use_failed", "json_validate_failed", "rate_limit_exceeded", "invalid_api_key",
+})
 STT_HIGH_NO_SPEECH_PROBABILITY = 0.5
 STT_LOW_LOG_PROBABILITY = -0.75
 STT_HIGH_COMPRESSION_RATIO = 2.4
+# Deliberately permissive: VAD-positive time excludes pauses and some consonants.
+# Catch whole sentences generated over a few animal/noise frames, without using
+# the recognizer's own (potentially confident) no_speech score as proof of speech.
+STT_MAX_VI_TOKENS_PER_SPEECH_SECOND = 30.0
 STT_LOW_LEVEL_RMS_THRESHOLD = 0.03
 STT_LOW_LEVEL_PEAK_THRESHOLD = 0.15
 STT_MIN_VOICED_FRAME_RATIO = 0.15
@@ -39,6 +59,8 @@ STT_TRANSIENT_ENVELOPE_CV = 1.0
 STT_MAX_TRANSIENT_ACTIVE_FRAME_RATIO = 0.15
 MAX_GROQ_STT_PROMPT_BYTES = 880
 GROQ_STT_CATALOG_CONTEXT_TERMS = 8
+STT_OPTIONAL_VERIFIER_MAX_SECONDS = 4.0
+STT_VERIFIER_RETURN_MARGIN_SECONDS = 0.25
 
 
 def _rate_limit_headers(headers: Any) -> dict[str, str]:
@@ -49,6 +71,188 @@ def _rate_limit_headers(headers: Any) -> dict[str, str]:
         for name in RATE_LIMIT_HEADER_NAMES
         if (value := headers.get(name)) is not None
     }
+
+
+def _reset_duration_seconds(value: str) -> float | None:
+    """Groq reset headers are durations such as ``2m59.56s``, not timestamps."""
+    try:
+        seconds = float(value)
+    except ValueError:
+        parts = re.findall(r"(\d+(?:\.\d+)?)(ms|d|h|m|s)", value)
+        if not parts or "".join(number + unit for number, unit in parts) != value:
+            return None
+        seconds = sum(float(number) * {"ms": .001, "s": 1, "m": 60,
+                                      "h": 3600, "d": 86400}[unit]
+                      for number, unit in parts)
+    return seconds if math.isfinite(seconds) and seconds >= 0 else None
+
+
+def _rate_limit_retry_seconds(headers: dict[str, str]) -> float:
+    """Honor provider wait hints without cooling down non-exhausted buckets."""
+    waits: list[float] = []
+    retry_after = headers.get("retry-after", "")
+    if retry_after:
+        seconds = _reset_duration_seconds(retry_after)
+        if seconds is None:
+            try:
+                date = parsedate_to_datetime(retry_after)
+                seconds = (date - datetime.now(UTC)).total_seconds()
+            except (TypeError, ValueError, OverflowError):
+                seconds = None
+        if seconds is not None and math.isfinite(seconds):
+            waits.append(seconds)
+    for bucket in ("requests", "tokens"):
+        try:
+            remaining = float(headers.get(f"x-ratelimit-remaining-{bucket}", "nan"))
+        except ValueError:
+            continue
+        if remaining <= 0:
+            seconds = _reset_duration_seconds(headers.get(f"x-ratelimit-reset-{bucket}", ""))
+            if seconds is not None:
+                waits.append(seconds)
+    return max(1, min(86_400, max(waits) if waits else 5))
+
+
+_LONG_TERM_QUOTA_RE = re.compile(
+    r"(?:free allowance|allowance.*used up|used up|comes back on|quota exceeded|"
+    r"monthly.*limit|daily.*limit|insufficient_quota)",
+    re.IGNORECASE,
+)
+
+
+def _is_long_term_quota_exhausted(exc: Exception) -> bool:
+    """Detect multi-hour/multi-day allowance exhaustion in provider 429 error bodies."""
+    candidates: list[str] = [str(exc)]
+    body = getattr(exc, "body", None)
+    if isinstance(body, (dict, str)):
+        candidates.append(str(body))
+    response = getattr(exc, "response", None)
+    if response is not None:
+        resp_text = getattr(response, "text", None)
+        if isinstance(resp_text, str):
+            candidates.append(resp_text[:400])
+    return any(_LONG_TERM_QUOTA_RE.search(part) for part in candidates if part)
+
+
+def _cooldown_seconds_for_429(headers: dict[str, str], exc: Exception) -> float:
+    """Honor explicit rate-limit headers, and cool down exhausted free allowances for 1 hour."""
+    base = _rate_limit_retry_seconds(headers)
+    if _is_long_term_quota_exhausted(exc):
+        return max(base, 3600.0)
+    return base
+
+
+def _chat_error_metadata(exc: Exception) -> dict[str, int | str]:
+    """Project only bounded diagnostic fields from an untrusted provider error.
+
+    Error messages and failed generations may contain customer text or secrets;
+    never copy them (or an unknown code) into the fallback trace.
+    """
+    response = getattr(exc, "response", None)
+    status = getattr(exc, "status_code", None) or getattr(response, "status_code", None)
+    metadata: dict[str, int | str] = {}
+    if isinstance(status, int) and not isinstance(status, bool) and 100 <= status <= 599:
+        metadata["status_code"] = status
+    body = getattr(exc, "body", None)
+    if body is None and response is not None:
+        decode = getattr(response, "json", None)
+        if callable(decode):
+            try:
+                body = decode()
+            except Exception:
+                body = None
+    if isinstance(body, dict):
+        nested_error = body.get("error")
+        candidates = [body.get("code")]
+        if isinstance(nested_error, dict):
+            candidates.append(nested_error.get("code"))
+        for code in candidates:
+            if isinstance(code, str) and code in CHAT_ERROR_CODES:
+                metadata["error_code"] = code
+                break
+    return metadata
+
+
+def _recover_local_schema_defaults(
+    exc: Exception,
+    response_format: dict[str, Any] | None,
+    validator: Callable[[str], bool] | None,
+) -> str | None:
+    """Never treat a failed provider generation as valid without local consent."""
+    if not callable(validator) or not isinstance(response_format, dict):
+        return None
+    specification = response_format.get("json_schema")
+    if response_format.get("type") != "json_schema" or not isinstance(specification, dict):
+        return None
+    if specification.get("strict") is not True:
+        return None
+    metadata = _chat_error_metadata(exc)
+    if metadata.get("status_code") != 400 or metadata.get("error_code") != "json_validate_failed":
+        return None
+    body = getattr(exc, "body", None)
+    if body is None:
+        decode = getattr(getattr(exc, "response", None), "json", None)
+        if callable(decode):
+            try:
+                body = decode()
+            except Exception:
+                return None
+    if not isinstance(body, dict):
+        return None
+    error = body.get("error")
+    generation = body.get("failed_generation")
+    if generation is None and isinstance(error, dict):
+        generation = error.get("failed_generation")
+    if not isinstance(generation, str):
+        return None
+    try:
+        if not isinstance(json.loads(generation), dict):
+            return None
+        if validator(generation) is True:
+            return generation
+    except Exception:
+        # Validation failures preserve the original provider fallback path.
+        pass
+    return None
+
+
+def _is_audio_input_provider_error(exc: Exception) -> bool:
+    """Recognize provider 4xx media errors even when the SDK omits ``body.code``.
+
+    Groq's SDK has returned both ``{"code": "invalid_media_file"}`` and nested or
+    message-only error payloads over time. Treating those as provider outages makes
+    the API report 502 for a bad recording and can trigger pointless model/key
+    retries. Keep this predicate narrow so unrelated 400s remain provider errors.
+    """
+    status = getattr(exc, "status_code", None)
+    response = getattr(exc, "response", None)
+    status = status or getattr(response, "status_code", None)
+    if status not in {400, 422}:
+        return False
+    body = getattr(exc, "body", None)
+    if body is None and response is not None:
+        body = getattr(response, "json", None)
+        if callable(body):
+            try:
+                body = body()
+            except Exception:
+                body = None
+    if isinstance(body, dict):
+        candidates = [body.get("code"), body.get("message"), body.get("error")]
+    else:
+        candidates = [body, str(exc)]
+    text = " ".join(str(value) for value in candidates if value is not None).casefold()
+    return any(
+        token in text
+        for token in (
+            "invalid_media_file",
+            "invalid_audio_file",
+            "unsupported_audio_format",
+            "audio could not be decoded",
+            "could not decode audio",
+            "unsupported audio",
+        )
+    )
 
 
 RETAIL_STT_PROMPT = (
@@ -81,6 +285,10 @@ class GroqConfigurationError(RuntimeError):
     """Raised when the server has no Groq credential configured."""
 
 
+class GroqAudioInputError(ValueError):
+    """The provider rejected undecodable or unsupported customer audio."""
+
+
 class GroqProviderError(RuntimeError):
     """Raised when Groq cannot complete a request."""
 
@@ -100,6 +308,7 @@ class GroqChatResult(str):
     tool_calls: list[dict[str, Any]]
     fallback_trace: list[dict[str, Any]]
     usage: dict[str, int]
+    finish_reason: str | None
 
     def __new__(
         cls,
@@ -108,12 +317,14 @@ class GroqChatResult(str):
         tool_calls: list[dict[str, Any]] | None = None,
         fallback_trace: list[dict[str, Any]] | None = None,
         usage: dict[str, int] | None = None,
+        finish_reason: str | None = None,
     ) -> GroqChatResult:
         result = super().__new__(cls, text)
         result.model = model
         result.tool_calls = tool_calls or []
         result.fallback_trace = fallback_trace or []
         result.usage = usage or {}
+        result.finish_reason = finish_reason
         return result
 
 
@@ -132,12 +343,17 @@ class GroqTranscriptionResult(str):
         fallback_trace: list[dict[str, Any]] | None = None,
         speech_detected: bool = True,
         quality: dict[str, float] | None = None,
+        needs_confirmation: bool = False,
+        verification_text: str | None = None,
     ) -> GroqTranscriptionResult:
         result = super().__new__(cls, text)
         result.model = model
         result.fallback_trace = fallback_trace or []
         result.speech_detected = speech_detected
         result.quality = quality or {}
+        result.needs_confirmation = needs_confirmation
+        # Internal comparison only; API schemas/logs never serialize this text.
+        result.verification_text = verification_text
         return result
 
 
@@ -154,7 +370,7 @@ def _mean_centered_rms(frame: Sequence[int]) -> float:
     return math.sqrt(sum((sample - mean) ** 2 for sample in frame) / len(frame))
 
 
-def _wav_signal_quality(content: bytes) -> dict[str, float] | None:
+def _wav_signal_quality(content: bytes, analysis_gain: float = 1.0) -> dict[str, float] | None:
     """Measure PCM WAV signal level without decoding compressed audio formats."""
     try:
         with wave.open(io.BytesIO(content), "rb") as audio:
@@ -185,6 +401,7 @@ def _wav_signal_quality(content: bytes) -> dict[str, float] | None:
         "waveform_rms": rms,
         "waveform_peak": peak,
         "audio_duration_seconds": frame_count / sample_rate,
+        "waveform_analysis_gain": float(analysis_gain),
     }
     if channels == 1 and quality["audio_duration_seconds"] >= 1.0 and rms > 0:
         frame_size = max(1, sample_rate // 10)
@@ -221,12 +438,12 @@ def _wav_signal_quality(content: bytes) -> dict[str, float] | None:
             or envelope_cv <= STT_STEADY_NOISE_ENVELOPE_CV
             or transient_candidate
         ):
-            quality.update(_wav_voiced_signal_quality(samples, sample_rate, rms))
+            quality.update(_wav_voiced_signal_quality(samples, sample_rate, rms, analysis_gain))
     return quality
 
 
 def _wav_voiced_signal_quality(
-    samples: array, sample_rate: int, waveform_rms: float
+    samples: array, sample_rate: int, waveform_rms: float, analysis_gain: float = 1.0,
 ) -> dict[str, float]:
     """Estimate whether quiet PCM contains voiced, speech-like periodic frames.
 
@@ -241,7 +458,7 @@ def _wav_voiced_signal_quality(
     min_lag = max(20, round(analysis_rate / 400))
     max_lag = max(min_lag + 1, round(analysis_rate / 70))
     lag_step = max(2, round(analysis_rate / 4_000))
-    active_rms_floor = max(0.00035, waveform_rms * 0.08)
+    active_rms_floor = max(0.00035 / max(1.0, analysis_gain), waveform_rms * 0.08)
 
     active_frames = 0
     voiced_frames = 0
@@ -297,8 +514,10 @@ def _has_voiced_signal(quality: dict[str, float]) -> bool:
 
 def _is_near_silence(quality: dict[str, float]) -> bool:
     """Reject only PCM that is effectively digital silence, preserving quiet speech."""
+    gain = max(1.0, quality.get("waveform_analysis_gain", 1.0))
     if not (
-        quality.get("waveform_rms", 1.0) < 0.0015 and quality.get("waveform_peak", 1.0) < 0.012
+        quality.get("waveform_rms", 1.0) * gain < 0.0015
+        and quality.get("waveform_peak", 1.0) * gain < 0.012
     ):
         return False
     return not _has_voiced_signal(quality)
@@ -361,35 +580,44 @@ def _transcription_quality(response: Any) -> tuple[bool, dict[str, float], str |
     """Reject likely non-speech/hallucinated completions using Whisper segment metadata."""
     segments = _field(response, "segments") or []
     measured: list[tuple[float, float | None, float | None, float | None]] = []
+    missing_metadata = False
+    invalid_metadata = False
     for segment in segments:
         start = _field(segment, "start")
         end = _field(segment, "end")
         no_speech = _field(segment, "no_speech_prob")
         avg_logprob = _field(segment, "avg_logprob")
         compression_ratio = _field(segment, "compression_ratio")
-        try:
-            no_speech_value = float(no_speech) if no_speech is not None else None
-            logprob_value = float(avg_logprob) if avg_logprob is not None else None
-            compression_value = float(compression_ratio) if compression_ratio is not None else None
-            start_value = float(start) if start is not None else 0.0
-            end_value = float(end) if end is not None else start_value + 1.0
-        except (TypeError, ValueError):
+        if any(value is None for value in (
+            start, end, no_speech, avg_logprob, compression_ratio,
+        )):
+            missing_metadata = True
             continue
-        if no_speech_value is not None and not math.isfinite(no_speech_value):
-            no_speech_value = None
-        if logprob_value is not None and not math.isfinite(logprob_value):
-            logprob_value = None
-        if compression_value is not None and not math.isfinite(compression_value):
-            compression_value = None
-        duration = max(end_value - start_value, 0.01)
+        try:
+            start_value = float(start)
+            end_value = float(end)
+            no_speech_value = float(no_speech)
+            logprob_value = float(avg_logprob)
+            compression_value = float(compression_ratio)
+        except (TypeError, ValueError):
+            invalid_metadata = True
+            continue
+        if (
+            not all(math.isfinite(value) for value in (
+                start_value, end_value, no_speech_value, logprob_value, compression_value,
+            ))
+            or end_value <= start_value
+            or not 0.0 <= no_speech_value <= 1.0
+            or compression_value < 0.0
+        ):
+            invalid_metadata = True
+            continue
+        duration = end_value - start_value
         measured.append((duration, no_speech_value, logprob_value, compression_value))
 
-    has_no_speech_metadata = any(row[1] is not None for row in measured)
-    has_logprob_metadata = any(row[2] is not None for row in measured)
-    has_compression_metadata = any(row[3] is not None for row in measured)
-    if not measured or not (
-        has_no_speech_metadata and has_logprob_metadata and has_compression_metadata
-    ):
+    if invalid_metadata:
+        return False, {}, "invalid_quality_metadata"
+    if missing_metadata or not measured:
         # Groq verbose_json documents these segment fields. Missing metadata means
         # we cannot tell a real utterance from a fluent completion over silence.
         return False, {}, "missing_quality_metadata"
@@ -441,6 +669,10 @@ def _transcription_quality(response: Any) -> tuple[bool, dict[str, float], str |
 def _has_repeated_phrase(text: str) -> bool:
     """Catch repeated Whisper loops without blocking ordinary word-level repetition."""
     tokens = re.findall(r"[\w]+", text.casefold(), flags=re.UNICODE)
+    # Coughs can decode to a single word repeated seven times and still have
+    # good compression/log-probability scores. The multiword check misses this.
+    if len(tokens) >= 6 and len(set(tokens)) == 1:
+        return True
     if len(tokens) < 8:
         return False
 
@@ -459,6 +691,26 @@ def _has_repeated_phrase(text: str) -> bool:
             if non_overlapping >= 2 and (non_overlapping * ngram_size) / len(tokens) >= 0.35:
                 return True
     return False
+
+
+def _has_insufficient_acoustic_support(
+    text: str, quality: dict[str, float], language: str,
+) -> bool:
+    """Reject implausible Vietnamese text volume relative to independent speech.
+
+    This is a loose hallucination guard, not an accuracy or speaker-identity
+    score. Use total positive frames across all episodes so pauses/long replies
+    do not inflate the rate. Short answers are intentionally exempt.
+    """
+    if language != "vi":
+        return False
+    frames = quality.get("server_vad_frame_count")
+    ratio = quality.get("server_vad_positive_frame_ratio")
+    if frames is None or ratio is None:
+        return False
+    tokens = re.findall(r"[^\W_]+", text, flags=re.UNICODE)
+    speech_seconds = frames * ratio * 512 / 16_000
+    return len(tokens) >= 8 and len(tokens) > speech_seconds * STT_MAX_VI_TOKENS_PER_SPEECH_SECOND
 
 
 def _transcription_prompt(language: str, vocabulary: Sequence[str] | None = None) -> str:
@@ -493,10 +745,72 @@ def _transcription_prompt(language: str, vocabulary: Sequence[str] | None = None
 
 
 class GroqService:
+    supports_bound_consultation = True
+    supports_local_schema_recovery = True
+
     def __init__(self, settings: Settings | None = None, client: Any | None = None) -> None:
         self.settings = settings or get_settings()
         self.client = client
         self._clients_by_credential: dict[str, Any] = {}
+        self._chat_cooldowns: dict[tuple[str, str], float] = {}
+        self._chat_token_budgets: dict[tuple[str, str], tuple[int, float]] = {}
+        self._chat_rr_cursor: dict[str, int] = {}
+        self._stt_cooldowns: dict[tuple[str, str], float] = {}
+        self._stt_rr_cursor: dict[str, int] = {}
+
+    def _record_token_budget(
+        self,
+        model: str,
+        slot: str,
+        headers: dict[str, str],
+        *,
+        exhausted: bool = False,
+    ) -> None:
+        now = perf_counter()
+        reset_seconds = _reset_duration_seconds(headers.get("x-ratelimit-reset-tokens", ""))
+        if exhausted:
+            wait = _rate_limit_retry_seconds(headers)
+            self._chat_token_budgets[(model, slot)] = (0, now + wait)
+            return
+        raw_remaining = headers.get("x-ratelimit-remaining-tokens")
+        if raw_remaining is None:
+            return
+        try:
+            remaining = int(float(raw_remaining))
+        except ValueError:
+            return
+        if remaining < 0:
+            return
+        ttl = reset_seconds if reset_seconds is not None and reset_seconds > 0 else 60.0
+        self._chat_token_budgets[(model, slot)] = (remaining, now + ttl)
+
+    def _ordered_credentials(
+        self,
+        model: str,
+        credentials: tuple[tuple[str, str], ...],
+        estimated_tokens: int,
+    ) -> list[tuple[int, str, str]]:
+        count = len(credentials)
+        if count <= 1:
+            return [(0, credentials[0][0], credentials[0][1])]
+        start = self._chat_rr_cursor.get(model, 0) % count
+        rotated = [
+            (idx, credentials[idx][0], credentials[idx][1])
+            for idx in (*range(start, count), *range(0, start))
+        ]
+        now = perf_counter()
+
+        def sort_key(entry: tuple[int, str, str]) -> tuple[int, int]:
+            _, slot, _ = entry
+            budget = self._chat_token_budgets.get((model, slot))
+            if budget is None or now >= budget[1]:
+                return (0, 0)
+            remaining = budget[0]
+            if remaining >= estimated_tokens:
+                return (0, 0)
+            return (1, -remaining)
+
+        return sorted(rotated, key=sort_key)
 
     def _credentials_or_raise(self) -> tuple[tuple[str, str], ...]:
         credentials = self.settings.groq_api_credentials
@@ -504,18 +818,136 @@ class GroqService:
             raise GroqConfigurationError("Groq API key is not configured")
         return credentials
 
+    def _chat_credentials_or_raise(self) -> tuple[tuple[str, str], ...]:
+        credentials = self.settings.chat_api_credentials
+        if not credentials:
+            raise GroqConfigurationError("Chat LLM / Groq API key is not configured")
+        return credentials
+
+    def _build_openai_client(self, *, api_key: str, base_url: str) -> AsyncOpenAI:
+        http_client = httpx.AsyncClient(
+            timeout=self.settings.groq_timeout_seconds,
+            limits=httpx.Limits(
+                max_keepalive_connections=20,
+                max_connections=50,
+                keepalive_expiry=60.0,
+            ),
+        )
+        return AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=self.settings.groq_timeout_seconds,
+            max_retries=0,
+            http_client=http_client,
+        )
+
     def _client_for_credential(self, slot: str, api_key: str) -> Any:
         # Injected clients keep unit tests and app integrations deterministic.
         if self.client is not None:
             return self.client
         if slot not in self._clients_by_credential:
-            self._clients_by_credential[slot] = AsyncOpenAI(
+            self._clients_by_credential[slot] = self._build_openai_client(
                 api_key=api_key,
                 base_url=self.settings.groq_base_url,
-                timeout=self.settings.groq_timeout_seconds,
-                max_retries=0,
             )
         return self._clients_by_credential[slot]
+
+    def _chat_client_for_credential(self, slot: str, api_key: str) -> Any:
+        if self.client is not None:
+            return self.client
+        base_url = self.settings.effective_chat_base_url
+        if base_url == self.settings.groq_base_url:
+            return self._client_for_credential(slot, api_key)
+        cache_key = f"{base_url}::{slot}"
+        if cache_key not in self._clients_by_credential:
+            self._clients_by_credential[cache_key] = self._build_openai_client(
+                api_key=api_key,
+                base_url=base_url,
+            )
+        return self._clients_by_credential[cache_key]
+
+    def _evict_client(self, slot: str, *, use_groq_pool: bool) -> None:
+        if self.client is not None:
+            return
+        base_url = (
+            self.settings.groq_base_url
+            if use_groq_pool
+            else self.settings.effective_chat_base_url
+        )
+        key = slot if base_url == self.settings.groq_base_url else f"{base_url}::{slot}"
+        self._clients_by_credential.pop(key, None)
+
+    def _is_on_cooldown(self, selected_model: str, credential_slot: str, now_ts: float) -> bool:
+        if (
+            self._chat_cooldowns.get((selected_model, credential_slot), 0) > now_ts
+            or self._chat_cooldowns.get(("*", credential_slot), 0) > now_ts
+        ):
+            return True
+        if ":free" in selected_model and (
+            self._chat_cooldowns.get((":free", credential_slot), 0) > now_ts
+        ):
+            return True
+        return False
+
+    def _record_429_cooldown(
+        self,
+        selected_model: str,
+        credential_slot: str,
+        response_headers: dict[str, str],
+        exc: Exception,
+    ) -> None:
+        wait = _cooldown_seconds_for_429(response_headers, exc)
+        until = perf_counter() + wait
+        self._chat_cooldowns[(selected_model, credential_slot)] = until
+        if ":free" in selected_model and _is_long_term_quota_exhausted(exc):
+            self._chat_cooldowns[(":free", credential_slot)] = until
+
+    def _can_use_groq_fast_lane(self) -> bool:
+        return (
+            self.settings.stream_llm_use_groq_lpu
+            and self.client is None
+            and bool(self.settings.groq_api_credentials)
+            and self.settings.effective_chat_base_url != self.settings.groq_base_url
+        )
+
+    async def preconnect_chat(self) -> None:
+        """Warm HTTPS keep-alive pools for the chat LLM (and Groq LPU fast lane when enabled)."""
+        async def _warm(client: Any, base_url: str, api_key: str) -> None:
+            try:
+                http_client = getattr(client, "_client", None)
+                if http_client is not None:
+                    await http_client.get(
+                        f"{base_url.rstrip('/')}/models",
+                        headers={"Authorization": f"Bearer {api_key}"},
+                        timeout=3.0,
+                    )
+            except Exception:
+                pass
+
+        tasks: list[Any] = []
+        try:
+            credentials = self._chat_credentials_or_raise()
+            slot, api_key = credentials[0]
+            tasks.append(
+                _warm(
+                    self._chat_client_for_credential(slot, api_key),
+                    self.settings.effective_chat_base_url,
+                    api_key,
+                )
+            )
+        except Exception:
+            pass
+        if self._can_use_groq_fast_lane():
+            g_slot, g_key = self.settings.groq_api_credentials[0]
+            tasks.append(
+                _warm(
+                    self._client_for_credential(g_slot, g_key),
+                    self.settings.groq_base_url,
+                    g_key,
+                )
+            )
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     @staticmethod
     def _can_rotate_credential(exc: Exception) -> bool:
@@ -536,142 +968,553 @@ class GroqService:
         tools: Sequence[dict[str, Any]] | None = None,
         tool_choice: str | dict[str, Any] | None = None,
         max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
+        local_json_validator: Callable[[str], bool] | None = None,
+        reasoning_effort: str | None = None,
     ) -> GroqChatResult:
-        credentials = self._credentials_or_raise()
-        models = list(
+        if response_format is not None and (tools or tool_choice):
+            raise ValueError("Structured output cannot be combined with tool use")
+        primary_credentials = self._chat_credentials_or_raise()
+        primary_models = list(
             dict.fromkeys(
                 selected_model
                 for selected_model in (
-                    model or self.settings.groq_model,
-                    self.settings.groq_fallback_model,
-                    self.settings.groq_fallback_model_2,
+                    model or self.settings.effective_chat_model,
+                    self.settings.effective_chat_fallback_model,
+                    self.settings.effective_chat_fallback_model_2,
                 )
                 if selected_model
             )
         )
+        # Use ONLY the configured dedicated chat LLM (DeepSeek) when present —
+        # never silently fall back to Groq chat models.
+        provider_stages: list[tuple[tuple[tuple[str, str], ...], list[str], bool]] = [
+            (primary_credentials, primary_models, False),
+        ]
+
+        # Conservative estimate of request token footprint for selecting a key
+        # that still has enough remaining TPM budget before attempting a call.
+        msg_chars = sum(len(str(m.get("content", ""))) for m in messages)
+        estimated_tokens = max(256, msg_chars // 3 + min(max_tokens or 512, 1200))
 
         last_error: Exception | None = None
         fallback_trace: list[dict[str, Any]] = []
-        for selected_model in models:
-            for credential_slot, api_key in credentials:
-                client = self._client_for_credential(credential_slot, api_key)
-                try:
-                    model_options: dict[str, Any] = {}
-                    if selected_model.startswith("qwen/"):
-                        model_options["reasoning_effort"] = "none"
-                    elif selected_model.startswith("openai/gpt-oss-"):
-                        model_options["reasoning_effort"] = "low"
-                    if tools:
-                        model_options["tools"] = list(tools)
-                        model_options["tool_choice"] = tool_choice or "auto"
-
-                    forced_tool_name = (
-                        str((tool_choice.get("function") or {}).get("name") or "")
-                        if isinstance(tool_choice, dict)
-                        else ""
+        for credentials, models, use_groq_pool in provider_stages:
+            stage_exhausted = False
+            for selected_model in models:
+                if stage_exhausted:
+                    break
+                ordered = self._ordered_credentials(selected_model, credentials, estimated_tokens)
+                for slot_index, credential_slot, api_key in ordered:
+                    now_ts = perf_counter()
+                    if self._is_on_cooldown(selected_model, credential_slot, now_ts):
+                        fallback_trace.append({"model": selected_model, "status": "cooldown"})
+                        continue
+                    client = (
+                        self._client_for_credential(credential_slot, api_key)
+                        if use_groq_pool
+                        else self._chat_client_for_credential(credential_slot, api_key)
                     )
-                    default_max_tokens = (
-                        1024
-                        if forced_tool_name == "plan_shopping_mission"
-                        else 512
-                        if isinstance(tool_choice, dict)
-                        else 80
-                    )
-
-                    request_options = {
-                        "model": selected_model,
-                        "messages": list(messages),
-                        "temperature": 0.2,
-                        "max_tokens": max_tokens
-                        if max_tokens is not None
-                        else default_max_tokens,
-                        **model_options,
-                    }
-                    completion_endpoint = client.chat.completions
-                    raw_endpoint = getattr(completion_endpoint, "with_raw_response", None)
-                    response_headers: dict[str, str] = {}
-                    if raw_endpoint is None:
-                        response = await completion_endpoint.create(**request_options)
-                    else:
-                        raw_response = await raw_endpoint.create(**request_options)
-                        response_headers = _rate_limit_headers(raw_response.headers)
-                        parsed_response = raw_response.parse()
-                        response = (
-                            await parsed_response
-                            if inspect.isawaitable(parsed_response)
-                            else parsed_response
+                    try:
+                        model_options: dict[str, Any] = {}
+                        configured_effort = (
+                            reasoning_effort
+                            if reasoning_effort is not None
+                            else self.settings.groq_structured_reasoning_effort
                         )
-                    response_message = response.choices[0].message
-                    content = response_message.content or ""
-                    tool_calls = [
-                        {
-                            "id": tool_call.id,
-                            "type": "function",
-                            "function": {
-                                "name": tool_call.function.name,
-                                "arguments": tool_call.function.arguments,
-                            },
+                        if selected_model.startswith("qwen/"):
+                            model_options["reasoning_effort"] = (
+                                configured_effort
+                                if response_format is not None else "none"
+                            )
+                        elif selected_model.startswith("openai/gpt-oss-"):
+                            model_options["reasoning_effort"] = (
+                                configured_effort
+                                if response_format is not None and configured_effort != "none"
+                                else "low"
+                            )
+                        elif "deepseek" in selected_model.casefold():
+                            # Non-fast DeepSeek endpoints can exceed 16s with reasoning enabled;
+                            # keep structured reasoning on fast endpoints and "none" on slow
+                            # fallbacks.
+                            is_fast_deepseek = "fast" in selected_model.casefold()
+                            model_options["reasoning_effort"] = (
+                                configured_effort
+                                if response_format is not None and is_fast_deepseek
+                                else "none"
+                            )
+                        if tools:
+                            model_options["tools"] = list(tools)
+                            model_options["tool_choice"] = tool_choice or "auto"
+                        if response_format is not None:
+                            model_options["response_format"] = response_format
+
+                        forced_tool_name = (
+                            str((tool_choice.get("function") or {}).get("name") or "")
+                            if isinstance(tool_choice, dict)
+                            else ""
+                        )
+                        default_max_tokens = (
+                            1024
+                            if forced_tool_name == "plan_shopping_mission"
+                            else 512
+                            if isinstance(tool_choice, dict)
+                            else 80
+                        )
+
+                        request_options = {
+                            "model": selected_model,
+                            "messages": list(messages),
+                            "temperature": 0.2,
+                            "max_tokens": max_tokens
+                            if max_tokens is not None
+                            else default_max_tokens,
+                            **model_options,
                         }
-                        for tool_call in (getattr(response_message, "tool_calls", None) or [])
-                    ]
-                    if not content.strip() and not tool_calls:
-                        raise ValueError("Groq returned an empty response")
-                    successful_attempt: dict[str, Any] = {
-                        "model": selected_model,
-                        "status": "success",
-                    }
-                    if response_headers:
-                        successful_attempt["rate_limit_headers"] = response_headers
-                    if len(credentials) > 1:
-                        successful_attempt["credential_slot"] = credential_slot
-                    fallback_trace.append(successful_attempt)
-                    logger.info(
-                        "Groq chat completed model=%s attempts=%d",
-                        selected_model,
-                        len(fallback_trace),
-                    )
-                    usage = getattr(response, "usage", None)
-                    usage_summary = {
-                        field: int(value)
-                        for field in ("prompt_tokens", "completion_tokens", "total_tokens")
-                        if (value := getattr(usage, field, None)) is not None
-                    }
-                    return GroqChatResult(
-                        content.strip(), selected_model, tool_calls, fallback_trace, usage_summary
-                    )
-                except Exception as exc:
-                    last_error = exc
-                    failed_attempt: dict[str, Any] = {
-                        "model": selected_model,
-                        "status": "error",
-                        "error_type": type(exc).__name__,
-                    }
-                    error_response = getattr(exc, "response", None)
-                    response_headers = _rate_limit_headers(getattr(error_response, "headers", None))
-                    if response_headers:
-                        failed_attempt["rate_limit_headers"] = response_headers
-                    if len(credentials) > 1:
-                        failed_attempt["credential_slot"] = credential_slot
-                    fallback_trace.append(failed_attempt)
-                    logger.warning(
-                        "Groq chat model attempt failed model=%s credential_slot=%s error_type=%s",
-                        selected_model,
-                        credential_slot if len(credentials) > 1 else "primary",
-                        type(exc).__name__,
-                    )
-                    # Only retry a different key for credential/quota failures.
-                    # Other errors move directly to the next model.
-                    if not self._can_rotate_credential(exc):
-                        break
+                        completion_endpoint = client.chat.completions
+                        raw_endpoint = getattr(completion_endpoint, "with_raw_response", None)
+                        response_headers: dict[str, str] = {}
+                        base_attempt_timeout = self.settings.groq_chat_attempt_timeout_seconds
+                        if (
+                            not use_groq_pool
+                            and self.settings.effective_chat_base_url != self.settings.groq_base_url
+                        ):
+                            base_attempt_timeout = max(base_attempt_timeout, 16.0)
+                        attempt_timeout = min(
+                            self.settings.groq_timeout_seconds,
+                            base_attempt_timeout,
+                        )
+                        if raw_endpoint is None:
+                            response = await asyncio.wait_for(
+                                completion_endpoint.create(**request_options),
+                                timeout=attempt_timeout,
+                            )
+                        else:
+                            raw_response = await asyncio.wait_for(
+                                raw_endpoint.create(**request_options), timeout=attempt_timeout,
+                            )
+                            response_headers = _rate_limit_headers(raw_response.headers)
+                            parsed_response = raw_response.parse()
+                            response = (
+                                await parsed_response
+                                if inspect.isawaitable(parsed_response)
+                                else parsed_response
+                            )
+                        finish_reason = getattr(response.choices[0], "finish_reason", None)
+                        if finish_reason in {"length", "content_filter"}:
+                            raise ValueError("Groq returned an incomplete response")
+                        response_message = response.choices[0].message
+                        content = response_message.content or ""
+                        if response_format is not None and content.strip().startswith("```"):
+                            stripped = re.sub(
+                                r"^```(?:json)?\s*|\s*```$", "", content.strip(), flags=re.I
+                            )
+                            if stripped:
+                                content = stripped
+                        tool_calls = [
+                            {
+                                "id": tool_call.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tool_call.function.name,
+                                    "arguments": tool_call.function.arguments,
+                                },
+                            }
+                            for tool_call in (getattr(response_message, "tool_calls", None) or [])
+                        ]
+                        if not content.strip() and not tool_calls:
+                            raise ValueError("Groq returned an empty response")
+                        successful_attempt: dict[str, Any] = {
+                            "model": selected_model,
+                            "status": "success",
+                        }
+                        if response_headers:
+                            successful_attempt["rate_limit_headers"] = response_headers
+                            self._record_token_budget(
+                                selected_model, credential_slot, response_headers
+                            )
+                        if len(credentials) > 1:
+                            successful_attempt["credential_slot"] = credential_slot
+                            self._chat_rr_cursor[selected_model] = (
+                                (slot_index + 1) % len(credentials)
+                            )
+                        fallback_trace.append(successful_attempt)
+                        logger.info(
+                            "Chat LLM completed model=%s attempts=%d",
+                            selected_model,
+                            len(fallback_trace),
+                        )
+                        usage = getattr(response, "usage", None)
+                        usage_summary = {
+                            field: int(value)
+                            for field in ("prompt_tokens", "completion_tokens", "total_tokens")
+                            if (value := getattr(usage, field, None)) is not None
+                        }
+                        return GroqChatResult(
+                            content.strip(), selected_model, tool_calls, fallback_trace,
+                            usage_summary, finish_reason,
+                        )
+                    except Exception as exc:
+                        last_error = exc
+                        failed_attempt: dict[str, Any] = {
+                            "model": selected_model,
+                            "status": "error",
+                            "error_type": type(exc).__name__,
+                            **_chat_error_metadata(exc),
+                        }
+                        error_response = getattr(exc, "response", None)
+                        response_headers = _rate_limit_headers(
+                            getattr(error_response, "headers", None)
+                        )
+                        status_code = getattr(exc, "status_code", None) or getattr(
+                            error_response, "status_code", None
+                        )
+                        if status_code == 402:
+                            # Short cooldown so balance/pass updates take effect promptly
+                            # without hammering all fallback models in a single turn.
+                            self._chat_cooldowns[("*", credential_slot)] = perf_counter() + 15.0
+                            if len(credentials) == 1:
+                                stage_exhausted = True
+                        elif status_code == 429:
+                            self._record_429_cooldown(
+                                selected_model, credential_slot, response_headers, exc,
+                            )
+                            self._record_token_budget(
+                                selected_model, credential_slot, response_headers, exhausted=True,
+                            )
+                            if len(credentials) > 1:
+                                self._chat_rr_cursor[selected_model] = (
+                                    (slot_index + 1) % len(credentials)
+                                )
+                        elif type(exc).__name__ == "APIConnectionError":
+                            self._evict_client(credential_slot, use_groq_pool=use_groq_pool)
+                        if response_headers:
+                            failed_attempt["rate_limit_headers"] = response_headers
+                        if len(credentials) > 1:
+                            failed_attempt["credential_slot"] = credential_slot
+                        # Hosted strict decoding can reject an omitted wire-required
+                        # field whose local schema explicitly defines a safe default.
+                        # Only a caller-owned strict validator can authorize recovery.
+                        recovered = _recover_local_schema_defaults(
+                            exc, response_format, local_json_validator,
+                        )
+                        if recovered is not None:
+                            failed_attempt.update(
+                                status="success", recovery="local-default-validation"
+                            )
+                            if len(credentials) > 1:
+                                self._chat_rr_cursor[selected_model] = (
+                                    (slot_index + 1) % len(credentials)
+                                )
+                            fallback_trace.append(failed_attempt)
+                            logger.info(
+                                "Chat LLM structured output recovered model=%s", selected_model
+                            )
+                            return GroqChatResult(
+                                recovered, selected_model, fallback_trace=fallback_trace,
+                            )
+                        fallback_trace.append(failed_attempt)
+                        logger.warning(
+                            "Chat LLM attempt failed model=%s credential_slot=%s "
+                            "error_type=%s",
+                            selected_model,
+                            credential_slot if len(credentials) > 1 else "primary",
+                            type(exc).__name__,
+                        )
+                        # Only retry a different key for credential/quota failures.
+                        # Other errors move directly to the next model.
+                        if stage_exhausted or not self._can_rotate_credential(exc):
+                            break
 
         logger.error(
-            "Groq chat exhausted configured models attempts=%d",
+            "Chat LLM exhausted configured models attempts=%d",
             len(fallback_trace),
         )
         raise GroqProviderError(
-            "Groq chat request failed for configured models",
+            "Chat LLM request failed for configured models",
             fallback_trace=fallback_trace,
         ) from last_error
+
+    async def fast_chat(
+        self,
+        messages: Sequence[dict[str, Any]],
+        *,
+        max_tokens: int = 140,
+        temperature: float = 0.1,
+    ) -> GroqChatResult:
+        """Ultra-low-latency plain-text/micro-JSON helper for small non-schema prompts.
+
+        When ``stream_llm_use_groq_lpu`` is enabled, runs first on Groq LPU (~300ms,
+        free tier) and seamlessly falls back to ``chat()`` on any error/rate-limit.
+        """
+        if self._can_use_groq_fast_lane():
+            groq_credentials = self.settings.groq_api_credentials
+            groq_models = list(
+                dict.fromkeys(
+                    m
+                    for m in (
+                        self.settings.groq_model,
+                        self.settings.groq_fallback_model_2,
+                        self.settings.groq_fallback_model,
+                    )
+                    if m
+                )
+            )
+            msg_chars = sum(len(str(m.get("content", ""))) for m in messages)
+            estimated_tokens = max(128, msg_chars // 3 + min(max_tokens, 400))
+            for selected_model in groq_models:
+                ordered = self._ordered_credentials(
+                    selected_model, groq_credentials, estimated_tokens
+                )
+                for slot_index, credential_slot, api_key in ordered:
+                    if self._is_on_cooldown(selected_model, credential_slot, perf_counter()):
+                        continue
+                    client = self._client_for_credential(credential_slot, api_key)
+                    try:
+                        request_options: dict[str, Any] = {
+                            "model": selected_model,
+                            "messages": list(messages),
+                            "temperature": temperature,
+                            "max_tokens": max_tokens,
+                        }
+                        if selected_model.startswith("qwen/"):
+                            request_options["reasoning_effort"] = "none"
+                        elif selected_model.startswith("openai/gpt-oss-"):
+                            request_options["reasoning_effort"] = "low"
+                        response = await asyncio.wait_for(
+                            client.chat.completions.create(**request_options),
+                            timeout=min(self.settings.groq_timeout_seconds, 5.0),
+                        )
+                        content = (response.choices[0].message.content or "").strip()
+                        if not content:
+                            raise ValueError("Groq fast_chat returned empty response")
+                        if len(groq_credentials) > 1:
+                            self._chat_rr_cursor[selected_model] = (
+                                (slot_index + 1) % len(groq_credentials)
+                            )
+                        return GroqChatResult(content, selected_model)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as exc:
+                        error_response = getattr(exc, "response", None)
+                        response_headers = _rate_limit_headers(
+                            getattr(error_response, "headers", None)
+                        )
+                        status_code = getattr(exc, "status_code", None) or getattr(
+                            error_response, "status_code", None
+                        )
+                        if status_code == 429:
+                            self._record_429_cooldown(
+                                selected_model, credential_slot, response_headers, exc,
+                            )
+                            self._record_token_budget(
+                                selected_model, credential_slot, response_headers, exhausted=True,
+                            )
+                            if len(groq_credentials) > 1:
+                                self._chat_rr_cursor[selected_model] = (
+                                    (slot_index + 1) % len(groq_credentials)
+                                )
+                        elif type(exc).__name__ == "APIConnectionError":
+                            self._evict_client(credential_slot, use_groq_pool=True)
+                        if not self._can_rotate_credential(exc):
+                            break
+        return await self.chat(messages, max_tokens=max_tokens, reasoning_effort="none")
+
+    async def stream_chat(
+        self,
+        messages: Sequence[dict[str, Any]],
+        *,
+        model: str | None = None,
+        max_tokens: int = 260,
+        temperature: float = 0.2,
+    ) -> AsyncIterator[tuple[str, str]]:
+        """Stream visible text deltas with optional Groq LPU fast-lane + chat LLM failover.
+
+        When ``stream_llm_use_groq_lpu`` is enabled and no explicit model override is
+        requested, tries Groq LPU first (~300-500ms TTFT, free tier) and seamlessly
+        rotates to the configured dedicated chat LLM if an error occurs before any
+        visible token has been yielded to the caller.
+        """
+        primary_credentials = self._chat_credentials_or_raise()
+        primary_models = list(
+            dict.fromkeys(
+                selected_model
+                for selected_model in (
+                    model or self.settings.effective_chat_model,
+                    self.settings.effective_chat_fallback_model,
+                    self.settings.effective_chat_fallback_model_2,
+                )
+                if selected_model
+            )
+        )
+        provider_stages: list[tuple[tuple[tuple[str, str], ...], list[str], bool]] = []
+        if model is None and self._can_use_groq_fast_lane():
+            groq_stream_models = list(
+                dict.fromkeys(
+                    m
+                    for m in (
+                        self.settings.groq_model,
+                        self.settings.groq_fallback_model_2,
+                        self.settings.groq_fallback_model,
+                    )
+                    if m
+                )
+            )
+            if groq_stream_models:
+                provider_stages.append(
+                    (self.settings.groq_api_credentials, groq_stream_models, True)
+                )
+        provider_stages.append((primary_credentials, primary_models, False))
+
+        msg_chars = sum(len(str(m.get("content", ""))) for m in messages)
+        estimated_tokens = max(256, msg_chars // 3 + min(max_tokens, 800))
+
+        last_error: Exception | None = None
+        fallback_trace: list[dict[str, Any]] = []
+        for stage_credentials, stage_models, use_groq_pool in provider_stages:
+            stage_exhausted = False
+            for selected_model in stage_models:
+                if stage_exhausted:
+                    break
+                ordered = self._ordered_credentials(
+                    selected_model, stage_credentials, estimated_tokens
+                )
+                for slot_index, credential_slot, api_key in ordered:
+                    now_ts = perf_counter()
+                    if self._is_on_cooldown(selected_model, credential_slot, now_ts):
+                        fallback_trace.append({"model": selected_model, "status": "cooldown"})
+                        continue
+                    client = (
+                        self._client_for_credential(credential_slot, api_key)
+                        if use_groq_pool
+                        else self._chat_client_for_credential(credential_slot, api_key)
+                    )
+                    yielded_any = False
+                    stream: Any | None = None
+                    try:
+                        request_options: dict[str, Any] = {
+                            "model": selected_model,
+                            "messages": list(messages),
+                            "temperature": temperature,
+                            "max_tokens": max_tokens,
+                            "stream": True,
+                        }
+                        if "deepseek" in selected_model.casefold() or selected_model.startswith(
+                            "qwen/"
+                        ):
+                            request_options["reasoning_effort"] = "none"
+                        elif selected_model.startswith("openai/gpt-oss-"):
+                            request_options["reasoning_effort"] = "low"
+                        base_attempt_timeout = (
+                            6.0
+                            if use_groq_pool
+                            else max(self.settings.groq_chat_attempt_timeout_seconds, 14.0)
+                        )
+                        attempt_timeout = min(
+                            self.settings.groq_timeout_seconds, base_attempt_timeout
+                        )
+                        stream = await asyncio.wait_for(
+                            client.chat.completions.create(**request_options),
+                            timeout=attempt_timeout,
+                        )
+                        async for chunk in stream:
+                            choices = getattr(chunk, "choices", None) or ()
+                            if not choices:
+                                continue
+                            delta = getattr(choices[0], "delta", None)
+                            content = getattr(delta, "content", None) if delta is not None else None
+                            if content:
+                                yielded_any = True
+                                yield content, selected_model
+                        if not yielded_any:
+                            raise ValueError("Chat LLM stream returned an empty response")
+                        if len(stage_credentials) > 1:
+                            self._chat_rr_cursor[selected_model] = (
+                                (slot_index + 1) % len(stage_credentials)
+                            )
+                        logger.info("Chat LLM stream completed model=%s", selected_model)
+                        return
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as exc:
+                        last_error = exc
+                        error_response = getattr(exc, "response", None)
+                        response_headers = _rate_limit_headers(
+                            getattr(error_response, "headers", None)
+                        )
+                        status_code = getattr(exc, "status_code", None) or getattr(
+                            error_response, "status_code", None
+                        )
+                        if status_code == 402:
+                            self._chat_cooldowns[("*", credential_slot)] = perf_counter() + 15.0
+                            if len(stage_credentials) == 1:
+                                stage_exhausted = True
+                        elif status_code == 429:
+                            self._record_429_cooldown(
+                                selected_model, credential_slot, response_headers, exc,
+                            )
+                            self._record_token_budget(
+                                selected_model, credential_slot, response_headers, exhausted=True,
+                            )
+                            if len(stage_credentials) > 1:
+                                self._chat_rr_cursor[selected_model] = (
+                                    (slot_index + 1) % len(stage_credentials)
+                                )
+                        elif type(exc).__name__ == "APIConnectionError":
+                            self._evict_client(credential_slot, use_groq_pool=use_groq_pool)
+                        fallback_trace.append(
+                            {
+                                "model": selected_model,
+                                "status": "error",
+                                "error_type": type(exc).__name__,
+                                **_chat_error_metadata(exc),
+                            }
+                        )
+                        if yielded_any:
+                            raise GroqProviderError(
+                                "Chat LLM stream interrupted after partial output",
+                                fallback_trace=fallback_trace,
+                            ) from exc
+                        if stage_exhausted or not self._can_rotate_credential(exc):
+                            break
+                    finally:
+                        if stream is not None:
+                            close_fn = getattr(stream, "close", None) or getattr(
+                                stream, "aclose", None
+                            )
+                            if callable(close_fn):
+                                try:
+                                    closed = close_fn()
+                                    if inspect.isawaitable(closed):
+                                        await closed
+                                except Exception:
+                                    pass
+
+        raise GroqProviderError(
+            "Chat LLM stream failed for configured models",
+            fallback_trace=fallback_trace,
+        ) from last_error
+
+    async def structured_chat(
+        self, messages: Sequence[dict[str, Any]], *, name: str,
+        schema: dict[str, Any], max_tokens: int = 1600,
+        local_json_validator: Callable[[str], bool] | None = None,
+        model: str | None = None,
+        reasoning_effort: str | None = None,
+    ) -> GroqChatResult:
+        """Read-only decisions use constrained JSON, separate from action tools.
+
+        The configured Qwen/GPT-OSS models support Groq strict outputs. Local
+        validation still checks business constraints and grounded references.
+        """
+        return await self.chat(
+            messages, model=model, max_tokens=max_tokens,
+            response_format={"type": "json_schema", "json_schema": {
+                "name": name, "strict": True, "schema": schema,
+            }},
+            local_json_validator=local_json_validator,
+            reasoning_effort=reasoning_effort,
+        )
 
     async def transcribe(
         self,
@@ -681,7 +1524,14 @@ class GroqService:
         language: str = "vi",
         vocabulary: Sequence[str] | None = None,
     ) -> GroqTranscriptionResult:
-        credentials = self._credentials_or_raise()
+        # Optional local verification shares the endpoint's overall STT budget.
+        # Preserve a successful primary result rather than timing it out while
+        # waiting for a second decoder, particularly on CPU or a cold model.
+        transcription_deadline = perf_counter() + max(
+            0.1, self.settings.groq_stt_total_timeout_seconds,
+        )
+        local_vi = language == "vi" and self.settings.vietnamese_asr_backend == "zipformer"
+        credentials = () if local_vi else self._credentials_or_raise()
         models = list(
             dict.fromkeys(
                 model
@@ -693,111 +1543,155 @@ class GroqService:
             )
         )
 
-        signal_quality = _wav_signal_quality(content)
-        if signal_quality is not None and _is_near_silence(signal_quality):
+        if local_vi:
+            from backend.services.vietnamese_asr import MODEL_NAME
+            models = [MODEL_NAME]
+
+        # Whisper may confidently invent whole sentences over animal/mechanical
+        # sounds. Verify acoustic speech independently of its decoder metadata.
+        decoded_samples = None
+        try:
+            if analyze_speech_activity is _DEFAULT_ANALYZE_SPEECH_ACTIVITY:
+                analyzed = await asyncio.to_thread(analyze_speech_audio, content)
+                activity = analyzed.activity
+                decoded_samples = analyzed.samples
+            else:
+                activity = await asyncio.to_thread(analyze_speech_activity, content)
+        except SpeechActivityInputError as exc:
+            raise GroqAudioInputError("Audio could not be decoded within analysis limits") from exc
+        except SpeechActivityUnavailable as exc:
+            raise GroqProviderError("Acoustic verification unavailable") from exc
+        acoustic_quality = activity.quality
+        if not activity.speech_detected:
             model = models[0] if models else self.settings.groq_stt_model
-            logger.info(
-                "Groq transcription rejected candidate model=%s reason=near_silence duration_ms=%d",
-                model,
-                round(signal_quality["audio_duration_seconds"] * 1000),
-            )
+            logger.info("Groq transcription rejected model=%s reason=no_acoustic_speech", model)
             return GroqTranscriptionResult(
-                "",
-                model,
-                [{"model": model, "status": "rejected", "reason": "near_silence"}],
+                "", model,
+                [{"model": model, "status": "rejected", "reason": "no_acoustic_speech"}],
                 speech_detected=False,
-                quality=signal_quality,
+                quality=acoustic_quality,
             )
-        if signal_quality is not None and _is_low_level_non_speech(signal_quality):
-            model = models[0] if models else self.settings.groq_stt_model
-            logger.info(
-                "Groq transcription rejected candidate model=%s reason=low_level_non_speech "
-                "duration_ms=%d voiced_frame_ratio=%s periodicity=%s",
-                model,
-                round(signal_quality["audio_duration_seconds"] * 1000),
-                round(signal_quality["waveform_voiced_frame_ratio"], 3),
-                round(signal_quality["waveform_periodicity_mean"], 3),
+
+        # Correlation analysis also runs off the event loop.
+        signal_quality = await asyncio.to_thread(
+            _wav_signal_quality, content, acoustic_quality.get("server_vad_analysis_gain", 1.0),
+        )
+        if signal_quality is not None:
+            for predicate, reason in (
+                (_is_near_silence, "near_silence"),
+                (_is_low_level_non_speech, "low_level_non_speech"),
+                (_is_steady_unvoiced_noise, "steady_unvoiced_noise"),
+                (_is_steady_tone, "steady_tone"),
+                (_is_impulsive_non_speech, "impulsive_non_speech"),
+            ):
+                if predicate(signal_quality):
+                    model = models[0] if models else self.settings.groq_stt_model
+                    logger.info("Groq transcription rejected model=%s reason=%s", model, reason)
+                    return GroqTranscriptionResult(
+                        "", model,
+                        [{"model": model, "status": "rejected", "reason": reason}],
+                        speech_detected=False,
+                        quality={**signal_quality, **acoustic_quality},
+                    )
+
+        if local_vi:
+            from backend.services.vietnamese_asr import (
+                VietnameseASRUnavailable,
+                transcribe_vietnamese,
             )
+            try:
+                text = await asyncio.to_thread(
+                    transcribe_vietnamese, content, self.settings.vietnamese_asr_model_dir,
+                    self.settings.vietnamese_asr_decoding,
+                )
+            except VietnameseASRUnavailable as exc:
+                raise GroqProviderError("Local Vietnamese ASR unavailable") from exc
             return GroqTranscriptionResult(
-                "",
-                model,
-                [{"model": model, "status": "rejected", "reason": "low_level_non_speech"}],
-                speech_detected=False,
-                quality=signal_quality,
-            )
-        if signal_quality is not None and _is_steady_unvoiced_noise(signal_quality):
-            model = models[0] if models else self.settings.groq_stt_model
-            logger.info(
-                "Groq transcription rejected candidate model=%s reason=steady_unvoiced_noise "
-                "duration_ms=%d voiced_frame_ratio=%s periodicity=%s",
-                model,
-                round(signal_quality["audio_duration_seconds"] * 1000),
-                round(signal_quality["waveform_voiced_frame_ratio"], 3),
-                round(signal_quality["waveform_periodicity_mean"], 3),
-            )
-            return GroqTranscriptionResult(
-                "",
-                model,
-                [{"model": model, "status": "rejected", "reason": "steady_unvoiced_noise"}],
-                speech_detected=False,
-                quality=signal_quality,
-            )
-        if signal_quality is not None and _is_steady_tone(signal_quality):
-            model = models[0] if models else self.settings.groq_stt_model
-            logger.info(
-                "Groq transcription rejected candidate model=%s reason=steady_tone duration_ms=%d",
-                model,
-                round(signal_quality["audio_duration_seconds"] * 1000),
-            )
-            return GroqTranscriptionResult(
-                "",
-                model,
-                [{"model": model, "status": "rejected", "reason": "steady_tone"}],
-                speech_detected=False,
-                quality=signal_quality,
-            )
-        if signal_quality is not None and _is_impulsive_non_speech(signal_quality):
-            model = models[0] if models else self.settings.groq_stt_model
-            logger.info(
-                "Groq transcription rejected candidate model=%s reason=impulsive_non_speech "
-                "duration_ms=%d active_frame_ratio=%s",
-                model,
-                round(signal_quality["audio_duration_seconds"] * 1000),
-                round(signal_quality["waveform_active_frame_ratio"], 3),
-            )
-            return GroqTranscriptionResult(
-                "",
-                model,
-                [{"model": model, "status": "rejected", "reason": "impulsive_non_speech"}],
-                speech_detected=False,
-                quality=signal_quality,
+                text, models[0], [{"model": models[0], "status": "success"}],
+                speech_detected=bool(text), quality=acoustic_quality,
             )
 
         last_error: Exception | None = None
         fallback_trace: list[dict[str, Any]] = []
         rejected_model: str | None = None
         rejected_quality: dict[str, float] = {}
+        upload = (filename, content, content_type)
+        # VAD and PCM quality above use the original waveform. Reducing only
+        # large uncompressed WAVs leaves small MP3/Opus capture untouched.
+        from backend.services.speech_upload import prepare_stt_upload
+
+        try:
+            if decoded_samples is not None and "samples" in inspect.signature(
+                prepare_stt_upload
+            ).parameters:
+                prepared = await asyncio.to_thread(
+                    prepare_stt_upload, content, samples=decoded_samples,
+                )
+            else:
+                prepared = await asyncio.to_thread(prepare_stt_upload, content)
+        except (SpeechActivityInputError, SpeechActivityUnavailable, ValueError, OSError):
+            prepared = None  # Optional transport optimization, never skip acoustic checks.
+        if prepared is not None:
+            upload = ("speech.flac", prepared, "audio/flac")
+            acoustic_quality.update(stt_upload_original_bytes=float(len(content)),
+                                    stt_upload_bytes=float(len(prepared)))
         for selected_model in models:
-            for credential_slot, api_key in credentials:
+            cred_count = len(credentials)
+            rr_start = self._stt_rr_cursor.get(selected_model, 0) % cred_count if cred_count else 0
+            ordered_stt_creds = [
+                (idx, credentials[idx][0], credentials[idx][1])
+                for idx in (*range(rr_start, cred_count), *range(0, rr_start))
+            ]
+            for slot_index, credential_slot, api_key in ordered_stt_creds:
+                if self._stt_cooldowns.get((selected_model, credential_slot), 0) > perf_counter():
+                    cooldown_attempt = {"model": selected_model, "status": "cooldown"}
+                    if len(credentials) > 1:
+                        cooldown_attempt["credential_slot"] = credential_slot
+                    fallback_trace.append(cooldown_attempt)
+                    continue
                 client = self._client_for_credential(credential_slot, api_key)
                 started = perf_counter()
                 try:
-                    response = await client.audio.transcriptions.create(
-                        file=(filename, content, content_type),
-                        model=selected_model,
-                        language=language,
-                        prompt=_transcription_prompt(language, vocabulary),
-                        response_format="verbose_json",
-                        timestamp_granularities=["segment"],
-                        temperature=0,
+                    attempt_budget = min(
+                        self.settings.groq_stt_attempt_timeout_seconds,
+                        self.settings.groq_timeout_seconds,
+                        transcription_deadline - perf_counter()
+                        - min(STT_VERIFIER_RETURN_MARGIN_SECONDS,
+                              self.settings.groq_stt_total_timeout_seconds / 10),
+                    )
+                    if attempt_budget <= 0:
+                        raise TimeoutError("No transcription attempt budget remains")
+                    response = await asyncio.wait_for(
+                        client.audio.transcriptions.create(
+                            file=upload,
+                            model=selected_model,
+                            language=language,
+                            prompt=_transcription_prompt(language, vocabulary),
+                            response_format="verbose_json",
+                            timestamp_granularities=["segment"],
+                            temperature=0,
+                        ), timeout=attempt_budget,
                     )
                     text = getattr(response, "text", "")
-                    if not text or not text.strip():
-                        raise ValueError("Groq returned an empty transcription")
-                    speech_detected, quality, rejection_reason = _transcription_quality(response)
+                    if not isinstance(text, str):
+                        raise ValueError("Groq returned an invalid transcription payload")
+                    if not text.strip():
+                        # An empty successful ASR result means there are no words to
+                        # submit. A second decoder must not invent a customer turn.
+                        speech_detected, quality, rejection_reason = False, {}, "empty_transcript"
+                    else:
+                        speech_detected, quality, rejection_reason = _transcription_quality(
+                            response
+                        )
+                    quality.update(acoustic_quality)
                     if speech_detected and _has_repeated_phrase(text):
                         speech_detected = False
                         rejection_reason = "repeated_phrase"
+                    if speech_detected and _has_insufficient_acoustic_support(
+                        text, quality, language
+                    ):
+                        speech_detected = False
+                        rejection_reason = "insufficient_acoustic_support"
                     if not speech_detected:
                         logger.info(
                             "Groq transcription rejected candidate model=%s reason=%s "
@@ -841,13 +1735,51 @@ class GroqService:
                     successful_attempt = {"model": selected_model, "status": "success"}
                     if len(credentials) > 1:
                         successful_attempt["credential_slot"] = credential_slot
+                        self._stt_rr_cursor[selected_model] = (slot_index + 1) % len(credentials)
                     fallback_trace.append(successful_attempt)
+                    confirm = False
+                    verification_text = None
+                    if language == "vi" and self.settings.vietnamese_asr_verify_uncertain:
+                        from backend.services.asr_disagreement import needs_confirmation
+                        from backend.services.vietnamese_asr import (
+                            VietnameseASRUnavailable,
+                            transcribe_vietnamese,
+                        )
+                        try:
+                            verifier_budget = min(
+                                STT_OPTIONAL_VERIFIER_MAX_SECONDS,
+                                transcription_deadline - perf_counter()
+                                - STT_VERIFIER_RETURN_MARGIN_SECONDS,
+                            )
+                            if verifier_budget <= 0:
+                                raise TimeoutError("No optional verification budget remains")
+                            other = await asyncio.wait_for(
+                                asyncio.to_thread(
+                                    transcribe_vietnamese, content,
+                                    self.settings.vietnamese_asr_model_dir,
+                                    self.settings.vietnamese_asr_decoding,
+                                ),
+                                timeout=verifier_budget,
+                            )
+                        except (VietnameseASRUnavailable, SpeechActivityUnavailable, TimeoutError):
+                            # An unavailable verifier is not agreement. Keep the
+                            # transcript editable and never auto-submit it as a
+                            # successfully double-checked customer request.
+                            quality["asr_verifier_available"] = 0.0
+                            confirm = True
+                        else:
+                            verification_text = other
+                            confirm, distance = needs_confirmation(text, other, quality)
+                            quality.update(asr_verifier_available=1.0,
+                                           asr_disagreement_ratio=distance)
                     return GroqTranscriptionResult(
                         text.strip(),
                         selected_model,
                         fallback_trace,
                         speech_detected=True,
                         quality=quality,
+                        needs_confirmation=confirm,
+                        verification_text=verification_text,
                     )
                 except Exception as exc:
                     last_error = exc
@@ -856,6 +1788,26 @@ class GroqService:
                         "status": "error",
                         "error_type": type(exc).__name__,
                     }
+                    status = getattr(exc, "status_code", None)
+                    response = getattr(exc, "response", None)
+                    status = status or getattr(response, "status_code", None)
+                    body = getattr(exc, "body", None)
+                    code = body.get("code") if isinstance(body, dict) else None
+                    if _is_audio_input_provider_error(exc) or (status in {400, 422} and code in {
+                        "invalid_media_file", "invalid_audio_file", "unsupported_audio_format",
+                    }):
+                        # Retry cannot repair a malformed upload. Do not expose
+                        # provider bodies, which may contain request details.
+                        raise GroqAudioInputError("Audio could not be decoded") from exc
+                    if status == 429:
+                        headers = _rate_limit_headers(getattr(response, "headers", None))
+                        self._stt_cooldowns[(selected_model, credential_slot)] = (
+                            perf_counter() + _rate_limit_retry_seconds(headers)
+                        )
+                        if len(credentials) > 1:
+                            self._stt_rr_cursor[selected_model] = (
+                                (slot_index + 1) % len(credentials)
+                            )
                     if len(credentials) > 1:
                         failed_attempt["credential_slot"] = credential_slot
                     fallback_trace.append(failed_attempt)

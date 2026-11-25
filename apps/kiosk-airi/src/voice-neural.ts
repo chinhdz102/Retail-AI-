@@ -5,6 +5,7 @@
 export interface NeuralVadCallbacks {
   getStream: () => Promise<MediaStream>
   onSpeechStart: () => void
+  onSpeechRealStart: () => void
   onSpeechEnd: (audio: Float32Array) => void
   onVADMisfire: () => void
   onFrameProcessed: (probabilities: { isSpeech: number }, frame: Float32Array) => void
@@ -19,18 +20,18 @@ export async function createLocalNeuralVad(callbacks: NeuralVadCallbacks): Promi
   const { MicVAD } = await import('@ricky0123/vad-web')
   const base = import.meta.env.BASE_URL
   return MicVAD.new({
-    model: 'v5',
+    // v6 retains the 512-sample interface. Stricter speech thresholds reject
+    // continuous fan/HVAC airflow while 750ms redemption avoids cutting off
+    // natural mid-sentence Vietnamese pauses.
+    model: 'v6',
     processorType: 'AudioWorklet',
     baseAssetPath: `${base}vad/`,
     onnxWASMBasePath: `${base}vad/onnx/`,
-    positiveSpeechThreshold: 0.55,
-    negativeSpeechThreshold: 0.35,
-    // Keep conversational pauses intact while avoiding the upstream 1.4s delay.
-    // Offline tests on seven Vietnamese regional speech samples cut segmentation
-    // from 29 turns to 13 at 900ms, with only 250ms more end-of-turn wait.
-    redemptionMs: 900,
-    preSpeechPadMs: 600,
-    minSpeechMs: 250,
+    positiveSpeechThreshold: 0.72,
+    negativeSpeechThreshold: 0.45,
+    redemptionMs: 750,
+    preSpeechPadMs: 280,
+    minSpeechMs: 320,
     submitUserSpeechOnPause: false,
     ...callbacks,
   })

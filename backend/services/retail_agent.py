@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import copy
 import json
 import re
@@ -11,6 +10,12 @@ from typing import Any
 from uuid import uuid4
 
 from backend.products.catalog import PRODUCT_ALIASES, ProductSnapshot
+from backend.products.repository import get_product_repository
+from backend.services.bounded_work import (
+    CatalogWorkCapacityExceeded,
+    CatalogWorkTimeoutError,
+    run_catalog_work,
+)
 from backend.services.groq import GroqProviderError, GroqService
 from backend.services.query_understanding import understand_catalog_query
 from backend.services.retail_tools import (
@@ -853,18 +858,28 @@ async def lookup_branch_information(
     """Read branch-scoped operational facts with the kiosk bound by the API."""
     raw_arguments = json.dumps(arguments or {}, ensure_ascii=False)
     try:
-        return await asyncio.wait_for(
-            asyncio.to_thread(
-                execute_retail_information_tool,
-                name,
-                raw_arguments,
-                kiosk_id=kiosk_id,
-            ),
-            timeout=CATALOG_TOOL_TIMEOUT_SECONDS,
+        return await run_catalog_work(
+            execute_retail_information_tool,
+            name,
+            raw_arguments,
+            timeout_seconds=CATALOG_TOOL_TIMEOUT_SECONDS,
+            kiosk_id=kiosk_id,
         )
-    except TimeoutError:
+    except CatalogWorkTimeoutError:
         return ToolObservation(
             content={"error": "Retail information lookup timed out."},
+            tool_name=name,
+            status="TEMPORARY_FAILURE",
+            source="tool_gateway",
+            response_mode="DETERMINISTIC_ERROR",
+            terminal=True,
+        )
+    except CatalogWorkCapacityExceeded as exc:
+        return ToolObservation(
+            content={
+                "error": "Retail information lookup is temporarily unavailable.",
+                "failure_type": type(exc).__name__,
+            },
             tool_name=name,
             status="TEMPORARY_FAILURE",
             source="tool_gateway",
@@ -925,25 +940,31 @@ async def _execute_tool_call(
                 tool_kwargs["previous_queries"] = previous_queries
                 if current_user_text:
                     tool_kwargs["current_user_text"] = current_user_text
-            observation = await asyncio.wait_for(
-                asyncio.to_thread(
-                    execute_catalog_tool,
-                    name,
-                    raw_arguments,
-                    **tool_kwargs,
-                ),
-                timeout=operation_timeout,
+            observation = await run_catalog_work(
+                execute_catalog_tool,
+                name,
+                raw_arguments,
+                timeout_seconds=operation_timeout,
+                **tool_kwargs,
             )
             return name, observation
-        except TimeoutError as exc:
+        except CatalogWorkTimeoutError as exc:
             last_error = exc
-            if attempt < TOOL_TIMEOUT_RETRIES:
+            if exc.retryable and attempt < retries:
                 continue
+            break
+        except CatalogWorkCapacityExceeded as exc:
+            last_error = exc
+            break
         except Exception as exc:  # Keep tool implementation errors inside the tool boundary.
             last_error = exc
             break
 
-    error_name = type(last_error).__name__ if last_error else "UnknownError"
+    error_name = (
+        "TimeoutError"
+        if isinstance(last_error, CatalogWorkTimeoutError)
+        else type(last_error).__name__ if last_error else "UnknownError"
+    )
     observation = ToolObservation(
         content={
             "error": "Catalog lookup is temporarily unavailable. Please try again.",
@@ -1117,9 +1138,12 @@ def _unique_product_match_id(
 ) -> str | None:
     if not query or not candidates:
         return None
+    repo = get_product_repository()
+    normalize_noisy = getattr(repo, "normalize_noisy_query", None)
+    effective_query = normalize_noisy(query) if callable(normalize_noisy) else query
     query_tokens = [
         token
-        for token in re.findall(r"\w+", _normalize_vietnamese(query))
+        for token in re.findall(r"\w+", _normalize_vietnamese(effective_query))
         if len(token) > 1 and token not in {"va", "and", "with"}
     ]
     repeated_bim_bim_phrase = query_tokens.count("bim") >= 2
@@ -1127,13 +1151,23 @@ def _unique_product_match_id(
         return None
     matches = []
     for product in candidates:
+        dehyp_name = re.sub(r"(?<=[a-zA-Z0-9])-(?=[a-zA-Z0-9])", "", product.name)
         product_tokens = re.findall(
             r"\w+",
             _normalize_vietnamese(
-                f"{product.name} {product.uom or ''} {PRODUCT_ALIASES.get(product.product_id, '')}"
+                f"{product.name} {dehyp_name} {product.brand or ''} "
+                f"{product.category or ''} {product.uom or ''} "
+                f"{PRODUCT_ALIASES.get(product.product_id, '')}"
             ),
         )
         product_counts = Counter(product_tokens)
+        if product_counts.get("tui") or product_counts.get("goi"):
+            product_counts.setdefault("bich", 1)
+        for tok in list(product_counts):
+            if re.fullmatch(r"\d+lit", tok):
+                product_counts.setdefault(tok[:-2], 1)
+            elif re.fullmatch(r"\d+l", tok):
+                product_counts.setdefault(f"{tok}it", 1)
         is_match = set(query_tokens).issubset(product_counts) and (
             not repeated_bim_bim_phrase or product_counts["bim"] >= 2
         )

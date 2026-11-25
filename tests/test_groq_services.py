@@ -1,14 +1,18 @@
 import io
+import json
 import math
 import random
 import wave
 from types import SimpleNamespace
+from typing import Literal
 
 import pytest
+from pydantic import BaseModel, ConfigDict, Field
 
 from backend.config import Settings
 from backend.services.groq import (
     MAX_GROQ_STT_PROMPT_BYTES,
+    GroqAudioInputError,
     GroqConfigurationError,
     GroqProviderError,
     GroqService,
@@ -16,6 +20,19 @@ from backend.services.groq import (
     _transcription_prompt,
     _wav_signal_quality,
 )
+from backend.services.speech_activity import SpeechActivityResult
+
+
+@pytest.fixture(autouse=True)
+def acoustic_gate_for_provider_unit_tests(monkeypatch):
+    # These tests isolate provider retries/metadata and the earlier PCM heuristic.
+    # Fake bytes and synthesized harmonic tones are not human-speech fixtures.
+    # Real decoding/ONNX and the service's no-speech boundary are tested separately
+    # in test_speech_activity.py and the cached-corpus replay diagnostic.
+    monkeypatch.setattr(
+        "backend.services.groq.analyze_speech_activity",
+        lambda _content: SpeechActivityResult(True, {}),
+    )
 
 
 class FakeChatCompletions:
@@ -55,6 +72,66 @@ class FakeClient:
         self.audio = SimpleNamespace(transcriptions=FakeTranscriptions())
 
 
+@pytest.mark.asyncio
+async def test_invalid_audio_is_not_retried_as_a_provider_outage():
+    calls = []
+
+    class InvalidMedia(Exception):
+        status_code = 400
+        body = {"code": "invalid_media_file"}
+
+    async def invalid(**kwargs):
+        calls.append(kwargs)
+        raise InvalidMedia()
+
+    client = FakeClient()
+    client.audio.transcriptions.create = invalid
+    service = GroqService(Settings(_env_file=None, groq_api_key="test"), client=client)
+    with pytest.raises(GroqAudioInputError):
+        await service.transcribe("broken.wav", b"invalid data", "audio/wav")
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_invalid_audio_message_without_provider_code_is_classified_as_input_error():
+    calls = []
+
+    class InvalidMediaMessage(Exception):
+        status_code = 422
+        body = {"error": "The uploaded audio could not be decoded"}
+
+    async def invalid(**kwargs):
+        calls.append(kwargs)
+        raise InvalidMediaMessage()
+
+    client = FakeClient()
+    client.audio.transcriptions.create = invalid
+    service = GroqService(Settings(_env_file=None, groq_api_key="test"), client=client)
+    with pytest.raises(GroqAudioInputError):
+        await service.transcribe("broken.webm", b"invalid data", "audio/webm")
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("finish_reason", ["length", "content_filter"])
+async def test_chat_never_publishes_incomplete_provider_output(finish_reason):
+    client = FakeClient()
+
+    async def incomplete(**kwargs):
+        return SimpleNamespace(choices=[SimpleNamespace(
+            finish_reason=finish_reason,
+            message=SimpleNamespace(content="A plausible but incomplete answer"),
+        )])
+
+    client.chat.completions.create = incomplete
+    service = GroqService(Settings(_env_file=None, groq_api_key="test-key",
+                                   groq_fallback_model="", groq_fallback_model_2=""),
+                          client=client)
+    with pytest.raises(GroqProviderError) as error:
+        await service.chat([{"role": "user", "content": "test"}])
+    assert error.value.fallback_trace[0]["error_type"] == "ValueError"
+
+
 class FallbackChatCompletions:
     def __init__(self) -> None:
         self.calls: list[dict] = []
@@ -74,6 +151,256 @@ class FallbackClient:
     def __init__(self) -> None:
         self.chat = SimpleNamespace(completions=FallbackChatCompletions())
         self.audio = SimpleNamespace(transcriptions=FakeTranscriptions())
+
+
+@pytest.mark.asyncio
+async def test_chat_rate_limit_cooldown_skips_retry_until_expiry(monkeypatch):
+    from backend.services import groq as groq_module
+
+    now = 100.0
+    monkeypatch.setattr(groq_module, "perf_counter", lambda: now)
+    calls = []
+
+    async def create(**kwargs):
+        calls.append(kwargs["model"])
+        if kwargs["model"] == "primary":
+            error = RuntimeError("quota")
+            error.status_code = 429
+            error.response = SimpleNamespace(status_code=429, headers={"retry-after": "30"})
+            raise error
+        return SimpleNamespace(choices=[SimpleNamespace(
+            finish_reason="stop", message=SimpleNamespace(content="Complete reply"),
+        )])
+
+    client = FakeClient()
+    client.chat.completions.create = create
+    service = GroqService(Settings(_env_file=None, groq_api_key="test", groq_model="primary",
+                                   groq_fallback_model="fallback", groq_fallback_model_2=""),
+                          client=client)
+    await service.chat([{"role": "user", "content": "one"}])
+    result = await service.chat([{"role": "user", "content": "two"}])
+    assert calls == ["primary", "fallback", "fallback"]
+    assert result.fallback_trace[0]["status"] == "cooldown"
+    now = 131.0
+    await service.chat([{"role": "user", "content": "three"}])
+    assert calls[-2:] == ["primary", "fallback"]
+
+
+@pytest.mark.asyncio
+async def test_chat_rate_limit_cooldown_honors_retry_after_over_five_minutes(monkeypatch):
+    """Provider retry-after values above the historical 300s cap remain authoritative."""
+    from backend.services import groq as groq_module
+
+    now = 1_000.0
+    monkeypatch.setattr(groq_module, "perf_counter", lambda: now)
+    calls: list[str] = []
+
+    async def create(**kwargs):
+        calls.append(kwargs["model"])
+        if kwargs["model"] == "primary":
+            error = RuntimeError("quota")
+            error.status_code = 429
+            error.response = SimpleNamespace(status_code=429, headers={"retry-after": "754"})
+            raise error
+        return SimpleNamespace(choices=[SimpleNamespace(
+            finish_reason="stop", message=SimpleNamespace(content="Complete reply"),
+        )])
+
+    client = FakeClient()
+    client.chat.completions.create = create
+    service = GroqService(Settings(
+        _env_file=None,
+        groq_api_key="test",
+        groq_model="primary",
+        groq_fallback_model="fallback",
+        groq_fallback_model_2="",
+    ), client=client)
+
+    await service.chat([{"role": "user", "content": "first"}])
+    now = 1_301.0
+    result = await service.chat([{"role": "user", "content": "still waiting"}])
+    assert calls == ["primary", "fallback", "fallback"]
+    assert result.fallback_trace[0] == {"model": "primary", "status": "cooldown"}
+
+    now = 1_755.0
+    await service.chat([{"role": "user", "content": "retry now"}])
+    assert calls[-2:] == ["primary", "fallback"]
+
+
+@pytest.mark.parametrize(("headers", "expected"), [
+    ({"x-ratelimit-remaining-tokens": "0", "x-ratelimit-reset-tokens": "1h2m3.5s"}, 3723.5),
+    ({"retry-after": "2", "x-ratelimit-remaining-requests": "0",
+      "x-ratelimit-reset-requests": "23h59m"}, 86340),
+    ({"retry-after": "3", "x-ratelimit-remaining-tokens": "100",
+      "x-ratelimit-reset-tokens": "1h"}, 3),
+    ({"retry-after": "nan", "x-ratelimit-remaining-tokens": "nan",
+      "x-ratelimit-reset-tokens": "1h"}, 5),
+    ({"x-ratelimit-remaining-tokens": "0", "x-ratelimit-reset-tokens": "invalid"}, 5),
+    ({"retry-after": "999999"}, 86400),
+    ({"retry-after": "1500ms"}, 1.5),
+])
+def test_rate_limit_waits_respect_only_exhausted_provider_buckets(headers, expected):
+    from backend.services.groq import _rate_limit_retry_seconds
+    assert _rate_limit_retry_seconds(headers) == expected
+
+
+def test_rate_limit_waits_accept_http_date_retry_after(monkeypatch):
+    from datetime import UTC, datetime
+
+    from backend.services import groq as groq_module
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 11, 3, 12, 0, tzinfo=UTC)
+
+    monkeypatch.setattr(groq_module, "datetime", FixedDatetime)
+    assert groq_module._rate_limit_retry_seconds({
+        "retry-after": "Tue, 03 Nov 2026 12:02:00 GMT",
+    }) == 120
+
+
+@pytest.mark.asyncio
+async def test_token_reset_duration_stops_repeated_doomed_requests(monkeypatch):
+    from backend.services import groq as groq_module
+    now = 100.0
+    monkeypatch.setattr(groq_module, "perf_counter", lambda: now)
+    calls = []
+
+    async def create(**kwargs):
+        calls.append(kwargs["model"])
+        if kwargs["model"] == "primary":
+            error = RuntimeError("quota")
+            error.status_code = 429
+            error.response = SimpleNamespace(status_code=429, headers={
+                "x-ratelimit-remaining-tokens": "0", "x-ratelimit-reset-tokens": "1h",
+            })
+            raise error
+        return SimpleNamespace(choices=[SimpleNamespace(
+            finish_reason="stop", message=SimpleNamespace(content="Complete reply"),
+        )])
+
+    client = FakeClient()
+    client.chat.completions.create = create
+    service = GroqService(Settings(_env_file=None, groq_api_key="test", groq_model="primary",
+                                   groq_fallback_model="fallback", groq_fallback_model_2=""),
+                          client=client)
+    await service.chat([{"role": "user", "content": "one"}])
+    now = 110.0
+    result = await service.chat([{"role": "user", "content": "two"}])
+    assert calls == ["primary", "fallback", "fallback"]
+    assert result.fallback_trace[0]["status"] == "cooldown"
+    now = 3701.0
+    await service.chat([{"role": "user", "content": "three"}])
+    assert calls[-2:] == ["primary", "fallback"]
+
+
+class RecoverableDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    label: str = Field(max_length=10)
+    count: int
+    eligible: bool
+    category: Literal["food", "other"]
+    required_size: str | None = None
+
+
+def strict_decision_validator(text: str) -> bool:
+    RecoverableDecision.model_validate_json(text, strict=True)
+    return True
+
+
+def schema_recovery_service(generation, *, body_shape="top", code="json_validate_failed"):
+    calls = []
+    body = {"code": code, "failed_generation": generation,
+            "message": "untrusted customer text must not be logged"}
+
+    async def create(**kwargs):
+        calls.append(kwargs["model"])
+        if kwargs["model"] == "primary":
+            error = RuntimeError("untrusted provider error")
+            error.status_code = 400
+            error.body = {"error": body} if body_shape == "nested" else body
+            if body_shape == "response":
+                error.body = None
+                error.response = SimpleNamespace(status_code=400, json=lambda: body, headers={})
+            raise error
+        return SimpleNamespace(choices=[SimpleNamespace(
+            finish_reason="stop", message=SimpleNamespace(content="fallback output"),
+        )])
+
+    client = FakeClient()
+    client.chat.completions.create = create
+    return GroqService(Settings(
+        _env_file=None, groq_api_key="test", groq_model="primary",
+        groq_fallback_model="fallback", groq_fallback_model_2="",
+    ), client=client), calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("body_shape", ["top", "nested", "response"])
+async def test_strict_schema_recovers_only_locally_valid_default_omission(body_shape, caplog):
+    generation = json.dumps({"label": "valid", "count": 1, "eligible": True, "category": "food"})
+    service, calls = schema_recovery_service(generation, body_shape=body_shape)
+    result = await service.structured_chat(
+        [], name="Decision", schema=RecoverableDecision.model_json_schema(),
+        local_json_validator=strict_decision_validator,
+    )
+    assert calls == ["primary"]
+    assert str(result) == generation
+    assert RecoverableDecision.model_validate_json(result, strict=True).required_size is None
+    assert result.model == "primary" and result.usage == {} and result.finish_reason is None
+    assert result.fallback_trace[0]["status"] == "success"
+    assert result.fallback_trace[0]["recovery"] == "local-default-validation"
+    assert "failed_generation" not in str(result.fallback_trace)
+    assert "untrusted customer" not in caplog.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("generation", [
+    '{"label":"too long label","count":1,"eligible":true,"category":"food"}',
+    '{"label":"valid","count":1,"eligible":true,"category":"food","extra":true}',
+    '{"count":1,"eligible":true,"category":"food"}',
+    '{"label":"valid","count":"1","eligible":true,"category":"food"}',
+    '{"label":"valid","count":1,"eligible":"true","category":"food"}',
+    '{"label":"valid","count":1,"eligible":true,"category":"invented"}',
+    '{"label":"valid","count":1,"eligible":true,"category":"food","required_size":12}',
+    '{invalid json', '[]', 'null',
+])
+async def test_failed_generation_invalid_fields_preserve_fallback(generation):
+    service, calls = schema_recovery_service(generation)
+    result = await service.structured_chat(
+        [], name="Decision", schema=RecoverableDecision.model_json_schema(),
+        local_json_validator=strict_decision_validator,
+    )
+    assert calls == ["primary", "fallback"]
+    assert result == "fallback output"
+    assert result.fallback_trace[0]["status"] == "error"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", [
+    "absent", "nonstrict", "false", "raises", "truthy", "wrong_code", "no_validator", "tools",
+])
+async def test_schema_recovery_requires_explicit_strict_validation(mode):
+    generation = '{"label":"valid","count":1,"eligible":true,"category":"food"}'
+    service, calls = schema_recovery_service(
+        generation, code="tool_use_failed" if mode == "wrong_code" else "json_validate_failed",
+    )
+    def validator(text):
+        if mode == "raises":
+            raise ValueError("rejected")
+        return False if mode == "false" else 1 if mode == "truthy" else True
+
+    response_format = None if mode in {"absent", "tools"} else {
+        "type": "json_schema", "json_schema": {"strict": mode != "nonstrict"},
+    }
+    result = await service.chat(
+        [], response_format=response_format,
+        local_json_validator=None if mode == "no_validator" else validator,
+        tools=[{"type": "function", "function": {"name": "action"}}] if mode == "tools" else None,
+    )
+    assert calls == ["primary", "fallback"]
+    assert result == "fallback output"
 
 
 def test_stt_defaults_to_accuracy_first_whisper_model() -> None:
@@ -159,6 +486,35 @@ async def test_other_forced_tool_calls_keep_the_existing_token_limit() -> None:
     )
 
     assert client.chat.completions.calls[0]["max_tokens"] == 512
+
+
+@pytest.mark.asyncio
+async def test_read_only_structured_output_uses_constrained_json_without_action_tools():
+    client = FakeClient()
+    service = GroqService(Settings(_env_file=None, groq_api_key="test"), client=client)
+    schema = {"type": "object", "properties": {"text": {"type": "string"}},
+              "required": ["text"], "additionalProperties": False}
+    await service.structured_chat(
+        [{"role": "user", "content": "Tư vấn giúp mình"}],
+        name="Advice", schema=schema, max_tokens=1800,
+    )
+    call = client.chat.completions.calls[0]
+    assert call["response_format"] == {"type": "json_schema", "json_schema": {
+        "name": "Advice", "strict": True, "schema": schema,
+    }}
+    assert call["reasoning_effort"] == "low"
+    assert "tools" not in call and "tool_choice" not in call
+    assert call["max_tokens"] == 1800
+
+
+@pytest.mark.asyncio
+async def test_structured_output_cannot_accidentally_invoke_action_tools():
+    client = FakeClient()
+    service = GroqService(Settings(_env_file=None, groq_api_key="test"), client=client)
+    with pytest.raises(ValueError, match="cannot be combined"):
+        await service.chat([], response_format={"type": "json_schema"},
+                           tools=[{"type": "function", "function": {"name": "add_to_cart"}}])
+    assert not client.chat.completions.calls
 
 
 @pytest.mark.asyncio
@@ -781,6 +1137,73 @@ async def test_transcribe_rejects_missing_verbose_quality_metadata() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("empty_text", ["", "   "])
+async def test_transcribe_does_not_retry_empty_speech_as_a_provider_failure(
+    empty_text: str,
+) -> None:
+    calls = []
+
+    async def create(**kwargs):
+        calls.append(kwargs["model"])
+        return SimpleNamespace(text=empty_text, segments=[])
+
+    service = GroqService(
+        settings=Settings(
+            _env_file=None, groq_api_key="test-key", groq_stt_model="whisper-large-v3",
+            groq_stt_fallback_model="whisper-large-v3-turbo",
+        ),
+        client=SimpleNamespace(audio=SimpleNamespace(transcriptions=SimpleNamespace(create=create))),
+    )
+    result = await service.transcribe("noise.webm", b"audio", "audio/webm")
+    assert result == ""
+    assert result.speech_detected is False
+    assert calls == ["whisper-large-v3"]
+    assert result.fallback_trace == [
+        {"model": "whisper-large-v3", "status": "rejected", "reason": "empty_transcript"}
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "bad_metadata",
+    [
+        {"no_speech_prob": None},
+        {"avg_logprob": None},
+        {"compression_ratio": None},
+        {"start": float("nan")},
+        {"end": float("inf")},
+        {"end": -1.0},
+        {"no_speech_prob": float("nan")},
+    ],
+)
+async def test_transcribe_rejects_partially_unscored_or_invalid_segments(bad_metadata) -> None:
+    good = dict(start=0.0, end=1.0, no_speech_prob=0.01, avg_logprob=-0.2, compression_ratio=0.9)
+    bad = dict(start=1.0, end=2.0, no_speech_prob=0.01, avg_logprob=-0.2, compression_ratio=0.9)
+    bad.update(bad_metadata)
+    calls = []
+
+    async def create(**kwargs):
+        calls.append(kwargs["model"])
+        return SimpleNamespace(
+            text="Có nước suối. Đây là phần không được chấm điểm.",
+            segments=[SimpleNamespace(**good), SimpleNamespace(**bad)],
+        )
+
+    service = GroqService(
+        settings=Settings(_env_file=None, groq_api_key="test-key"),
+        client=SimpleNamespace(audio=SimpleNamespace(transcriptions=SimpleNamespace(create=create))),
+    )
+    result = await service.transcribe("voice.webm", b"audio", "audio/webm")
+    assert result == ""
+    assert result.speech_detected is False
+    assert len(calls) == 1
+    assert result.fallback_trace[0]["reason"] in {
+        "missing_quality_metadata", "invalid_quality_metadata"
+    }
+    assert all(math.isfinite(value) for value in result.quality.values())
+
+
+@pytest.mark.asyncio
 async def test_transcribe_keeps_natural_repetition_in_customer_request() -> None:
     class NaturalRepetitionTranscriptions:
         async def create(self, **kwargs):
@@ -1033,6 +1456,99 @@ class RateLimitedRawChatCompletions:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error_code,http_status,body_source",
+    [
+        ("tool_use_failed", 400, "top_level"),
+        ("rate_limit_exceeded", 429, "nested"),
+        ("invalid_api_key", 401, "response"),
+    ],
+)
+async def test_chat_provider_trace_projects_allowlisted_code_without_raw_body(
+    error_code, http_status, body_source, caplog,
+) -> None:
+    provider_body = {
+        "code": error_code,
+        "message": "customer secret and failed_generation must never be copied",
+        "failed_generation": "api-key-like-content",
+    }
+
+    class ToolUseFailure(RuntimeError):
+        status_code = http_status
+        body = {"error": provider_body} if body_source == "nested" else provider_body
+
+    failure = ToolUseFailure("provider message contains customer secret")
+    if body_source == "response":
+        failure.body = None
+        failure.status_code = None
+        failure.response = SimpleNamespace(
+            status_code=http_status, json=lambda: provider_body,
+            headers={"authorization": "test-key"},
+        )
+
+    class FailingCompletions:
+        async def create(self, **kwargs):
+            raise failure
+
+    client = FakeClient()
+    client.chat = SimpleNamespace(completions=FailingCompletions())
+    service = GroqService(
+        settings=Settings(
+            groq_api_key="test-key",
+            groq_fallback_model="",
+            groq_fallback_model_2="",
+        ),
+        client=client,
+    )
+
+    with pytest.raises(GroqProviderError) as error:
+        await service.chat([{"role": "user", "content": "customer secret"}])
+
+    trace = error.value.fallback_trace
+    assert trace[0]["status_code"] == http_status
+    assert trace[0]["error_code"] == error_code
+    assert "message" not in trace[0]
+    assert "failed_generation" not in trace[0]
+    assert "customer secret" not in repr(trace)
+    assert "api-key-like-content" not in repr(trace)
+    assert "test-key" not in repr(trace)
+    assert "customer secret" not in caplog.text
+    assert "api-key-like-content" not in caplog.text
+    assert "test-key" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_chat_provider_trace_drops_unknown_error_code_but_keeps_status() -> None:
+    class UnknownFailure(RuntimeError):
+        status_code = 500
+        body = {"code": "internal_error", "message": "do not expose this"}
+
+    class FailingCompletions:
+        async def create(self, **kwargs):
+            raise UnknownFailure()
+
+    client = FakeClient()
+    client.chat = SimpleNamespace(completions=FailingCompletions())
+    service = GroqService(
+        settings=Settings(
+            groq_api_key="test-key",
+            groq_fallback_model="",
+            groq_fallback_model_2="",
+        ),
+        client=client,
+    )
+
+    with pytest.raises(GroqProviderError) as error:
+        await service.chat([{"role": "user", "content": "hello"}])
+
+    trace = error.value.fallback_trace[0]
+    assert trace["status_code"] == 500
+    assert "error_code" not in trace
+    assert "internal_error" not in repr(trace)
+    assert "do not expose this" not in repr(trace)
+
+
+@pytest.mark.asyncio
 async def test_chat_records_rate_limit_headers_and_token_usage() -> None:
     client = FakeClient()
     client.chat = SimpleNamespace(completions=RawChatCompletions())
@@ -1075,6 +1591,7 @@ async def test_chat_provider_error_preserves_rate_limit_headers() -> None:
             "model": "qwen/qwen3.8-27b",
             "status": "error",
             "error_type": "RateLimitFailure",
+            "status_code": 429,
             "rate_limit_headers": {"retry-after": "2"},
         }
     ]
@@ -1126,6 +1643,7 @@ async def test_chat_rotates_api_keys_after_quota_error_before_model_fallback() -
             "model": "qwen/primary-model",
             "status": "error",
             "error_type": "RateLimitFailure",
+            "status_code": 429,
             "rate_limit_headers": {"retry-after": "2"},
             "credential_slot": "primary",
         },
@@ -1310,6 +1828,71 @@ async def test_transcribe_rotates_api_key_after_quota_error() -> None:
         },
         {
             "model": "whisper-large-v3-turbo",
+            "status": "success",
+            "credential_slot": "fallback_1",
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_transcribe_round_robins_keys_and_skips_cooled_down_slot() -> None:
+    calls = 0
+
+    class PoolTranscriptions:
+        async def create(self, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 3:
+                raise RateLimitFailure()
+            return SimpleNamespace(
+                text=f"Lượt {calls}.",
+                segments=[
+                    SimpleNamespace(
+                        start=0.0,
+                        end=1.1,
+                        no_speech_prob=0.01,
+                        avg_logprob=-0.2,
+                        compression_ratio=0.9,
+                    )
+                ],
+            )
+
+    client = SimpleNamespace(
+        chat=SimpleNamespace(completions=FakeChatCompletions()),
+        audio=SimpleNamespace(transcriptions=PoolTranscriptions()),
+    )
+    service = GroqService(
+        settings=Settings(
+            groq_api_key="primary-test-key",
+            groq_api_key_fallback_1="fallback-test-key-1",
+            groq_stt_model="whisper-large-v3",
+            groq_stt_fallback_model="whisper-large-v3-turbo",
+        ),
+        client=client,
+    )
+
+    first = await service.transcribe("a.webm", b"audio", "audio/webm")
+    second = await service.transcribe("b.webm", b"audio", "audio/webm")
+    third = await service.transcribe("c.webm", b"audio", "audio/webm")
+    fourth = await service.transcribe("d.webm", b"audio", "audio/webm")
+
+    assert first.fallback_trace[0]["credential_slot"] == "primary"
+    assert second.fallback_trace[0]["credential_slot"] == "fallback_1"
+    # Call 3 hits RateLimitFailure on primary and succeeds on fallback_1
+    assert third.fallback_trace[0]["status"] == "error"
+    assert third.fallback_trace[0]["credential_slot"] == "primary"
+    assert third.fallback_trace[1]["status"] == "success"
+    assert third.fallback_trace[1]["credential_slot"] == "fallback_1"
+    # Call 4 wraps back to primary, skips it via cooldown without an API call,
+    # and succeeds on fallback_1
+    assert fourth.fallback_trace == [
+        {
+            "model": "whisper-large-v3",
+            "status": "cooldown",
+            "credential_slot": "primary",
+        },
+        {
+            "model": "whisper-large-v3",
             "status": "success",
             "credential_slot": "fallback_1",
         },

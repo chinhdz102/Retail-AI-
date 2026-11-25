@@ -1,3 +1,5 @@
+from xml.etree import ElementTree
+
 import httpx
 import pytest
 
@@ -71,7 +73,11 @@ async def test_synthesize_uses_configured_region_and_language_voice(
     ssml = kwargs["content"].decode("utf-8")
     assert f'xml:lang="{locale}"' in ssml
     assert f'<voice name="{voice}">' in ssml
-    assert "Giá &lt; 20.000đ &amp; mới" in ssml
+    document = ElementTree.fromstring(ssml)
+    assert "".join(document.itertext()) == "Giá < 20.000đ & mới"
+    assert "&lt;" in ssml and "&amp;" in ssml
+    if language == "vi":
+        assert 'alias="hai mươi nghìn đồng"' in ssml
 
 
 @pytest.mark.asyncio
@@ -197,3 +203,88 @@ async def test_open_stream_keeps_audio_incremental_and_closes_upstream() -> None
     assert chunks
     assert seen["request"].headers["Ocp-Apim-Subscription-Key"] == "azure-secret"
     assert stream.voice_id == "vi-VN-HoaiMyNeural"
+
+
+@pytest.mark.asyncio
+async def test_stream_and_buffered_tts_use_identical_safe_number_aliases():
+    requests = []
+
+    async def handler(request):
+        requests.append(request.content)
+        return httpx.Response(200, headers={"content-type": "audio/mpeg"}, content=b"audio")
+
+    async with httpx.AsyncClient(base_url="https://test.invalid",
+                                transport=httpx.MockTransport(handler)) as client:
+        service = AzureSpeechService(
+            Settings(_env_file=None, azure_speech_key="test", azure_speech_region="test"), client,
+        )
+        text = 'Chai 1,5 lít giá 32.500đ & <break time="99s"/>.'
+        await service.synthesize(text)
+        stream = await service.open_stream(text)
+        await stream.aclose()
+    assert requests[0] == requests[1]
+    xml = ElementTree.fromstring(requests[0])
+    assert "".join(xml.itertext()) == text
+    assert not any(node.tag.endswith("break") for node in xml.iter())
+    assert 'alias="ba mươi hai nghìn năm trăm đồng"' in requests[0].decode()
+
+
+@pytest.mark.asyncio
+async def test_lru_cache_serves_repeated_synthesize_and_stream_without_upstream_call() -> None:
+    calls = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, headers={"content-type": "audio/mpeg"}, content=b"mp3-cached")
+
+    async with httpx.AsyncClient(
+        base_url="https://japaneast.tts.speech.microsoft.com",
+        transport=httpx.MockTransport(handler),
+    ) as client:
+        service = AzureSpeechService(
+            Settings(_env_file=None, azure_speech_key="test", azure_speech_region="japaneast"),
+            client=client,
+        )
+        service._cache_enabled = True
+
+        stream1 = await service.open_stream("Chào bạn, mình là Mai!")
+        chunks1 = [chunk async for chunk in stream1.iter_bytes()]
+        await stream1.aclose()
+
+        stream2 = await service.open_stream("Chào bạn, mình là Mai!")
+        chunks2 = [chunk async for chunk in stream2.iter_bytes()]
+        await stream2.aclose()
+
+        buffered = await service.synthesize("Chào bạn, mình là Mai!")
+
+    assert calls == 1
+    assert b"".join(chunks1) == b"mp3-cached"
+    assert b"".join(chunks2) == b"mp3-cached"
+    assert buffered.content == b"mp3-cached"
+
+
+@pytest.mark.asyncio
+async def test_transient_503_retries_once_when_live_mode_enabled() -> None:
+    calls = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(503, content=b"service unavailable")
+        return httpx.Response(200, headers={"content-type": "audio/mpeg"}, content=b"recovered")
+
+    async with httpx.AsyncClient(
+        base_url="https://japaneast.tts.speech.microsoft.com",
+        transport=httpx.MockTransport(handler),
+    ) as client:
+        service = AzureSpeechService(
+            Settings(_env_file=None, azure_speech_key="test", azure_speech_region="japaneast"),
+            client=client,
+        )
+        service._cache_enabled = True
+        result = await service.synthesize("Xin chào")
+
+    assert calls == 2
+    assert result.content == b"recovered"

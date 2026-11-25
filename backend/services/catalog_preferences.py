@@ -98,8 +98,18 @@ def title_mentions_preparation(title: str, methods: frozenset[str]) -> bool:
     return any(_PREPARATION_NAMES[method] in native_words for method in methods)
 
 
+_FOOD_BO_BEFORE = re.compile(
+    r"\b(?:xuc xich|thit|pho|pho mai|mi|bun|chao|nuoc|vi|huong|sua|banh|banh quy|quy|"
+    r"sot|xot|tuong|lau|canh|gio|cha|vien|kho|keo|kem|bot|dau|hat|com|mien|bap|ngo)\s+bo\s*$"
+)
+
+
 def excluded_catalog_brands(text: str, brands: list[str]) -> frozenset[str]:
-    normalized = normalize_category_text(text)
+    # Protect Vietnamese accented nouns "bò" (beef), "bơ" (butter), "bộ" (set)
+    # from colliding with "bỏ" (exclude) after accent folding.
+    has_explicit_bo_exclude = bool(re.search(r"\bbỏ\b", text, flags=re.IGNORECASE))
+    safe_text = re.sub(r"\b(?:bò|bơ|bộ)\b", "foodnoun", text, flags=re.IGNORECASE)
+    normalized = normalize_category_text(safe_text)
     excluded = set()
     for brand in brands:
         key = normalize_category_text(brand)
@@ -108,7 +118,11 @@ def excluded_catalog_brands(text: str, brands: list[str]) -> frozenset[str]:
         for match in re.finditer(rf"(?<!\w){re.escape(key)}(?!\w)", normalized):
             prefix = normalized[max(0, match.start() - 100) : match.start()]
             suffix = normalized[match.end() : match.end() + 48]
-            if _NEGATED_BRAND.search(prefix) or _NEGATED_BRAND_SUFFIX.search(suffix):
+            if _NEGATED_BRAND.search(prefix) and (
+                has_explicit_bo_exclude or not _FOOD_BO_BEFORE.search(prefix)
+            ):
+                excluded.add(key)
+            elif _NEGATED_BRAND_SUFFIX.search(suffix):
                 excluded.add(key)
     return frozenset(excluded)
 

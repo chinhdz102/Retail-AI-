@@ -5,8 +5,225 @@ from datetime import datetime
 from typing import Literal
 
 from backend.products.catalog import ProductSnapshot
+from backend.products.knowledge import EvidenceScope, EvidenceStatus, product_knowledge_facts
 
 Language = Literal["vi", "en", "zh"]
+
+_TITLE_FUNCTION_PATTERNS: tuple[tuple[str, str], ...] = (
+    (r"\bcửa\s+trước\b", "giặt máy cửa trước"),
+    (r"\bcửa\s+trên\b", "giặt máy cửa trên"),
+    (r"\bgiặt\s+tay\b", "giặt tay"),
+    (r"\b(?:sạch\s+gàu|chống\s+gàu|trị\s+gàu)\b", "làm sạch/chống gàu"),
+    (r"\bngăn\s+(?:gãy\s+)?rụng(?:\s+tóc)?\b", "ngăn gãy rụng tóc"),
+    (r"\bkhông\s+cay\s+mắt\b", "không cay mắt"),
+    (r"\btắm\s+gội(?:\s+toàn\s+thân)?\b", "tắm gội toàn thân"),
+    (r"\blàm\s+sạch\s+sâu\b", "làm sạch sâu"),
+    (r"\bgiàu\s+canxi\b", "giàu canxi"),
+    (r"\bít\s+béo\b", "ít béo"),
+    (r"\bphục\s+hồi(?:\s+hư\s+tổn)?\b", "phục hồi tóc"),
+    (r"\bsuôn\s+mượt\b", "dưỡng tóc suôn mượt"),
+    (r"\bdưỡng\s+(?:tóc|chất|ẩm)\b", "bổ sung dưỡng chất/dưỡng ẩm"),
+    (r"\btạo\s+bọt\b", "rửa mặt tạo bọt"),
+    (r"\bsáng\s+da\b", "hỗ trợ sáng da"),
+    (r"\bmờ\s+thâm\b", "hỗ trợ mờ thâm"),
+    (r"\b(?:ngừa\s+mụn|cho\s+da\s+mụn|acne\s+care)\b", "chăm sóc da mụn"),
+    (r"\bkhử\s+mùi(?:\s+tanh)?\b", "khử mùi"),
+    (r"\b(?:diệt\s+khuẩn|kháng\s+khuẩn)\b", "diệt/kháng khuẩn"),
+    (r"\bbảo\s+vệ\s+123\b", "bảo vệ răng miệng"),
+    (r"\bngừa\s+sâu\s+răng\b", "ngừa sâu răng"),
+    (r"\btrắng\s+răng\b", "làm trắng răng"),
+    (r"\b(?:giảm\s+ê\s+buốt|sensitive)\b", "chăm sóc răng nhạy cảm"),
+    (r"\b(?:không\s+đường|zero)\b", "không đường"),
+    (r"\bít\s+đường\b", "ít đường"),
+    (r"\bcó\s+đường\b", "có đường"),
+    (r"\bkhông\s+calo\b", "không calo"),
+    (r"\btiệt\s+trùng\b", "chế biến tiệt trùng"),
+    (r"\bthanh\s+trùng\b", "chế biến thanh trùng"),
+    (r"\bmen\s+sống\b", "bổ sung men sống"),
+    (r"\b(?:siêu\s+sạch|sạch\s+bóng)\b", "làm sạch bề mặt"),
+    (r"\bngăn\s+côn\s+trùng\b", "hỗ trợ ngăn côn trùng"),
+    (r"\b(?:mềm\s+vải|làn\s+gió\s+mát|hương\s+nước\s+hoa)\b", "làm mềm và tạo hương thơm"),
+    (r"\b(?:ăn\s+liền|pha\s+sẵn)\b", "chế biến tiện lợi"),
+)
+
+_TITLE_INGREDIENT_PHRASE_RE = re.compile(
+    r"\b((?:nhân|chiết\s+xuất|tinh\s+chất|tinh\s+dầu)\s+"
+    r"[^,.;()0-9]+?)(?=\s+(?:\d|gói|túi|chai|lon|hộp|tuýp|can|lốc|thùng|bịch|khay|hũ|lọ|"
+    r"sạch|ngăn|khử|dưỡng|tạo|giặt|cửa|cho|loại)\b|$)",
+    re.IGNORECASE,
+)
+
+_TITLE_INGREDIENT_KEYWORDS: tuple[str, ...] = (
+    "thịt heo",
+    "trứng cút",
+    "trứng muối",
+    "xá xíu",
+    "thịt bò",
+    "thịt gà",
+    "tôm chua cay",
+    "hải sản",
+    "sườn heo",
+    "bạc hà",
+    "trà xanh",
+    "matcha",
+    "lô hội",
+    "nha đam",
+    "đất sét trắng",
+    "đất sét",
+    "canxi",
+    "tơ tằm trắng",
+    "vitamin c",
+    "collagen",
+    "baking soda",
+    "hương thảo",
+    "muối khoáng",
+    "muối hồng",
+    "than hoạt tính",
+    "sả chanh",
+    "chanh sả",
+    "chanh",
+    "quế",
+    "cam bergamot",
+    "gừng",
+    "cacao",
+    "sô cô la",
+    "phô mai",
+    "hạnh nhân",
+    "hạt óc chó",
+    "đậu nành",
+    "đậu đỏ",
+    "gạo lứt",
+    "yến mạch",
+    "hạt chia",
+    "trân châu đường đen",
+    "việt quất",
+    "lựu đỏ",
+    "hương dâu",
+    "hương cam",
+    "hương đào",
+    "100% sữa tươi",
+    "men sống",
+)
+
+
+_CATEGORY_ABBREV_RE: tuple[tuple[str, str], ...] = (
+    (r"\bt\.thân\b", "toàn thân"),
+    (r"\bt\.em\b", "trẻ em"),
+    (r"\bt\.trùng\b", "tiệt trùng"),
+    (r"\bđ\.lạnh\b", "đông lạnh"),
+    (r"\bv\.sinh\b", "vệ sinh"),
+)
+
+
+def _humanize_category_group(label: str) -> str:
+    cleaned = label
+    for pattern, replacement in _CATEGORY_ABBREV_RE:
+        cleaned = re.sub(pattern, replacement, cleaned, flags=re.IGNORECASE)
+    return " ".join(cleaned.split())
+
+
+def extract_catalog_product_traits(product: ProductSnapshot) -> dict[str, str]:
+    """Extract grounded category group, functional traits, and title-stated ingredients."""
+    raw_cat = (product.category_hierarchy or product.category or "").strip()
+    segments = [seg.strip() for seg in raw_cat.split(">") if seg.strip()]
+    category_group = _humanize_category_group(segments[-1]) if segments else "Sản phẩm"
+
+    name_lower = product.name.casefold()
+    functions: list[str] = []
+    for pattern, label in _TITLE_FUNCTION_PATTERNS:
+        if re.search(pattern, name_lower, flags=re.IGNORECASE) and label not in functions:
+            functions.append(label)
+
+    ingredients: list[str] = []
+    for match in _TITLE_INGREDIENT_PHRASE_RE.finditer(product.name):
+        phrase = " ".join(match.group(1).split()).strip(" ,.-")
+        if phrase and phrase.casefold() not in {item.casefold() for item in ingredients}:
+            ingredients.append(phrase)
+    joined_existing = " ".join(ingredients).casefold()
+    for kw in _TITLE_INGREDIENT_KEYWORDS:
+        if re.search(rf"(?<!\w){re.escape(kw)}(?!\w)", name_lower) and kw not in joined_existing:
+            ingredients.append(kw)
+            joined_existing += f" {kw}"
+
+    return {
+        "category_group": category_group,
+        "title_functions": ", ".join(functions[:4]),
+        "title_ingredients": ", ".join(ingredients[:4]),
+    }
+
+
+def _enriched_ingredients_text(
+    product: ProductSnapshot,
+) -> tuple[str | None, str | None, EvidenceScope | None]:
+    """Return (ingredients_text, source, scope) when verified enrichment exists."""
+    try:
+        facts = product_knowledge_facts(product, ("ingredients",), source="catalog")
+    except Exception:
+        return None, None, None
+    for fact in facts:
+        if fact.status == EvidenceStatus.VERIFIED and isinstance(fact.value, str) and fact.value:
+            return fact.value.strip().rstrip("."), fact.source, fact.evidence_scope
+    return None, None, None
+
+
+def _retailer_summary_text(product: ProductSnapshot) -> str | None:
+    """Return crawled Thanh Lam Mart product summary when available (never bare title echoes)."""
+    try:
+        facts = product_knowledge_facts(product, ("description",), source="catalog")
+    except Exception:
+        return None
+    for fact in facts:
+        if (
+            fact.evidence_scope == EvidenceScope.RETAILER_LISTING
+            and (fact.evidence_version or "").startswith("thanh_lam-retailer-details-v1:")
+            and isinstance(fact.value, str)
+            and len(fact.value.strip()) >= 25
+        ):
+            summary = fact.value.strip().rstrip(".")
+            if len(summary) > 320:
+                summary = summary[:317].rsplit(" ", 1)[0].rstrip(" ,;:") + "..."
+            return summary
+    return None
+
+
+def _ingredients_fact(product: ProductSnapshot, language: Language) -> str:
+    if product.ingredients:
+        if language == "en":
+            return f"ingredients: {product.ingredients}"
+        if language == "zh":
+            return f"配料：{product.ingredients}"
+        return f"thành phần: {product.ingredients}"
+    enriched_text, enriched_source, enriched_scope = _enriched_ingredients_text(product)
+    if enriched_text:
+        if enriched_scope == EvidenceScope.RETAILER_LISTING:
+            if language == "en":
+                return f"retailer-listed ingredients ({enriched_source}): {enriched_text}"
+            if language == "zh":
+                return f"商品页标注配料（{enriched_source}）：{enriched_text}"
+            return f"thành phần theo {enriched_source}: {enriched_text}"
+        if language == "en":
+            return f"manufacturer-declared ingredients ({enriched_source}): {enriched_text}"
+        if language == "zh":
+            return f"厂商公布的配料（{enriched_source}）：{enriched_text}"
+        return f"thành phần theo công bố của {enriched_source}: {enriched_text}"
+    traits = extract_catalog_product_traits(product)
+    if traits["title_ingredients"]:
+        if language == "en":
+            return (
+                f"title-noted ingredients/flavor: {traits['title_ingredients']} "
+                "(full ingredient list is not in the catalog; please check the package)"
+            )
+        if language == "zh":
+            return f"商品名称注明的配料/风味：{traits['title_ingredients']}（完整配料表请查看包装）"
+        return (
+            f"thành phần/hương vị ghi trên tên sản phẩm: {traits['title_ingredients']} "
+            "(bảng thành phần chi tiết chưa có trong catalog, bạn xem thêm trên bao bì nhé)"
+        )
+    return {
+        "en": "detailed ingredients are not listed in the catalog (please check the package)",
+        "zh": "目录未记录详细配料表（请查看包装）",
+        "vi": "catalog chưa có dữ liệu chi tiết về bảng thành phần (bạn xem trên bao bì nhé)",
+    }[language]
 
 
 def snapshot_disclosure_keys(
@@ -124,7 +341,7 @@ def render_verified_snapshot(
         if "expiry_at" in fields:
             facts.append(f"expiry date {expiry_date}")
         if "ingredients" in fields:
-            facts.append(f"ingredients: {product.ingredients}")
+            facts.append(_ingredients_fact(product, language))
         if "spicy" in fields:
             facts.append(_spicy_fact(product, language))
         response = f"{product.name}: " + "; ".join(facts) + "."
@@ -151,7 +368,7 @@ def render_verified_snapshot(
         if "expiry_at" in fields:
             facts.append(f"保质期至 {expiry_date}")
         if "ingredients" in fields:
-            facts.append(f"配料：{product.ingredients}")
+            facts.append(_ingredients_fact(product, language))
         if "spicy" in fields:
             facts.append(_spicy_fact(product, language))
         response = f"{product.name}：" + "；".join(facts) + "。"
@@ -181,7 +398,7 @@ def render_verified_snapshot(
     if "expiry_at" in fields:
         facts.append(f"hạn dùng {expiry_date}")
     if "ingredients" in fields:
-        facts.append(f"thành phần: {product.ingredients}")
+        facts.append(_ingredients_fact(product, language))
     if "spicy" in fields:
         facts.append(_spicy_fact(product, language))
 
@@ -238,8 +455,41 @@ def render_verified_snapshot(
     if fields == ("expiry_at",):
         return f"Hạn dùng của {product.name} là {expiry_date} nhé."
     if fields == ("ingredients",):
-        ingredients = (product.ingredients or "").rstrip(".")
-        return f"Thành phần của {product.name} gồm {ingredients} nhé."
+        clean_name = " ".join(product.name.split())
+        if product.ingredients:
+            ingredients = product.ingredients.rstrip(".")
+            return f"Thành phần của {clean_name} gồm {ingredients} nhé."
+        enriched_text, enriched_source, enriched_scope = _enriched_ingredients_text(product)
+        if enriched_text:
+            if enriched_scope == EvidenceScope.RETAILER_LISTING:
+                return (
+                    f"Theo {enriched_source}, với {clean_name}: {enriched_text}. "
+                    "Bạn xem thêm bảng thành phần đầy đủ trên bao bì sản phẩm nhé."
+                )
+            return (
+                f"Theo {enriched_source}, với {clean_name}: {enriched_text}. "
+                "Đây là thông tin chung của dòng sản phẩm; bạn xem thêm trên bao bì nhé."
+            )
+        retailer_summary = _retailer_summary_text(product)
+        if retailer_summary:
+            return (
+                f"Theo thông tin sản phẩm Thanh Lam Mart về {clean_name}: {retailer_summary}. "
+                "Mình chưa có bảng thành phần tách riêng chi tiết nên bạn xem thêm trên nhãn "
+                "bao bì sản phẩm nhé."
+            )
+        traits = extract_catalog_product_traits(product)
+        if traits["title_ingredients"]:
+            return (
+                f"Theo tên và nhóm hàng trong danh mục, {product.name} thuộc nhóm "
+                f"{traits['category_group']} và có ghi nhận thành phần/hương vị: "
+                f"{traits['title_ingredients']}. Mình chưa có dữ liệu đã xác minh cho bảng "
+                "thành phần chi tiết nên bạn kiểm tra giúp mình trên nhãn sản phẩm nhé."
+            )
+        return (
+            f"Theo danh mục, {product.name} thuộc nhóm {traits['category_group']}. "
+            "Mình chưa có dữ liệu đã xác minh cho bảng thành phần chi tiết nên bạn kiểm tra "
+            "giúp mình trên nhãn sản phẩm nhé."
+        )
     if fields == ("spicy",):
         if product.spicy is None:
             return (

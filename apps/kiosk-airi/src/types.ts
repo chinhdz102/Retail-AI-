@@ -38,6 +38,7 @@ export interface AgentResponse {
   data_source?: string | null
   state: string
   products?: ProductCard[]
+  related_products?: ProductCard[]
   shopping_plan?: ShoppingPlan
   cart?: ShoppingCart | null
   checkout_quote?: CheckoutQuote | null
@@ -136,6 +137,22 @@ export interface SupportTicket {
   status: string
   created_at: string
   demo: boolean
+  target_role?: 'manager' | 'staff'
+  notified_channel?: 'zalo' | 'messenger' | 'gmail' | null
+  notified_provider?: string | null
+  notification_status?: 'DELIVERED' | 'FAILED' | 'NOT_CONFIGURED' | null
+  notification_detail?: string | null
+  notified_at?: string | null
+}
+
+export interface ManagerNotifierStatus {
+  enabled: boolean
+  store_name: string
+  primary_channel: 'zalo' | 'messenger' | 'gmail' | null
+  primary_provider: string | null
+  priority: string[]
+  configured_providers: string[]
+  channels: Record<string, boolean>
 }
 
 export interface ProductCard {
@@ -144,11 +161,17 @@ export interface ProductCard {
   category: string
   brand: string | null
   price_vnd: number
+  list_price_vnd?: number | null
+  promotion?: string | null
+  shelf?: string | null
+  image_url?: string | null
   stock: number
   stock_is_current?: boolean
   uom: string | null
   data_timestamp: string
   data_source: string
+  demo_units_sold_30d?: number | null
+  sales_data_source?: 'SIMULATED' | null
 }
 
 export interface CartLine {
@@ -203,16 +226,20 @@ export interface TranscriptionResponse {
   language: string
   model: string
   speech_detected?: boolean
+  needs_confirmation?: boolean
   quality?: Record<string, number>
+  diagnostics?: { raw_text: string; corrections: Array<{ source: string; replacement: string }> }
 }
 
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   text: string
+  imagePreviewUrl?: string
   model?: string
   groundedProductIds?: string[]
   products?: ProductCard[]
+  relatedProducts?: ProductCard[]
   shoppingPlan?: ShoppingPlan
   supportTicket?: SupportTicket
 }

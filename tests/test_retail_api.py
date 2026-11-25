@@ -44,6 +44,7 @@ from backend.api.main import (
     _sensitive_internal_information_requested,
     _shopping_mission_context_message,
     _shopping_mission_planner_system_prompt,
+    _should_defer_unscoped_consultation,
     _should_preempt_legacy_lookup_for_shopping_mission,
     _spicy_recommendation_constraint_requested,
     _support_ticket_followup_requested,
@@ -1663,7 +1664,11 @@ async def test_broad_brand_product_knowledge_question_asks_which_variant(
     assert 1 <= len(payload["grounded_product_ids"]) <= 5
     assert payload["tools_used"] == ["search_products"]
     assert "Bạn muốn hỏi loại nào?" in payload["text"]
-    assert "650g" in payload["text"]
+    assert "Pantene" in payload["text"]
+    assert all(
+        "pantene" in item["name"].casefold()
+        for item in payload["products"]
+    )
     assert "tuyên bố của nhà sản xuất" not in payload["text"]
     assert service.calls == 0
 
@@ -1860,6 +1865,115 @@ def test_whole_cart_recommendation_parses_categories_budget_and_people() -> None
         "quantity_per_category": 2,
         "limit": 3,
     }
+
+
+def test_unscoped_consultation_guard_blocks_snapshot_filler_queries() -> None:
+    record = session_store.create("unscoped-consultation-guard")
+    assert _should_defer_unscoped_consultation(
+        "Mình cần mua đồ để dọn nhà cuối tuần, gợi ý giúp mình nhé.", record
+    )
+
+
+@pytest.mark.parametrize(
+    "text,category",
+    [
+        ("Gợi ý đèn đọc sách để quay video trong phòng tối.", "Đèn đọc sách"),
+        ("Gợi ý bánh cho trẻ em, không cay.", "Bánh"),
+        ("Gợi ý nước lau sàn an toàn quanh thú cưng.", "Nước lau sàn"),
+    ],
+)
+@pytest.mark.parametrize("has_visible_products", [False, True])
+def test_unscoped_consultation_guard_keeps_special_constraints_out_of_legacy_search(
+    text: str, category: str, has_visible_products: bool, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class CategoryRepository:
+        def list_category_hierarchies(self):
+            return (("Cửa hàng", "Nhóm hàng", category),)
+
+    monkeypatch.setattr(api_main, "get_product_repository", lambda: CategoryRepository())
+    category_calls = []
+
+    def resolve(*args):
+        category_calls.append(args)
+        return category
+
+    monkeypatch.setattr(api_main, "resolve_catalog_request_category", resolve)
+    record = session_store.create("unscoped-consultation-special-constraints")
+    if has_visible_products:
+        record.shopping.selected_product_ids = ["seen-product"]
+    assert _should_defer_unscoped_consultation(text, record)
+    assert category_calls == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Đèn đọc sách để quay video ở đâu?",
+        "Nước lau sàn an toàn quanh thú cưng giá bao nhiêu?",
+        "Thêm bánh cho trẻ em vào giỏ.",
+    ],
+)
+def test_consultation_fallback_preserves_factual_and_cart_controllers(
+    text: str,
+) -> None:
+    record = session_store.create("consultation-fallback-factual")
+    assert not _should_defer_unscoped_consultation(text, record)
+
+
+def test_catalog_product_type_prefix_does_not_trigger_a_redundant_scope_question(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.api import main as api
+
+    class PrefixCategoryRepository:
+        def list_category_hierarchies(self):
+            return (
+                ("Nhà cửa", "Chiếu sáng", "Đèn đọc sách loại nhỏ"),
+                ("Nhà cửa", "Chiếu sáng", "Đèn đọc sách loại lớn"),
+            )
+
+    monkeypatch.setattr(api, "get_product_repository", lambda: PrefixCategoryRepository())
+    monkeypatch.setattr(api, "resolve_catalog_request_category", lambda *args: "đèn đọc sách")
+    record = session_store.create("resolved-product-type-prefix")
+    assert not _should_defer_unscoped_consultation(
+        "Có đèn đọc sách nào dưới 150 nghìn?", record,
+    )
+
+
+def test_shared_words_across_different_families_do_not_define_product_scope(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class BroadCategoryRepository:
+        def list_category_hierarchies(self):
+            return (
+                ("Nhà cửa", "Nhà bếp", "Đồ dùng làm bánh"),
+                ("Cá nhân", "Chăm sóc", "Đồ dùng cho bé"),
+            )
+
+    monkeypatch.setattr(api_main, "get_product_repository", lambda: BroadCategoryRepository())
+    monkeypatch.setattr(api_main, "resolve_catalog_request_category", lambda *args: "đồ dùng")
+    record = session_store.create("ambiguous-family-prefix")
+    assert _should_defer_unscoped_consultation(
+        "Mình thiếu mấy đồ dùng cơ bản, tư vấn giúp mình nhé.", record,
+    )
+
+
+def test_curated_product_alias_preserves_scope_across_audience_families(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class AudienceCategoryRepository:
+        def list_category_hierarchies(self):
+            return (
+                ("Cá nhân", "Chăm sóc nam", "Dầu gội nam"),
+                ("Cá nhân", "Chăm sóc tóc", "Dầu gội nữ"),
+            )
+
+    monkeypatch.setattr(api_main, "get_product_repository", lambda: AudienceCategoryRepository())
+    monkeypatch.setattr(api_main, "resolve_catalog_request_category", lambda *args: "dầu gội")
+    record = session_store.create("explicit-type-curated-alias")
+    assert not _should_defer_unscoped_consultation(
+        "Có dầu gội nào dưới 150 nghìn không?", record,
+    )
 
 
 def test_whole_cart_handles_colloquial_people_per_category_and_strict_budget() -> None:
@@ -3703,7 +3817,8 @@ async def test_recommendation_returns_sellable_matching_candidate(
     assert "Nước suối 500ml" in response.json()["text"]
     assert "7.000đ" in response.json()["text"]
     assert "31/08/2026" not in response.json()["text"]
-    assert "Giá tại cửa hàng có thể khác catalog" in response.json()["text"]
+    assert "giá tham khảo" in response.json()["text"].casefold()
+    assert "Giá tại cửa hàng có thể khác catalog" not in response.json()["text"]
     assert response.json()["grounded_product_ids"] == ["WATER01"]
     assert service.calls == 0
 
@@ -4570,7 +4685,8 @@ async def test_recommendation_price_caveat_is_not_repeated_on_product_followup(
     )
 
     assert recommendation.status_code == price_followup.status_code == 200
-    assert "Giá tại cửa hàng có thể khác catalog" in recommendation.json()["text"]
+    assert "giá tham khảo" in recommendation.json()["text"].casefold()
+    assert "Giá tại cửa hàng có thể khác catalog" not in recommendation.json()["text"]
     assert "18.000đ" in price_followup.json()["text"]
     assert "Giá tại cửa hàng có thể khác" not in price_followup.json()["text"]
     assert price_followup.json()["data_timestamp"] == "2026-08-31T00:00:00Z"
@@ -4579,7 +4695,7 @@ async def test_recommendation_price_caveat_is_not_repeated_on_product_followup(
 
 
 @pytest.mark.asyncio
-async def test_whole_cart_combo_warns_once_and_does_not_mutate_cart(
+async def test_whole_cart_combo_uses_reference_prices_without_log_tails_or_cart_mutation(
     client: httpx.AsyncClient,
 ) -> None:
     service = UnexpectedGroqService()
@@ -4600,9 +4716,10 @@ async def test_whole_cart_combo_warns_once_and_does_not_mutate_cart(
     )
 
     assert first.status_code == followup.status_code == 200
-    assert "Giá là tham khảo theo catalog" in first.json()["text"]
-    assert "chưa xác minh tại chi nhánh" in first.json()["text"]
-    assert "Giá là tham khảo theo catalog" not in followup.json()["text"]
+    for response in (first, followup):
+        assert "giá tham khảo" in response.json()["text"]
+        assert "chưa xác minh tại chi nhánh" not in response.json()["text"]
+        assert "Tồn hiện tại" not in response.json()["text"]
     assert first.json()["data_source"] == "demo_product_catalog"
     assert first.json()["cart"] is None
     assert followup.json()["cart"] is None
@@ -4680,11 +4797,81 @@ async def test_implicit_cooking_need_uses_grounded_catalog_without_claiming_fit(
         assert card["name"] == snapshot.name
         assert card["price_vnd"] == snapshot.price_vnd
         assert expected_category in snapshot.category_hierarchy
-    assert "chưa có đủ thông tin" in payload["text"].casefold()
+    assert "chưa đủ thông tin để xác nhận" in payload["text"].casefold()
     assert "phù hợp" in payload["text"].casefold()
     assert "nhu cầu này" in payload["text"].casefold()
     assert "lựa chọn khác" not in payload["text"].casefold()
     assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_title_matched_preparation_reply_is_customer_facing_not_internal_log(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "thanh_lam_products.json"
+    )
+    monkeypatch.setattr("backend.api.main.get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(
+        "backend.services.retail_tools.get_product_repository",
+        lambda settings=None: repository,
+    )
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "title-match-natural-reply"})
+
+    response = await client.post(
+        "/agent/respond",
+        json={
+            "session_id": created.json()["session_id"],
+            "text": "Có loại thịt cho ăn lẩu không?",
+            "language": "vi",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    text = response.json()["text"]
+    assert "Dạ, mình tìm thấy" in text
+    assert "Bạn muốn xem loại này hay mình tìm thêm" in text
+    assert "Mình chọn theo tên hàng" not in text
+    assert "cách dùng cụ thể cần kiểm tra trên nhãn" not in text
+    assert "Giá tại cửa hàng có thể khác catalog" not in text
+    assert "Mình chưa kiểm tra được hàng còn tại cửa hàng" not in text
+    assert service.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_concise_recommendation_still_answers_explicit_stock_question_honestly(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = SnapshotProductRepository(
+        Path(__file__).resolve().parents[1] / "data" / "thanh_lam_products.json"
+    )
+    monkeypatch.setattr(api_main, "get_product_repository", lambda settings=None: repository)
+    monkeypatch.setattr(retail_tools, "get_product_repository", lambda settings=None: repository)
+    service = UnexpectedGroqService()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    created = await client.post("/sessions", json={"kiosk_id": "recommendation-then-stock"})
+    session_id = created.json()["session_id"]
+
+    recommendation = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Có loại thịt cho ăn lẩu không?"},
+    )
+    availability = await client.post(
+        "/agent/respond",
+        json={"session_id": session_id, "text": "Loại đó còn hàng không?"},
+    )
+
+    assert recommendation.status_code == availability.status_code == 200
+    assert "Tồn hiện tại chưa được xác minh" not in recommendation.json()["text"]
+    stock_payload = availability.json()
+    assert stock_payload["grounded_product_ids"] == recommendation.json()["grounded_product_ids"]
+    assert stock_payload["products"][0]["stock_is_current"] is False
+    assert "chưa" in stock_payload["text"].casefold()
+    assert "tồn hiện tại" in stock_payload["text"].casefold()
 
 
 @pytest.mark.asyncio
@@ -4916,7 +5103,8 @@ async def test_multi_turn_product_refinement_keeps_group_and_discloses_unverifie
     second_payload = second.json()
     third_payload = third.json()
     assert second_payload["tools_used"] == ["recommend_products"]
-    assert "chưa có đủ thông tin xác minh" in second_payload["text"].casefold()
+    assert "chưa đủ thông tin để xác nhận" in second_payload["text"].casefold()
+    assert "dữ liệu đã xác minh" not in second_payload["text"].casefold()
     assert "phù hợp với nhu cầu này" in second_payload["text"].casefold()
     assert third_payload["tools_used"] == ["recommend_products"]
     assert "Pond's" not in third_payload["text"]
@@ -5288,6 +5476,59 @@ async def test_audio_endpoint_transcribes_vietnamese_audio(client: httpx.AsyncCl
 
 
 @pytest.mark.asyncio
+async def test_audio_diagnostics_preserves_decoder_text_and_correction_boundary(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.services.catalog_transcription import CatalogWordCorrection
+
+    class RawStt:
+        async def transcribe(self, *args, **kwargs):
+            return "Hai trai 500ml."
+
+    monkeypatch.setattr(
+        "backend.api.main.correct_catalog_words",
+        lambda text, catalog, language: (
+            "Hai chai 500ml.", [CatalogWordCorrection("trai", "chai")],
+        ),
+    )
+    app.dependency_overrides[get_groq_service] = RawStt
+    created = await client.post("/sessions", json={"kiosk_id": "stt-debug"})
+    session_id = created.json()["session_id"]
+    for requested in (False, True):
+        response = await client.post(
+            "/audio/transcribe",
+            data={"session_id": session_id, "include_diagnostics": str(requested).lower()},
+            files={"file": ("voice.wav", BytesIO(b"audio"), "audio/wav")},
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["text"] == "Hai chai 500ml."
+        if requested:
+            assert payload["diagnostics"] == {
+                "raw_text": "Hai trai 500ml.",
+                "corrections": [{"source": "trai", "replacement": "chai"}],
+            }
+        else:
+            assert "diagnostics" not in payload
+
+
+@pytest.mark.asyncio
+async def test_audio_diagnostics_non_vietnamese_has_no_corrections(
+    client: httpx.AsyncClient,
+) -> None:
+    created = await client.post("/sessions", json={"kiosk_id": "stt-debug-en"})
+    response = await client.post(
+        "/audio/transcribe",
+        data={"session_id": created.json()["session_id"], "language": "en",
+              "include_diagnostics": "true"},
+        files={"file": ("voice.wav", BytesIO(b"audio"), "audio/wav")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["diagnostics"] == {"raw_text": payload["text"], "corrections": []}
+
+
+@pytest.mark.asyncio
 async def test_audio_endpoint_limits_whisper_catalog_context_to_eight_terms(
     client: httpx.AsyncClient,
 ) -> None:
@@ -5335,6 +5576,42 @@ async def test_audio_endpoint_limits_whisper_catalog_context_to_eight_terms(
     assert service.vocabulary == tuple(
         f"Brand {index}" for index in range(1, GROQ_STT_CATALOG_CONTEXT_TERMS + 1)
     )
+
+
+@pytest.mark.asyncio
+async def test_audio_endpoint_uses_prior_customer_brands_before_global_terms(client):
+    class Catalog:
+        source_name = "test"
+
+        def list_speech_terms(self, limit):
+            return ("VINAMILK", "THIÊN LONG")[:limit]
+
+        def list_brand_names(self, limit=300):
+            return ("OMO", "ARIEL")
+
+        def list_category_hierarchies(self):
+            return ()
+
+        def search(self, query="", limit=10):
+            return []
+
+    class Stt:
+        async def transcribe(self, filename, content, content_type, language="vi", vocabulary=()):
+            self.vocabulary = vocabulary
+            return "Loại nào đáng tiền?"
+
+    service = Stt()
+    app.dependency_overrides[get_groq_service] = lambda: service
+    app.dependency_overrides[get_transcription_catalog] = lambda: Catalog()
+    created = await client.post("/sessions", json={"kiosk_id": "context"})
+    sid = created.json()["session_id"]
+    session_store.add_message(UUID(sid), "user", "So sánh OMO và Ariel giúp mình")
+    response = await client.post(
+        "/audio/transcribe", data={"session_id": sid},
+        files={"file": ("voice.wav", BytesIO(b"audio"), "audio/wav")},
+    )
+    assert response.status_code == 200
+    assert tuple(service.vocabulary)[:2] == ("OMO", "ARIEL")
 
 
 @pytest.mark.asyncio
@@ -5436,6 +5713,47 @@ async def test_audio_endpoint_exposes_low_confidence_as_no_speech(
     assert response.json()["speech_detected"] is False
     assert response.json()["model"] == "whisper-large-v3-turbo"
     assert response.json()["quality"]["no_speech_duration_ratio"] == 1.0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("secondary,confirmation", [
+    ("NƯỚC GIẶT OMO VỚI ARIEL LOẠI NÀO ĐÁNG TIỀN HƠN", True),
+    ("NƯỚC GIẶT OMO VỚI A RIN LOẠI NÀO ĐÁNG TIỀN HƠN", False),
+])
+async def test_audio_endpoint_flags_catalog_identity_difference_without_replacing_transcript(
+    client: httpx.AsyncClient, secondary, confirmation,
+) -> None:
+    primary = "Nước giặt OMO với A-RIN loại nào đáng tiền hơn?"
+
+    class Catalog:
+        def list_brand_names(self, *, limit):
+            assert limit == 300
+            return ("OMO", "ARIEL")
+
+        def search(self, query="", limit=10):
+            return []
+
+    class ComparedSttService(FakeGroqService):
+        async def transcribe(self, *args, **kwargs):
+            return GroqTranscriptionResult(
+                primary, "whisper-large-v3", quality={"avg_logprob": -0.1},
+                verification_text=secondary,
+            )
+
+    app.dependency_overrides[get_groq_service] = lambda: ComparedSttService()
+    app.dependency_overrides[get_transcription_catalog] = lambda: Catalog()
+    created = await client.post("/sessions", json={"kiosk_id": "asr-identity-comparison"})
+    response = await client.post(
+        "/audio/transcribe", data={"session_id": created.json()["session_id"]},
+        files={"file": ("voice.wav", BytesIO(b"audio"), "audio/wav")},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["text"] == primary
+    assert bool(data.get("needs_confirmation")) is confirmation
+    assert "verification_text" not in data and secondary not in response.text
+    if confirmation:
+        assert data["quality"]["asr_catalog_identity_disagreement"] == 1
 
 
 @pytest.mark.asyncio
@@ -5895,7 +6213,8 @@ async def test_spoken_product_requests_resolve_from_the_full_snapshot_catalog(
             assert any(name in payload["text"].casefold() for name in returned_names[:3])
         if expected_tool == "recommend_products":
             assert "giá tham khảo" in payload["text"].casefold()
-            assert "giá tại cửa hàng có thể khác catalog" in payload["text"].casefold()
+            assert "giá tại cửa hàng có thể khác catalog" not in payload["text"].casefold()
+            assert "tồn hiện tại chưa được xác minh" not in payload["text"].casefold()
             if index == 1:
                 assert "mình tìm thấy vài loại" in payload["text"].casefold()
                 assert (
@@ -6023,7 +6342,9 @@ async def test_natural_product_discovery_stays_catalog_grounded_across_departmen
         assert payload["grounded_product_ids"], (text, payload)
         assert payload["data_source"] == "thanh_lam_json_snapshot"
         assert "giá tham khảo" in payload["text"].casefold()
-        assert "giá tại cửa hàng có thể khác catalog" in payload["text"].casefold()
+        assert "giá tại cửa hàng có thể khác catalog" not in payload["text"].casefold()
+        assert "tồn hiện tại chưa được xác minh" not in payload["text"].casefold()
+        assert "mình chọn theo" not in payload["text"].casefold()
 
         products = [
             repository.get_product_snapshot(product_id)
@@ -6077,6 +6398,8 @@ async def test_natural_product_discovery_stays_catalog_grounded_across_departmen
                     "catalog chưa xác nhận",
                     "catalog chưa ghi",
                     "catalog chưa có đủ thông tin xác minh",
+                    "mình chưa đủ thông tin để xác nhận",
+                    "mình chưa rõ các biến thể",
                 )
             ), (
                 text,

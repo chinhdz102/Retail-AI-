@@ -69,7 +69,7 @@ try {
     }
   })
   if (!result.initialized) throw new Error('Neural VAD did not start in Chromium')
-  if (!vadRequests.some(url => url.includes('silero_vad_v5.onnx'))) {
+  if (!vadRequests.some(url => url.includes('silero_vad_v6.onnx'))) {
     throw new Error('Local Silero v5 model was not requested')
   }
   if (vadRequests.some(url => !url.startsWith(origin))) {

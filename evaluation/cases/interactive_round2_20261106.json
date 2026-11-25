@@ -1,0 +1,223 @@
+{
+  "suite_id": "interactive_round2_20261106",
+  "version": 1,
+  "predeclared_before_execution": true,
+  "provenance": {
+    "author": "Codex development conversations; hotpot follows the UI failure observed this turn.",
+    "evaluation": "Exposed development cases, agent manual review, no independent human judgement or SKU oracle."
+  },
+  "journeys": [
+    {
+      "id": "hotpot-choice",
+      "name": "Main ingredient then exclude pork",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh",
+      "turns": [
+        {
+          "text": "Nhà có 2 người, tối nay ăn lẩu. Tầm 150 nghìn tiền thịt thôi, chọn giúp mình một loại. Nhà tự thái được.",
+          "decision_goal": "Choose one main meat ingredient with a practical preparation or purchasing reason. Preserve the budget; do not require the title to say hotpot.",
+          "must_keep_criteria": [
+            "One choice",
+            "Main meat ingredient",
+            "Budget150000",
+            "Home slicing possible"
+          ],
+          "disallowed_unsupported_claims": [
+            "Serving guarantees",
+            "Cooking speed",
+            "Texture or freshness guarantees",
+            "Filled pastry or processed balls as main fresh meat"
+          ],
+          "role": "customer"
+        },
+        {
+          "text": "Không thịt heo nhé, vẫn tiền đó. Nếu là bạn thì lấy loại nào và vì sao?",
+          "decision_goal": "Update the meat choice to exclude pork, retain budget and hotpot goal, make a reasoned choice rather than list names.",
+          "must_keep_criteria": [
+            "No pork",
+            "Budget150000",
+            "One choice",
+            "Hotpot retained"
+          ],
+          "disallowed_unsupported_claims": [
+            "Personal purchase experience",
+            "Unverified ingredient absence",
+            "Tenderness or cooking guarantees"
+          ],
+          "role": "customer"
+        }
+      ]
+    },
+    {
+      "id": "work-drink",
+      "name": "One work drink then smaller package",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh",
+      "turns": [
+        {
+          "text": "Mua nước mang đi làm, dưới 20 nghìn, không nước có ga và không cà phê. Chọn giúp một chai thôi.",
+          "decision_goal": "Select one actual bottle below budget with a task-specific reason and both exclusions.",
+          "must_keep_criteria": [
+            "One bottle",
+            "Below20000",
+            "No carbonated drink",
+            "No coffee"
+          ],
+          "disallowed_unsupported_claims": [
+            "Smallest without comparison",
+            "Invented material or bag fit",
+            "Health or hydration duration guarantee"
+          ],
+          "role": "customer"
+        },
+        {
+          "text": "Có chai nhỏ hơn không? Mình không muốn mua cả lốc hay cả thùng.",
+          "decision_goal": "Resolve smaller against the product actually shown. Respect unit versus multipack and previous budget/exclusions; clarify the reference once if no product was shown.",
+          "must_keep_criteria": [
+            "Only a single bottle",
+            "Below20000",
+            "No carbonated drink",
+            "No coffee",
+            "Genuine comparison reference"
+          ],
+          "disallowed_unsupported_claims": [
+            "Imaginary previous product",
+            "Claiming a multipack price buys a single bottle",
+            "Invented container dimensions"
+          ],
+          "role": "customer"
+        }
+      ]
+    },
+    {
+      "id": "hair-choice",
+      "name": "Choose shampoo then explain price tradeoff",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh",
+      "turns": [
+        {
+          "text": "Chọn giúp mình một chai dầu gội dưới 150 nghìn dùng thông thường, không cần hàng cao cấp. Nói ngắn vì sao chọn nhé.",
+          "decision_goal": "Make one purchase choice within budget; explain a real package or price tradeoff without pretending to know scalp suitability.",
+          "must_keep_criteria": [
+            "One shampoo",
+            "Below150000",
+            "Practical value reason"
+          ],
+          "disallowed_unsupported_claims": [
+            "Scalp treatment",
+            "Invented fragrance strength",
+            "Duration or number of washes without dosage",
+            "Personal use experience"
+          ],
+          "role": "customer"
+        },
+        {
+          "text": "Nếu muốn tiết kiệm tiền mua lúc này hơn nữa thì sao? Vẫn dầu gội thôi, đừng mua thêm dầu xả.",
+          "decision_goal": "Interpret lower initial spending rather than maximize package size; use actual prior item as price reference or clarify if absent.",
+          "must_keep_criteria": [
+            "Shampoo only",
+            "No conditioner",
+            "Lower initial spend against a real reference"
+          ],
+          "disallowed_unsupported_claims": [
+            "Longer duration",
+            "Better efficacy from higher price",
+            "Claims of cheaper than an unshown item"
+          ],
+          "role": "customer"
+        }
+      ]
+    },
+    {
+      "id": "home-cleaning",
+      "name": "Joint purpose then narrow to one",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh",
+      "turns": [
+        {
+          "text": "Mới chuyển nhà, cần nước rửa chén với túi rác, tổng dưới 80 nghìn. Nhà có khăn và miếng rửa rồi, chọn giúp mấy thứ cần mua thôi.",
+          "decision_goal": "Buy the two required roles together within total budget, omit accessories already owned and give a reasoned priority.",
+          "must_keep_criteria": [
+            "Total below80000",
+            "Dishwashing and rubbish bags together",
+            "No cloth or sponge"
+          ],
+          "disallowed_unsupported_claims": [
+            "Unverified cleaning superiority",
+            "Bag durability promise",
+            "Household duration guarantee"
+          ],
+          "role": "customer"
+        },
+        {
+          "text": "Thôi trước mắt lấy một loại nước rửa chén dưới 35 nghìn thôi, không mùi chanh.",
+          "decision_goal": "Narrow to one dishwashing product, change budget and exclude lemon-labelled variants without preserving the old bundle.",
+          "must_keep_criteria": [
+            "One dishwashing product",
+            "Below35000",
+            "No lemon",
+            "No old bundle"
+          ],
+          "disallowed_unsupported_claims": [
+            "Non-irritating",
+            "Unverified fragrance intensity",
+            "Invented ingredient absence"
+          ],
+          "role": "customer"
+        }
+      ]
+    },
+    {
+      "id": "sensitive-care",
+      "name": "General advice and acne treatment distinction",
+      "group": "cross_category_generalization",
+      "session_mode": "fresh",
+      "turns": [
+        {
+          "text": "Da mình nhạy cảm, muốn chọn sữa tắm thì cần xem gì? Chưa cần chốt hãng.",
+          "decision_goal": "Give practical sourced selection guidance; do not force a SKU or claim a brand is safe for sensitive skin.",
+          "must_keep_criteria": [
+            "General selection advice",
+            "No brand required",
+            "Sensitive skin"
+          ],
+          "disallowed_unsupported_claims": [
+            "Allergy-free guarantees",
+            "Invented ingredient list",
+            "Treatment schedule"
+          ],
+          "role": "customer"
+        },
+        {
+          "text": "Còn loại điều trị mụn thì sao, tư vấn giúp mình với.",
+          "decision_goal": "Recognize the treatment question and give a useful next step, distinguish ordinary cosmetic care from treatment without a product dumping or generic no-catalog fallback.",
+          "must_keep_criteria": [
+            "Acne treatment distinction",
+            "Useful next step",
+            "No irrelevant bath-product continuation"
+          ],
+          "disallowed_unsupported_claims": [
+            "Cosmetic cures acne",
+            "Drug regimen",
+            "Unverified active ingredients or dosage"
+          ],
+          "role": "customer"
+        }
+      ]
+    }
+  ],
+  "evaluation_policy": {
+    "decision_unit": "Every scheduled HTTP turn including fallbacks.",
+    "denominator": "All ten scheduled turns, no removal of failed or not-run turns.",
+    "manual_review": "Codex reads every response against the predeclared rubric; not independently human judged.",
+    "labels": [
+      "pass",
+      "weak",
+      "fail",
+      "service_failure",
+      "not_run"
+    ],
+    "pass_standard": "Answers the actual goal, preserves constraints, makes a useful decision or necessary clarification, and avoids unsupported claims.",
+    "no_production_case_rules": "No customer prompt-to-answer or prompt-to-SKU mapping."
+  }
+}

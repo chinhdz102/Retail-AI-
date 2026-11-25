@@ -10,7 +10,7 @@ await mkdir(destination, { recursive: true })
 await mkdir(targetOrt, { recursive: true })
 const files = (await readdir(sourceVad)).filter((name) =>
   name === 'vad.worklet.bundle.min.js' || /^silero_vad_.*\.onnx$/.test(name))
-if (!files.includes('vad.worklet.bundle.min.js') || !files.includes('silero_vad_v5.onnx')) {
+if (!files.includes('vad.worklet.bundle.min.js') || !files.includes('silero_vad_v6.onnx')) {
   throw new Error('The local Silero VAD package does not contain the required model/worklet assets')
 }
 for (const name of files) await copyFile(join(sourceVad, name), join(destination, name))

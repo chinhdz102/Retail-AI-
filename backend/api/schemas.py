@@ -101,6 +101,7 @@ class SupportTicketCreateRequest(BaseModel):
     issue_type: IssueType = IssueType.OTHER
     description: str = Field(min_length=1, max_length=500)
     idempotency_key: str = Field(default_factory=lambda: uuid4().hex, min_length=8, max_length=128)
+    target_role: Literal["manager", "staff"] = "staff"
 
 
 class SupportTicketResponse(BaseModel):
@@ -112,6 +113,63 @@ class SupportTicketResponse(BaseModel):
     status: str
     created_at: datetime
     demo: bool = True
+    target_role: Literal["manager", "staff"] = "staff"
+    notified_channel: Literal["zalo", "messenger", "gmail"] | None = None
+    notified_provider: str | None = None
+    notification_status: Literal["DELIVERED", "FAILED", "NOT_CONFIGURED"] = "NOT_CONFIGURED"
+    notification_detail: str | None = None
+    notified_at: datetime | None = None
+
+
+class ManagerNotifierStatusResponse(BaseModel):
+    enabled: bool
+    store_name: str
+    primary_channel: Literal["zalo", "messenger", "gmail"] | None = None
+    primary_provider: str | None = None
+    priority: list[str] = Field(default_factory=list)
+    configured_providers: list[str] = Field(default_factory=list)
+    channels: dict[str, bool] = Field(default_factory=dict)
+
+
+class ManagerNotifierAttemptResponse(BaseModel):
+    provider: str
+    channel_group: Literal["zalo", "messenger", "gmail"]
+    ok: bool
+    detail: str
+    provider_message_id: str | None = None
+
+
+class ManagerNotifierTestRequest(BaseModel):
+    message: str = Field(
+        default="Tin nhắn kiểm tra kết nối từ trợ lý siêu thị Mai.",
+        min_length=1,
+        max_length=500,
+    )
+    kiosk_id: str = Field(default="kiosk-01", min_length=1, max_length=64)
+    provider: Literal["zalo_bot", "zalo_oa", "zalo_webhook", "messenger", "gmail"] | None = None
+
+
+class ManagerNotifierTestResponse(BaseModel):
+    configured: bool
+    delivered: bool
+    channel: Literal["zalo", "messenger", "gmail"] | None = None
+    provider: str | None = None
+    provider_message_id: str | None = None
+    detail: str
+    attempts: list[ManagerNotifierAttemptResponse] = Field(default_factory=list)
+    sent_at: datetime | None = None
+
+
+class ZaloBotChatHint(BaseModel):
+    chat_id: str
+    display_name: str = ""
+    last_text: str = ""
+
+
+class ZaloBotUpdatesResponse(BaseModel):
+    ok: bool
+    detail: str
+    chats: list[ZaloBotChatHint] = Field(default_factory=list)
 
 
 class ProductCardResponse(BaseModel):
@@ -120,11 +178,17 @@ class ProductCardResponse(BaseModel):
     category: str
     brand: str | None = None
     price_vnd: int
+    list_price_vnd: int | None = None
+    promotion: str | None = None
+    shelf: str | None = None
+    image_url: str | None = None
     stock: int
     stock_is_current: bool = True
     uom: str | None = None
     data_timestamp: datetime
     data_source: str = "unknown"
+    demo_units_sold_30d: int | None = Field(default=None, ge=0, le=999)
+    sales_data_source: Literal["SIMULATED"] | None = None
 
 
 class ShoppingPlanQuantityEstimate(BaseModel):
@@ -250,6 +314,7 @@ class AgentRespondResponse(BaseModel):
     data_source: str | None = None
     state: SessionState
     products: list[ProductCardResponse] = Field(default_factory=list)
+    related_products: list[ProductCardResponse] = Field(default_factory=list)
     shopping_plan: ShoppingPlanResponse | None = None
     cart: CartResponse | None = None
     checkout_quote: CheckoutQuoteResponse | None = None
@@ -262,13 +327,29 @@ class ProductSearchResponse(BaseModel):
     data_timestamp: datetime
 
 
+class TranscriptionCorrection(BaseModel):
+    """A bounded, opt-in explanation of catalog post-processing."""
+
+    source: str
+    replacement: str
+
+
+class TranscriptionDiagnostics(BaseModel):
+    """Raw decoder output and deterministic corrections for local debugging."""
+
+    raw_text: str
+    corrections: list[TranscriptionCorrection] = Field(default_factory=list)
+
+
 class TranscriptionResponse(BaseModel):
     session_id: UUID
     text: str
     language: LanguageCode = "vi"
     model: str
     speech_detected: bool = True
+    needs_confirmation: bool | None = None
     quality: dict[str, float] = Field(default_factory=dict)
+    diagnostics: TranscriptionDiagnostics | None = None
 
 
 class SynthesizeRequest(BaseModel):

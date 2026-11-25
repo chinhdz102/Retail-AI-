@@ -192,6 +192,9 @@ _PHYSICALLY_VERIFIED_SHELF_SOURCES = frozenset({"PHYSICALLY_VERIFIED"})
 _DEFAULT_ENRICHMENT_PATH = (
     Path(__file__).resolve().parents[2] / "data" / "product_knowledge_enrichment_pilot.json"
 )
+_DEFAULT_RETAILER_DETAILS_PATH = (
+    Path(__file__).resolve().parents[2] / "data" / "thanh_lam_product_details.json"
+)
 
 
 def _safe_source_url(product: ProductSnapshot) -> str | None:
@@ -266,6 +269,72 @@ def _manufacturer_record_for_product(
     return record, registry_sha256
 
 
+@lru_cache(maxsize=4)
+def _load_retailer_details(
+    path: str,
+    modified_ns: int,
+    file_size: int,
+) -> tuple[dict[str, dict[str, Any]], str, str, datetime | None]:
+    del modified_ns, file_size
+    raw = Path(path).read_bytes()
+    payload = json.loads(raw.decode("utf-8"))
+    if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
+        raise ValueError("Unsupported retailer product details schema")
+    records = payload.get("records")
+    if not isinstance(records, dict):
+        raise ValueError("Retailer product details missing records map")
+    generated_raw = payload.get("generated_at")
+    generated_at: datetime | None = None
+    if isinstance(generated_raw, str) and generated_raw:
+        try:
+            generated_at = datetime.fromisoformat(generated_raw.replace("Z", "+00:00"))
+        except ValueError:
+            generated_at = None
+    return (
+        records,
+        hashlib.sha256(raw).hexdigest(),
+        str(payload.get("source_catalog_sha256") or ""),
+        generated_at,
+    )
+
+
+def _retailer_record_for_product(
+    product: ProductSnapshot,
+    *,
+    allow_retailer_details: bool,
+) -> tuple[dict[str, Any] | None, str | None, datetime | None]:
+    if not allow_retailer_details:
+        return None, None, None
+    try:
+        stat = _DEFAULT_RETAILER_DETAILS_PATH.stat()
+    except OSError:
+        return None, None, None
+    try:
+        records, file_sha256, source_catalog_sha256, generated_at = _load_retailer_details(
+            str(_DEFAULT_RETAILER_DETAILS_PATH.resolve()),
+            stat.st_mtime_ns,
+            stat.st_size,
+        )
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None, None, None
+    if (
+        product.catalog_version
+        and source_catalog_sha256
+        and source_catalog_sha256.casefold() != product.catalog_version.casefold()
+    ):
+        return None, file_sha256, generated_at
+    rec = records.get(product.product_id)
+    if not isinstance(rec, dict):
+        return None, file_sha256, generated_at
+    if (
+        rec.get("product_name") != product.name
+        or str(rec.get("brand") or "").casefold() != str(product.brand or "").casefold()
+        or str(rec.get("barcode") or "") != str(product.barcode or "")
+    ):
+        return None, file_sha256, generated_at
+    return rec, file_sha256, generated_at
+
+
 def _enriched_fact(
     product: ProductSnapshot,
     fact: ManufacturerEnrichmentFact,
@@ -311,6 +380,10 @@ def product_knowledge_facts(
     manufacturer_record, registry_sha256 = _manufacturer_record_for_product(
         product,
         enrichment_path,
+    )
+    retailer_record, retailer_sha256, retailer_observed_at = _retailer_record_for_product(
+        product,
+        allow_retailer_details=(enrichment_path is None),
     )
     manufacturer_facts = (
         {fact.attribute: fact for fact in manufacturer_record.facts}
@@ -365,6 +438,96 @@ def product_knowledge_facts(
                 )
             result.append(enriched_result)
             continue
+
+        # Tier 3: Official Thanh Lam Mart retailer product listing details (lower precedence
+        # than active-catalog direct fields and official manufacturer declarations).
+        if (
+            retailer_record is not None
+            and retailer_sha256 is not None
+            and (direct_field is None or direct_value is None)
+        ):
+            if requested == "ingredients" and isinstance(retailer_record.get("ingredients"), str):
+                ing_source = (
+                    str(retailer_record.get("ingredients_source") or "").strip()
+                    or "thông tin sản phẩm Thanh Lam Mart"
+                )
+                ing_url = (
+                    str(retailer_record.get("ingredients_source_url") or "").strip()
+                    or str(retailer_record.get("source_url") or "").strip()
+                    or _safe_source_url(product)
+                )
+                result.append(
+                    ProductKnowledgeFact(
+                        product_id=product.product_id,
+                        attribute="ingredients",
+                        value=retailer_record["ingredients"],
+                        status=EvidenceStatus.VERIFIED,
+                        evidence_scope=EvidenceScope.RETAILER_LISTING,
+                        source=ing_source,
+                        source_url=ing_url,
+                        source_field="thanh_lam.longDescription.ingredients",
+                        observed_at=retailer_observed_at or product.data_timestamp,
+                        verified_at=retailer_observed_at or product.data_timestamp,
+                        catalog_version=version,
+                        evidence_version=f"thanh_lam-retailer-details-v1:{retailer_sha256}",
+                        product_match_scope="EXACT_VARIANT",
+                        confidence=0.85,
+                        note=(
+                            "Extracted from the official Thanh Lam Mart product listing; "
+                            "check the physical package label for the complete ingredient list."
+                        ),
+                    )
+                )
+                continue
+            if requested == "usage" and isinstance(retailer_record.get("usage"), str):
+                result.append(
+                    ProductKnowledgeFact(
+                        product_id=product.product_id,
+                        attribute="usage",
+                        value=retailer_record["usage"],
+                        status=EvidenceStatus.VERIFIED,
+                        evidence_scope=EvidenceScope.RETAILER_LISTING,
+                        source="thông tin sản phẩm Thanh Lam Mart",
+                        source_url=str(retailer_record.get("source_url") or "")
+                        or _safe_source_url(product),
+                        source_field="thanh_lam.longDescription.usage",
+                        observed_at=retailer_observed_at or product.data_timestamp,
+                        verified_at=retailer_observed_at or product.data_timestamp,
+                        catalog_version=version,
+                        evidence_version=f"thanh_lam-retailer-details-v1:{retailer_sha256}",
+                        product_match_scope="EXACT_VARIANT",
+                        confidence=0.85,
+                        note=(
+                            "Usage instructions extracted from the official Thanh Lam Mart product "
+                            "listing; follow the physical package label if different."
+                        ),
+                    )
+                )
+                continue
+            if requested == "description" and isinstance(retailer_record.get("summary"), str):
+                result.append(
+                    ProductKnowledgeFact(
+                        product_id=product.product_id,
+                        attribute="description",
+                        value=retailer_record["summary"],
+                        status=EvidenceStatus.INFERRED,
+                        evidence_scope=EvidenceScope.RETAILER_LISTING,
+                        source="thông tin sản phẩm Thanh Lam Mart",
+                        source_url=str(retailer_record.get("source_url") or "")
+                        or _safe_source_url(product),
+                        source_field="thanh_lam.longDescription",
+                        observed_at=retailer_observed_at or product.data_timestamp,
+                        catalog_version=version,
+                        evidence_version=f"thanh_lam-retailer-details-v1:{retailer_sha256}",
+                        product_match_scope="EXACT_VARIANT",
+                        confidence=0.7,
+                        note=(
+                            "Retailer listing summary; do not treat marketing language as "
+                            "independent clinical or safety verification."
+                        ),
+                    )
+                )
+                continue
 
         if requested == "availability":
             if product.stock_is_current:

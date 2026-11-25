@@ -4,11 +4,16 @@ import asyncio
 import json
 import logging
 import re
+import unicodedata
+from collections import defaultdict, deque
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from time import perf_counter
-from uuid import UUID
+from uuid import UUID, uuid4
 
+import anyio
 import asyncpg
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,6 +56,7 @@ from backend.products.category_taxonomy import (
     category_leaf,
     normalize_category_text,
     resolve_catalog_category,
+    resolve_catalog_category_alias,
     split_category_hierarchy,
 )
 from backend.products.repository import ProductRepository, get_product_repository
@@ -59,9 +65,23 @@ from backend.services.azure_speech import (
     AzureSpeechProviderError,
     AzureSpeechService,
 )
+from backend.services.azure_stt import AzureSTTService
+from backend.services.bounded_work import run_catalog_work
 from backend.services.catalog_browse import explicit_catalog_category_list
 from backend.services.catalog_preferences import preparation_terms
 from backend.services.catalog_transcription import correct_catalog_words
+from backend.services.consultation_cache import (
+    get_consultation_cache,
+    is_stateless_cacheable_turn,
+)
+from backend.services.customer_consultation import (
+    StreamingConsultationPlan,
+    prepare_streaming_consultation,
+    render_visible_comparison,
+    safe_consult_customer,
+)
+from backend.services.demo_sales import rank_demo_sales, render_demo_sales
+from backend.services.demo_sales_store import get_demo_sales_store
 from backend.services.elevenlabs import (
     ElevenLabsConfigurationError,
     ElevenLabsProviderError,
@@ -69,9 +89,15 @@ from backend.services.elevenlabs import (
 )
 from backend.services.groq import (
     GROQ_STT_CATALOG_CONTEXT_TERMS,
+    GroqAudioInputError,
     GroqConfigurationError,
     GroqProviderError,
     GroqService,
+)
+from backend.services.manager_notifier import (
+    CHANNEL_DISPLAY_LABELS,
+    ManagerAlertPayload,
+    ManagerNotifierService,
 )
 from backend.services.organization_profiles import OrganizationAnswer, get_organization_answer
 from backend.services.product_comparison import (
@@ -82,6 +108,7 @@ from backend.services.product_comparison import (
 )
 from backend.services.query_understanding import (
     QueryUnderstandingResult,
+    non_catalog_question_kind,
     prior_product_page_reference_kind,
     understand_catalog_query,
 )
@@ -99,6 +126,7 @@ from backend.services.retail_agent import (
     run_retail_agent,
 )
 from backend.services.retail_response_style import (
+    extract_catalog_product_traits,
     render_verified_snapshot,
     snapshot_disclosure_keys,
 )
@@ -151,8 +179,10 @@ from backend.services.smalltalk import (
 from backend.services.speech_tickets import SpeechTicketStore
 from backend.services.support import (
     SupportIdempotencyConflictError,
+    SupportTicket,
     SupportTicketNotFoundError,
     SupportTicketStore,
+    _safe_description,
     classify_support_intent,
 )
 from backend.services.vietnamese_intent import (
@@ -198,16 +228,221 @@ logger = logging.getLogger(__name__)
 _ALLERGEN_PRODUCT_CLARIFICATION = "ALLERGEN_PRODUCT_NAME"
 _groq_service: GroqService | None = None
 _azure_speech_service: AzureSpeechService | None = None
+_azure_stt_service: AzureSTTService | None = None
 _elevenlabs_service: ElevenLabsService | None = None
 
-app = FastAPI(title="AI Retail Assistant API", version=settings.app_version)
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    try:
+        repo = get_product_repository(settings)
+        repo.list_category_hierarchies()
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        pass
+    # Pre-warm Silero VAD ONNX, DPDFNet2 neural speech denoiser, and Azure Speech
+    # TLS connections so the very first voice turn avoids cold-start spikes.
+    try:
+        from backend.services.speech_activity import _model_session
+
+        await asyncio.to_thread(_model_session)
+    except Exception:
+        pass
+    try:
+        # Warm the catalog snapshot & taxonomy indexes at startup so the very first
+        # customer turn never pays one-time JSON parse + token index latency.
+        repo = get_product_repository()
+        repo.list_category_hierarchies()
+    except Exception:
+        pass
+
+    async def _warm_network_and_audio_pools() -> None:
+        async def _warm_denoiser() -> None:
+            if not settings.speech_denoiser_enabled:
+                return
+            try:
+                from backend.services.speech_denoiser import warm_speech_denoiser
+
+                await asyncio.to_thread(
+                    warm_speech_denoiser, settings.speech_denoiser_model_path
+                )
+            except Exception:
+                pass
+
+        async def _warm_azure_tts() -> None:
+            if not settings.has_azure_speech:
+                return
+            try:
+                await get_azure_speech_service(settings).preconnect("vi")
+            except Exception:
+                pass
+
+        async def _warm_azure_stt() -> None:
+            if not (settings.has_azure_speech and settings.stt_provider == "azure"):
+                return
+            try:
+                await get_azure_stt_service(settings).preconnect("vi")
+            except Exception:
+                pass
+
+        async def _warm_chat_llm() -> None:
+            if not settings.has_chat_llm_key:
+                return
+            try:
+                await get_groq_service(settings).preconnect_chat()
+            except Exception:
+                pass
+
+        # Run all external TLS preconnects and optional ONNX denoiser warmup
+        # concurrently in the background so serverless cold-starts never block
+        # /health or /sessions for 5-8s waiting on sequential handshakes.
+        await asyncio.gather(
+            _warm_chat_llm(),
+            _warm_azure_tts(),
+            _warm_azure_stt(),
+            _warm_denoiser(),
+            return_exceptions=True,
+        )
+
+    warmup_task = asyncio.create_task(_warm_network_and_audio_pools())
+    try:
+        yield
+    finally:
+        if not warmup_task.done():
+            warmup_task.cancel()
+            await asyncio.gather(warmup_task, return_exceptions=True)
+
+
+app = FastAPI(
+    title="AI Retail Assistant API",
+    version=settings.app_version,
+    lifespan=_lifespan,
+)
+from backend.api.audio_ws import router as _audio_ws_router  # noqa: E402
+from backend.api.support_routes import (  # noqa: E402
+    get_manager_notifier_service,
+)
+from backend.api.support_routes import (  # noqa: E402
+    router as _support_router,
+)
+from backend.api.vision_routes import router as _vision_router  # noqa: E402
+
+app.include_router(_audio_ws_router)
+app.include_router(_support_router)
+app.include_router(_vision_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID", "X-Response-Time-Ms"],
 )
+
+_RATE_LIMIT_WINDOW_SECONDS = 60.0
+_RATE_LIMIT_MAX_REQUESTS = 180
+_rate_limit_buckets: dict[str, deque[float]] = defaultdict(deque)
+
+
+class _ObservabilityAndRateLimitMiddleware:
+    """Pure ASGI middleware for request IDs, timing headers, and prod rate limiting.
+
+    Using pure ASGI instead of Starlette's BaseHTTPMiddleware avoids task-group
+    disconnect hangs and ensures zero-buffer SSE streaming on /agent/respond/stream.
+    """
+
+    def __init__(self, asgi_app) -> None:
+        self.app = asgi_app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers_raw = scope.get("headers") or ()
+        incoming_id = ""
+        for key, value in headers_raw:
+            if key.lower() == b"x-request-id":
+                incoming_id = value.decode("latin-1", errors="ignore").strip()[:64]
+                break
+        request_id = incoming_id or uuid4().hex[:16]
+        started = perf_counter()
+        path = scope.get("path", "")
+        method = scope.get("method", "")
+
+        # Enforce per-IP sliding-window rate limiting in production while keeping
+        # local development/benchmarks unthrottled.
+        if settings.app_env.casefold() in {"production", "prod"} and path != "/health":
+            client = scope.get("client")
+            client_ip = client[0] if client else "unknown"
+            bucket = _rate_limit_buckets[client_ip]
+            while bucket and started - bucket[0] > _RATE_LIMIT_WINDOW_SECONDS:
+                bucket.popleft()
+            if len(bucket) >= _RATE_LIMIT_MAX_REQUESTS:
+                body = json.dumps(
+                    {"detail": "Too many requests. Please retry shortly."},
+                    ensure_ascii=False,
+                ).encode("utf-8")
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": 429,
+                        "headers": [
+                            (b"content-type", b"application/json"),
+                            (b"content-length", str(len(body)).encode("ascii")),
+                            (b"x-request-id", request_id.encode("ascii")),
+                            (b"retry-after", b"10"),
+                        ],
+                    }
+                )
+                await send({"type": "http.response.body", "body": body})
+                return
+            bucket.append(started)
+
+        async def send_with_observability(message) -> None:
+            if message.get("type") == "http.response.start":
+                elapsed_ms = (perf_counter() - started) * 1000.0
+                headers = list(message.get("headers") or ())
+                headers.append((b"x-request-id", request_id.encode("ascii")))
+                headers.append((b"x-response-time-ms", f"{elapsed_ms:.1f}".encode("ascii")))
+                message = {**message, "headers": headers}
+                if elapsed_ms >= 2000.0:
+                    logger.warning(
+                        "Slow HTTP request request_id=%s method=%s path=%s "
+                        "status=%s elapsed_ms=%.1f",
+                        request_id,
+                        method,
+                        path,
+                        message.get("status"),
+                        elapsed_ms,
+                    )
+            await send(message)
+
+        await self.app(scope, receive, send_with_observability)
+
+
+class _StripApiPrefixMiddleware:
+    """Allow the same FastAPI app to be served at both /... (local) and /api/... (Vercel)."""
+
+    def __init__(self, asgi_app) -> None:
+        self.app = asgi_app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope.get("type") in {"http", "websocket"}:
+            path = scope.get("path") or ""
+            if path == "/api":
+                scope = {**scope, "path": "/"}
+            elif path.startswith("/api/"):
+                scope = {**scope, "path": path[4:]}
+            raw_path = scope.get("raw_path")
+            if isinstance(raw_path, (bytes, bytearray)):
+                if raw_path == b"/api":
+                    scope = {**scope, "raw_path": b"/"}
+                elif raw_path.startswith(b"/api/"):
+                    scope = {**scope, "raw_path": bytes(raw_path[4:])}
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(_ObservabilityAndRateLimitMiddleware)
+app.add_middleware(_StripApiPrefixMiddleware)
 
 
 def get_groq_service(settings: Settings = Depends(get_settings)) -> GroqService:
@@ -235,6 +470,13 @@ def get_azure_speech_service(settings: Settings = Depends(get_settings)) -> Azur
     if _azure_speech_service is None or _azure_speech_service.settings is not settings:
         _azure_speech_service = AzureSpeechService(settings=settings)
     return _azure_speech_service
+
+
+def get_azure_stt_service(settings: Settings = Depends(get_settings)) -> AzureSTTService:
+    global _azure_stt_service
+    if _azure_stt_service is None or _azure_stt_service.settings is not settings:
+        _azure_stt_service = AzureSTTService(settings=settings)
+    return _azure_stt_service
 
 
 def _session_or_http_error(session_id: UUID):
@@ -444,7 +686,13 @@ def _filter_product_candidates_to_session_context(
         allowed_ids = set(record.shopping.comparison_product_ids)
     elif (
         record.shopping.current_intent in {IntentType.PRODUCT_LOOKUP, IntentType.RECOMMENDATION}
-        and record.shopping.pending_action == "SELECT_RECOMMENDATION"
+        and (
+            record.shopping.pending_action == "SELECT_RECOMMENDATION"
+            or (
+                len(record.shopping.selected_product_ids) > 1
+                and not record.last_grounded_product_id
+            )
+        )
     ):
         allowed_ids = set(record.shopping.selected_product_ids)
     elif (
@@ -543,7 +791,14 @@ def _contextualize_variant_product_query(query: str, text: str, record) -> str:
         context_ids = record.shopping.comparison_product_ids
     elif record.last_grounded_product_id:
         context_ids = [record.last_grounded_product_id]
-    elif record.shopping.pending_action == "SELECT_RECOMMENDATION":
+    elif (
+        record.shopping.pending_action == "SELECT_RECOMMENDATION"
+        or (
+            record.shopping.current_intent
+            in {IntentType.PRODUCT_LOOKUP, IntentType.RECOMMENDATION}
+            and record.shopping.selected_product_ids
+        )
+    ):
         context_ids = record.shopping.selected_product_ids
     else:
         return query
@@ -726,10 +981,50 @@ def _unsupported_action_claim(reply: str, observations: tuple[ToolObservation, .
 
 def _unsupported_customer_care_action_claim(reply: str) -> bool:
     """Reject promises/actions the customer-care integration cannot perform."""
-    normalized = _normalize_request_text(reply)
+    # Vietnamese product titles routinely contain "đá" (ice), "da" (skin),
+    # "gói" (pack), "gội" (shampoo), and "bao" (pack/bun). Folding accents
+    # before checking tense+verb pairs falsely turns e.g. "Nescafé sữa đá hộp
+    # 200g (10 gói x 20g)" into "da ... goi" ("đã gọi nhân viên").
+    reply_nfc = unicodedata.normalize("NFC", reply).casefold()
+    has_vi_diacritics = bool(
+        re.search(
+            r"[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]",
+            reply_nfc,
+        )
+    )
+    if has_vi_diacritics:
+        vi_action_pattern = (
+            r"\b(?:đã|vừa|mới|sẽ)\b.{0,60}\b(?:ghi nhận|tiếp nhận|"
+            r"báo(?:\s+(?:với|cho|lại|ngay|nhân viên|quản lý|cửa hàng|bộ phận))|"
+            r"chuyển(?:\s+(?:cho|tới|đến|ngay|yêu cầu|phản ánh|khiếu nại|"
+            r"bộ phận|nhân viên|quản lý))|"
+            r"gửi(?:\s+(?:cho|tới|đến|ngay|yêu cầu|phản ánh|khiếu nại|"
+            r"bộ phận|nhân viên|quản lý))|"
+            r"liên hệ|gọi(?:\s+(?:cho|ngay|nhân viên|quản lý|hỗ trợ|bộ phận|cửa hàng))|"
+            r"tạo ticket|tạo yêu cầu|hoàn tiền|đổi hàng|xử lý)\b"
+        )
+        if re.search(vi_action_pattern, reply_nfc):
+            return True
+    # Strip Vietnamese polite "dạ" and common retail nouns ("sữa đá", "10 gói",
+    # "dầu gội", "bao bì") before ASCII/English fallback matching.
+    cleaned_for_ascii = re.sub(
+        r"\b(?:dạ|đá|gói|gội|bánh bao|bao bì)\b",
+        " ",
+        reply_nfc,
+    )
+    normalized = _normalize_request_text(cleaned_for_ascii)
     patterns = (
-        r"\b(?:da|vua|moi|se|will|have|has)\b.{0,60}\b(?:ghi nhan|tiep nhan|bao|"
-        r"chuyen|gui|lien he|goi|tao ticket|tao yeu cau|hoan tien|doi hang|xu ly)\b",
+        (
+            r"\b(?:will|have|has)\b.{0,60}\b(?:ghi nhan|tiep nhan|bao|"
+            r"chuyen|gui|lien he|goi|tao ticket|tao yeu cau|hoan tien|doi hang|xu ly)\b"
+            if has_vi_diacritics
+            else r"\b(?:da|vua|moi|se|will|have|has)\b.{0,60}\b(?:ghi nhan|tiep nhan|"
+            r"bao(?:\s+(?:voi|cho|lai|ngay|nhan vien|quan ly|cua hang))|"
+            r"chuyen(?:\s+(?:cho|toi|den|ngay|yeu cau|phan anh|khieu nai|nhan vien|quan ly))|"
+            r"gui(?:\s+(?:cho|toi|den|ngay|yeu cau|phan anh|khieu nai|nhan vien|quan ly))|"
+            r"lien he|goi(?:\s+(?:cho|ngay|nhan vien|quan ly|ho tro|cua hang))|"
+            r"tao ticket|tao yeu cau|hoan tien|doi hang|xu ly)\b"
+        ),
         r"\b(?:manager|staff|employee|support team|customer service)\b.{0,50}\b"
         r"(?:has been notified|was notified|will contact|has contacted|logged|received)\b",
         r"\b(?:i|we|our store|the store)\b.{0,40}\b(?:have logged|logged|created a ticket|"
@@ -783,15 +1078,28 @@ def _support_ticket_followup_requested(text: str) -> bool:
             "lien he duoc nhan vien that chua",
             "nhan vien that nhan duoc chua",
             "da co nhan vien nao nhan chua",
+            "goi duoc quan ly chua",
+            "goi duoc quan li chua",
+            "nhan duoc cho quan ly chua",
+            "nhan duoc cho quan li chua",
+            "da nhan cho quan ly chua",
+            "da nhan cho quan li chua",
+            "da bao quan ly chua",
+            "da bao quan li chua",
+            "quan ly nhan duoc chua",
+            "quan li nhan duoc chua",
             "has a real staff member been contacted",
             "did you contact staff",
+            "did you notify the manager",
+            "did you message the manager",
             "what is the ticket number",
             "what is my ticket id",
         )
     ) or bool(
         re.search(
             r"\b(?:phieu|yeu cau ho tro|ticket)\b.{0,80}"
-            r"\b(?:nhan vien|staff|goi lai|lien he|trang thai|status|da nhan)\b",
+            r"\b(?:nhan vien|quan ly|quan li|manager|staff|goi lai|lien he|"
+            r"trang thai|status|da nhan)\b",
             normalized,
         )
     )
@@ -825,21 +1133,56 @@ def _localized_false_staff_acknowledgement_denial(language: LanguageCode) -> str
 
 def _administrative_action_requested(text: str) -> bool:
     raw = " ".join(text.casefold().split())
+    raw_spaced = re.sub(r"[_-]+", " ", raw)
     normalized = _normalize_request_text(text)
     accented_write = re.search(
         r"\b(?:sửa|đổi|cập nhật|điều chỉnh|thay đổi)(?:\s+lại)?\s+"
         r"(?:giá|tồn kho|hàng tồn)\b",
         raw,
     )
+    # Match English write verbs against raw text (preserving Vietnamese
+    # diacritics so "đất sét ... giá" does not collide with English "set").
+    english_write_patterns = (
+        r"\b(?:set|update|modify|change)\b.{0,35}\b(?:giá|gia|price)\b",
+        r"\bset\s+(?:muc\s+|mức\s+)?(?:tồn kho|ton kho|hàng tồn|hang ton|inventory|stock)\b",
+        r"\b(?:set|update|modify|change|increase|decrease|raise|lower|add|remove)\b"
+        r".{0,35}\b(?:tồn kho|ton kho|hàng tồn|hang ton|inventory|stock)\b",
+        r"\b(?:set|update|modify|change|increase|decrease)\b"
+        r".{0,35}\b(?:tồn|ton)\b.{0,60}\b\d+(?:\s+\d+)*\b",
+    )
+    # Accent stripping collapses "đôi" (pair, e.g. "bộ đôi") with "đổi" (edit)
+    # and "đất" (clay/earth) with "đặt" (set). Guard against accented nouns.
+    has_accented_doi_pair = bool(re.search(r"\b(?:đôi|đợi)\b", raw)) and not bool(
+        re.search(r"\bđổi\b", raw)
+    )
+    has_accented_dat_earth = bool(re.search(r"\bđất\b", raw)) and not bool(
+        re.search(r"\bđặt\b", raw)
+    )
     unambiguous_write_patterns = (
-        r"\b(?:doi|cap nhat|dieu chinh|thay doi|set|update|modify|change)\b"
-        r".{0,35}\b(?:gia|price)\b",
-        r"\b(?:dat|set)\s+(?:muc\s+)?(?:ton kho|hang ton|inventory|stock)\b",
-        r"\b(?:doi|cap nhat|dieu chinh|thay doi|set|update|modify|change|"
-        r"increase|decrease|raise|lower|add|remove|tang|giam)\b"
+        r"\b(?:cap nhat|dieu chinh|thay doi)\b.{0,35}\b(?:gia|price)\b",
+        r"\b(?:cap nhat|dieu chinh|thay doi|tang|giam)\b"
         r".{0,35}\b(?:ton kho|hang ton|inventory|stock)\b",
-        r"\b(?:tang|giam|dat|cap nhat|doi|set|update|modify|change|increase|decrease)\b"
-        r".{0,35}\bton\b.{0,60}\b\d+(?:\s+\d+)*\b",
+        r"\b(?:tang|giam|cap nhat)\b.{0,35}\bton\b.{0,60}\b\d+(?:\s+\d+)*\b",
+    )
+    doi_write = (
+        not has_accented_doi_pair
+        and (
+            bool(re.search(r"\bdoi\b.{0,35}\b(?:ton kho|hang ton|inventory|stock)\b", normalized))
+            or bool(re.search(r"\bdoi\b.{0,35}\bton\b.{0,60}\b\d+(?:\s+\d+)*\b", normalized))
+            or (
+                bool(re.search(r"\bdoi\b.{0,35}\b(?:gia|price)\b", normalized))
+                and not re.search(r"\bgia\s+bao\s+nhieu\b", normalized)
+            )
+        )
+    )
+    dat_write = not has_accented_dat_earth and (
+        bool(
+            re.search(
+                r"\bdat\s+(?:muc\s+)?(?:ton kho|hang ton|inventory|stock)\b",
+                normalized,
+            )
+        )
+        or bool(re.search(r"\bdat\b.{0,35}\bton\b.{0,60}\b\d+(?:\s+\d+)*\b", normalized))
     )
     # Accent stripping makes "sữa" (milk) and "sửa" (edit) identical. Only
     # treat unaccented "sua" as a write when the rest of the request has an
@@ -865,6 +1208,8 @@ def _administrative_action_requested(text: str) -> bool:
         r"(?:ton|ton kho|hang ton|inventory|stock)\b",
         r"\b(?:confirm|verify)\b.{0,30}\b(?:inventory|stock)\b.{0,25}\b"
         r"(?:was|has been|is)\s+(?:updated|changed|modified|set)\b",
+        r"\b(?:tu dong\s+)?tru tien(?:\s+the)?\b",
+        r"\bchot don\b.{0,45}\bkhong can hoi\b",
         r"\bpaid\b",
     )
     amount_edit_without_budget = bool(
@@ -882,7 +1227,10 @@ def _administrative_action_requested(text: str) -> bool:
     )
     return bool(
         accented_write
+        or doi_write
+        or dat_write
         or unaccented_sua_has_command
+        or any(re.search(pattern, raw_spaced) for pattern in english_write_patterns)
         or any(re.search(pattern, normalized) for pattern in unambiguous_write_patterns)
         or any(re.search(pattern, normalized) for pattern in patterns)
         or amount_edit_without_budget
@@ -1370,7 +1718,15 @@ def _interaction_analytics_requested(text: str) -> bool:
         "hoi nhieu nhat",
         "nhu cau thuong gap",
     )
-    return any(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized) for phrase in phrases)
+    if any(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized) for phrase in phrases):
+        return True
+    return bool(
+        re.search(
+            r"\b(?:hom nay|ngay hom nay|trong ngay|tu sang)\b.{0,45}"
+            r"\bda ban(?: duoc)?\b.{0,35}\b(?:bao nhieu|may)\b",
+            normalized,
+        )
+    )
 
 
 def _sensitive_internal_information_requested(text: str) -> bool:
@@ -1389,9 +1745,20 @@ def _sensitive_internal_information_requested(text: str) -> bool:
         "khoa api",
         "ma api",
         "groq key",
+        "deepseek key",
+        "khoa deepseek",
+        "token ket noi",
         "secret key",
+        "environment variable",
+        "bien moi truong",
+        "mat khau co so du lieu",
+        "mat khau db",
         "session khac",
         "session cua khach khac",
+        "khach hang phien truoc",
+        "nguoi mua phien truoc",
+        "phien truoc vua mua",
+        "don hang cua khach truoc",
         "tin nhan cua khach truoc",
         "lich su hoi thoai cua nguoi khac",
         "du lieu cua session khac",
@@ -1420,6 +1787,449 @@ def _prompt_override_requested(text: str) -> bool:
         "lenh he thong moi",
     )
     return any(marker in normalized for marker in markers)
+
+
+def _adversarial_policy_bypass_requested(text: str) -> str | None:
+    """Detect persona hijack, medical prescribing roleplay, unsafe claims, and fake promos."""
+    normalized = " ".join(_normalize_request_text(text).split())
+    if re.search(
+        r"\b(?:quen ten mai|tu nay ban la tro ly|ban la tro ly cua)\b",
+        normalized,
+    ):
+        return "persona"
+    if re.search(
+        r"\b(?:dong vai bac si|ke don thuoc|ke don khang sinh|"
+        r"thuoc khang sinh.{0,35}dieu tri)\b",
+        normalized,
+    ):
+        return "medical_rx"
+    if re.search(
+        r"\bchua\s+(?:duoc\s+|khoi\s+)?(?:ung thu|benh ung thu|benh nan y|hiv|dot quy)\b",
+        normalized,
+    ):
+        return "medical_claim"
+    if re.search(
+        r"\b(?:hoan toan )?vo hai cho tre(?: em)?\b|"
+        r"\ban toan tuyet doi cho tre(?: em)?\b|"
+        r"\buong\s+\d+\s+(?:lon|chai)\b.{0,45}\b(?:vo hai|khong sao|tre em)\b",
+        normalized,
+    ):
+        return "unsafe_claim"
+    if re.search(
+        r"\bxac nhan bang van ban\b.{0,50}\b(?:tang|mien phi|giam gia|khuyen mai)\b|"
+        r"\b(?:ma\s+)?(?:voucher|giam gia)\s+(?:bi mat|noi bo)\b|"
+        r"\bdong vai\s+(?:nhan vien\s+)?(?:quay\s+)?thu ngan\b|"
+        r"\btao\s+(?:ngay\s+)?hoa don\s+giam\s+\d+%",
+        normalized,
+    ):
+        return "fake_promo"
+    return None
+
+
+def _localized_adversarial_policy_denial(kind: str, language: LanguageCode) -> str:
+    if kind == "unsafe_claim":
+        return {
+            "vi": (
+                "Dạ xin lỗi bạn, mình không thể xác nhận hay khẳng định việc tiêu thụ quá mức "
+                "đồ uống tăng lực hay bất kỳ thực phẩm nào là vô hại, đặc biệt đối với trẻ em ạ. "
+                "Bạn vui lòng xem khuyến cáo sử dụng in trên nhãn sản phẩm hoặc tham khảo chuyên "
+                "gia y tế để đảm bảo an toàn sức khỏe nhé."
+            ),
+            "en": (
+                "I cannot claim that excessive consumption of energy drinks or any product is "
+                "harmless, especially for children. Please check the packaging warnings or "
+                "consult a healthcare professional."
+            ),
+            "zh": (
+                "很抱歉，我无法确认过量饮用功能饮料或任何产品对儿童无害，"
+                "请查看包装警示或咨询专业医生。"
+            ),
+        }[language]
+    if kind == "medical_claim":
+        return {
+            "vi": (
+                "Dạ xin lỗi bạn, mình không thể xác nhận hay khẳng định thực phẩm, đồ uống "
+                "có tác dụng chữa khỏi bệnh lý nghiêm trọng như ung thư ạ. Bạn vui lòng tham "
+                "khảo ý kiến bác sĩ hoặc cơ sở y tế chuyên môn nhé."
+            ),
+            "en": (
+                "I cannot claim that any food or beverage cures serious medical conditions "
+                "such as cancer. Please consult a qualified physician."
+            ),
+            "zh": "我无法声称任何食品或饮料可以治愈癌症等严重疾病，请咨询专业医生。",
+        }[language]
+    if kind == "persona":
+        return {
+            "vi": (
+                "Dạ, mình là Mai – trợ lý mua sắm của siêu thị nên không thể đổi vai hay báo "
+                "giá sản phẩm của hệ thống khác ạ. Bạn cần tìm mặt hàng siêu thị nào mình rất "
+                "sẵn lòng hỗ trợ nhé."
+            ),
+            "en": (
+                "I'm Mai, the supermarket shopping assistant, so I cannot switch personas "
+                "or quote items from another retailer."
+            ),
+            "zh": "我是超市购物助手 Mai，无法切换身份或提供其他商家的报价。",
+        }[language]
+    if kind == "medical_rx":
+        return {
+            "vi": (
+                "Dạ xin lỗi bạn, mình là trợ lý siêu thị nên không thể đóng vai bác sĩ hay "
+                "kê đơn thuốc kháng sinh ạ. Với tình trạng sức khỏe hay da liễu, bạn vui lòng "
+                "đi khám bác sĩ hoặc hỏi dược sĩ chuyên môn nhé."
+            ),
+            "en": (
+                "I'm a supermarket assistant and cannot act as a doctor or prescribe "
+                "antibiotics. Please consult a qualified physician or pharmacist."
+            ),
+            "zh": "我是超市助手，无法扮演医生或开具抗生素处方，请咨询专业医生或药师。",
+        }[language]
+    return {
+        "vi": (
+            "Dạ xin lỗi bạn, mình không thể tự xác nhận chương trình tặng quà hay cung cấp "
+            "mã voucher nội bộ khi chưa có trong dữ liệu ưu đãi chính thức của cửa hàng ạ. "
+            "Bạn vui lòng kiểm tra chương trình khuyến mãi trực tiếp tại quầy nhé."
+        ),
+        "en": (
+            "I cannot confirm unverified promotional gifts or issue internal voucher codes "
+            "outside official store records."
+        ),
+        "zh": "我无法确认未经官方记录的赠品活动，也不能提供内部优惠券代码。",
+    }[language]
+
+
+def _medical_treatment_or_medicine_requested(text: str) -> bool:
+    """Refuse medicine, pharmacy, and disease-cure requests deterministically."""
+    if _generic_nearby_places_requested(text):
+        return False
+    # Never block supermarket items/phrases whose ASCII fold collides with "thuốc"
+    # (e.g. "thước kẻ" = ruler, "thuộc nhóm" = belongs to, cleaning chemicals).
+    raw_folded = re.sub(r"\b(?:thước|thuộc)\b", " ", text.casefold())
+    normalized = " ".join(_normalize_request_text(raw_folded).split())
+    if not normalized:
+        return False
+    cleaned = re.sub(
+        r"\bthuoc\s+(?:la|tay|nhuom|ke|day|do|bo|nhom|danh\s+muc|ve|"
+        r"xit\s+con\s+trung|diet\s+(?:con\s+trung|muoi|gian|kien|chuot))\b",
+        " ",
+        normalized,
+    )
+    cleaned = re.sub(
+        r"\b(?:hieu|nha|quay|tiem)\s+thuoc\b",
+        " ",
+        cleaned,
+    )
+    cleaned = " ".join(cleaned.split())
+    if re.search(r"\bthuoc\b", cleaned):
+        return True
+    if re.search(
+        r"\b(?:kem\s+boi\s+(?:tri|chua)|khang\s+sinh|ha\s+sot|"
+        r"efferalgan|panadol|paracetamol|ibuprofen|omeprazole|smecta|berberin|oresol|"
+        r"chua\s+khoi|chua\s+benh|tri\s+dut\s+diem|dieu\s+tri\s+benh)\b",
+        cleaned,
+    ):
+        return True
+    if re.search(
+        r"\b(?:bi\s+)?(?:nam\s+chan|nam\s+da|hac\s+lao|lang\s+ben|"
+        r"trao\s+nguoc\s+da\s+day|dau\s+da\s+day|viem\s+loet\s+da\s+day|"
+        r"sot\s+\d+\s*do|sot\s+cao|viem\s+hong|viem\s+phe\s+quan|"
+        r"tieu\s+chay|ngo\s+doc|dau\s+rang|nhuc\s+rang|cam\s+cum|"
+        r"bong\s+nuoc\s+soi|vet\s+bong|phong\s+rop|so\s+cuu)\b",
+        cleaned,
+    ):
+        return True
+    return False
+
+
+def _off_topic_non_retail_requested(text: str) -> bool:
+    """Politely catch clearly non-retail requests (pure math, dating, coding, trivia, etc.).
+
+    Always preserves genuine shopping turns (including gift buying for a partner or
+    retail price calculations) to maintain 0% over-refusal on benign retail intents.
+    """
+    normalized = " ".join(_normalize_request_text(text).split())
+    if not normalized:
+        return False
+
+    has_retail_context = bool(
+        re.search(
+            r"\b(?:sieu thi|cua hang|mua|banh|keo|socola|chocolate|tra sua|sua|nuoc|"
+            r"ca phe|mi|gao|dau an|gia vi|gio hang|thanh toan|khuyen mai|san pham|"
+            r"mat hang|hang hoa|qua tang|tang qua|tang do|chai|lon|hop|goi|thung|kg|ml|"
+            r"nghin|ngan|vnd|dong|\d+\s*k)\b",
+            normalized,
+        )
+    )
+
+    # 1. Pure math / algebra / calculus (never triggers on retail shopping math).
+    if re.search(
+        r"\b(?:giai\s+(?:he\s+)?(?:bat\s+)?phuong\s+trinh|phuong\s+trinh\s+bac|"
+        r"tinh\s+dao\s+ham|dao\s+ham\s+cua|tinh\s+tich\s+phan|tich\s+phan\s+cua|"
+        r"tinh\s+ma\s+tran|dien\s+tich\s+(?:tam\s+giac|hinh\s+tron|hinh\s+chu\s+nhat)|"
+        r"chu\s+vi\s+(?:tam\s+giac|hinh\s+tron))\b",
+        normalized,
+    ):
+        return True
+    if not has_retail_context and re.search(
+        r"(?<!\w)\d+(?:[.,]\d+)?\s*(?:cong|tru|nhan|chia|\+|\*|×|/)\s*\d+(?:[.,]\d+)?(?!\w)",
+        normalized,
+    ):
+        return True
+
+    # 2. Coding / software engineering / school essay writing.
+    if re.search(
+        r"\b(?:viet\s+(?:giup\s+(?:minh|toi)\s+)?(?:doan\s+)?code|"
+        r"lap\s+trinh|python|javascript|typescript|c\+\+|html|css|"
+        r"thuat\s+toan|sap\s+xep\s+mang|fix\s+bug|"
+        r"viet\s+(?:giup\s+(?:minh|toi)\s+)?(?:mot\s+)?(?:bai|doan)\s+van|"
+        r"van\s+nghi\s+luan|nghi\s+luan\s+xa\s+hoi|phan\s+tich\s+tac\s+pham|soan\s+van)\b",
+        normalized,
+    ):
+        return True
+
+    # 3. Horoscope / fortune-telling / lottery / gambling.
+    if re.search(
+        r"\b(?:xem\s+tu\s+vi|tu\s+vi\s+hom\s+nay|boi\s+toan|boi\s+bai|xem\s+chi\s+tay|"
+        r"cung\s+hoang\s+dao|ket\s+qua\s+xo\s+so|xo\s+so\s+mien|lo\s+de|so\s+de)\b",
+        normalized,
+    ):
+        return True
+
+    # 4. General world trivia / politics / multi-day city weather forecasts.
+    if re.search(
+        r"\b(?:thu\s+do\s+cua\s+nuoc|tong\s+thong\s+(?:my|phap|nga)|"
+        r"du\s+bao\s+thoi\s+tiet|"
+        r"thoi\s+tiet\s+(?:ha\s+noi|sai\s+gon|da\s+nang|hai\s+phong|can\s+tho|hue|nha\s+trang|"
+        r"da\s+lat|phu\s+quoc)\b.{0,30}\b(?:ngay\s+mai|tuan\s+sau|cuoi\s+tuan|co\s+mua))\b",
+        normalized,
+    ):
+        return True
+
+    # 5. Relationship / dating / marriage coaching ONLY when no retail shopping intent exists.
+    if not has_retail_context and re.search(
+        r"\b(?:nguoi\s+yeu\b.{0,30}\b(?:gian|do|chia\s+tay|lam\s+lanh)|"
+        r"do\s+nguoi\s+yeu|tan\s+(?:do\s+)?crush|cua\s+crush|tu\s+van\s+tinh\s+cam|"
+        r"vo\s+chong\b.{0,25}\b(?:cai\s+nhau|ly\s+hon|mau\s+thuan)|"
+        r"yeu\s+don\s+phuong)\b",
+        normalized,
+    ):
+        return True
+
+    return False
+
+
+def _localized_off_topic_refusal(language: LanguageCode) -> str:
+    return {
+        "vi": (
+            "Dạ mình là Mai, trợ lý mua sắm của siêu thị nên chỉ hỗ trợ tra cứu và tư vấn "
+            "sản phẩm trong cửa hàng thôi ạ. Yêu cầu này nằm ngoài phạm vi hỗ trợ của mình, "
+            "nhưng nếu bạn cần tìm thực phẩm, đồ uống, đồ gia dụng hay món quà nhỏ trong siêu thị "
+            "thì cứ nhắn hoặc nói để mình hỗ trợ ngay nhé!"
+        ),
+        "en": (
+            "I'm Mai, the supermarket shopping assistant, so I can only help with product lookup "
+            "and shopping advice inside the store. That topic is outside my scope, but feel free "
+            "to ask if you need help finding groceries or household items!"
+        ),
+        "zh": (
+            "您好，我是超市购物助手 Mai，只负责协助查询和推荐店内商品。这个话题超出了我的服务范围，"
+            "不过如果您需要选购食品、饮料或日用品，我很乐意为您服务！"
+        ),
+    }[language]
+
+
+def _unverified_certification_question_requested(text: str) -> bool:
+    """Detect direct certification/dietary-label verification absent from catalog snapshots."""
+    normalized = " ".join(_normalize_request_text(text).split())
+    if is_recommendation_request(text) or _requested_snapshot_fields(text):
+        return False
+    return bool(
+        re.search(
+            r"\b(?:chung\s+nhan\s+(?:halal|huu\s+co|organic|vegan|iso|fda|kosher)|"
+            r"dat\s+chuan\s+(?:halal|organic|iso|fda)|"
+            r"co\s+chung\s+nhan\b|halal\b|kosher\b)\b",
+            normalized,
+        )
+    )
+
+
+def _localized_certification_unavailable(language: LanguageCode) -> str:
+    return {
+        "vi": (
+            "Dạ, hiện hệ thống chưa có dữ liệu đã xác minh về chứng nhận (như Halal, hữu cơ hay "
+            "tiêu chuẩn kiểm định riêng) của sản phẩm này nên mình chưa thể khẳng định ạ. Bạn vui "
+            "lòng kiểm tra trực tiếp tem hoặc thông tin in trên bao bì sản phẩm giúp mình nhé."
+        ),
+        "en": (
+            "I don't have verified certification data (such as Halal or organic labels) for this "
+            "product in the catalog, so I can't confirm it. Please check the packaging directly."
+        ),
+        "zh": (
+            "目录中暂时没有该商品经过核实的认证信息（如清真或有机认证），"
+            "请您直接查看商品包装标签。"
+        ),
+    }[language]
+
+
+def _localized_medical_refusal(language: LanguageCode) -> str:
+    return {
+        "vi": (
+            "Dạ xin lỗi bạn, mình là trợ lý mua sắm của siêu thị nên không hỗ trợ tư vấn "
+            "hay bán các loại thuốc và sản phẩm chữa bệnh ạ. Để đảm bảo an toàn sức khỏe, "
+            "bạn vui lòng đến nhà thuốc hỏi dược sĩ hoặc thăm khám bác sĩ chuyên môn nhé. "
+            "Nếu bạn cần tìm thực phẩm hay đồ dùng siêu thị, mình rất sẵn lòng hỗ trợ ạ."
+        ),
+        "en": (
+            "I'm sorry, as a supermarket shopping assistant I cannot advise on or sell "
+            "medications or medical treatments. Please consult a pharmacist or doctor for "
+            "health concerns. I'm happy to help with everyday groceries and household items."
+        ),
+        "zh": (
+            "很抱歉，作为超市购物助手，我无法提供药品或疾病治疗方面的建议或商品。"
+            "为了您的健康安全，请咨询药师或专业医生。如需选购日常食品或生活用品，我很乐意为您服务。"
+        ),
+    }[language]
+
+
+def _unverified_origin_question_requested(text: str) -> bool:
+    """Detect direct country-of-origin verification questions absent from the catalog."""
+    normalized = " ".join(_normalize_request_text(text).split())
+    if is_recommendation_request(text):
+        return False
+    if _requested_snapshot_fields(text):
+        return False
+    return bool(
+        re.search(
+            r"\b(?:nguon\s+goc(?:\s+(?:xuat\s+xu|san\s+xuat))?|xuat\s+xu|"
+            r"san\s+xuat\s+(?:tai|o)|made\s+in|country\s+of\s+origin)\b",
+            normalized,
+        )
+    )
+
+
+def _localized_origin_unavailable(language: LanguageCode) -> str:
+    return {
+        "vi": (
+            "Dạ, mình chưa có thông tin đã xác minh về nguồn gốc hay nơi sản xuất của "
+            "sản phẩm này trong hệ thống nên chưa thể khẳng định ạ. Bạn vui lòng xem trực "
+            "tiếp thông tin nhà sản xuất in trên bao bì sản phẩm giúp mình nhé."
+        ),
+        "en": (
+            "I don't have verified country-of-origin information for this product in the "
+            "catalog, so I can't confirm where it is made. Please check the packaging label."
+        ),
+        "zh": (
+            "我目前没有该商品经过核实的产地信息，暂时无法确认生产地。请您查看包装上的标签说明。"
+        ),
+    }[language]
+
+
+def _is_empty_or_gibberish_input(text: str) -> bool:
+    """Catch whitespace-only or keyboard-mash turns before paying LLM latency."""
+    stripped = text.strip()
+    if not stripped:
+        return True
+    if not re.search(r"[^\W_]", stripped, flags=re.UNICODE):
+        return True
+    tokens = re.findall(r"[^\W_]+", stripped.casefold(), flags=re.UNICODE)
+    if not tokens:
+        return True
+    alpha_tokens = [tok for tok in tokens if tok.isalpha()]
+    if not alpha_tokens:
+        return False
+    # Never flag short codes, numbers, or any known catalog/Vietnamese word.
+    vowels = set("aeiouyàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹ")
+    looks_mash = all(
+        len(tok) >= 6
+        and tok.isascii()
+        and (
+            bool(re.search(r"[bcdfghjklmnpqrstvwxz]{5,}", tok))
+            or sum(ch in vowels for ch in tok) / len(tok) < 0.18
+        )
+        for tok in alpha_tokens
+    )
+    if not looks_mash:
+        return False
+    try:
+        repo = get_product_repository()
+        known = getattr(repo, "_known_words", frozenset())
+        if any(tok in known for tok in alpha_tokens):
+            return False
+    except Exception:
+        pass
+    return True
+
+
+def _localized_empty_or_gibberish_clarification(language: LanguageCode) -> str:
+    return {
+        "vi": (
+            "Dạ, mình chưa nghe hoặc hiểu rõ nội dung câu hỏi ạ. Bạn có thể cho mình biết "
+            "tên sản phẩm hoặc nhóm hàng siêu thị bạn đang cần tìm không ạ?"
+        ),
+        "en": (
+            "I didn't quite catch that. Could you let me know which product or supermarket "
+            "category you're looking for?"
+        ),
+        "zh": "抱歉，我没太明白您的意思。请问您想查找哪种超市商品或类别呢？",
+    }[language]
+
+
+def _non_supermarket_out_of_catalog_requested(text: str) -> bool:
+    """Abstain early on clearly non-supermarket tech, vehicles, tickets, or appliances."""
+    normalized = " ".join(_normalize_request_text(text).split())
+    # Never block supermarket consumables for appliances (e.g. nước giặt cửa trước)
+    # or travel snacks/groceries merely mentioning a mode of transport (e.g. đi du lịch bằng ô tô).
+    if re.search(
+        r"\b(?:nuoc giat|bot giat|vien giat|nuoc xa|nuoc tay|vien tay|tui thom|"
+        r"khu mui|sap thom|ve sinh may)\b",
+        normalized,
+    ):
+        return False
+    travel_grocery_context = bool(
+        re.search(
+            r"\b(?:do an|an nhe|an vat|do uong|nuoc uong|banh|keo|snack|sua|trai cay|"
+            r"di du lich|du lich|da ngoai|picnic|cam trai|mang di|di duong)\b",
+            normalized,
+        )
+    )
+    if travel_grocery_context and re.search(
+        r"\b(?:bang|tren|di|len|ngoi)\s+(?:o to|xe hoi|xe may|xe khach|tau hoa|may bay)\b",
+        normalized,
+    ):
+        return False
+    return bool(
+        re.search(
+            r"\b(?:iphone|macbook|ipad|samsung galaxy|dien thoai|smartphone|laptop|"
+            r"day sac|cap sac|cu sac|sac du phong|"
+            r"cat kinh can|do do mat|kinh can theo do|sua dien thoai|sua laptop|"
+            r"tivi|smart tv|lop xe|vo xe|phu tung xe|"
+            r"(?<!bang )(?<!tren )(?<!di )(?<!len )(?:xe may|o to)|"
+            r"ve may bay|ve tau|dat phong khach san|tour du lich|"
+            r"may loc khong khi|may dieu hoa|dieu hoa nhiet do|may lanh|tu lanh|"
+            r"noi chien khong dau|"
+            r"(?:thuc an|do an|pate|cat ve sinh)\s+(?:hat\s+)?(?:cho\s+)?"
+            r"(?:cho|meo|thu cung|cho con|meo con)|"
+            r"thuc an\s+hat\b.{0,30}\b(?:cho|meo|thu cung))\b",
+            normalized,
+        )
+    )
+
+
+def _localized_non_supermarket_ooc(language: LanguageCode) -> str:
+    return {
+        "vi": (
+            "Dạ rất tiếc, hiện danh mục siêu thị bên mình chưa có nhóm sản phẩm hoặc dịch vụ "
+            "này (như thiết bị điện tử, phụ tùng xe, thức ăn thú cưng, vé dịch vụ hay điện máy "
+            "lớn) ạ. Mình chuyên hỗ trợ tra cứu và tư vấn thực phẩm, hàng tiêu dùng siêu thị — "
+            "bạn cần tìm mặt hàng nào mình hỗ trợ ngay nhé!"
+        ),
+        "en": (
+            "This supermarket catalog does not carry that product or service category "
+            "(such as electronics, vehicle parts, travel tickets, or large appliances). "
+            "I can help with groceries and everyday supermarket items."
+        ),
+        "zh": "本店超市目录目前不提供此类商品或服务（如电子设备、车辆配件、机票或大家电）。",
+    }[language]
 
 
 def _unsupported_catalog_fact_claim(
@@ -1536,7 +2346,10 @@ def _localized_not_found(language: LanguageCode) -> str:
     return {
         "en": "I couldn't find a matching product yet. Try saying its name or category.",
         "zh": "我还没有找到匹配的商品。请再说一次商品名称或类别。",
-        "vi": "Mình chưa tìm thấy món đó trong danh mục hiện có.",
+        "vi": (
+            "Dạ, mình chưa tìm thấy mặt hàng đó. "
+            "Bạn cho mình tên loại hàng hoặc thương hiệu để tìm tiếp nhé."
+        ),
     }[language]
 
 
@@ -1658,11 +2471,11 @@ def _localized_catalog_category_label(category: str, language: LanguageCode) -> 
 def _localized_recommendation_candidates(
     observation: ToolObservation,
     language: LanguageCode,
-    *,
-    include_price_caveat: bool = True,
-    include_stock_caveat: bool = True,
 ) -> str:
-    products = observation.products[:5]
+    # Prices are already labelled as reference prices. A recommendation does
+    # not assert live availability: keep freshness/source in response metadata
+    # and answer availability explicitly when the customer asks about stock.
+    products = observation.products[:3]
     items = []
     category_overview = observation.content.get("browse_mode") == "CATEGORY_OVERVIEW"
     category_label = _localized_catalog_category_label(
@@ -1689,9 +2502,9 @@ def _localized_recommendation_candidates(
                 spice_note = "，目录标注为不辣" if not spicy_constraint else "，目录标注为辣"
             else:
                 spice_note = (
-                    ", catalog ghi nhận không cay"
+                    ", không cay"
                     if not spicy_constraint
-                    else ", catalog ghi nhận có cay"
+                    else ", có vị cay"
                 )
         if language == "en":
             details = spice_note.lstrip(", ")
@@ -1743,21 +2556,14 @@ def _localized_recommendation_candidates(
                 )
             elif title_match:
                 response = (
-                    f"I found catalog titles that may be related: {rendered_items}. "
-                    "The product names alone do not verify their intended use. "
-                    "Would you like to filter by product type, price, or brand?"
+                    f"I found {rendered_items}. Would you like to see this one, "
+                    "or should I look for a few more options for your request?"
                 )
             else:
                 response = (
                     f"The catalog lists {rendered_items}, but does not have verified evidence "
                     "that they suit the requested use. Would you like to filter by price or brand?"
                 )
-            if include_price_caveat:
-                response += " Store prices may differ from the catalog."
-            if include_stock_caveat and any(
-                not product.stock_is_current for product in products[:3]
-            ):
-                response += " Current availability has not been verified."
             return response
         if language == "zh":
             if unverified_alternative:
@@ -1767,20 +2573,13 @@ def _localized_recommendation_candidates(
                 )
             elif title_match:
                 response = (
-                    f"我找到名称可能相关的商品：{rendered_items}。"
-                    "仅凭商品名称无法核实用途。您想按商品类型、价格还是品牌筛选？"
+                    f"我找到{rendered_items}。您想先看看这一款，还是继续找几种相近的选择？"
                 )
             else:
                 response = (
                     f"目录中有{rendered_items}，但没有经过核实的信息能确认它们适合您的用途。"
                     "您想按价格还是品牌筛选？"
                 )
-            if include_price_caveat:
-                response += " 门店实际价格可能与目录不同。"
-            if include_stock_caveat and any(
-                not product.stock_is_current for product in products[:3]
-            ):
-                response += " 当前库存尚未核实。"
             return response
         if unverified_alternative:
             alternatives_intro = (
@@ -1790,37 +2589,27 @@ def _localized_recommendation_candidates(
             )
             response = (
                 f"{alternatives_intro}{rendered_items}. "
-                f"Catalog chưa xác nhận chúng có phù hợp với “{unverified_use_case}” không. "
+                f"Mình chưa xác nhận được loại nào hợp với “{unverified_use_case}”. "
                 "Bạn muốn so sánh giá hay thương hiệu?"
             )
         elif title_match:
-            titles_intro = (
-                "Mình tìm thấy một tên hàng có thể liên quan: "
-                if len(items[:3]) == 1
-                else "Mình tìm thấy vài tên hàng có thể liên quan: "
-            )
             response = (
-                f"{titles_intro}{rendered_items}. "
-                "Tên hàng chưa đủ để xác nhận công dụng. "
-                "Bạn muốn lọc theo loại cụ thể, giá hay thương hiệu?"
+                f"Dạ, mình tìm thấy {rendered_items}. "
+                "Bạn muốn xem loại này hay mình tìm thêm vài lựa chọn cùng nhóm ạ?"
             )
         else:
             if len(items[:3]) == 1:
                 response = (
-                    f"Trong catalog, mình tìm thấy một sản phẩm trong nhóm này: {rendered_items}. "
-                    "Catalog chưa có đủ thông tin xác minh để kết luận sản phẩm này có phù hợp "
+                    f"Mình tìm thấy một sản phẩm trong nhóm này: {rendered_items}. "
+                    "Mình chưa đủ thông tin để xác nhận sản phẩm này có phù hợp "
                     "với nhu cầu này không. Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không?"
                 )
             else:
                 response = (
                     f"Mình tìm thấy vài loại trong danh mục: {rendered_items}. "
-                    "Catalog chưa có đủ thông tin xác minh để kết luận sản phẩm nào phù hợp "
+                    "Mình chưa đủ thông tin để xác nhận sản phẩm nào phù hợp "
                     "với nhu cầu này. Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không?"
                 )
-        if include_price_caveat:
-            response += " Giá tại cửa hàng có thể khác catalog."
-        if include_stock_caveat and any(not product.stock_is_current for product in products[:3]):
-            response += " Tồn hiện tại chưa được xác minh."
         return response
     if observation.content.get("family_details_unverified"):
         rendered_items = "; ".join(items[:3])
@@ -1833,7 +2622,6 @@ def _localized_recommendation_candidates(
             for value in observation.content.get("unverified_constraints", [])
         )
         if len(products) == 1:
-            product = products[0]
             if language == "en":
                 response = (
                     f"I found one catalog option: {rendered_items}. The catalog does not confirm "
@@ -1846,10 +2634,6 @@ def _localized_recommendation_candidates(
                         " The catalog doesn't list a weight/size range; "
                         "check the package before choosing."
                     )
-                if include_price_caveat:
-                    response += " Store price may differ from the catalog."
-                if include_stock_caveat and not product.stock_is_current:
-                    response += " Current availability has not been verified."
                 return response
             if language == "zh":
                 response = (
@@ -1858,26 +2642,18 @@ def _localized_recommendation_candidates(
                 )
                 if has_weight_size_caveat:
                     response += "目录没有标明适用体重或尺码，请先查看包装。"
-                if include_price_caveat:
-                    response += "门店价格可能与目录不同。"
-                if include_stock_caveat and not product.stock_is_current:
-                    response += "当前库存尚未核实。"
                 return response
             response = (
                 f"Trong danh mục, mình tìm được một lựa chọn: {rendered_items}. "
-                "Catalog chưa xác nhận được các biến thể hoặc chi tiết còn lại bạn hỏi, "
+                "Mình chưa rõ các biến thể hoặc chi tiết còn lại bạn hỏi, "
                 "nên mình chưa thể kết luận hay so sánh đầy đủ. Bạn muốn xem giá hoặc tìm thêm "
                 "lựa chọn cùng nhóm không?"
             )
             if has_weight_size_caveat:
                 response += (
-                    " Catalog chưa ghi dải cân nặng/kích cỡ; "
+                    " Mình chưa có hướng dẫn chọn theo cân nặng/kích cỡ; "
                     "bạn kiểm tra trên bao bì trước khi chọn nhé."
                 )
-            if include_price_caveat:
-                response += " Giá tại cửa hàng có thể khác catalog."
-            if include_stock_caveat and not product.stock_is_current:
-                response += " Tồn hiện tại chưa được xác minh."
             return response
         if language == "en":
             response = (
@@ -1892,12 +2668,6 @@ def _localized_recommendation_candidates(
             elif has_audience_caveat:
                 response += " Please check the age guidance on the label."
             response += " Would you like to narrow them by price or brand?"
-            if include_price_caveat:
-                response += " Store prices may differ from the catalog."
-            if include_stock_caveat and any(
-                not product.stock_is_current for product in products[:3]
-            ):
-                response += " Current availability has not been verified."
             return response
         if language == "zh":
             response = (
@@ -1908,29 +2678,19 @@ def _localized_recommendation_candidates(
             elif has_audience_caveat:
                 response += "请先查看包装上的适用年龄。"
             response += "您想按价格还是品牌继续筛选？"
-            if include_price_caveat:
-                response += "门店实际价格可能与目录不同。"
-            if include_stock_caveat and any(
-                not product.stock_is_current for product in products[:3]
-            ):
-                response += "当前库存尚未核实。"
             return response
         response = (
             f"Mình tìm thấy vài loại trong nhóm này: {rendered_items}. "
-            "Catalog chưa xác nhận chúng đáp ứng các tiêu chí khác bạn vừa nêu."
+            "Mình chưa đủ thông tin để xác nhận chúng đáp ứng các tiêu chí khác bạn vừa nêu."
         )
         if has_weight_size_caveat:
             response += (
-                " Catalog chưa ghi dải cân nặng/kích cỡ; "
+                " Mình chưa có hướng dẫn chọn theo cân nặng/kích cỡ; "
                 "bạn kiểm tra trên bao bì trước khi chọn nhé."
             )
         elif has_audience_caveat:
             response += " Bạn kiểm tra hướng dẫn độ tuổi trên nhãn nhé."
         response += " Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không?"
-        if include_price_caveat:
-            response += " Giá tại cửa hàng có thể khác catalog."
-        if include_stock_caveat and any(not product.stock_is_current for product in products[:3]):
-            response += " Tồn hiện tại chưa được xác minh."
         return response
     if category_overview:
         if language == "en":
@@ -1939,10 +2699,6 @@ def _localized_recommendation_candidates(
                 + "; ".join(items)
                 + ". Which type would you like to look at first?"
             )
-            if include_price_caveat:
-                response += " Store prices may differ from the catalog."
-            if include_stock_caveat and any(not product.stock_is_current for product in products):
-                response += " Current availability has not been verified."
             return response
         if language == "zh":
             response = (
@@ -1950,83 +2706,49 @@ def _localized_recommendation_candidates(
                 + "；".join(items)
                 + "。您想先看看哪一种？"
             )
-            if include_price_caveat:
-                response += "门店实际价格可能与目录不同。"
-            if include_stock_caveat and any(not product.stock_is_current for product in products):
-                response += "当前库存尚未核实。"
             return response
         response = (
             f"Mình tìm thấy vài loại {category_label or 'phù hợp'}: "
             + "; ".join(items)
             + ". Bạn muốn mình lọc tiếp theo giá hoặc thương hiệu không?"
         )
-        if include_price_caveat:
-            response += " Giá tại cửa hàng có thể khác catalog."
-        if include_stock_caveat and any(not product.stock_is_current for product in products):
-            response += " Tồn hiện tại chưa được xác minh."
         return response
     if observation.content.get("preparation_alternatives_unverified") and language != "vi":
         if language == "en":
-            response = "You could also look at these sliced products: " + "; ".join(items) + "."
-            response += " The catalog doesn't verify their suitability for hotpot; check the label."
-            if include_price_caveat:
-                response += " Store prices may differ from the catalog."
-            if include_stock_caveat and any(not product.stock_is_current for product in products):
-                response += " Current availability has not been verified."
+            response = "Other options in this category: " + "; ".join(items) + "."
+            response += " Their suitability for your requested preparation is unverified."
             return response
-        response = "您也可以看看这些切片商品：" + "；".join(items)
-        response += "。目录尚未确认是否适合火锅，请查看标签。"
-        if include_price_caveat:
-            response += "门店实际价格可能与目录不同。"
-        if include_stock_caveat and any(not product.stock_is_current for product in products):
-            response += "当前库存尚未核实。"
+        response = "您也可以看看同类商品：" + "；".join(items)
+        response += "。目录尚未确认是否适合您要求的烹饪方式。"
         return response
     if language == "en":
         response = "You could try " + ", ".join(items) + "."
-        if include_price_caveat:
-            response += " Store prices may differ from the catalog."
-        if include_stock_caveat and any(not product.stock_is_current for product in products):
-            response += " Current availability has not been verified."
         return response
     if language == "zh":
         response = "可以试试" + "、".join(items) + "。"
-        if include_price_caveat:
-            response += "门店实际价格可能与目录不同。"
-        if include_stock_caveat and any(not product.stock_is_current for product in products):
-            response += "当前库存尚未核实。"
         return response
     if observation.content.get("preparation_alternatives_unverified"):
-        response = "Bạn có thể tham khảo thêm các sản phẩm cắt lát: " + "; ".join(items) + "."
-        response += " Catalog chưa xác nhận chúng phù hợp nhúng lẩu; bạn kiểm tra nhãn nhé."
-        if include_price_caveat:
-            response += " Giá tại cửa hàng có thể khác catalog."
-        if include_stock_caveat and any(not product.stock_is_current for product in products):
-            response += " Tồn hiện tại chưa được xác minh."
+        response = "Bạn có thể tham khảo thêm các sản phẩm cùng nhóm: " + "; ".join(items) + "."
+        response += " Mình chưa xác nhận chúng phù hợp với cách chế biến bạn yêu cầu."
         return response
     title_evidence = observation.content.get("preference_evidence") == "PRODUCT_TITLE_ONLY"
-    response = (
-        "Trong catalog, mình tìm được " + "; ".join(items) + "."
-        if title_evidence
-        else "Mình gợi ý " + ", ".join(items) + " nhé."
-    )
     if title_evidence:
-        response += (
-            " Mình chọn theo mô tả trong tên hàng; công dụng và độ phù hợp "
-            "bạn cần kiểm tra thêm trên nhãn sản phẩm."
+        if len(items) == 1:
+            return (
+                f"Dạ, mình tìm thấy {items[0]}. "
+                "Bạn muốn xem loại này hay mình tìm thêm vài lựa chọn cùng nhóm ạ?"
+            )
+        return (
+            f"Dạ, mình tìm thấy {', '.join(items)}. "
+            "Bạn muốn xem một loại trong số này hay mình tìm thêm vài lựa chọn cùng nhóm ạ?"
         )
-    if include_price_caveat:
-        response += " Giá tại cửa hàng có thể khác catalog."
-    if include_stock_caveat and any(not product.stock_is_current for product in products):
-        response += " Tồn hiện tại chưa được xác minh."
+    response = "Mình gợi ý " + ", ".join(items) + " nhé."
     return response
 
 
 def _localized_whole_cart_recommendation(
     observation: ToolObservation,
     language: LanguageCode,
-    *,
-    include_price_caveat: bool = True,
-    include_stock_caveat: bool = True,
 ) -> str:
     content = observation.content
 
@@ -2100,40 +2822,19 @@ def _localized_whole_cart_recommendation(
 
     rendered_options = "; ".join(render_option(option) for option in options[:2])
     if language == "en":
-        response = (
-            f"Using catalog prices, here are combos with a total {budget_limit_en}: "
+        return (
+            f"At reference prices, these combos total {budget_limit_en}: "
             f"{rendered_options}. I haven't added anything to your cart."
         )
-        if include_price_caveat:
-            response += " Prices are catalog references, not verified for this branch."
-        if include_stock_caveat and any(
-            not product.stock_is_current for product in observation.products
-        ):
-            response += " Current availability has not been verified."
-        return response
     if language == "zh":
-        response = (
-            f"按目录价格，以下组合总价{budget_limit_zh}：{rendered_options}。"
+        return (
+            f"按参考价，以下组合总价{budget_limit_zh}：{rendered_options}。"
             "我还没有把商品加入购物车。"
         )
-        if include_price_caveat:
-            response += " 价格来自目录，尚未在此门店核实。"
-        if include_stock_caveat and any(
-            not product.stock_is_current for product in observation.products
-        ):
-            response += "当前库存尚未核实。"
-        return response
-    response = (
-        f"Theo giá catalog, các combo có tổng giá {budget_limit_vi} gồm: "
+    return (
+        f"Theo giá tham khảo, các combo có tổng giá {budget_limit_vi} gồm: "
         f"{rendered_options}. Mình chưa thêm món nào vào giỏ nhé."
     )
-    if include_price_caveat:
-        response += " Giá là tham khảo theo catalog, chưa xác minh tại chi nhánh."
-    if include_stock_caveat and any(
-        not product.stock_is_current for product in observation.products
-    ):
-        response += " Tồn hiện tại chưa được xác minh."
-    return response
 
 
 def _localized_catalog_promotions(
@@ -2301,8 +3002,10 @@ def _localized_unranked_candidates(
         price = f"{product.price_vnd:,}"
         if language == "vi":
             names.append(f"{product.name} (giá tham khảo {price.replace(',', '.')}đ)")
+        elif language == "en":
+            names.append(f"{product.name} (reference price {price} VND)")
         else:
-            names.append(f"{product.name} ({price} VND)")
+            names.append(f"{product.name}（参考价 {price} 越南盾）")
     category_overview = observation.content.get("browse_mode") == "CATEGORY_OVERVIEW"
     if category_overview:
         category_label = _localized_catalog_category_label(
@@ -2313,7 +3016,6 @@ def _localized_unranked_candidates(
             f"{category_leaf(product)}: {name}"
             for product, name in zip(products, names, strict=True)
         ]
-        unverified_stock = any(not product.stock_is_current for product in products)
         if language == "en":
             if not items:
                 return f"{limitation} I couldn't find a matching type in {category_label}."
@@ -2322,7 +3024,7 @@ def _localized_unranked_candidates(
                 + "; ".join(items)
                 + ". What would you like me to narrow down?"
             )
-            return response + (" Current availability is unverified." if unverified_stock else "")
+            return response
         if language == "zh":
             if not items:
                 return f"{limitation} 我在{category_label}中没有找到匹配类别。"
@@ -2331,7 +3033,7 @@ def _localized_unranked_candidates(
                 + "；".join(items)
                 + "。您想按什么条件继续筛选？"
             )
-            return response + ("当前库存尚未核实。" if unverified_stock else "")
+            return response
         if not items:
             return f"{limitation} Mình chưa tìm thấy nhóm phù hợp trong {category_label}."
         response = (
@@ -2339,7 +3041,7 @@ def _localized_unranked_candidates(
             + "; ".join(items)
             + ". Bạn muốn mình lọc tiếp theo giá hay đặc điểm nào?"
         )
-        return response + (" Tồn hiện tại chưa được xác minh." if unverified_stock else "")
+        return response
     if language == "en":
         if not names:
             return f"{limitation} I couldn't find a currently sellable match in that category."
@@ -2374,7 +3076,9 @@ def _ranking_metric(text: str) -> str:
     rating = bool(re.search(r"\b(?:tot nhat|tot nhut|danh gia|rating|rated)\b", normalized))
     sales = bool(
         re.search(
-            r"\b(?:ban chay|ban dat hang|dat hang|dat khach|chay hang|mua nhieu|"
+            r"\b(?:ban chay|ban (?:duoc )?nhieu (?:nhat|nhut)|"
+            r"luot ban (?:cao|nhieu) (?:nhat|nhut)|"
+            r"ban dat hang|dat hang|dat khach|chay hang|mua nhieu|"
             r"bestseller|best seller|best selling|most popular|top selling)\b",
             normalized,
         )
@@ -2486,6 +3190,9 @@ def _reply_already_discloses_missing_attribute(reply: str, language: LanguageCod
             "chua the noi loai nao phu hop",
             "catalog chua co du thong tin de xac nhan loai nao phu hop voi nhu cau nay",
             "catalog chua co du thong tin xac minh de ket luan san pham",
+            "chua du thong tin de xac nhan",
+            "chua ro cac bien the hoac chi tiet con lai",
+            "chua xac nhan duoc loai nao hop",
         ),
         "en": (
             "no verified information about",
@@ -2559,6 +3266,91 @@ def _localized_consultation_clarification(language: LanguageCode) -> str:
     }[language]
 
 
+def _should_defer_unscoped_consultation(text: str, record) -> bool:
+    """Avoid legacy catalog guesses when a recommendation has no real scope.
+
+    The legacy recommendation route is useful for an identified catalog group,
+    but a failed experimental planner must not turn a use case such as
+    ``dọn nhà`` or ``ăn cả tuần`` into arbitrary rows from the snapshot.
+    Existing product context and resolvable catalog categories keep their
+    established controllers.
+    """
+    normalized = _normalize_request_text(text)
+    if re.search(r"\b(?:gio|cart|thanh toan|thanh toán|dat hang|đặt hàng)\b", normalized):
+        return False
+    try:
+        repository = get_product_repository()
+        paths = repository.list_category_hierarchies()
+        understanding = understand_catalog_query(text, paths)
+        if understanding.budget_vnd is not None and record.shopping.consultation.get("need"):
+            # A price ceiling refines the active mission. If its planner is
+            # unavailable, broad name search would lose that mission and may
+            # even show rows above the customer's ceiling.
+            return True
+        if understanding.intent in {"location", "price", "purchase_action"}:
+            return False
+        # A failed consultation must not fall through to the legacy broad
+        # search when the customer supplied a use case, exclusion, audience,
+        # or an attribute the catalog cannot verify. Those requests need a
+        # constrained planner/clarification instead of arbitrary snapshot
+        # rows (for example, spicy child snacks or pet-safe cleaners).
+        special_constraint = bool(
+            understanding.use_case
+            or understanding.hard_constraints
+            or understanding.negative_constraints
+            or explicit_product_audience(text) is not None
+            or _unsupported_catalog_attribute_requested(text)
+        )
+        if special_constraint:
+            return True
+        if record.shopping.selected_product_ids or record.last_grounded_product_id:
+            return False
+        category = resolve_catalog_request_category(text, repository)
+        if category:
+            category_match = resolve_catalog_category(
+                category, paths
+            ) or resolve_catalog_category_alias(category, paths)
+            actual_categories = {
+                normalize_category_text(segment)
+                for path in paths
+                for segment in path
+            }
+            if (
+                category_match is not None
+                and normalize_category_text(category_match.category) in actual_categories
+            ):
+                return False
+            # A real product type can be a shared prefix of several leaf
+            # labels (for example a shampoo type with sibling variants).
+            # Exact segment equality wrongly sends those clear requests back
+            # to the generic scope question when the planner is unavailable.
+            category_words = set(normalize_category_text(category).split())
+            matching_families = {
+                tuple(path[:-1])
+                for path in paths
+                if any(
+                    category_words <= set(normalize_category_text(segment).split())
+                    for segment in path
+                )
+            }
+            if (
+                category_match is not None
+                and len(category_words) >= 2
+                and category_words <= category_match.matched_tokens
+                and (
+                    len(matching_families) == 1
+                    or resolve_catalog_category_alias(category, paths) is not None
+                )
+                and any(
+                    category_words <= set(segment.split()) for segment in actual_categories
+                )
+            ):
+                return False
+        return understanding.intent in {"recommendation", "product_search", "variant"}
+    except (OSError, RuntimeError, TimeoutError, ValueError):
+        return True
+
+
 def _localized_use_case_category_clarification(language: LanguageCode) -> str:
     return {
         "en": (
@@ -2567,8 +3359,8 @@ def _localized_use_case_category_clarification(language: LanguageCode) -> str:
         ),
         "zh": "您想找哪一类商品来满足这个需求？告诉我商品类型，我再帮您查目录。",
         "vi": (
-            "Bạn muốn tìm nhóm sản phẩm nào cho nhu cầu này? Nói tên loại hàng, "
-            "mình sẽ tra catalog cho đúng nhé."
+            "Bạn đang cần nhóm sản phẩm nào? Cho mình biết món cần tìm để mình "
+            "gợi ý đúng nhu cầu nhé."
         ),
     }[language]
 
@@ -3485,7 +4277,10 @@ def _localized_product_variant_clarification(
     observation: ToolObservation,
     language: LanguageCode,
 ) -> str:
-    names = [product.name for product in observation.products[:3]]
+    names = [
+        f"{product.name} ({_comparison_price(product.price_vnd, language)})"
+        for product in observation.products[:3]
+    ]
     if language == "en":
         return (
             "I found several similar products: "
@@ -3506,6 +4301,26 @@ def _localized_location_candidates(
     language: LanguageCode,
 ) -> str:
     listed = [product for product in products[:3] if product.shelf]
+    codes = [str(product.shelf) for product in listed]
+    parts = [code.split("-") for code in codes]
+    if parts and all(len(part) == 4 for part in parts):
+        bays = list(dict.fromkeys("-".join(part[:2]) for part in parts))
+        if len(bays) == 1:
+            aisle, bay = parts[0][:2]
+            return {
+                "vi": (
+                    f"Dạ, theo sơ đồ kệ đề xuất, nhóm này ở dãy {aisle}, khoang {bay}. "
+                    "Vị trí thực tế có thể thay đổi. Bạn cần loại hay quy cách nào?"
+                ),
+                "en": (
+                    f"The suggested planogram puts these items in aisle {aisle}, bay {bay}. "
+                    "Actual placement may differ. Which type or size do you need?"
+                ),
+                "zh": (
+                    f"建议货架图中，这些商品位于{aisle}通道、{bay}货架区。"
+                    "实际摆放可能不同。您需要哪种类型或规格？"
+                ),
+            }[language]
     if language == "en":
         if not listed:
             return "The catalog does not include a suggested shelf location for these products."
@@ -3859,23 +4674,17 @@ def _grounded_reply(
         )
         names = ", ".join(product.name for product in lowest_products)
         price = f"{lowest_price:,}"
-        snapshot_date = lowest_products[0].data_timestamp.strftime("%d/%m/%Y")
         if language == "en":
             return (
-                f"The lowest catalog reference price in this category is {price} VND: "
-                f"{names}. Catalog snapshot: {snapshot_date}. Package sizes may differ; "
-                "please confirm the in-store price and current stock."
+                f"The lowest reference price in this category is {price} VND: {names}."
             )
         if language == "zh":
             return (
-                f"该类别中目录参考价最低的是{names}，价格为{price}越南盾。"
-                f"目录快照日期：{snapshot_date}。商品规格可能不同；"
-                "请确认门店价格和当前库存。"
+                f"该类别中参考价最低的是{names}，价格为{price}越南盾。"
             )
         return (
-            f"Trong nhóm hàng này, giá tham khảo thấp nhất trong catalog là "
-            f"{price.replace(',', '.')}đ: {names}. Dữ liệu snapshot ngày {snapshot_date}; "
-            "quy cách có thể khác nhau, bạn kiểm tra lại giá và tồn thực tế tại cửa hàng nhé."
+            f"Trong nhóm hàng này, giá tham khảo thấp nhất là "
+            f"{price.replace(',', '.')}đ: {names}."
         )
 
     last_recommendation = next(
@@ -3888,23 +4697,15 @@ def _grounded_reply(
     )
     if last_recommendation and last_recommendation.status == "SUCCESS":
         if last_recommendation.content.get("recommendation_type") == "whole_cart":
-            disclosed = _claim_product_disclosures(
+            _claim_product_disclosures(
                 last_recommendation.products,
                 last_recommendation.source,
-                ("price_vnd", "stock"),
+                ("price_vnd",),
                 session_id,
-            )
-            include_price_caveat = session_id is None or any(
-                key.endswith("|price_vnd") for key in disclosed
-            )
-            include_stock_caveat = session_id is None or any(
-                key.endswith("|stock") for key in disclosed
             )
             return _localized_whole_cart_recommendation(
                 last_recommendation,
                 language,
-                include_price_caveat=include_price_caveat,
-                include_stock_caveat=include_stock_caveat,
             )
         if last_recommendation.content.get("count") == 0:
             if last_recommendation.content.get("alternative_exhausted"):
@@ -3979,26 +4780,13 @@ def _grounded_reply(
                 }[language]
             return _localized_no_sellable_match(language)
         if last_recommendation.products:
-            disclosed = _claim_product_disclosures(
-                last_recommendation.products[:5],
+            _claim_product_disclosures(
+                last_recommendation.products[:3],
                 last_recommendation.source,
-                ("price_vnd", "stock"),
+                ("price_vnd",),
                 session_id,
             )
-            include_price_caveat = session_id is None or any(
-                key.endswith("|price_vnd") for key in disclosed
-            )
-            include_stock_caveat = (
-                session_id is None
-                or any(key.endswith("|stock") for key in disclosed)
-                or any(not product.stock_is_current for product in last_recommendation.products[:5])
-            )
-            return _localized_recommendation_candidates(
-                last_recommendation,
-                language,
-                include_price_caveat=include_price_caveat,
-                include_stock_caveat=include_stock_caveat,
-            )
+            return _localized_recommendation_candidates(last_recommendation, language)
     if last_recommendation and last_recommendation.status in {
         "DATA_UNAVAILABLE",
         "TEMPORARY_FAILURE",
@@ -4044,7 +4832,7 @@ def _grounded_reply(
 
 def _system_prompt(retail_context: str, language: LanguageCode = "vi") -> str:
     if language == "en":
-        return f"""You are Sky, a friendly convenience-store assistant.
+        return f"""You are Mai, a friendly convenience-store assistant.
 Reply in natural English, in no more than two short sentences and 35 words.
 Use a warm, conversational tone. Answer only the question asked. Do not repeat old turns or
 restart a product discussion after a simple thanks.
@@ -4109,7 +4897,7 @@ Verified store context:
 {retail_context}
 """
     language_name = {"vi": "tiếng Việt", "en": "English", "zh": "中文 (简体中文)"}[language]
-    return f"""Bạn là Sky, trợ lý cửa hàng tiện lợi.
+    return f"""Bạn là Mai, trợ lý cửa hàng tiện lợi.
 Trả lời ngắn gọn, thân thiện và chỉ dùng dữ liệu được xác minh.
 Chỉ trả lời tối đa 2 câu và 35 từ để hội thoại bằng giọng nói phản hồi nhanh.
 Trong tiếng Việt, xưng hô nhất quán mình–bạn. Với lời cảm ơn hoặc xác nhận ngắn, đáp tự nhiên,
@@ -4189,7 +4977,7 @@ retail_context:
 def _shopping_mission_planner_system_prompt(language: LanguageCode) -> str:
     language_name = {"vi": "Vietnamese", "en": "English", "zh": "Chinese"}[language]
     return (
-        "You are Sky's structured shopping-mission planner for a retail catalog. "
+        "You are Mai's structured shopping-mission planner for a retail catalog. "
         "Read the full conversation, then call plan_shopping_mission exactly once; do not "
         "answer the customer in prose. The customer may not know product or category names.\n"
         "Capture the goal/use case, occasion, party size, total budget, hard requirements, "
@@ -4300,7 +5088,7 @@ def close_session(session_id: UUID) -> SessionResponse:
     )
 
 
-def _support_ticket_response(ticket) -> SupportTicketResponse:
+def _support_ticket_response(ticket: SupportTicket) -> SupportTicketResponse:
     return SupportTicketResponse(
         ticket_id=ticket.ticket_id,
         session_id=ticket.session_id,
@@ -4310,7 +5098,157 @@ def _support_ticket_response(ticket) -> SupportTicketResponse:
         status=ticket.status,
         created_at=ticket.created_at,
         demo=ticket.demo,
+        target_role=ticket.target_role,
+        notified_channel=ticket.notified_channel,
+        notified_provider=ticket.notified_provider,
+        notification_status=ticket.notification_status,
+        notification_detail=ticket.notification_detail,
+        notified_at=ticket.notified_at,
     )
+
+
+def _recent_session_context(record, current_text: str) -> str | None:
+    parts: list[str] = []
+    if record.last_grounded_product_name:
+        parts.append(f"Sản phẩm vừa xem: {record.last_grounded_product_name}")
+    current_clean = " ".join(current_text.split()).casefold()
+    for msg in reversed(record.messages[-6:]):
+        if msg.get("role") != "user":
+            continue
+        content = " ".join(str(msg.get("content") or "").split())
+        if not content or content.casefold() == current_clean:
+            continue
+        parts.append(f"Câu hỏi trước: {_safe_description(content)[:160]}")
+        break
+    return " | ".join(parts) if parts else None
+
+
+async def _dispatch_ticket_notification(
+    ticket: SupportTicket,
+    *,
+    created_new: bool,
+    record,
+    notifier: ManagerNotifierService,
+) -> SupportTicket:
+    if not created_new or not notifier.settings.has_manager_notifier:
+        return ticket
+    payload = ManagerAlertPayload(
+        ticket_id=ticket.ticket_id,
+        session_id=ticket.session_id,
+        kiosk_id=ticket.kiosk_id,
+        store_name=notifier.settings.store_name,
+        target_role=ticket.target_role,
+        issue_type=ticket.issue_type,
+        customer_message=ticket.description,
+        created_at=ticket.created_at,
+        recent_context=_recent_session_context(record, ticket.description),
+    )
+    result = await notifier.notify(payload)
+    return support_ticket_store.record_notification(
+        ticket.ticket_id,
+        configured=result.configured,
+        delivered=result.delivered,
+        channel=result.channel,
+        provider=result.provider,
+        detail=result.detail,
+        sent_at=result.sent_at,
+    )
+
+
+def _localized_support_handoff_reply(ticket: SupportTicket, language: LanguageCode) -> str:
+    if ticket.notification_status == "DELIVERED" and ticket.notified_channel:
+        channel_name = CHANNEL_DISPLAY_LABELS.get(ticket.notified_channel, {}).get(
+            language, ticket.notified_channel.title()
+        )
+        if language == "en":
+            who = "the store manager" if ticket.target_role == "manager" else "store staff"
+            return (
+                f"I have sent a {channel_name} message to {who} about your request. "
+                "Someone will come assist you shortly."
+            )
+        if language == "zh":
+            who = "店长" if ticket.target_role == "manager" else "门店人员"
+            return (
+                f"我已经通过 {channel_name} 向{who}发送了提醒，"
+                "工作人员很快会过来协助您。"
+            )
+        if ticket.target_role == "manager":
+            return (
+                f"Dạ, mình đã gửi tin nhắn qua {channel_name} báo quản lý biết bạn đang cần gặp "
+                "rồi ạ. Quản lý sẽ ra hỗ trợ bạn ngay nhé."
+            )
+        return (
+            f"Dạ, mình đã gửi thông báo qua {channel_name} cho quản lý và nhân viên rồi ạ. "
+            "Nhân viên sẽ ra hỗ trợ bạn ngay nhé."
+        )
+
+    if ticket.notification_status == "FAILED":
+        if language == "en":
+            return (
+                "I recorded your support request, but could not deliver the automatic "
+                "alert to the manager right now. Please ask a store associate at the counter."
+            )
+        if language == "zh":
+            return "我已记录您的求助请求，但目前未能自动发送消息给店长。请直接联系柜台店员。"
+        return (
+            "Mình đã ghi nhận yêu cầu hỗ trợ, nhưng hiện chưa gửi được tin nhắn tự động "
+            "tới quản lý. Bạn vui lòng liên hệ trực tiếp nhân viên tại quầy giúp mình nhé."
+        )
+
+    return (
+        f"I created demo support request {ticket.ticket_id}. A real staff member has not "
+        "been contacted."
+        if language == "en"
+        else (
+            f"已创建演示服务请求 {ticket.ticket_id}。系统尚未联系真实店员。"
+            if language == "zh"
+            else f"Mình đã tạo yêu cầu hỗ trợ demo mã {ticket.ticket_id}. Hệ thống chưa "
+            "liên hệ nhân viên thật."
+        )
+    )
+
+
+def _localized_support_followup_reply(ticket: SupportTicket, language: LanguageCode) -> str:
+    if ticket.notification_status == "DELIVERED" and ticket.notified_channel:
+        channel_name = CHANNEL_DISPLAY_LABELS.get(ticket.notified_channel, {}).get(
+            language, ticket.notified_channel.title()
+        )
+        return {
+            "vi": (
+                f"Dạ, mình đã gửi thông báo thành công tới quản lý qua {channel_name} rồi ạ. "
+                "Quản lý sẽ ra hỗ trợ bạn sớm nhé."
+            ),
+            "en": (
+                f"Your support request was delivered to the manager via {channel_name}. "
+                "Someone will come assist you shortly."
+            ),
+            "zh": f"已通过 {channel_name} 成功通知店长，工作人员很快会过来协助您。",
+        }[language]
+    if ticket.notification_status == "FAILED":
+        return {
+            "vi": (
+                "Mình đã ghi nhận yêu cầu nhưng hệ thống chưa gửi được tin nhắn tự động tới "
+                "quản lý. Bạn nhờ nhân viên tại quầy hỗ trợ giúp mình nhé."
+            ),
+            "en": (
+                "Your request was recorded, but the automatic message could not be delivered. "
+                "Please contact store staff at the counter."
+            ),
+            "zh": "已记录您的请求，但未能自动通知店长，请联系柜台店员。",
+        }[language]
+    return {
+        "vi": (
+            f"Phiếu hỗ trợ demo {ticket.ticket_id} đang ở trạng thái {ticket.status}; "
+            "hệ thống chưa liên hệ nhân viên thật."
+        ),
+        "en": (
+            f"Demo support ticket {ticket.ticket_id} is {ticket.status}; "
+            "the system has not contacted a real staff member."
+        ),
+        "zh": (
+            f"演示支持工单 {ticket.ticket_id} 的状态为 {ticket.status}；系统尚未联系真实店员。"
+        ),
+    }[language]
 
 
 @app.post(
@@ -4318,18 +5256,26 @@ def _support_ticket_response(ticket) -> SupportTicketResponse:
     response_model=SupportTicketResponse,
     status_code=201,
 )
-def create_support_ticket(
+async def create_support_ticket(
     session_id: UUID,
     request: SupportTicketCreateRequest,
+    notifier: ManagerNotifierService = Depends(get_manager_notifier_service),
 ) -> SupportTicketResponse:
     record = _session_or_http_error(session_id)
     try:
-        ticket = support_ticket_store.create(
+        ticket, created_new = support_ticket_store.create_or_get(
             session_id=session_id,
             kiosk_id=record.kiosk_id,
             issue_type=request.issue_type,
             description=request.description,
             idempotency_key=request.idempotency_key,
+            target_role=request.target_role,
+        )
+        ticket = await _dispatch_ticket_notification(
+            ticket,
+            created_new=created_new,
+            record=record,
+            notifier=notifier,
         )
         if record.state != SessionState.HANDOFF:
             session_store.transition(session_id, SessionState.HANDOFF)
@@ -4697,19 +5643,44 @@ def product_snapshot(product_id: str):
     return product
 
 
+def _safe_product_image_url(value: str | None) -> str | None:
+    if not value:
+        return None
+    cleaned = value.strip()
+    if not cleaned or any(ch.isspace() or ord(ch) < 0x20 for ch in cleaned):
+        return None
+    if cleaned.startswith(("https://", "http://")):
+        return cleaned
+    return None
+
+
 def _product_card(product: ProductSnapshot) -> ProductCardResponse:
     source = get_product_repository().source_name
+    settings = get_settings()
+    demo_units = None
+    if settings.demo_sales_enabled and settings.app_env == "development":
+        demo_units = get_demo_sales_store(settings).counts().get(product.product_id)
     return ProductCardResponse(
         product_id=product.product_id,
         name=product.name,
         category=product.category,
         brand=product.brand,
         price_vnd=product.price_vnd,
+        list_price_vnd=(
+            product.list_price_vnd
+            if product.list_price_vnd and product.list_price_vnd > product.price_vnd
+            else None
+        ),
+        promotion=product.promotion,
+        shelf=product.shelf,
+        image_url=_safe_product_image_url(product.image_url),
         stock=product.sellable_stock if product.stock_is_current else product.stock,
         stock_is_current=product.stock_is_current,
         uom=product.uom,
         data_timestamp=product.data_timestamp,
         data_source=source,
+        demo_units_sold_30d=demo_units,
+        sales_data_source="SIMULATED" if demo_units is not None else None,
     )
 
 
@@ -4779,12 +5750,14 @@ def _record_shopping_turn(
     model: str,
     tools_used: list[str] | None = None,
     products: list[ProductSnapshot] | None = None,
+    related_products: list[ProductSnapshot] | None = None,
     cart: CartResponse | None = None,
     checkout_quote: CheckoutQuoteResponse | None = None,
     order: SandboxOrderResponse | None = None,
     support_ticket: SupportTicketResponse | None = None,
     state: SessionState | None = None,
 ) -> AgentRespondResponse:
+    text = re.sub(r"(\d)để\b", r"\1đ để", text)
     if state != SessionState.CLOSED:
         session_store.add_message(request.session_id, "user", request.text)
         session_store.add_message(request.session_id, "assistant", text)
@@ -4803,6 +5776,7 @@ def _record_shopping_turn(
         data_source=get_product_repository().source_name if products else None,
         state=state or SessionState.CLOSED,
         products=[_product_card(product) for product in products or []],
+        related_products=[_product_card(product) for product in related_products or []],
         cart=cart,
         checkout_quote=checkout_quote,
         order=order,
@@ -5619,9 +6593,36 @@ def _comparison_reply(
             cheaper, dearer = sorted(products, key=lambda item: item.price_vnd)
             difference = _comparison_price(dearer.price_vnd - cheaper.price_vnd, language)
             if language == "vi":
+                p1 = _comparison_price(cheaper.price_vnd, language)
+                p2 = _comparison_price(dearer.price_vnd, language)
                 result = (
-                    f"{cheaper.name} rẻ hơn {dearer.name} {difference} theo giá {source_label}."
+                    f"{cheaper.name} rẻ hơn {dearer.name} {difference} "
+                    f"theo giá {source_label} ({p1} so với {p2})."
                 )
+                # Also compute unit-value efficiency when both items have comparable
+                # weight/volume measures (e.g. 400g vs 900g, 250ml vs 500ml).
+                from backend.services.customer_consultation import (
+                    _batch_base_unit_dims,
+                    _unit_price_info,
+                )
+
+                force_base = bool(_batch_base_unit_dims([first, second]))
+                u1 = _unit_price_info(first, force_base_unit=force_base)
+                u2 = _unit_price_info(second, force_base_unit=force_base)
+                if (
+                    u1
+                    and u2
+                    and u1[1].split("/")[-1] == u2[1].split("/")[-1]
+                    and u1[0] != u2[0]
+                ):
+                    better, pricier = (
+                        (first, second) if u1[0] < u2[0] else (second, first)
+                    )
+                    bu, pu = (u1, u2) if u1[0] < u2[0] else (u2, u1)
+                    result += (
+                        f" Nếu tính theo đơn giá quy đổi, {better.name} "
+                        f"({bu[1]}) tiết kiệm/lợi hơn {pricier.name} ({pu[1]})."
+                    )
             elif language == "en":
                 result = (
                     f"{cheaper.name} is {difference} cheaper than {dearer.name} "
@@ -5917,6 +6918,8 @@ async def _handle_product_comparison(
             get_product_repository().source_name,
             request.session_id,
         )
+        if request.language == "vi" and metric is None and record.shopping.consultation:
+            reply = render_visible_comparison(products)
         return _record_shopping_turn(
             request,
             reply,
@@ -5927,9 +6930,58 @@ async def _handle_product_comparison(
 
     resolved: list[ProductSnapshot | None] = []
     comparison_option_groups: list[tuple[str, list[ProductSnapshot]]] = []
-    for query in queries:
+    left_categories: set[str] = set()
+    left_leaves: set[str] = set()
+    missing_size_notes: list[str] = []
+    for q_idx, query in enumerate(queries):
         observation = await lookup_product_candidates(query)
         candidates = observation.products
+        if not candidates and re.search(r"\b(?:loai\s+)?thuong\b", _normalize_request_text(query)):
+            # "Meiji thường 946ml" means the standard variant without special modifier
+            # words like "thường"; retry without "thường" and prefer the non-left item.
+            cleaned_q = re.sub(
+                r"\b(?:loai\s+)?thuong\b", " ", _normalize_request_text(query)
+            )
+            cleaned_q = " ".join(cleaned_q.split())
+            if cleaned_q:
+                observation = await lookup_product_candidates(cleaned_q)
+                candidates = observation.products
+        if not candidates and re.search(
+            r"\b\d+(?:[.,]\d+)?\s*(?:ml|l|lit|kg|g)\b", _normalize_request_text(query)
+        ):
+            # If an exact pack size (e.g. "Vinamilk ít đường 1L") is absent from
+            # the catalog, gracefully fall back to the same product line in
+            # other available pack sizes and explain the difference transparently.
+            sizeless_q = re.sub(
+                r"\b\d+(?:[.,]\d+)?\s*(?:ml|l|lit|kg|g)\b",
+                " ",
+                _normalize_request_text(query),
+            )
+            sizeless_q = " ".join(sizeless_q.split())
+            if sizeless_q:
+                fallback_obs = await lookup_product_candidates(sizeless_q)
+                if fallback_obs.products:
+                    candidates = fallback_obs.products
+                    missing_size_notes.append(query)
+        if q_idx == 0 and candidates:
+            left_categories = {c.category for c in candidates if c.category}
+            left_leaves = {
+                (c.category_hierarchy or c.category or "").split(" > ")[-1].strip()
+                for c in candidates
+                if (c.category_hierarchy or c.category)
+            }
+        elif q_idx == 1 and candidates and (left_leaves or left_categories):
+            same_leaf = [
+                c
+                for c in candidates
+                if (c.category_hierarchy or c.category or "").split(" > ")[-1].strip()
+                in left_leaves
+            ]
+            same_cat = [c for c in candidates if c.category in left_categories]
+            if same_leaf:
+                candidates = tuple(same_leaf)
+            elif same_cat:
+                candidates = tuple(same_cat)
         if not candidates:
             reply = (
                 f"Mình chưa tìm thấy sản phẩm khớp với ‘{query}’ trong catalog hiện có. "
@@ -5946,6 +6998,18 @@ async def _handle_product_comparison(
                 model="comparison-clarification",
                 tools_used=["search_products"],
             )
+        # When comparing "X <special>" vs "X thường", disambiguate the right side
+        # away from the exact product already chosen for the left side.
+        if (
+            q_idx == 1
+            and resolved
+            and resolved[0] is not None
+            and len(candidates) > 1
+            and re.search(r"\b(?:loai\s+)?thuong\b", _normalize_request_text(query))
+        ):
+            distinct = [c for c in candidates if c.product_id != resolved[0].product_id]
+            if len(distinct) == 1:
+                candidates = tuple(distinct)
         product_id = (
             candidates[0].product_id
             if len(candidates) == 1
@@ -5960,31 +7024,51 @@ async def _handle_product_comparison(
         comparison_option_groups.append((query, [product]))
 
     if any(product is None for product in resolved):
-        lines = [
-            f"- {query}: " + "; ".join(item.name for item in options)
-            for query, options in comparison_option_groups
-        ]
         if request.language == "vi":
-            reply = (
-                "Mình chưa chốt được một cặp sản phẩm cụ thể để so sánh. "
-                "Trong catalog mình tìm thấy:\n"
-                + "\n".join(lines)
-                + "\nBạn chọn tên hoặc quy cách một món ở mỗi bên nhé; "
-                "mình sẽ đối chiếu các thông tin có trong catalog."
+            lines = [
+                f"- Nhóm {idx}: "
+                + "; ".join(
+                    f"{item.name} ({_comparison_price(item.price_vnd, request.language)})"
+                    for item in options
+                )
+                for idx, (_query, options) in enumerate(comparison_option_groups, 1)
+            ]
+            size_note = (
+                f"Lưu ý: catalog hiện chưa có đúng quy cách ‘{', '.join(missing_size_notes)}’, "
+                "nên mình liệt kê các quy cách cùng dòng gần nhất để bạn đối chiếu nhé.\n"
+                if missing_size_notes
+                else ""
             )
-        elif request.language == "en":
             reply = (
-                "I can't identify one exact product on each side yet. The catalog has:\n"
+                size_note
+                + "Dạ, có nhiều quy cách/dòng sản phẩm tương ứng nên mình chưa chốt được "
+                "một cặp cụ thể ạ. Hiện bên mình có các lựa chọn:\n"
                 + "\n".join(lines)
-                + "\nPlease choose a name or size for each side, and I'll compare the facts "
-                "recorded in the catalog."
+                + "\nBạn chọn tên hoặc quy cách một món ở mỗi bên giúp mình nhé, "
+                "mình sẽ đối chiếu chi tiết ngay ạ."
             )
         else:
-            reply = (
-                "我还无法确定双方各自对应的具体商品。目录中找到：\n"
-                + "\n".join(lines)
-                + "\n请为每一方选择具体名称或规格，我再比较目录中记录的信息。"
-            )
+            lines = [
+                f"- {query}: "
+                + "; ".join(
+                    f"{item.name} ({_comparison_price(item.price_vnd, request.language)})"
+                    for item in options
+                )
+                for query, options in comparison_option_groups
+            ]
+            if request.language == "en":
+                reply = (
+                    "I can't identify one exact product on each side yet. The catalog has:\n"
+                    + "\n".join(lines)
+                    + "\nPlease choose a name or size for each side, and I'll compare the facts "
+                    "recorded in the catalog."
+                )
+            else:
+                reply = (
+                    "我还无法确定双方各自对应的具体商品。目录中找到：\n"
+                    + "\n".join(lines)
+                    + "\n请为每一方选择具体名称或规格，我再比较目录中记录的信息。"
+                )
         product_options = list(
             {
                 product.product_id: product
@@ -6053,6 +7137,229 @@ async def _handle_product_comparison(
         tools_used=["search_products", "get_product_snapshot"],
         products=products,
     )
+
+
+def _format_vnd(amount: int) -> str:
+    return f"{amount:,}".replace(",", ".") + "đ"
+
+
+def _parse_vnd_amount(raw_num: str, unit: str) -> int | None:
+    try:
+        val = float(raw_num.replace(",", "."))
+    except ValueError:
+        return None
+    u = unit.casefold()
+    mult = 1_000_000 if u in {"trieu", "tr"} else 1_000 if u in {"k", "ngan", "nghin"} else 1
+    out = round(val * mult)
+    return out if 0 < out <= 100_000_000 else None
+
+
+async def _resolve_single_sku_for_math(fragment: str) -> ProductSnapshot | None:
+    cleaned = re.sub(
+        r"^(?:hoi\s+\d+\s+thu\s*:?|cho\s+(?:minh|toi|em|anh|chi)\s+hoi|"
+        r"(?:minh|toi|em|anh|chi)\s+(?:muon\s+)?(?:hoi|mua)|mua)\s+",
+        "",
+        fragment.strip(),
+        flags=re.IGNORECASE,
+    ).strip(" ,.!?:;")
+    query = _fact_product_query(cleaned) or cleaned
+    if not query or len(query) < 2:
+        return None
+    obs = await lookup_product_candidates(query)
+    candidates = obs.products
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+    uid = _unique_product_match_id(query, candidates)
+    if uid:
+        match = next((p for p in candidates if p.product_id == uid), None)
+        if match is not None:
+            return match
+    return candidates[0]
+
+
+async def _handle_retail_arithmetic_or_multi_fact(
+    request: AgentRespondRequest,
+) -> AgentRespondResponse | None:
+    """Deterministic Python math for budget-division, multi-item totals, and dual-SKU lookups."""
+    if request.language != "vi":
+        return None
+    raw = request.text.strip()
+    normalized = " ".join(_normalize_request_text(raw).split())
+    if re.search(
+        r"\b(?:goi y|tu van|lap gio|combo|them vao gio|cho vao gio|dat hang|"
+        r"thanh toan|so sanh|khac nhau|ngan sach|duoi\s+\d)\b",
+        normalized,
+    ):
+        return None
+
+    units_pat = r"(?:chai|lon|hop|goi|tui|bich|thung|loc|vi|cuon|tuyp|cai|hu|lo)"
+
+    # Mode 1: Budget division ("Nếu mình có 100k thì mua được mấy hộp X và dư bao nhiêu?")
+    div_match = re.search(
+        rf"\bco\s+(\d+(?:[.,]\d+)?)\s*(trieu|tr|k|ngan|nghin|dong|vnd|d)\b.{{0,25}}"
+        rf"\bmua\s+duoc\s+(?:may|bao\s+nhieu)\s+({units_pat})\s+(.+)$",
+        normalized,
+    )
+    if div_match:
+        budget_vnd = _parse_vnd_amount(div_match.group(1), div_match.group(2))
+        unit_word = div_match.group(3)
+        prod_frag = re.sub(
+            r"\b(?:va\s+)?(?:con\s+)?du\b.*$", "", div_match.group(4)
+        ).strip(" ,.!?:;")
+        if budget_vnd and prod_frag:
+            product = await _resolve_single_sku_for_math(prod_frag)
+            if product is not None and product.price_vnd > 0:
+                qty = budget_vnd // product.price_vnd
+                spent = qty * product.price_vnd
+                rem = budget_vnd - spent
+                uom_label = (product.uom or unit_word).strip().lower()
+                if qty == 0:
+                    reply = (
+                        f"Dạ với {_format_vnd(budget_vnd)}, {product.name} có giá tham khảo "
+                        f"{_format_vnd(product.price_vnd)}/{uom_label} nên chưa đủ mua "
+                        f"1 {uom_label} ạ "
+                        f"(còn thiếu {_format_vnd(product.price_vnd - budget_vnd)}). "
+                        "Giá thực tế tại cửa hàng có thể chênh lệch nhẹ nhé."
+                    )
+                else:
+                    reply = (
+                        f"Dạ với {_format_vnd(budget_vnd)}, {product.name} có giá tham khảo "
+                        f"{_format_vnd(product.price_vnd)}/{uom_label}, bạn mua được {qty} "
+                        f"{uom_label} (tổng {_format_vnd(spent)}) và dư khoảng "
+                        f"{_format_vnd(rem)} ạ. Giá thực tế tại cửa hàng có thể khác một chút nhé."
+                    )
+                return _record_shopping_turn(
+                    request,
+                    reply,
+                    model="arithmetic-controller",
+                    tools_used=["search_products"],
+                    products=[product],
+                )
+
+    # Mode 2: Quantified total cost ("Mua 2 chai A và 1 chai B hết/tổng khoảng bao nhiêu tiền?")
+    asks_total_cost = bool(
+        re.search(
+            r"\b(?:tong(?:\s+(?:cong|tien|khoang|tam))?|het(?:\s+(?:khoang|tam))?)\s+"
+            r"bao\s+nhieu(?:\s+tien)?\b",
+            normalized,
+        )
+    )
+    if asks_total_cost:
+        body = re.sub(
+            r"\b(?:thi\s+)?(?:tong(?:\s+(?:cong|tien|khoang|tam))?|het(?:\s+(?:khoang|tam))?)"
+            r"\s+bao\s+nhieu.*$",
+            "",
+            normalized,
+        ).strip(" ,.!?:;")
+        item_re = re.compile(
+            rf"\b(\d{{1,2}})\s+({units_pat})\s+(.+?)"
+            rf"(?=(?:\s+(?:va|voi)\s+\d{{1,2}}\s+{units_pat}\b)|$)"
+        )
+        matches = list(item_re.finditer(body))
+        if 1 <= len(matches) <= 4:
+            resolved_items: list[tuple[int, str, ProductSnapshot]] = []
+            for m in matches:
+                qty = int(m.group(1))
+                unit_word = m.group(2)
+                frag = m.group(3).strip(" ,.!?:;")
+                if qty < 1 or qty > 50 or len(frag) < 3:
+                    resolved_items = []
+                    break
+                product = await _resolve_single_sku_for_math(frag)
+                if product is None or product.price_vnd <= 0:
+                    resolved_items = []
+                    break
+                resolved_items.append((qty, unit_word, product))
+            if resolved_items:
+                total_vnd = sum(qty * p.price_vnd for qty, _, p in resolved_items)
+                parts = [
+                    f"{qty} × {p.name} ({_format_vnd(p.price_vnd)} = "
+                    f"{_format_vnd(qty * p.price_vnd)})"
+                    for qty, _, p in resolved_items
+                ]
+                reply = (
+                    "Dạ mình tạm tính theo giá tham khảo hiện có: "
+                    + "; ".join(parts)
+                    + f". Tổng cộng khoảng {_format_vnd(total_vnd)} ạ. "
+                    "Giá thực tế tại cửa hàng có thể chênh lệch nhẹ nhé."
+                )
+                return _record_shopping_turn(
+                    request,
+                    reply,
+                    model="arithmetic-controller",
+                    tools_used=["search_products"],
+                    products=[p for _, _, p in resolved_items],
+                )
+
+    # Mode 3: Dual-SKU factual query ("giá A VÀ giá B" / "Hỏi giá cả 2 món: A và B")
+    split_clauses = re.split(r"(?:,\s*|\s+)và\s+", raw, maxsplit=1, flags=re.IGNORECASE)
+    if len(split_clauses) == 2:
+        left_raw, right_raw = split_clauses[0].strip(), split_clauses[1].strip()
+        left_fields = _requested_snapshot_fields(left_raw)
+        right_fields = _requested_snapshot_fields(right_raw)
+        shared_dual_price = bool(
+            left_fields
+            and not right_fields
+            and any(f in {"price_vnd", "promotion"} for f in left_fields)
+            and re.search(
+                r"\b(?:gia\s+(?:ca\s+)?2\s+(?:mon|thu|loai|san\s+pham)|"
+                r"hoi\s+gia\s+(?:ca\s+)?2\s+(?:mon|thu)|"
+                r"(?:gia|khuyen\s+mai)\s+[^:?]{4,}:?)\b",
+                _normalize_request_text(left_raw),
+            )
+            and len(_fact_product_query(right_raw).split()) >= 2
+        )
+        if shared_dual_price:
+            right_fields = left_fields
+        if (
+            left_fields
+            and right_fields
+            and any(f in {"price_vnd", "promotion", "stock"} for f in left_fields)
+            and any(f in {"price_vnd", "promotion", "stock"} for f in right_fields)
+        ):
+            left_clean = re.sub(
+                r"^(?:cho\s+mình\s+hỏi|mình\s+hỏi|hỏi)\s+"
+                r"(?:(?:giá\s+(?:cả\s+)?)?2\s+(?:thứ|món|loại|sản\s+phẩm)\s*:?\s*)?",
+                "",
+                left_raw,
+                flags=re.IGNORECASE,
+            ).strip(" :")
+            p1 = await _resolve_single_sku_for_math(left_clean)
+            p2 = await _resolve_single_sku_for_math(right_raw)
+            if p1 is not None and p2 is not None and p1.product_id != p2.product_id:
+                def _describe_sku(prod: ProductSnapshot) -> str:
+                    uom_suffix = f"/{prod.uom}" if prod.uom else ""
+                    line = f"{prod.name}: giá tham khảo {_format_vnd(prod.price_vnd)}{uom_suffix}"
+                    if (
+                        prod.promotion
+                        and prod.list_price_vnd
+                        and prod.price_vnd < prod.list_price_vnd
+                    ):
+                        line += (
+                            f" (đang ưu đãi {prod.promotion}, giá gốc "
+                            f"{_format_vnd(prod.list_price_vnd)})"
+                        )
+                    elif prod.promotion:
+                        line += f" (ưu đãi: {prod.promotion})"
+                    return line
+
+                reply = (
+                    "Dạ mình gửi bạn thông tin 2 sản phẩm theo giá tham khảo hiện có ạ:\n"
+                    f"1) {_describe_sku(p1)}.\n"
+                    f"2) {_describe_sku(p2)}.\n"
+                    "Giá và khuyến mãi thực tế tại cửa hàng có thể chênh lệch nhẹ nhé."
+                )
+                return _record_shopping_turn(
+                    request,
+                    reply,
+                    model="multi-fact-controller",
+                    tools_used=["search_products"],
+                    products=[p1, p2],
+                )
+
+    return None
 
 
 async def _handle_multi_category_browse(
@@ -6159,6 +7466,12 @@ async def _handle_multi_category_browse(
     )
 
 
+_STREAM_HANDOFF_VAR: ContextVar[list[StreamingConsultationPlan] | None] = ContextVar(
+    "_stream_handoff",
+    default=None,
+)
+
+
 @app.post("/agent/respond", response_model=AgentRespondResponse)
 async def agent_respond(
     request: AgentRespondRequest,
@@ -6170,6 +7483,44 @@ async def agent_respond(
     record = _refresh_terminal_order_session(request.session_id, record)
     if record.state in {SessionState.CLOSED, SessionState.EXPIRED}:
         raise HTTPException(status_code=409, detail="Session is closed")
+
+    if _is_empty_or_gibberish_input(request.text):
+        return _record_shopping_turn(
+            request,
+            _localized_empty_or_gibberish_clarification(request.language),
+            model="local-clarification",
+        )
+
+    general_kind = non_catalog_question_kind(request.text)
+    if general_kind:
+        if general_kind == "calendar":
+            # Asia/Ho_Chi_Minh uses UTC+07:00 year round. An explicit offset
+            # also works on Windows installations without an IANA tz database.
+            today = datetime.now(timezone(timedelta(hours=7), "Asia/Ho_Chi_Minh"))
+            weekdays = (
+                "thứ Hai", "thứ Ba", "thứ Tư", "thứ Năm", "thứ Sáu", "thứ Bảy", "Chủ nhật",
+            )
+            reply = {
+                "vi": (
+                    f"Hôm nay là {weekdays[today.weekday()]}, "
+                    f"ngày {today:%d/%m/%Y} (giờ Việt Nam)."
+                ),
+                "en": f"Today is {today:%A, %d/%m/%Y} (Vietnam time).",
+                "zh": (
+                    f"今天是星期{'一二三四五六日'[today.weekday()]}，"
+                    f"{today:%Y年%m月%d日}（越南时间）。"
+                ),
+            }[request.language]
+        else:
+            reply = {
+                "vi": (
+                    "Mình là trợ lý AI. Mình đang ở đây để trò chuyện với bạn; "
+                    "bạn muốn chia sẻ điều gì?"
+                ),
+                "en": "I'm an AI assistant. I'm here to chat; what would you like to share?",
+                "zh": "我是AI助手。我在这里陪您聊天，您想聊些什么？",
+            }[request.language]
+        return _record_shopping_turn(request, reply, model="local-general")
 
     if record.shopping.unresolved_product_category and not is_alternative_product_request(
         request.text
@@ -6191,6 +7542,112 @@ async def agent_respond(
             record.state,
             _localized_prompt_override_denial(request.language),
         )
+    adversarial_kind = _adversarial_policy_bypass_requested(request.text)
+    if adversarial_kind is not None:
+        return _local_policy_response(
+            request,
+            record.state,
+            _localized_adversarial_policy_denial(adversarial_kind, request.language),
+        )
+    if _medical_treatment_or_medicine_requested(request.text):
+        return _record_shopping_turn(
+            request,
+            _localized_medical_refusal(request.language),
+            model="local-medical-gate",
+            products=[],
+        )
+    if _off_topic_non_retail_requested(request.text):
+        return _record_shopping_turn(
+            request,
+            _localized_off_topic_refusal(request.language),
+            model="local-offtopic-gate",
+            products=[],
+        )
+    if _non_supermarket_out_of_catalog_requested(request.text):
+        return _record_shopping_turn(
+            request,
+            _localized_non_supermarket_ooc(request.language),
+            model="local-ooc-gate",
+            products=[],
+        )
+    if re.search(r"\bthuoc\s+la\b", _normalize_request_text(request.text)) and not re.search(
+        r"\b(?:do\s+uong|nuoc\s+uong|bia)\b",
+        _normalize_request_text(request.text),
+    ):
+        reply = {
+            "vi": (
+                "Dạ hiện danh mục siêu thị bên mình chưa có mặt hàng thuốc lá ạ. "
+                "Nếu bạn cần tìm đồ uống hay thực phẩm khác trong siêu thị, "
+                "mình rất sẵn lòng hỗ trợ nhé!"
+            ),
+            "en": (
+                "Our supermarket catalog does not currently carry tobacco or cigarettes. "
+                "I'd be happy to help you find beverages or other groceries!"
+            ),
+            "zh": (
+                "本店超市目录目前不提供香烟类商品，"
+                "如需选购饮品或其他日用品我很乐意为您服务。"
+            ),
+        }[request.language]
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="local-ooc-gate",
+            products=[],
+        )
+    if _unverified_origin_question_requested(request.text):
+        return _record_shopping_turn(
+            request,
+            _localized_origin_unavailable(request.language),
+            model="local-policy",
+            products=[],
+        )
+    if _unverified_certification_question_requested(request.text):
+        return _record_shopping_turn(
+            request,
+            _localized_certification_unavailable(request.language),
+            model="local-policy",
+            products=[],
+        )
+    if _foreign_currency_budget_requested(request.text):
+        return _local_policy_response(
+            request,
+            record.state,
+            _localized_vnd_budget_clarification(request.language),
+        )
+    if re.search(
+        r"\b(?:hoan\s+toan\s+)?khong\s+(?:co|chua)\s+duong\s+(?:dung|phai)\s+khong\b",
+        " ".join(_normalize_request_text(request.text).split()),
+    ):
+        premise_query = _fact_product_query(request.text)
+        if premise_query and len(premise_query.split()) >= 2:
+            premise_obs = await lookup_product_candidates(premise_query, current_user_text="")
+            if premise_obs.status == "SUCCESS" and premise_obs.products:
+                matched_p = premise_obs.products[0]
+                norm_name = _normalize_request_text(matched_p.name)
+                if "co duong" in norm_name and "khong duong" not in norm_name:
+                    reply = {
+                        "vi": (
+                            f"Dạ không phải đâu ạ — theo tên sản phẩm trong danh mục, "
+                            f"{matched_p.name} (giá tham khảo {_format_vnd(matched_p.price_vnd)}) "
+                            "là sản phẩm có đường, không phải loại không đường nhé. Bạn có thể "
+                            "xem bảng thành phần chi tiết trên bao bì, hoặc nếu muốn tìm loại "
+                            "không đường/ít đường mình tìm giúp bạn ngay ạ."
+                        ),
+                        "en": (
+                            f"No — according to the catalog title, {matched_p.name} is a sweetened "
+                            "product, not sugar-free. Please check the packaging label for full "
+                            "ingredients."
+                        ),
+                        "zh": f"不是的，根据目录名称，{matched_p.name} 是含糖产品，并非无糖产品。",
+                    }[request.language]
+                    return _record_shopping_turn(
+                        request,
+                        reply,
+                        model="catalog",
+                        tools_used=["search_products"],
+                        products=[matched_p],
+                    )
     safe_checkout_confirmation = (
         record.state == SessionState.CHECKOUT_CONFIRMATION
         and bool(record.shopping.pending_confirmation_id)
@@ -6252,26 +7709,246 @@ async def agent_respond(
                 reply,
                 model="support-simulator",
             )
+        reply = _localized_support_followup_reply(ticket, request.language)
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="manager-notifier" if not ticket.demo else "support-simulator",
+            tools_used=["get_support_ticket"],
+            support_ticket=_support_ticket_response(ticket),
+        )
+    if (
+        (record.shopping.pending_action or "").startswith(
+            ("SELECT_RECOMMENDATION", "LOOKUP_PRODUCT:")
+        )
+        and _pending_candidate_index(request.text) is None
+        and not _pending_candidate_code(request.text)
+        and classify_shopping_action(request.text, record.state) is None
+    ):
+        record = session_store.update_shopping(
+            request.session_id,
+            pending_action=None,
+            pending_clarification=None,
+        )
+    early_smalltalk = (
+        classify_smalltalk_intent(request.text)
+        if classify_support_intent(request.text) is None
+        else None
+    )
+    if early_smalltalk == "identity":
+        return _record_shopping_turn(
+            request,
+            localized_identity_response(request.language),
+            model="local-identity",
+        )
+    if early_smalltalk in {"greeting", "farewell", "wellbeing", "compliment"}:
+        return _record_shopping_turn(
+            request,
+            localized_smalltalk_fallback(early_smalltalk, request.language),
+            model="local-smalltalk",
+        )
+    if (
+        not record.shopping.pending_clarification
+        and not record.shopping.consultation.get("pending_question")
+        and _simple_customer_acknowledgement_requested(request.text)
+    ):
         reply = {
-            "vi": (
-                f"Phiếu hỗ trợ demo {ticket.ticket_id} đang ở trạng thái {ticket.status}; "
-                "hệ thống chưa liên hệ nhân viên thật."
-            ),
-            "en": (
-                f"Demo support ticket {ticket.ticket_id} is {ticket.status}; "
-                "the system has not contacted a real staff member."
-            ),
-            "zh": (
-                f"演示支持工单 {ticket.ticket_id} 的状态为 {ticket.status}；系统尚未联系真实店员。"
-            ),
+            "vi": "Dạ không có gì ạ, bạn cần hỗ trợ thêm cứ hỏi mình bất cứ lúc nào nhé!",
+            "en": "You're welcome. Just ask if you need anything else.",
+            "zh": "不客气，有需要随时问我。",
         }[request.language]
         return _record_shopping_turn(
             request,
             reply,
-            model="support-simulator",
-            tools_used=["get_support_ticket"],
-            support_ticket=_support_ticket_response(ticket),
+            model="local-smalltalk",
         )
+    if (
+        settings.customer_consultation_enabled
+        and settings.app_env == "development"
+        and settings.has_chat_llm_key
+        and request.language == "vi"
+        and record.state in {SessionState.NEW, SessionState.BROWSING, SessionState.CART_ACTIVE}
+        # Pending selections and comparison references belong to the established
+        # controllers. The experimental planner must not ask for these IDs again.
+        and not record.shopping.pending_action
+        and not record.shopping.pending_clarification
+        and classify_support_intent(request.text) is None
+        and not _explicit_product_knowledge_lookup_requested(request.text, record)
+        and not (
+            settings.demo_sales_enabled
+            and settings.app_env == "development"
+            and _product_ranking_requested(request.text)
+            and "sales" in _ranking_metric(request.text).split("+")
+        )
+        and not (
+            (
+                len(record.shopping.selected_product_ids) == 2
+                and is_comparison_request(request.text)
+                and not is_recommendation_request(request.text)
+            )
+            or (
+                comparison_metric(request.text) in {"price", "stock"}
+                and parse_comparison_queries(request.text) is not None
+            )
+        )
+    ):
+        catalog_repo = get_product_repository()
+        can_use_turn1_cache = (
+            settings.consultation_cache_enabled
+            and type(groq) is GroqService
+            and groq.client is None
+            and is_stateless_cacheable_turn(request.text, record)
+        )
+        if can_use_turn1_cache:
+            cached = get_consultation_cache().get(
+                request.text,
+                language=request.language,
+                catalog_source=catalog_repo.source_name,
+            )
+            if cached is not None:
+                if cached.memory:
+                    cache_updates: dict[str, object] = {"consultation": cached.memory}
+                    if cached.products:
+                        ids = [p.product_id for p in cached.products]
+                        cache_updates.update(
+                            current_intent=(
+                                IntentType.COMPARISON
+                                if cached.memory.get("last_action") == "compare"
+                                else IntentType.RECOMMENDATION
+                            ),
+                            selected_product_ids=ids,
+                            comparison_product_ids=ids if len(ids) == 2 else [],
+                            active_product_id=ids[0] if len(ids) == 1 else None,
+                            active_category=_catalog_scope_for_displayed_products(
+                                request.text,
+                                [*cached.products, *cached.related_products],
+                            ),
+                            pending_action=None,
+                            pending_clarification=None,
+                        )
+                        single = cached.products[0] if len(ids) == 1 else None
+                        session_store.set_last_grounded_product(
+                            request.session_id,
+                            single.product_id if single else None,
+                            single.name if single else None,
+                        )
+                    session_store.update_shopping(request.session_id, **cache_updates)
+                return _record_shopping_turn(
+                    request,
+                    cached.text,
+                    model=f"consultation:{cached.model}:cache",
+                    products=list(cached.products),
+                    related_products=list(cached.related_products),
+                    tools_used=["customer_consultation"],
+                )
+        stream_handoff = _STREAM_HANDOFF_VAR.get()
+        if stream_handoff is not None:
+            stream_plan = await prepare_streaming_consultation(
+                text=request.text,
+                record=record,
+                repository=catalog_repo,
+                groq=groq,
+            )
+            if stream_plan is not None:
+                stream_handoff.append(stream_plan)
+                repo_source = (
+                    catalog_repo.source_name if stream_plan.products else None
+                )
+                return AgentRespondResponse(
+                    session_id=request.session_id,
+                    text="",
+                    model=f"consultation:{settings.effective_chat_model}:stream",
+                    grounded_product_ids=[p.product_id for p in stream_plan.products],
+                    tools_used=["customer_consultation"],
+                    data_timestamp=max(
+                        (p.data_timestamp for p in stream_plan.products),
+                        default=None,
+                    ),
+                    data_source=repo_source,
+                    state=record.state,
+                    products=[_product_card(p) for p in stream_plan.products],
+                    related_products=[_product_card(p) for p in stream_plan.related_products],
+                )
+        consultation = await safe_consult_customer(
+            text=request.text, record=record, repository=catalog_repo, groq=groq,
+            turn_id=str(request.client_turn_id),
+            review_selection=settings.customer_consultation_review_enabled,
+            review_high_risk_only=settings.customer_consultation_review_high_risk_only,
+        )
+        if consultation is not None and consultation.model == "consultation-fallback":
+            # Preserve an answer received while the planner is unavailable. A
+            # pending consultation cannot safely fall through to name search:
+            # short answers describe the question's slot rather than a product.
+            if consultation.memory:
+                session_store.update_shopping(
+                    request.session_id, consultation=consultation.memory,
+                )
+            if (
+                consultation.memory.get("need")
+                or consultation.memory.get("unprocessed_answer")
+                # A provider outage can precede the first valid plan, leaving
+                # only the customer's deferred request. Its next turn still
+                # belongs to that conversation, even without a stored need.
+                # Otherwise refinements/budget edits or a category switch can
+                # escape to unconstrained legacy search (or a second LLM 502).
+                # Use the incoming record: this turn's newly deferred request
+                # alone must not disable ordinary concrete catalog lookups.
+                or record.shopping.consultation.get("unprocessed_request")
+                or _should_defer_unscoped_consultation(request.text, record)
+            ):
+                return _record_shopping_turn(
+                    request,
+                    consultation.text,
+                    model="consultation:consultation-fallback",
+                    tools_used=["customer_consultation"],
+                )
+            # A clear, concrete catalog request still belongs to the established
+            # deterministic lookup path when the generative layer is unavailable.
+        if consultation is not None and consultation.model != "consultation-fallback":
+            if consultation.memory:
+                updates = {"consultation": consultation.memory}
+                if consultation.products:
+                    ids = [p.product_id for p in consultation.products]
+                    updates.update(
+                        current_intent=(
+                            IntentType.COMPARISON
+                            if consultation.memory.get("last_action") == "compare"
+                            else IntentType.RECOMMENDATION
+                        ),
+                        selected_product_ids=ids,
+                        comparison_product_ids=ids if len(ids) == 2 else [],
+                        active_product_id=ids[0] if len(ids) == 1 else None,
+                        active_category=_catalog_scope_for_displayed_products(
+                            request.text,
+                            [*consultation.products, *consultation.related_products],
+                        ),
+                        pending_action=None, pending_clarification=None,
+                    )
+                    single = consultation.products[0] if len(ids) == 1 else None
+                    session_store.set_last_grounded_product(
+                        request.session_id, single.product_id if single else None,
+                        single.name if single else None,
+                    )
+                session_store.update_shopping(request.session_id, **updates)
+            if can_use_turn1_cache and consultation.products:
+                get_consultation_cache().put(
+                    request.text,
+                    language=request.language,
+                    catalog_source=catalog_repo.source_name,
+                    reply_text=consultation.text,
+                    model=consultation.model,
+                    products=consultation.products,
+                    related_products=consultation.related_products,
+                    memory=consultation.memory,
+                )
+            return _record_shopping_turn(
+                request,
+                consultation.text,
+                model=f"consultation:{consultation.model}",
+                products=consultation.products,
+                related_products=consultation.related_products,
+                tools_used=["customer_consultation"],
+            )
     pending_action = record.shopping.pending_action or ""
     if pending_action.startswith("UNAVAILABLE_SIZE:"):
         unavailable_size = pending_action.partition(":")[2].casefold().replace(" ", "")
@@ -6705,7 +8382,7 @@ async def agent_respond(
         )
     if _simple_customer_acknowledgement_requested(request.text):
         reply = {
-            "vi": "Không có gì, bạn cứ hỏi mình khi cần nhé.",
+            "vi": "Dạ không có gì ạ, bạn cần hỗ trợ thêm cứ hỏi mình bất cứ lúc nào nhé!",
             "en": "You're welcome. Just ask if you need anything else.",
             "zh": "不客气，有需要随时问我。",
         }[request.language]
@@ -6716,12 +8393,20 @@ async def agent_respond(
         )
     support_intent = classify_support_intent(request.text)
     if support_intent is not None:
-        ticket = support_ticket_store.create(
+        ticket, created_new = support_ticket_store.create_or_get(
             session_id=request.session_id,
             kiosk_id=record.kiosk_id,
             issue_type=support_intent.issue_type,
             description=support_intent.description,
             idempotency_key=str(request.client_turn_id),
+            target_role=support_intent.target_role,
+        )
+        notifier = get_manager_notifier_service(settings)
+        ticket = await _dispatch_ticket_notification(
+            ticket,
+            created_new=created_new,
+            record=record,
+            notifier=notifier,
         )
         if record.state != SessionState.HANDOFF:
             session_store.transition(request.session_id, SessionState.HANDOFF)
@@ -6735,22 +8420,15 @@ async def agent_respond(
             handoff_previous_state=record.shopping.handoff_previous_state or record.state.value,
         )
         support_ticket = _support_ticket_response(ticket)
-        reply = (
-            f"I created demo support request {ticket.ticket_id}. A real staff member has not "
-            "been contacted."
-            if request.language == "en"
-            else (
-                f"已创建演示服务请求 {ticket.ticket_id}。系统尚未联系真实店员。"
-                if request.language == "zh"
-                else f"Mình đã tạo yêu cầu hỗ trợ demo mã {ticket.ticket_id}. Hệ thống chưa "
-                "liên hệ nhân viên thật."
-            )
-        )
+        reply = _localized_support_handoff_reply(ticket, request.language)
+        tools_used = ["handoff_to_staff"]
+        if ticket.notification_status == "DELIVERED" and ticket.notified_channel:
+            tools_used.append(f"notify_manager_{ticket.notified_channel}")
         return _record_shopping_turn(
             request,
             reply,
-            model="support-simulator",
-            tools_used=["handoff_to_staff"],
+            model="manager-notifier" if not ticket.demo else "support-simulator",
+            tools_used=tools_used,
             support_ticket=support_ticket,
         )
     if _store_service_policy_requested(request.text):
@@ -6832,6 +8510,38 @@ async def agent_respond(
             record.state,
             _localized_interaction_analytics_unavailable(request.language),
         )
+    if _non_supermarket_out_of_catalog_requested(request.text):
+        return _record_shopping_turn(
+            request,
+            _localized_non_supermarket_ooc(request.language),
+            model="local-ooc-gate",
+            products=[],
+        )
+    if re.search(r"\bthuoc\s+la\b", _normalize_request_text(request.text)) and not re.search(
+        r"\b(?:do\s+uong|nuoc\s+uong|bia)\b",
+        _normalize_request_text(request.text),
+    ):
+        reply = {
+            "vi": (
+                "Dạ hiện danh mục siêu thị bên mình chưa có mặt hàng thuốc lá ạ. "
+                "Nếu bạn cần tìm đồ uống hay thực phẩm khác trong siêu thị, "
+                "mình rất sẵn lòng hỗ trợ nhé!"
+            ),
+            "en": (
+                "Our supermarket catalog does not currently carry tobacco or cigarettes. "
+                "I'd be happy to help you find beverages or other groceries!"
+            ),
+            "zh": (
+                "本店超市目录目前不提供香烟类商品，"
+                "如需选购饮品或其他日用品我很乐意为您服务。"
+            ),
+        }[request.language]
+        return _record_shopping_turn(
+            request,
+            reply,
+            model="local-ooc-gate",
+            products=[],
+        )
     if _foreign_currency_budget_requested(
         request.text
     ) or _unparsed_recommendation_budget_requested(request.text):
@@ -6899,12 +8609,12 @@ async def agent_respond(
         except GroqConfigurationError as exc:
             raise HTTPException(
                 status_code=503,
-                detail="Groq chat provider is not configured",
+                detail="Chat LLM provider is not configured",
             ) from exc
         except GroqProviderError as exc:
             raise HTTPException(
                 status_code=502,
-                detail="Groq chat provider unavailable",
+                detail="Chat LLM provider unavailable",
             ) from exc
         return _record_shopping_turn(
             request,
@@ -6919,15 +8629,36 @@ async def agent_respond(
         catalog_hierarchies = catalog_repository.list_category_hierarchies()
     except (OSError, RuntimeError, TimeoutError, ValueError):
         catalog_repository = None
-    structured_query = understand_catalog_query(request.text, catalog_hierarchies)
+    normalized_for_understanding = request.text
+    if catalog_repository is not None:
+        normalize_noisy = getattr(catalog_repository, "normalize_noisy_query", None)
+        if callable(normalize_noisy):
+            try:
+                normalized_for_understanding = normalize_noisy(request.text)
+            except Exception:
+                normalized_for_understanding = request.text
+    structured_query = understand_catalog_query(
+        normalized_for_understanding, catalog_hierarchies
+    )
     semantic_use_case_recommendation = bool(
         structured_query.intent == "recommendation" and structured_query.use_case
+    )
+    use_case_catalog_match = (
+        resolve_catalog_category(structured_query.use_case, catalog_hierarchies)
+        if structured_query.use_case and catalog_hierarchies
+        else None
+    )
+    use_case_names_catalog_group = bool(
+        use_case_catalog_match is not None
+        and use_case_catalog_match.exact_phrase
+        and len(use_case_catalog_match.matched_tokens) >= 2
     )
     if (
         structured_query.use_case
         and structured_query.clarification_needed
         and not structured_query.product_type
         and not structured_query.product_reference
+        and not use_case_names_catalog_group
         and record.shopping.current_intent != IntentType.RECOMMENDATION
     ):
         return _record_shopping_turn(
@@ -6956,6 +8687,11 @@ async def agent_respond(
         return await _handle_product_comparison(request, record, None, "stock")
 
     if not mission_preemption_requested:
+        arithmetic_response = await _handle_retail_arithmetic_or_multi_fact(request)
+        if arithmetic_response is not None:
+            return arithmetic_response
+
+    if not mission_preemption_requested:
         category_list = (
             explicit_catalog_category_list(request.text, catalog_hierarchies)
             if catalog_hierarchies
@@ -6981,6 +8717,59 @@ async def agent_respond(
         or explicit_catalog_category
         or _has_specific_product_reference(request.text)
     )
+    if (
+        settings.demo_sales_enabled and settings.app_env == "development"
+        and structured_query.ranking_criterion == "sales_popularity"
+        and "sales" in _ranking_metric(request.text).split("+")
+        and not mission_preemption_requested
+    ):
+        sales_category = explicit_catalog_category or structured_query.product_type
+        selected_ids = (
+            tuple(record.shopping.selected_product_ids)
+            if not sales_category and len(record.shopping.selected_product_ids) > 1
+            else ()
+        )
+        if not sales_category and not selected_ids:
+            sales_category = record.shopping.active_category
+            if not sales_category and record.shopping.selected_product_ids:
+                selected_ids = tuple(record.shopping.selected_product_ids)
+        try:
+            sales_items = await run_catalog_work(
+                rank_demo_sales, catalog_repository or get_product_repository(settings),
+                structured_query, sales_category, selected_ids, timeout_seconds=4.0,
+                sales_counts=get_demo_sales_store(settings).counts(),
+            )
+        except (RuntimeError, TimeoutError, OSError, ValueError):
+            sales_items = ()
+        if sales_items:
+            observation = ToolObservation(
+                content={"sales_data_source": "SIMULATED"},
+                products=(sales_items[0].product,),
+                tool_name="recommend_products",
+                source=(catalog_repository or get_product_repository(settings)).source_name,
+            )
+            sales_reply = render_demo_sales(sales_items, request.language)
+            extra_metrics = [
+                metric for metric in _ranking_metric(request.text).split("+") if metric != "sales"
+            ]
+            if extra_metrics:
+                limitation = _ranking_limitation(extra_metrics, request.language)
+                sales_reply = f"{sales_reply} {limitation}"
+            response = _deterministic_tool_response(
+                request, record.state, observation,
+                sales_reply,
+                model="demo-sales", tools_used=["get_demo_sales_ranking"],
+            )
+            response.products[0].demo_units_sold_30d = sales_items[0].units_sold_30d
+            response.products[0].sales_data_source = "SIMULATED"
+            related_cards: list[ProductCardResponse] = []
+            for item in sales_items[1:]:
+                card = _product_card(item.product)
+                card.demo_units_sold_30d = item.units_sold_30d
+                card.sales_data_source = "SIMULATED"
+                related_cards.append(card)
+            response.related_products = related_cards
+            return response
     if _product_ranking_requested(request.text) and _ranking_metric(request.text) != "price":
         requested_category = (
             _explicit_recommendation_category(request.text) or explicit_catalog_category
@@ -7148,7 +8937,10 @@ async def agent_respond(
     prompt_override = _prompt_override_requested(request.text)
     unsupported_attribute_requested = (
         _unsupported_catalog_attribute_requested(request.text)
-        or has_unverified_negative_catalog_constraint(request.text)
+        or has_unverified_negative_catalog_constraint(
+            request.text,
+            active_category=record.shopping.active_category,
+        )
     ) and not (
         whole_cart_budget_followup
         and record.shopping.current_intent == IntentType.RECOMMENDATION
@@ -7379,12 +9171,14 @@ async def agent_respond(
         )
         else None
     )
-    recommendation_lookup_request = bool(category_recommendation_arguments) or (
-        _explicit_recommendation_category(request.text) is not None
-        and (
-            _price_constraint_from_text(request.text) is not None
-            or _unparsed_recommendation_budget_requested(request.text)
-            or is_recommendation_request(request.text)
+    recommendation_lookup_request = structured_query.intent != "location" and (
+        bool(category_recommendation_arguments) or (
+            _explicit_recommendation_category(request.text) is not None
+            and (
+                _price_constraint_from_text(request.text) is not None
+                or _unparsed_recommendation_budget_requested(request.text)
+                or is_recommendation_request(request.text)
+            )
         )
     )
     recommendation_updates = _recommendation_constraint_updates(
@@ -7399,7 +9193,8 @@ async def agent_respond(
         )
     )
     recommendation_constraint_followup = (
-        record.shopping.current_intent == IntentType.RECOMMENDATION
+        structured_query.intent != "location"
+        and record.shopping.current_intent == IntentType.RECOMMENDATION
         and (
             bool(category_recommendation_arguments)
             or _whole_cart_budget_only_followup(request.text)
@@ -7453,7 +9248,10 @@ async def agent_respond(
         and explicit_fact_query
         and _fact_query_has_product_target(explicit_fact_query)
         and not followup_fields
-        and not is_recommendation_request(request.text)
+        and (
+            not is_recommendation_request(request.text)
+            or structured_query.intent == "location"
+        )
         and not recommendation_lookup_request
         and not recommendation_constraint_followup
         and not _product_ranking_requested(request.text)
@@ -7466,7 +9264,12 @@ async def agent_respond(
         and not _administrative_action_requested(request.text)
     ):
         candidate_observation = await lookup_product_candidates(
-            explicit_fact_query,
+            (
+                structured_query.product_reference
+                if _normalize_request_text(structured_query.product_reference)
+                == _normalize_request_text(explicit_fact_query)
+                else explicit_fact_query
+            ),
             # Keep the original turn only when the shared parser found a
             # negative constraint; ordinary fact queries must retain the
             # existing exact-product lookup behavior.
@@ -7479,6 +9282,11 @@ async def agent_respond(
             record,
             request.text,
         )
+        if _recommendation_verifies_child_audience(request.text, (candidate_observation,)):
+            unsupported_attribute_requested = (
+                _unsupported_catalog_attribute_requested(request.text, include_audience=False)
+                or has_unverified_negative_catalog_constraint(request.text)
+            )
         if (
             candidate_observation.status == "DATA_UNAVAILABLE"
             and (
@@ -7494,6 +9302,51 @@ async def agent_respond(
                 tools_used=["search_products"],
             )
         if candidate_observation.status == "SUCCESS" and candidate_observation.products:
+            # On an explicit availability check ("có bán X không?"), if the
+            # query names specific non-catalog tokens (e.g. an uncarried breed,
+            # grade, or brand absent from the entire catalog vocabulary) and
+            # none of the returned fallback candidates match them, abstain
+            # honestly instead of returning unrelated items from a parent group.
+            if requested_fields == ("stock",) and catalog_repository is not None:
+                known_vocab = getattr(catalog_repository, "_known_words", None)
+                if isinstance(known_vocab, frozenset) and len(known_vocab) >= 100:
+                    query_tokens = [
+                        tok
+                        for tok in _normalize_request_text(explicit_fact_query).split()
+                        if len(tok) >= 2
+                        and not tok.isdigit()
+                        and tok not in _FACT_QUERY_STOP_WORDS
+                        and tok not in {"sieu", "thi", "cua", "hang", "ban"}
+                    ]
+                    unknown_specific = [tok for tok in query_tokens if tok not in known_vocab]
+                    if unknown_specific:
+                        cand_blob = " ".join(
+                            _normalize_request_text(
+                                f"{p.name} {p.brand or ''} {p.category or ''}"
+                            )
+                            for p in candidate_observation.products
+                        )
+                        if not any(tok in cand_blob for tok in unknown_specific):
+                            return _deterministic_tool_response(
+                                request,
+                                record.state,
+                                ToolObservation(
+                                    status="NOT_FOUND",
+                                    content={"count": 0},
+                                    products=(),
+                                    tool_name="search_products",
+                                    source=candidate_observation.source,
+                                ),
+                                (
+                                    "Dạ hiện mình không tìm thấy sản phẩm khớp đúng yêu cầu trong "
+                                    "danh mục siêu thị ạ. Bạn cho mình xin tên loại hàng hoặc "
+                                    "thương hiệu khác để mình tìm hỗ trợ bạn nhé."
+                                    if request.language == "vi"
+                                    else _localized_not_found(request.language)
+                                ),
+                                model="catalog",
+                                tools_used=["search_products"],
+                            )
             candidates = tuple(candidate_observation.products)
             reported_count = candidate_observation.content.get("count")
             exact_id = _unique_product_match_id(explicit_fact_query, candidates)
@@ -7541,7 +9394,57 @@ async def agent_respond(
                     if unsupported_attribute_requested and not (
                         _reply_already_discloses_missing_attribute(reply, request.language)
                     ):
-                        reply = f"{reply} {_localized_unverified_fact(request.language)}"
+                        knowledge_attrs = _product_knowledge_attributes_requested(request.text)
+                        knowledge_note = ""
+                        if knowledge_attrs:
+                            knowledge_obs = await lookup_product_knowledge(
+                                product.product_id, knowledge_attrs,
+                            )
+                            if knowledge_obs.status == "SUCCESS":
+                                facts = knowledge_obs.content.get("facts", [])
+                                decl_facts = [
+                                    f for f in facts
+                                    if isinstance(f, dict)
+                                    and f.get("status") == "VERIFIED"
+                                    and f.get("evidence_scope")
+                                    in {"MANUFACTURER_DECLARATION", "RETAILER_LISTING"}
+                                ]
+                                knowledge_note = (
+                                    _localized_verified_manufacturer_declaration_reply(
+                                        product.name, decl_facts, request.language,
+                                    )
+                                    or _localized_manufacturer_claim_reply(
+                                        product.name, facts, request.language,
+                                    )
+                                    or ""
+                                )
+                        fallback_note = _localized_unverified_fact(request.language)
+                        if (
+                            not knowledge_note
+                            and request.language == "vi"
+                            and "benefits" in knowledge_attrs
+                        ):
+                            traits = extract_catalog_product_traits(product)
+                            notes = [f"thuộc nhóm {traits['category_group']}"]
+                            if traits["title_functions"]:
+                                notes.append(
+                                    f"đặc điểm ghi trên tên gồm {traits['title_functions']}"
+                                )
+                            if traits["title_ingredients"]:
+                                notes.append(
+                                    f"thành phần/hương vị ghi trên tên gồm "
+                                    f"{traits['title_ingredients']}"
+                                )
+                            fallback_note = (
+                                f"{fallback_note} Theo danh mục, sản phẩm "
+                                + ", ".join(notes)
+                                + "."
+                            )
+                        reply = (
+                            f"{reply} {knowledge_note}".strip()
+                            if knowledge_note
+                            else f"{reply} {fallback_note}".strip()
+                        )
                     if _reservation_requested(request.text) and not (
                         _reply_already_refuses_reservation(reply, request.language)
                     ):
@@ -7584,9 +9487,80 @@ async def agent_respond(
                             requested_fields,
                             request.session_id,
                         )
-                        if product is not None and requested_fields == ("spicy",)
+                        if product is not None
+                        and set(requested_fields).issubset({"spicy", "ingredients"})
                         else _localized_unverified_fact(request.language)
                     )
+                    if (
+                        product is not None
+                        and unsupported_attribute_requested
+                        and "ingredients" in requested_fields
+                    ):
+                        knowledge_attrs = _product_knowledge_attributes_requested(request.text)
+                        verified_knowledge_note = ""
+                        if knowledge_attrs:
+                            knowledge_obs = await lookup_product_knowledge(
+                                product.product_id, knowledge_attrs,
+                            )
+                            if knowledge_obs.status == "SUCCESS":
+                                facts = knowledge_obs.content.get("facts", [])
+                                decl_facts = [
+                                    f for f in facts
+                                    if isinstance(f, dict)
+                                    and f.get("status") == "VERIFIED"
+                                    and f.get("evidence_scope")
+                                    in {"MANUFACTURER_DECLARATION", "RETAILER_LISTING"}
+                                ]
+                                verified_knowledge_note = (
+                                    _localized_verified_manufacturer_declaration_reply(
+                                        product.name, decl_facts, request.language,
+                                    )
+                                    or _localized_manufacturer_claim_reply(
+                                        product.name, facts, request.language,
+                                    )
+                                    or ""
+                                )
+                        if verified_knowledge_note:
+                            reply = f"{reply} {verified_knowledge_note}".strip()
+                        elif knowledge_attrs and request.language == "vi":
+                            traits = extract_catalog_product_traits(product)
+                            trait_bits = [f"nhóm {traits['category_group']}"]
+                            if traits["title_functions"]:
+                                trait_bits.append(
+                                    f"đặc điểm ghi trên tên gồm {traits['title_functions']}"
+                                )
+                            if traits["title_ingredients"]:
+                                trait_bits.append(
+                                    f"thành phần/hương vị ghi trên tên gồm "
+                                    f"{traits['title_ingredients']}"
+                                )
+                            has_verified_ingred = reply.startswith("Theo ") and (
+                                "Theo tên và nhóm" not in reply
+                                and "Theo danh mục" not in reply
+                            )
+                            if has_verified_ingred:
+                                reply = (
+                                    f"{reply} Về công dụng/cách dùng cụ thể, mình chưa có dữ liệu "
+                                    f"đã xác minh nên mình không đoán (theo danh mục: "
+                                    + "; ".join(trait_bits)
+                                    + ")."
+                                )
+                            else:
+                                reply = (
+                                    f"Với {product.name} ("
+                                    + "; ".join(trait_bits)
+                                    + "), mình chưa có dữ liệu đã xác minh cho bảng thành phần "
+                                    "chi tiết và công dụng/lợi ích đầy đủ nên mình không đoán. "
+                                    "Bạn kiểm tra thêm trên nhãn bao bì sản phẩm nhé."
+                                )
+                        elif knowledge_attrs:
+                            knowledge_note = _localized_product_knowledge_abstention(
+                                product.name,
+                                knowledge_attrs,
+                                request.language,
+                                product=product,
+                            )
+                            reply = f"{reply} {knowledge_note}".strip()
                 else:
                     reply = _localized_tool_failure(request.language)
                 return _deterministic_tool_response(
@@ -7607,22 +9581,58 @@ async def agent_respond(
                 pending_clarification="Select a product before reading its snapshot.",
             )
             session_store.set_last_grounded_product(request.session_id, None)
-            return _deterministic_tool_response(
-                request,
-                record.state,
-                candidate_observation,
-                (
-                    _localized_price_candidates(candidates, request.language)
-                    if "price_vnd" in requested_fields
+            multi_reply = (
+                _localized_price_candidates(candidates, request.language)
+                if "price_vnd" in requested_fields
+                else (
+                    _localized_location_candidates(candidates, request.language)
+                    if "shelf" in requested_fields
                     else (
-                        _localized_location_candidates(candidates, request.language)
-                        if "shelf" in requested_fields
+                        _localized_product_knowledge_disambiguation(candidates, request.language)
+                        if "ingredients" in requested_fields and request.language == "vi"
                         else _localized_product_variant_clarification(
                             candidate_observation,
                             request.language,
                         )
                     )
-                ),
+                )
+            )
+            knowledge_attrs = (
+                _product_knowledge_attributes_requested(request.text)
+                if unsupported_attribute_requested
+                else ()
+            )
+            if knowledge_attrs and "price_vnd" in requested_fields:
+                for candidate in candidates[:5]:
+                    knowledge_obs = await lookup_product_knowledge(
+                        candidate.product_id, knowledge_attrs,
+                    )
+                    if knowledge_obs.status == "SUCCESS":
+                        facts = knowledge_obs.content.get("facts", [])
+                        decl_facts = [
+                            f for f in facts
+                            if isinstance(f, dict)
+                            and f.get("status") == "VERIFIED"
+                            and f.get("evidence_scope")
+                            in {"MANUFACTURER_DECLARATION", "RETAILER_LISTING"}
+                        ]
+                        knowledge_note = (
+                            _localized_verified_manufacturer_declaration_reply(
+                                candidate.name, decl_facts, request.language,
+                            )
+                            or _localized_manufacturer_claim_reply(
+                                candidate.name, facts, request.language,
+                            )
+                            or ""
+                        )
+                        if knowledge_note:
+                            multi_reply = f"{knowledge_note} {multi_reply}"
+                            break
+            return _deterministic_tool_response(
+                request,
+                record.state,
+                candidate_observation,
+                multi_reply,
                 model="catalog",
                 tools_used=["search_products"],
             )
@@ -8011,7 +10021,8 @@ async def agent_respond(
                     for fact in facts
                     if isinstance(fact, dict)
                     and fact.get("status") == "VERIFIED"
-                    and fact.get("evidence_scope") == "MANUFACTURER_DECLARATION"
+                    and fact.get("evidence_scope")
+                    in {"MANUFACTURER_DECLARATION", "RETAILER_LISTING"}
                 ]
                 manufacturer_declaration_reply = _localized_verified_manufacturer_declaration_reply(
                     knowledge_product.name,
@@ -8086,6 +10097,7 @@ async def agent_respond(
                         knowledge_product.name,
                         knowledge_attributes,
                         request.language,
+                        product=knowledge_product,
                     )
                     return _deterministic_tool_response(
                         request,
@@ -8627,7 +10639,7 @@ async def agent_respond(
             return AgentRespondResponse(
                 session_id=request.session_id,
                 text=reply,
-                model=agent_result.model or settings.groq_model,
+                model=agent_result.model or settings.effective_chat_model,
                 grounded_product_ids=[product.product_id for product in plan_products],
                 tools_used=list(agent_result.tools_used),
                 data_timestamp=(
@@ -8658,11 +10670,52 @@ async def agent_respond(
                 observations=(promotion_observation,),
             )
         elif recommendation_arguments:
+            price_range = _price_range_from_text(request.text)
             ranking_observation = await lookup_recommendation_products(
                 recommendation_arguments,
                 previous_queries=previous_user_queries,
                 current_user_text=request.text,
             )
+            if price_range is not None:
+                min_p, max_p = price_range
+                in_range_list = [
+                    p for p in ranking_observation.products if min_p <= p.price_vnd <= max_p
+                ]
+                if len(in_range_list) < 3:
+                    repo = get_product_repository(settings)
+                    broader = repo.search(
+                        query=str(recommendation_arguments.get("query") or ""),
+                        category=recommendation_arguments.get("category")
+                        if isinstance(recommendation_arguments.get("category"), str)
+                        else None,
+                        max_price_vnd=max_p,
+                        limit=20,
+                    )
+                    seen_ids = {p.product_id for p in in_range_list}
+                    for prod in broader:
+                        if min_p <= prod.price_vnd <= max_p and prod.product_id not in seen_ids:
+                            in_range_list.append(prod)
+                            seen_ids.add(prod.product_id)
+                in_range = tuple(in_range_list[:5])
+                filtered_content = dict(ranking_observation.content)
+                filtered_content["items"] = [
+                    {
+                        "product_id": p.product_id,
+                        "name": p.name,
+                        "category": p.category,
+                        "brand": p.brand,
+                        "reference_price_vnd": p.price_vnd,
+                        "stock_is_current": p.stock_is_current,
+                    }
+                    for p in in_range
+                ]
+                filtered_content["count"] = len(in_range)
+                ranking_observation = replace(
+                    ranking_observation,
+                    status="SUCCESS" if in_range else "NOT_FOUND",
+                    content=filtered_content,
+                    products=in_range,
+                )
             agent_result = RetailAgentResult(
                 text="",
                 model="catalog",
@@ -8933,16 +10986,16 @@ async def agent_respond(
             reply, request.language
         ):
             reply = f"{reply} {_reservation_refusal(request.language)}".strip()
-        model = agent_result.model or settings.groq_model
+        model = agent_result.model or settings.effective_chat_model
         products = []
         tools_used = list(agent_result.tools_used)
     except GroqConfigurationError as exc:
         raise HTTPException(
             status_code=503,
-            detail="Groq chat provider is not configured",
+            detail="Chat LLM provider is not configured",
         ) from exc
     except GroqProviderError as exc:
-        raise HTTPException(status_code=502, detail="Groq chat provider unavailable") from exc
+        raise HTTPException(status_code=502, detail="Chat LLM provider unavailable") from exc
 
     latest_catalog_observation = _latest_catalog_response_observation(agent_result.observations)
     products = _response_products_from_latest_observation(
@@ -9053,9 +11106,27 @@ async def agent_respond_stream(
     groq: GroqService = Depends(get_groq_service),
     settings: Settings = Depends(get_settings),
 ) -> StreamingResponse | Response:
-    # Run the complete policy, tool, grounding, and transaction flow first. Only
-    # its final response is exposed as text deltas, so no unverified claim streams.
-    response_task = asyncio.create_task(agent_respond(request, groq, settings))
+    # Run policy, tool, grounding, and transaction checks first. Low-risk
+    # grounded consultations hand off verified catalog cards + a live token
+    # stream so cards appear in <100 ms and text streams as DeepSeek generates it.
+    stream_handoff: list[StreamingConsultationPlan] = []
+    was_cacheable_turn1 = False
+    if (
+        settings.consultation_cache_enabled
+        and type(groq) is GroqService
+        and groq.client is None
+    ):
+        try:
+            was_cacheable_turn1 = is_stateless_cacheable_turn(
+                request.text, session_store.get(request.session_id)
+            )
+        except Exception:
+            was_cacheable_turn1 = False
+    handoff_token = _STREAM_HANDOFF_VAR.set(stream_handoff)
+    try:
+        response_task = asyncio.create_task(agent_respond(request, groq, settings))
+    finally:
+        _STREAM_HANDOFF_VAR.reset(handoff_token)
     try:
         while not response_task.done():
             if await http_request.is_disconnected():
@@ -9068,6 +11139,125 @@ async def agent_respond_stream(
         response_task.cancel()
         await asyncio.gather(response_task, return_exceptions=True)
         raise
+
+    if stream_handoff:
+        outcome = stream_handoff[0]
+        start_response = response
+
+        async def live_consultation_events():
+            start_meta = start_response.model_dump(mode="json", exclude={"text"})
+            yield (
+                "event: start\ndata: "
+                + json.dumps({"response": start_meta}, ensure_ascii=False, separators=(",", ":"))
+                + "\n\n"
+            )
+            collected: list[str] = []
+            used_model = settings.effective_chat_model
+            disconnected = False
+            try:
+                async for delta_text, model_name in groq.stream_chat(
+                    outcome.messages, max_tokens=200
+                ):
+                    if await http_request.is_disconnected():
+                        disconnected = True
+                        return
+                    used_model = model_name
+                    clean_delta = delta_text.replace("**", "")
+                    if not clean_delta:
+                        continue
+                    collected.append(clean_delta)
+                    yield (
+                        "event: delta\ndata: "
+                        + json.dumps(
+                            {"text": clean_delta}, ensure_ascii=False, separators=(",", ":")
+                        )
+                        + "\n\n"
+                    )
+            except asyncio.CancelledError:
+                disconnected = True
+                raise
+            except (GroqProviderError, ValueError, RuntimeError, TimeoutError):
+                if not collected:
+                    used_model = "consultation-local-fallback"
+                    for chunk in _validated_text_chunks(outcome.fallback_text):
+                        if await http_request.is_disconnected():
+                            disconnected = True
+                            return
+                        collected.append(chunk)
+                        yield (
+                            "event: delta\ndata: "
+                            + json.dumps(
+                                {"text": chunk}, ensure_ascii=False, separators=(",", ":")
+                            )
+                            + "\n\n"
+                        )
+            if disconnected:
+                return
+            final_text = re.sub(r"(\d)để\b", r"\1đ để", "".join(collected).strip())
+            if not final_text:
+                final_text = outcome.fallback_text
+            if outcome.memory:
+                updates: dict[str, object] = {"consultation": outcome.memory}
+                if outcome.products:
+                    ids = [p.product_id for p in outcome.products]
+                    updates.update(
+                        current_intent=IntentType.RECOMMENDATION,
+                        selected_product_ids=ids,
+                        comparison_product_ids=ids if len(ids) == 2 else [],
+                        active_product_id=ids[0] if len(ids) == 1 else None,
+                        active_category=_catalog_scope_for_displayed_products(
+                            request.text, [*outcome.products, *outcome.related_products]
+                        ),
+                        pending_action=None,
+                        pending_clarification=None,
+                    )
+                    single = outcome.products[0] if len(ids) == 1 else None
+                    session_store.set_last_grounded_product(
+                        request.session_id,
+                        single.product_id if single else None,
+                        single.name if single else None,
+                    )
+                session_store.update_shopping(request.session_id, **updates)
+            session_store.add_message(request.session_id, "user", request.text)
+            session_store.add_message(request.session_id, "assistant", final_text)
+            if (
+                was_cacheable_turn1
+                and outcome.products
+                and final_text
+                and used_model != "consultation-local-fallback"
+            ):
+                get_consultation_cache().put(
+                    request.text,
+                    language=request.language,
+                    catalog_source=get_product_repository().source_name,
+                    reply_text=final_text,
+                    model=used_model,
+                    products=outcome.products,
+                    related_products=outcome.related_products,
+                    memory=outcome.memory,
+                )
+            latest_state = session_store.get(request.session_id).state
+            complete_response = start_response.model_copy(
+                update={
+                    "model": f"consultation:{used_model}:stream",
+                    "state": latest_state,
+                }
+            )
+            complete_meta = complete_response.model_dump(mode="json", exclude={"text"})
+            yield (
+                "event: complete\ndata: "
+                + json.dumps({"response": complete_meta}, ensure_ascii=False, separators=(",", ":"))
+                + "\n\n"
+            )
+
+        return StreamingResponse(
+            live_consultation_events(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-store",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     async def response_events():
         metadata = response.model_dump(mode="json", exclude={"text"})
@@ -9231,9 +11421,18 @@ def _requested_snapshot_fields_for_catalog(
     if not understanding.product_type or understanding.intent == "price":
         return fields
     category_phrase = normalize_category_text(understanding.product_type)
-    if not category_phrase or not re.search(
-        rf"(?<!\w){re.escape(category_phrase)}(?!\w)",
-        normalized_query,
+    # Only strip price_vnd when the matched category name itself contains "gia"
+    # (e.g. "Giá đỗ") and the customer did not separately ask for a price.
+    if (
+        not category_phrase
+        or "gia" not in category_phrase.split()
+        or not re.search(rf"(?<!\w){re.escape(category_phrase)}(?!\w)", normalized_query)
+    ):
+        return fields
+    without_category = re.sub(rf"(?<!\w){re.escape(category_phrase)}(?!\w)", " ", normalized_query)
+    if re.search(
+        r"\b(?:gia bao nhieu|bao nhieu tien|bao tien|may dong|gia ban|price|how much)\b",
+        without_category,
     ):
         return fields
     return tuple(field for field in fields if field != "price_vnd")
@@ -9572,6 +11771,8 @@ _FACT_QUERY_STOP_WORDS = {
     "duoc",
     "re",
     "hon",
+    "coi",
+    "tam",
     "please",
 }
 
@@ -9609,6 +11810,12 @@ def _usage_dosage_question_requested(text: str) -> bool:
     return any(
         phrase in normalized
         for phrase in (
+            "huong dan su dung",
+            "cach su dung",
+            "cach dung",
+            "cach pha",
+            "cach nau",
+            "cach che bien",
             "dung the nao",
             "su dung the nao",
             "dung nhu the nao",
@@ -9643,6 +11850,18 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
     sorted(
         (
             "loi ich suc khoe",
+            "xuat xu",
+            "nguon goc",
+            "nguon goc san xuat",
+            "nguon goc xuat xu",
+            "san xuat o dau",
+            "san xuat tai",
+            "made in",
+            "country of origin",
+            "halal",
+            "chung nhan halal",
+            "dat chuan halal",
+            "kosher",
             "co loi ich cho suc khoe",
             "loi ich cho suc khoe",
             "suc khoe nhu the nao",
@@ -9770,16 +11989,34 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
 
 
 def _fact_product_query(text: str) -> str:
-    normalized = _normalize_request_text(text)
+    try:
+        repo = get_product_repository()
+        normalize_noisy = getattr(repo, "normalize_noisy_query", None)
+        if callable(normalize_noisy):
+            text = normalize_noisy(text)
+    except Exception:
+        pass
+    parsed = understand_catalog_query(text)
+    parsed_reference = parsed.product_reference
+    if (
+        parsed.intent == "location" and parsed_reference
+        and _requested_snapshot_fields(text) == ("shelf",)
+        and _normalize_request_text(parsed_reference) != _normalize_request_text(text)
+    ):
+        # The parser removes the location clause before accent folding. Keep
+        # identity words such as "kẻ" that otherwise collide with "kệ".
+        return _normalize_request_text(parsed_reference)
+    normalized = _normalize_request_text(parsed_reference or text)
     attribute_terms = (
-        r"(?:calo|kcal|calories?|duong|sugar|protein|caffeine|cafein|"
+        r"(?:calo|kcal|calories?|duong(?:\s+mia)?|sugar|protein|caffeine|cafein|"
         r"dinh duong|nutrition|nutritional)"
     )
     normalized = re.sub(
-        rf"\b(?:co|has|have|contain|contains)\s+"
-        rf"(?:(?:bao nhieu|how many|how much|luong|ham luong|muc)\s+)?"
+        rf"\b(?:co|chua|has|have|contain|contains)\s+"
+        rf"(?:(?:bao nhieu|nhieu|it|how many|how much|luong|ham luong|muc)\s+)?"
         rf"{attribute_terms}(?:\s+(?:voi|va|and|with)\s+{attribute_terms})*"
-        rf"(?:\s+(?:bao nhieu|how many|how much))?(?:\s+(?:khong|vay|nhi|a))?\b",
+        rf"(?:\s+(?:bao nhieu|lam|how many|how much))?"
+        rf"(?:\s+(?:dung khong|phai khong|khong|vay|nhi|a))?\b",
         " ",
         normalized,
     )
@@ -9822,6 +12059,17 @@ def _fact_product_query(text: str) -> str:
     normalized = re.sub(r"\bkhong phai sot uop\b", " ", normalized)
     normalized = re.sub(r"\b(?:hoi )?binh thuong\b", " ", normalized)
     normalized = re.sub(r"\bben minh\b", " ", normalized)
+    normalized = re.sub(
+        r"\b(?:(?:o|tai|trong|ben)\s+)?sieu\s+thi(?:\s+nay)?\b",
+        " ",
+        normalized,
+    )
+    normalized = re.sub(
+        r"\b(?:hoan\s+toan\s+)?(?:khong\s+(?:co|chua)\s+duong|co\s+duong)\s+"
+        r"(?:dung|phai)\s+khong\b|\bhoan\s+toan\b",
+        " ",
+        normalized,
+    )
     normalized = re.sub(
         r"\b(?:tai |o )?cua hang\b|\b(?:hom nay|today|hien tai|luc nay)\b|"
         r"\b(?:con )?hieu luc\b|\bda (?:duoc )?(?:xac nhan|xac minh|kiem tra|cap nhat)\b|"
@@ -9870,6 +12118,20 @@ def _fact_product_query(text: str) -> str:
         " ",
         normalized,
     )
+    normalized = re.sub(
+        r"\b(?:han\s+su\s+dung|han\s+dung|het\s+han)(?:\s+den)?"
+        r"(?:\s+(?:ngay|thang|nam|bao\s+gio|luc\s+nao|khi\s+nao))*\b",
+        " ",
+        normalized,
+    )
+    normalized = re.sub(
+        r"\b(?:dung cho|phu hop voi|danh cho)\s+(?:loai\s+)?"
+        r"(?:da|toc|doi tuong|lua tuoi)\s+(?:nao|gi)\b|"
+        r"\b(?:thanh phan|cong dung|tac dung)\s+(?:co\s+)?(?:nhung\s+)?(?:gi|nao)\b|"
+        r"\b(?:co\s+(?:nhung\s+)?thanh phan\s+(?:gi|nao))\b",
+        " ",
+        normalized,
+    )
     for phrase in _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES:
         normalized = re.sub(rf"\b{re.escape(phrase)}\b", " ", normalized)
     measure_terms: set[str] = set()
@@ -9884,8 +12146,40 @@ def _fact_product_query(text: str) -> str:
             measure_terms.update((whole, f"{fraction}{normalized_unit}"))
         else:
             measure_terms.add(f"{whole}{normalized_unit}")
+    for match in re.finditer(
+        r"(?<!\w)(?:vi|vỉ|loc|lốc|thung|thùng)\s+(\d{1,2})\b",
+        text,
+        re.IGNORECASE,
+    ):
+        measure_terms.add(match.group(1))
     has_front_loader_hint = bool(re.search(r"\bcua truoc\b", normalized))
-    preserve_dau_product_token = bool(re.search(r"(?<!\w)(?:đậu|dầu)(?!\w)", text, re.IGNORECASE))
+    preserve_dau_product_token = bool(
+        re.search(r"(?<!\w)(?:đậu|dầu)(?!\w)", text, re.IGNORECASE)
+        or re.search(
+            r"\bdau\s+(?:an|goi|xa|hao|me|o\s*liu|thuc\s+vat|nanh|dau\s+nanh|phong)\b",
+            normalized,
+        )
+    )
+    preserve_chua_product_token = bool(
+        re.search(r"(?<!\w)chua(?!\w)", text, re.IGNORECASE)
+        or re.search(r"\b(?:sua|dua|canh)\s+chua\b", normalized)
+    )
+    preserve_tra_product_token = bool(
+        re.search(r"(?<!\w)trà(?!\w)", text, re.IGNORECASE)
+        or re.search(
+            r"\btra\s+(?:sua|xanh|den|o\s*long|lai|dao|chanh|vai|gung|tui|hop|ceylon|matcha)\b",
+            normalized,
+        )
+    )
+    preserve_sao_product_token = bool(re.search(r"\bngoi\s+sao\b", normalized))
+    preserve_nam_product_token = bool(
+        re.search(r"\b(?:phuong\s+nam|nam\s+ngu|nam\s+duong|viet\s+nam)\b", normalized)
+    )
+    preserve_suc_product_token = bool(re.search(r"\bsuc\s+mieng\b", normalized))
+    preserve_tam_product_token = bool(
+        re.search(r"(?<!\w)tắm(?!\w)", text, re.IGNORECASE)
+        or re.search(r"\b(?:sua|xa\s+bong|xa\s+phong|dau|khan|muoi|gel)\s+tam\b", normalized)
+    )
     normalized_words = normalized.split()
     possessive_brand_phrases = {
         _normalize_request_text(match.group(1)).strip(): match.group(0)
@@ -9896,26 +12190,54 @@ def _fact_product_query(text: str) -> str:
     pocket_phrase_tokens = {
         index
         for index in range(1, len(normalized_words))
-        if normalized_words[index - 1 : index + 1] == ["bo", "tui"]
+        if normalized_words[index - 1 : index + 1]
+        in (["bo", "tui"], ["bac", "ha"], ["dau", "an"])
     }
-    query_words = [
-        word
+    packaging_tui_tokens = {
+        index
+        for index in range(len(normalized_words) - 1)
+        if normalized_words[index] == "tui"
+        and (
+            normalized_words[index + 1] in {"lon", "nho", "to", "cham", "refill"}
+            or normalized_words[index + 1][:1].isdigit()
+        )
+    }
+    indexed_query_words = [
+        (index, word)
         for index, word in enumerate(normalized_words)
         if (
             word not in _FACT_QUERY_STOP_WORDS
             or (word == "dau" and preserve_dau_product_token)
+            or (word == "chua" and preserve_chua_product_token)
+            or (word == "tra" and preserve_tra_product_token)
+            or (word == "sao" and preserve_sao_product_token)
+            or (word == "nam" and preserve_nam_product_token)
+            or (word == "suc" and preserve_suc_product_token)
+            or (word == "tam" and preserve_tam_product_token)
             or index in pocket_phrase_tokens
+            or index in packaging_tui_tokens
             or word in possessive_brand_tokens
         )
         and (not word.isdigit() or word in measure_terms)
         and not re.fullmatch(r"\d+(?:k|d|dong|vnd)", word)
     ]
     if has_front_loader_hint:
-        query_words.extend(word for word in ("cua", "truoc") if word not in query_words)
+        existing_words = {word for _, word in indexed_query_words}
+        for word in ("cua", "truoc"):
+            if word not in existing_words:
+                indexed_query_words.append((-1, word))
     unique_query_words: list[str] = []
     seen_query_words: set[str] = set()
-    for word in query_words:
-        if word in seen_query_words and not (word == "bim" and unique_query_words[-1:] == ["bim"]):
+    for orig_index, word in indexed_query_words:
+        # Preserve legitimate adjacent Vietnamese reduplications in the original
+        # text once (e.g. "hảo hảo", "bim bim") while removing repeated echoes.
+        is_adjacent_reduplication = (
+            orig_index > 0
+            and normalized_words[orig_index - 1] == word
+            and unique_query_words[-1:] == [word]
+            and unique_query_words[-2:] != [word, word]
+        )
+        if word in seen_query_words and not is_adjacent_reduplication:
             continue
         unique_query_words.append(word)
         seen_query_words.add(word)
@@ -10178,7 +12500,7 @@ async def _handle_product_correction(
                     fields,
                     request.session_id,
                 )
-                if product is not None and fields == ("spicy",)
+                if product is not None and set(fields).issubset({"spicy", "ingredients"})
                 else _localized_unverified_fact(request.language)
             )
         else:
@@ -10294,6 +12616,27 @@ _ENGLISH_BUDGET_WORDS = {
 }
 
 
+def _price_range_from_text(text: str) -> tuple[int, int] | None:
+    """Parse explicit VND price ranges like 'từ 100k đến 200k' or 'trong khoảng 30k - 65k'."""
+    normalized = " ".join(_normalize_request_text(text).split())
+    match = re.search(
+        r"\b(?:tu|trong\s+khoang|khoang)\s+"
+        r"(\d+(?:[.,]\d+)?)\s*(trieu|tr|k|nghin|ngan|dong|vnd|d)?\s*"
+        r"(?:den|toi|-)\s*"
+        r"(\d+(?:[.,]\d+)?)\s*(trieu|tr|k|nghin|ngan|dong|vnd|d)\b",
+        normalized,
+    )
+    if match is None:
+        return None
+    low_raw, low_unit, high_raw, high_unit = match.groups()
+    effective_low_unit = low_unit or high_unit
+    low_vnd = _parse_vnd_amount(low_raw, effective_low_unit)
+    high_vnd = _parse_vnd_amount(high_raw, high_unit)
+    if low_vnd and high_vnd and 0 < low_vnd < high_vnd:
+        return (low_vnd, high_vnd)
+    return None
+
+
 def _price_constraint_from_text(text: str) -> dict[str, int | str] | None:
     normalized = _normalize_request_text(text)
     normalized = re.sub(r"(?<=\d)d\b", " d", normalized)
@@ -10304,6 +12647,9 @@ def _price_constraint_from_text(text: str) -> dict[str, int | str] | None:
         normalized,
     )
     if operator_match is None:
+        price_range = _price_range_from_text(text)
+        if price_range is not None:
+            return {"operator": "LTE", "value_vnd": price_range[1]}
         return None
 
     if re.match(
@@ -10378,7 +12724,8 @@ def _price_constraint_from_text(text: str) -> dict[str, int | str] | None:
 def _foreign_currency_budget_requested(text: str) -> bool:
     has_limit = bool(
         re.search(
-            r"\b(?:duoi|toi da|khong qua|under|below|less than|no more than|at most|up to)\b",
+            r"\b(?:duoi|toi da|khong qua|ngan sach|tam|khoang|co|"
+            r"under|below|less than|no more than|at most|up to|budget)\b",
             _normalize_request_text(text),
         )
     )
@@ -11249,6 +13596,13 @@ def _recommendation_constraint_updates(
 
 
 def _product_ranking_requested(text: str) -> bool:
+    try:
+        repo = get_product_repository()
+        normalize_noisy = getattr(repo, "normalize_noisy_query", None)
+        if callable(normalize_noisy):
+            text = normalize_noisy(text)
+    except Exception:
+        pass
     normalized = " ".join(_normalize_request_text(text).split())
     ranking_cues = (
         "gia re",
@@ -11271,6 +13625,12 @@ def _product_ranking_requested(text: str) -> bool:
         "top rated",
         "ban chay",
         "ban chay nhat",
+        "ban duoc nhieu nhat",
+        "ban duoc nhieu nhut",
+        "ban nhieu nhat",
+        "ban nhieu nhut",
+        "luot ban cao nhat",
+        "luot ban nhieu nhat",
         "ban dat hang",
         "dat hang nhat",
         "dat khach",
@@ -11490,6 +13850,34 @@ def _implicit_followup_fields(text: str) -> tuple[str, ...]:
     return () if has_entity_or_topic else fields
 
 
+def _explicit_product_knowledge_lookup_requested(text: str, record) -> bool:
+    """Leave concrete product facts with their established evidence controller.
+
+    Choosing a product for a need still belongs to consultation. Reading a
+    named product's instructions or declaration does not require a shopping
+    planner, even after a previous consultation failed. Identity resolution
+    and ambiguous variants remain the knowledge controller's responsibility.
+    """
+    if is_recommendation_request(text):
+        return False
+    snapshot_fields = _requested_snapshot_fields(text)
+    has_knowledge_attr = (
+        _unsupported_catalog_attribute_requested(text)
+        and bool(_product_knowledge_attributes_requested(text))
+    )
+    has_direct_fact_lookup = bool(
+        set(snapshot_fields) & {"ingredients", "expiry_at", "stock"}
+    )
+    if not (has_knowledge_attr or has_direct_fact_lookup):
+        return False
+    if record.last_grounded_product_id and _contextual_product_reference_requested(text):
+        return True
+    return bool(
+        _has_specific_product_reference(text)
+        and _fact_query_has_product_target(_fact_product_query(text))
+    )
+
+
 def _product_knowledge_attributes_requested(text: str) -> tuple[str, ...]:
     normalized = " ".join(_normalize_request_text(text).split())
     attributes: list[str] = []
@@ -11568,6 +13956,8 @@ def _localized_product_knowledge_abstention(
     product_name: str,
     attributes: tuple[str, ...],
     language: LanguageCode,
+    *,
+    product: ProductSnapshot | None = None,
 ) -> str:
     labels = {
         "en": {
@@ -11613,11 +14003,25 @@ def _localized_product_knowledge_abstention(
             f"我在商品目录中找到了{product_name}，但没有经过核实的{attribute_text}信息，"
             "所以我不会猜测。您想查目录中记录的价格或配料吗？"
         )
-    return (
+    base = (
         f"Mình tìm thấy {product_name} trong danh mục, nhưng chưa có dữ liệu xác minh về "
-        f"{attribute_text}, nên mình chưa thể xác nhận phần này; mình không đoán. "
-        "Nếu bạn cần, mình có thể tra các thông tin khác đang được ghi trong danh mục như giá "
-        "hoặc thành phần."
+        f"{attribute_text}, nên mình chưa thể xác nhận phần này; mình không đoán."
+    )
+    if product is not None:
+        traits = extract_catalog_product_traits(product)
+        notes = [f"thuộc nhóm {traits['category_group']}"]
+        if traits["title_functions"]:
+            notes.append(f"mục đích/đặc điểm ghi trên tên gồm {traits['title_functions']}")
+        if traits["title_ingredients"]:
+            notes.append(f"thành phần/hương vị ghi trên tên gồm {traits['title_ingredients']}")
+        return (
+            f"{base} Theo thông tin định danh trong danh mục, sản phẩm "
+            + ", ".join(notes)
+            + ". Chi tiết công dụng và bảng thành phần đầy đủ bạn xem trên nhãn bao bì nhé."
+        )
+    return (
+        f"{base} Nếu bạn cần, mình có thể tra các thông tin khác đang được ghi trong danh mục "
+        "như giá hoặc thành phần."
     )
 
 
@@ -11634,6 +14038,27 @@ def _localized_product_knowledge_disambiguation(
         )
     if language == "zh":
         return f"我找到几种相符的商品：{options}。您想查哪一种？"
+    trait_parts: list[str] = []
+    groups: list[str] = []
+    for product in products[:3]:
+        traits = extract_catalog_product_traits(product)
+        if traits["category_group"] and traits["category_group"] not in groups:
+            groups.append(traits["category_group"])
+        for val in (traits["title_functions"], traits["title_ingredients"]):
+            if val and val not in trait_parts:
+                trait_parts.append(val)
+    if groups or trait_parts:
+        group_str = ", ".join(groups[:2])
+        joined_traits = "; ".join(trait_parts[:4])
+        trait_str = (
+            f" (đặc điểm/thành phần ghi trên tên: {joined_traits})" if joined_traits else ""
+        )
+        return (
+            f"Mình tìm thấy vài sản phẩm phù hợp: {options}. "
+            f"Theo danh mục, các sản phẩm này thuộc nhóm {group_str}{trait_str}; "
+            "chi tiết công dụng và bảng thành phần đầy đủ ghi trên bao bì từng loại. "
+            "Bạn muốn hỏi loại nào?"
+        )
     return f"Mình tìm thấy vài sản phẩm phù hợp: {options}. Bạn muốn hỏi loại nào?"
 
 
@@ -11795,7 +14220,7 @@ def _manufacturer_declaration_value_text(
             return f"厂商提供的越南语信息：{value.strip()}"
         return value.strip()
     if isinstance(value, list) and value and all(isinstance(item, str) for item in value):
-        joined = "; ".join(item.strip() for item in value if item.strip())
+        joined = ". ".join(item.strip().rstrip(".;") for item in value if item.strip())
         if not joined:
             return None
         if language == "en":
@@ -11819,7 +14244,7 @@ def _localized_verified_manufacturer_declaration_reply(
         if (
             not isinstance(fact, dict)
             or fact.get("status") != "VERIFIED"
-            or fact.get("evidence_scope") != "MANUFACTURER_DECLARATION"
+            or fact.get("evidence_scope") not in {"MANUFACTURER_DECLARATION", "RETAILER_LISTING"}
             or not fact.get("source")
             or not fact.get("source_field")
             or fact.get("product_match_scope") not in {"EXACT_VARIANT", "PRODUCT_LINE"}
@@ -11840,8 +14265,6 @@ def _localized_verified_manufacturer_declaration_reply(
     line_scoped = any(
         fact.get("product_match_scope") == "PRODUCT_LINE" for fact, _text in declarations
     )
-    source_fields = list(dict.fromkeys(str(fact["source_field"]) for fact, _text in declarations))
-    source_field_text = ", ".join(source_fields)
     if language == "en":
         scope_note = (
             " This manufacturer information is scoped to the product line or the stated package "
@@ -11851,7 +14274,7 @@ def _localized_verified_manufacturer_declaration_reply(
         )
         return (
             f"For {product_name}, {source_text} declares: {details}. "
-            f"Source record: {source_field_text}.{scope_note}"
+            f"{scope_note.strip()}"
         )
     if language == "zh":
         scope_note = (
@@ -11861,18 +14284,25 @@ def _localized_verified_manufacturer_declaration_reply(
         )
         return (
             f"关于{product_name}，{source_text}公布的信息是：{details}。"
-            f"来源记录：{source_field_text}。{scope_note}"
+            f"{scope_note}"
         )
-    scope_note = (
-        " Đây là thông tin cấp dòng sản phẩm hoặc theo quy cách được ghi rõ; không thể lấy số "
-        "này suy ra cho chai, lon hay biến thể khác."
-        if line_scoped
-        else " Khai báo này được đối chiếu với đúng biến thể trong catalog."
-    )
-    return (
-        f"Về {product_name}, {source_text} công bố: {details}. "
-        f"Mục nguồn: {source_field_text}.{scope_note}"
-    )
+    # Retain provenance in the observation, rather than reading internal field
+    # paths to the customer. A line-scoped fact still needs its practical limit.
+    scope_note = ""
+    if line_scoped:
+        numeric = any(
+            fact.get("attribute") in {"calories", "nutrition", "caffeine"}
+            for fact, _text in declarations
+        )
+        scope_note = (
+            " Số liệu áp dụng theo quy cách nêu trên; không thể lấy số này suy ra "
+            "cho chai, lon hay biến thể khác."
+            if numeric
+            else " Đây là hướng dẫn chung của dòng sản phẩm; nếu nhãn gói bạn mua "
+            "ghi khác thì làm theo nhãn nhé."
+        )
+    clean_product_name = " ".join(product_name.split())
+    return f"Theo {source_text}, với {clean_product_name}: {details.rstrip('.')}.{scope_note}"
 
 
 def _product_knowledge_verifies_request(
@@ -11928,10 +14358,10 @@ def _storage_condition_requested(
     )
 
 
-def _unsupported_catalog_attribute_requested(text: str) -> bool:
+def _unsupported_catalog_attribute_requested(text: str, *, include_audience: bool = True) -> bool:
     normalized = _normalize_request_text(text)
     normalized = " ".join(normalized.split())
-    if explicit_product_audience(text) is not None:
+    if include_audience and explicit_product_audience(text) is not None:
         return True
     if re.search(
         r"\b(?:co duong khong|co duong|has sugar|does (?:it|this) have sugar|"
@@ -12077,20 +14507,25 @@ def _unverified_followup_acknowledgement_requested(text: str) -> bool:
     )
 
 
-@app.post("/audio/transcribe", response_model=TranscriptionResponse)
+@app.post(
+    "/audio/transcribe", response_model=TranscriptionResponse, response_model_exclude_none=True,
+)
 async def transcribe_audio(
     session_id: UUID = Form(...),
     language: LanguageCode = Form("vi"),
+    include_diagnostics: bool = Form(False),
     file: UploadFile = File(...),
     groq: GroqService = Depends(get_groq_service),
+    azure_stt: AzureSTTService = Depends(get_azure_stt_service),
     settings: Settings = Depends(get_settings),
     catalog: ProductRepository = Depends(get_transcription_catalog),
 ) -> TranscriptionResponse:
-    _session_or_http_error(session_id)
+    record = _session_or_http_error(session_id)
     content_type = file.content_type or ""
     if not content_type.startswith("audio/"):
         raise HTTPException(status_code=415, detail="Upload an audio file")
-    content = await file.read()
+    # Bound the additional in-memory copy even if multipart upload was spooled.
+    content = await file.read(10 * 1024 * 1024 + 1)
     if not content:
         raise HTTPException(status_code=422, detail="Audio file is empty")
     if len(content) > 10 * 1024 * 1024:
@@ -12102,8 +14537,11 @@ async def transcribe_audio(
             try:
                 # Keep Whisper's contextual bias list short. The full catalog is
                 # still available to the grounded correction step below.
-                vocabulary = await asyncio.to_thread(
-                    list_speech_terms, GROQ_STT_CATALOG_CONTEXT_TERMS
+                from backend.services.transcription_context import session_speech_terms
+
+                vocabulary = await run_catalog_work(
+                    session_speech_terms, catalog, record, GROQ_STT_CATALOG_CONTEXT_TERMS,
+                    timeout_seconds=1.0,
                 )
             except Exception as exc:
                 logger.warning(
@@ -12111,10 +14549,21 @@ async def transcribe_audio(
                     getattr(catalog, "source_name", "unknown"),
                     type(exc).__name__,
                 )
-        # One bounded deadline covers primary + fallback Whisper attempts.
-        # Without a shared budget each slow fallback can outlive the browser.
+        # Route live STT to Azure Speech + DPDFNet2 neural denoiser when configured
+        # (removing Groq from live STT), while honoring legacy unit tests that
+        # explicitly mock get_groq_service without overriding get_azure_stt_service.
+        use_azure_stt = (
+            settings.stt_provider == "azure"
+            and settings.has_azure_speech
+            and (
+                get_azure_stt_service in app.dependency_overrides
+                or get_groq_service not in app.dependency_overrides
+            )
+        )
+        stt_backend = azure_stt if use_azure_stt else groq
+        # One bounded deadline covers STT + neural denoising attempts.
         transcription = await asyncio.wait_for(
-            groq.transcribe(
+            stt_backend.transcribe(
                 file.filename or "voice.webm",
                 content,
                 content_type,
@@ -12124,6 +14573,30 @@ async def transcribe_audio(
             timeout=max(0.1, settings.groq_stt_total_timeout_seconds),
         )
         text = str(transcription)
+        raw_text = text
+        needs_confirmation = getattr(transcription, "needs_confirmation", False)
+        quality = dict(getattr(transcription, "quality", {}))
+        verification_text = getattr(transcription, "verification_text", None)
+        if language == "vi" and text.strip() and isinstance(verification_text, str):
+            # A small brand error can change the shopping task even when global
+            # decoder distance is low. Compare actual catalog names off-loop;
+            # never replace the primary transcript with the other decode.
+            list_brands = getattr(catalog, "list_brand_names", None)
+            if callable(list_brands):
+                try:
+                    from backend.services.asr_disagreement import catalog_anchor_disagreement
+
+                    brands = await run_catalog_work(list_brands, limit=300, timeout_seconds=1.0)
+                    if catalog_anchor_disagreement(raw_text, verification_text, brands):
+                        needs_confirmation = True
+                        quality["asr_catalog_identity_disagreement"] = 1.0
+                except Exception as exc:
+                    needs_confirmation = True
+                    quality["asr_catalog_identity_check_available"] = 0.0
+                    logger.warning(
+                        "ASR identity check unavailable error_type=%s", type(exc).__name__,
+                    )
+        corrections = []
         transcription_model = getattr(transcription, "model", settings.groq_stt_model)
         if text.strip() and language == "vi" and getattr(transcription, "speech_detected", True):
             text, corrections = await asyncio.to_thread(
@@ -12139,6 +14612,8 @@ async def transcribe_audio(
                     transcription_model,
                     getattr(catalog, "source_name", "unknown"),
                 )
+    except GroqAudioInputError as exc:
+        raise HTTPException(status_code=422, detail="Audio file could not be decoded") from exc
     except TimeoutError as exc:
         raise HTTPException(status_code=504, detail="Speech recognition timed out") from exc
     except GroqConfigurationError as exc:
@@ -12154,7 +14629,15 @@ async def transcribe_audio(
         language=language,
         model=transcription_model,
         speech_detected=getattr(transcription, "speech_detected", bool(text.strip())),
-        quality=getattr(transcription, "quality", {}),
+        needs_confirmation=True if needs_confirmation else None,
+        quality=quality,
+        diagnostics={
+            "raw_text": raw_text,
+            "corrections": [
+                {"source": correction.source, "replacement": correction.replacement}
+                for correction in corrections
+            ],
+        } if include_diagnostics else None,
     )
 
 
@@ -12171,14 +14654,14 @@ async def synthesize_audio(
     if settings.has_azure_speech:
         try:
             audio = await azure_speech.synthesize(request.text, request.language)
+            provider = "azure-speech"
+            model = "neural-standard"
         except AzureSpeechConfigurationError as exc:
             raise HTTPException(status_code=503, detail="Text-to-speech is not configured") from exc
         except AzureSpeechProviderError as exc:
             raise HTTPException(
                 status_code=502, detail="Text-to-speech provider unavailable"
             ) from exc
-        provider = "azure-speech"
-        model = "neural-standard"
     else:
         try:
             audio = await elevenlabs.synthesize(request.text, request.language)
@@ -12250,14 +14733,14 @@ async def stream_synthesis_ticket(
     if settings.has_azure_speech:
         try:
             audio = await azure_speech.open_stream(request.text, request.language)
+            provider = "azure-speech"
+            model = "neural-standard"
         except AzureSpeechConfigurationError as exc:
             raise HTTPException(status_code=503, detail="Text-to-speech is not configured") from exc
         except AzureSpeechProviderError as exc:
             raise HTTPException(
                 status_code=502, detail="Text-to-speech provider unavailable"
             ) from exc
-        provider = "azure-speech"
-        model = "neural-standard"
     else:
         try:
             audio = await elevenlabs.open_stream(request.text, request.language)
@@ -12271,13 +14754,25 @@ async def stream_synthesis_ticket(
         model = settings.elevenlabs_model
 
     chunks = audio.iter_bytes()
+
+    async def close_audio():
+        # ASGI disconnects can cancel the enclosing AnyIO scope repeatedly.
+        # Shield cleanup, with a bound so a stuck provider cannot hang shutdown.
+        with anyio.move_on_after(2, shield=True):
+            await audio.aclose()
+
     try:
         first_chunk = b""
         while not first_chunk:
             first_chunk = await anext(chunks)
         first_byte_ms = (perf_counter() - started) * 1000
+    except asyncio.CancelledError:
+        # Cancellation is a BaseException: the provider response must also close
+        # when the browser leaves before the first byte arrives.
+        await close_audio()
+        raise
     except Exception as exc:
-        await audio.aclose()
+        await close_audio()
         logger.warning(
             "TTS stream failed before first audio provider=%s error_type=%s",
             provider,
@@ -12302,7 +14797,7 @@ async def stream_synthesis_ticket(
             raise
         finally:
             try:
-                await audio.aclose()
+                await close_audio()
             except Exception:
                 logger.debug("TTS stream close failed provider=%s", provider)
             logger.info(

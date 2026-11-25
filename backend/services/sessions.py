@@ -62,6 +62,7 @@ class ShoppingSessionState:
     seen_product_scope: list[str] = field(default_factory=list)
     comparison_product_ids: list[str] = field(default_factory=list)
     shopping_mission: dict[str, Any] = field(default_factory=dict)
+    consultation: dict[str, Any] = field(default_factory=dict)
     cart_reference: str | None = None
     pending_clarification: str | None = None
     pending_action: str | None = None

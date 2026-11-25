@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from backend.products.catalog import ProductSnapshot
 from backend.products.repository import catalog_speech_terms
 from backend.services.catalog_transcription import correct_catalog_words
@@ -428,6 +430,28 @@ def test_does_not_treat_quoc_gia_as_a_price_cue() -> None:
     assert changes == []
 
 
+@pytest.mark.parametrize("text", [
+    "Liên hiệp quốc dân, kỷ luật, mùa màng khá.",
+    "Quốc dân múa rất đẹp.",
+    "Quốc dân đứng dưới mưa.",
+    "Mua sữa nhé. Quốc dân đoàn kết.",
+    "Mua sữa nhé! Quốc dân đoàn kết.",
+    "Mua sữa nhé\nQuốc dân đoàn kết.",
+])
+def test_brand_correction_preserves_diacritics_and_sentence_boundaries(text: str) -> None:
+    class OrdinaryWordCollisionCatalog:
+        def list_brand_names(self, limit: int = 300) -> tuple[str, ...]:
+            return ("JORDAN",)[:limit]
+
+        def search(self, query: str = "", limit: int = 10) -> list[ProductSnapshot]:
+            return []
+
+    corrected, changes = correct_catalog_words(text, OrdinaryWordCollisionCatalog())
+
+    assert corrected == text
+    assert changes == []
+
+
 def test_does_not_rewrite_words_that_already_match_the_catalog() -> None:
     text = "Có Coca Zero không?"
 
@@ -465,3 +489,47 @@ def test_speech_vocabulary_is_derived_from_catalog_brands_and_categories() -> No
     assert "COCA-COLA" in terms
     assert "Snack" in terms
     assert "Nước ngọt" in terms
+
+
+def test_phonetic_brand_and_category_span_protection_preserve_vietnamese_nouns() -> None:
+    class PhoneticRetailCatalog:
+        def list_brand_names(self, limit: int = 300) -> tuple[str, ...]:
+            return ("SENKA", "HEINEKEN", "TUẤN ĐẠT", "THU DUNG")[:limit]
+
+        def list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]:
+            return (
+                ("Hoá mỹ phẩm", "Chăm sóc da mặt", "Sữa rửa mặt"),
+                ("Đồ uống có cồn", "Bia"),
+            )
+
+        def normalize_noisy_query(self, text: str) -> str:
+            return (
+                text.replace("sen ka", "senka")
+                .replace("hai nơ ken", "heineken")
+            )
+
+        def search(
+            self, query: str = "", category: str | None = None, limit: int = 10
+        ) -> list[ProductSnapshot]:
+            return []
+
+    catalog = PhoneticRetailCatalog()
+
+    fixed_face, changes_face = correct_catalog_words(
+        "Sữa rửa mặt sen ka đất sét trắng 120g giá bao nhiêu?",
+        catalog,
+    )
+    assert fixed_face == "Sữa rửa mặt Senka đất sét trắng 120g giá bao nhiêu?"
+    assert [(c.source, c.replacement) for c in changes_face] == [("sen ka", "Senka")]
+
+    fixed_beer, changes_beer = correct_catalog_words(
+        "Thùng bia hai nơ ken 330ml giá bao nhiêu?",
+        catalog,
+    )
+    assert fixed_beer == "Thùng bia Heineken 330ml giá bao nhiêu?"
+    assert [(c.source, c.replacement) for c in changes_beer] == [("hai nơ ken", "Heineken")]
+
+    ordinary = "Hôm nay trời đẹp quá bạn ơi"
+    fixed_ordinary, changes_ordinary = correct_catalog_words(ordinary, catalog)
+    assert fixed_ordinary == ordinary
+    assert changes_ordinary == []

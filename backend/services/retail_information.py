@@ -8,6 +8,8 @@ from typing import Any, Literal
 
 import asyncpg
 
+from backend.config import get_settings
+
 RetailInformationKind = Literal["store", "promotions", "receipts", "nearby"]
 
 
@@ -29,6 +31,9 @@ class PostgresRetailInformationRepository:
 
     def __init__(self, database_url: str) -> None:
         self._dsn = re.sub(r"^postgresql\+asyncpg://", "postgresql://", database_url)
+        settings = get_settings()
+        self._connect_timeout_seconds = settings.postgres_connect_timeout_seconds
+        self._command_timeout_seconds = settings.postgres_command_timeout_seconds
 
     def _run(self, coroutine):
         return asyncio.run(coroutine)
@@ -73,7 +78,11 @@ class PostgresRetailInformationRepository:
         return dict(row) if row else None
 
     async def _lookup(self, kind: RetailInformationKind, kiosk_id: str, category: str | None):
-        conn = await asyncpg.connect(self._dsn, timeout=2)
+        conn = await asyncpg.connect(
+            self._dsn,
+            timeout=self._connect_timeout_seconds,
+            command_timeout=self._command_timeout_seconds,
+        )
         try:
             store = await self._store(conn, kiosk_id)
             if store is None:
@@ -221,7 +230,7 @@ class PostgresRetailInformationRepository:
                 source_updated_at=feed["last_success_at"],
             )
         finally:
-            await conn.close()
+            await conn.close(timeout=self._command_timeout_seconds)
 
     def lookup(
         self,
@@ -244,8 +253,6 @@ def lookup_retail_information(
             "DATA_UNAVAILABLE", kind, reason="A kiosk-to-branch mapping is required."
         )
     if database_url is None:
-        from backend.config import get_settings
-
         settings = get_settings()
         if settings.catalog_repository != "postgres":
             return RetailInformationResult(

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections import defaultdict
-from dataclasses import dataclass
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
 from datetime import datetime
 from difflib import SequenceMatcher
 from functools import lru_cache
@@ -14,7 +14,7 @@ from backend.products.catalog import (
     QUERY_STOP_WORDS,
     PriceOperator,
     ProductSnapshot,
-    matches_explicit_product_audience,
+    explicit_product_audience,
     matches_price_constraint,
     product_audience_evidence,
 )
@@ -55,13 +55,193 @@ _FILLER_WORDS = QUERY_STOP_WORDS | frozenset(
         "packaging",
     }
 )
-_PACKAGING_WORDS = frozenset({"chai", "lon", "hop", "goi", "tui", "thung", "loc"})
+_PACKAGING_WORDS = frozenset(
+    {
+        "chai",
+        "lon",
+        "hop",
+        "goi",
+        "tui",
+        "thung",
+        "loc",
+        "can",
+        "tuyp",
+        "binh",
+        "bich",
+        "khay",
+        "hu",
+        "lo",
+        "cuon",
+        "vi",
+        "ly",
+    }
+)
 _SIZE_PREFERENCE_WORDS = frozenset({"nho", "mini", "small", "smaller"})
+_LARGE_SIZE_PREFERENCE_WORDS = frozenset({"to", "dai", "large", "big", "larger"})
+_PACKAGING_EQUIVALENTS: dict[str, frozenset[str]] = {
+    "bich": frozenset({"bich", "tui", "goi"}),
+}
+_VIETNAMESE_TONE_MARKS = frozenset({"\u0300", "\u0301", "\u0303", "\u0309", "\u0323"})
+_WORD_RE = re.compile(r"[^\W_]+", flags=re.UNICODE)
+_NATIVE_NO_COMPOUND_WORDS = frozenset(
+    {
+        "có",
+        "cá",
+        "cà",
+        "cả",
+        "là",
+        "vị",
+        "vì",
+        "mà",
+        "mã",
+        "gì",
+        "ở",
+        "đâu",
+        "đậu",
+        "dầu",
+        "bò",
+        "bơ",
+        "gà",
+        "mì",
+        "sữa",
+        "trà",
+        "kem",
+        "bánh",
+        "nước",
+        "giá",
+        "kệ",
+        "hộp",
+        "gói",
+        "chai",
+        "lon",
+        "túi",
+        "bịch",
+        "cửa",
+        "nhà",
+        "cho",
+        "bạn",
+        "mình",
+        "tôi",
+        "thì",
+        "như",
+        "ấy",
+        "mục",
+        "danh",
+        "nếu",
+        "khi",
+        "vậy",
+        "thế",
+        "sao",
+        "với",
+        "và",
+        "để",
+        "từ",
+        "về",
+        "trong",
+        "ngoài",
+        "trên",
+        "dưới",
+        "đang",
+        "đã",
+        "sẽ",
+        "cũng",
+        "vẫn",
+        "chỉ",
+        "không",
+        "chưa",
+        "được",
+        "bị",
+        "phải",
+        "nên",
+        "cần",
+        "muốn",
+        "thích",
+        "hỏi",
+        "xem",
+        "tìm",
+        "mua",
+        "lấy",
+        "chọn",
+        "giúp",
+        "nhé",
+        "nha",
+        "ạ",
+        "nào",
+        "này",
+        "đó",
+        "kia",
+        "của",
+        "các",
+        "những",
+        "một",
+        "nhiều",
+        "ít",
+    }
+)
+_PROTECTED_QUERY_WORDS = _FILLER_WORDS | frozenset(
+    {
+        "nhung",
+        "thanh",
+        "phan",
+        "cong",
+        "dung",
+        "tac",
+        "nhieu",
+        "tien",
+        "gom",
+        "trong",
+        "ngoai",
+        "duoi",
+        "tren",
+        "khoang",
+        "ngan",
+        "sach",
+        "nghin",
+        "trieu",
+        "dong",
+        "calo",
+        "kcal",
+        "protein",
+        "duong",
+        "khong",
+        "tot",
+        "khoe",
+        "nguoi",
+        "benh",
+        "tieu",
+        "chua",
+        "biet",
+        "thich",
+        "muon",
+        "chon",
+        "giup",
+        "tham",
+        "khao",
+        "danh",
+        "muc",
+        "cua",
+        "hang",
+        "san",
+        "pham",
+        "bnhiu",
+        "bnhieu",
+        "nhiu",
+        "coi",
+        "tam",
+        "bn",
+    }
+)
 _COMPARISON_PATTERN = re.compile(r"\b(?:khac\s+gi|khac\s+nhau|so\s+sanh|compare|comparison)\b")
 _TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 _MEASURE_PATTERN = re.compile(
     r"(?<!\d)(\d+(?:[.,]\d+)?)\s*(ml|milliliter|millilitre|lit|liter|litre|l|kg|g)\b"
 )
+
+
+_BABY_DEPARTMENT_SEGMENT = frozenset({"do", "dung", "cham", "soc", "me", "va", "be"})
+_PACK_WORDS = frozenset({"thung", "loc", "combo"})
+_MEASURE_TOKEN_RE = re.compile(r"(\d+)(ml|lit|l|kg|g|gr|gam)")
+_BABY_QUERY_RE = re.compile(r"\b(?:tre em|em be|cho be|baby|kids|children)\b")
 
 
 @dataclass(frozen=True)
@@ -80,7 +260,105 @@ class _Candidate:
     category_segment_texts: tuple[str, ...]
     uom_words: frozenset[str]
     native_words: frozenset[str]
+    brand_native_words: frozenset[str]
     baby_audience: bool
+    audience_evidence: str | None = None
+    native_title_clean: str = ""
+    folded_to_native: dict[str, tuple[str, ...]] = field(
+        default_factory=dict, hash=False, compare=False
+    )
+    measure: tuple[float, str] | None = None
+    has_pack_title_or_uom: bool = False
+    has_pack_uom: bool = False
+    is_baby_dept_parent: bool = False
+    title_space_text: str = ""
+
+
+@lru_cache(maxsize=32768)
+def _vowel_skeleton(native_word: str) -> str:
+    decomposed = unicodedata.normalize("NFD", native_word.casefold())
+    stripped = "".join(ch for ch in decomposed if ch not in _VIETNAMESE_TONE_MARKS)
+    return unicodedata.normalize("NFC", stripped)
+
+
+@lru_cache(maxsize=16384)
+def _phonetic_fold(word: str) -> str:
+    w = word.casefold().strip()
+    if not w or not w.isalpha():
+        return w
+    w = re.sub(r"onnaise$", "one", w)
+    w = re.sub(r"ight", "ai", w)
+    w = re.sub(r"igh", "ai", w)
+    w = re.sub(r"buoy", "boi", w)
+    w = re.sub(r"ew", "iu", w)
+    w = re.sub(r"pie\b", "pai", w)
+    w = re.sub(r"ie\b", "i", w)
+    w = re.sub(r"ear\b", "ia", w)
+    w = re.sub(r"own", "aon", w)
+    w = re.sub(r"(?:ein|ain)", "en", w)
+    w = re.sub(r"ph", "f", w)
+    w = re.sub(r"qu", "kw", w)
+    w = re.sub(r"ck", "k", w)
+    w = w.replace("x", "s")
+    w = re.sub(r"([a-z])\1+", r"\1", w)
+    if len(w) >= 5 and re.search(r"[bcdfghjklmnpqrstvwxz]e$", w):
+        w = w[:-1]
+    w = w.replace("y", "i")
+    w = re.sub(r"lk$", "l", w)
+    w = re.sub(r"iu$", "il", w)
+    w = re.sub(r"([aeiou])l$", r"\1n", w)
+    w = re.sub(r"rt$", "t", w)
+    w = re.sub(r"^c[aeo]l(?=[aeiou])", "cl", w)
+    w = re.sub(r"c(?!h)", "k", w)
+    return w
+
+
+def _phonetic_variants(word: str) -> tuple[str, ...]:
+    base = _phonetic_fold(word)
+    if not base:
+        return ()
+    variants = [base]
+    u_to_a = re.sub(r"^([bcdfghjklmnpqrstvwxz]+)u([mnlptk])", r"\1a\2", base)
+    if u_to_a != base:
+        variants.append(u_to_a)
+    raw_lower = word.casefold().strip()
+    # English -pie endings are often pronounced "-pi" in Vietnamese (e.g. Kewpie -> kiu pi).
+    if raw_lower.endswith("pie") and base.endswith("pai"):
+        variants.append(base[:-3] + "pi")
+    # English -yne/-ine endings sound like Vietnamese "-ai" (e.g. Sensodyne -> sen so dai).
+    if re.search(r"[yi]ne$", raw_lower) and len(base) >= 5:
+        ai_form = re.sub(r"in$", "ai", base)
+        if ai_form != base:
+            variants.append(ai_form)
+    # Vietnamese syllable phonology simplifies medial English "-st-" clusters to "-t-"
+    # (e.g. Listerine -> lit-to-rin, Nestle -> net-le, Castrol -> kat-tron).
+    medial_st = re.sub(r"([aeiou])st", r"\1t", base)
+    if medial_st != base and len(base) >= 5:
+        variants.append(medial_st)
+    # Spoken Vietnamese frequently drops final English stop "-t" (e.g. Comfort -> com pho).
+    if len(base) >= 5 and base.endswith("t"):
+        variants.append(base[:-1])
+    return tuple(dict.fromkeys(variants))
+
+
+def _dehyphenated_tokens(value: str | None) -> tuple[str, ...]:
+    if not value:
+        return ()
+    base = set(_tokens(value))
+    extras: list[str] = []
+    if "-" in value:
+        merged = re.sub(r"(?<=[a-zA-Z0-9])-(?=[a-zA-Z0-9])", "", value)
+        for t in _tokens(merged):
+            if t not in base and t not in extras:
+                extras.append(t)
+    # Also index possessive stems (e.g. "Johnson's" -> "johnson", "Lay's" -> "lay")
+    # alongside the folded apostrophe-free form ("johnsons", "lays").
+    if "'" in value or "\u2019" in value:
+        for match in re.finditer(r"([a-zA-Z]{3,})['\u2019]s\b", value):
+            stem = match.group(1).casefold()
+            if stem not in base and stem not in extras:
+                extras.append(stem)
+    return tuple(extras)
 
 
 @lru_cache(maxsize=32768)
@@ -166,6 +444,105 @@ def _category_phrase_tokens(normalized: str) -> tuple[tuple[str, ...], ...]:
     )
 
 
+_DIACRITIC_PRODUCT_WORDS = frozenset(
+    {
+        "dầu",
+        "đậu",
+        "dâu",
+        "trà",
+        "ăn",
+        "túi",
+        "hội",
+        "vị",
+        "vỉ",
+        "hàn",
+        "ý",
+        "số",
+        "bao",
+    }
+)
+_DAU_PRODUCT_FOLLOWERS = frozenset(
+    {
+        "an",
+        "goi",
+        "xa",
+        "hao",
+        "me",
+        "oliu",
+        "o",
+        "thuc",
+        "dau",
+        "nanh",
+        "gao",
+        "cai",
+        "huong",
+        "phong",
+        "xanh",
+        "do",
+        "den",
+        "tuong",
+        "tam",
+        "tay",
+    }
+)
+_TRA_PRODUCT_FOLLOWERS = frozenset(
+    {
+        "xanh",
+        "den",
+        "o",
+        "lai",
+        "gung",
+        "hoa",
+        "tui",
+        "hop",
+        "goi",
+        "ceylon",
+        "dao",
+        "chanh",
+        "vai",
+        "sua",
+        "thao",
+        "sen",
+        "tan",
+        "cuong",
+        "dilmah",
+        "lipton",
+        "cozy",
+        "phuc",
+    }
+)
+_TRA_NON_PRODUCT_NEIGHBORS = frozenset(
+    {"cuu", "loi", "kiem", "tien", "lai", "ve", "gop", "sau", "truoc"}
+)
+_RELAXABLE_BRAND_MODIFIERS = frozenset(
+    {
+        "nhat",
+        "ban",
+        "han",
+        "quoc",
+        "my",
+        "uc",
+        "phap",
+        "duc",
+        "thai",
+        "lan",
+        "viet",
+        "thuong",
+        "nguyen",
+        "chinh",
+        "nhap",
+        "khau",
+        "muot",
+        "toc",
+        "thom",
+        "mat",
+        "ngon",
+        "sach",
+        "tot",
+    }
+)
+
+
 @lru_cache(maxsize=4096)
 def _query_terms(query: str) -> tuple[tuple[str, ...], bool, bool]:
     normalized = normalize_search_text(query).strip()
@@ -174,6 +551,47 @@ def _query_terms(query: str) -> tuple[tuple[str, ...], bool, bool]:
     comparison = bool(_COMPARISON_PATTERN.search(normalized)) or bool(
         re.search(r"\b(?:vs|versus)\b", normalized)
     )
+    # Preserve Vietnamese product words whose ASCII fold collides with stop words
+    # (e.g. dầu/đậu/dâu vs đâu, trà vs tra cứu, ăn vs English "an", túi vs tui).
+    protected_tokens: set[str] = set()
+    for native_word in _native_tokens(query):
+        if native_word in _DIACRITIC_PRODUCT_WORDS:
+            folded = _tokens(native_word)
+            if folded:
+                protected_tokens.add(folded[0])
+    raw_plain_tokens = _tokens(normalized)
+    for idx, tok in enumerate(raw_plain_tokens):
+        prev_tok = raw_plain_tokens[idx - 1] if idx > 0 else ""
+        next_tok = raw_plain_tokens[idx + 1] if idx + 1 < len(raw_plain_tokens) else ""
+        if tok == "dau" and (
+            next_tok in _DAU_PRODUCT_FOLLOWERS
+            or prev_tok in {"sua", "banh", "keo", "hat", "vi", "kem", "nuoc", "tuong"}
+        ):
+            protected_tokens.add("dau")
+        elif tok == "an" and (
+            prev_tok in {"dau", "mi", "banh", "khan", "giay", "do", "mon", "chao", "sot", "xot"}
+            or next_tok in {"lien", "kieng", "vat", "sang", "dam"}
+        ):
+            protected_tokens.add("an")
+        elif tok == "tra" and (
+            prev_tok not in _TRA_NON_PRODUCT_NEIGHBORS
+            and next_tok not in _TRA_NON_PRODUCT_NEIGHBORS
+            and (len(raw_plain_tokens) <= 4 or next_tok in _TRA_PRODUCT_FOLLOWERS)
+        ):
+            protected_tokens.add("tra")
+        elif tok == "y" and prev_tok in {"mi", "sot", "xot"}:
+            protected_tokens.add("y")
+        elif tok == "so" and next_tok.isdigit():
+            protected_tokens.add("so")
+        elif tok == "bao" and prev_tok == "banh":
+            protected_tokens.add("bao")
+        elif tok == "hoi" and prev_tok == "lo":
+            protected_tokens.add("hoi")
+        elif tok == "tui" and (
+            next_tok in {"lon", "nho", "to", "cham", "refill"}
+            or (bool(next_tok) and next_tok[0].isdigit())
+        ):
+            protected_tokens.add("tui")
     normalized = re.sub(r"\bkhong\s+duong\b", "zero", normalized)
     normalized = re.sub(
         r"\b(?:sugar[\s-]*free|no\s+sugar|without\s+sugar)\b",
@@ -188,13 +606,191 @@ def _query_terms(query: str) -> tuple[tuple[str, ...], bool, bool]:
         normalized = re.sub(r"\bbim\b", "ta", normalized)
     else:
         normalized = re.sub(r"\bbim\s+bim\b|\bbimbim\b", "snack", normalized)
-    terms = [token for token in _tokens(normalized) if token not in _FILLER_WORDS]
+    normalized = re.sub(
+        r"\b(\d+)\s+(ml|lit|l|kg|g|gr|gam)\b",
+        r"\1\2",
+        normalized,
+    )
+    terms = [
+        token
+        for token in _tokens(normalized)
+        if token not in _FILLER_WORDS or token in protected_tokens
+    ]
     return tuple(terms), comparison, snack_slang
+
+
+def _token_lookup_variants(token: str) -> tuple[str, ...]:
+    variants = list(_PACKAGING_EQUIVALENTS.get(token, (token,)))
+    if re.fullmatch(r"\d+l", token):
+        variants.append(f"{token}it")
+    elif re.fullmatch(r"\d+lit", token):
+        variants.append(token[:-2])
+    return tuple(dict.fromkeys(variants))
+
+
+@dataclass(frozen=True)
+class _PreparedTerm:
+    token: str
+    variants: tuple[str, ...]
+    measure_digits: str | None
+    measure_unit_aliases: tuple[str, ...]
+    short_alpha_prefix: bool
+    is_digit: bool
+    accent_variants: frozenset[str]
+    accent_skeletons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _PreparedQuery:
+    normalized: str
+    native_query_clean: str
+    query_has_diacritics: bool
+    terms: tuple[str, ...]
+    prepared_terms: tuple[_PreparedTerm, ...]
+    comparison: bool
+    snack_slang: bool
+    requires_baby_audience: bool
+    accented_variant_sets: tuple[frozenset[str], ...]
+    wants_small: bool
+    wants_large: bool
+    wants_pack: bool
+    core_indices: tuple[int, ...]
+    numeric_indices: tuple[int, ...]
+    explicit_packaging_indices: tuple[int, ...]
+    required_terms_count: int
+
+
+@lru_cache(maxsize=2048)
+def _prepare_query(query: str) -> _PreparedQuery:
+    normalized = normalize_search_text(query).strip().casefold()
+    native_query_clean = unicodedata.normalize("NFC", query.strip().casefold())
+    query_has_diacritics = _has_vietnamese_diacritic(native_query_clean)
+    terms, comparison, snack_slang = _query_terms(query)
+    requires_baby_audience = bool(_BABY_QUERY_RE.search(normalized)) if terms else False
+    accented_map: dict[str, set[str]] = defaultdict(set)
+    native_query_words: set[str] = set()
+    for native_word in _native_tokens(query):
+        native_query_words.add(native_word)
+        if _has_vietnamese_diacritic(native_word):
+            folded = _tokens(native_word)
+            if folded:
+                accented_map[folded[0]].add(native_word)
+    prepared_terms: list[_PreparedTerm] = []
+    for token in terms:
+        variants = _token_lookup_variants(token)
+        measure_match = _MEASURE_TOKEN_RE.fullmatch(token)
+        if measure_match:
+            digits, unit = measure_match.groups()
+            unit_aliases: tuple[str, ...] = ("l", "lit") if unit in {"l", "lit"} else (unit,)
+        else:
+            digits = None
+            unit_aliases = ()
+        acc_set = frozenset(accented_map.get(token, ()))
+        acc_skels = tuple(_vowel_skeleton(v) for v in acc_set)
+        prepared_terms.append(
+            _PreparedTerm(
+                token=token,
+                variants=variants,
+                measure_digits=digits,
+                measure_unit_aliases=unit_aliases,
+                short_alpha_prefix=token.isalpha() and len(token) <= 3,
+                is_digit=token.isdigit(),
+                accent_variants=acc_set,
+                accent_skeletons=acc_skels,
+            )
+        )
+    has_packaging_followed_by_lon = any(
+        left in (_PACKAGING_WORDS - {"lon"}) and right == "lon"
+        for left, right in zip(terms, terms[1:], strict=False)
+    )
+    wants_small = any(word in _SIZE_PREFERENCE_WORDS for word in terms)
+    wants_large = (
+        "lớn" in native_query_words
+        or has_packaging_followed_by_lon
+        or any(word in _LARGE_SIZE_PREFERENCE_WORDS for word in terms)
+    )
+    wants_pack = any(word in _PACK_WORDS for word in terms)
+    lon_as_large = (
+        {"lon"} if ("lớn" in native_query_words or has_packaging_followed_by_lon) else set()
+    )
+    large_size_tokens = _LARGE_SIZE_PREFERENCE_WORDS | lon_as_large
+    effective_packaging = _PACKAGING_WORDS - lon_as_large
+    core_indices = tuple(
+        index
+        for index, token in enumerate(terms)
+        if len(token) >= 3
+        and not token[0].isdigit()
+        and token not in effective_packaging
+        and token not in _SIZE_PREFERENCE_WORDS
+        and token not in large_size_tokens
+    )
+    numeric_indices = tuple(
+        index for index, token in enumerate(terms) if token[0].isdigit()
+    )
+    explicit_packaging_indices = tuple(
+        index for index, token in enumerate(terms) if token in effective_packaging
+    )
+    required_terms_count = (
+        sum(
+            1
+            for token in terms
+            if token not in _SIZE_PREFERENCE_WORDS and token not in large_size_tokens
+        )
+        or len(terms)
+    )
+    return _PreparedQuery(
+        normalized=normalized,
+        native_query_clean=native_query_clean,
+        query_has_diacritics=query_has_diacritics,
+        terms=terms,
+        prepared_terms=tuple(prepared_terms),
+        comparison=comparison,
+        snack_slang=snack_slang,
+        requires_baby_audience=requires_baby_audience,
+        accented_variant_sets=tuple(frozenset(v) for v in accented_map.values()),
+        wants_small=wants_small,
+        wants_large=wants_large,
+        wants_pack=wants_pack,
+        core_indices=core_indices,
+        numeric_indices=numeric_indices,
+        explicit_packaging_indices=explicit_packaging_indices,
+        required_terms_count=required_terms_count,
+    )
+
+
+def _prepared_word_matches(pterm: _PreparedTerm, words: frozenset[str]) -> bool:
+    if pterm.token in words:
+        return True
+    if len(pterm.variants) > 1 and not words.isdisjoint(pterm.variants):
+        return True
+    if pterm.measure_digits is not None:
+        if pterm.measure_digits in words and any(
+            alias in words for alias in pterm.measure_unit_aliases
+        ):
+            return True
+    if pterm.short_alpha_prefix:
+        prefix = pterm.token
+        plen = len(prefix)
+        return any(word.startswith(prefix) and word[plen:].isdigit() for word in words)
+    if pterm.is_digit:
+        prefix = pterm.token
+        plen = len(prefix)
+        return any(word.startswith(prefix) and word[plen:].isalpha() for word in words)
+    return False
 
 
 def _word_matches(token: str, words: frozenset[str]) -> bool:
     if token in words:
         return True
+    variants = _token_lookup_variants(token)
+    if len(variants) > 1 and not words.isdisjoint(variants):
+        return True
+    measure_match = _MEASURE_TOKEN_RE.fullmatch(token)
+    if measure_match:
+        digits, unit = measure_match.groups()
+        unit_aliases = ("l", "lit") if unit in {"l", "lit"} else (unit,)
+        if digits in words and any(alias in words for alias in unit_aliases):
+            return True
     if token.isalpha() and len(token) <= 3:
         return any(word.startswith(token) and word[len(token) :].isdigit() for word in words)
     if token.isdigit():
@@ -202,135 +798,166 @@ def _word_matches(token: str, words: frozenset[str]) -> bool:
     return False
 
 
+def _score_prepared(
+    pq: _PreparedQuery,
+    candidate: _Candidate,
+    known_words: frozenset[str],
+    known_native_words: frozenset[str] = frozenset(),
+) -> float:
+    normalized = pq.normalized
+    if normalized in candidate.identifiers:
+        return 1000.0
+    native_title_clean = candidate.native_title_clean or unicodedata.normalize(
+        "NFC", candidate.product.name.strip().casefold()
+    )
+    if normalized and normalized == candidate.title and (
+        not pq.query_has_diacritics or pq.native_query_clean == native_title_clean
+    ):
+        return 900.0
+    if normalized and candidate.title.startswith(normalized) and (
+        not pq.query_has_diacritics or native_title_clean.startswith(pq.native_query_clean)
+    ):
+        return 800.0
+
+    terms = pq.terms
+    if not terms:
+        return 0.0
+    if pq.requires_baby_audience and not candidate.baby_audience:
+        return 0.0
+
+    title_words = candidate.title_words
+    brand_words = candidate.brand_words
+    category_words = candidate.category_words
+    uom_words = candidate.uom_words
+    cand_native_words = candidate.native_words
+    folded_to_native = candidate.folded_to_native
+
+    term_scores: list[float] = []
+    title_hits = 0
+    for pterm in pq.prepared_terms:
+        accent_collision = False
+        if pterm.accent_variants and cand_native_words.isdisjoint(pterm.accent_variants):
+            candidate_same_folded = folded_to_native.get(pterm.token)
+            if candidate_same_folded is None and not folded_to_native:
+                candidate_same_folded = tuple(
+                    nw
+                    for nw in cand_native_words
+                    for f in (_tokens(nw),)
+                    if f and f[0] == pterm.token
+                )
+            if candidate_same_folded:
+                accent_collision = True
+                for variant, v_skel in zip(
+                    pterm.accent_variants, pterm.accent_skeletons, strict=True
+                ):
+                    unknown_variant = bool(known_native_words) and variant not in known_native_words
+                    for cand_native in candidate_same_folded:
+                        if v_skel == _vowel_skeleton(cand_native) and (
+                            unknown_variant or cand_native in candidate.brand_native_words
+                        ):
+                            accent_collision = False
+                            break
+                    if not accent_collision:
+                        break
+        if accent_collision:
+            term_scores.append(0.0)
+            continue
+        if _prepared_word_matches(pterm, title_words):
+            title_hits += 1
+            term_scores.append(3.0)
+        elif _prepared_word_matches(pterm, brand_words):
+            term_scores.append(2.4)
+        elif _prepared_word_matches(pterm, uom_words):
+            term_scores.append(1.8)
+        elif _prepared_word_matches(pterm, category_words):
+            term_scores.append(1.3)
+        else:
+            term_scores.append(0.0)
+
+    exact_core_matches = sum(1 for index in pq.core_indices if term_scores[index] > 0)
+    if exact_core_matches >= 1:
+        field_words_3 = (title_words, brand_words, category_words)
+        field_weights_3 = (3.0, 2.4, 1.3)
+        for index, pterm in enumerate(pq.prepared_terms):
+            token = pterm.token
+            if term_scores[index] or len(token) < 4 or pterm.is_digit:
+                continue
+            if token in known_words:
+                continue
+            fuzzy_score = max(
+                (
+                    SequenceMatcher(None, token, word).ratio() * weight
+                    for words, weight in zip(field_words_3, field_weights_3, strict=True)
+                    for word in words
+                    if len(word) >= 4
+                ),
+                default=0.0,
+            )
+            if fuzzy_score >= 2.16:
+                term_scores[index] = fuzzy_score
+
+    if pq.numeric_indices:
+        if pq.comparison and len(pq.numeric_indices) > 1:
+            if max((term_scores[i] for i in pq.numeric_indices), default=0.0) == 0:
+                return 0.0
+        elif any(term_scores[i] == 0 for i in pq.numeric_indices):
+            return 0.0
+
+    if pq.explicit_packaging_indices and not pq.comparison:
+        if any(term_scores[i] == 0 for i in pq.explicit_packaging_indices):
+            return 0.0
+    if any(term_scores[i] == 0 for i in pq.core_indices):
+        return 0.0
+
+    matched = sum(1 for s in term_scores if s > 0)
+    if matched == 0 or matched / pq.required_terms_count < 0.5:
+        return 0.0
+    score = sum(term_scores) - 1.5 * (len(terms) - matched)
+    if pq.accented_variant_sets:
+        native_exact_hits = sum(
+            1
+            for variants in pq.accented_variant_sets
+            if not cand_native_words.isdisjoint(variants)
+        )
+        score += 1.5 * native_exact_hits
+    if title_hits >= 2:
+        score += 2.0
+    if pq.snack_slang and "snack" in category_words:
+        score += 5.0
+        if "bim" in title_words:
+            score += 2.0
+
+    if pq.wants_small:
+        preferred_measure = (
+            candidate.measure if candidate.measure is not None else _measure(candidate.title)
+        )
+        if preferred_measure is not None:
+            amount, _dimension = preferred_measure
+            score += max(-3.0, min(3.0, 3.0 * (1000.0 - amount) / 1000.0))
+            if candidate.has_pack_title_or_uom or not (title_words | uom_words).isdisjoint(
+                _PACK_WORDS
+            ):
+                score -= 3.0
+    elif pq.wants_large:
+        preferred_measure = (
+            candidate.measure if candidate.measure is not None else _measure(candidate.title)
+        )
+        if preferred_measure is not None:
+            amount, _dimension = preferred_measure
+            score += max(-2.0, min(3.0, 3.0 * (amount - 500.0) / 3000.0))
+    elif not pq.wants_pack:
+        if candidate.has_pack_uom or not uom_words.isdisjoint(_PACK_WORDS):
+            score -= 5.0
+    return max(score, 0.1)
+
+
 def _score(
     query: str,
     candidate: _Candidate,
     known_words: frozenset[str],
+    known_native_words: frozenset[str] = frozenset(),
 ) -> float:
-    normalized = normalize_search_text(query).strip().casefold()
-    if normalized in candidate.identifiers:
-        return 1000.0
-    if normalized and normalized == candidate.title:
-        return 900.0
-    if normalized and candidate.title.startswith(normalized):
-        return 800.0
-
-    terms, comparison, snack_slang = _query_terms(query)
-    if not terms:
-        return 0.0
-    if re.search(r"\b(?:tre em|em be|cho be|baby|kids|children)\b", normalized):
-        if not candidate.baby_audience:
-            return 0.0
-
-    field_words = (
-        candidate.title_words,
-        candidate.brand_words,
-        candidate.category_words,
-        candidate.uom_words,
-    )
-    field_weights = (3.0, 2.4, 1.3, 1.8)
-    accented_query_words: dict[str, set[str]] = defaultdict(set)
-    for native_word in _native_tokens(query):
-        if not _has_vietnamese_diacritic(native_word):
-            continue
-        folded = _tokens(native_word)
-        if folded:
-            accented_query_words[folded[0]].add(native_word)
-
-    def has_accent_collision(token: str) -> bool:
-        variants = accented_query_words.get(token)
-        if not variants or candidate.native_words.intersection(variants):
-            return False
-        return any(
-            folded and folded[0] == token
-            for native_word in candidate.native_words
-            for folded in (_tokens(native_word),)
-        )
-
-    term_scores = [
-        0.0
-        if has_accent_collision(token)
-        else max(
-            (
-                weight
-                for words, weight in zip(field_words, field_weights, strict=True)
-                if _word_matches(token, words)
-            ),
-            default=0.0,
-        )
-        for token in terms
-    ]
-    core_terms = [
-        (index, token)
-        for index, token in enumerate(terms)
-        if len(token) >= 3
-        and not token[0].isdigit()
-        and token not in _PACKAGING_WORDS
-        and token not in _SIZE_PREFERENCE_WORDS
-    ]
-    exact_core_matches = sum(1 for index, _token in core_terms if term_scores[index] > 0)
-    for index, token in enumerate(terms):
-        if term_scores[index] or len(token) < 4 or token.isdigit():
-            continue
-        if exact_core_matches < 1 or token in known_words:
-            continue
-        fuzzy_score = max(
-            (
-                SequenceMatcher(None, token, word).ratio() * weight
-                for words, weight in zip(field_words[:3], field_weights[:3], strict=True)
-                for word in words
-                if len(word) >= 4
-            ),
-            default=0.0,
-        )
-        if fuzzy_score >= 2.16:
-            term_scores[index] = fuzzy_score
-
-    numeric_terms = [token for token in terms if token[0].isdigit()]
-    numeric_scores = [
-        score for token, score in zip(terms, term_scores, strict=True) if token in numeric_terms
-    ]
-    if numeric_terms:
-        if comparison and len(numeric_terms) > 1:
-            if max(numeric_scores, default=0.0) == 0:
-                return 0.0
-        elif any(score == 0 for score in numeric_scores):
-            return 0.0
-
-    explicit_packaging = [token for token in terms if token in _PACKAGING_WORDS]
-    if explicit_packaging and not comparison and any(
-        term_scores[terms.index(token)] == 0 for token in explicit_packaging
-    ):
-        return 0.0
-    if any(term_scores[index] == 0 for index, _token in core_terms):
-        return 0.0
-
-    matched = sum(score > 0 for score in term_scores)
-    if matched == 0 or matched / len(terms) < 0.5:
-        return 0.0
-    score = sum(term_scores) - 1.5 * (len(terms) - matched)
-    if sum(_word_matches(token, candidate.title_words) for token in terms) >= 2:
-        score += 2.0
-    if snack_slang and "snack" in candidate.category_words:
-        score += 5.0
-        if "bim" in candidate.title_words:
-            score += 2.0
-
-    if any(word in _SIZE_PREFERENCE_WORDS for word in terms):
-        preferred_measure = _measure(candidate.title)
-        if preferred_measure is not None:
-            amount, _dimension = preferred_measure
-            score += max(-3.0, min(3.0, 3.0 * (1000.0 - amount) / 1000.0))
-            if (candidate.title_words | candidate.uom_words).intersection(
-                {"thung", "loc", "combo"}
-            ):
-                score -= 3.0
-    elif not any(word in {"thung", "loc", "combo"} for word in terms):
-        if candidate.uom_words.intersection({"thung", "loc", "combo"}):
-            score -= 5.0
-    # Packaging is a ranking preference, not an identity constraint. A valid
-    # match must remain retrievable when only packs/cases exist in this group.
-    return max(score, 0.1)
+    return _score_prepared(_prepare_query(query), candidate, known_words, known_native_words)
 
 
 def _measure(title: str) -> tuple[float, str] | None:
@@ -348,47 +975,67 @@ def _measure(title: str) -> tuple[float, str] | None:
     return amount, "mass"
 
 
+@dataclass(frozen=True)
+class _PreparedCategoryFilter:
+    mode: str  # "none" | "baby" | "exact_taxonomy" | "phrases"
+    taxonomy_key: str = ""
+    is_oral_care: bool = False
+    phrase_needles: tuple[str, ...] = ()
+
+
+def _prepare_category_filter(
+    category: str | None,
+    known_category_keys: frozenset[str],
+) -> _PreparedCategoryFilter:
+    if not category:
+        return _PreparedCategoryFilter("none")
+    normalized = _category_key(category)
+    if normalized == "baby":
+        return _PreparedCategoryFilter("baby")
+    alias_key = _category_alias_key(normalized)
+    taxonomy_key = normalize_category_text(category)
+    if taxonomy_key in known_category_keys and alias_key not in _CATEGORY_PHRASE_ALIASES:
+        return _PreparedCategoryFilter("exact_taxonomy", taxonomy_key=taxonomy_key)
+    phrase_needles = tuple(
+        f" {' '.join(phrase)} " for phrase in _category_phrase_tokens(normalized)
+    )
+    return _PreparedCategoryFilter(
+        "phrases",
+        is_oral_care=(normalized == "oral_care"),
+        phrase_needles=phrase_needles,
+    )
+
+
+def _prepared_category_matches(
+    cat_filter: _PreparedCategoryFilter,
+    candidate: _Candidate,
+) -> bool:
+    mode = cat_filter.mode
+    if mode == "none":
+        return True
+    if mode == "exact_taxonomy":
+        return cat_filter.taxonomy_key in candidate.category_segment_texts
+    if mode == "baby":
+        return candidate.baby_audience or candidate.is_baby_dept_parent
+    segments = candidate.category_segment_texts
+    if cat_filter.is_oral_care and candidate.is_baby_dept_parent:
+        fallback_title = candidate.title_space_text or " ".join(_tokens(candidate.product.name))
+        segments = (*segments, fallback_title)
+    for segment in segments:
+        padded = f" {segment} "
+        for needle in cat_filter.phrase_needles:
+            if needle in padded:
+                return True
+    return False
+
+
 def _category_matches(
     category: str | None,
     candidate: _Candidate,
     known_category_keys: frozenset[str] = frozenset(),
 ) -> bool:
-    if not category:
-        return True
-    normalized = _category_key(category)
-    if normalized == "baby":
-        if candidate.baby_audience:
-            return True
-        # This parent identifies an intentional baby and maternity department.
-        # Match it as one taxonomy segment, rather than by concatenating every
-        # segment in the path (which previously leaked unrelated categories).
-        baby_department = frozenset({"do", "dung", "cham", "soc", "me", "va", "be"})
-        return any(
-            segment == baby_department
-            for segment in candidate.category_segment_words[:-1]
-        )
-
-    alias_key = _category_alias_key(normalized)
-    taxonomy_key = normalize_category_text(category)
-    if (
-        taxonomy_key in known_category_keys
-        and alias_key not in _CATEGORY_PHRASE_ALIASES
-    ):
-        # Catalog labels are authoritative. Match their actual hierarchy
-        # segment so homonyms and partial token overlaps cannot widen a search.
-        return taxonomy_key in candidate.category_segment_texts
-
-    category_segments = candidate.category_segment_texts
-    if normalized == "oral_care" and any(
-        segment == frozenset({"do", "dung", "cham", "soc", "me", "va", "be"})
-        for segment in candidate.category_segment_words[:-1]
-    ):
-        category_segments += (" ".join(_tokens(candidate.product.name)),)
-
-    return any(
-        f" {' '.join(phrase)} " in f" {segment} "
-        for phrase in _category_phrase_tokens(normalized)
-        for segment in category_segments
+    return _prepared_category_matches(
+        _prepare_category_filter(category, known_category_keys), candidate
     )
 
 
@@ -472,6 +1119,48 @@ class SnapshotProductRepository:
         self._known_words = frozenset(
             word for candidate in self._candidates for word in candidate.words
         )
+        self._known_native_words = frozenset(
+            word for candidate in self._candidates for word in candidate.native_words
+        )
+        word_freq: Counter[str] = Counter()
+        brand_words: set[str] = set()
+        compound_targets: set[str] = set()
+        catalog_bigrams: set[tuple[str, str]] = set()
+        for candidate in self._candidates:
+            for word in candidate.words:
+                word_freq[word] += 1
+            for bw in candidate.brand_words:
+                if len(bw) >= 3 and bw.isalpha():
+                    brand_words.add(bw)
+                    compound_targets.add(bw)
+            for tw in candidate.title_words:
+                if len(tw) >= 5 and tw.isalpha() and tw not in _PROTECTED_QUERY_WORDS:
+                    # Include de-hyphenated compound tokens such as chocopie, cocacola
+                    if tw not in _tokens(candidate.title):
+                        compound_targets.add(tw)
+            title_seq = _tokens(candidate.title)
+            for idx in range(len(title_seq) - 1):
+                catalog_bigrams.add((title_seq[idx], title_seq[idx + 1]))
+            for seg_text in candidate.category_segment_texts:
+                seg_seq = _tokens(seg_text)
+                for idx in range(len(seg_seq) - 1):
+                    catalog_bigrams.add((seg_seq[idx], seg_seq[idx + 1]))
+            for nw in candidate.native_words:
+                folded = _tokens(nw)
+                if folded and len(folded[0]) >= 4 and folded[0].isalpha() and nw == folded[0]:
+                    compound_targets.add(folded[0])
+        self._brand_words = frozenset(brand_words)
+        self._compound_targets = frozenset(compound_targets)
+        self._catalog_bigrams = frozenset(catalog_bigrams)
+        phonetic_index: dict[str, str] = {}
+        sorted_targets = sorted(
+            compound_targets,
+            key=lambda w: (-(w in brand_words), -word_freq[w], w),
+        )
+        for target in sorted_targets:
+            for pv in _phonetic_variants(target):
+                phonetic_index.setdefault(pv, target)
+        self._phonetic_index = phonetic_index
         self._token_index: dict[str, set[str]] = defaultdict(set)
         self._title_index: dict[str, set[str]] = defaultdict(set)
         self._identifier_index: dict[str, str] = {}
@@ -481,11 +1170,151 @@ class SnapshotProductRepository:
             self._title_index[candidate.title].add(candidate.product.product_id)
             for identifier in candidate.identifiers:
                 self._identifier_index[identifier] = candidate.product.product_id
+        # Each repository owns one immutable catalog version. Keep a bounded
+        # page cache with that instance so a reload cannot reuse old products.
+        self._search_page = lru_cache(maxsize=1024)(self._search)
+        self._normalize_noisy_cached = lru_cache(maxsize=2048)(self._normalize_noisy_query)
+
+    def normalize_noisy_query(self, query: str) -> str:
+        if not query or len(self.products) < 50:
+            return query
+        return self._normalize_noisy_cached(query)
+
+    def _normalize_noisy_query(self, text: str) -> str:
+        matches = list(_WORD_RE.finditer(text))
+        if not matches:
+            return text
+        native_toks = [unicodedata.normalize("NFC", m.group().casefold()) for m in matches]
+        plain_toks = [_tokens(nt)[0] if _tokens(nt) else nt for nt in native_toks]
+        n = len(matches)
+        edits: list[tuple[int, int, str]] = []
+        i = 0
+        while i < n:
+            matched_compound: str | None = None
+            matched_span = 1
+            preceded_by_apostrophe = (
+                matches[i].start() > 0 and text[matches[i].start() - 1] in ("'", "\u2019")
+            )
+            for span in () if preceded_by_apostrophe else (5, 4, 3, 2):
+                if i + span > n:
+                    continue
+                between = text[matches[i].end() : matches[i + span - 1].start()]
+                if re.search(r"[.!?,;:\d/]", between):
+                    continue
+                span_native = native_toks[i : i + span]
+                span_plain = plain_toks[i : i + span]
+                if any(not p.isalpha() or len(p) > 4 for p in span_plain):
+                    continue
+                if any(nt in _NATIVE_NO_COMPOUND_WORDS for nt in span_native):
+                    continue
+                if all(
+                    _has_vietnamese_diacritic(nt) and nt in self._known_native_words
+                    for nt in span_native
+                ):
+                    continue
+                if span == 2 and (span_plain[0], span_plain[1]) in self._catalog_bigrams:
+                    continue
+                if span == 2 and span_native[0] in {"co", "có"} and span_plain[1] == "xi":
+                    continue
+                joined = "".join(span_plain)
+                if len(joined) < 3:
+                    continue
+                if joined in self._compound_targets:
+                    matched_compound = joined
+                    matched_span = span
+                    break
+                if len(joined) >= 4:
+                    p_fold = _phonetic_fold(joined)
+                    if p_fold in self._phonetic_index:
+                        matched_compound = self._phonetic_index[p_fold]
+                        matched_span = span
+                        break
+                    if len(p_fold) >= 6:
+                        best_target = None
+                        best_ratio = 0.0
+                        for pv, target in self._phonetic_index.items():
+                            if (
+                                pv[0] != p_fold[0]
+                                or pv[-1] != p_fold[-1]
+                                or abs(len(pv) - len(p_fold)) > 1
+                            ):
+                                continue
+                            ratio = SequenceMatcher(None, p_fold, pv).ratio()
+                            if ratio >= 0.85 and ratio > best_ratio:
+                                best_ratio = ratio
+                                best_target = target
+                        if best_target:
+                            matched_compound = best_target
+                            matched_span = span
+                            break
+            if matched_compound is not None:
+                edits.append(
+                    (matches[i].start(), matches[i + matched_span - 1].end(), matched_compound)
+                )
+                i += matched_span
+                continue
+
+            nt = native_toks[i]
+            pt = plain_toks[i]
+            if (
+                nt not in self._known_native_words
+                and pt in self._known_words
+                and re.search(
+                    r"(?:a[oiuy]|e[ou]|o[ai]|u[aiy])[\u0300\u0301\u0303\u0309\u0323]",
+                    unicodedata.normalize("NFD", nt),
+                )
+            ):
+                edits.append((matches[i].start(), matches[i].end(), pt))
+                i += 1
+                continue
+            if (
+                pt in self._known_words
+                or pt in _PROTECTED_QUERY_WORDS
+                or not pt.isalpha()
+                or len(pt) < 4
+                or _has_vietnamese_diacritic(nt)
+            ):
+                i += 1
+                continue
+
+            p_fold = _phonetic_fold(pt)
+            if p_fold in self._phonetic_index:
+                edits.append((matches[i].start(), matches[i].end(), self._phonetic_index[p_fold]))
+                i += 1
+                continue
+
+            best_word = None
+            best_score = 0.0
+            for candidate_word in self._compound_targets:
+                if len(candidate_word) < 4:
+                    continue
+                if candidate_word[0] != pt[0] or abs(len(candidate_word) - len(pt)) > 2:
+                    continue
+                ratio = SequenceMatcher(None, pt, candidate_word).ratio()
+                p_ratio = SequenceMatcher(None, p_fold, _phonetic_fold(candidate_word)).ratio()
+                eff_ratio = max(ratio, p_ratio)
+                if eff_ratio >= 0.80:
+                    score = eff_ratio + (0.03 if candidate_word in self._brand_words else 0.0)
+                    if score > best_score:
+                        best_score = score
+                        best_word = candidate_word
+            if best_word:
+                edits.append((matches[i].start(), matches[i].end(), best_word))
+            i += 1
+
+        if not edits:
+            return text
+        result = text
+        for start, end, replacement in reversed(edits):
+            result = f"{result[:start]}{replacement}{result[end:]}"
+        return result
 
     @staticmethod
     def _candidate(product: ProductSnapshot) -> _Candidate:
         title = normalize_search_text(product.name)
         brand = normalize_search_text(product.brand)
+        dehyp_title_tokens = _dehyphenated_tokens(product.name)
+        dehyp_brand_tokens = _dehyphenated_tokens(product.brand)
         raw_hierarchy = product.category_hierarchy or ""
         category = normalize_search_text(
             " ".join(
@@ -518,14 +1347,21 @@ class SnapshotProductRepository:
             category_segment_texts = (
                 " ".join(_tokens(f"{category} {product.category}")),
             )
-        baby_audience = product_audience_evidence(product) in {"child", "newborn"}
+        audience_evidence = product_audience_evidence(product)
+        baby_audience = audience_evidence in {"child", "newborn"}
+        title_tokens = _tokens(title)
+        brand_tokens = _tokens(brand)
+        category_tokens = _tokens(category)
+        uom_tokens = _tokens(uom)
         words = tuple(
             dict.fromkeys(
                 (
-                    *_tokens(title),
-                    *_tokens(brand),
-                    *_tokens(category),
-                    *_tokens(uom),
+                    *title_tokens,
+                    *dehyp_title_tokens,
+                    *brand_tokens,
+                    *dehyp_brand_tokens,
+                    *category_tokens,
+                    *uom_tokens,
                 )
             )
         )
@@ -533,6 +1369,35 @@ class SnapshotProductRepository:
             value.casefold()
             for value in (product.product_id, product.item_no, product.barcode)
             if value
+        )
+        title_words = frozenset((*title_tokens, *dehyp_title_tokens))
+        uom_words = frozenset(uom_tokens)
+        native_words = frozenset(
+            _native_tokens(
+                " ".join(
+                    filter(
+                        None,
+                        (
+                            product.name,
+                            product.brand,
+                            product.category,
+                            product.category_hierarchy,
+                            product.department,
+                            product.sub_department,
+                            product.uom,
+                        ),
+                    )
+                )
+            )
+        )
+        folded_buckets: dict[str, list[str]] = defaultdict(list)
+        for nw in native_words:
+            f = _tokens(nw)
+            if f:
+                folded_buckets[f[0]].append(nw)
+        folded_to_native = {k: tuple(v) for k, v in folded_buckets.items()}
+        is_baby_dept_parent = any(
+            segment == _BABY_DEPARTMENT_SEGMENT for segment in category_segment_words[:-1]
         )
         return _Candidate(
             product=product,
@@ -542,31 +1407,23 @@ class SnapshotProductRepository:
             uom=uom,
             identifiers=identifiers,
             words=words,
-            title_words=frozenset(_tokens(title)),
-            brand_words=frozenset(_tokens(brand)),
-            category_words=frozenset(_tokens(category)),
+            title_words=title_words,
+            brand_words=frozenset((*brand_tokens, *dehyp_brand_tokens)),
+            category_words=frozenset(category_tokens),
             category_segment_words=category_segment_words,
             category_segment_texts=category_segment_texts,
-            uom_words=frozenset(_tokens(uom)),
-            native_words=frozenset(
-                _native_tokens(
-                    " ".join(
-                        filter(
-                            None,
-                            (
-                                product.name,
-                                product.brand,
-                                product.category,
-                                product.category_hierarchy,
-                                product.department,
-                                product.sub_department,
-                                product.uom,
-                            ),
-                        )
-                    )
-                )
-            ),
+            uom_words=uom_words,
+            native_words=native_words,
+            brand_native_words=frozenset(_native_tokens(product.brand)),
             baby_audience=baby_audience,
+            audience_evidence=audience_evidence,
+            native_title_clean=unicodedata.normalize("NFC", product.name.strip().casefold()),
+            folded_to_native=folded_to_native,
+            measure=_measure(title),
+            has_pack_title_or_uom=not (title_words | uom_words).isdisjoint(_PACK_WORDS),
+            has_pack_uom=not uom_words.isdisjoint(_PACK_WORDS),
+            is_baby_dept_parent=is_baby_dept_parent,
+            title_space_text=" ".join(_tokens(product.name)),
         )
 
     def search(
@@ -584,50 +1441,164 @@ class SnapshotProductRepository:
         offset: int = 0,
         sort_by: str | None = None,
     ) -> list[ProductSnapshot]:
+        # Return a fresh list: callers may reorder/filter it without changing
+        # the cached page. ProductSnapshot values themselves are immutable.
+        return list(
+            self._search_page(
+                query=query,
+                category=category,
+                max_price_vnd=max_price_vnd,
+                spicy=spicy,
+                in_stock=in_stock,
+                limit=limit,
+                brand=brand,
+                price_operator=price_operator,
+                price_value_vnd=price_value_vnd,
+                diversify_by_subcategory=diversify_by_subcategory,
+                offset=offset,
+                sort_by=sort_by,
+            )
+        )
+
+    def _search(
+        self,
+        query: str,
+        category: str | None,
+        max_price_vnd: int | None,
+        spicy: bool | None,
+        in_stock: bool,
+        limit: int,
+        brand: str | None,
+        price_operator: PriceOperator | None,
+        price_value_vnd: int | None,
+        diversify_by_subcategory: bool,
+        offset: int,
+        sort_by: str | None,
+    ) -> tuple[ProductSnapshot, ...]:
         normalized = normalize_search_text(query).strip().casefold()
         exact_id = self._identifier_index.get(normalized)
         exact_title_ids = self._title_index.get(normalized)
-        retrieval_query = (
-            query if exact_id or exact_title_ids else catalog_query_with_aliases(query)
+        effective_raw_query = (
+            query if exact_id or exact_title_ids else self.normalize_noisy_query(query)
         )
+        raw_plain_set = set(_tokens(effective_raw_query))
+        has_explicit_brand = bool(raw_plain_set & self._brand_words)
+        aliased_query = (
+            effective_raw_query
+            if exact_id or exact_title_ids
+            else catalog_query_with_aliases(effective_raw_query)
+        )
+        # Never let a category alias inject "tre em" into an explicit brand lookup
+        # (e.g. "ta dan sunmate" is adult diapers, not "ta dan tre em").
+        if (
+            has_explicit_brand
+            and "tre em" in normalize_search_text(aliased_query)
+            and "tre em" not in normalize_search_text(effective_raw_query)
+        ):
+            retrieval_query = effective_raw_query
+        else:
+            retrieval_query = aliased_query
         terms, comparison, _snack_slang = _query_terms(retrieval_query)
         normalized = normalize_search_text(retrieval_query).strip().casefold()
-        if exact_id:
-            candidate_ids = {exact_id}
-        elif exact_title_ids:
-            candidate_ids = set(exact_title_ids)
-        else:
-            candidate_ids = set().union(
-                *(self._token_index.get(token, set()) for token in terms)
-            ) if terms else {item.product.product_id for item in self._candidates}
 
+        cat_filter = _prepare_category_filter(category, self._known_category_keys)
+        requested_audience = explicit_product_audience(query)
         normalized_brand = _tokens(brand)
-        results: list[tuple[float, ProductSnapshot]] = []
-        for product_id in candidate_ids:
-            candidate = self._by_candidate_id[product_id]
-            product = candidate.product
-            if not _category_matches(
-                category, candidate, self._known_category_keys
-            ):
-                continue
-            if not matches_explicit_product_audience(query, product):
-                continue
-            if normalized_brand and not all(
-                token in candidate.brand_words for token in normalized_brand
-            ):
-                continue
-            if max_price_vnd is not None and product.price_vnd > max_price_vnd:
-                continue
-            if not matches_price_constraint(product.price_vnd, price_operator, price_value_vnd):
-                continue
-            if spicy is not None and product.spicy is not spicy:
-                continue
-            if in_stock and product.sellable_stock <= 0:
-                continue
-            score = _score(retrieval_query, candidate, self._known_words)
-            if terms and score <= 0:
-                continue
-            results.append((score, product))
+
+        def _collect_matches(
+            active_query: str, active_terms: tuple[str, ...]
+        ) -> list[tuple[float, ProductSnapshot]]:
+            if exact_id:
+                c_ids = {exact_id}
+            elif exact_title_ids:
+                c_ids = set(exact_title_ids)
+            else:
+                c_ids = (
+                    set().union(
+                        *(
+                            self._token_index.get(eq_token, set())
+                            for token in active_terms
+                            for eq_token in _token_lookup_variants(token)
+                        )
+                    )
+                    if active_terms
+                    else {item.product.product_id for item in self._candidates}
+                )
+            pq = _prepare_query(active_query)
+            by_cid = self._by_candidate_id
+            known_words = self._known_words
+            known_native_words = self._known_native_words
+            matched_rows: list[tuple[float, ProductSnapshot]] = []
+            for product_id in c_ids:
+                candidate = by_cid[product_id]
+                if not _prepared_category_matches(cat_filter, candidate):
+                    continue
+                if requested_audience is not None:
+                    ev = candidate.audience_evidence
+                    if requested_audience == "newborn":
+                        if ev != "newborn":
+                            continue
+                    elif requested_audience == "adult":
+                        if ev in {"child", "newborn"}:
+                            continue
+                    elif ev not in {"child", "newborn"}:
+                        continue
+                if normalized_brand and not all(
+                    token in candidate.brand_words for token in normalized_brand
+                ):
+                    continue
+                product = candidate.product
+                if max_price_vnd is not None and product.price_vnd > max_price_vnd:
+                    continue
+                if price_operator is not None and price_value_vnd is not None:
+                    if not matches_price_constraint(
+                        product.price_vnd, price_operator, price_value_vnd
+                    ):
+                        continue
+                if spicy is not None and product.spicy is not spicy:
+                    continue
+                if in_stock and product.sellable_stock <= 0:
+                    continue
+                score = _score_prepared(
+                    pq,
+                    candidate,
+                    known_words,
+                    known_native_words,
+                )
+                if active_terms and score <= 0:
+                    continue
+                matched_rows.append((score, product))
+            return matched_rows
+
+        results = _collect_matches(retrieval_query, terms)
+        # If a synonym rewrite yielded 0 results, retry once with the raw query.
+        if not results and retrieval_query != effective_raw_query:
+            raw_terms, _, _ = _query_terms(effective_raw_query)
+            if raw_terms:
+                results = _collect_matches(effective_raw_query, raw_terms)
+                if results:
+                    terms = raw_terms
+        # If an explicit catalog brand is named (e.g. Bioré, Kikkoman, Tresemmé)
+        # and extra regional/origin/modifier words prevented an exact match,
+        # retry once with those safe non-identity modifiers stripped.
+        if not results and has_explicit_brand:
+            relaxed_query = re.sub(
+                r"\b(?:xa\s+bong|xa\s+phong)\s+tam\b",
+                "sua tam",
+                normalize_search_text(effective_raw_query),
+            )
+            relaxed_tokens = [
+                tok
+                for tok in _tokens(relaxed_query)
+                if tok not in _RELAXABLE_BRAND_MODIFIERS
+            ]
+            relaxed_str = " ".join(relaxed_tokens)
+            if relaxed_str and relaxed_str != normalize_search_text(retrieval_query):
+                relaxed_terms, _, _ = _query_terms(relaxed_str)
+                if relaxed_terms and (set(relaxed_terms) & self._brand_words):
+                    results = _collect_matches(relaxed_str, relaxed_terms)
+                    if results:
+                        terms = relaxed_terms
 
         if sort_by == "price_ascending":
             results.sort(
@@ -664,7 +1635,7 @@ class SnapshotProductRepository:
         bounded_offset = max(0, min(int(offset), 100_000))
         if diversify_by_subcategory:
             products = diversify_by_category_leaf(products, bounded_offset + bounded_limit)
-        return products[bounded_offset : bounded_offset + bounded_limit]
+        return tuple(products[bounded_offset : bounded_offset + bounded_limit])
 
     def catalog_terms_evidenced(
         self,
@@ -687,13 +1658,20 @@ class SnapshotProductRepository:
                 continue
             product = candidate.product
             evidence = frozenset(
-                normalize_category_text(
-                    " ".join(
-                        filter(None, (product.name, product.brand, product.description))
-                    )
-                ).split()
+                (
+                    *candidate.words,
+                    *normalize_category_text(
+                        " ".join(
+                            filter(None, (product.name, product.brand, product.description))
+                        )
+                    ).split(),
+                )
             )
             supported.update(requested & evidence)
+            for req_token in requested - supported:
+                variants = _token_lookup_variants(req_token)
+                if len(variants) > 1 and evidence.intersection(variants):
+                    supported.add(req_token)
             if supported == requested:
                 break
         return frozenset(supported)

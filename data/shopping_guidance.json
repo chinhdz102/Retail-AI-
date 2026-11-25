@@ -1,0 +1,211 @@
+{
+  "version": "2026-11-06",
+  "scope": "General source summaries for shopping advice; never evidence about a catalog SKU.",
+  "entries": [
+    {
+      "id": "foodsafety-meat-doneness",
+      "source": "FoodSafety.gov",
+      "url": "https://www.foodsafety.gov/food-safety-charts/safe-minimum-internal-temperatures",
+      "checked_at": "2026-11-02",
+      "match_any": [
+        "thịt",
+        "lẩu",
+        "hotpot",
+        "raw meat"
+      ],
+      "summary": "Thịt sống cần được nấu tới nhiệt độ bên trong an toàn, kiểm tra bằng nhiệt kế thực phẩm; mức nhiệt và thời gian nghỉ phụ thuộc loại thịt và dạng nguyên miếng hay xay. Không hứa thịt thái mỏng sẽ chín an toàn sau vài giây nhúng. Lời khuyên chọn nguyên liệu theo món ăn không chứng minh độ tươi, độ mềm hay thời gian nấu của một mã hàng. Không cần đọc cả bảng nhiệt độ khi khách chỉ đang hỏi mua thịt.",
+      "domain": "food_safety"
+    },
+    {
+      "id": "aad-acne-care",
+      "source": "American Academy of Dermatology",
+      "url": "https://www.aad.org/public/diseases/acne/skin-care/tips",
+      "checked_at": "2026-11-02",
+      "match_any": [
+        "mụn",
+        "acne"
+      ],
+      "summary": "Chăm sóc da mụn: rửa nhẹ bằng sản phẩm làm sạch không chà xát; tránh chất làm se, toner hoặc tẩy da chết gây kích ứng. Chăm sóc thông thường đi cùng điều trị, không thay thế điều trị. Nhãn non-comedogenic là một tiêu chí để xem trên sản phẩm, không được suy ra từ hãng hay tên mỹ phẩm. Không tự ghép thêm nhiều bước chăm sóc. Khi cần điều trị, nên được bác sĩ da liễu tư vấn.",
+      "domain": "health"
+    },
+    {
+      "id": "aad-sensitive-cleansing",
+      "source": "American Academy of Dermatology",
+      "url": "https://www.aad.org/public/everyday-care/skin-care-basics/dry/dermatologists-tips-relieve-dry-skin",
+      "checked_at": "2026-11-05",
+      "match_any": ["da nhạy cảm", "da khô", "sensitive skin"],
+      "summary": "Với da khô hoặc nhạy cảm, AAD khuyên chọn sản phẩm làm sạch dịu nhẹ và có nhãn fragrance-free; unscented không đồng nghĩa không có thành phần tạo hương. Đây là tiêu chí chọn chung, không xác nhận một mã sữa tắm là dịu nhẹ hoặc không gây kích ứng. Không suy phù hợp chỉ từ thương hiệu, mùi nhẹ hay chữ tự nhiên; không tự bổ sung thành phần hoặc chế độ điều trị.",
+      "domain": "health"
+    },
+    {
+      "id": "cdc-child-food-texture",
+      "source": "Centers for Disease Control and Prevention",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/choking-hazards.html",
+      "checked_at": "2026-11-02",
+      "match_any": [
+        "trẻ",
+        "trẻ con",
+        "bé",
+        "em bé",
+        "child",
+        "toddler"
+      ],
+      "summary": "Nguồn này nói về trẻ nhỏ, không áp dụng mọi hạn chế cho mọi độ tuổi. Cần biết tuổi và khả năng nhai trước khi chốt đồ ăn vặt. Với trẻ nhỏ, đồ cứng, dính, nhỏ, thịt dai hoặc có xương, hạt nguyên và kẹo có thể gây hóc; hình dạng và cách chuẩn bị cũng quan trọng. Không suy phù hợp cho trẻ từ vị hoặc nhãn ít đường. Với trẻ sơ sinh/trẻ nhỏ, nguồn không khuyến nghị đồ có đường thêm hoặc chất tạo ngọt.",
+      "domain": "child_safety"
+    },
+    {
+      "id": "aspca-cleaners-pets",
+      "source": "ASPCA Poison Control",
+      "url": "https://www.aspca.org/pet-care/aspca-poison-control/poisonous-household-products",
+      "checked_at": "2026-11-02",
+      "match_any": [
+        "thú cưng",
+        "mèo",
+        "chó",
+        "pet",
+        "cat",
+        "dog"
+      ],
+      "summary": "Sử dụng chất vệ sinh đúng hướng dẫn trên nhãn; không đánh đồng tên gọi tự nhiên, mùi nhẹ hoặc thương hiệu với an toàn cho thú cưng. Với chất vệ sinh được nguồn đề cập, cần để khô trước khi thú cưng trở lại khu vực; dung dịch cần tráng/rửa phải làm đúng hướng dẫn. Không cho thú cưng tiếp xúc dung dịch đậm đặc. Đây là hướng dẫn dùng chung, không xác nhận an toàn một mã hàng.",
+      "domain": "chemical_safety"
+    },
+    {
+      "id": "pg-he-laundry",
+      "source": "Procter & Gamble Care Hub",
+      "url": "https://pg-lex.my.salesforce-sites.com/CarehubStandalone/articles/en_US/FAQ/Popular-questions-about-HE-laundry-detergent",
+      "checked_at": "2026-11-03",
+      "match_any": [
+        "nước giặt",
+        "bột giặt",
+        "máy giặt",
+        "cửa trước",
+        "detergent",
+        "laundry"
+      ],
+      "summary": "Máy giặt hiệu suất cao dùng ít nước cần chất giặt ít bọt tương thích, nhận biết bằng nhãn HE hoặc hướng dẫn của máy và chất giặt. Cả bột lẫn nước giặt đều có thể có loại HE; không kết luận mọi nước giặt đều hợp máy cửa trước hoặc giặt sạch hơn bột. Nguồn không chứng minh sản phẩm bất kỳ trong cửa hàng có nhãn HE, hiệu quả hay số lần giặt. Muốn so chi phí mỗi mẻ cần quy cách và liều dùng thực tế, không chỉ dung tích túi.",
+      "domain": "ordinary"
+    },
+    {
+      "id": "aad-hair-care",
+      "source": "American Academy of Dermatology",
+      "url": "https://www.aad.org/public/everyday-care/hair-scalp-care/hair/healthy-hair-tips",
+      "checked_at": "2026-11-03",
+      "match_any": [
+        "dầu gội",
+        "da đầu",
+        "tóc bết",
+        "tóc nhanh bết",
+        "shampoo"
+      ],
+      "summary": "Chọn sản phẩm có nhãn dành cho loại tóc; tần suất gội dựa vào độ bẩn và dầu. Khi gội, tập trung dầu gội lên da đầu để làm sạch dầu và cặn, thay vì chà toàn bộ chiều dài tóc. Đây là hướng dẫn chung, không xác nhận chai nào kiềm dầu hay dịu da. Nguồn không có cơ sở để khuyên mọi người tránh hoàn toàn silicone/cồn hoặc chuyển sang gel tạo kiểu khi đang cần dầu gội. Không tự ghép thêm quy trình nhiều sản phẩm khi khách chỉ cần chọn dầu gội.",
+      "domain": "ordinary"
+    },
+    {
+      "id": "cdc-home-cleaning",
+      "source": "Centers for Disease Control and Prevention",
+      "url": "https://www.cdc.gov/hygiene/about/when-and-how-to-clean-and-disinfect-your-home.html",
+      "checked_at": "2026-11-03",
+      "match_any": [
+        "dọn nhà",
+        "dọn bếp",
+        "tẩy rửa",
+        "vệ sinh nhà",
+        "house cleaning"
+      ],
+      "summary": "Vệ sinh thông thường và khử khuẩn là hai việc khác nhau. Thường xuyên làm sạch bằng sản phẩm phù hợp bề mặt là bước cơ bản; cần làm sạch trước khi khử khuẩn. Với chất khử khuẩn, theo đúng nhãn về pha loãng, thời gian tiếp xúc và bảo hộ, giữ thông thoáng; không trộn các hóa chất/sản phẩm với nhau. Không tự mặc định khách dọn nhà phải mua thêm chất khử khuẩn. Hướng dẫn chung này không xác nhận hiệu quả hoặc tính phù hợp bề mặt của một mã hàng.",
+      "domain": "chemical_safety"
+    },
+    {
+      "id": "who-sugars",
+      "source": "World Health Organization",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet",
+      "checked_at": "2026-11-02",
+      "match_any": [
+        "đường",
+        "ngọt",
+        "sugar",
+        "sweet"
+      ],
+      "summary": "Hạn chế đường tự do; nước trái cây dù không thêm đường vẫn có thể chứa lượng đường tự do đáng kể. WHO khuyến nghị giảm đường mà không dựa vào chất tạo ngọt không đường. Khi chọn hàng cần đọc nhãn dinh dưỡng, không suy hàm lượng đường từ độ ngọt cảm nhận hoặc chữ tự nhiên. Không biến yêu cầu ít ngọt thành bảo đảm phù hợp cho bệnh cụ thể.",
+      "domain": "health"
+    },
+    {
+      "id": "fda-total-added-sugars",
+      "source": "U.S. Food and Drug Administration",
+      "url": "https://www.fda.gov/food/nutrition-facts-label/added-sugars-nutrition-facts-label",
+      "checked_at": "2026-11-07",
+      "match_any": ["đường", "sugar", "unsweetened"],
+      "summary": "Đường tổng số gồm đường tự nhiên trong thực phẩm, như sữa và trái cây, cộng với đường thêm vào nếu có. Không thêm đường khác với không có đường tổng số. Khi khách hạn chế đường, cần phân biệt tên/nhãn không đường với số gram đường thực tế; không suy số gram từ tên hàng hay độ ngọt. Nguồn hướng dẫn cách đọc nhãn, không xác nhận thành phần hay dinh dưỡng của một mã hàng trong cửa hàng.",
+      "domain": "nutrition_label"
+    },
+    {
+      "id": "philips-water-kettle-use",
+      "source": "Philips Support",
+      "url": "https://www.philips.co.in/c-f/XC000006139/can-i-heat-up-other-liquids-with-my-philips-kettle",
+      "checked_at": "2026-11-06",
+      "match_any": ["ấm đun nước", "ấm siêu tốc", "bình đun nước", "kettle"],
+      "summary": "Philips hướng dẫn các mẫu ấm đun nước được bài hỗ trợ đề cập chỉ dùng đun nước, không đun súp, chất lỏng khác hoặc thực phẩm đóng hộp. Đây không phải xác nhận khả năng nấu của thiết bị khách đang có. Khi khách chỉ có ấm đun nước thông thường, không tự đề xuất cho thức ăn vào nấu trực tiếp trong ấm. Phân biệt lấy nước nóng để pha trong vật đựng phù hợp với nấu thực phẩm trong thiết bị; cách chuẩn bị vẫn cần phù hợp hướng dẫn của thức ăn và thiết bị.",
+      "domain": "compatibility"
+    },
+    {
+      "id": "fda-ready-to-cook",
+      "source": "U.S. Food and Drug Administration",
+      "url": "https://www.fda.gov/food/buy-store-serve-safe-food/test-your-safety-knowledge-about-ready-cook-foods",
+      "checked_at": "2026-11-03",
+      "match_any": [
+        "ăn sáng",
+        "đồ ăn nhanh",
+        "đồ ăn tiện",
+        "đông lạnh",
+        "ready to cook",
+        "ready-to-eat"
+      ],
+      "summary": "Thực phẩm có hướng dẫn cook, bake hoặc ready to cook chưa mặc định ăn ngay; đông lạnh hoặc đã sơ chế một phần cũng không chứng minh đã an toàn để ăn trực tiếp. Cần đọc hướng dẫn trên bao bì và nấu đủ theo nhãn. Khi tư vấn đồ ăn tiện, phân biệt món mở ra ăn ngay với món cần hâm/nấu; không suy ra từ việc có tủ lạnh, bao bì hoặc tên nhóm hàng.",
+      "domain": "food_safety"
+    },
+    {
+      "id": "aeg-induction-cookware",
+      "source": "AEG support",
+      "url": "https://support.aeg.co.uk/support-articles/article/what-cookware-is-suitable-for-cooking-zones-with-induction-heating",
+      "checked_at": "2026-11-03",
+      "match_any": [
+        "bếp từ",
+        "nồi bếp từ",
+        "chảo bếp từ",
+        "induction"
+      ],
+      "summary": "Bếp từ cần đáy nhiễm từ; có thể kiểm tra bằng nam châm và xem ký hiệu/hướng dẫn của sản phẩm. Kích thước đáy tối thiểu còn phụ thuộc mẫu bếp. Không suy tính tương thích từ chất liệu nhìn bên ngoài hoặc tên thương hiệu; khi chốt mã hàng cần bằng chứng trên nhãn.",
+      "domain": "compatibility"
+    },
+    {
+      "id": "energizer-battery-care",
+      "source": "Energizer OEM",
+      "url": "https://oem.energizer.com/english/dos-donts/",
+      "checked_at": "2026-11-03",
+      "match_any": [
+        "pin",
+        "pin remote",
+        "điều khiển",
+        "battery"
+      ],
+      "summary": "Đọc đúng cỡ và loại pin theo thiết bị; thay cùng lúc bằng pin mới cùng cỡ và loại, không trộn pin cũ/mới hoặc khác loại/hãng trong cùng thiết bị. Đây là hướng dẫn chung, không chứng minh thời lượng hoặc chất lượng của một vỉ pin cụ thể.",
+      "domain": "compatibility"
+    },
+    {
+      "id": "myplate-meal-planning",
+      "source": "MyPlate.gov",
+      "url": "https://www.myplate.gov/sites/default/files/2024-06/TipSheet-24-Meal-Planning.pdf",
+      "checked_at": "2026-11-03",
+      "match_any": [
+        "ăn cả tuần",
+        "lên thực đơn",
+        "đi chợ",
+        "meal plan",
+        "bữa tối",
+        "bữa sáng"
+      ],
+      "summary": "Khi lên danh sách mua theo ngân sách, xem trước đồ đã có và lập kế hoạch cho các bữa cần dùng để tránh mua trùng. Đây là nguyên tắc lập kế hoạch chung; không suy khẩu phần, độ no hoặc số người từ tên một sản phẩm và không tự ghép đủ tuần nếu khách chưa cho biết lượng cần.",
+      "domain": "ordinary"
+    }
+  ]
+}

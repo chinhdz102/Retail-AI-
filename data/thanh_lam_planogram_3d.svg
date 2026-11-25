@@ -5,7 +5,7 @@
 <text x="40" y="88" fill="#b8c7d9" font-family="Segoe UI,Arial,sans-serif" font-size="16">3,081 SKU · 13 aisle · 5 tầng kệ · 8 bay/aisle · nhóm theo ngành và category</text>
 <text x="40" y="116" fill="#fbbf24" font-family="Segoe UI,Arial,sans-serif" font-size="14">Màu thể hiện các khối category · sơ đồ minh hoạ theo vị trí đề xuất, chưa phải bản vẽ thi công</text>
 <text x="40" y="142" fill="#d5e2f0" font-family="Segoe UI,Arial,sans-serif" font-size="13">Đầu dãy có mã và tên nhóm hàng · Mã vị trí: Axx-Bxx-Lxx-Pxx · L1 dưới, L5 trên</text>
-<text x="40" y="158" fill="#91a8c0" font-family="Segoe UI,Arial,sans-serif" font-size="9">Nguồn: catalog Thanh Lam Mart · dataset version a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6</text>
+<text x="40" y="158" fill="#91a8c0" font-family="Segoe UI,Arial,sans-serif" font-size="9">Nguồn: catalog Thanh Lam Mart · dataset version 992e87a5929f3a86460fb3440ea3a25e3fab6a37f62de8b371a385abe4af3ef5</text>
 <rect x="28" y="164" width="350" height="174" rx="13" fill="#1e2b3c" stroke="#35465c" filter="url(#shadow)"/>
 <text x="42" y="187" fill="#f1f5f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">A01 · Dệt may</text>
 <text x="42" y="207" fill="#a9bbd0" font-family="Segoe UI,Arial,sans-serif" font-size="12">31 SKU · 1 bay · 4 category</text>

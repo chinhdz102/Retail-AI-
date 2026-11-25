@@ -10,6 +10,15 @@ const apiMocks = vi.hoisted(() => ({
   transcribe: vi.fn(),
   createSynthesisTicket: vi.fn(),
   getCart: vi.fn().mockResolvedValue(null),
+  getManagerNotifierStatus: vi.fn().mockResolvedValue({
+    enabled: false,
+    store_name: 'Thanh Lam Mart',
+    primary_channel: null,
+    primary_provider: null,
+    priority: [],
+    configured_providers: [],
+    channels: {},
+  }),
   addCartItem: vi.fn(),
   setCartItemQuantity: vi.fn(),
   prepareCheckout: vi.fn(),
@@ -25,6 +34,7 @@ vi.mock('./voice-controller', () => ({
   VoiceConversationController: class FakeVoiceConversationController {
     options: any
     isActive = false
+    bargeInMode = false
 
     constructor(options: any) {
       this.options = options
@@ -32,6 +42,10 @@ vi.mock('./voice-controller', () => ({
     }
 
     setLocale() {}
+
+    setBargeInMode(enabled: boolean) {
+      this.bargeInMode = enabled
+    }
 
     async start() {
       this.startCalls = (this.startCalls ?? 0) + 1
@@ -47,6 +61,7 @@ vi.mock('./voice-controller', () => ({
 
     pause() {
       this.isActive = false
+      this.bargeInMode = false
       this.options.onState({ mode: 'idle', phase: 'idle', permission: 'granted' })
     }
 
@@ -56,6 +71,218 @@ vi.mock('./voice-controller', () => ({
 }))
 
 import App from './App.vue'
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail })
+  return { promise, resolve, reject }
+}
+
+function setupCloudReply() {
+  vi.clearAllMocks()
+  const play = vi.fn().mockResolvedValue(undefined)
+  const pause = vi.fn()
+  const videoPlay = vi.fn().mockResolvedValue(undefined)
+  const videoPause = vi.fn()
+  Object.defineProperty(HTMLAudioElement.prototype, 'play', { configurable: true, value: play })
+  Object.defineProperty(HTMLAudioElement.prototype, 'pause', { configurable: true, value: pause })
+  Object.defineProperty(HTMLVideoElement.prototype, 'play', { configurable: true, value: videoPlay })
+  Object.defineProperty(HTMLVideoElement.prototype, 'pause', { configurable: true, value: videoPause })
+  apiMocks.createSession.mockResolvedValue({ session_id: 'session-test' })
+  apiMocks.respond.mockResolvedValue({
+    session_id: 'session-test', text: 'Mình gợi ý chai nước này.',
+    grounded_product_ids: [], state: 'BROWSING',
+  })
+  apiMocks.createSynthesisTicket.mockResolvedValue('http://127.0.0.1:8000/audio/synthesize/stream/current')
+  return { play, pause }
+}
+
+async function startSpokenReply() {
+  const wrapper = mount(App)
+  await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+  await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+  controllerStore.current.options.onTranscript('Có nước gì ít ngọt không?')
+  await vi.waitFor(() => expect(apiMocks.createSynthesisTicket).toHaveBeenCalledOnce())
+  return wrapper
+}
+
+afterEach(() => {
+  Reflect.deleteProperty(HTMLAudioElement.prototype, 'play')
+  Reflect.deleteProperty(HTMLAudioElement.prototype, 'pause')
+  Reflect.deleteProperty(HTMLVideoElement.prototype, 'play')
+  Reflect.deleteProperty(HTMLVideoElement.prototype, 'pause')
+})
+
+describe('voice turn ownership', () => {
+  it('keeps uncertain Vietnamese words editable without sending a shopping request', async () => {
+    setupCloudReply()
+    apiMocks.transcribe.mockResolvedValueOnce({
+      session_id: 'session-test', text: 'Lấy sữa đường', language: 'vi',
+      speech_detected: true, needs_confirmation: true,
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    expect(controllerStore.current.options.locale).toBe('vi-VN')
+    controllerStore.current.options.onAudio(new Blob(['voice']))
+    await vi.waitFor(() => expect(
+      (wrapper.get('textarea').element as HTMLTextAreaElement).value,
+    ).toBe('Lấy sữa đường'))
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    expect(apiMocks.createSynthesisTicket).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Mình nghe chưa chắc câu này')
+    await wrapper.get('textarea').setValue('Lấy sữa không đường')
+    await wrapper.get('form.composer').trigger('submit')
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledWith(
+      'session-test', 'Lấy sữa không đường', 'vi', expect.any(String),
+      expect.any(Function), expect.any(AbortSignal),
+    ))
+    wrapper.unmount()
+  })
+
+  it('stops old cloud speech and ignores its ended callback during a typed request', async () => {
+    const { pause } = setupCloudReply()
+    const wrapper = await startSpokenReply()
+    const audio = wrapper.get('audio').element as HTMLAudioElement
+    await vi.waitFor(() => expect(audio.getAttribute('src')).toContain('/stream/current'))
+    const staleEnded = audio.onended
+    const answer = deferred<any>()
+    apiMocks.respond.mockReturnValueOnce(answer.promise)
+    const mic = controllerStore.current
+    const starts = mic.startCalls
+    pause.mockClear()
+    await wrapper.get('textarea').setValue('Tìm loại khác giúp tôi')
+    await wrapper.get('form.composer').trigger('submit')
+    expect(pause).toHaveBeenCalledOnce()
+    expect(audio.getAttribute('src')).toBeNull()
+    staleEnded?.call(audio, new Event('ended'))
+    await vi.waitFor(() => expect(wrapper.get('.voice-feedback strong').text()).toBe('Đang xử lý'))
+    expect(mic.startCalls).toBe(starts)
+    answer.resolve({ session_id: 'session-test', text: 'Có loại khác.', grounded_product_ids: [], state: 'BROWSING' })
+    wrapper.unmount()
+  })
+
+  it.each(['typed', 'stop'] as const)('drops an old TTS ticket after a %s takeover', async (action) => {
+    const { play } = setupCloudReply()
+    const ticket = deferred<string>()
+    apiMocks.createSynthesisTicket.mockReturnValueOnce(ticket.promise)
+    const wrapper = await startSpokenReply()
+    const playCalls = play.mock.calls.length
+    if (action === 'typed') {
+      apiMocks.respond.mockReturnValueOnce(new Promise(() => {}))
+      await wrapper.get('textarea').setValue('Cho tôi hỏi thêm')
+      await wrapper.get('form.composer').trigger('submit')
+    } else {
+      await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    }
+    ticket.resolve('http://127.0.0.1:8000/audio/synthesize/stream/stale')
+    await Promise.resolve()
+    await Promise.resolve()
+    await new Promise((done) => setTimeout(done, 0))
+    expect(play).toHaveBeenCalledTimes(playCalls)
+    expect(wrapper.get('audio').element.getAttribute('src')).toBeNull()
+    if (action === 'stop') {
+      await vi.waitFor(() => expect(wrapper.get('.voice-feedback strong').text()).toBe('Sẵn sàng'))
+    }
+    wrapper.unmount()
+  })
+
+  it('ignores a late autoplay rejection after a typed request has taken over', async () => {
+    const { play } = setupCloudReply()
+    const playback = deferred<void>()
+    play.mockImplementation(function (this: HTMLMediaElement) {
+      return this.src.includes('/stream/') ? playback.promise : Promise.resolve()
+    })
+    const wrapper = await startSpokenReply()
+    await vi.waitFor(() => expect(wrapper.get('audio').element.getAttribute('src')).toContain('/stream/current'))
+    apiMocks.respond.mockReturnValueOnce(new Promise(() => {}))
+    await wrapper.get('textarea').setValue('Tư vấn tiếp giúp tôi')
+    await wrapper.get('form.composer').trigger('submit')
+    playback.reject(Object.assign(new Error('blocked'), { name: 'NotAllowedError' }))
+    await new Promise((done) => setTimeout(done, 0))
+    expect(wrapper.get('.voice-feedback strong').text()).toBe('Đang xử lý')
+    wrapper.unmount()
+  })
+
+  it('cancels in-flight Vietnamese STT when the user stops listening', async () => {
+    setupCloudReply()
+    const transcription = deferred<any>()
+    apiMocks.transcribe.mockReturnValueOnce(transcription.promise)
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onAudio(new Blob(['voice']))
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledOnce())
+    const signal = apiMocks.transcribe.mock.calls[0][3] as AbortSignal
+    await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    expect(signal.aborted).toBe(true)
+    transcription.resolve({ session_id: 'session-test', text: 'Câu cũ', language: 'vi' })
+    await new Promise((done) => setTimeout(done, 0))
+    expect(wrapper.get('.voice-feedback strong').text()).toBe('Sẵn sàng')
+    expect(apiMocks.respond).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('keeps the new request retry ID when an aborted voice response arrives late', async () => {
+    setupCloudReply()
+    apiMocks.createRequestId.mockReturnValueOnce('old-voice').mockReturnValueOnce('new-text')
+      .mockReturnValueOnce('unexpected-new-id')
+    const oldAnswer = deferred<any>()
+    apiMocks.respond.mockReturnValueOnce(oldAnswer.promise)
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(wrapper.find('button[aria-label="Bắt đầu nói"]').exists()).toBe(true))
+    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
+    controllerStore.current.options.onTranscript('Có nước suối không?')
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledOnce())
+    const oldSignal = apiMocks.respond.mock.calls[0][5] as AbortSignal
+    await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    expect(oldSignal.aborted).toBe(true)
+    apiMocks.respond.mockRejectedValueOnce(new Error('temporary network error'))
+    await wrapper.get('textarea').setValue('Tìm đồ uống khác')
+    await wrapper.get('form.composer').trigger('submit')
+    await vi.waitFor(() => expect(wrapper.find('.error-retry').exists()).toBe(true))
+    const newTurnId = apiMocks.respond.mock.calls[1][3]
+    oldAnswer.resolve({ session_id: 'session-test', text: 'Câu trả lời cũ.', state: 'BROWSING' })
+    await new Promise((done) => setTimeout(done, 0))
+    apiMocks.respond.mockResolvedValueOnce({ session_id: 'session-test', text: 'Bạn xem nước này nhé.', state: 'BROWSING' })
+    await wrapper.get('.error-retry').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledTimes(3))
+    expect(apiMocks.respond.mock.calls[2][3]).toBe(newTurnId)
+    expect(wrapper.text()).not.toContain('Câu trả lời cũ.')
+    wrapper.unmount()
+    apiMocks.createRequestId.mockReset().mockReturnValue('request-test-id')
+  })
+
+  it('ignores a late browser speech start after cancellation', async () => {
+    setupCloudReply()
+    const utterances: Array<{ onstart?: () => void; onend?: () => void; onerror?: () => void }> = []
+    const cancel = vi.fn()
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
+      cancel, resume: vi.fn(), getVoices: () => [],
+      speak: (utterance: typeof utterances[number]) => { utterances.push(utterance) },
+    } })
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: class {
+      text: string
+      constructor(text: string) { this.text = text }
+    } })
+    apiMocks.createSynthesisTicket.mockRejectedValueOnce(new Error('cloud unavailable'))
+    const wrapper = await startSpokenReply()
+    await vi.waitFor(() => expect(utterances).toHaveLength(1))
+    apiMocks.respond.mockReturnValueOnce(new Promise(() => {}))
+    cancel.mockClear()
+    await wrapper.get('textarea').setValue('Tìm loại khác')
+    await wrapper.get('form.composer').trigger('submit')
+    expect(cancel).toHaveBeenCalledOnce()
+    utterances[0].onstart?.()
+    utterances[0].onend?.()
+    await new Promise((done) => setTimeout(done, 0))
+    expect(wrapper.get('.voice-feedback strong').text()).toBe('Đang xử lý')
+    wrapper.unmount()
+    Reflect.deleteProperty(window, 'speechSynthesis')
+    Reflect.deleteProperty(window, 'SpeechSynthesisUtterance')
+  })
+})
 
 describe('voice transcript integration', () => {
   it('prewarms speech in the background while listening without creating a chat turn', async () => {
@@ -108,7 +335,7 @@ describe('voice transcript integration', () => {
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(2))
     await vi.waitFor(() => expect(wrapper.text()).toContain('Phiên trước đã kết thúc'))
     expect(apiMocks.createSession).toHaveBeenCalledTimes(2)
-    expect(apiMocks.transcribe).toHaveBeenNthCalledWith(1, 'old-session', audio, 'vi', expect.any(AbortSignal))
+    expect(apiMocks.transcribe).toHaveBeenNthCalledWith(1, 'old-session', audio, 'vi', expect.any(AbortSignal), false)
     expect(apiMocks.transcribe).toHaveBeenCalledTimes(1)
     expect(apiMocks.respond).not.toHaveBeenCalled()
     expect(wrapper.findAll('.message-row')).toHaveLength(0)
@@ -316,6 +543,7 @@ describe('voice transcript integration', () => {
       expect.any(Blob),
       'vi',
       expect.any(AbortSignal),
+      false,
     ))
     await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledWith(
       'session-test',
@@ -374,124 +602,168 @@ describe('voice transcript integration', () => {
     expect(play).toHaveBeenCalled()
   })
 
-  it('stops cloud TTS as soon as the microphone detects a new user turn', async () => {
-    const play = vi.fn().mockResolvedValue(undefined)
-    const pause = vi.fn()
-    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
-      configurable: true,
-      value: play,
-    })
-    Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
-      configurable: true,
-      value: pause,
-    })
-    apiMocks.createSession.mockResolvedValue({
-      session_id: 'session-test',
-      kiosk_id: 'kiosk-01',
-      state: 'BROWSING',
-      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-    })
-    apiMocks.respond.mockResolvedValue({
-      session_id: 'session-test',
-      text: 'Coca Zero giá 13.000đ. Bạn cần mình tìm thêm gì không?',
-      model: 'qwen/qwen3.8-27b',
-      grounded_product_ids: ['COKE_ZERO_330'],
-      state: 'BROWSING',
-    })
-    apiMocks.createSynthesisTicket.mockResolvedValue(
-      'http://127.0.0.1:8000/audio/synthesize/stream/one-use-token',
-    )
+  it('arms barge-in during cloud speech, stops Mai immediately when the customer speaks, and rejects self-echo', async () => {
+    const { pause } = setupCloudReply()
+    const wrapper = await startSpokenReply()
+    const audio = wrapper.get('audio').element as HTMLAudioElement
+    await vi.waitFor(() => expect(audio.getAttribute('src')).toContain('/stream/current'))
+    const mic = controllerStore.current
+    await vi.waitFor(() => expect(mic.bargeInMode).toBe(true))
+    expect(mic.isActive).toBe(true)
 
-    const wrapper = mount(App)
-    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]')).toBeTruthy())
-    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
-    await vi.waitFor(() => expect(controllerStore.current).not.toBeNull())
-    controllerStore.current.options.onTranscript('Cho tôi biết giá Coca Zero.')
+    // Unconfirmed stray audio callback or exact self-echo transcript must NOT interrupt Mai.
+    mic.options.onAudio(new Blob(['unconfirmed loudspeaker echo']))
+    mic.options.onTranscript('Mình gợi ý chai nước này.')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.get('.voice-feedback strong').text()).toBe('Đang trả lời')
+    expect(audio.getAttribute('src')).toContain('/stream/current')
+    expect(apiMocks.transcribe).not.toHaveBeenCalled()
+    expect(apiMocks.respond).toHaveBeenCalledOnce()
 
-    await vi.waitFor(() => expect(wrapper.get('audio').element.getAttribute('src')).toBe(
-      'http://127.0.0.1:8000/audio/synthesize/stream/one-use-token',
-    ))
-    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(2))
+    // Confirmed user barge-in immediately silences Mai and captures the interrupting utterance.
     pause.mockClear()
-
-    controllerStore.current.options.onState({
-      mode: 'recorder',
-      phase: 'recording',
-      permission: 'granted',
+    apiMocks.transcribe.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Khoan đã, cho mình xem nước suối thôi',
+      language: 'vi',
+      speech_detected: true,
     })
-
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Mình có Aquafina 500ml giá 6.000đ.',
+      grounded_product_ids: [],
+      state: 'BROWSING',
+    })
+    mic.options.onBargeIn()
+    await wrapper.vm.$nextTick()
     expect(pause).toHaveBeenCalledOnce()
-    expect(wrapper.get('audio').element.getAttribute('src')).toBeNull()
-    expect(controllerStore.current.isActive).toBe(true)
-    await vi.waitFor(() => expect(wrapper.get('.vrm-mic-control').classes()).toContain('recording'))
-    await vi.waitFor(() => expect(wrapper.get('.voice-feedback').text()).toContain('Đang ghi âm tiếng Việt'))
+    expect(audio.getAttribute('src')).toBeNull()
+    expect(mic.bargeInMode).toBe(false)
+    expect(wrapper.get('.voice-feedback strong').text()).toBe('Đang nghe')
+
+    mic.options.onAudio(new Blob(['customer barge-in voice']))
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledTimes(2))
+    expect(apiMocks.respond.mock.calls[1][1]).toBe('Khoan đã, cho mình xem nước suối thôi')
+    wrapper.unmount()
   })
 
-  it('cancels browser speech fallback when the microphone detects a new user turn', async () => {
-    const cancel = vi.fn()
-    let utterance: { onstart?: () => void; onend?: () => void; onerror?: () => void } | null = null
-    Object.defineProperty(window, 'speechSynthesis', {
-      configurable: true,
-      value: {
-        resume: vi.fn(),
-        cancel,
-        getVoices: () => [],
-        speak: (value: typeof utterance) => {
-          utterance = value
-          utterance?.onstart?.()
-        },
-      },
-    })
-    Object.defineProperty(window, 'SpeechSynthesisUtterance', {
-      configurable: true,
-      value: class {
-        text: string
-        onstart: (() => void) | null = null
-        onend: (() => void) | null = null
-        onerror: (() => void) | null = null
-        lang = ''
-        rate = 1
-        pitch = 1
-        voice = null
+  it('discards transcribed assistant loudspeaker echo after barge-in without answering itself', async () => {
+    setupCloudReply()
+    const wrapper = await startSpokenReply()
+    const audio = wrapper.get('audio').element as HTMLAudioElement
+    await vi.waitFor(() => expect(audio.getAttribute('src')).toContain('/stream/current'))
+    const mic = controllerStore.current
+    await vi.waitFor(() => expect(mic.bargeInMode).toBe(true))
 
-        constructor(text: string) {
-          this.text = text
-        }
-      },
-    })
-    apiMocks.createSession.mockResolvedValue({
+    apiMocks.transcribe.mockResolvedValueOnce({
       session_id: 'session-test',
-      kiosk_id: 'kiosk-01',
-      state: 'BROWSING',
-      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      text: 'Mình gợi ý chai nước này.',
+      language: 'vi',
+      speech_detected: true,
     })
-    apiMocks.respond.mockResolvedValue({
-      session_id: 'session-test',
-      text: 'Coca Zero giá 13.000đ.',
-      model: 'qwen/qwen3.8-27b',
-      grounded_product_ids: ['COKE_ZERO_330'],
-      state: 'BROWSING',
-    })
-    apiMocks.createSynthesisTicket.mockRejectedValue(new Error('tts unavailable'))
+    mic.options.onBargeIn()
+    mic.options.onAudio(new Blob(['bleedthrough echo']))
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(wrapper.get('.voice-feedback strong').text()).toBe('Đang nghe'))
+    expect(apiMocks.respond).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
 
-    const wrapper = mount(App)
-    await vi.waitFor(() => expect(wrapper.get('button[aria-label="Bắt đầu nói"]')).toBeTruthy())
-    await wrapper.get('button[aria-label="Bắt đầu nói"]').trigger('click')
-    await vi.waitFor(() => expect(controllerStore.current).not.toBeNull())
-    controllerStore.current.options.onTranscript('Cho tôi biết giá Coca Zero.')
+  it('waits for the loudspeaker tail after speech ends before disarming barge-in guard', async () => {
+    setupCloudReply()
+    const wrapper = await startSpokenReply()
+    const audio = wrapper.get('audio').element as HTMLAudioElement
+    await vi.waitFor(() => expect(audio.onended).toBeTypeOf('function'))
+    const mic = controllerStore.current
+    await vi.waitFor(() => expect(mic.bargeInMode).toBe(true))
+    vi.useFakeTimers()
+    audio.onended?.call(audio, new Event('ended'))
+    mic.options.onAudio(new Blob(['reverberation']))
+    mic.options.onTranscript('Tiếng vọng cuối câu')
+    await vi.advanceTimersByTimeAsync(399)
+    expect(mic.bargeInMode).toBe(true)
+    expect(apiMocks.transcribe).not.toHaveBeenCalled()
+    expect(apiMocks.respond).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(mic.isActive).toBe(true)
+    expect(mic.bargeInMode).toBe(false)
+    expect(wrapper.get('.voice-feedback strong').text()).toBe('Đang nghe')
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
 
-    await vi.waitFor(() => expect(utterance).not.toBeNull())
-    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(2))
-    cancel.mockClear()
-    controllerStore.current.options.onState({
-      mode: 'recorder',
-      phase: 'recording',
-      permission: 'granted',
-    })
-
-    expect(cancel).toHaveBeenCalledOnce()
+  it('allows the stop-speaking button to interrupt and resume after the speaker tail', async () => {
+    const { pause } = setupCloudReply()
+    const wrapper = await startSpokenReply()
+    await vi.waitFor(() => expect(wrapper.get('audio').element.getAttribute('src')).toContain('/stream/current'))
+    pause.mockClear()
+    vi.useFakeTimers()
+    await wrapper.get('button[aria-label="Dừng Mai nói"]').trigger('click')
+    expect(pause).toHaveBeenCalledOnce()
+    expect(wrapper.get('audio').element.getAttribute('src')).toBeNull()
+    expect(controllerStore.current.isActive).toBe(false)
+    await vi.advanceTimersByTimeAsync(400)
     expect(controllerStore.current.isActive).toBe(true)
-    await vi.waitFor(() => expect(wrapper.get('.voice-feedback').text()).toContain('Đang ghi âm tiếng Việt'))
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it.each(['stop', 'typed', 'unmount'] as const)('cancels a pending microphone restart on %s', async (action) => {
+    setupCloudReply()
+    const wrapper = await startSpokenReply()
+    const audio = wrapper.get('audio').element as HTMLAudioElement
+    await vi.waitFor(() => expect(audio.onended).toBeTypeOf('function'))
+    const mic = controllerStore.current
+    await vi.waitFor(() => expect(mic.bargeInMode).toBe(true))
+    const startsBeforeEnd = mic.startCalls
+    vi.useFakeTimers()
+    audio.onended?.call(audio, new Event('ended'))
+    if (action === 'stop') {
+      await wrapper.get('button[aria-label="Dừng nghe"]').trigger('click')
+    } else if (action === 'typed') {
+      apiMocks.respond.mockReturnValueOnce(new Promise(() => {}))
+      await wrapper.get('textarea').setValue('Câu hỏi mới')
+      await wrapper.get('form.composer').trigger('submit')
+    } else {
+      wrapper.unmount()
+    }
+    await vi.advanceTimersByTimeAsync(500)
+    expect(mic.startCalls).toBe(startsBeforeEnd)
+    expect(mic.isActive).toBe(false)
+    if (action !== 'unmount') wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it.each(['end', 'error'] as const)('arms barge-in during browser TTS and disarms cleanly after %s', async (event) => {
+    setupCloudReply()
+    let utterance: any
+    vi.stubGlobal('speechSynthesis', {
+      resume: vi.fn(), cancel: vi.fn(), getVoices: () => [],
+      speak: (value: any) => { utterance = value; value.onstart?.() },
+    })
+    vi.stubGlobal('SpeechSynthesisUtterance', class {
+      text: string
+      constructor(text: string) { this.text = text }
+    })
+    apiMocks.createSynthesisTicket.mockRejectedValueOnce(new Error('tts unavailable'))
+    const wrapper = await startSpokenReply()
+    await vi.waitFor(() => expect(utterance).toBeDefined())
+    const mic = controllerStore.current
+    expect(mic.isActive).toBe(true)
+    expect(mic.bargeInMode).toBe(true)
+    mic.options.onAudio(new Blob(['browser TTS echo']))
+    expect(apiMocks.transcribe).not.toHaveBeenCalled()
+    vi.useFakeTimers()
+    utterance[event === 'end' ? 'onend' : 'onerror']()
+    await vi.advanceTimersByTimeAsync(399)
+    expect(mic.bargeInMode).toBe(true)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(mic.isActive).toBe(true)
+    expect(mic.bargeInMode).toBe(false)
+    wrapper.unmount()
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it('unlocks browser speech audio when the user starts voice mode', async () => {
@@ -625,13 +897,18 @@ describe('voice transcript integration', () => {
     await vi.waitFor(() => expect(controllerStore.current).not.toBeNull())
     controllerStore.current.options.onTranscript('Cho tôi hỏi một chút')
     await vi.waitFor(() => expect(utterances).toHaveLength(1))
+    await vi.waitFor(() => expect(controllerStore.current.bargeInMode).toBe(true))
+    await wrapper.get('button[aria-label="Dừng Mai nói"]').trigger('click')
+    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(3))
     controllerStore.current.options.onTranscript('Và thêm một câu nữa')
     await vi.waitFor(() => expect(utterances).toHaveLength(2))
+    await vi.waitFor(() => expect(controllerStore.current.bargeInMode).toBe(true))
 
-    expect(controllerStore.current.startCalls).toBe(3)
+    // Stale end event from the cancelled first utterance must not disarm the second turn's barge-in guard.
     utterances[0].onend?.()
-    expect(controllerStore.current.startCalls).toBe(3)
+    expect(controllerStore.current.bargeInMode).toBe(true)
     utterances[1].onend?.()
-    expect(controllerStore.current.startCalls).toBe(4)
+    await vi.waitFor(() => expect(controllerStore.current.bargeInMode).toBe(false))
+    wrapper.unmount()
   })
 })

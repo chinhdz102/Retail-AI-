@@ -11,14 +11,17 @@ UnsupportedComparisonDimension = Literal["taste", "popularity"]
 
 _CONNECTOR = re.compile(r"\s+(voi|va|vs|versus|with|and)\s+")
 _COMPARATIVE_CUE = (
-    r"(?:re hon|it tien hon|gia thap hon|tot hon|ngon hon|con nhieu hon|"
+    r"(?:re hon|it tien hon|gia thap hon|loi hon|tiet kiem hon|kinh te hon|"
+    r"tot hon|ngon hon|con nhieu hon|"
     r"con nhieu hang hon|nhieu hang hon|co nhieu hang hon|ban chay hon|"
-    r"cheaper|better|more available|more stock|lower price|cost less|less expensive)"
+    r"cheaper|better|more economical|better value|more available|more stock|"
+    r"lower price|cost less|less expensive)"
 )
-_COMPARATIVE_SUBJECT = r"(?:cai nao|ben nao|mon nao|chai nao|loai nao|hang nao)"
+_COMPARATIVE_SUBJECT = r"(?:cai nao|ben nao|mon nao|chai nao|goi nao|hop nao|loai nao|hang nao)"
 _FOLLOWUP_TAIL = re.compile(
-    rf"\s+(?:(?:xem\s+)?{_COMPARATIVE_SUBJECT}\s+(?:(?:la|thi)\s+)?{_COMPARATIVE_CUE}\b.*|"
-    r"which one (?:is )?(?:cheaper|better|more available|has more stock)|"
+    rf"(?:\s*,\s*|\s+)(?:(?:xem|mua|chon)\s+)?{_COMPARATIVE_SUBJECT}\s+"
+    rf"(?:(?:la|thi)\s+)?{_COMPARATIVE_CUE}\b.*|"
+    r"\s+(?:which one (?:is )?(?:cheaper|better|more available|has more stock)|"
     r"which is (?:cheaper|better|more available)|what is (?:cheaper|better))\b.*$"
 )
 _COMPARISON_FOLLOWUP = re.compile(
@@ -57,6 +60,20 @@ def _taxonomy_label_contains_only_comparison_marker(
     return explicit_compare_cue is None
 
 
+_EXISTENTIAL_FILTER = re.compile(
+    rf"\b(?:co|tim|xem|goi y|chon|tu van)\s+{_COMPARATIVE_SUBJECT}\s+"
+    rf"(?:khac\s+)?{_COMPARATIVE_CUE}\b"
+)
+_ANAPHORIC_PAIR_PREFIX = re.compile(
+    r"^(?:(?:ca\s+)?(?:hai|2)\s+(?:san pham|mat hang|mon|loai|chai|hop|goi|tui|lon|tuyp|can|cai)"
+    r"(?:\s+(?:do|nay|kia|tren|vua roi))?|"
+    r"ca\s+hai(?:\s+(?:do|nay|kia))?)\b"
+)
+_ADVICE_RIGHT_CLAUSE = re.compile(
+    r"^(?:nen\s+(?:chon|mua|dung)|chon\s+(?:giup|ho|cho)|tu\s+van|goi\s+y|mua\s+(?:cai|loai|chai|mon)\s+nao)\b"
+)
+
+
 def is_comparison_request(
     text: str,
     category_hierarchies: tuple[tuple[str, ...], ...] = (),
@@ -64,15 +81,23 @@ def is_comparison_request(
     normalized = " ".join(normalize_vietnamese(text).split())
     if _taxonomy_label_contains_only_comparison_marker(text, category_hierarchies):
         return False
-    return bool(
-        parse_comparison_queries(text, category_hierarchies) is not None
-        or re.search(r"\bso sanh\b|\bcompare\b|\bversus\b|\bvs\b", normalized)
-        or _FOLLOWUP_TAIL.search(normalized)
-        or _COMPARISON_FOLLOWUP.search(normalized)
+    explicit_compare = bool(
+        re.search(r"\bso sanh\b|\bcompare\b|\bversus\b|\bvs\b", normalized)
         or (
             _CONNECTOR.search(normalized)
             and re.search(r"\bkhac gi(?: nhau)?\b|\bkhac nhau\b", normalized)
         )
+    )
+    if not explicit_compare and _EXISTENTIAL_FILTER.search(normalized):
+        return False
+    return bool(
+        parse_comparison_queries(text, category_hierarchies) is not None
+        or explicit_compare
+        or _FOLLOWUP_TAIL.search(normalized)
+        or _COMPARISON_FOLLOWUP.search(normalized)
+        # Shared intent parsing also recognizes references to an already visible
+        # pair without an explicit A-with-B connector.
+        or understand_catalog_query(text, category_hierarchies).intent == "comparison"
     )
 
 
@@ -100,6 +125,14 @@ def _parse_comparison_queries_from_patterns(text: str) -> tuple[str, str] | None
 
     left = body[: connector.start()].strip()
     right = body[connector.end() :].strip()
+    # A connector joining two question/advice clauses (e.g. "hai chai đó khác
+    # nhau gì và nên chọn chai nào...") does not name two catalog operands.
+    if (
+        re.search(r"\b(?:khac gi|khac nhau)\b", left)
+        or _ANAPHORIC_PAIR_PREFIX.search(left)
+        or _ADVICE_RIGHT_CLAUSE.search(right)
+    ):
+        return None
     right = _FOLLOWUP_TAIL.sub("", right).strip()
     right = _DIFFERENCE_TAIL.sub("", right).strip()
     right = _POLITE_TAIL.sub("", right).strip()
@@ -108,7 +141,7 @@ def _parse_comparison_queries_from_patterns(text: str) -> tuple[str, str] | None
     left = _POLITE_TAIL.sub("", left).strip()
     if not left or not right:
         return None
-    if re.match(r"^(?:chai|lon|hop|goi|tui)\b", right):
+    if re.match(r"^(?:chai|lon|hop|goi|tui|\d+(?:[.,]\d+)?\s*(?:ml|l|lit|kg|g))\b", right):
         shared_product = re.sub(
             r"\b\d+(?:[.,]\d+)?(?:\s*(?:ml|l|lit|litro|kg|g))?\b",
             " ",
@@ -118,6 +151,61 @@ def _parse_comparison_queries_from_patterns(text: str) -> tuple[str, str] | None
         shared_product = " ".join(shared_product.split())
         if shared_product:
             right = f"{shared_product} {right}"
+    else:
+        # When comparing "kem đánh răng Sensodyne với Colgate" or "dầu ăn Simply
+        # với Neptune", propagate the shared leading product type from the left
+        # operand onto a brand-only right operand so brand #2 doesn't pull
+        # unrelated categories (e.g. Colgate toothbrushes or Neptune rice).
+        shared_type_prefixes = (
+            "kem danh rang",
+            "ban chai danh rang",
+            "nuoc suc mieng",
+            "sua rua mat",
+            "sua tam",
+            "dau goi",
+            "dau xa",
+            "nuoc xa vai",
+            "nuoc xa",
+            "nuoc giat",
+            "bot giat",
+            "nuoc rua chen",
+            "nuoc lau san",
+            "dau an",
+            "nuoc mam",
+            "nuoc tuong",
+            "hat nem",
+            "tuong ot",
+            "tuong ca",
+            "sua tuoi",
+            "sua chua uong",
+            "sua chua an",
+            "sua chua",
+            "sua hat",
+            "sua dau nanh",
+            "sua bot",
+            "sua dac",
+            "ca phe hoa tan",
+            "ca phe",
+            "mi an lien",
+            "mi goi",
+            "banh quy",
+            "banh gao",
+            "banh mi",
+            "xuc xich",
+            "khan giay",
+            "khan uot",
+            "giay ve sinh",
+            "nuoc ngot",
+            "tra tui loc",
+        )
+        for prefix_type in shared_type_prefixes:
+            if (
+                left.startswith(prefix_type + " ")
+                and not right.startswith(prefix_type)
+                and not any(right.startswith(other + " ") for other in shared_type_prefixes)
+            ):
+                right = f"{prefix_type} {right}"
+                break
     return left, right
 
 
@@ -155,8 +243,9 @@ def comparison_metric(text: str) -> ComparisonMetric | None:
     normalized = " ".join(normalize_vietnamese(text).split())
     if re.search(
         r"\b(?:so sanh (?:theo )?gia|compare (?:by )?price|compare prices?|"
-        r"re hon|it tien hon|gia thap hon|chenh nhau|price difference|difference between|"
-        r"cheaper|cheapest|lower price|"
+        r"re hon|it tien hon|gia thap hon|loi hon|tiet kiem hon|kinh te hon|"
+        r"chenh nhau|price difference|difference between|"
+        r"cheaper|cheapest|lower price|better value|more economical|"
         r"cost less|less expensive)\b",
         normalized,
     ):

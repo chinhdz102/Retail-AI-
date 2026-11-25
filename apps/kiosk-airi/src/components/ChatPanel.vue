@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import {
   PhArrowClockwise as ArrowClockwise,
   PhArrowUp as ArrowUp,
   PhBarcode as Barcode,
+  PhBellRinging as BellRinging,
+  PhCamera as Camera,
   PhCaretRight as CaretRight,
+  PhImage as ImageIcon,
   PhMicrophone as Microphone,
   PhPause as Pause,
   PhPlus as Plus,
@@ -13,10 +16,16 @@ import {
   PhSparkle as Sparkle,
   PhStop as Stop,
   PhTrash as Trash,
-  PhTranslate as Translate,
   PhWaveform as Waveform,
+  PhX as CloseIcon,
 } from '@phosphor-icons/vue'
 
+import {
+  formatKilobytes,
+  isVideoBlob,
+  preprocessProductMedia,
+  type PreprocessedMedia,
+} from '../media-preprocess'
 import type {
   AssistantStatus,
   ChatMessage,
@@ -25,6 +34,7 @@ import type {
   ProductCard,
   SandboxOrder,
   ShoppingCart,
+  SupportTicket,
 } from '../types'
 
 const props = defineProps<{
@@ -44,9 +54,26 @@ const props = defineProps<{
   microphoneDevices?: Array<{ id: string; label: string }>
   selectedMicrophone?: string
   activeMicrophone?: string
+  cameraTriggerToken?: number
+  managerNotifyChannel?: 'zalo' | 'messenger' | 'gmail' | null
 }>()
 
 const conversation = ref<HTMLElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const nativeCameraInput = ref<HTMLInputElement | null>(null)
+const cameraVideo = ref<HTMLVideoElement | null>(null)
+const pendingImageFile = ref<Blob | null>(null)
+const pendingImagePreview = ref<string | null>(null)
+const pendingMediaInfo = ref<PreprocessedMedia | null>(null)
+const isProcessingMedia = ref(false)
+const mediaProcessError = ref<string | null>(null)
+const isCameraOpen = ref(false)
+const cameraError = ref<string | null>(null)
+const isCameraStarting = ref(false)
+const activeProductModal = ref<ProductCard | null>(null)
+const brokenImageIds = ref<Record<string, boolean>>({})
+let cameraStream: MediaStream | null = null
+
 watch(() => [props.messages.length, props.status], async () => {
   await nextTick()
   if (conversation.value) conversation.value.scrollTop = conversation.value.scrollHeight
@@ -55,10 +82,10 @@ watch(() => [props.messages.length, props.status], async () => {
 const emit = defineEmits<{
   'update:draft': [value: string]
   send: []
+  'send-image': [payload: { file: Blob; previewUrl: string; message: string }]
   'quick-prompt': [value: string]
   'toggle-recording': []
   'stop-speaking': []
-  'change-language': [value: LanguageCode]
   'change-microphone': [deviceId: string]
   retry: []
   'add-product': [productId: string]
@@ -71,12 +98,6 @@ const emit = defineEmits<{
   'end-session': []
   'request-support': []
 }>()
-
-const languageOptions: Array<{ code: LanguageCode; short: string; label: string }> = [
-  { code: 'vi', short: 'VN', label: 'Tiếng Việt' },
-  { code: 'en', short: 'EN', label: 'English' },
-  { code: 'zh', short: '中', label: '中文' },
-]
 
 const copy = computed(() => {
   if (props.language === 'en') {
@@ -96,15 +117,15 @@ const copy = computed(() => {
       micStart: 'Start speaking',
       micStop: 'Stop recording',
       voiceStop: 'Stop listening',
-      stopSpeaking: 'Stop Sky speaking',
+      stopSpeaking: 'Stop Mai speaking',
       languageLabel: 'Conversation language',
-      sectionLabel: 'Conversation with Sky',
+      sectionLabel: 'Conversation with Mai',
       microphone: 'Input microphone',
       defaultMicrophone: 'Default microphone',
       activeMicrophone: 'Currently capturing from',
       microphoneAriaLabel: 'Choose an input microphone',
       microphoneLevel: 'Microphone signal level',
-      inputLabel: 'Type a question for Sky',
+      inputLabel: 'Type a question for Mai',
       quickPromptsLabel: 'Suggested questions',
       sendLabel: 'Send question',
     }
@@ -126,21 +147,21 @@ const copy = computed(() => {
       micStart: '开始说话',
       micStop: '停止录音',
       voiceStop: '停止聆听',
-      stopSpeaking: '停止 Sky 朗读',
+      stopSpeaking: '停止 Mai 朗读',
       languageLabel: '对话语言',
-      sectionLabel: '与 Sky 对话',
+      sectionLabel: '与 Mai 对话',
       microphone: '输入麦克风',
       defaultMicrophone: '默认麦克风',
       activeMicrophone: '当前正在使用',
       microphoneAriaLabel: '选择输入麦克风',
       microphoneLevel: '麦克风信号强度',
-      inputLabel: '输入问题给 Sky',
+      inputLabel: '输入问题给 Mai',
       quickPromptsLabel: '推荐问题',
       sendLabel: '发送问题',
     }
   }
   return {
-    eyebrow: 'Hội thoại rảnh tay',
+    eyebrow: 'Cùng Mai mua sắm',
     title: 'Mình cùng nói chuyện nhé',
     emptyTitle: 'Bạn muốn tìm gì hôm nay?',
     emptyBody: 'Nói tự nhiên hoặc nhập câu hỏi. Mình chỉ dùng thông tin cửa hàng đã xác minh.',
@@ -148,22 +169,22 @@ const copy = computed(() => {
     thinking: 'Mình đang tìm câu trả lời',
     transcribing: 'Mình đang nghe lại câu nói của bạn',
     errorTitle: 'Chưa kết nối được trợ lý',
-    placeholder: 'Ví dụ: Coca Zero giá bao nhiêu?',
+    placeholder: 'Hỏi Mai về sản phẩm bạn cần…',
     hint: 'Enter để gửi',
     hintSecond: 'Shift + Enter để xuống dòng',
     retry: 'Thử lại',
     micStart: 'Bắt đầu nói',
     micStop: 'Dừng ghi âm',
     voiceStop: 'Dừng nghe',
-    stopSpeaking: 'Dừng Sky nói',
+    stopSpeaking: 'Dừng Mai nói',
     languageLabel: 'Ngôn ngữ hội thoại',
-    sectionLabel: 'Trò chuyện với Sky',
+    sectionLabel: 'Trò chuyện với Mai',
     microphone: 'Micro đầu vào',
     defaultMicrophone: 'Micro mặc định',
     activeMicrophone: 'Đang thu từ',
     microphoneAriaLabel: 'Chọn micro đầu vào',
     microphoneLevel: 'Mức tín hiệu micro',
-    inputLabel: 'Nhập câu hỏi cho Sky',
+    inputLabel: 'Nhập câu hỏi cho Mai',
     quickPromptsLabel: 'Câu hỏi gợi ý',
     sendLabel: 'Gửi câu hỏi',
   }
@@ -238,6 +259,50 @@ const shoppingText = computed(() => {
 const visibleCart = computed(() => props.checkoutQuote?.cart ?? props.cart ?? null)
 const visibleOrder = computed(() => props.order ?? null)
 
+function channelDisplayName(channel: 'zalo' | 'messenger' | 'gmail' | null | undefined) {
+  if (channel === 'zalo') return 'Zalo'
+  if (channel === 'messenger') return 'Messenger'
+  if (channel === 'gmail') return 'Gmail'
+  return ''
+}
+
+const supportButtonLabel = computed(() => {
+  const ch = channelDisplayName(props.managerNotifyChannel)
+  if (!ch) return shoppingText.value.support
+  if (props.language === 'en') return `Call manager · ${ch}`
+  if (props.language === 'zh') return `联系店长 · ${ch}`
+  return `Gọi quản lý · ${ch}`
+})
+
+function supportTicketTitle(ticket: SupportTicket) {
+  if (ticket.notification_status === 'DELIVERED' && ticket.notified_channel) {
+    const ch = channelDisplayName(ticket.notified_channel)
+    if (props.language === 'en') return `Manager alerted via ${ch}`
+    if (props.language === 'zh') return `已通过 ${ch} 通知店长`
+    return `Đã gửi tin báo quản lý qua ${ch}`
+  }
+  if (ticket.notification_status === 'FAILED') {
+    if (props.language === 'en') return 'Automatic alert could not be sent'
+    if (props.language === 'zh') return '自动通知发送失败'
+    return 'Chưa gửi được tin nhắn tự động'
+  }
+  return shoppingText.value.ticketLabel
+}
+
+function supportTicketSubnote(ticket: SupportTicket) {
+  if (ticket.notification_status === 'DELIVERED') {
+    if (props.language === 'en') return 'The store manager has received your request.'
+    if (props.language === 'zh') return '店长已收到您的求助通知，请稍候。'
+    return 'Quản lý đã nhận được thông báo và sẽ ra hỗ trợ bạn sớm nhất.'
+  }
+  if (ticket.notification_status === 'FAILED') {
+    if (props.language === 'en') return 'Please ask a store associate at the counter.'
+    if (props.language === 'zh') return '请直接联系柜台店员。'
+    return 'Bạn vui lòng nhờ nhân viên tại quầy hỗ trợ trực tiếp nhé.'
+  }
+  return ticket.demo ? shoppingText.value.ticketDemo : ''
+}
+
 function formatVnd(amount: number) {
   return new Intl.NumberFormat(props.language === 'en' ? 'en-US' : 'vi-VN', {
     maximumFractionDigits: 0,
@@ -276,6 +341,7 @@ const quickPrompts = computed(() => {
       { label: 'Coca Zero price', icon: Barcode },
       { label: 'Recommend a non-spicy snack', icon: Sparkle },
       { label: 'Where is milk?', icon: CaretRight },
+      { label: 'Call the manager please', icon: BellRinging },
     ]
   }
   if (props.language === 'zh') {
@@ -283,19 +349,287 @@ const quickPrompts = computed(() => {
       { label: 'Coca Zero 价格', icon: Barcode },
       { label: '推荐不辣的零食', icon: Sparkle },
       { label: '牛奶在哪？', icon: CaretRight },
+      { label: '请帮我找店长', icon: BellRinging },
     ]
   }
   return [
     { label: 'Giá Coca Zero', icon: Barcode },
     { label: 'Gợi ý snack không cay', icon: Sparkle },
     { label: 'Sữa ở kệ nào?', icon: CaretRight },
+    { label: 'Gọi quản lý giúp mình', icon: BellRinging },
   ]
+})
+
+function clearPendingImage(revoke = true) {
+  if (revoke && pendingImagePreview.value) {
+    try {
+      URL.revokeObjectURL(pendingImagePreview.value)
+    } catch {
+      // Ignore revoke issues in test environments.
+    }
+  }
+  pendingImageFile.value = null
+  pendingImagePreview.value = null
+  pendingMediaInfo.value = null
+  mediaProcessError.value = null
+}
+
+function attachImageBlob(blob: Blob, info?: PreprocessedMedia) {
+  clearPendingImage(true)
+  pendingImageFile.value = blob
+  pendingMediaInfo.value = info ?? null
+  if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+    pendingImagePreview.value = URL.createObjectURL(blob)
+  } else {
+    pendingImagePreview.value = ''
+  }
+}
+
+const pendingMediaTitle = computed(() => {
+  const info = pendingMediaInfo.value
+  if (info?.sourceKind === 'video') {
+    return `Đã trích khung hình rõ nhất từ video (${formatKilobytes(info.finalBytes)})`
+  }
+  if (info?.finalBytes) {
+    return `Ảnh sản phẩm đã tối ưu (${formatKilobytes(info.finalBytes)})`
+  }
+  return 'Ảnh sản phẩm đã sẵn sàng'
+})
+
+const pendingMediaHint = computed(() => {
+  const info = pendingMediaInfo.value
+  if (info?.sourceKind === 'video') {
+    return `Chọn tự động từ ${info.framesSampled} khung hình (${formatKilobytes(info.originalBytes)} → ${formatKilobytes(info.finalBytes)} · ${info.elapsedMs} ms)`
+  }
+  return 'Gõ câu hỏi thêm hoặc bấm Gửi để Mai nhận diện ngay'
+})
+
+function stopCameraStream() {
+  if (cameraStream) {
+    for (const track of cameraStream.getTracks()) {
+      try {
+        track.stop()
+      } catch {
+        // Ignore stop error.
+      }
+    }
+    cameraStream = null
+  }
+  if (cameraVideo.value) {
+    cameraVideo.value.srcObject = null
+  }
+}
+
+function closeCameraModal() {
+  stopCameraStream()
+  isCameraOpen.value = false
+  isCameraStarting.value = false
+  cameraError.value = null
+}
+
+async function openCameraModal() {
+  cameraError.value = null
+  isCameraOpen.value = true
+  const getUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices)
+  if (!getUserMedia) {
+    cameraError.value = 'Trình duyệt không hỗ trợ mở camera trực tiếp. Bạn chọn ảnh có sẵn từ máy bên dưới nhé.'
+    return
+  }
+  isCameraStarting.value = true
+  try {
+    let stream: MediaStream
+    try {
+      stream = await getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+        audio: false,
+      })
+    } catch {
+      stream = await getUserMedia({ video: true, audio: false })
+    }
+    if (!isCameraOpen.value) {
+      stream.getTracks().forEach((t) => t.stop())
+      return
+    }
+    cameraStream = stream
+    await nextTick()
+    if (cameraVideo.value) {
+      cameraVideo.value.srcObject = stream
+      await cameraVideo.value.play().catch(() => {})
+    }
+  } catch {
+    cameraError.value = 'Chưa mở được camera (chưa cấp quyền hoặc không có camera). Bạn chọn ảnh từ thiết bị bên dưới nhé.'
+  } finally {
+    isCameraStarting.value = false
+  }
+}
+
+async function attachProcessedMedia(file: Blob) {
+  mediaProcessError.value = null
+  isProcessingMedia.value = true
+  try {
+    const processed = await preprocessProductMedia(file)
+    attachImageBlob(processed.blob, processed)
+  } catch (error) {
+    if (isVideoBlob(file) && file.size <= 4 * 1024 * 1024) {
+      // Browser could not decode codec client-side; send compact video to backend PyAV fallback.
+      attachImageBlob(file, {
+        blob: file,
+        sourceKind: 'video',
+        originalBytes: file.size,
+        finalBytes: file.size,
+        width: 0,
+        height: 0,
+        elapsedMs: 0,
+        framesSampled: 1,
+      })
+    } else {
+      mediaProcessError.value = error instanceof Error
+        ? error.message
+        : 'Chưa đọc được ảnh/video này. Bạn thử chọn ảnh rõ hơn hoặc video MP4 ngắn nhé.'
+    }
+  } finally {
+    isProcessingMedia.value = false
+  }
+}
+
+async function captureCameraFrame() {
+  const video = cameraVideo.value
+  if (!video || !video.videoWidth || !video.videoHeight) return
+  const started = typeof performance !== 'undefined' ? performance.now() : Date.now()
+  const canvas = document.createElement('canvas')
+  const maxSide = 640
+  const scale = Math.min(1, maxSide / Math.max(video.videoWidth, video.videoHeight))
+  canvas.width = Math.max(1, Math.round(video.videoWidth * scale))
+  canvas.height = Math.max(1, Math.round(video.videoHeight * scale))
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.78))
+  if (blob) {
+    const elapsedMs = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - started)
+    attachImageBlob(blob, {
+      blob,
+      sourceKind: 'image',
+      originalBytes: blob.size,
+      finalBytes: blob.size,
+      width: canvas.width,
+      height: canvas.height,
+      elapsedMs,
+      framesSampled: 1,
+    })
+    closeCameraModal()
+  }
+}
+
+function triggerFilePicker() {
+  fileInput.value?.click()
+}
+
+function triggerNativeCamera() {
+  nativeCameraInput.value?.click()
+}
+
+async function onFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  closeCameraModal()
+  await attachProcessedMedia(file)
+}
+
+function onComposerPaste(event: ClipboardEvent) {
+  const items = event.clipboardData?.items
+  if (!items) return
+  for (const item of items) {
+    if (item.type.startsWith('image/') || item.type.startsWith('video/')) {
+      const file = item.getAsFile()
+      if (file) {
+        event.preventDefault()
+        void attachProcessedMedia(file)
+        return
+      }
+    }
+  }
+}
+
+function submitComposer() {
+  if (pendingImageFile.value) {
+    const file = pendingImageFile.value
+    const previewUrl = pendingImagePreview.value ?? ''
+    const message = props.draft.trim()
+    clearPendingImage(false)
+    emit('send-image', { file, previewUrl, message })
+    return
+  }
+  emit('send')
+}
+
+function formatProductName(name: string) {
+  return name.replace(/\s+/g, ' ').trim()
+}
+
+function hasValidProductImage(product: ProductCard) {
+  return Boolean(product.image_url && !brokenImageIds.value[product.product_id])
+}
+
+function onProductImageError(productId: string) {
+  brokenImageIds.value = { ...brokenImageIds.value, [productId]: true }
+}
+
+function openProductModal(product: ProductCard) {
+  activeProductModal.value = product
+}
+
+function closeProductModal() {
+  activeProductModal.value = null
+}
+
+function askProductIngredients(product: ProductCard) {
+  const cleanName = formatProductName(product.name)
+  closeProductModal()
+  const prompt = props.language === 'en'
+    ? `What are the main ingredients of ${cleanName}?`
+    : props.language === 'zh'
+      ? `${cleanName} 的主要成分是什么？`
+      : `Thành phần chính của ${cleanName} là gì?`
+  emit('quick-prompt', prompt)
+}
+
+function onWindowKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && activeProductModal.value) {
+    event.preventDefault()
+    closeProductModal()
+  }
+}
+
+watch(activeProductModal, (current) => {
+  if (typeof window === 'undefined') return
+  if (current) {
+    window.addEventListener('keydown', onWindowKeydown)
+  } else {
+    window.removeEventListener('keydown', onWindowKeydown)
+  }
+})
+
+watch(() => props.cameraTriggerToken, (token) => {
+  if (token && token > 0) {
+    void openCameraModal()
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onWindowKeydown)
+  }
+  stopCameraStream()
+  clearPendingImage(true)
 })
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault()
-    emit('send')
+    submitComposer()
   }
 }
 </script>
@@ -314,26 +648,12 @@ function onKeydown(event: KeyboardEvent) {
           <Waveform :size="17" weight="duotone" aria-hidden="true" />
           <span>{{ isHandsFree ? 'AUTO' : 'MIC' }}</span>
         </div>
-        <div class="language-picker" role="group" :aria-label="copy.languageLabel">
-          <Translate :size="16" weight="duotone" aria-hidden="true" />
-          <button
-            v-for="option in languageOptions"
-            :key="option.code"
-            type="button"
-            class="language-option"
-            :class="{ selected: language === option.code }"
-            :aria-pressed="language === option.code"
-            :aria-label="option.label"
-            @click="emit('change-language', option.code)"
-          >
-            {{ option.short }}
-          </button>
-        </div>
+        <span class="voice-mode-chip" lang="vi">Tiếng Việt</span>
         <button type="button" class="end-session-button" @click="emit('end-session')">
           {{ shoppingText.end }}
         </button>
         <button type="button" class="support-request-button" @click="emit('request-support')">
-          {{ shoppingText.support }}
+          {{ supportButtonLabel }}
         </button>
       </div>
       <label v-if="microphoneDevices?.length" class="microphone-picker">
@@ -360,18 +680,30 @@ function onKeydown(event: KeyboardEvent) {
         :class="`message-${message.role}`"
       >
         <div class="message-meta">
-          <span class="message-author">{{ message.role === 'assistant' ? 'Sky' : copy.user }}</span>
-          <span v-if="message.model" class="message-model">{{ message.model }}</span>
+          <span class="message-author">{{ message.role === 'assistant' ? 'Mai' : copy.user }}</span>
         </div>
+        <img
+          v-if="message.imagePreviewUrl"
+          :src="message.imagePreviewUrl"
+          class="message-image-preview"
+          alt="Ảnh sản phẩm đã gửi"
+        />
         <p v-if="message.text" class="message-bubble">{{ message.text }}</p>
         <div v-else-if="message.role === 'assistant' && status === 'thinking'" class="message-bubble typing-bubble" role="status">
           <span>{{ copy.thinking }}</span>
           <span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
         </div>
-        <div v-if="message.supportTicket" class="support-ticket-card" role="status">
-          <strong>{{ shoppingText.ticketLabel }}</strong>
-          <span>{{ message.supportTicket.ticket_id }} · {{ message.supportTicket.status }}</span>
-          <small>{{ message.supportTicket.demo ? shoppingText.ticketDemo : '' }}</small>
+        <div
+          v-if="message.supportTicket"
+          class="support-ticket-card"
+          :class="{
+            'is-delivered': message.supportTicket.notification_status === 'DELIVERED',
+            'is-failed': message.supportTicket.notification_status === 'FAILED',
+          }"
+          role="status"
+        >
+          <strong>{{ supportTicketTitle(message.supportTicket) }}</strong>
+          <small>{{ supportTicketSubnote(message.supportTicket) }}</small>
         </div>
         <section v-if="message.shoppingPlan" class="shopping-plan-card" :aria-label="language === 'en' ? 'Suggested shopping plan' : language === 'zh' ? '购物方案建议' : 'Phương án mua sắm gợi ý'">
           <article v-for="option in message.shoppingPlan.options" :key="option.option_id" class="shopping-plan-option">
@@ -409,22 +741,110 @@ function onKeydown(event: KeyboardEvent) {
           </small>
         </section>
         <div v-if="message.products?.length && !message.shoppingPlan" class="message-product-list">
-          <article v-for="product in message.products" :key="product.product_id" class="message-product-card">
-            <div class="message-product-copy">
-              <strong>{{ product.name }}</strong>
-              <span>{{ productPriceLabel(product) }} · {{ productStockLabel(product) }}</span>
-              <small class="product-provenance">{{ productProvenance(product) }}</small>
+          <article
+            v-for="product in message.products"
+            :key="product.product_id"
+            class="message-product-card is-clickable"
+            role="button"
+            tabindex="0"
+            :aria-label="`${language === 'en' ? 'View photo of' : language === 'zh' ? '查看商品图片' : 'Xem ảnh sản phẩm'} ${formatProductName(product.name)}`"
+            @click="openProductModal(product)"
+            @keydown.enter.self="openProductModal(product)"
+            @keydown.space.self.prevent="openProductModal(product)"
+          >
+            <div class="product-card-thumb" aria-hidden="true">
+              <img
+                v-if="hasValidProductImage(product)"
+                :src="product.image_url!"
+                :alt="formatProductName(product.name)"
+                loading="lazy"
+                decoding="async"
+                @error="onProductImageError(product.product_id)"
+              />
+              <ImageIcon v-else :size="20" weight="duotone" />
             </div>
-            <button v-if="product.data_source === 'demo_product_catalog'" type="button" class="small-action-button" @click="emit('add-product', product.product_id)">
+            <div class="message-product-copy">
+              <strong>{{ formatProductName(product.name) }}</strong>
+              <small v-if="product.sales_data_source === 'SIMULATED'" class="product-provenance">
+                {{ language === 'en' ? 'Demo sales' : language === 'zh' ? '演示销量' : 'Đã bán (demo)' }}:
+                {{ product.demo_units_sold_30d }} / 30 {{ language === 'en' ? 'days' : language === 'zh' ? '天' : 'ngày' }}
+              </small>
+              <span>{{ productPriceLabel(product) }}<template v-if="product.stock_is_current !== false"> · {{ productStockLabel(product) }}</template></span>
+              <details class="product-provenance" @click.stop>
+                <summary>{{ language === 'en' ? 'Price and availability' : language === 'zh' ? '价格与库存说明' : 'Thông tin giá và hàng' }}</summary>
+                <small v-if="product.stock_is_current === false">{{ productStockLabel(product) }}</small>
+                <small>{{ productProvenance(product) }}</small>
+              </details>
+            </div>
+            <button v-if="product.data_source === 'demo_product_catalog'" type="button" class="small-action-button" @click.stop="emit('add-product', product.product_id)">
               <ShoppingCartIcon :size="16" weight="duotone" aria-hidden="true" />
               {{ shoppingText.add }}
             </button>
+            <span v-else class="product-card-view-hint" aria-hidden="true">
+              <CaretRight :size="15" weight="bold" />
+            </span>
           </article>
+        </div>
+        <div v-if="message.relatedProducts?.length && !message.shoppingPlan" class="message-related-products">
+          <div class="related-products-heading">
+            {{
+              language === 'en'
+                ? 'Other matching items in catalog'
+                : language === 'zh'
+                  ? '目录中其他同类商品'
+                  : 'Sản phẩm cùng loại khác trong catalog'
+            }}
+          </div>
+          <div class="message-product-list related-product-list">
+            <article
+              v-for="product in message.relatedProducts"
+              :key="product.product_id"
+              class="message-product-card related-product-card is-clickable"
+              role="button"
+              tabindex="0"
+              :aria-label="`${language === 'en' ? 'View photo of' : language === 'zh' ? '查看商品图片' : 'Xem ảnh sản phẩm'} ${formatProductName(product.name)}`"
+              @click="openProductModal(product)"
+              @keydown.enter.self="openProductModal(product)"
+              @keydown.space.self.prevent="openProductModal(product)"
+            >
+              <div class="product-card-thumb" aria-hidden="true">
+                <img
+                  v-if="hasValidProductImage(product)"
+                  :src="product.image_url!"
+                  :alt="formatProductName(product.name)"
+                  loading="lazy"
+                  decoding="async"
+                  @error="onProductImageError(product.product_id)"
+                />
+                <ImageIcon v-else :size="18" weight="duotone" />
+              </div>
+              <div class="message-product-copy">
+                <strong>{{ formatProductName(product.name) }}</strong>
+                <small v-if="product.sales_data_source === 'SIMULATED'" class="product-provenance">
+                  {{ language === 'en' ? 'Demo sales' : language === 'zh' ? '演示销量' : 'Đã bán (demo)' }}:
+                  {{ product.demo_units_sold_30d }} / 30 {{ language === 'en' ? 'days' : language === 'zh' ? '天' : 'ngày' }}
+                </small>
+                <span>{{ productPriceLabel(product) }}<template v-if="product.stock_is_current !== false"> · {{ productStockLabel(product) }}</template></span>
+                <details class="product-provenance" @click.stop>
+                  <summary>{{ language === 'en' ? 'Price and availability' : language === 'zh' ? '价格与库存说明' : 'Thông tin giá và hàng' }}</summary>
+                  <small v-if="product.stock_is_current === false">{{ productStockLabel(product) }}</small>
+                  <small>{{ productProvenance(product) }}</small>
+                </details>
+              </div>
+              <button v-if="product.data_source === 'demo_product_catalog'" type="button" class="small-action-button" @click.stop="emit('add-product', product.product_id)">
+                <ShoppingCartIcon :size="16" weight="duotone" aria-hidden="true" />
+                {{ shoppingText.add }}
+              </button>
+              <span v-else class="product-card-view-hint" aria-hidden="true">
+                <CaretRight :size="15" weight="bold" />
+              </span>
+            </article>
+          </div>
         </div>
       </article>
 
       <div v-if="status === 'transcribing' || (status === 'thinking' && messages[messages.length - 1]?.role !== 'assistant')" class="message-row message-assistant">
-        <div class="message-meta"><span class="message-author">Sky</span></div>
+        <div class="message-meta"><span class="message-author">Mai</span></div>
         <div class="message-bubble typing-bubble" role="status">
           <span>{{ status === 'transcribing' ? copy.transcribing : copy.thinking }}</span>
           <span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -536,16 +956,80 @@ function onKeydown(event: KeyboardEvent) {
       </button>
     </div>
 
-    <form class="composer" @submit.prevent="emit('send')">
+    <div v-if="isProcessingMedia" class="composer-attachment" role="status">
+      <div class="composer-attachment-copy">
+        <strong>Đang xử lý ảnh / trích khung hình rõ nhất từ video...</strong>
+        <span>Đang tối ưu nhẹ ngay trên máy (~30 KB) để gửi cực nhanh</span>
+      </div>
+    </div>
+
+    <div v-else-if="mediaProcessError" class="chat-error" role="alert">
+      <div>
+        <strong>Chưa xử lý được tệp</strong>
+        <span>{{ mediaProcessError }}</span>
+      </div>
+    </div>
+
+    <div v-if="pendingImageFile" class="composer-attachment" role="status">
+      <img
+        v-if="pendingImagePreview && !isVideoBlob(pendingImageFile)"
+        :src="pendingImagePreview"
+        class="composer-attachment-thumb"
+        alt="Xem trước ảnh sản phẩm"
+      />
+      <div class="composer-attachment-copy">
+        <strong>{{ pendingMediaTitle }}</strong>
+        <span>{{ pendingMediaHint }}</span>
+      </div>
+      <button
+        type="button"
+        class="composer-attachment-remove"
+        aria-label="Xóa ảnh đính kèm"
+        @click="clearPendingImage(true)"
+      >
+        <CloseIcon :size="16" weight="bold" aria-hidden="true" />
+      </button>
+    </div>
+
+    <input
+      ref="fileInput"
+      type="file"
+      accept="image/*,video/*"
+      class="sr-only"
+      aria-label="Chọn ảnh hoặc video sản phẩm từ thiết bị"
+      @change="onFileSelected"
+    />
+    <input
+      ref="nativeCameraInput"
+      type="file"
+      accept="image/*"
+      capture="environment"
+      class="sr-only"
+      aria-label="Chụp ảnh trực tiếp bằng camera điện thoại"
+      @change="onFileSelected"
+    />
+
+    <form class="composer" @submit.prevent="submitComposer">
+      <button
+        type="button"
+        class="camera-button"
+        :class="{ 'has-image': Boolean(pendingImageFile) }"
+        aria-label="Chụp hoặc chọn ảnh sản phẩm"
+        :disabled="status === 'thinking' || status === 'transcribing'"
+        @click="openCameraModal"
+      >
+        <Camera :size="21" weight="duotone" aria-hidden="true" />
+      </button>
       <label class="sr-only" for="assistant-input">{{ copy.inputLabel }}</label>
       <textarea
         id="assistant-input"
         :value="draft"
         rows="1"
         maxlength="2000"
-        :placeholder="copy.placeholder"
+        :placeholder="pendingImageFile ? 'Hỏi về ảnh này (hoặc bấm Gửi luôn)...' : copy.placeholder"
         @input="emit('update:draft', ($event.target as HTMLTextAreaElement).value)"
         @keydown="onKeydown"
+        @paste="onComposerPaste"
       ></textarea>
       <div class="composer-actions">
         <button
@@ -572,12 +1056,141 @@ function onKeydown(event: KeyboardEvent) {
           type="submit"
           class="send-button"
           :aria-label="copy.sendLabel"
-          :disabled="!draft.trim() || status === 'thinking' || status === 'transcribing'"
+          :disabled="(!draft.trim() && !pendingImageFile) || status === 'thinking' || status === 'transcribing'"
         >
           <ArrowUp :size="20" weight="bold" aria-hidden="true" />
         </button>
       </div>
     </form>
     <p class="composer-hint">{{ copy.hint }} <span>•</span> {{ copy.hintSecond }}</p>
+
+    <div v-if="isCameraOpen" class="camera-modal" role="dialog" aria-modal="true" aria-label="Chụp ảnh sản phẩm">
+      <div class="camera-modal-card">
+        <header class="camera-modal-header">
+          <div>
+            <strong>Quét &amp; nhận diện sản phẩm</strong>
+            <span>Đưa mặt trước bao bì rõ chữ vào khung hình</span>
+          </div>
+          <button type="button" class="camera-modal-close" aria-label="Đóng camera" @click="closeCameraModal">
+            <CloseIcon :size="18" weight="bold" aria-hidden="true" />
+          </button>
+        </header>
+
+        <div class="camera-viewfinder">
+          <video v-show="!cameraError" ref="cameraVideo" autoplay playsinline muted class="camera-video"></video>
+          <div v-if="!cameraError" class="camera-reticle" aria-hidden="true"></div>
+          <div v-if="isCameraStarting" class="camera-status-overlay">Đang mở camera...</div>
+          <div v-if="cameraError" class="camera-error-box">
+            <ImageIcon :size="32" weight="duotone" aria-hidden="true" />
+            <p>{{ cameraError }}</p>
+          </div>
+        </div>
+
+        <footer class="camera-modal-actions">
+          <button type="button" class="camera-gallery-btn" @click="triggerFilePicker">
+            <ImageIcon :size="18" weight="duotone" aria-hidden="true" />
+            <span>Chọn ảnh / video</span>
+          </button>
+          <button
+            v-if="!cameraError"
+            type="button"
+            class="camera-shutter-btn"
+            :disabled="isCameraStarting"
+            @click="captureCameraFrame"
+          >
+            <Camera :size="20" weight="fill" aria-hidden="true" />
+            <span>Chụp ảnh</span>
+          </button>
+          <button
+            v-else
+            type="button"
+            class="camera-shutter-btn"
+            @click="triggerNativeCamera"
+          >
+            <Camera :size="20" weight="fill" aria-hidden="true" />
+            <span>Camera máy</span>
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <Teleport to="body">
+      <div
+        v-if="activeProductModal"
+        class="product-modal"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="formatProductName(activeProductModal.name)"
+        @click.self="closeProductModal"
+      >
+        <div class="product-modal-card">
+          <header class="product-modal-header">
+            <div class="product-modal-badges">
+              <span v-if="activeProductModal.brand" class="product-modal-chip">{{ activeProductModal.brand }}</span>
+              <span v-if="activeProductModal.category" class="product-modal-chip is-muted">{{ activeProductModal.category }}</span>
+            </div>
+            <button
+              type="button"
+              class="product-modal-close"
+              :aria-label="language === 'en' ? 'Close product photo' : language === 'zh' ? '关闭商品图片' : 'Đóng ảnh sản phẩm'"
+              @click="closeProductModal"
+            >
+              <CloseIcon :size="18" weight="bold" aria-hidden="true" />
+            </button>
+          </header>
+
+          <div class="product-modal-media">
+            <img
+              v-if="hasValidProductImage(activeProductModal)"
+              :src="activeProductModal.image_url!"
+              :alt="formatProductName(activeProductModal.name)"
+              class="product-modal-image"
+              @error="onProductImageError(activeProductModal.product_id)"
+            />
+            <div v-else class="product-modal-placeholder">
+              <ImageIcon :size="44" weight="duotone" aria-hidden="true" />
+              <span>{{ language === 'en' ? 'Product photo is not available in catalog' : language === 'zh' ? '目录暂无该商品图片' : 'Sản phẩm chưa có ảnh trong catalog' }}</span>
+            </div>
+          </div>
+
+          <div class="product-modal-body">
+            <h2 class="product-modal-title">{{ formatProductName(activeProductModal.name) }}</h2>
+            <div class="product-modal-pricing">
+              <strong class="product-modal-price">{{ formatVnd(activeProductModal.price_vnd) }}</strong>
+              <span v-if="activeProductModal.list_price_vnd && activeProductModal.list_price_vnd > activeProductModal.price_vnd" class="product-modal-list-price">
+                {{ formatVnd(activeProductModal.list_price_vnd) }}
+              </span>
+              <span v-if="activeProductModal.uom" class="product-modal-uom">/ {{ activeProductModal.uom }}</span>
+            </div>
+            <p v-if="activeProductModal.promotion" class="product-modal-promo">{{ activeProductModal.promotion }}</p>
+            <div class="product-modal-meta">
+              <span v-if="activeProductModal.sales_data_source === 'SIMULATED'">
+                {{ language === 'en' ? 'Demo sales' : language === 'zh' ? '演示销量' : 'Đã bán (demo)' }}:
+                {{ activeProductModal.demo_units_sold_30d }} / 30 {{ language === 'en' ? 'days' : language === 'zh' ? '天' : 'ngày' }}
+              </span>
+              <span>{{ productProvenance(activeProductModal) }}</span>
+            </div>
+          </div>
+
+          <footer class="product-modal-actions">
+            <button
+              type="button"
+              class="product-modal-ask-btn"
+              @click="askProductIngredients(activeProductModal)"
+            >
+              <Sparkle :size="17" weight="duotone" aria-hidden="true" />
+              <span>{{ language === 'en' ? 'Ask ingredients' : language === 'zh' ? '查看成分' : 'Hỏi thành phần' }}</span>
+            </button>
+            <button
+              type="button"
+              class="product-modal-dismiss-btn"
+              @click="closeProductModal"
+            >
+              {{ language === 'en' ? 'Close' : language === 'zh' ? '关闭' : 'Đóng' }}
+            </button>
+          </footer>
+        </div>
+      </div>
+    </Teleport>
   </section>
 </template>

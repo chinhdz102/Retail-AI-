@@ -23,6 +23,22 @@ catalog does not contain loyalty rules, return policies, store hours, sales rank
 taste ratings or interaction analytics. Sky states that those facts are unverified and
 suggests asking store staff instead of guessing.
 
+For local demonstrations, `DEMO_SALES_ENABLED=true` with `APP_ENV=development` enables
+deterministic simulated 30-day sales counts. Replies and product cards label these as
+simulated; no orders or production sales records are created. The flag is ignored in
+production. Run `uv run python -m scripts.evaluate_consultation_coverage` to check five
+query patterns across every catalog hierarchy path and multi-turn department changes.
+
+The new Vietnamese consultation policy is experimental and disabled by default.
+Its live review still finds unsuitable meal baskets and unsupported product benefits;
+see [the 35-question review](docs/reports/customer_consultation_35_review_20261101.md)
+and [research notes](docs/reports/customer_consultation_research_20261101.md).
+To try it locally, set `CUSTOMER_CONSULTATION_ENABLED=true` in the backend environment
+with `APP_ENV=development`, then restart Uvicorn. It requires a model key and remains
+disabled in production even if the flag is set. Existing checkout, pending selections
+and known-pair comparisons retain their controllers. Use `false` for the baseline;
+test-suite success does not establish conversational quality.
+
 ## Prerequisites
 
 - Python 3.13 (the current workspace provides it through `py`/`uv`);
@@ -61,18 +77,19 @@ npm --prefix apps/kiosk-airi install
 npm --prefix apps/kiosk-airi run dev
 ```
 
-Open `http://127.0.0.1:5173`. Sky waits in a ready state without adding a chat bubble or
+Open `http://127.0.0.1:5173`. Mai waits in a ready state without adding a chat bubble or
 requesting microphone access. Open the text panel to type a question or select a quick
 prompt. Voice capture starts only after the visitor clicks the microphone button.
 Silero VAD runs locally in the browser and sends only detected speech to Groq Whisper
 (`whisper-large-v3`, then `whisper-large-v3-turbo` on provider failure). It keeps a short
-pre-speech buffer, closes the microphone before agent/TTS playback, and rejects low-confidence
-Whisper outputs so silence does not become a customer message.
+pre-speech buffer, stops capture while uploading a segment, and keeps a separate monitor in
+hands-free mode so a real customer turn can interrupt TTS. Low-confidence and non-speech
+Whisper outputs are rejected so silence does not become a customer message.
 Cloud TTS streams through a short-lived, one-use URL;
 see [the voice pipeline notes](docs/voice-pipeline.md).
 If the browser blocks autoplay, click \`Bật âm thanh\` once; the same gesture unlocks the
 audio element and resumes the pending reply. The supplied \`sky.glb\` includes
-its own \`talk\` animation, which the kiosk uses directly while Sky is speaking. If the API
+its own \`talk\` animation, which the kiosk uses directly while Mai is speaking. If the API
 runs on another origin, copy
 `apps/kiosk-airi/.env.example` to `apps/kiosk-airi/.env` and set `VITE_API_BASE_URL`.
 
@@ -106,6 +123,19 @@ The Thanh Lam Mart PostgreSQL catalog is read-only for customer lookups. Develop
 isolated in-memory state; production selects the Redis session adapter and fails closed if
 Redis is unavailable. Cart and checkout are explicitly sandbox-only, use the demo catalog,
 and are not connected to a POS, persistent order database or payment provider.
+
+Snapshot searches cache up to 256 result pages per repository instance. The cache key
+includes the complete query, filters, ordering and pagination; callers receive a new
+list. Loading a new snapshot repository starts a new cache, so changed reference prices
+do not reuse pages from the previous catalog version.
+
+Catalog tools use a bounded worker pool: `CATALOG_TOOL_WORKERS` defaults to 8 and
+`CATALOG_TOOL_MAX_IN_FLIGHT` to 16 running or queued jobs per process. Cancelled or
+timed-out requests retain their slot until a running lookup actually finishes. All
+PostgreSQL catalog and branch-information reads use `POSTGRES_CONNECT_TIMEOUT_SECONDS`
+(default 2 seconds) and `POSTGRES_COMMAND_TIMEOUT_SECONDS` (default 2.5 seconds per
+database command and connection cleanup). These driver deadlines complement the
+agent's per-tool request deadlines.
 
 ## Agent tool loop
 

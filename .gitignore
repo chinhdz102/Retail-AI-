@@ -20,6 +20,11 @@ htmlcov/
 *.log
 .tmp/
 evaluation/results/
+data/demo_sales.sqlite3*
+data/models/
 
 # Generated local ONNX/VAD assets (copied from pinned npm packages)
 apps/kiosk-airi/public/vad/
+.vercel
+.env*
+.cache/

@@ -12,6 +12,15 @@ const apiMocks = vi.hoisted(() => ({
   transcribe: vi.fn(),
   createSynthesisTicket: vi.fn(),
   getCart: vi.fn().mockResolvedValue(null),
+  getManagerNotifierStatus: vi.fn().mockResolvedValue({
+    enabled: false,
+    store_name: 'Thanh Lam Mart',
+    primary_channel: null,
+    primary_provider: null,
+    priority: ['zalo_bot', 'zalo_oa', 'zalo_webhook', 'messenger', 'gmail'],
+    configured_providers: [],
+    channels: {},
+  }),
   addCartItem: vi.fn(),
   setCartItemQuantity: vi.fn(),
   prepareCheckout: vi.fn(),
@@ -84,7 +93,7 @@ describe('kiosk app', () => {
     const wrapper = mount(App)
 
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
-    await vi.waitFor(() => expect(wrapper.get('model-viewer')).toBeTruthy())
+    await vi.waitFor(() => expect(wrapper.get('section[aria-label="Avatar Mai"]')).toBeTruthy())
 
     expect(wrapper.find('.top-bar').exists()).toBe(false)
     expect(wrapper.find('.stage-features').exists()).toBe(false)
@@ -170,6 +179,53 @@ describe('kiosk app', () => {
     expect(apiMocks.createSession).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps rejected typed text editable after session expiry without replaying it', async () => {
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+    apiMocks.createSession.mockResolvedValueOnce({ session_id: 'old-session', expires_at: expiresAt })
+      .mockResolvedValueOnce({ session_id: 'new-session', expires_at: expiresAt })
+    apiMocks.respond.mockRejectedValueOnce(Object.assign(new Error('Session not found'), { status: 404 }))
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledOnce())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    const text = 'Chọn đồ rửa chén dưới 40 nghìn giúp mình'
+    await wrapper.get('#assistant-input').setValue(text)
+    await wrapper.get('form').trigger('submit')
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(wrapper.get<HTMLTextAreaElement>('#assistant-input').element.value).toBe(text))
+    expect(apiMocks.respond).toHaveBeenCalledOnce()
+    expect(wrapper.findAll('.message-row')).toHaveLength(0)
+    expect(wrapper.text()).toContain('giữ câu vừa nhập')
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'new-session', text: 'Mình tư vấn trong phiên mới.', model: 'test',
+      grounded_product_ids: [], state: 'BROWSING',
+    })
+    await wrapper.get('form').trigger('submit')
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledTimes(2))
+    expect(apiMocks.respond.mock.calls[1][0]).toBe('new-session')
+    expect(apiMocks.respond.mock.calls[1][1]).toBe(text)
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Mình tư vấn trong phiên mới.'))
+    wrapper.unmount()
+  })
+
+  it('does not restore typed text into another customer session after an explicit reset', async () => {
+    let rejectResponse!: (reason: Error) => void
+    apiMocks.respond.mockReturnValueOnce(new Promise((_, reject) => { rejectResponse = reject }))
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledOnce())
+    await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+    await wrapper.get('#assistant-input').setValue('Lựa chọn riêng của khách trước')
+    await wrapper.get('form').trigger('submit')
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledOnce())
+    await wrapper.get('.end-session-button').trigger('click')
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(2))
+    rejectResponse(Object.assign(new Error('Session not found'), { status: 404 }))
+    await flushPromises()
+    expect(wrapper.get<HTMLTextAreaElement>('#assistant-input').element.value).toBe('')
+    expect(wrapper.findAll('.message-row')).toHaveLength(0)
+    expect(apiMocks.respond).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
+
   it('does not render a late customer response after ending and replacing the session', async () => {
     const oldResponse = deferred<{
       session_id: string
@@ -238,23 +294,22 @@ describe('kiosk app', () => {
     expect(wrapper.findAll('.message-assistant')).toHaveLength(0)
   })
 
-  it('switches the chat to English and sends the selected language to the API', async () => {
+  it('keeps the kiosk in Vietnamese and preserves Latin brand names', async () => {
     const wrapper = mount(App)
 
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
     await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
-    await wrapper.get('button[aria-label="English"]').trigger('click')
-
-    expect(wrapper.text()).toContain('What can I help you find?')
-    expect(document.documentElement.lang).toBe('en-US')
-    expect(wrapper.get('textarea').attributes('placeholder')).toBe('Try: How much is Coca Zero?')
-    await wrapper.get('textarea').setValue('How much is Coca-Cola Zero?')
+    expect(wrapper.find('button[aria-label="English"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="中文"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Tiếng Việt')
+    expect(document.documentElement.lang).toBe('vi-VN')
+    await wrapper.get('textarea').setValue('Coca-Cola Zero bao nhiêu tiền?')
     await wrapper.get('.composer').trigger('submit')
     await vi.waitFor(() =>
       expect(apiMocks.respond).toHaveBeenCalledWith(
         'session-test',
-        'How much is Coca-Cola Zero?',
-        'en',
+        'Coca-Cola Zero bao nhiêu tiền?',
+        'vi',
         expect.any(String),
         expect.any(Function),
         expect.any(AbortSignal),
@@ -307,8 +362,58 @@ describe('kiosk app', () => {
       expect.any(AbortSignal),
     ))
     await vi.waitFor(() => expect(wrapper.find('.support-ticket-card').exists()).toBe(true))
-    expect(wrapper.get('.support-ticket-card').text()).toContain('ticket-demo-1')
+    expect(wrapper.get('.support-ticket-card').text()).not.toContain('ticket-demo-1')
     expect(wrapper.get('.support-ticket-card').text()).toContain('Chỉ là bản demo')
+  })
+
+  it('calls manager via the floating button and displays delivered Zalo alert card', async () => {
+    apiMocks.getManagerNotifierStatus.mockResolvedValueOnce({
+      enabled: true,
+      store_name: 'Thanh Lam Mart',
+      primary_channel: 'zalo',
+      primary_provider: 'zalo_bot',
+      priority: ['zalo_bot', 'messenger', 'gmail'],
+      configured_providers: ['zalo_bot'],
+      channels: { zalo_bot: true },
+    })
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Dạ, mình đã gửi tin nhắn qua Zalo báo quản lý biết bạn đang cần gặp rồi ạ. Quản lý sẽ ra hỗ trợ bạn ngay nhé.',
+      model: 'manager-notifier',
+      grounded_product_ids: [],
+      tools_used: ['handoff_to_staff', 'notify_manager_zalo'],
+      state: 'HANDOFF',
+      support_ticket: {
+        ticket_id: 'a1b2c3d4-0000-0000-0000-000000000001',
+        session_id: 'session-test',
+        kiosk_id: 'kiosk-01',
+        issue_type: 'OTHER',
+        description: 'Mình muốn gọi quản lý giúp mình.',
+        status: 'NOTIFIED_ZALO',
+        created_at: new Date().toISOString(),
+        demo: false,
+        target_role: 'manager',
+        notified_channel: 'zalo',
+        notified_provider: 'zalo_bot',
+        notification_status: 'DELIVERED',
+      },
+    })
+    const wrapper = mount(App)
+    await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+    await wrapper.get('button[aria-label="Gọi quản lý"]').trigger('click')
+
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledWith(
+      'session-test',
+      'Mình muốn gọi quản lý giúp mình.',
+      'vi',
+      expect.any(String),
+      expect.any(Function),
+      expect.any(AbortSignal),
+    ))
+    await vi.waitFor(() => expect(wrapper.find('.support-ticket-card.is-delivered').exists()).toBe(true))
+    expect(wrapper.get('.support-ticket-card').text()).toContain('Đã gửi tin báo quản lý qua Zalo')
+    expect(wrapper.get('.support-ticket-card').text()).not.toContain('NOTIFIED_ZALO')
+    expect(wrapper.get('.support-ticket-card').text()).not.toContain('a1b2c3d4')
   })
 
   it('defaults to the physical AMD microphone and hides duplicate browser aliases', async () => {
@@ -467,6 +572,7 @@ describe('kiosk app', () => {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
+        channelCount: { ideal: 1 }, sampleRate: { ideal: 48000 }, sampleSize: { ideal: 16 }, voiceIsolation: true,
       },
     }))
 
@@ -529,7 +635,11 @@ describe('kiosk app', () => {
       grounded_product_ids: ['COKE_ZERO_330'],
       state: 'BROWSING',
     })
-    await vi.waitFor(() => expect(wrapper.find('.message-model').text()).toBe('catalog'))
+    await flushPromises()
+    expect(wrapper.find('.message-model').exists()).toBe(false)
+    expect(wrapper.find('.message-assistant .message-bubble').text()).toBe(
+      'Coca-Cola Zero có giá 13.000đ.',
+    )
   })
 
   it('reuses the same client turn id on retry and does not duplicate the customer message', async () => {
@@ -550,7 +660,8 @@ describe('kiosk app', () => {
 
     await wrapper.get('.error-retry').trigger('click')
 
-    await vi.waitFor(() => expect(wrapper.find('.message-model').text()).toBe('catalog'))
+    await vi.waitFor(() => expect(wrapper.find('.message-assistant .message-bubble').text())
+      .toBe('Coca-Cola Zero hiện có giá 13.000đ.'))
     expect(apiMocks.respond).toHaveBeenCalledTimes(2)
     expect(apiMocks.respond.mock.calls[1][3]).toBe(firstTurnId)
     expect(wrapper.findAll('.message-user')).toHaveLength(1)
@@ -721,6 +832,88 @@ describe('kiosk app', () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain('Thanh toán mô phỏng hoàn tất'))
     expect(wrapper.text()).not.toContain('SANDBOX-ORDERTEST')
     expect(wrapper.findAll('.shopping-cart-line')).toHaveLength(0)
+  })
+
+  it('opens a product photo popup when clicking a recommended product card and closes cleanly', async () => {
+    const chinsu = {
+      product_id: 'TLM_10141747',
+      name: 'Tương ớt  Chin Su chai 1kg',
+      category: 'Tương ớt',
+      brand: 'CHIN-SU',
+      price_vnd: 62_200,
+      list_price_vnd: 72_000,
+      promotion: 'Giảm 14%',
+      image_url: 'https://s3-hcmc02.higiocloud.vn/images/2024/11/10141747-20241117094121.jpg',
+      stock: 0,
+      stock_is_current: false,
+      uom: 'chai',
+      data_timestamp: '2026-08-31T00:00:00Z',
+      data_source: 'thanh_lam_json_snapshot',
+      demo_units_sold_30d: 284,
+      sales_data_source: 'SIMULATED' as const,
+    }
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Đây là Tương ớt Chin Su chai 1kg.',
+      model: 'catalog',
+      grounded_product_ids: [chinsu.product_id],
+      state: 'BROWSING',
+      products: [chinsu],
+    })
+
+    const wrapper = mount(App, { attachTo: document.body })
+    try {
+      await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+      await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+      await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
+      await vi.waitFor(() => expect(wrapper.find('.message-product-card').exists()).toBe(true))
+
+      // Clicking the details dropdown should NOT open the modal.
+      await wrapper.get('.message-product-card details summary').trigger('click')
+      expect(document.body.querySelector('.product-modal')).toBeNull()
+
+      // Clicking the product card opens the photo lightbox popup.
+      await wrapper.get('.message-product-card').trigger('click')
+      const modal = document.body.querySelector('.product-modal')
+      expect(modal).not.toBeNull()
+      const img = modal?.querySelector<HTMLImageElement>('.product-modal-image')
+      expect(img?.getAttribute('src')).toBe(chinsu.image_url)
+      expect(modal?.textContent).toContain('Tương ớt Chin Su chai 1kg')
+      expect(modal?.textContent).toContain('62.200đ')
+      expect(modal?.textContent).toContain('72.000đ')
+      expect(modal?.textContent).toContain('Giảm 14%')
+
+      // Pressing Escape closes the popup.
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      await flushPromises()
+      expect(document.body.querySelector('.product-modal')).toBeNull()
+
+      // Re-open and click "Hỏi thành phần" to trigger a follow-up question.
+      apiMocks.respond.mockResolvedValueOnce({
+        session_id: 'session-test',
+        text: 'Thành phần gồm nước, đường, ớt 110 g/kg...',
+        model: 'catalog',
+        grounded_product_ids: [chinsu.product_id],
+        state: 'BROWSING',
+        products: [chinsu],
+      })
+      await wrapper.get('.message-product-card').trigger('click')
+      const askBtn = document.body.querySelector<HTMLButtonElement>('.product-modal-ask-btn')
+      expect(askBtn).not.toBeNull()
+      askBtn?.click()
+      await flushPromises()
+      expect(document.body.querySelector('.product-modal')).toBeNull()
+      await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledWith(
+        'session-test',
+        'Thành phần chính của Tương ớt Chin Su chai 1kg là gì?',
+        'vi',
+        expect.any(String),
+        expect.any(Function),
+        expect.any(AbortSignal),
+      ))
+    } finally {
+      wrapper.unmount()
+    }
   })
 
   it('shows an inline recovery message when the agent fails', async () => {

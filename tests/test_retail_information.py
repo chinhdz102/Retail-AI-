@@ -39,7 +39,7 @@ class FakeRetailInformationConnection:
             return self.rows
         raise AssertionError(f"Unexpected query: {query}")
 
-    async def close(self):
+    async def close(self, *, timeout=None):
         return None
 
 

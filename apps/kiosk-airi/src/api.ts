@@ -2,6 +2,7 @@ import type {
   AgentResponse,
   CheckoutQuote,
   LanguageCode,
+  ManagerNotifierStatus,
   SandboxOrder,
   ShoppingCart,
   ProductSearchResponse,
@@ -9,8 +10,10 @@ import type {
   TranscriptionResponse,
 } from './types'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '')
-  ?? 'http://127.0.0.1:8000'
+const rawApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim()
+const API_BASE_URL = rawApiBase
+  ? rawApiBase.replace(/\/$/, '')
+  : (import.meta.env.PROD ? '/api' : 'http://127.0.0.1:8000')
 
 export class ApiError extends Error {
   readonly status: number
@@ -82,14 +85,19 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000):
   }
 }
 
+export type TextDeltaHandler = ((text: string) => void) & {
+  onStart?: (metadata: Omit<AgentResponse, 'text'>) => void
+}
+
 async function requestAgentStream(
   sessionId: string,
   text: string,
   language: LanguageCode,
   clientTurnId: string,
-  onTextDelta: (text: string) => void,
+  onTextDelta: TextDeltaHandler,
   signal?: AbortSignal,
   timeoutMs = 45_000,
+  onStart?: (metadata: Omit<AgentResponse, 'text'>) => void,
 ): Promise<AgentResponse> {
   const timed = createTimedController(timeoutMs, signal)
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
@@ -148,6 +156,7 @@ async function requestAgentStream(
         assertResponseSession(sessionId, payload.response)
         state.metadata = payload.response
         state.sessionValidated = true
+        ;(onStart ?? onTextDelta.onStart)?.(payload.response)
       } else if (eventName === 'delta') {
         if (typeof payload.text !== 'string') throw new Error('Invalid response stream delta.')
         if (!state.sessionValidated) {
@@ -225,11 +234,12 @@ export function respond(
   text: string,
   language: LanguageCode = 'vi',
   clientTurnId = createRequestId(),
-  onTextDelta?: (text: string) => void,
+  onTextDelta?: TextDeltaHandler,
   signal?: AbortSignal,
+  onStart?: (metadata: Omit<AgentResponse, 'text'>) => void,
 ): Promise<AgentResponse> {
   if (onTextDelta) {
-    return requestAgentStream(sessionId, text, language, clientTurnId, onTextDelta, signal)
+    return requestAgentStream(sessionId, text, language, clientTurnId, onTextDelta, signal, 45_000, onStart)
   }
   return request<AgentResponse>('/agent/respond', {
     method: 'POST',
@@ -320,10 +330,12 @@ export function transcribe(
   audio: Blob,
   language: LanguageCode = 'vi',
   signal?: AbortSignal,
+  includeDiagnostics = false,
 ): Promise<TranscriptionResponse> {
   const form = new FormData()
   form.append('session_id', sessionId)
   form.append('language', language)
+  if (includeDiagnostics) form.append('include_diagnostics', 'true')
   const audioType = audio.type.split(';')[0].toLowerCase()
   const extension = ({
     'audio/mp4': 'mp4',
@@ -364,7 +376,43 @@ export async function createSynthesisTicket(
   return result.audio_url.startsWith('http') ? result.audio_url : `${API_BASE_URL}${result.audio_url}`
 }
 
+export function respondWithImage(
+  sessionId: string,
+  file: Blob,
+  message = '',
+  language: LanguageCode = 'vi',
+  signal?: AbortSignal,
+): Promise<AgentResponse> {
+  const form = new FormData()
+  form.append('session_id', sessionId)
+  form.append('message', message)
+  form.append('language', language)
+  const fileName = file instanceof File && file.name
+    ? file.name
+    : (file.type === 'image/png'
+      ? 'product.png'
+      : file.type === 'image/webp'
+        ? 'product.webp'
+        : file.type === 'video/mp4'
+          ? 'product.mp4'
+          : file.type === 'video/webm'
+            ? 'product.webm'
+            : file.type === 'video/quicktime'
+              ? 'product.mov'
+              : 'product.jpg')
+  form.append('file', file, fileName)
+  return request<AgentResponse>('/agent/respond/image', {
+    method: 'POST',
+    body: form,
+    signal,
+  }, 45_000)
+}
+
 export function searchProducts(query = '', limit = 6): Promise<ProductSearchResponse> {
   const params = new URLSearchParams({ q: query, limit: String(limit) })
   return request<ProductSearchResponse>(`/products/search?${params.toString()}`)
+}
+
+export function getManagerNotifierStatus(): Promise<ManagerNotifierStatus> {
+  return request<ManagerNotifierStatus>('/support/manager-notifier/status', undefined, 6_000)
 }

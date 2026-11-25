@@ -1,0 +1,37 @@
+# Local virtualenvs, dependencies, and caches
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+apps/kiosk-airi/node_modules
+apps/kiosk-airi/dist
+node_modules
+
+# Local secrets (configured via Vercel Environment Variables instead)
+.env
+.env.*
+!.env.example
+
+# Docs, reports, tests, root training scripts (not needed at runtime)
+/docs
+/tests
+/scripts
+*.log
+*.zip
+*.pdf
+
+# Heavy offline/training-only model files (not used in Vercel cloud runtime)
+/data/models/gipformer1.5-68M-rnnt
+/data/models/product-vision/*.tflite
+/data/models/product-vision/*.bin
+/data/models/speech-enhancement/gtcrn_simple.onnx
+/data/thanh_lam_planogram_3d*.png
+/data/thanh_lam_planogram_3d*.svg
+/data/*.csv
+/backend/assets/silero/silero_vad_v5.onnx
+
+# Generated during `npm run build` (copy-vad-assets.mjs) + unused PNG poster
+/apps/kiosk-airi/public/vad
+/apps/kiosk-airi/public/avatars/mai-closed-mouth-reference.png

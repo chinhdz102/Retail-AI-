@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-10-29T11:51:14Z",
-  "source_catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+  "generated_at": "2026-11-24T06:15:00Z",
+  "source_catalog_sha256": "992e87a5929f3a86460fb3440ea3a25e3fab6a37f62de8b371a385abe4af3ef5",
   "records": [
     {
       "product_id": "TLM_10307381",
@@ -86,6 +86,22 @@
           "verified_at": "2026-10-29T11:51:14Z",
           "confidence": 1.0,
           "note": "The official P/S page lists both 180 g and 230 g variants and gives these instructions. They are manufacturer-published package-use instructions, not individualized dental advice."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Kết hợp muối Baking Soda và tinh dầu hương thảo; hãng giới thiệu hướng tới làm sạch mảng bám, hỗ trợ răng trắng tự nhiên, ngăn ngừa sâu răng và thơm miệng.",
+            "en": "Combines Baking Soda and rosemary oil; described by P/S as helping clean plaque, support natural whitening, protect against cavities, and freshen breath."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "P/S Việt Nam",
+          "source_url": "https://www.psvietnam.vn/p/p-s-baking-soda-and-huong-thao.html/08934839126100",
+          "source_field": "Product description for P/S Baking Soda & Hương Thảo",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer product description, not an independent clinical evaluation. Check the box label for the full ingredient list."
         }
       ]
     },
@@ -150,6 +166,712 @@
           "verified_at": "2026-10-29T11:51:14Z",
           "confidence": 0.8,
           "note": "This is a manufacturer marketing description, not an independent efficacy test or a verified suitability result for an individual's hair. Always attribute it to Pantene."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10018364",
+      "product_name": "Kem đánh răng Sensodyne Multi Care 100g",
+      "brand": "SENSODYNE",
+      "barcode": "4800318407937",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Hoạt chất chính: Potassium Nitrate, Sodium Fluoride 0.3152% w/w (1450 ppm Fluoride). Thành phần khác: Aqua, Sorbitol, Hydrated Silica, Glycerin, Cocamidopropyl Betaine, Aroma, Zinc Citrate, Xanthan Gum, Titanium Dioxide, Sodium Hydroxide, Sodium Saccharin, Sucralose.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Sensodyne Việt Nam",
+          "source_url": "https://www.sensodyne.com/vi-vn/san-pham/kem-danh-rang-sensodyne-multi-care/",
+          "source_field": "Sensodyne Multi Care ingredient list",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Manufacturer-declared ingredient list for Sensodyne Multi Care. Check the tube/box label for lot-specific details."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Dòng kem đánh răng dành cho răng nhạy cảm, được hãng giới thiệu giúp giảm ê buốt răng khi chải đều 2 lần mỗi ngày, hỗ trợ nướu chắc khỏe, loại bỏ mảng bám và ngăn ngừa sâu răng.",
+            "en": "Described by Sensodyne as daily toothpaste for sensitive teeth, intended to relieve tooth sensitivity with twice-daily brushing, support healthy gums, remove plaque, and protect against cavities."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "Sensodyne Việt Nam",
+          "source_url": "https://www.sensodyne.com/vi-vn/san-pham/kem-danh-rang-sensodyne-multi-care/",
+          "source_field": "Sensodyne Multi Care product benefits",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer product description; not individualized dental advice. Persistent tooth sensitivity should be evaluated by a dentist."
+        },
+        {
+          "attribute": "usage",
+          "value": [
+            "Chải răng 2 lần mỗi ngày (không quá 3 lần/ngày), hạn chế nuốt và nhổ ra sau khi chải.",
+            "Hỏi ý kiến nha sĩ nếu tình trạng ê buốt kéo dài hoặc nặng hơn."
+          ],
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Sensodyne Việt Nam",
+          "source_url": "https://www.sensodyne.com/vi-vn/san-pham/kem-danh-rang-sensodyne-multi-care/",
+          "source_field": "Sensodyne Multi Care directions for use",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Manufacturer-published directions for use."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10018362",
+      "product_name": "Kem đánh răng Sensodyne Freshmint 100g",
+      "brand": "SENSODYNE",
+      "barcode": "8991991161332",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Hoạt chất chính: Potassium Nitrate, Sodium Fluoride 0.3152% w/w (1450 ppm Fluoride). Thành phần khác: Aqua, Sorbitol, Hydrated Silica, Glycerin, Aroma, Xanthan Gum, Cocamidopropyl Betaine, Sodium Methyl Cocoyl Taurate, Sodium Saccharin, Sodium Hydroxide, CI 42090, CI 19140.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Sensodyne Việt Nam",
+          "source_url": "https://www.sensodyne.com/vi-vn/san-pham/kem-danh-rang-sensodyne-fresh-mint/",
+          "source_field": "Sensodyne Fresh Mint ingredient list",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Manufacturer-declared ingredient list for Sensodyne Fresh Mint. Verify the package label for the exact batch."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Được hãng giới thiệu giúp giảm ê buốt cho răng nhạy cảm, củng cố men răng ngăn sâu răng và mang lại hơi thở thơm mát vị bạc hà khi chải đều 2 lần mỗi ngày.",
+            "en": "Described by Sensodyne as helping relieve sensitivity in sensitive teeth, strengthen enamel against cavities, and freshen breath with mint flavor with twice-daily brushing."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "Sensodyne Việt Nam",
+          "source_url": "https://www.sensodyne.com/vi-vn/san-pham/kem-danh-rang-sensodyne-fresh-mint/",
+          "source_field": "Sensodyne Fresh Mint product benefits",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer product description; consult a dentist if tooth sensitivity persists."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10161421",
+      "product_name": "Kem đánh răng SENSODYNE mát lạnh 160g",
+      "brand": "SENSODYNE",
+      "barcode": "8850090113164",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Hoạt chất chính dòng Sensodyne Fresh Mint: Potassium Nitrate, Sodium Fluoride 0.3152% w/w (1450 ppm Fluoride); các tá dược cơ bản gồm Aqua, Sorbitol, Hydrated Silica, Glycerin, Aroma, Xanthan Gum, Cocamidopropyl Betaine.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Sensodyne Việt Nam",
+          "source_url": "https://www.sensodyne.com/vi-vn/san-pham/kem-danh-rang-sensodyne-fresh-mint/",
+          "source_field": "Sensodyne Fresh Mint line active ingredients",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Line-level manufacturer ingredient declaration for Sensodyne Fresh Mint; verify the 160 g box label."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Dòng Sensodyne dành cho răng nhạy cảm, hãng giới thiệu giúp giảm ê buốt hằng ngày, hỗ trợ ngừa sâu răng và cho cảm giác mát lạnh hương bạc hà.",
+            "en": "Sensodyne line for sensitive teeth, described by the brand as supporting daily sensitivity relief, cavity protection, and a cool mint feel."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "Sensodyne Việt Nam",
+          "source_url": "https://www.sensodyne.com/vi-vn/san-pham/kem-danh-rang-sensodyne-fresh-mint/",
+          "source_field": "Sensodyne Fresh Mint product line description",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer marketing description; not individualized dental advice."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10230785",
+      "product_name": "Sữa rửa mặt đất sét trắng Senka Perfect Whiteclay 120g",
+      "brand": "SENKA",
+      "barcode": "4550516474636",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Các thành phần nổi bật theo công bố dòng sản phẩm: Đất sét trắng (White Clay / Kaolin), phức hợp chiết xuất tơ tằm trắng thiên nhiên (Sericin, Hydrolyzed Silk), gấp đôi Hyaluronic Acid (Sodium Hyaluronate, Sodium Acetylated Hyaluronate) cùng hệ làm sạch tạo bọt và giữ ẩm Aqua In Pool.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Senka Việt Nam (FineToday)",
+          "source_url": "https://senkavietnam.vn/",
+          "source_field": "Senka Perfect White Clay key ingredients",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Key ingredients published for the Senka Perfect White Clay line; check the tube label for the complete INCI list."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Được hãng giới thiệu tạo bọt tơ tằm mịn kết hợp đất sét trắng giúp làm sạch bụi bẩn, bã nhờn và tế bào chết, hỗ trợ da sáng đều màu hơn đồng thời giữ ẩm với Hyaluronic Acid.",
+            "en": "Described by Senka as combining dense silk foam and white clay to cleanse dirt, sebum, and dead skin cells, help brighten dull skin, and retain moisture with Hyaluronic Acid."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "Senka Việt Nam (FineToday)",
+          "source_url": "https://senkavietnam.vn/",
+          "source_field": "Senka Perfect White Clay product description",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer product description; not an independent dermatological suitability guarantee."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10601173",
+      "product_name": "Dầu gội Clear Men Cool Sport bạc hà sạch gàu 630g",
+      "brand": "CLEAR",
+      "barcode": "8934868502883",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Các thành phần chính theo công bố dòng sản phẩm: hoạt chất sạch gàu (Zinc Pyrithione / Climbazole tùy phiên bản), tinh chất bạc hà & Menthol, Taurine, Vitamin B3 (Niacinamide), Glycerin, tinh dầu hạt hướng dương, Water, Sodium Laureth Sulfate, Cocamidopropyl Betaine, Fragrance.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "CLEAR Việt Nam (Unilever)",
+          "source_url": "https://www.clearhaircare.com/vn/home.html",
+          "source_field": "Clear Men Cool Sport Menthol key ingredients",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Product-line ingredient summary from CLEAR / Unilever; inspect the exact bottle back label for lot-specific active anti-dandruff ingredients."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Được thiết kế cho da đầu nam giới; hãng giới thiệu giúp làm sạch gàu, dầu nhờn và mồ hôi, đồng thời mang lại cảm giác mát lạnh từ bạc hà và bổ sung dưỡng chất cho da đầu.",
+            "en": "Formulated for men's scalp; described by CLEAR as helping remove dandruff, excess oil, and sweat while delivering a cooling menthol sensation and scalp care nutrients."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "CLEAR Việt Nam (Unilever)",
+          "source_url": "https://www.clearhaircare.com/vn/home.html",
+          "source_field": "Clear Men Cool Sport Menthol product benefits",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer marketing description; not a clinical guarantee for individual scalp conditions."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10640562",
+      "product_name": "Nước Rửa Chén Sunlight Thiên Nhiên Lô Hội Túi 2kg",
+      "brand": "SUNLIGHT",
+      "barcode": "8934868142409",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Các thành phần chính theo công bố dòng Sunlight Thiên Nhiên Lô Hội: Nước, chất hoạt động bề mặt làm sạch (như Sodium Linear Alkylbenzene Sulfonate, Sodium Laureth Sulfate, Cocamidopropyl Betaine hoặc hệ gốc thực vật tùy phiên bản), muối khoáng (Magnesium Sulfate), chiết xuất lô hội và chanh, chất thơm.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Sunlight Việt Nam (Unilever)",
+          "source_url": "https://www.unilever.com.vn/brands/home-care/sunlight/",
+          "source_field": "Sunlight Nature Aloe Vera line ingredients",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Product-line ingredient summary; check the exact 2 kg pouch label for the formula version and preservatives."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Được hãng giới thiệu giúp đánh bay dầu mỡ và mùi tanh trên chén đĩa, kết hợp chiết xuất lô hội và muối khoáng hướng tới dịu nhẹ hơn với da tay.",
+            "en": "Described by Sunlight as cutting grease and food odors on dishes while combining aloe vera extract and mineral salt to be gentler on hands."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "Sunlight Việt Nam (Unilever)",
+          "source_url": "https://www.unilever.com.vn/brands/home-care/sunlight/",
+          "source_field": "Sunlight Nature Aloe Vera product benefits",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer marketing claim; individuals with sensitive skin should test carefully or wear gloves."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10161329",
+      "product_name": "Dầu gội Tresemme ngăn gãy rụng Salon Rebond chai 640g",
+      "brand": "TRESEMMÉ",
+      "barcode": "8934868144182",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Các thành phần chính theo công bố dòng Salon Rebond: Water, Sodium Laureth Sulfate, Cocamidopropyl Betaine, Dimethiconol, Dimethicone, phức hợp công nghệ tái kết nối TRESplex Rebond™ (gồm phân tử nhỏ, đường/Trehalose, Gluconolactone và peptide).",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "TRESemmé Việt Nam (Unilever)",
+          "source_url": "https://www.unilever.com.vn/brands/beauty-wellbeing/tresemme/",
+          "source_field": "TRESemmé Salon Rebond key ingredients",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Product-line ingredient summary; check the 640 g bottle back label for the full INCI list."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Dòng chăm sóc tóc hư tổn gãy rụng với công nghệ TRESplex Rebond™; hãng giới thiệu giúp làm sạch da đầu, hỗ trợ tái kết nối liên kết tóc hư tổn và giảm gãy rụng do tạo kiểu/hóa chất.",
+            "en": "Hair-fall care line featuring TRESplex Rebond™ technology; described by TRESemmé as cleansing the scalp, supporting damaged hair bond repair, and reducing breakage-related hair fall."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "TRESemmé Việt Nam (Unilever)",
+          "source_url": "https://www.unilever.com.vn/brands/beauty-wellbeing/tresemme/",
+          "source_field": "TRESemmé Salon Rebond product benefits",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer marketing description; addresses hair breakage, not medical hair-loss treatment."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10017376",
+      "product_name": "Sữa tắm gội toàn thân không cay mắt Johnson's Baby 500ml",
+      "brand": "JOHNSON'S",
+      "barcode": "9556006012413",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Các thành phần chính theo công bố dòng Johnson's Baby Top-to-Toe: Water, Cocamidopropyl Betaine, PEG-80 Sorbitan Laurate, Decyl Glucoside, Sodium Methyl Cocoyl Taurate, Glycerin, Citric Acid, Phenoxyethanol, Sodium Benzoate, Ethylhexylglycerin.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Johnson's Baby Việt Nam",
+          "source_url": "https://www.johnsonsbaby.com.vn/",
+          "source_field": "Johnson's Baby Top-to-Toe Wash ingredients",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Manufacturer-published line ingredients; verify the 500 ml bottle label for the exact batch."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Sữa tắm gội 2 trong 1 cho trẻ sơ sinh và trẻ nhỏ; hãng giới thiệu công thức không cay mắt (No More Tears®), độ pH cân bằng, làm sạch nhẹ nhàng cả tóc và toàn thân mà vẫn duy trì độ ẩm tự nhiên của da bé.",
+            "en": "2-in-1 baby hair and body wash; described by Johnson's Baby as featuring the No More Tears® formula and balanced pH to gently cleanse hair and skin while preserving natural moisture."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "Johnson's Baby Việt Nam",
+          "source_url": "https://www.johnsonsbaby.com.vn/",
+          "source_field": "Johnson's Baby Top-to-Toe product benefits",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer product description; discontinue use and consult a doctor if irritation occurs."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10018405",
+      "product_name": "Nước súc miệng diệt khuẩn Listerine Cool Mint chai 500ml",
+      "brand": "LISTERINE",
+      "barcode": "66627952",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "4 tinh dầu tự nhiên (Eucalyptol, Thymol, Menthol, Methyl Salicylate) cùng Water, Alcohol, Sorbitol, Poloxamer 407, Benzoic Acid, Sodium Benzoate, Sodium Saccharin, Flavor, CI 42053.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Listerine Việt Nam",
+          "source_url": "https://www.listerine.com.vn/",
+          "source_field": "Listerine Cool Mint ingredient declaration",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Manufacturer-published ingredient list for Listerine Cool Mint (contains alcohol; check bottle label for age restriction)."
+        },
+        {
+          "attribute": "usage",
+          "value": [
+            "Dùng 20 ml mỗi lần, không pha loãng.",
+            "Súc miệng trong 30 giây rồi nhổ đi (không nuốt).",
+            "Sử dụng 2 lần mỗi ngày sau khi đánh răng; không dùng cho trẻ dưới 12 tuổi (xem kỹ hướng dẫn trên chai)."
+          ],
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Listerine Việt Nam",
+          "source_url": "https://www.listerine.com.vn/",
+          "source_field": "Listerine Cool Mint usage directions",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Official manufacturer directions for Listerine Cool Mint."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Được hãng giới thiệu giúp diệt vi khuẩn gây hôi miệng, giảm mảng bám, hỗ trợ bảo vệ nướu và giữ hơi thở thơm mát vị bạc hà khi dùng đều 2 lần mỗi ngày.",
+            "en": "Described by Listerine as killing bacteria that cause bad breath, helping reduce plaque and support gum health, and leaving a fresh mint breath with twice-daily use."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "Listerine Việt Nam",
+          "source_url": "https://www.listerine.com.vn/",
+          "source_field": "Listerine Cool Mint benefits",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer product description; not a replacement for brushing or dental treatment."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10162329",
+      "product_name": "Sữa tắm chứa sữa & yến mạch Johnson chai 500ml",
+      "brand": "JOHNSON'S",
+      "barcode": "4801010534044",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Các thành phần chính theo công bố dòng Johnson's Milk + Oats: Protein sữa (Milk Protein), chiết xuất yến mạch tự nhiên (Avena Sativa Kernel Extract), Water, Cocamidopropyl Betaine, PEG-80 Sorbitan Laurate, Decyl Glucoside, Sodium Methyl Cocoyl Taurate, Glycerin, Glyceryl Stearate, Phenoxyethanol, Sodium Benzoate, Fragrance.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Johnson's Baby Việt Nam",
+          "source_url": "https://www.johnsonsbaby.com.vn/",
+          "source_field": "Johnson's Milk + Oats Bath ingredients",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Manufacturer-declared ingredients for Johnson's Milk + Oats; check the bottle label for the exact batch."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Được hãng giới thiệu kết hợp protein sữa và chiết xuất yến mạch giúp làm sạch dịu nhẹ, dưỡng ẩm và hỗ trợ phục hồi làn da khô ráp của bé.",
+            "en": "Described by Johnson's Baby as combining milk protein and oat extract to gently cleanse, moisturize, and help care for dry baby skin."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "Johnson's Baby Việt Nam",
+          "source_url": "https://www.johnsonsbaby.com.vn/",
+          "source_field": "Johnson's Milk + Oats Bath benefits",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer product description; not an independent dermatological guarantee."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10010636",
+      "product_name": "Sữa tươi tiệt trùng Meadow Fresh giàu canxi hộp 1L",
+      "brand": "MEADOW FRESH",
+      "barcode": "9415522285049",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Sữa bò tươi tách béo một phần (ít béo), bổ sung canxi sữa, Vitamin A và Vitamin D (kiểm tra hộp thực tế theo lô nhập khẩu Úc/New Zealand).",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Meadow Fresh Việt Nam (Goodman Fielder)",
+          "source_url": "https://meadowfreshvietnam.com/",
+          "source_field": "Meadow Fresh Calci Max product composition",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Line-level manufacturer composition for Meadow Fresh Calci Max; verify the exact carton label."
+        },
+        {
+          "attribute": "nutrition",
+          "value": {
+            "basis": "per 100 ml (approx., varies slightly by AU/NZ batch)",
+            "energy_kcal": 55,
+            "protein_g": 4.8,
+            "fat_g": 1.3,
+            "carbohydrate_g": 5.5,
+            "calcium_mg": 175
+          },
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Meadow Fresh Việt Nam (Goodman Fielder)",
+          "source_url": "https://meadowfreshvietnam.com/",
+          "source_field": "Meadow Fresh Calci Max nutrition per 100 ml",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Representative manufacturer nutrition table per 100 ml for Calci Max (calcium ~172-181 mg, fat ~1.2-1.4 g); check the exact box."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Sữa tươi ít béo tăng cường canxi cùng Vitamin A, D; hãng giới thiệu phù hợp bổ sung canxi hằng ngày hỗ trợ xương và răng chắc khỏe.",
+            "en": "Low-fat UHT milk fortified with calcium and Vitamins A & D; described by Meadow Fresh as supporting daily calcium intake for bone and dental health."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "Meadow Fresh Việt Nam (Goodman Fielder)",
+          "source_url": "https://meadowfreshvietnam.com/",
+          "source_field": "Meadow Fresh Calci Max description",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer nutritional positioning; not individualized medical or dietary advice."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10275943",
+      "product_name": "OMO NG Cửa trước Khử mùi ẩm mốc 3.8kg",
+      "brand": "OMO",
+      "barcode": "8934868197454",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Các thành phần chính theo công bố dòng OMO Matic Cửa Trước: Nước, Sodium Linear Alkylbenzenesulfonate, Sodium Laureth Sulfate, hoạt chất làm sạch, hệ enzyme, màn chắn kháng bẩn Polyshield, chất tạo hương và phụ gia làm sáng.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "OMO Việt Nam (Unilever)",
+          "source_url": "https://www.unilever.com.vn/brands/home-care/omo/",
+          "source_field": "OMO Matic Front-Load odor-control line ingredients",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Product-line ingredient summary; check the 3.8 kg pouch label for lot-specific details."
+        },
+        {
+          "attribute": "usage",
+          "value": [
+            "Thoa một ít nước giặt trực tiếp lên vết bẩn cứng đầu 2-3 phút trước khi giặt nếu cần.",
+            "Đổ lượng nước giặt theo hướng dẫn nắp/lượng đồ vào ngăn chứa chất giặt của máy giặt cửa trước.",
+            "Chọn chế độ giặt phù hợp và bảo quản nơi khô ráo, tránh xa tầm tay trẻ em."
+          ],
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "OMO Việt Nam (Unilever)",
+          "source_url": "https://www.unilever.com.vn/brands/home-care/omo/",
+          "source_field": "OMO Matic Front-Load directions",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Official front-load usage instructions from OMO / Unilever."
+        },
+        {
+          "attribute": "benefits",
+          "value": {
+            "vi": "Công thức ít bọt chuyên dụng cho máy giặt cửa trước; hãng giới thiệu giúp làm sạch vết bẩn cứng đầu, khử mùi ẩm mốc khi phơi thiếu nắng và lưu hương thơm trên sợi vải.",
+            "en": "Low-suds formula for front-load washing machines; described by OMO as removing tough stains, neutralizing musty damp odors, and leaving clothes fresh."
+          },
+          "status": "INFERRED",
+          "evidence_scope": "MANUFACTURER_CLAIM",
+          "source": "OMO Việt Nam (Unilever)",
+          "source_url": "https://www.unilever.com.vn/brands/home-care/omo/",
+          "source_field": "OMO Matic Front-Load product benefits",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 0.8,
+          "note": "Manufacturer marketing description; check machine manual for dosage."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10013500",
+      "product_name": "Bánh Choco-Pie Orion hộp 396g",
+      "brand": "CHOCOPIE",
+      "barcode": "8936036020380",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Bột mì, đường, mạch nha glucose, shortening thực vật (chất nhũ hóa 471), chất béo thực vật (chất nhũ hóa 492, 322(i)), bột cacao (2,8%), sữa bột nguyên kem, trứng, chất tạo xốp (500(ii), 503(ii)), đường dextrose, gelatin, muối, hỗn hợp bột cacao và bơ cacao (0,2%), chất ổn định (1442, 415), chất điều chỉnh độ acid (341(ii)), hương liệu tổng hợp (vani), chất nhũ hóa (322(i), 476), muối i-ốt, protein sữa.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Orion Vina",
+          "source_url": "https://orion.vn/",
+          "source_field": "Choco-Pie Orion self-declaration ingredient list",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Official Orion Vina product declaration for classic Choco-Pie; check the 396 g box for exact lot ingredients."
+        },
+        {
+          "attribute": "allergens",
+          "value": "Chứa lúa mì (gluten), trứng, sữa và đậu nành.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Orion Vina",
+          "source_url": "https://orion.vn/",
+          "source_field": "Choco-Pie Orion allergen warning",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Manufacturer allergen disclosure; check box for any cross-contact notices."
+        },
+        {
+          "attribute": "nutrition",
+          "value": {
+            "basis": "per 1 pack (36.3 g)",
+            "energy_kcal": 160
+          },
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Orion Vina",
+          "source_url": "https://orion.vn/",
+          "source_field": "Choco-Pie Orion energy per 36.3 g pack",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Energy per single pack declared by Orion; check the box nutrition panel for exact pack weight in the 396 g box."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10005885",
+      "product_name": "Bánh bao nhân thịt heo trứng cút Thọ Phát gói 250g",
+      "brand": "THỌ PHÁT",
+      "barcode": "8938502525016",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Bột mì (39,6%), trứng cút (16%), nước (14,6%), thịt heo (12,2%), đường (9,2%), sắn, shortening, bột nêm, nấm men, bột đậu nành, hành tây, hành tím, hành lá, nước tương, tỏi, tiêu, bột canh, muối i-ốt, chất điều vị (621), chất tạo xốp (500(ii), 450(i), 341(i), 341(ii)), chất điều chỉnh độ acid (326, 262(i)), chất bảo quản (282).",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Thọ Phát Food",
+          "source_url": "https://thophat.com/",
+          "source_field": "Bánh bao nhân thịt heo trứng cút ingredient declaration",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Official Thọ Phát ingredient declaration; check the 250 g package for exact lot ratios."
+        },
+        {
+          "attribute": "usage",
+          "value": [
+            "Hấp cách thủy khoảng 15-20 phút trước khi dùng.",
+            "Hoặc chiên ngập dầu nóng đến khi vàng đều."
+          ],
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Thọ Phát Food",
+          "source_url": "https://thophat.com/",
+          "source_field": "Bánh bao preparation directions",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Manufacturer cooking instructions; follow thawing/steaming guidance on the exact pouch."
+        },
+        {
+          "attribute": "allergens",
+          "value": "Chứa bột mì (gluten), trứng và đậu nành.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Thọ Phát Food",
+          "source_url": "https://thophat.com/",
+          "source_field": "Bánh bao allergen disclosure",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Manufacturer allergen disclosure."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10010491",
+      "product_name": "Sữa tươi tiệt trùng Vinamilk không đường hộp 1 lít",
+      "brand": "VINAMILK",
+      "barcode": "8934673561396",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Sữa tươi (99,7%), chất ổn định (471, 460(i), 407, 466), vitamin (A, D3) và khoáng chất (natri selenit).",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Vinamilk",
+          "source_url": "https://www.vinamilk.com.vn/",
+          "source_field": "Sữa tươi tiệt trùng Vinamilk 100% không đường ingredients",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Official Vinamilk ingredient declaration for 100% unsweetened UHT milk; verify exact carton."
+        },
+        {
+          "attribute": "nutrition",
+          "value": {
+            "basis": "per 100 ml",
+            "energy_kcal": 60.3,
+            "protein_g": 3.1,
+            "fat_g": 3.5,
+            "carbohydrate_g": 4.1,
+            "calcium_mg": 110,
+            "sodium_mg": 40
+          },
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Vinamilk",
+          "source_url": "https://www.vinamilk.com.vn/",
+          "source_field": "Sữa tươi tiệt trùng Vinamilk 100% không đường nutrition per 100 ml",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Official Vinamilk nutrition values per 100 ml (contains natural milk lactose in carbohydrates; no added sugar)."
+        }
+      ]
+    },
+    {
+      "product_id": "TLM_10009301",
+      "product_name": "Nước tương đậu nành Maggi chai 700ml",
+      "brand": "MAGGI",
+      "barcode": "8934804026817",
+      "match_scope": "PRODUCT_LINE",
+      "facts": [
+        {
+          "attribute": "ingredients",
+          "value": "Nước, muối i-ốt, chiết xuất đậu nành lên men tự nhiên (chứa đậu nành và lúa mì), đường, chất điều vị (621, 631, 627), chất tạo màu tổng hợp (150c), chất điều chỉnh độ acid (260), chất ổn định (415), chất bảo quản (202), hương liệu nước tương, kali iodid.",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Nestlé Việt Nam (MAGGI)",
+          "source_url": "https://www.nestle.com.vn/",
+          "source_field": "MAGGI fermented soy sauce ingredient declaration",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Official Nestlé / MAGGI Vietnam line ingredient declaration; check the 700 ml bottle label for exact soy extract ratio."
+        },
+        {
+          "attribute": "allergens",
+          "value": "Chứa đậu nành và lúa mì (gluten).",
+          "status": "VERIFIED",
+          "evidence_scope": "MANUFACTURER_DECLARATION",
+          "source": "Nestlé Việt Nam (MAGGI)",
+          "source_url": "https://www.nestle.com.vn/",
+          "source_field": "MAGGI soy sauce allergen notice",
+          "observed_at": "2026-11-24T06:15:00Z",
+          "verified_at": "2026-11-24T06:15:00Z",
+          "confidence": 1.0,
+          "note": "Manufacturer allergen disclosure."
         }
       ]
     }

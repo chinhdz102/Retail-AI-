@@ -8,6 +8,7 @@ from functools import lru_cache
 
 import asyncpg
 
+from backend.config import get_settings
 from backend.products.catalog import QUERY_STOP_WORDS, PriceOperator, ProductSnapshot
 from backend.products.category_taxonomy import split_category_hierarchy
 from backend.products.planogram import recommended_shelf
@@ -60,13 +61,23 @@ class PostgresProductRepository:
 
     def __init__(self, database_url: str) -> None:
         self._dsn = re.sub(r"^postgresql\+asyncpg://", "postgresql://", database_url)
+        settings = get_settings()
+        self._connect_timeout_seconds = settings.postgres_connect_timeout_seconds
+        self._command_timeout_seconds = settings.postgres_command_timeout_seconds
 
     def _run(self, coroutine):
         # Catalog calls already run in a worker thread at the agent boundary.
         return asyncio.run(coroutine)
 
+    async def _connect(self) -> asyncpg.Connection:
+        return await asyncpg.connect(
+            self._dsn,
+            timeout=self._connect_timeout_seconds,
+            command_timeout=self._command_timeout_seconds,
+        )
+
     async def _search(self, **criteria) -> list[ProductSnapshot]:
-        conn = await asyncpg.connect(self._dsn, timeout=2)
+        conn = await self._connect()
         try:
             raw_query = str(criteria.get("query", "")).strip()
             query, tokens, is_snack_phrase = _normalize_product_query(raw_query)
@@ -283,7 +294,7 @@ class PostgresProductRepository:
                 rows = await conn.fetch(sql, *args)
             return [self._to_snapshot(row) for row in rows]
         finally:
-            await conn.close()
+            await conn.close(timeout=self._command_timeout_seconds)
 
     def search(
         self,
@@ -377,12 +388,12 @@ class PostgresProductRepository:
                   )
             )
         """
-        conn = await asyncpg.connect(self._dsn, timeout=2)
+        conn = await self._connect()
         try:
             rows = await conn.fetch(sql, *args)
             return frozenset(str(row["token"]) for row in rows)
         finally:
-            await conn.close()
+            await conn.close(timeout=self._command_timeout_seconds)
 
     def catalog_terms_evidenced(
         self,
@@ -392,7 +403,7 @@ class PostgresProductRepository:
         return self._run(self._catalog_terms_evidenced(terms, category))
 
     async def _list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]:
-        conn = await asyncpg.connect(self._dsn, timeout=2)
+        conn = await self._connect()
         try:
             rows = await conn.fetch(
                 """
@@ -410,7 +421,7 @@ class PostgresProductRepository:
             }
             return tuple(sorted((path for path in paths if path), key=lambda item: item))
         finally:
-            await conn.close()
+            await conn.close(timeout=self._command_timeout_seconds)
 
     def list_category_hierarchies(self) -> tuple[tuple[str, ...], ...]:
         return self._run(self._list_category_hierarchies())
@@ -419,7 +430,7 @@ class PostgresProductRepository:
         bounded_limit = max(4, min(int(limit), 48))
         brand_limit = max(1, (bounded_limit * 3) // 4)
         category_limit = max(1, bounded_limit - brand_limit)
-        conn = await asyncpg.connect(self._dsn, timeout=2)
+        conn = await self._connect()
         try:
             brands = await conn.fetch(
                 """
@@ -453,14 +464,14 @@ class PostgresProductRepository:
                 [row["term"] for row in brands] + [row["term"] for row in categories]
             ))
         finally:
-            await conn.close()
+            await conn.close(timeout=self._command_timeout_seconds)
 
     def list_speech_terms(self, limit: int = 32) -> tuple[str, ...]:
         return self._run(self._list_speech_terms(limit))
 
     async def _list_brand_names(self, limit: int) -> tuple[str, ...]:
         bounded_limit = max(1, min(int(limit), 1000))
-        conn = await asyncpg.connect(self._dsn, timeout=2)
+        conn = await self._connect()
         try:
             rows = await conn.fetch(
                 """
@@ -478,13 +489,13 @@ class PostgresProductRepository:
             )
             return tuple(row["term"] for row in rows)
         finally:
-            await conn.close()
+            await conn.close(timeout=self._command_timeout_seconds)
 
     def list_brand_names(self, limit: int = 300) -> tuple[str, ...]:
         return self._run(self._list_brand_names(limit))
 
     async def _get_product_snapshot(self, product_id: str) -> ProductSnapshot | None:
-        conn = await asyncpg.connect(self._dsn, timeout=2)
+        conn = await self._connect()
         try:
             row = await conn.fetchrow(
                 """
@@ -510,7 +521,7 @@ class PostgresProductRepository:
             )
             return self._to_snapshot(row) if row else None
         finally:
-            await conn.close()
+            await conn.close(timeout=self._command_timeout_seconds)
 
     def get_product_snapshot(self, product_id: str) -> ProductSnapshot | None:
         return self._run(self._get_product_snapshot(product_id))
@@ -518,7 +529,7 @@ class PostgresProductRepository:
     async def _list_promotions(
         self, category: str | None, limit: int
     ) -> list[ProductSnapshot]:
-        conn = await asyncpg.connect(self._dsn, timeout=2)
+        conn = await self._connect()
         try:
             args: list[object] = [max(1, min(int(limit), 10))]
             category_filter = ""
@@ -557,7 +568,7 @@ class PostgresProductRepository:
             )
             return [self._to_snapshot(row) for row in rows]
         finally:
-            await conn.close()
+            await conn.close(timeout=self._command_timeout_seconds)
 
     def list_promotions(
         self, category: str | None = None, limit: int = 5
@@ -567,7 +578,7 @@ class PostgresProductRepository:
     async def _list_catalog_additions(
         self, category: str | None, limit: int
     ) -> CatalogAdditions:
-        conn = await asyncpg.connect(self._dsn, timeout=2)
+        conn = await self._connect()
         try:
             versions = await conn.fetch(
                 """
@@ -637,7 +648,7 @@ class PostgresProductRepository:
                 previous_imported_at=previous_version["imported_at"],
             )
         finally:
-            await conn.close()
+            await conn.close(timeout=self._command_timeout_seconds)
 
     def list_catalog_additions(
         self, category: str | None = None, limit: int = 5

@@ -151,6 +151,42 @@ def test_unresolved_product_category_round_trips_through_redis_encoding() -> Non
     assert decoded.shopping.seen_product_scope == ["drink", "water"]
 
 
+def test_clarification_state_round_trips_with_pending_slot_and_correction() -> None:
+    """Clarification memory must survive the Redis serialization boundary.
+
+    The consultation controller stores the unresolved slot independently from
+    product category.  A follow-up answer (and a later correction) therefore
+    cannot lose the original question when a worker reads the session back.
+    """
+    store = InMemorySessionStore()
+    session = store.create("clarification-round-trip")
+    consultation = {
+        "pending_question": {
+            "question_id": "q_usage",
+            "slot_key": "usage",
+            "scope": "snack",
+            "question": "Bạn dùng sản phẩm cho ai?",
+            "options": [],
+        },
+        "constraints": {"usage": "trẻ em"},
+    }
+    store.update_shopping(
+        session.session_id,
+        consultation=consultation,
+        pending_clarification="usage",
+    )
+
+    decoded = RedisSessionStore._decode(RedisSessionStore._encode(store.get(session.session_id)))
+    assert decoded.shopping.consultation == consultation
+    assert decoded.shopping.pending_clarification == "usage"
+
+    corrected = dict(consultation, constraints={"usage": "người lớn"})
+    store.update_shopping(session.session_id, consultation=corrected)
+    assert (
+        store.get(session.session_id).shopping.consultation["constraints"]["usage"] == "người lớn"
+    )
+
+
 def test_redis_session_decoder_defaults_pagination_memory_for_existing_records() -> None:
     session = InMemorySessionStore().create("legacy-session")
     payload = json.loads(RedisSessionStore._encode(session))

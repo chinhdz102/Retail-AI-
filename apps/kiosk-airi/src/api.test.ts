@@ -41,6 +41,18 @@ describe('agent response stream API', () => {
     const file = form.get('file') as File
     expect(file.name).toBe('voice.mp4')
     expect(file.type).toBe('audio/mp4')
+    expect(form.has('include_diagnostics')).toBe(false)
+  })
+
+  it('requests raw STT diagnostics only when explicitly enabled', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ text: '' }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    await transcribe('s', new Blob(['audio']), 'en', undefined, true)
+    const form = fetchMock.mock.calls[0][1].body as FormData
+    expect(form.get('include_diagnostics')).toBe('true')
+    expect(form.get('language')).toBe('en')
   })
 
   it('decodes incremental UTF-8 SSE events and assembles the validated response', async () => {

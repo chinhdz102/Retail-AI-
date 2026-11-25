@@ -1,0 +1,165 @@
+\documentclass[12pt,a4paper]{report}
+
+% ---------- Encoding & Font (Overleaf pdfLaTeX & XeLaTeX compatible, full Vietnamese T5/Unicode) ----------
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T5]{fontenc}
+  \usepackage{mathptmx}
+  \usepackage{tgtermes}
+\else
+  \usepackage{mathptmx}
+  \usepackage{fontspec}
+  \IfFontExistsTF{TeX Gyre Termes}{
+    \setmainfont{TeX Gyre Termes}
+    \setsansfont{TeX Gyre Termes}
+    \setmonofont{TeX Gyre Cursor}[Scale=0.88]
+  }{
+    \setmainfont{Times New Roman}
+    \setsansfont{Times New Roman}
+    \setmonofont{Consolas}[Scale=0.88]
+  }
+\fi
+
+% ---------- Page Geometry & Spacing ----------
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{setspace}
+\onehalfspacing
+\frenchspacing
+
+% ---------- Figures, Tables, Math, Algorithms ----------
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{amsmath, amssymb}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{ragged2e}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds}
+
+\setlist{leftmargin=2em}
+\setlength{\arrayrulewidth}{0.4pt}
+\renewcommand{\arraystretch}{1.14}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+% ---------- Links & Code Formatting ----------
+\usepackage{xurl}
+\def\UrlBreaks{\do\/\do\_\do\-\do\.}
+\Urlmuskip=0mu\relax
+\DeclareRobustCommand{\code}[1]{{\ttfamily\small\nolinkurl{#1}}}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=blue!70!black,
+    urlcolor=blue!70!black,
+    pdftitle={Phát triển Hệ thống Tác nhân AI Hỗ trợ Chuỗi Cửa hàng Bán lẻ tại Việt Nam},
+    pdfauthor={Nhóm Đồ án Tốt nghiệp Đại học FPT},
+}
+
+% ---------- Typography & Vietnamese Section Labels ----------
+\ifPDFTeX
+  \usepackage[protrusion=true,expansion=true]{microtype}
+\else
+  \usepackage[protrusion=true,expansion=false]{microtype}
+\fi
+\setlength{\emergencystretch}{2.5em}
+\hyphenpenalty=800
+\tolerance=1500
+
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\renewcommand{\chaptername}{Chương}
+\renewcommand{\appendixname}{Phụ lục}
+\renewcommand{\contentsname}{Mục lục}
+\renewcommand{\listtablename}{Danh mục bảng biểu}
+\renewcommand{\listfigurename}{Danh mục hình vẽ}
+\renewcommand{\tablename}{Bảng}
+\renewcommand{\figurename}{Hình}
+\renewcommand{\bibname}{Tài liệu tham khảo}
+\floatname{algorithm}{Thuật toán}
+\algrenewcommand\algorithmicrequire{\textbf{Đầu vào:}}
+\algrenewcommand\algorithmicensure{\textbf{Đầu ra:}}
+
+% ---------- FPT University Title Page Double Frame ----------
+\newcommand{\pageframe}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \draw[line width=0.8pt]
+      ([xshift=1cm,yshift=-1cm]current page.north west)
+      rectangle
+      ([xshift=-1cm,yshift=1cm]current page.south east);
+    \draw[line width=0.8pt]
+      ([xshift=1.12cm,yshift=-1.12cm]current page.north west)
+      rectangle
+      ([xshift=-1.12cm,yshift=1.12cm]current page.south east);
+  \end{tikzpicture}%
+}
+
+% ---------- Shared TikZ Diagram Styles (matching FPT reference template) ----------
+\tikzset{
+  procbox/.style={
+    rectangle, rounded corners=5pt, draw=blue!55!black, fill=blue!7,
+    line width=0.8pt, align=center, minimum height=1.0cm, inner sep=6pt, font=\small
+  },
+  aiagent/.style={
+    rectangle, rounded corners=5pt, draw=orange!75!black, fill=orange!11,
+    line width=0.85pt, align=center, minimum height=1.0cm, inner sep=6pt, font=\small
+  },
+  gatebox/.style={
+    rectangle, rounded corners=5pt, draw=teal!70!black, fill=teal!9,
+    line width=0.85pt, align=center, minimum height=1.0cm, inner sep=6pt, font=\small
+  },
+  decbox/.style={
+    diamond, aspect=2.1, draw=blue!60!black, fill=blue!8,
+    line width=0.8pt, align=center, inner sep=3pt, font=\footnotesize
+  },
+  flowarr/.style={-{Stealth[length=2.4mm]}, line width=0.8pt, draw=black!75}
+}
+
+\begin{document}
+
+\input{Preamble/titlepage}
+
+\pagenumbering{roman}
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{Lời cảm ơn}
+\input{Preamble/acknowledgement}
+
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{Tóm tắt}
+\input{Preamble/abstract}
+
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{Mục lục}
+\tableofcontents
+
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{Danh mục bảng biểu}
+\listoftables
+
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{Danh mục hình vẽ}
+\listoffigures
+
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{Danh mục chữ viết tắt}
+\input{Preamble/abbreviations}
+
+\clearpage
+\pagenumbering{arabic}
+
+\input{Chapters/Chapter_01_Introduction}
+\input{Chapters/Chapter_02_Theoretical_Background}
+\input{Chapters/Chapter_03_Data_Processing}
+\input{Chapters/Chapter_04_Methodology}
+\input{Chapters/Chapter_05_Result_Analysis}
+\input{Chapters/Chapter_06_Conclusion}
+
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{Tài liệu tham khảo}
+\input{Preamble/references}
+
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{Phụ lục}
+\input{Preamble/appendices}
+
+\end{document}

@@ -1,7 +1,16 @@
 # Retail-AI Production Quality Master Report
 
-**Assessment date:** 2026-10-29
+**Assessment date:** 2026-11-07 (latest continuation; historical baseline sections retained below)
 **Release decision:** `NOT READY` for production; suitable for controlled demo only
+**Latest continuation:** 2026-11-07 — [round 4: actual dialogue, budget repair, manufacturer knowledge routing and composition boundaries](consultation_repair4_20261107.md). Repaired contradictory basket feedback, title/uom bag normalization, empty native advice, bounded repair/review ordering, why-follow-up scope, empty-reason negative reviews, and an evaluation harness that incorrectly erased the displayed product page after fallbacks. Rebound four manufacturer records only after checking their exact identities; fact contents and timestamps are unchanged. With consultation enabled, explicit named-product instructions now reach the existing evidence controller. The actual streaming HTTP replay answers four original fact questions plus one grounded follow-up; final UI also answers preparation instructions immediately after an advice fallback. This establishes factual routing, not employee-quality recommendation. Actual UI advice still repeats facts, overinterprets a sugar label, or falls back. The observed no-added/exclusive-composition inference is now rejected by bounded local checks, including false model approvals; the latest generative UI retry encounters rate limits and a deadline, so semantic acceptance after that repair remains unproven. Full backend before the last composition change: **2,870 passed/1 skipped/1 warning**; final related checks pass **1,402 tests** with clean scoped Ruff and unchanged source hashes; details are in the linked report/manifest. No new physical mic, VAD/TTS/echo or LiveKit readiness evidence. Demo remains open; laptop stays running. Release remains `NOT READY`.
+**Previous repair round:** 2026-11-06 — [round 3: actual failures, general consultation repairs and Vietnamese speech transport](consultation_repair3_20261106.md). Added role-preserving alternatives, explicit sale-unit constraints, narrower negative discovery cues, unshown-reference clarification, exact same-product price rebinding and verified qualified budget comparisons. Independent limited checks reject unsupported fit, bodily-comfort, ingredient-absence and supply-duration promises, including false LLM approvals; they do not establish semantic employee quality. Fourteen exposed development turns across intermediate/final source versions have 6 semantic failures,7 service failures and1 weak answer, with0 employee-quality passes; the final-source API turn still falls back. These repeated related probes are not independent accuracy samples. Latest speech replay returns14/14 HTTP200, with all5 non-speech controls empty, after bounded large-WAV FLAC preparation and reverting the unsuccessful10s STT cutoff to20s. Regional/brand errors persist; no physical mic/room/echo/LiveKit claim. Final backend: **2,813 passed/1 skipped/1 warning**; scoped Ruff passes. Detailed report separates raw provider/UI captures, manual grades, offline replay and final-source evidence. Release remains `NOT READY`.
+**Latest direct-conversation round:** 2026-11-06 — [round 2: actual UI/API conversations, semantic fixes and Vietnamese audio replay](interactive_employee_round2_20261106.md). The latest 10-turn HTTP run contains 8 service failures and 2 semantic failures; two additional UI breakfast turns also fail to advise. Added bounded choice counts, partial-basket state/subtotals, native single-copy questions, comparison witnesses, sentence-bounded exclusions and verified budget comparisons. This remains below employee quality. Full backend before the final subtotal-only fix: **2,682 passed/1 skipped**; after that fix, **272 related tests passed**, with final scoped Ruff clean. Voice replay exercises 3 human, 6 synthetic speech and 5 non-speech files; regional/brand recognition errors remain despite uncertainty confirmation. No physical mic/room/browser-VAD/LiveKit readiness claim follows.
+**Latest Vietnamese-only continuation:** 2026-11-06 — [intent, consultation and paired ASR research/report](vietnamese_intent_asr_research_20261105.md). The kiosk fixes `vi` and removes the English selector. Added role-aware filtering for visible products, descriptor/negation checks, an advice-only route, numeric/dimension checks, and bounded optional ASR verification with transcript confirmation. Fact IDs remove false rejection caused by regenerated JSON quotations; four frozen reviewer probes matched expected labels, without establishing end-to-end quality. Later fixes pass actually delivered comparison references to the reviewer and preserve budget/exclusions through general-advice recovery. The latest two-turn HTTP capture is still **0 pass, 1 weak, 1 service failure**; the earlier seven-turn capture remains 0 pass/1 weak/6 service failures. This is not employee quality. PhoASR on the same 33 scheduled files did not justify replacing the default. Audio endpoint replay returned 14/14 HTTP200 with all five controls empty, but regional and brand errors remain. Azure fast transcription availability was checked on one public file: ordinary mode returns200; enhanced LLM mode is rejected400 by the current endpoint, so no model or accuracy claim follows. Final backend regression: **2,554 passed/1 skipped**; frontend unchanged since 121 passed/build success. Physical microphone, loudspeaker echo and LiveKit readiness remain unverified.
+**Latest text-first diagnosis:** 2026-11-03 — [real text probes, fixes and remaining defects](text_advice_diagnosis_20261103.md). The fixed-source paced delivery probe has 11 shopping turns: 1 useful, 4 partial, 6 failures (including all 4 fallbacks), plus 2 correct calendar controls. Shopping p50/p95 latency is 11.945/32.021s; this remains below employee quality. Routing, continuation, measurement roles, false preparation rejection, decimal questions and invented identity filters were repaired; provider cooldown/default recovery and opt-in voice diagnostics were added. Full backend regression: 2,280 passed/1 skipped before the final default-recovery refinement; final related regression: 419 passed; frontend 120 passed/build succeeds. Current token-limit evidence does not establish daily quota exhaustion. The detailed report distinguishes prior historical quota claims, live advice defects, and unverified physical-microphone quality.
+**Latest STT complaint audit:** 2026-11-03 — [Vietnamese/English recognition diagnostic](stt_regression_20261103.md). Live responses confirm Whisper Large v3 as primary. Fixed an accent-stripping/cross-sentence catalog correction that changed “quốc dân” into “Jordan”; verified the fix through the restarted endpoint. Related backend tests pass 498/498 and frontend tests 115/115, with a successful build. The same cached FLEURS/valid ViVoice inputs retain their previous decoder outputs; regional speech errors remain. Wrong-language forcing is reproduced, while tested automatic-language variants introduce other errors, so the default was preserved. This does not establish the cause of the user's physical-microphone failures or microphone readiness.
+**Latest acoustic-noise audit:** 2026-11-03 — [noise filtering report](noise_filtering_20261103.md). Silero v6 is shipped on both browser and server with matching weights and stronger browser capture hints. Endpoint replay rejects tested long fan-like noise and preserves a quiet Vietnamese speech sample mixed with fan-like noise. A paired 152-request `whisper-large-v3` ablation found RNNoise, GTCRN and DeepFilterNet3 worsened Vietnamese WER in the tested low-SNR rows, so none is enabled by default. This is a reproducible synthetic/file endpoint diagnostic, not proof that the user's physical mic and room are solved; production remains `NOT READY`.
+**Latest wording audit:** 2026-11-03 — [customer response wording fix](customer_response_wording_fix_20261103.md). Removed internal title-matching explanations and routine price/stock tails from shared recommendation, combo, unranked-category, and lowest-price replies. The 10-question comparison falls from 8/10 detected routine log tails to 0/10; the final expanded real-snapshot offline replay detects 0/13, with products in 11/13 turns. Final backend regression passes 2,098 tests, with one skipped and zero failures. One remaining legacy milk query gives a generic response. The final five-turn provider probe has two recommendations with products, one weak scope clarification, and two unavailable answers; it has zero detected routine log phrases, zero degraded lookups, and zero HTTP errors. These wording checks do not establish employee quality; `NOT READY` remains unchanged. The linked report records final regression and both provider-probe runs.
+**Latest continuation:** 2026-11-03 — [whole-catalog consultation audit and answer-quality review](consultation_human_quality_20261103.md), [employee-quality iteration v7](consultation_employee_iteration_20261103.md), and [voice/STT/TTS optimization](voice_optimization_20261103.md). The catalog audit passes 12,357 checks over 3,081 products and 346 taxonomy paths. The final backend regression passes 2,057 tests (1 skipped), frontend passes 115 tests, and the build succeeds after server-side Silero and Vietnamese TTS normalization. Acoustic replay retains 46 valid speech variants, blocks 34 controls and separately records four over-duration input errors. Live consultation still falls short of employee quality: the latest eight-turn probe contains six unavailable responses and two weak clarifications, and the provider subsequently exhausted its daily quota. Technical passes and small voice diagnostics do not establish employee quality or physical microphone/echo readiness; the release decision remains `NOT READY`.
 **Working branch:** `codex/retail-text-quality-v4-20261019` (kept as-is; no new branch created)
 **Historical benchmark base commit:** `7eeaa179d0ca0753a9759e67df3e4b2bf494a0ae`
 **Catalog snapshot:** Thanh Lam Mart JSON, dated 2026-09-15; Windows raw-byte SHA-256 `a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6`; LF-normalized content SHA-256 `8f2ee3771be548b85a8d8981127b2518b8e8e5868584491df36b96317476cbbc`.
@@ -753,3 +762,254 @@ The previous full-suite result was taken before its code commit, so the complete
 The deterministic V2 benchmark used the frozen provisional 300-query / 50-conversation set and the same Thanh Lam Mart snapshot (`a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6`). Exact product resolution scored Recall@1/5 and MRR **1.00** on 100 catalog-derived cases. Category browse scored Precision@5 and parser category accuracy **1.00** on 100 cases. Encoded hard constraints passed **100/100** with zero violations; candidate Recall@5 was **0.6878 on 98 evaluable cases**, Recall@10 **0.8694**, and results were non-empty in **98/100**. The deterministic end-to-end path measured p50/p95 **109.616/176.430 ms** on this local run. Across 50 generated conversations / 200 turns, category scope, context retention, parser-scope exact match, price ordering, and first-item reference checks each scored **1.00**. Candidate novelty for alternative recommendations had zero evaluable cases and remains untested.
 
 These are reproducibility/regression numbers for a synthetic, catalog-derived dataset, not human relevance, answer naturalness, hallucination rate, live-provider latency, browser/voice performance, or production readiness. The benchmark status remains `provisional_requires_human_review`; no independent blind labels were added. Artifact: [`semantic_intelligence_v2_a4667c1_postcommit_20261029.json`](artifacts/semantic_intelligence_v2_a4667c1_postcommit_20261029.json). Its working-tree flag is dirty because the workspace contains pre-existing untracked artifacts that were preserved; its tracked diff hash is empty. No new branch was created. Release remains **demo-only / not production-ready**.
+
+## 55. Complete database deadlines and bounded snapshot-page caching — 31/10/2026
+
+Completed the existing worker/timeout continuation on the same branch. Every one of the eight PostgreSQL catalog read paths now uses configurable connect and command deadlines, including connection cleanup; branch-information reads use the same policy. The immutable snapshot repository keeps up to 256 cached result pages per instance with every search criterion in the key, returns a fresh caller list, and starts a new cache when reloaded. New regressions cover changed snapshot prices, caller mutation, constraints/order/pagination, all database read deadlines and error cleanup, request cancellation, and context isolation.
+
+Final verification on the dirty working tree based on `20ed433b99efa9cff740ce2681324a88ee4e498f`: **1,551 backend tests passed, 1 Windows symlink-permission test skipped, in 225.59 s**; **100 frontend tests passed** and TypeScript/Vite build passed. Ruff, Python compile and diff checks passed. The frozen 300-query / 50-conversation benchmark has identical non-timing case and conversation results to the retained `a4667c1` artifact. Source hashes include the pre-existing untracked bounded-worker code and tests.
+
+A same-code cache-off/on/on/off ablation ran 240 timed requests and verified nonempty cards and identical ordered product IDs, names and prices in all four runs. At C20, p95 was **2,970–3,213 ms cache off** and **2,785–2,969 ms cache on**. The improvement is modest and variable; this four-query in-process workload is not a production capacity or provider-latency result. PostgreSQL checks used fake connections. No new live provider/browser/voice, human-review, protected blind-set or current-store evidence was added. Release remains **demo-only / not production-ready**.
+
+See the [31/10 detailed report](retail_ai_fix_optimization_20261031.md), [machine-readable quality gate](artifacts/quality_gate_optimization_20261031.json), and [source manifest](artifacts/verified_source_manifest_20261031.json) for commands, scope, results and remaining issues.
+
+## 56. General consultation grammar and category-wide verification — 31/10/2026
+
+Fixed shared request parsing, native-accent/operator collisions, location routing and
+category price ranking when a SKU has the same title as its category. No example SKU
+or example-query response is hardcoded. Replies list at most three recommendation
+items and summarize shared aisle/bay locations. Development-only synthetic sales are
+explicitly labeled in responses and cards; production ignores the demo-sales flag.
+
+The final working tree passed **1,590 backend tests, 1 Windows symlink-permission skip
+in 292.74 s**, **100 frontend tests**, TypeScript/Vite build, Ruff, compileall and diff
+checks. A new reproducible matrix passed **1,730 cases over all 346 hierarchy paths**
+(3,081 catalog products) plus **110 API conversation turns across 22 department scopes**.
+These check scope, price constraints/order, context and simulated ranking, with model
+calls blocked in the API sweep. Local browser checks verified synthetic sales on
+electrical appliances and a switch to school-supplies location lookup.
+
+Coverage is finite and catalog-derived, not exhaustive natural-language testing or
+human judgment of recommendation quality. Actual availability, placement, provider
+and voice performance, blind-set and human-review gaps remain unverified. See the
+[consultation report](retail_ai_consultation_generalization_20261031.md) and
+[detailed matrix](artifacts/consultation_coverage_20261031.json). Release remains demo-only.
+
+
+## 57. Exact 35-question review and experimental rollout — 01/11/2026
+
+Reviewed all 35 user-authored Vietnamese questions in fresh sessions and 14 authored
+multi-turn journeys (34 turns). The complete post-pagination run still has 9 failed,
+9 weak and 17 reasonable first-turn responses by agent self-review. This is exposed
+development evidence, not blind/human-rated consultation accuracy. HTTP 200 was not
+treated as success. Meal baskets, unsupported efficacy/taste claims and context
+handling remain inadequate.
+
+Added an opt-in structured dialogue policy, taxonomy-scoped bounded pagination,
+server-checked product/price/quantity binding and explicit experimental memory.
+Subsequent fixes preserve pending controllers and known-pair comparisons; the new
+pair renderer uses catalog facts and only computes unit prices for unambiguous
+single packs. No question-to-SKU table was introduced. The policy is now disabled
+by default and gated to development even when enabled. The local demo explicitly
+opts in; this does not establish production readiness.
+
+Verification: earlier full backend run 1,618 passed/1 Windows symlink skip with
+the semantic policy off; subsequent routing regression 512 passed; final contracts
+and comparison recognition 71 passed; frontend 100 passed and build succeeded.
+The finite catalog sweep passes 1,730 templates over 346 paths plus 110 API turns
+with the semantic policy off. Counts overlap and do not measure natural language
+quality. The final two-turn live replay checks pair retention/formatter only.
+
+See the [Vietnamese per-question report](customer_consultation_35_review_20261101.md),
+[research and source mapping](customer_consultation_research_20261101.md),
+[manual annotations](artifacts/customer_consultation_manual_review_20261101.json),
+[live 35-question trace](artifacts/customer_consultation_35_post_pagination_20261101.json)
+and [final pair replay](artifacts/customer_consultation_journeys_delivery_20261101.json).
+Release remains demo-only / not production-ready.
+
+## 58. Consultation research and real voice audit — 1 November 2026
+
+Continued the requested research and implementation with ALCE, official Groq/Azure/
+vad-web/Silero/LiveKit guidance and current manufacturer pages. Added typed product
+evidence projection, task-role/price diversity context, draft review, bound names and
+Unicode-price checks, finish-reason rejection and per-model/credential 429 cooldown.
+The reviewer still accepted unsupported claims. The 35 exposed development questions
+yielded 16 reasonable first actions, 8 weak and 11 failed under agent self-review;
+8 used the error fallback and only one returned product cards. These are not employee
+quality scores or an improvement claim. Six later journeys/16 turns remained weak.
+
+Fixed speech-start misfires interrupting TTS before confirmed speech, truncated
+fallback uploads at the 12-second cap, TTS upstream leakage on cancellation before
+first audio, cancelled-scope cleanup and rejected AudioContext.close promises.
+Bound the extra upload copy; fixed Vietnamese negation/reference collisions and
+kept direct price/location lookups on established controllers. A final laundry-location
+replay returns proposed-planogram facts, still not real shelf proof. Tissue-location
+still returns recommendations instead of location after the parser fix; it remains failed.
+
+Real Groq API diagnostics: FLEURS 12 clips, aggregate WER 7.41%/CER 4.43%; ViVoice34
+7 cached labeled clips, WER 21.30%/CER 10.92%. All 19 were accepted, illustrating that
+acceptance is not accuracy. These exposed read-speech clips are not live retail mic
+data. Installed v5 ONNX/WASM replay detected speech in 19/19 files and no speech in
+the tested synthetic controls; 13 resulting segments exceed the kiosk's 12 s cap.
+Azure vi/en/zh ticket streams decode, one-use tickets reject reuse, and four synthetic
+audio-to-agent-to-audio transports complete; their consultation content remains weak.
+
+Full backend at the earlier audit stage: 1,638 passed/1 Windows symlink skip; subsequent
+targeted regressions cover the final fixes (252 logic and 561 API/intent/search passed;
+counts overlap). Final frontend 101 passed,
+production build succeeds with the existing large-chunk warning. Physical microphone,
+room echo, real browser AudioWorklet/playback/autoplay and subjective TTS pronunciation
+are not verified in this run. LiveKit is not installed/integrated; no LiveKit success
+claim is made. Experimental consultation remains disabled by default/development-only.
+
+See [detailed Vietnamese report and all 35 replies](consultation_voice_audit_20261101.md),
+[research/source mapping](consultation_voice_research_20261101.md),
+[workplan and acceptance status](consultation_voice_workplan_20261101.md),
+[measured summary](artifacts/consultation_voice_measured_summary_20261101.json) and
+[version manifest](artifacts/consultation_voice_delivery_manifest_20261101.json).
+
+
+## 59. Hoàn tất sửa consultation/voice technical pass — 01/11/2026
+
+Đợt này tách selection sản phẩm thành schema typed có kiểm tra vai trò, nhãn đường, số lượng và ngân sách; làm phẳng schema tool; fallback planner lỗi/quota về controller catalog; sửa parser câu “tìm mãi không thấy … nó” và map audio malformed thành 422. Regression focused pass **603 tests**; lượt 35 câu development tại thời điểm này trả 35/35 HTTP 200, **12/35 có thẻ hàng**, median **0.928 s**, max **5.378 s**, không có consultation-fallback. Đây là dữ liệu đã lộ, tự kiểm tra, không phải blind human evaluation. **Lượt này đã được thay bằng replay mới hơn ở §61; không dùng số 12/35 làm kết quả cuối.**
+
+[Completion report](consultation_voice_completion_20261101.md) ghi artifact, hash, journey và giới hạn. Kết luận vẫn **demo-only / chưa production-ready**: một số câu chọn nhóm sai hoặc hỏi chưa đủ hữu ích, catalog là snapshot cũ, browser mic/loa/AEC/autoplay chưa xác minh, và LiveKit chưa triển khai.
+
+## 60. Final generic safeguards and voice regression — 01/11/2026
+
+The final audit added scope-gated constraint carryover for consultation follow-ups,
+grounded reasons in typed fallback answers, and a clarification sanitizer for unsupported
+safety, efficacy, taste, nutrition and stock claims. Voice barge-in now retains an
+interrupted TTS reply for 15 seconds and replays it only after empty/non-speech/repeated
+STT; accepted speech and explicit/session lifecycle actions clear the recovery. Groq
+malformed-media provider responses are classified as HTTP 422 input errors without retry.
+
+Validation: 287 focused backend tests passed, 102 frontend tests passed, production build,
+Ruff and Python compileall passed. These are software regressions only. Physical mic/room
+echo/AEC/autoplay and human TTS ratings remain unmeasured; LiveKit is documented as a
+readiness option but is not installed or integrated. Consultation remains development-only
+and not accepted as employee-quality.
+
+The final full backend regression then completed with **1668 passed, 1 skipped, 1 warning**.
+The skip is a Windows symlink-permission test; the warning is a Starlette/httpx deprecation.
+
+After that regression, an unscoped-consultation guard was added and replayed with the
+development flag: planner fallback no longer searches filler/use-case text and returns
+unrelated catalog rows. Cases for cleaning, a budgeted dinner and whole-house use now ask
+for the missing product group; explicit shampoo/category requests retain their catalog
+controller. The guard and consultation/API/parser suite pass **609 tests** with the same
+single deprecation warning. This improves abstention and routing safety, not a claim of
+employee-level recommendation quality.
+
+## 61. Identity guards and multi-role basket schema — 01/11/2026
+
+Added a generic identity clarification guard for color-only packaging references,
+previous-purchase/TikTok references and substitute requests without a named source item.
+It uses catalog brand names and parser signals, so ordinary category preferences such as
+“bút màu xanh” continue to retrieval while “cái loại sữa hộp màu xanh” asks for a brand or
+product name. The fallback scope wording was shortened for customer-facing Vietnamese,
+and multi-item fallback text now lists all represented categories instead of assigning the
+first item's category to every pick.
+
+Cross-agent review found a real schema mismatch: `GroundedSelection` capped every response
+at two picks while basket policy supports six bounded roles. The schema now allows six for
+baskets; the renderer still rejects more than two alternatives, and a three-role basket
+regression verifies role coverage and server-calculated totals.
+
+Validation after the latest source changes: **70 consultation tests passed** with the
+existing Starlette/httpx deprecation warning; frontend **102 tests passed** and production
+build passed with the existing model-viewer chunk warning. Ruff, compileall and diff checks
+passed. The frozen full backend artifact reports **1,683 passed, 1 skipped, 1 warning**;
+the final run is recorded in [`consultation_full_regression_final_v2_20261101.txt`](artifacts/consultation_full_regression_final_v2_20261101.txt).
+The taxonomy-prefix guard also has a **645-test** scoped regression artifact; the final
+full run above completed after that source change.
+LiveKit remains research/readiness only; physical mic, room echo/AEC/autoplay and independent
+human ratings remain unverified. Release remains demo-only and the consultation flag remains
+development-only by default.
+
+At this checkpoint the replay of all 35 exposed questions recorded **35/35 HTTP 200 but 2/35 product
+cards**; 12 turns used scope clarification after consultation/provider fallback. A separate
+post-fix replay of four affected cases and the scoped suite passed **645 tests**. This is
+evidence of safer routing and an unresolved conversation-quality gap, not a quality score.
+Voice provider/lifecycle regressions passed **73 tests**. Synthetic API controls reject
+silence/tone/noise before STT and classify malformed audio as **422**; see
+[`voice_input_controls_final_20261101.json`](artifacts/voice_input_controls_final_20261101.json).
+
+## 62. Diagnosed consultation fallback and server-side basket boundaries — 01/11/2026
+
+Added bounded error-code/status projection to the Groq chat trace and session-correlated
+consultation diagnostics. Logs contain reason labels and schema/rate-limit/cooldown counts,
+not raw provider errors, customer text, failed generations or credentials. A new exposed
+35-case replay recorded **35 HTTP 200, 9 cases with product cards**, but reading the replies
+still found unrelated products, a spicy child snack and incoherent baskets. Diagnostic
+logs identify 15 consultation failures: **13 rate-limit/cooldown, 1 structured-validation,
+1 mixed schema/cooldown**. These failures are different from the 10 final HTTP responses
+labelled scope clarification because some failures reached the legacy controller.
+
+The run predates the final delegation/fallback boundaries. It is retained with its original
+source hashes and is not a quality-improvement score or blind evaluation. Median/p95/max
+were 0.299/4.536/6.792 s on a host concurrently running offline tests, not a latency benchmark.
+See [`consultation_diagnostic_summary_20261101.json`](artifacts/consultation_diagnostic_summary_20261101.json)
+and [`customer_consultation_35_diagnostic_final35_20261101.json`](artifacts/customer_consultation_35_diagnostic_final35_20261101.json).
+
+Final changes keep special purpose/attribute/audience constraints out of broad legacy
+fallback, preserve a useful catalog path for clear single-type requests, and prevent a
+fresh single-type alternatives request from becoming a model-invented multi-item basket.
+Prefix-only scope must share one taxonomy family or use a curated alias; otherwise shared
+words such as a broad household label cannot identify a product scope. Targeted tests use
+multiple industries, context/constraint controls, real alias-family structure and valid
+multi-role baskets. No per-question/SKU response table was added.
+
+The final seven-case scoped replay is separate from the full 35 run and is not a new
+35-case result. It still contains generic clarifications and provider failures; no employee
+quality acceptance is claimed. Full/scoped source provenance, final counts and remaining
+voice/UI limitations are consolidated in the [completion report](consultation_voice_completion_20261101.md).
+Full v5 passed **1711 tests, 1 skip, 1 warning in 302.18 s**. Its manifest records source
+changes to main.py/API tests during the final alias correction, so it is a pre-alias
+baseline. The final scoped consultation/Groq/API/parser/shopping-flow suite passed **754 tests,
+1 warning in 158.18 s** on the post-alias source. A two-case live
+replay after that correction returns a directed household-scope question and two
+shampoo alternatives at 80,000/95,200 VND without an invented basket; it is not a new
+35-case or blind evaluation.
+LiveKit remains unimplemented; physical mic/room echo/AEC/autoplay and independent TTS
+ratings remain unverified. Release remains demo-only with consultation disabled by default.
+
+## 63. Server acoustic gate and Vietnamese TTS normalization — 03/11/2026
+
+Added server-side Silero v5 using the same bundled weights as the browser, decoding
+WAV/WebM/MP4/MP3 through PyAV to mono 16 kHz. Every upload/pass resets recurrent
+state and context. Quiet recordings can receive bounded gain for verification;
+Whisper still receives the original bytes. CPU work runs outside the event loop,
+with two active analysis slots, a cooperative 5-second budget and a 60-second
+decoded-duration limit. Cancellation does not release a still-running worker's slot.
+An unavailable acoustic verifier produces an error rather than bypassing the gate.
+
+Azure buffered/streaming synthesis now share SSML aliases for unambiguous Vietnamese
+currency and mass/volume tokens. Visible text remains unchanged and XML is escaped
+once. This applies the type-aware normalization idea from the Vietnamese NSW paper;
+it does not implement its learned tagger or establish perceived pronunciation quality.
+Whisper hallucination, Calm-Whisper, ViMD, VAD-window and incremental-TTS papers are
+mapped to applied/deferred decisions in the [detailed report](voice_optimization_20261103.md).
+
+Final validation: **2,057 backend tests passed, 1 Windows symlink-permission test
+skipped, 1 Starlette/httpx warning, 315.87 s**; **115 frontend tests / 21 suites**;
+production build, Ruff, compileall and diff checks pass. The scoped voice suite
+passes 148 tests (included in the full total). Acoustic replay uses the real decoder
+and ONNX model with fake ASR: **46 valid speech inputs retained, 34 controls blocked**,
+and **four >60-second ViVoice inputs recorded separately as input errors**. Correlated
+codec/gain variants and exposed clips are not independent or blind evaluation.
+
+After backend restart, real STT accepts three ViMD clips with WER **33.33%, 0%, 15%**;
+all five ESC-50 controls return empty text and `speech_detected=false` in 64–72 ms.
+Good confidence still accompanies incorrect words in the first clip. Azure vi/en/zh
+streams decode, ticket reuse returns 404, overlong text returns 422, and client cancel
+after first chunk works. First audio including ticket is **1,876 / 178 / 240 ms**,
+one sample per locale, not a latency improvement or MOS claim.
+
+See [full backend log](artifacts/voice_acoustic_full_backend_20261103.txt),
+[acoustic replay](artifacts/voice_acoustic_replay_20261103.json),
+[live STT](artifacts/voice_acoustic_stt_live_20261103.json) and
+[live TTS](artifacts/voice_acoustic_tts_live_20261103.json). Physical microphone,
+speaker echo/AEC, mixed/background speech, endpoint boundaries and independent TTS
+ratings remain unverified. LiveKit remains unintegrated; current public turn-detector
+language lists omit Vietnamese. Release remains controlled-demo only.

@@ -13,6 +13,7 @@ import unicodedata
 from functools import lru_cache
 
 
+@lru_cache(maxsize=8192)
 def normalize_vietnamese(text: str) -> str:
     # Resolve genuinely accentless chat spellings before accent stripping.
     # Doing this afterward turns valid words such as "hồng" into "không"
@@ -52,10 +53,18 @@ def normalize_vietnamese(text: str) -> str:
         (r"\b(mon|cai|loai)\s+chi(?=\s+(?:ngon|hop|re|tot|duoc)\b)", r"\1 nao"),
         (r"\b(an|uong)\s+chi\b", r"\1 gi"),
         (r"\bmo(?=\s+(?:ngon|an|uong|ban|chay|hop|re|tot|duoc)\b)", "nao"),
+        (r"\bbao\s+nhiu\b", "bao nhieu"),
+        (r"\bbnhiu\b", "bao nhieu"),
         (r"(?<!bao )\b(?:nhiu|nhieu)(?=\s+(?:tien|dong|vay|the|a|ban)\b)", "bao nhieu"),
         (r"(?<!bao )\b(?:nhiu|nhieu)(?=\W*$)", "bao nhieu"),
         (r"\b(?:bao\s+nhiu|bao\s+nhieu)\b", "bao nhieu"),
-        (r"\b(?:bn|bnh)\b", "bao nhieu"),
+        (r"\b(?:bn|bnh|bnhiu|bnhieu)\b", "bao nhieu"),
+        (
+            r"\bnc(?=\s+(?:ngot|suoi|khoang|mam|tuong|giat|xa|rua|hoa|uong|ep|tra|sot|lau|cham|giai)\b)",
+            "nuoc",
+        ),
+        (r"(?<=[a-z])\s+k(?=\s*(?:[?,!.]|$))", " khong"),
+        (r"(?<=[a-z])\s+v(?=\s*(?:[?!.]|$))", " vay"),
         (r"\b(?:hien\s+gio|bay\s+gio)\b", "hien tai"),
     )
     for pattern, replacement in replacements:
@@ -97,6 +106,9 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "luong duong",
             "bao nhieu duong",
             "co duong khong",
+            "chua duong",
+            "chua nhieu duong",
+            "co chua duong",
             "con nhieu duong",
             "sugar content",
             "nutrition information",
@@ -220,9 +232,12 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
     for cue in ("ma giam gia", "giam gia", "khuyen mai", "uu dai", "deal", "on sale", "sale"):
         promotion_stripped = re.sub(rf"(?<!\w){re.escape(cue)}(?!\w)", " ", promotion_stripped)
     explicit_price_with_promotion = _has_phrase(
-        promotion_stripped, ("gia", "price", "cost", "bao nhieu tien", "bao tien", "may dong")
+        promotion_stripped,
+        ("gia", "price", "cost", "bao nhieu tien", "bao tien", "may dong", "con bao nhieu"),
     )
-    if promotion and not explicit_price_with_promotion:
+    if promotion and explicit_price_with_promotion:
+        price = True
+    elif promotion and not explicit_price_with_promotion:
         price = False
 
     stock = _has_phrase(
@@ -278,7 +293,8 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             normalized,
         )
         or re.search(
-            r"\b\d+(?:[.,]\d+)?\s*(?:ml|l|g|kg)\b.{0,30}\b(?:co|ban|ton)\b.{0,15}\bkhong\b",
+            r"\b\d+(?:[.,]\d+)?\s*(?:ml|l|g|kg)\b.{0,30}"
+            r"\b(?:(?:co\s+(?:hang|ban|san))|(?:ban|ton)(?:\s+(?:hang|san))?|co)\s+khong\b",
             normalized,
         )
     )
@@ -308,13 +324,17 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
     ):
         stock = False
     remaining_quantity_question = _has_phrase(normalized, ("con bao nhieu",)) or bool(
-        re.search(r"\bcon\s+may\s+(?:chai|lon|hop|goi|ly|cai)\b", normalized)
+        re.search(
+            r"\bcon\s+(?:dung\s+)?(?:may|bao nhieu)\s+"
+            r"(?:chai|lon|hop|goi|ly|cai|bich|tui|cuon|tuyp|vi|hu|lo|thung)\b",
+            normalized,
+        )
     )
     remaining_amount_is_price = _has_phrase(
         normalized, ("con bao nhieu tien", "con bao nhieu dong")
     ) or bool(
         re.search(
-            r"\b(?:gia|price|cost)\b.{0,60}\bcon bao nhieu\b",
+            r"\b(?:gia|giam gia|khuyen mai|uu dai|price|cost)\b.{0,60}\bcon bao nhieu\b",
             normalized,
         )
     )
@@ -403,6 +423,9 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
             "nhan co gi",
             "trong nay co gi",
             "co duong khong",
+            "chua duong",
+            "chua nhieu duong",
+            "co chua duong",
             "co duong",
             "has sugar",
             "does it have sugar",
@@ -438,8 +461,10 @@ def requested_snapshot_fields(text: str) -> tuple[str, ...]:
         "kcal",
     }:
         ingredients = False
+    # "không cay mắt" / "cay mắt" on baby bath products means tear-free, not spicy food.
+    spicy_normalized = re.sub(r"\b(?:khong\s+)?cay\s+mat\b", " ", normalized)
     spicy = _has_phrase(
-        normalized,
+        spicy_normalized,
         (
             "khong cay",
             "co cay",
@@ -980,6 +1005,15 @@ def explicit_recommendation_categories(text: str) -> list[str]:
         ):
             continue
         for match in pattern.finditer(normalized):
+            if category == "drink" and cue == "chai nuoc":
+                following = normalized[match.end() : match.end() + 24]
+                if re.match(
+                    r"\s+(?:suc\s+mieng|rua\s+(?:chen|bat|tay|mat)|giat|xa|"
+                    r"lau\s+(?:san|kinh|nha)|mam|tuong|mau|hang|cot|dung|"
+                    r"tay(?:\s+trang)?|hoa(?:\s+hong)?|xit\s+phong)\b",
+                    following,
+                ):
+                    continue
             if is_negated(match.start()):
                 negated_matches.append((match.start(), category))
             else:
@@ -994,10 +1028,19 @@ def explicit_recommendation_categories(text: str) -> list[str]:
         ]
 
     # "nước" by itself is often part of a product name. Treat it as a drink
-    # category only when the same request explicitly names another category.
+    # category only when the same request explicitly names another category AND
+    # the token is not the head of a non-beverage compound ("nước súc miệng",
+    # "nước rửa chén", "nước giặt", "nước mắm", etc.).
     other_category_found = any(category != "drink" for _, _, category, _ in matches)
     if other_category_found:
         for match in re.finditer(r"(?<!\w)nuoc(?!\w)", normalized):
+            following = normalized[match.end() : match.end() + 24]
+            if re.match(
+                r"\s+(?:suc\s+mieng|rua\s+(?:chen|bat|tay|mat)|giat|xa|lau\s+(?:san|kinh|nha)|"
+                r"mam|tuong|mau|hang|cot|dung|tay(?:\s+trang)?|hoa(?:\s+hong)?|xit\s+phong)\b",
+                following,
+            ):
+                continue
             if is_negated(match.start()):
                 negated_matches.append((match.start(), "drink"))
             else:
@@ -1581,6 +1624,7 @@ _CONSULTATION_FILLER_TOKENS = frozenset(
         "tap",
         "dieu",
         "lieu",
+        "luong",
         "xac",
         "nuoc",
         "cuoc",
@@ -1837,9 +1881,31 @@ def is_recommendation_request(text: str) -> bool:
     normalized = " ".join(normalize_vietnamese(text).split())
     if is_recommendation_negated(text):
         return False
+    # Natural Vietnamese discovery framing: "Có <product> nào <criteria> không?"
+    # (e.g. "Có bánh mì tươi hay bánh mì sandwich nào ngon không?",
+    # "Có nước rửa chén nào dịu nhẹ không?"). Exclude direct factual lookups
+    # like "có giá/hạn dùng/chứng nhận/tồn kho nào không?".
+    has_discovery_question = bool(
+        (
+            re.search(r"\bco\b.{2,65}\bnao\b.{0,50}\b(?:khong|a|nhi|vay)?$", normalized)
+            or re.search(
+                r"^co\s+(?!ban\b)(?!chua\b)(?!duong\b)(?:[\w]+\s+){1,5}"
+                r"(?:khong mui|it duong|khong duong|diu nhe|an toan cho|cho da be|cho tre em)\b"
+                r".{0,40}\bkhong$",
+                normalized,
+            )
+        )
+        and not re.search(
+            r"\b(?:gia bao nhieu|bao nhieu tien|o ke nao|o dau|con bao nhieu|"
+            r"han dung|hsd|chung nhan|xuat xu|co chua|thanh phan|"
+            r"san pham nay|loai nay|hop nay|chai nay|goi nay)\b",
+            normalized,
+        )
+    )
     return (
         is_alternative_product_request(text)
         or _has_phrase(normalized, _RECOMMENDATION_CUES)
+        or has_discovery_question
         or bool(re.search(r"(?<!giai )\bkhat(?:\s+nuoc)?\b", normalized))
     )
 

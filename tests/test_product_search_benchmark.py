@@ -35,7 +35,7 @@ class _Connection:
         self.args = args
         return self.rows
 
-    async def close(self) -> None:
+    async def close(self, *, timeout: float | None = None) -> None:
         return None
 
 

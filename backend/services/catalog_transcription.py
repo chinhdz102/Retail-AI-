@@ -67,24 +67,60 @@ _NEVER_CORRECT = QUERY_STOP_WORDS | frozenset(
         "tam",
         "chin",
         "muoi",
+        "anh",
+        "chi",
+        "em",
+        "ong",
+        "rang",
+        "vinh",
+        "vien",
+        "nghi",
+        "chung",
+        "nguoi",
+        "hon",
+        "phu",
+        "muc",
+        "linh",
+        "campuchia",
+        "singapore",
+        "home",
     }
 )
+_RETAIL_PACKAGING_WORDS = frozenset(
+    {
+        "thung",
+        "chai",
+        "lon",
+        "hop",
+        "goi",
+        "bich",
+        "tui",
+        "tuyp",
+        "loc",
+        "hu",
+        "binh",
+        "can",
+        "cuon",
+        "mieng",
+    }
+)
+_NEVER_FUZZY_BRAND = _NEVER_CORRECT | _RETAIL_PACKAGING_WORDS
 _RETAIL_BRAND_CUE_PHRASES = (
     ("mua",),
-    ("gia", "ban"),
-    ("gia", "bao", "nhieu"),
-    ("bao", "nhieu", "tien"),
-    ("con", "hang"),
-    ("het", "hang"),
-    ("mat", "hang"),
-    ("cua", "hang"),
-    ("hang", "hoa"),
-    ("hang", "ton"),
-    ("ton", "kho"),
-    ("khuyen", "mai"),
-    ("san", "pham"),
-    ("mua", "hang"),
-    ("tim", "mua"),
+    ("giá", "bán"),
+    ("giá", "bao", "nhiêu"),
+    ("bao", "nhiêu", "tiền"),
+    ("còn", "hàng"),
+    ("hết", "hàng"),
+    ("mặt", "hàng"),
+    ("cửa", "hàng"),
+    ("hàng", "hóa"),
+    ("hàng", "tồn"),
+    ("tồn", "kho"),
+    ("khuyến", "mãi"),
+    ("sản", "phẩm"),
+    ("mua", "hàng"),
+    ("tìm", "mua"),
 )
 
 
@@ -126,10 +162,20 @@ def _retail_cue_positions(
 ) -> list[int]:
     """Find commerce cues without confusing Vietnamese homophones such as kế/kệ."""
     cue_positions: set[int] = set()
+    surface_words = [unicodedata.normalize("NFC", match.group()).casefold()
+                     for match in matches]
     for start in range(len(normalized_words)):
         for phrase in _RETAIL_BRAND_CUE_PHRASES:
             end = start + len(phrase)
-            if tuple(normalized_words[start:end]) == phrase:
+            normalized_phrase = tuple(_normalize_word(word) for word in phrase)
+            if tuple(normalized_words[start:end]) != normalized_phrase:
+                continue
+            # Missing accents are common in ASR output, but conflicting accents
+            # are different words: mùa/múa/mưa must never become the action mua.
+            if all(
+                surface == expected or surface == _normalize_word(surface)
+                for surface, expected in zip(surface_words[start:end], phrase, strict=True)
+            ):
                 cue_positions.add(start)
 
         # Keep the accented standalone price/location words. The de-accented
@@ -298,12 +344,14 @@ def _correct_fuzzy_brand(
 
     # An exact catalog category is strong evidence of a product query, even when
     # the customer does not say a price/stock cue (for example, "Có kem đánh
-    # răng P, F không?").
+    # răng P, F không?"). Also protect all tokens inside matched exact category
+    # spans so phrases like "sữa rửa mặt" are never overwritten by a fuzzy brand.
+    category_span_positions: set[int] = set()
     for start in range(len(normalized_words)):
         for width in range(2, min(4, len(normalized_words) - start) + 1):
             if tuple(normalized_words[start : start + width]) in category_phrase_index:
                 cue_positions.append(start)
-                break
+                category_span_positions.update(range(start, start + width))
     if not cue_positions:
         return text, []
 
@@ -415,10 +463,14 @@ def _correct_fuzzy_brand(
                 )
             )
             if not possible_spoken_acronym and any(
-                word in _NEVER_CORRECT for word in source_tokens
+                word in _NEVER_FUZZY_BRAND for word in source_tokens
             ):
                 continue
+            if any(index in category_span_positions for index in range(start_index, end_index)):
+                continue
             if any(word in category_words and len(word) >= 4 for word in source_tokens):
+                continue
+            if len(source_tokens) == 1 and source_tokens[0] in category_words:
                 continue
             if len(source_tokens) == 1 and source_tokens[0] in known_brand_tokens:
                 continue
@@ -435,11 +487,18 @@ def _correct_fuzzy_brand(
                 for brand_tokens in known_brand_sequences
             ) and not exact_short_brand_transcription:
                 continue
-            if not any(
-                start_index - 5 <= cue_index < start_index
-                or end_index <= cue_index <= end_index + 4
-                for cue_index in cue_positions
-            ):
+            def local_retail_cue(cue_index: int) -> bool:
+                if not (
+                    start_index - 5 <= cue_index < start_index
+                    or end_index <= cue_index <= end_index + 4
+                ):
+                    return False
+                left = min(start_index, cue_index)
+                right = max(end_index - 1, cue_index)
+                between = text[matches[left].end() : matches[right].start()]
+                return not re.search(r"[.!?;\n]", between)
+
+            if not any(local_retail_cue(cue_index) for cue_index in cue_positions):
                 continue
 
             candidate_brand_surfaces, has_exact_category = brands_near_span(start_index, end_index)
@@ -457,6 +516,12 @@ def _correct_fuzzy_brand(
                 (_edit_distance(source, brand), brand, surface)
                 for brand, surface in brands.items()
                 if abs(len(source) - len(brand)) <= 3
+                and not (
+                    not has_exact_category
+                    and len(source_tokens) == 1
+                    and len(_words(surface)) >= 2
+                    and matches[start_index].group().casefold() != source_tokens[0]
+                )
             ]
             if not distances:
                 continue
@@ -465,7 +530,11 @@ def _correct_fuzzy_brand(
             )
             best_distance, best_brand, best_surface = distances[0]
             ratio = best_distance / max(len(source), len(best_brand))
-            standard_match = best_distance <= 3 and ratio <= 0.45
+            standard_match = (
+                (best_distance <= 3 and ratio <= 0.45)
+                if has_exact_category
+                else (best_distance <= 2 and ratio <= 0.40)
+            )
             exact_category_match = (
                 has_exact_category and len(brands) <= 3 and best_distance <= 4 and ratio <= 0.6
             )
@@ -546,6 +615,160 @@ def _correct_fuzzy_brand(
     ]
 
 
+_PHONETIC_RETAIL_CONTEXT_WORDS = frozenset(
+    {
+        "sua",
+        "nuoc",
+        "dau",
+        "banh",
+        "mi",
+        "bia",
+        "kem",
+        "ta",
+        "bim",
+        "gao",
+        "tra",
+        "cafe",
+        "phe",
+        "giay",
+        "bot",
+        "xuc",
+        "xich",
+        "tuong",
+        "mam",
+        "chai",
+        "lon",
+        "hop",
+        "goi",
+        "tui",
+        "bich",
+        "thung",
+        "tuyp",
+        "loc",
+    }
+)
+
+
+def _correct_phonetic_catalog_brands(
+    text: str,
+    catalog: SearchableCatalog,
+) -> tuple[str, list[CatalogWordCorrection]]:
+    """Repair spoken phonetic/syllable-split catalog brands without eating adjacent words."""
+    normalize_noisy = getattr(catalog, "normalize_noisy_query", None)
+    if not callable(normalize_noisy):
+        return text, []
+    matches = list(_WORD_PATTERN.finditer(text))
+    if not matches:
+        return text, []
+    normalized_words = [_normalize_word(match.group()) for match in matches]
+    has_retail_context = bool(
+        _retail_cue_positions(matches, normalized_words)
+        or any(word in _PHONETIC_RETAIL_CONTEXT_WORDS for word in normalized_words)
+    )
+    if not has_retail_context:
+        return text, []
+    try:
+        rewritten = normalize_noisy(text)
+    except Exception:
+        return text, []
+    if not isinstance(rewritten, str) or rewritten == text:
+        return text, []
+
+    # Build a canonical casing lookup from the catalog's brand list.
+    brand_case: dict[str, str] = {}
+    list_brand_names = getattr(catalog, "list_brand_names", None)
+    if callable(list_brand_names):
+        try:
+            for raw_brand in list_brand_names(500):
+                folded = _normalize_word(raw_brand).replace(" ", "")
+                if folded:
+                    brand_case.setdefault(folded, _catalog_brand_surface(raw_brand))
+        except Exception:
+            pass
+
+    from difflib import SequenceMatcher
+
+    orig_tokens = list(_WORD_PATTERN.finditer(text))
+    new_tokens = list(_WORD_PATTERN.finditer(rewritten))
+    orig_strs = [m.group() for m in orig_tokens]
+    new_strs = [m.group() for m in new_tokens]
+    matcher = SequenceMatcher(None, orig_strs, new_strs)
+    edits: list[tuple[int, int, str, str]] = []
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag != "replace" or i1 >= i2 or j1 >= j2:
+            continue
+        src_span = text[orig_tokens[i1].start() : orig_tokens[i2 - 1].end()]
+        if _normalize_word(src_span) in _NEVER_CORRECT:
+            continue
+        rep_raw = rewritten[new_tokens[j1].start() : new_tokens[j2 - 1].end()]
+        rep_key = _normalize_word(rep_raw)
+        if rep_key in brand_case:
+            rep_surface = brand_case[rep_key]
+        elif rep_raw.islower() and len(rep_raw) >= 4:
+            rep_surface = rep_raw.title()
+        else:
+            rep_surface = rep_raw
+        if src_span.casefold() != rep_surface.casefold():
+            edits.append(
+                (orig_tokens[i1].start(), orig_tokens[i2 - 1].end(), src_span, rep_surface)
+            )
+
+    if not edits:
+        return text, []
+    corrected = text
+    corrections: list[CatalogWordCorrection] = []
+    for start, end, src_span, rep_surface in reversed(edits):
+        corrected = f"{corrected[:start]}{rep_surface}{corrected[end:]}"
+        corrections.append(CatalogWordCorrection(source=src_span, replacement=rep_surface))
+    corrections.reverse()
+    return corrected, corrections
+
+
+_ANCHORED_RETAIL_PHRASES: tuple[tuple[re.Pattern[str], str, str], ...] = (
+    (
+        re.compile(r"\b(?:Thanh Lam Mart|Wilmart)\s+h[ôo]n\b", flags=re.IGNORECASE),
+        "Thanh Lam Home",
+        "Thanh Lam Home",
+    ),
+    (re.compile(r"\bWilmart\b", flags=re.IGNORECASE), "Thanh Lam Mart", "Thanh Lam Mart"),
+    (
+        re.compile(r"\b(?:ACFOGS|AC\s+FOGS|AC\s+Foods?|Ace\s+Foods?)\b", flags=re.IGNORECASE),
+        "ACEFOODS",
+        "ACEFOODS",
+    ),
+    (
+        re.compile(r"\b(khăn\s+(?:mặt|tắm))\s+proton\b", flags=re.IGNORECASE),
+        r"\1 cotton",
+        "khăn mặt cotton",
+    ),
+)
+
+
+def _correct_anchored_retail_phrases(
+    text: str,
+    catalog: SearchableCatalog,
+) -> tuple[str, list[CatalogWordCorrection]]:
+    """Repair high-frequency Vietnamese-accented English brand/fabric ASR slips."""
+    corrected = text
+    corrections: list[CatalogWordCorrection] = []
+    for pattern, replacement, catalog_probe in _ANCHORED_RETAIL_PHRASES:
+        match = pattern.search(corrected)
+        if not match:
+            continue
+        try:
+            if not catalog.search(query=catalog_probe, limit=1):
+                continue
+        except Exception:
+            continue
+        new_text = pattern.sub(replacement, corrected)
+        if new_text != corrected:
+            corrections.append(
+                CatalogWordCorrection(source=match.group(0), replacement=catalog_probe)
+            )
+            corrected = new_text
+    return corrected, corrections
+
+
 def correct_catalog_words(
     text: str,
     catalog: SearchableCatalog,
@@ -562,9 +785,16 @@ def correct_catalog_words(
     if language != "vi" or not text.strip():
         return text, []
 
+    text, anchored_phrase_corrections = _correct_anchored_retail_phrases(text, catalog)
     text, packaging_corrections = _correct_retail_packaging_classifier(text)
+    text, phonetic_corrections = _correct_phonetic_catalog_brands(text, catalog)
     text, fuzzy_brand_corrections = _correct_fuzzy_brand(text, catalog)
-    existing_corrections = [*packaging_corrections, *fuzzy_brand_corrections]
+    existing_corrections = [
+        *anchored_phrase_corrections,
+        *packaging_corrections,
+        *phonetic_corrections,
+        *fuzzy_brand_corrections,
+    ]
 
     matches = list(_WORD_PATTERN.finditer(text))
     if not matches:

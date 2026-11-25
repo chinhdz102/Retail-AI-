@@ -82,6 +82,66 @@ def test_snapshot_search_offset_returns_a_stable_non_overlapping_next_page(
     }
 
 
+def test_cached_search_pages_cannot_be_changed_by_callers(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    first = snapshot_repo.search(category="drink", limit=5)
+    expected = list(first)
+    assert expected
+    first.reverse()
+    first.pop()
+
+    assert snapshot_repo.search(category="drink", limit=5) == expected
+
+
+def test_warm_search_cache_preserves_constraints_order_and_pagination(
+    snapshot_repo: SnapshotProductRepository,
+) -> None:
+    first = snapshot_repo.search(category="drink", limit=5)
+    assert len(first) == 5
+    lowest_price = first[0].price_vnd
+    queries = [
+        {"category": "drink", "limit": 5, "offset": 5},
+        {"category": "drink", "limit": 5, "sort_by": "price_descending"},
+        {"category": "drink", "limit": 5, "price_operator": "GT",
+         "price_value_vnd": lowest_price},
+        {"category": "drink", "limit": 5, "max_price_vnd": lowest_price - 1},
+        {"category": "drink", "limit": 5, "in_stock": True},
+        {"category": "drink", "limit": 5, "spicy": False},
+        {"category": "drink", "limit": 5, "brand": "not-a-catalog-brand-qxz"},
+        {"category": "not-a-catalog-category-qxz", "limit": 5},
+    ]
+    # Exercise every request twice after a broader page has already been cached.
+    for _ in range(2):
+        pages = [snapshot_repo.search(**criteria) for criteria in queries]
+        assert not {item.product_id for item in first} & {
+            item.product_id for item in pages[0]
+        }
+        assert pages[1]
+        assert pages[1][0].price_vnd > first[0].price_vnd
+        assert [item.price_vnd for item in pages[1]] == sorted(
+            (item.price_vnd for item in pages[1]), reverse=True,
+        )
+        assert pages[2] and all(item.price_vnd > lowest_price for item in pages[2])
+        assert all(page == [] for page in pages[3:])
+        assert snapshot_repo.search(category="drink", limit=5) == first
+
+
+def test_reloading_snapshot_at_same_path_does_not_reuse_cached_prices(tmp_path: Path) -> None:
+    row = json.loads(DATA_PATH.read_text(encoding="utf-8"))[0]
+    row.update(price_vnd=10_000, sale_price_vnd=10_000)
+    path = tmp_path / "catalog.json"
+    path.write_text(json.dumps([row], ensure_ascii=False), encoding="utf-8")
+    first = SnapshotProductRepository(path)
+    assert first.search(row["name"])[0].price_vnd == 10_000
+
+    row.update(price_vnd=20_000, sale_price_vnd=20_000)
+    path.write_text(json.dumps([row], ensure_ascii=False), encoding="utf-8")
+    updated = SnapshotProductRepository(path)
+    assert updated.search(row["name"])[0].price_vnd == 20_000
+    assert first.search(row["name"])[0].price_vnd == 10_000
+
+
 def test_snapshot_price_sort_applies_before_page_limit_even_with_query_terms(
     snapshot_repo: SnapshotProductRepository,
 ) -> None:
@@ -597,7 +657,8 @@ async def test_unavailable_product_alternatives_use_catalog_and_retain_category(
             leaves = [path.split(">")[-1].strip() for path in normalized_paths]
             assert len(leaves) == len(set(leaves))
             assert "giá tham khảo" in alternative_body["text"].casefold()
-            assert "tồn hiện tại chưa được xác minh" in alternative_body["text"].casefold()
+            assert "tồn hiện tại chưa được xác minh" not in alternative_body["text"].casefold()
+            assert all(card["stock_is_current"] is False for card in alternative_body["products"])
             assert alternative_body.get("cart") is None
 
         created = await client.post("/sessions", json={"kiosk_id": "snapshot-whole-cart"})
@@ -612,7 +673,7 @@ async def test_unavailable_product_alternatives_use_catalog_and_retain_category(
     combo_body = combo.json()
     assert combo.status_code == 200
     assert "recommend_products" in combo_body["tools_used"]
-    assert "tồn hiện tại chưa được xác minh" in combo_body["text"].casefold()
+    assert "tồn hiện tại chưa được xác minh" not in combo_body["text"].casefold()
     assert combo_body.get("cart") is None
 
 

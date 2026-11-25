@@ -1,9 +1,9 @@
-# Sky avatar attribution
+# Mai avatar attribution
 
-- Source repository: https://github.com/M3-org/avatars
-- Model URL: https://github.com/M3-org/avatars/blob/main/sky/sky.glb
-- Preview URL: https://github.com/M3-org/avatars/blob/main/sky/glb_sky.png
-- Retrieved: 2026-08-31
-- `sky.glb` SHA-256: `2DF789B268CF526FF12072EFCC46B073DEE3458B614644B566C29981AB31FABC`
+## Mai reference frame
 
-The source repository does not expose a `LICENSE` file or SPDX license metadata at retrieval time. This asset is included for the local academic/demo build only. Confirm redistribution and commercial-use rights with the asset author before publishing the kiosk or shipping the model outside this project.
+`mai-closed-mouth-reference.png` is the reference frame for the Mai retail kiosk assistant, using a consistent teal-and-cream uniform across all state clips.
+
+## Mai video clips
+
+The `mai-clip-v4-*.mp4` files are normalized silent state clips (`01-idle`, `02-listening`, `03-thinking`, `04-speaking`) for kiosk playback. Cloud or browser TTS provides speech audio.

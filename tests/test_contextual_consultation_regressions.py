@@ -177,7 +177,11 @@ async def test_explicit_category_cheapest_returns_catalog_global_minimum(
     assert set(payload["grounded_product_ids"]) == expected_ids
     assert {product["price_vnd"] for product in payload["products"]} == {minimum}
     assert "giá tham khảo thấp nhất" in payload["text"]
-    assert "snapshot ngày" in payload["text"]
+    assert "snapshot ngày" not in payload["text"]
+    assert "tồn thực tế" not in payload["text"]
+    assert payload["data_timestamp"]
+    assert payload["data_source"] == snapshot.source_name
+    assert all(product["stock_is_current"] is False for product in payload["products"])
 
 
 @pytest.mark.asyncio
@@ -710,7 +714,8 @@ async def test_cooking_goal_survives_an_ingredient_reply_and_resets_on_new_depar
         first = await ask("Tư vấn thịt nhúng lẩu giúp mình")
         assert first["products"]
         assert all("lẩu" in p["name"].casefold() for p in first["products"])
-        assert "tên hàng" in first["text"].casefold()
+        assert "tên hàng" not in first["text"].casefold()
+        assert "Mình chọn theo" not in first["text"]
         repeated = await ask("ăn lẩu")
         assert repeated["products"]
         assert all("lẩu" in p["name"].casefold() for p in repeated["products"])
@@ -718,7 +723,7 @@ async def test_cooking_goal_survives_an_ingredient_reply_and_resets_on_new_depar
         if second["products"]:
             assert all("lẩu" in p["name"].casefold() for p in second["products"])
             assert all("bò" in p["name"].casefold() for p in second["products"])
-            assert "tên hàng" in second["text"]
+            assert "tên hàng" not in second["text"]
         else:
             assert "ghi nhận" in second["text"] and "cách chế biến" in second["text"]
         switched = await ask("giới thiệu khăn mặt cho mình")
@@ -762,8 +767,8 @@ async def test_personal_care_condition_refines_current_category_without_inventin
             assert product is not None
             assert product.category_hierarchy.endswith("Kem dưỡng da mặt")
     assert all("pond's" not in item["name"].casefold() for item in refinement["products"])
-    assert "Catalog chưa có đủ thông tin xác minh" in condition["text"]
-    assert "Catalog chưa có đủ thông tin xác minh" in refinement["text"]
+    assert "Mình chưa đủ thông tin để xác nhận" in condition["text"]
+    assert "Mình chưa đủ thông tin để xác nhận" in refinement["text"]
     assert "một sản phẩm trong nhóm này" in condition["text"]
     assert "Mình chưa có dữ liệu đã xác minh" not in condition["text"]
     assert "Mình chưa có dữ liệu đã xác minh" not in refinement["text"]

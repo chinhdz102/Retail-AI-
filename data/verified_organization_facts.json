@@ -35,6 +35,16 @@
             "thanh_lam_mart_official_profile",
             "thanh_lam_transaction_policy"
           ]
+        },
+        {
+          "claim_id": "bac_ninh_provincial_network",
+          "facts": {
+            "vi": "Bộ dữ liệu mô phỏng mạng lưới bán lẻ phục vụ thử nghiệm tại tỉnh Bắc Ninh gồm 120 điểm bán trên địa bàn tỉnh.",
+            "en": "The synthetic retail store-network benchmark dataset for Bac Ninh province models 120 simulated store locations across the province."
+          },
+          "source_ids": [
+            "thanh_lam_mart_official_profile"
+          ]
         }
       ],
       "sources": [

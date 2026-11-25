@@ -6,6 +6,8 @@ import httpx
 import pytest
 
 from backend.api import main as api_main
+from backend.config import Settings
+from backend.services.manager_notifier import ManagerNotifierService
 from backend.services.support import (
     SupportIdempotencyConflictError,
     SupportTicketNotFoundError,
@@ -13,6 +15,19 @@ from backend.services.support import (
     classify_support_intent,
 )
 from backend.shared.contracts import IssueType, SessionState
+
+
+@pytest.fixture(autouse=True)
+def _isolate_demo_support_from_live_env_notifiers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep demo-simulator tests isolated so pytest never sends real Zalo/Gmail alerts."""
+    empty_notifier = ManagerNotifierService(
+        settings=Settings(_env_file=None),  # type: ignore[call-arg]
+    )
+    monkeypatch.setattr(
+        api_main,
+        "get_manager_notifier_service",
+        lambda _settings=None: empty_notifier,
+    )
 
 
 @pytest.mark.parametrize(

@@ -63,6 +63,26 @@ export interface SpeechRecognitionConstructor {
 export interface MediaStreamTrackLike {
   stop: () => void
   label?: string
+  getSettings?: () => MediaTrackSettings
+}
+
+export interface VoiceCaptureMetadata {
+  source: 'silero-v6' | 'pcm' | 'mediarecorder'
+  settings: Record<string, number | boolean | string>
+}
+
+/** Do not export deviceId/groupId or device labels with a diagnostic recording. */
+export function captureMetadata(stream: MediaStreamLike | null, source: VoiceCaptureMetadata['source']): VoiceCaptureMetadata {
+  const settings: VoiceCaptureMetadata['settings'] = {}
+  try {
+    const actual = stream?.getTracks()[0]?.getSettings?.() as Record<string, unknown> | undefined
+    for (const key of ['sampleRate', 'sampleSize', 'channelCount', 'echoCancellation', 'noiseSuppression', 'autoGainControl', 'voiceIsolation', 'latency']) {
+      const value = actual?.[key]
+      if (typeof value === 'boolean' || typeof value === 'string'
+        || (typeof value === 'number' && Number.isFinite(value))) settings[key] = value
+    }
+  } catch { /* Settings are best-effort; capturing audio must still work. */ }
+  return { source, settings }
 }
 
 export interface MediaStreamLike {
@@ -74,6 +94,12 @@ export interface VoiceMediaConstraints {
     echoCancellation?: boolean
     noiseSuppression?: boolean
     autoGainControl?: boolean
+    /** Prefer a mono voice path; browsers ignore unsupported optional hints. */
+    channelCount?: { ideal: number }
+    sampleRate?: { ideal: number }
+    sampleSize?: { ideal: number }
+    /** Chromium/Safari voice isolation when the input device exposes it. */
+    voiceIsolation?: boolean
     deviceId?: { exact: string }
   }
 }
@@ -148,8 +174,13 @@ export interface VoiceConversationOptions extends VoiceControllerDependencies {
   /** Prefer local Silero VAD before the RMS fallback (opt-in per deployment). */
   preferNeuralVad?: boolean
   onState: (state: VoiceState) => void
+  onBargeIn?: () => void
   onTranscript: (text: string) => void
   onAudio: (audio: Blob) => void
+  onSpeechStartFrame?: (preRollFrames: Float32Array[]) => void
+  onSpeechFrame?: (frame: Float32Array) => void
+  onSpeechMisfire?: () => void
+  onCapture?: (metadata: VoiceCaptureMetadata) => void
   onLevel?: (level: number) => void
   onInputDevice?: (label: string) => void
   onError: (error: VoiceControllerError) => void
@@ -191,11 +222,25 @@ const MAX_SEGMENT_DURATION_MS = 12_000
 const MIN_VOICED_DURATION_MS = 120
 const POLL_INTERVAL_MS = 40
 const RECOGNITION_START_TIMEOUT_MS = 500
+const BARGE_IN_GRACE_MS = 450
+const BARGE_IN_NEURAL_MIN_RMS = 0.065
+const BARGE_IN_NEURAL_IMMEDIATE_RMS = 0.11
+const BARGE_IN_NEURAL_MIN_PROB = 0.78
+const BARGE_IN_NEURAL_SUSTAINED_FRAMES = 5
+const BARGE_IN_FALLBACK_MIN_RMS = 0.055
+const BARGE_IN_FALLBACK_CONFIRM_MS = 220
+const NEURAL_MIN_SPEECH_RMS = 0.015
+const NEURAL_NOISE_FLOOR_MULTIPLIER = 1.55
+const NEURAL_NOISE_FLOOR_ALPHA = 0.06
 const MICROPHONE_CONSTRAINTS: VoiceMediaConstraints = {
   audio: {
     echoCancellation: true,
     noiseSuppression: true,
     autoGainControl: true,
+    channelCount: { ideal: 1 },
+    sampleRate: { ideal: 48_000 },
+    sampleSize: { ideal: 16 },
+    voiceIsolation: true,
   },
 }
 
@@ -251,6 +296,18 @@ function rms(data: Uint8Array): number {
   return Math.sqrt(sum / data.length)
 }
 
+function managedNeuralSession(vad: NeuralVadSession): NeuralVadSession {
+  let startPromise: Promise<void> | null = null
+  let destroyPromise: Promise<void> | null = null
+  return {
+    start: () => startPromise ??= Promise.resolve().then(() => vad.start()),
+    // A pending start can still allocate worklets/contexts. Finish it before
+    // destroying this session, and never run destroy twice after cancellation.
+    destroy: () => destroyPromise ??= (startPromise ?? Promise.resolve())
+      .catch(() => undefined).then(() => vad.destroy()),
+  }
+}
+
 export class VoiceConversationController {
   private readonly options: VoiceConversationOptions
   private readonly dependencies: VoiceControllerDependencies
@@ -285,6 +342,17 @@ export class VoiceConversationController {
   private readonly envelopeGate = new SpeechEnvelopeGate()
   private forceSegmentEmit = false
   private generation = 0
+  private bargeInMode = false
+  private bargeInReadyAt = 0
+  private bargeInTriggered = false
+  private bargeInSustainedMs = 0
+  private bargeInSpeechPeakRms = 0
+  private bargeInNeuralFrames = 0
+  private bargeInStrongFrames = 0
+  private bargeInImmediateCandidate = false
+  private bargeInAmbientRms = 0.012
+  private neuralNoiseFloor = 0.008
+  private neuralNoiseSamples = 0
 
   constructor(options: VoiceConversationOptions) {
     this.options = options
@@ -337,6 +405,15 @@ export class VoiceConversationController {
 
   pause(): void {
     this.active = false
+    this.bargeInMode = false
+    this.bargeInReadyAt = 0
+    this.bargeInTriggered = false
+    this.bargeInSustainedMs = 0
+    this.bargeInSpeechPeakRms = 0
+    this.bargeInNeuralFrames = 0
+    this.bargeInStrongFrames = 0
+    this.bargeInImmediateCandidate = false
+    this.bargeInAmbientRms = 0.012
     this.generation += 1
     this.clearRecognitionStart()
     this.clearRecorderStart()
@@ -350,6 +427,29 @@ export class VoiceConversationController {
   stop(): void {
     this.destroyed = true
     this.pause()
+  }
+
+  setBargeInMode(enabled: boolean, graceMs = BARGE_IN_GRACE_MS): void {
+    const now = this.dependencies.now?.() ?? Date.now()
+    this.bargeInMode = enabled
+    this.bargeInReadyAt = enabled ? now + Math.max(0, graceMs) : 0
+    this.bargeInTriggered = false
+    this.bargeInSustainedMs = 0
+    this.bargeInSpeechPeakRms = 0
+    this.bargeInNeuralFrames = 0
+    this.bargeInStrongFrames = 0
+    this.bargeInImmediateCandidate = false
+    if (enabled) {
+      this.bargeInAmbientRms = Math.min(0.05, Math.max(0.012, this.neuralNoiseFloor))
+    }
+  }
+
+  private confirmBargeIn(mode: VoiceMode): void {
+    if (!this.bargeInMode || this.bargeInTriggered) return
+    this.bargeInTriggered = true
+    this.bargeInMode = false
+    this.options.onBargeIn?.()
+    this.setState(mode, 'recording')
   }
 
   setLocale(locale: string): void {
@@ -403,6 +503,19 @@ export class VoiceConversationController {
     }
     recognition.onresult = (event) => {
       if (!this.active || token !== this.generation) return
+      const now = this.dependencies.now?.() ?? Date.now()
+      const startIndex = event.resultIndex ?? 0
+      let hasAnyTranscript = false
+      for (let index = startIndex; index < event.results.length; index += 1) {
+        if (event.results[index]?.[0]?.transcript?.trim()) {
+          hasAnyTranscript = true
+          break
+        }
+      }
+      if (this.bargeInMode) {
+        if (!hasAnyTranscript || now < this.bargeInReadyAt) return
+        this.confirmBargeIn('recognition')
+      }
       const text = finalTranscript(event)
       if (!text) return
       this.pause()
@@ -457,6 +570,7 @@ export class VoiceConversationController {
   }
 
   private async startNeuralRecorder(token: number): Promise<void> {
+    if (!this.active || token !== this.generation) return
     // Neural inference requires a secure-context AudioWorklet. Do not attempt
     // to initialize ONNX in unsupported browsers, jsdom or HTTP deployments.
     if (!this.dependencies.createNeuralVad && typeof AudioWorkletNode === 'undefined') {
@@ -469,11 +583,43 @@ export class VoiceConversationController {
       return
     }
     let stream: MediaStreamLike | null = null
+    let vad: NeuralVadSession | null = null
     let speechStartedAt: number | null = null
+    let neuralRealStarted = false
+    const preRollFrames: Float32Array[] = []
+    let streamingSpeechActive = false
+    let segmentPeakRms = 0
+    let segmentFrameCount = 0
+    let segmentHighSpeechFrames = 0
+    const neuralEnvelope = new SpeechEnvelopeGate()
+    this.neuralNoiseFloor = 0.008
+    this.neuralNoiseSamples = 0
+    const requiredBargeInRms = () => Math.max(
+      BARGE_IN_NEURAL_MIN_RMS,
+      Math.min(0.105, this.bargeInAmbientRms * 1.85),
+    )
+    const canConfirmNeuralBargeIn = (now: number) => (
+      now >= this.bargeInReadyAt
+      && (
+        this.bargeInNeuralFrames === 0
+        || this.bargeInStrongFrames >= BARGE_IN_NEURAL_SUSTAINED_FRAMES
+        || this.bargeInImmediateCandidate
+      )
+    )
+    const resetSegmentMetrics = () => {
+      segmentPeakRms = 0
+      segmentFrameCount = 0
+      segmentHighSpeechFrames = 0
+      neuralEnvelope.reset()
+      this.bargeInSpeechPeakRms = 0
+      this.bargeInNeuralFrames = 0
+      this.bargeInStrongFrames = 0
+      this.bargeInImmediateCandidate = false
+    }
     try {
       this.recorderStartTimer = this.schedule(() => {
-        this.recorderStartTimer = null
         if (!this.active || token !== this.generation) return
+        this.recorderStartTimer = null
         this.pause()
         this.emitError('runtime', 'Không tải được bộ nhận diện giọng nói. Hãy thử lại micro.')
       }, 12_000)
@@ -492,37 +638,174 @@ export class VoiceConversationController {
         onSpeechStart: () => {
           if (this.active && token === this.generation) {
             speechStartedAt = this.dependencies.now?.() ?? Date.now()
+            neuralRealStarted = false
+            resetSegmentMetrics()
+          }
+        },
+        // An onset may still be fan airflow or a short noise/misfire. Only
+        // confirmed speech above the room/fan floor triggers recording/WS STT
+        // or interrupts kiosk TTS.
+        onSpeechRealStart: () => {
+          if (!this.active || token !== this.generation) return
+          neuralRealStarted = true
+          if (!this.bargeInMode) {
+            const minVoiceRms = Math.max(
+              NEURAL_MIN_SPEECH_RMS,
+              this.neuralNoiseFloor * NEURAL_NOISE_FLOOR_MULTIPLIER,
+            )
+            if (segmentFrameCount > 0 && segmentPeakRms < minVoiceRms) {
+              return
+            }
             this.setState('recorder', 'recording')
+            if (!streamingSpeechActive) {
+              streamingSpeechActive = true
+              this.options.onSpeechStartFrame?.(preRollFrames.splice(0, preRollFrames.length))
+            }
+            return
+          }
+          const now = this.dependencies.now?.() ?? Date.now()
+          if (canConfirmNeuralBargeIn(now)) {
+            this.confirmBargeIn('recorder')
+            if (!streamingSpeechActive) {
+              streamingSpeechActive = true
+              this.options.onSpeechStartFrame?.(preRollFrames.splice(0, preRollFrames.length))
+            }
           }
         },
         onVADMisfire: () => {
           if (this.active && token === this.generation) {
             speechStartedAt = null
+            neuralRealStarted = false
+            resetSegmentMetrics()
+            if (streamingSpeechActive) {
+              streamingSpeechActive = false
+              this.options.onSpeechMisfire?.()
+            }
             this.setState('recorder', 'listening')
           }
         },
-        onFrameProcessed: (_probabilities, frame) => {
+        onFrameProcessed: (probabilities, frame) => {
           if (!this.active || token !== this.generation || !frame.length) return
           const now = this.dependencies.now?.() ?? Date.now()
           if (speechStartedAt !== null && now - speechStartedAt >= MAX_SEGMENT_DURATION_MS) {
             this.active = false
+            if (streamingSpeechActive) {
+              streamingSpeechActive = false
+              this.options.onSpeechMisfire?.()
+            }
             this.releaseAudioResources()
             this.emitError('runtime', 'Câu nói dài hơn 12 giây. Bạn chia yêu cầu thành câu ngắn hơn nhé.')
             return
           }
           let sum = 0
           for (const sample of frame) sum += sample * sample
-          this.options.onLevel?.(Math.min(1, Math.sqrt(sum / frame.length) / 0.15))
+          const frameRms = Math.sqrt(sum / frame.length)
+          const speechProb = typeof probabilities?.isSpeech === 'number' ? probabilities.isSpeech : 0
+
+          if (this.bargeInMode && !this.bargeInTriggered) {
+            if (now < this.bargeInReadyAt || frameRms < BARGE_IN_NEURAL_MIN_RMS) {
+              const target = Math.min(0.055, frameRms)
+              this.bargeInAmbientRms += (target - this.bargeInAmbientRms) * 0.12
+            }
+          } else if (speechStartedAt === null && speechProb < 0.35) {
+            const clamped = Math.min(0.08, Math.max(0.004, frameRms))
+            if (this.neuralNoiseSamples < 6) {
+              this.neuralNoiseSamples += 1
+              this.neuralNoiseFloor = ((this.neuralNoiseFloor * (this.neuralNoiseSamples - 1)) + clamped) / this.neuralNoiseSamples
+            } else {
+              this.neuralNoiseFloor += (clamped - this.neuralNoiseFloor) * NEURAL_NOISE_FLOOR_ALPHA
+            }
+          }
+
+          if (speechStartedAt !== null) {
+            segmentFrameCount += 1
+            if (frameRms > segmentPeakRms) segmentPeakRms = frameRms
+            neuralEnvelope.observe(frameRms, 32)
+            const minVoiceRms = Math.max(
+              NEURAL_MIN_SPEECH_RMS,
+              this.neuralNoiseFloor * NEURAL_NOISE_FLOOR_MULTIPLIER,
+            )
+            if (speechProb >= 0.68 && frameRms >= minVoiceRms) {
+              segmentHighSpeechFrames += 1
+            }
+
+            if (this.bargeInMode) {
+              this.bargeInNeuralFrames += 1
+              if (frameRms > this.bargeInSpeechPeakRms) this.bargeInSpeechPeakRms = frameRms
+              const minBargeRms = requiredBargeInRms()
+              if (now >= this.bargeInReadyAt && speechProb >= BARGE_IN_NEURAL_MIN_PROB && frameRms >= minBargeRms) {
+                this.bargeInStrongFrames += 1
+                if (frameRms >= BARGE_IN_NEURAL_IMMEDIATE_RMS && speechProb >= 0.88) {
+                  this.bargeInImmediateCandidate = true
+                }
+              } else {
+                this.bargeInStrongFrames = 0
+              }
+              if (neuralRealStarted && !this.bargeInTriggered && canConfirmNeuralBargeIn(now)) {
+                this.confirmBargeIn('recorder')
+                if (!streamingSpeechActive) {
+                  streamingSpeechActive = true
+                  this.options.onSpeechStartFrame?.(preRollFrames.splice(0, preRollFrames.length))
+                }
+              }
+            } else if (neuralRealStarted && !streamingSpeechActive && segmentPeakRms >= minVoiceRms) {
+              this.setState('recorder', 'recording')
+              streamingSpeechActive = true
+              this.options.onSpeechStartFrame?.(preRollFrames.splice(0, preRollFrames.length))
+            }
+
+            if (streamingSpeechActive) {
+              this.options.onSpeechFrame?.(frame)
+            } else {
+              preRollFrames.push(new Float32Array(frame))
+              if (preRollFrames.length > 14) preRollFrames.shift()
+            }
+          } else {
+            preRollFrames.push(new Float32Array(frame))
+            if (preRollFrames.length > 12) preRollFrames.shift()
+          }
+          this.options.onLevel?.(Math.min(1, frameRms / 0.15))
         },
         onSpeechEnd: (audio) => {
           if (!this.active || token !== this.generation) return
+          const observedFrames = segmentFrameCount
+          const observedPeakRms = segmentPeakRms
+          const observedHighFrames = segmentHighSpeechFrames
+          const isStationaryFanNoise = observedFrames >= 12 && neuralEnvelope.stationaryNoiseLevel() !== null
           speechStartedAt = null
+          neuralRealStarted = false
+          streamingSpeechActive = false
+          preRollFrames.length = 0
+          resetSegmentMetrics()
+          if (this.bargeInMode && !this.bargeInTriggered) {
+            this.options.onSpeechMisfire?.()
+            this.setState('recorder', 'listening')
+            return
+          }
+          const minVoiceRms = Math.max(
+            NEURAL_MIN_SPEECH_RMS,
+            this.neuralNoiseFloor * NEURAL_NOISE_FLOOR_MULTIPLIER,
+          )
+          if (
+            observedFrames > 0
+            && (
+              observedPeakRms < minVoiceRms
+              || isStationaryFanNoise
+              || (observedFrames >= 6 && observedHighFrames < 2)
+            )
+          ) {
+            this.options.onSpeechMisfire?.()
+            this.setState('recorder', 'listening')
+            return
+          }
           if (!audio.length || audio.length < 16_000 * 0.2) {
+            this.options.onSpeechMisfire?.()
             this.setState('recorder', 'listening')
             return
           }
           if (audio.length > 16_000 * MAX_SEGMENT_DURATION_MS / 1000) {
             this.active = false
+            this.options.onSpeechMisfire?.()
             this.releaseAudioResources()
             this.emitError('runtime', 'Câu nói dài hơn 12 giây. Bạn chia yêu cầu thành câu ngắn hơn nhé.')
             return
@@ -531,23 +814,27 @@ export class VoiceConversationController {
           capture.start()
           capture.append(audio)
           const wav = capture.finish()
+          const metadata = captureMetadata(stream, 'silero-v6')
           this.active = false
           this.releaseAudioResources()
           this.lastPollAt = null
+          this.options.onCapture?.(metadata)
           this.options.onAudio(wav)
         },
       }
       const factory = this.dependencies.createNeuralVad ?? createLocalNeuralVad
-      const vad = await factory(callbacks)
+      vad = managedNeuralSession(await factory(callbacks))
       if (!this.active || token !== this.generation) {
-        void Promise.resolve(vad.destroy()).catch(() => undefined)
-        this.releaseAudioResources()
+        this.destroyNeuralSession(vad)
+        this.stopOwnedStream(stream)
         return
       }
       this.neuralVad = vad
       await vad.start()
       if (!this.active || token !== this.generation) {
-        this.releaseAudioResources()
+        if (this.neuralVad === vad) this.neuralVad = null
+        this.destroyNeuralSession(vad)
+        this.stopOwnedStream(stream)
         return
       }
       this.clearRecorderStart()
@@ -555,8 +842,12 @@ export class VoiceConversationController {
       this.options.onInputDevice?.(stream.getTracks()[0]?.label || 'Micro mặc định')
       this.setState('recorder', 'listening')
     } catch (error) {
+      if (!this.active || token !== this.generation) {
+        if (vad && this.neuralVad !== vad) this.destroyNeuralSession(vad)
+        this.stopOwnedStream(stream)
+        return
+      }
       this.clearRecorderStart()
-      if (!this.active || token !== this.generation) return
       this.releaseAudioResources()
       const name = (error as { name?: string })?.name
       if (name === 'NotAllowedError' || name === 'SecurityError') {
@@ -571,6 +862,7 @@ export class VoiceConversationController {
   }
 
   private async startRecorder(token: number, cause?: unknown): Promise<void> {
+    if (!this.active || token !== this.generation) return
     this.clearRecognitionStart()
     const getUserMedia = this.dependencies.getUserMedia
     const Recorder = this.dependencies.MediaRecorder
@@ -584,23 +876,27 @@ export class VoiceConversationController {
       return
     }
 
+    let stream: MediaStreamLike | null = null
+    let context: AudioContextLike | null = null
+    let source: AudioMediaStreamSourceLike | null = null
+    let node: PcmWorkletNodeLike | null = null
     try {
       this.recorderStartTimer = this.schedule(() => {
-        this.recorderStartTimer = null
         if (!this.active || token !== this.generation) return
+        this.recorderStartTimer = null
         this.pause()
         this.emitError('runtime', 'Chưa mở được micro. Hãy kiểm tra quyền micro rồi bấm mic để thử lại.')
       }, 12_000)
       const audioConstraints = typeof MICROPHONE_CONSTRAINTS.audio === 'object' ? MICROPHONE_CONSTRAINTS.audio : {}
-      const stream = await getUserMedia(this.deviceId
+      stream = await getUserMedia(this.deviceId
         ? { audio: { ...audioConstraints, deviceId: { exact: this.deviceId } } }
         : MICROPHONE_CONSTRAINTS)
       if (!this.active || token !== this.generation) {
         stream.getTracks().forEach((track) => track.stop())
         return
       }
-      const context = createAudioContext()
       this.stream = stream
+      context = createAudioContext()
       this.audioContext = context
       if (context.resume && context.state !== 'running') await context.resume()
       if (!this.active || token !== this.generation) {
@@ -612,7 +908,7 @@ export class VoiceConversationController {
       }
       const analyser = context.createAnalyser()
       analyser.fftSize = 512
-      const source = context.createMediaStreamSource(stream)
+      source = context.createMediaStreamSource(stream)
       source.connect(analyser)
       this.stream = stream
       this.audioContext = context
@@ -622,11 +918,11 @@ export class VoiceConversationController {
         && context.sampleRate && context.destination !== undefined) {
         // Worklet is progressive enhancement. Older browsers and restricted
         // contexts continue using MediaRecorder rather than losing voice mode.
-        let node: PcmWorkletNodeLike | null = null
+        node = null
         try {
           await context.audioWorklet.addModule(`${import.meta.env.BASE_URL}pcm-capture.worklet.js`)
           if (!this.active || token !== this.generation) {
-            this.releaseAudioResources()
+            this.releaseLocalRecorderResources(stream, context, source, node)
             return
           }
           node = this.dependencies.createPcmWorkletNode
@@ -643,6 +939,10 @@ export class VoiceConversationController {
           this.pcmBuffer = buffer
           this.pcmWorkletNode = node
         } catch {
+          if (!this.active || token !== this.generation) {
+            this.releaseLocalRecorderResources(stream, context, source, node)
+            return
+          }
           if (node) {
             node.port.onmessage = null
             node.disconnect()
@@ -660,8 +960,11 @@ export class VoiceConversationController {
       this.setState('recorder', 'listening')
       this.pollAudio(token)
     } catch (error) {
+      if (token !== this.generation || !this.active) {
+        this.releaseLocalRecorderResources(stream, context, source, node)
+        return
+      }
       this.clearRecorderStart()
-      if (token !== this.generation) return
       this.stopMonitor(true)
       const name = (error as { name?: string })?.name
       if (name === 'NotAllowedError' || name === 'SecurityError') {
@@ -700,6 +1003,46 @@ export class VoiceConversationController {
     }
     // Do not lower the threshold below the quiet-room floor once recording:
     // otherwise a fan/AGC background can hold the recorder open until 12s.
+    if (this.bargeInMode) {
+      if (now < this.bargeInReadyAt) {
+        this.monitorTimer = this.schedule(() => {
+          this.monitorTimer = null
+          this.pollAudio(token)
+        }, POLL_INTERVAL_MS)
+        return
+      }
+      const bargeInThreshold = Math.max(BARGE_IN_FALLBACK_MIN_RMS, threshold * 1.6)
+      const bargeInDetected = level >= (this.segmentRecorder
+        ? Math.max(MIN_SPEECH_THRESHOLD, bargeInThreshold * 0.85)
+        : bargeInThreshold)
+      if (bargeInDetected) {
+        if (!this.segmentRecorder) this.startSegment(now, true)
+        this.envelopeGate.observe(level, elapsed)
+        this.lastVoiceAt = now
+        this.voicedDurationMs += elapsed
+        this.bargeInSustainedMs += elapsed
+        if (!this.bargeInTriggered && this.bargeInSustainedMs >= BARGE_IN_FALLBACK_CONFIRM_MS) {
+          this.confirmBargeIn('recorder')
+        }
+      } else if (this.segmentRecorder && !this.bargeInTriggered && now - this.lastVoiceAt >= 240) {
+        this.bargeInSustainedMs = 0
+        this.stopSegment(true)
+        return
+      } else if (!this.segmentRecorder) {
+        this.bargeInSustainedMs = 0
+      }
+      if (this.segmentRecorder && now - this.segmentStartedAt >= MAX_SEGMENT_DURATION_MS) {
+        this.stopSegment(false)
+        this.releaseAudioResources()
+        this.emitError('runtime', 'Câu nói dài hơn 12 giây. Bạn chia yêu cầu thành câu ngắn hơn nhé.')
+        return
+      }
+      this.monitorTimer = this.schedule(() => {
+        this.monitorTimer = null
+        this.pollAudio(token)
+      }, POLL_INTERVAL_MS)
+      return
+    }
     const speechDetected = level >= (this.segmentRecorder
       ? Math.max(MIN_SPEECH_THRESHOLD, threshold * 0.88)
       : threshold)
@@ -727,10 +1070,13 @@ export class VoiceConversationController {
         this.stationaryNoiseSamples = 0
       }
     }
-    if (this.segmentRecorder && (
-      now - this.lastVoiceAt >= SILENCE_DURATION_MS
-      || now - this.segmentStartedAt >= MAX_SEGMENT_DURATION_MS
-    )) {
+    if (this.segmentRecorder && now - this.segmentStartedAt >= MAX_SEGMENT_DURATION_MS) {
+      this.stopSegment(false)
+      this.releaseAudioResources()
+      this.emitError('runtime', 'Câu nói dài hơn 12 giây. Bạn chia yêu cầu thành câu ngắn hơn nhé.')
+      return
+    }
+    if (this.segmentRecorder && now - this.lastVoiceAt >= SILENCE_DURATION_MS) {
       this.stopSegment(true)
       return
     }
@@ -740,7 +1086,7 @@ export class VoiceConversationController {
     }, POLL_INTERVAL_MS)
   }
 
-  private startSegment(now: number): void {
+  private startSegment(now: number, deferRecordingState = false): void {
     const Recorder = this.dependencies.MediaRecorder
     if (!this.stream || (!Recorder && !this.pcmBuffer)) return
     const selectedMimeType = Recorder
@@ -766,19 +1112,23 @@ export class VoiceConversationController {
       }
       recorder.onstop = () => {
         const blob = new Blob(this.segmentChunks, { type: mimeType })
-        const hasSpeech = this.forceSegmentEmit || (
+        const unconfirmedBargeIn = this.bargeInMode && !this.bargeInTriggered
+        const hasSpeech = !unconfirmedBargeIn && (this.forceSegmentEmit || (
           this.voicedDurationMs >= MIN_VOICED_DURATION_MS
           && (!this.options.validateSpeechEnvelope || this.envelopeGate.hasSpeechEvidence())
-        )
+        ))
         this.segmentRecorder = null
         this.segmentChunks = []
         this.voicedDurationMs = 0
+        this.bargeInSustainedMs = 0
         this.envelopeGate.reset()
         this.stationaryNoiseSamples = 0
         this.forceSegmentEmit = false
         if (blob.size > 0 && token === this.generation && hasSpeech) {
+          const metadata = captureMetadata(this.stream, this.pcmBuffer ? 'pcm' : 'mediarecorder')
           this.releaseAudioResources()
           this.lastPollAt = null
+          this.options.onCapture?.(metadata)
           this.options.onAudio(blob)
         } else if (token === this.generation && !this.destroyed) {
           this.active = true
@@ -797,7 +1147,7 @@ export class VoiceConversationController {
         this.emitError('runtime', event.error || 'Audio recording failed')
       }
       recorder.start(100)
-      this.setState('recorder', 'recording')
+      if (!deferRecordingState) this.setState('recorder', 'recording')
     } catch (error) {
       this.segmentRecorder = null
       this.segmentChunks = []
@@ -851,6 +1201,34 @@ export class VoiceConversationController {
     this.recorderStartTimer = null
   }
 
+  private destroyNeuralSession(vad: NeuralVadSession | null): void {
+    if (vad) void Promise.resolve(vad.destroy()).catch(() => undefined)
+  }
+
+  private stopOwnedStream(stream: MediaStreamLike | null): void {
+    // A late initialization may belong to an earlier generation. Never stop a
+    // stream that a newer generation has already adopted.
+    if (!stream || this.stream === stream) return
+    stream.getTracks().forEach((track) => track.stop())
+  }
+
+  private releaseLocalRecorderResources(
+    stream: MediaStreamLike | null,
+    context: AudioContextLike | null,
+    source: AudioMediaStreamSourceLike | null,
+    node: PcmWorkletNodeLike | null,
+  ): void {
+    if (node && node !== this.pcmWorkletNode) {
+      node.port.onmessage = null
+      node.disconnect()
+    }
+    if (source !== this.audioSource) source?.disconnect?.()
+    if (context && context !== this.audioContext) {
+      try { void Promise.resolve(context.close()).catch(() => undefined) } catch { /* Already closed. */ }
+    }
+    this.stopOwnedStream(stream)
+  }
+
   private stopMonitor(discardSegment: boolean): void {
     if (this.monitorTimer !== null) {
       this.clearTimer(this.monitorTimer)
@@ -863,7 +1241,7 @@ export class VoiceConversationController {
   private releaseAudioResources(): void {
     const vad = this.neuralVad
     this.neuralVad = null
-    if (vad) void Promise.resolve(vad.destroy()).catch(() => undefined)
+    this.destroyNeuralSession(vad)
     if (this.pcmWorkletNode) {
       this.pcmWorkletNode.port.onmessage = null
       this.pcmWorkletNode.disconnect()
@@ -876,7 +1254,9 @@ export class VoiceConversationController {
     this.analyser = null
     const context = this.audioContext
     this.audioContext = null
-    if (context) void context.close()
+    if (context) {
+      try { void Promise.resolve(context.close()).catch(() => undefined) } catch { /* Already closed. */ }
+    }
     const stream = this.stream
     this.stream = null
     stream?.getTracks().forEach((track) => track.stop())

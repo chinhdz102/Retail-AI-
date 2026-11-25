@@ -4,18 +4,44 @@ This note records the STT/TTS patterns adapted from [ParrotGo](https://github.co
 for the retail kiosk. Only voice infrastructure concepts were reused; its booking and
 dispatch workflows are outside this project.
 
+Implementation status (6 November 2026): the kiosk is Vietnamese only. This is a browser/server VAD + HTTP STT +
+ticket-stream TTS pipeline. LiveKit is not installed or integrated. Current research,
+paired Vietnamese decoder results, actual endpoint captures and remaining limitations are in
+[`reports/vietnamese_intent_asr_research_20261105.md`](reports/vietnamese_intent_asr_research_20261105.md),
+updated on 6 November. Earlier voice diagnostics are in
+[`reports/voice_optimization_20261103.md`](reports/voice_optimization_20261103.md).
+The latest fan/computer-noise investigation, paired denoiser measurements and Silero v6
+delivery checks are in [`reports/noise_filtering_20261103.md`](reports/noise_filtering_20261103.md).
+The LiveKit comparison and pre-migration measurement contract are in
+[`reports/livekit-turn-taking-readiness-20261101.md`](reports/livekit-turn-taking-readiness-20261101.md).
+
 ## Speech to text
 
-1. The visitor starts microphone capture explicitly. Silero VAD v5 runs locally in the browser
+1. The visitor starts microphone capture explicitly. Silero VAD v6 runs locally in the browser
    through ONNX Runtime Web; microphone capture requests echo cancellation, noise suppression,
-   and automatic gain control. The VAD keeps 800 ms of pre-speech audio, requires 400 ms of speech,
-   and waits for 1,400 ms of silence before ending a turn (with a 30-second hard limit). These
-   settings preserve initial consonants and keep ordinary pauses between Vietnamese clauses inside
-   one turn.
+   and automatic gain control, with optional mono, 48 kHz, 16-bit and voice-isolation hints.
+   Browsers may ignore unsupported hints; requested settings do not prove applied processing.
+   Current settings are 600 ms pre-speech padding, 250 ms minimum
+   speech and 900 ms redemption, quantized to the installed model's 32 ms frames, with a
+   12-second segment limit. Thresholds are 0.55/0.35. `onSpeechStart` starts timing;
+   only `onSpeechRealStart` exposes RECORDING and interrupts TTS. A short VAD misfire does
+   not interrupt playback. This reduces one false-interruption class; it does not detect
+   backchannels or prevent acoustic echo by itself.
 2. The VAD returns only speech segments. The browser converts them to 16 kHz, mono, PCM WAV and
-   stops the microphone before uploading, which avoids recording the kiosk's own spoken reply.
+   stops the microphone before uploading. Hands-free mode starts a fresh microphone monitor
+   during TTS for barge-in; echo/self-capture still requires a room and device test.
    The model, worklet, and WASM runtime are served from the app itself instead of a CDN.
-   The backend rejects near-silent PCM, sustained sine-like PCM, and steady unvoiced noise before
+   All server uploads first pass independent Silero v6 verification, including compressed fallback
+   audio. PyAV decodes to mono 16 kHz; model frames are 512 samples with 64-sample context, and
+   recurrent state/context reset per upload/pass. The unchanged weights and MIT license ship in
+   `backend/assets/silero/`; no startup download is needed. Quiet inputs may be analyzed with
+   bounded gain while the original bytes are retained for Whisper. Decoder/model work runs in
+   worker threads, with two active slots, a cooperative 5-second budget and a 60-second decoded
+   audio limit. Over-duration/invalid media return 422; verification unavailability returns an
+   error, never a silent bypass. Cancelling the awaiter does not free a still-running worker slot.
+   Speech presence does not identify the speaker or prove that each recognized word is correct.
+   After neural verification, the existing PCM heuristic also rejects near-silent PCM,
+   sustained sine-like PCM, and steady unvoiced noise before
    sending it to Whisper. For quiet PCM (at or below 0.03 RMS and 0.15 peak), and for louder PCM
    with a nearly constant 100 ms energy envelope (coefficient of variation at or below 0.15), it
    checks 40 ms frames every 100 ms for periodic energy in the human voice range. It rejects only
@@ -27,16 +53,27 @@ dispatch workflows are outside this project.
    `whisper-large-v3-turbo` when the first model request fails. It requests
    `verbose_json` at temperature 0 and uses a short, neutral Vietnamese retail context so the prompt
    does not over-bias recognition toward a fixed list of product words.
+   The current kiosk fixes the language parameter to `vi` and has no English selector.
+   Older API language codes remain for compatibility; they are outside the current evaluation.
+   Prompt terms prioritize brands actually named by the customer in the two most recent
+   customer turns, then visible products and bounded catalog vocabulary. A one-second catalog
+   deadline prevents vocabulary lookup from blocking recognition. The historical
+   [bilingual regression diagnostic](reports/stt_regression_20261103.md) records
+   wrong-language and prompt ablations. Catalog correction preserves accented
+   commerce cues and does not borrow fuzzy-brand cues across sentence boundaries.
 4. The backend rejects a candidate when at least half of its returned segment duration is marked
    non-speech (`no_speech_prob >= 0.5`), at least half of the speech duration has a compression
    ratio of 2.4 or higher, or the speech-weighted `avg_logprob` is `<= -0.75`. These conservative
    checks are applied to the primary model. If it rejects a candidate as low quality or non-speech,
    the backend stops instead of letting the fallback model invent a transcript. The transcript is
-   empty and never reaches the retail agent; the UI asks the customer to repeat and resumes
+   empty and never reaches the retail agent; after a real TTS barge-in, a short-lived recovery
+   may replay the interrupted reply, otherwise the UI asks the customer to repeat and resumes
    hands-free listening. The fallback remains available for provider and request failures. The API
    returns `speech_detected` and quality metrics for diagnostics.
 5. Groq requests segment granularity explicitly and the backend requires the documented verbose
-   segment quality fields before it accepts text. It also rejects a long repeated phrase loop when
+   quality fields and valid timestamps in every segment before it accepts text. An empty successful
+   response returns no customer turn without trying another decoder. It also rejects a long repeated
+   phrase loop when
    the same four-or-more-token sequence accounts for at least 35% of the transcript. The kiosk
    repeats this loop check as a second guard before sending a transcript to the retail agent. A
    rejected loop returns no customer message and asks the visitor to repeat; ordinary word-level
@@ -44,8 +81,31 @@ dispatch workflows are outside this project.
 6. VAD callbacks carry the microphone generation that created them. Pause, resume, start, and
    segment cleanup are serialized, and a new generation gets a fresh VAD instance. A late event from
    a paused microphone cannot be mistaken for the current visitor's words.
+7. The demo starts an optional local Zipformer30M Vietnamese verifier when its cached model
+   is available. It processes the original audio after the same acoustic gate. It does not
+   rewrite Whisper text. Negation, quantity/unit or large decoder disagreements can require
+   confirmation; equivalent spoken/written quantities are normalized for comparison only.
+   An exact catalog brand present in only one decode also triggers confirmation. This last
+   rule cannot catch a brand both decoders misrecognize; the current Ariel example is still
+   missed. These cues are heuristics, not calibrated accuracy probabilities.
+8. Optional verification has at most four seconds and uses only the remaining shared
+   20-second STT budget, leaving a 250 ms return margin. If unavailable, busy or timed out,
+   the primary transcript is returned with `needs_confirmation=true`; this is not successful
+   double checking. Cancelling the awaiter does not release a still-running native decoder's
+   semaphore. The kiosk displays an editable transcript and waits for explicit submission
+   before consultation/TTS. Primary provider timeouts can still return HTTP 504.
+
+The 6 November final file replay returned HTTP 200 for 14/14 files, including five controls
+with empty transcripts; the earlier same-day replay returned 13/14 with one timeout. Neither
+run exercises the physical microphone, loudspeaker echo or browser VAD. The small paired
+Whisper/PhoASR/Zipformer comparison does not justify claiming a universally best model.
 
 ## Text to speech
+
+Azure synthesis applies the same Vietnamese normalization to buffered and streamed requests.
+Unambiguous currency and mass/volume tokens use SSML `sub` aliases (for example, `45.000đ`,
+`300g`, `1,5 lít`), keeping visible text unchanged and escaping XML once. Ambiguous formats and
+identifiers are left literal. This is not a learned pronunciation model or a human quality rating.
 
 1. The kiosk posts the session, reply text, and language to `POST /audio/synthesize/tickets`.
    The API stores the text in a bounded in-memory ticket store for 60 seconds and returns a
@@ -72,12 +132,14 @@ Device)` is preferred over a stale virtual input. If a chosen device ID is stale
 once with the OS default. When the level stays near zero, the kiosk now says that the selected input
 has almost no signal instead of implying Whisper failed.
 Silero and microphone setup report a visible error after 12 seconds instead of waiting indefinitely.
-A continuous utterance is capped at 30 seconds.
+A continuous utterance is capped at 12 seconds. Both neural and fallback capture reject
+overlong input with a visible error rather than uploading a truncated customer request.
 
 After a report of clipped/incorrect live microphone transcripts, the capture settings were compared
 with the installed Silero VAD defaults. The previous 450 ms pre-roll and 1,050 ms endpoint could
-drop initial consonants or split a sentence around a normal pause; they are now 800 ms and 1,400 ms,
-with a 400 ms minimum segment. The kiosk also restores the saved physical microphone before the
+drop initial consonants or split a sentence around a normal pause. That historical tuning
+used 800/1,400/400 ms; the current measured configuration is 600/900/250 ms as stated above.
+The kiosk also restores the saved physical microphone before the
 first capture and retries the OS default if that device ID has gone stale. These changes target
 capture and segmentation; they do not prove accuracy on the user's room/microphone. The existing
 16-case STT set uses generated Azure speech, and the provided long video has no complete verbatim

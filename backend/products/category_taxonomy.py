@@ -112,6 +112,25 @@ _CATEGORY_QUERY_SYNONYMS: dict[str, tuple[str, ...]] = {
     # Each target is resolved against the active taxonomy at runtime.
     "mi goi": ("mi an lien",),
     "mi tom": ("mi an lien",),
+    "mi y": ("my kho",),
+    "my y": ("my kho",),
+    "mi spaghetti": ("my kho",),
+    "spaghetti": ("my kho",),
+    "sot mi y": ("cac loai sot",),
+    "xot mi y": ("cac loai sot",),
+    "sot spaghetti": ("cac loai sot",),
+    "xot spaghetti": ("cac loai sot",),
+    "sot ca chua": ("cac loai sot",),
+    "xot ca chua": ("cac loai sot",),
+    "nuoc xa vai": ("nuoc xa",),
+    "xa vai": ("nuoc xa",),
+    "bot nem": ("hat nem",),
+    "xi dau": ("nuoc tuong",),
+    "si dau": ("nuoc tuong",),
+    "yen mach": ("ngu coc an sang",),
+    "yen mach nguyen chat": ("ngu coc an sang",),
+    "oats": ("ngu coc an sang",),
+    "oatmeal": ("ngu coc an sang",),
     "dau goi": ("dau goi",),
     "do an": ("thuc pham",),
     "do uong": ("do uong thuoc la",),
@@ -166,6 +185,47 @@ _CATEGORY_QUERY_SYNONYMS: dict[str, tuple[str, ...]] = {
     "nuoc ngot": ("nuoc ngot co ga",),
     "nuoc suoi": ("nuoc khoang",),
     "yaourt": ("sua chua an",),
+    "sua chua uong": ("scu loi khuan", "scu tiet trung", "scu thanh trung"),
+    "bia": ("bia cider",),
+    "bia lon": ("bia cider",),
+    "bia chai": ("bia cider",),
+    "bia nhe": ("bia cider",),
+    "nuoc ep": ("nuoc hoa qua",),
+    "nuoc ep trai cay": ("nuoc hoa qua",),
+    "nuoc trai cay": ("nuoc hoa qua",),
+    "trai cay tuoi": ("trai cay",),
+    "hoa qua tuoi": ("trai cay",),
+    "keo deo": ("keo mem",),
+    "keo deo trai cay": ("keo mem",),
+    "socola": ("chocolate",),
+    "so co la": ("chocolate",),
+    "chocolate": ("chocolate",),
+    "hat dieu": ("hat say kho",),
+    "dau phong": ("hat say kho",),
+    "dau phong rang": ("hat say kho",),
+    "hat dinh duong": ("hat say kho",),
+    "hat kho": ("hat say kho",),
+    "banh mi": ("banh my",),
+    "banh mi tuoi": ("banh my",),
+    "banh mi sandwich": ("banh my sandwich",),
+    "sandwich": ("banh my sandwich",),
+    "cu qua": ("rau an cu", "rau cu"),
+    "rau cu": ("rau cu",),
+    "rau cu qua": ("rau cu",),
+    "xuc xich": ("xuc xich lap xuong",),
+    "xuc xich an lien": ("xuc xich tiet trung",),
+    "gia vi uop": ("cac loai sot",),
+    "uop thit": ("cac loai sot",),
+    "uop thit nuong": ("cac loai sot",),
+    "gia vi uop thit nuong": ("cac loai sot",),
+    "sot uop": ("cac loai sot",),
+    "xot uop": ("cac loai sot",),
+    "uop bbq": ("cac loai sot",),
+    "thit nuong bbq": ("cac loai sot",),
+    "nuoc lau": ("cac loai sot",),
+    "khan uot": ("giay uot tre em", "khan uot da nang"),
+    "khan uot khong mui": ("giay uot tre em", "khan uot da nang"),
+    "khan uot cho da be": ("giay uot tre em",),
     "cai ngot": ("rau cai",),
     "cai thia": ("rau cai",),
     "cai xanh": ("rau cai",),
@@ -214,6 +274,7 @@ _CATEGORY_QUERY_SYNONYMS: dict[str, tuple[str, ...]] = {
 }
 
 
+@lru_cache(maxsize=2048)
 def catalog_category_query_aliases(query: str) -> tuple[str, ...]:
     """Return catalog-backed product-type synonyms found in a spoken query."""
     normalized_query = normalize_category_text(query)
@@ -238,6 +299,7 @@ def catalog_category_query_aliases(query: str) -> tuple[str, ...]:
     )
 
 
+@lru_cache(maxsize=2048)
 def catalog_category_alias_source_phrase(query: str) -> str | None:
     """Return the longest spoken synonym phrase present in a query."""
     normalized_query = normalize_category_text(query)
@@ -438,33 +500,49 @@ def _has_category_diacritic(value: str) -> bool:
     )
 
 
+@lru_cache(maxsize=16)
+def _single_word_diacritic_category_index(
+    paths: tuple[tuple[str, ...], ...],
+) -> tuple[tuple[str, str, str], ...]:
+    """Pre-index single-word accent-bearing taxonomy labels once per catalog snapshot."""
+    entries: dict[tuple[str, str], str] = {}
+    for path in paths:
+        for label in path:
+            label_words = _native_category_words(label)
+            if len(label_words) != 1 or not _has_category_diacritic(label_words[0]):
+                continue
+            normalized_label = normalize_category_text(label)
+            if len(normalized_label.split()) != 1:
+                continue
+            entries.setdefault((label_words[0].casefold(), normalized_label), label)
+    return tuple(
+        (native_word, normalized_label, label)
+        for (native_word, normalized_label), label in entries.items()
+    )
+
+
 def _resolve_native_exact_single_word_category(
     query: str,
     paths: tuple[tuple[str, ...], ...],
 ) -> CatalogCategoryMatch | None:
     """Keep accent-bearing one-word category labels distinct from folded fillers."""
     native_words = _native_category_words(query)
+    if not native_words:
+        return None
     request_fillers = _CATEGORY_QUERY_STOP_WORDS | _SINGLE_WORD_CATEGORY_CONTEXT_WORDS | {"xem"}
-    matches: dict[str, str] = {}
     native_query_words = {word.casefold() for word in native_words}
-    for path in paths:
-        for label in path:
-            label_words = _native_category_words(label)
-            normalized_label = normalize_category_text(label)
-            other_content = [
-                normalize_category_text(word)
-                for word in native_words
-                if normalize_category_text(word) != normalized_label
-                and normalize_category_text(word) not in request_fillers
-            ]
-            if (
-                len(normalized_label.split()) == 1
-                and len(label_words) == 1
-                and _has_category_diacritic(label_words[0])
-                and label_words[0].casefold() in native_query_words
-                and not other_content
-            ):
-                matches.setdefault(normalized_label, label)
+    non_filler_folded = [
+        folded
+        for word in native_words
+        if (folded := normalize_category_text(word)) and folded not in request_fillers
+    ]
+    matches: dict[str, str] = {}
+    for native_label_word, normalized_label, label in _single_word_diacritic_category_index(paths):
+        if native_label_word not in native_query_words:
+            continue
+        if any(word != normalized_label for word in non_filler_folded):
+            continue
+        matches.setdefault(normalized_label, label)
     if len(matches) != 1:
         return None
     normalized_label, label = next(iter(matches.items()))

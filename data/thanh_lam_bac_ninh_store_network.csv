@@ -1,0 +1,121 @@
+﻿store_code,store_name,store_type,province,cluster_zone,ward_commune,address,monthly_avg_revenue_vnd,status
+TLM_BN_S_001,Siêu thị Thanh Lam Mart Vincom Plaza Bắc Ninh,Supermarket (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,Phường Đại Phúc,"TTTM Vincom Plaza, Ngã 6, P. Đại Phúc, Tỉnh Bắc Ninh",720000000,Hoạt động
+TLM_BN_CỤ_001,Thanh Lam Mart P. Đại Phúc #01,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Đại Phúc,"Đường Trần Hưng Đạo, P. Đại Phúc, Tỉnh Bắc Ninh",76000000,Hoạt động
+TLM_BN_CỤ_002,Thanh Lam Mart P. Suối Hoa #02,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Suối Hoa,"Đường Trần Phú, P. Suối Hoa, Tỉnh Bắc Ninh",73000000,Hoạt động
+TLM_BN_CỤ_003,Thanh Lam Mart P. Ninh Xá #03,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Ninh Xá,"Đường Nguyễn Trãi, P. Ninh Xá, Tỉnh Bắc Ninh",81000000,Hoạt động
+TLM_BN_CỤ_004,Thanh Lam Mart P. Tiền An #04,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Tiền An,"Đường Lê Thái Tổ, P. Tiền An, Tỉnh Bắc Ninh",80000000,Hoạt động
+TLM_BN_CỤ_005,Thanh Lam Mart P. Võ Cường #05,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Võ Cường,"Đường Nguyễn Văn Cừ, P. Võ Cường, Tỉnh Bắc Ninh",80000000,Hoạt động
+TLM_BN_CỤ_006,Thanh Lam Mart P. Kinh Bắc #06,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Kinh Bắc,"Đường Kinh Dương Vương, P. Kinh Bắc, Tỉnh Bắc Ninh",77000000,Hoạt động
+TLM_BN_CỤ_007,Thanh Lam Mart P. Vệ An #07,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Vệ An,"Đường Thiên Đức, P. Vệ An, Tỉnh Bắc Ninh",76000000,Hoạt động
+TLM_BN_CỤ_008,Thanh Lam Mart P. Vũ Ninh #08,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Vũ Ninh,"Đường Ngô Gia Tự, P. Vũ Ninh, Tỉnh Bắc Ninh",90000000,Hoạt động
+TLM_BN_CỤ_009,Thanh Lam Mart P. Nam Sơn #09,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Nam Sơn,"Khu đô thị Nam Sơn, P. Nam Sơn, Tỉnh Bắc Ninh",75000000,Hoạt động
+TLM_BN_CỤ_010,Thanh Lam Mart P. Khắc Niệm #10,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Khắc Niệm,"Đường QL38, P. Khắc Niệm, Tỉnh Bắc Ninh",91000000,Hoạt động
+TLM_BN_CỤ_011,Thanh Lam Mart P. Kim Chân #11,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Kim Chân,"Khu dân cư Kim Chân, P. Kim Chân, Tỉnh Bắc Ninh",86000000,Hoạt động
+TLM_BN_CỤ_012,Thanh Lam Mart P. Vân Dương #12,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Vân Dương,"Đường 286, P. Vân Dương, Tỉnh Bắc Ninh",74000000,Hoạt động
+TLM_BN_CỤ_013,Thanh Lam Mart P. Hạp Lĩnh #13,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Hạp Lĩnh,"Đường QL38, P. Hạp Lĩnh, Tỉnh Bắc Ninh",73000000,Hoạt động
+TLM_BN_CỤ_014,Thanh Lam Mart P. Phong Khê #14,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Phong Khê,"Khu làng nghề Phong Khê, P. Phong Khê, Tỉnh Bắc Ninh",75000000,Hoạt động
+TLM_BN_CỤ_015,Thanh Lam Mart P. Suối Hoa #15,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Suối Hoa,"Tòa nhà thương mại Suối Hoa, P. Suối Hoa, Tỉnh Bắc Ninh",79000000,Hoạt động
+TLM_BN_CỤ_016,Thanh Lam Mart P. Võ Cường #16,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Võ Cường,"Khu đô thị HUD Võ Cường, P. Võ Cường, Tỉnh Bắc Ninh",80000000,Hoạt động
+TLM_BN_CỤ_017,Thanh Lam Mart P. Đại Phúc #17,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Đại Phúc,"Đường Hai Bà Trưng, P. Đại Phúc, Tỉnh Bắc Ninh",89000000,Hoạt động
+TLM_BN_CỤ_018,Thanh Lam Mart P. Ninh Xá #18,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Ninh Xá,"Đường Hoàng Hoa Thám, P. Ninh Xá, Tỉnh Bắc Ninh",92000000,Hoạt động
+TLM_BN_CỤ_019,Thanh Lam Mart P. Tiền An #19,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Tiền An,"Phố Cổ Tiền An, P. Tiền An, Tỉnh Bắc Ninh",73000000,Hoạt động
+TLM_BN_CỤ_020,Thanh Lam Mart P. Vũ Ninh #20,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Vũ Ninh,"Khu ẩm thực Đền Bà Chúa Kho, P. Vũ Ninh, Tỉnh Bắc Ninh",90000000,Hoạt động
+TLM_BN_CỤ_021,Thanh Lam Mart P. Vệ An #21,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Vệ An,"Phố Vệ An Mới, P. Vệ An, Tỉnh Bắc Ninh",79000000,Hoạt động
+TLM_BN_CỤ_022,Thanh Lam Mart P. Nam Sơn #22,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Nam Sơn,"Khu tái định cư Nam Sơn, P. Nam Sơn, Tỉnh Bắc Ninh",90000000,Hoạt động
+TLM_BN_CỤ_023,Thanh Lam Mart P. Kinh Bắc #23,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Kinh Bắc,"Khu liên hiệp thể thao Kinh Bắc, P. Kinh Bắc, Tỉnh Bắc Ninh",86000000,Hoạt động
+TLM_BN_CỤ_024,Thanh Lam Mart P. Đại Phúc #24,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Đại Phúc,"Chợ Đỗ Xá, P. Đại Phúc, Tỉnh Bắc Ninh",80000000,Hoạt động
+TLM_BN_CỤ_025,Thanh Lam Mart P. Võ Cường #25,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Võ Cường,"Chung cư Cát Tường, P. Võ Cường, Tỉnh Bắc Ninh",87000000,Hoạt động
+TLM_BN_CỤ_026,Thanh Lam Mart P. Ninh Xá #26,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Ninh Xá,"Ngã tư Cổng Ô, P. Ninh Xá, Tỉnh Bắc Ninh",91000000,Hoạt động
+TLM_BN_CỤ_027,Thanh Lam Mart P. Suối Hoa #27,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Suối Hoa,"Đường Huyền Quang, P. Suối Hoa, Tỉnh Bắc Ninh",81000000,Hoạt động
+TLM_BN_CỤ_028,Thanh Lam Mart P. Kinh Bắc #28,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Trung tâm,P. Kinh Bắc,"Khu văn phòng hành chính mới, P. Kinh Bắc, Tỉnh Bắc Ninh",73000000,Hoạt động
+TLM_BN_S_002,Siêu thị Thanh Lam Mart Từ Sơn,Supermarket (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,Phường Đông Ngàn,"Phố Mới, Đường Lý Thái Tổ, P. Đông Ngàn, Tỉnh Bắc Ninh",580000000,Hoạt động
+TLM_BN_CỤ_001,Thanh Lam Mart P. Đông Ngàn #01,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Đông Ngàn,"Đường Trần Phú, P. Đông Ngàn, Tỉnh Bắc Ninh",74000000,Hoạt động
+TLM_BN_CỤ_002,Thanh Lam Mart P. Đồng Kỵ #02,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Đồng Kỵ,"Phố đồ gỗ Đồng Kỵ, P. Đồng Kỵ, Tỉnh Bắc Ninh",82000000,Hoạt động
+TLM_BN_CỤ_003,Thanh Lam Mart P. Trang Hạ #03,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Trang Hạ,"Đường Lê Quang Đạo, P. Trang Hạ, Tỉnh Bắc Ninh",79000000,Hoạt động
+TLM_BN_CỤ_004,Thanh Lam Mart P. Châu Khê #04,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Châu Khê,"Khu làng nghề sắt Châu Khê, P. Châu Khê, Tỉnh Bắc Ninh",77000000,Hoạt động
+TLM_BN_CỤ_005,Thanh Lam Mart P. Tân Hồng #05,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Tân Hồng,"Khu đô thị Tân Hồng, P. Tân Hồng, Tỉnh Bắc Ninh",73000000,Hoạt động
+TLM_BN_CỤ_006,Thanh Lam Mart P. Đình Bảng #06,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Đình Bảng,"Đường Lý Thánh Tông, P. Đình Bảng, Tỉnh Bắc Ninh",75000000,Hoạt động
+TLM_BN_CỤ_007,Thanh Lam Mart P. Phù Chẩn #07,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Phù Chẩn,"Khu đô thị Centa City, P. Phù Chẩn, Tỉnh Bắc Ninh",79000000,Hoạt động
+TLM_BN_CỤ_008,Thanh Lam Mart P. Đồng Nguyên #08,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Đồng Nguyên,"Đường Nguyễn Văn Cừ, P. Đồng Nguyên, Tỉnh Bắc Ninh",72000000,Hoạt động
+TLM_BN_CỤ_009,Thanh Lam Mart P. Tương Giang #09,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Tương Giang,"Khu dân cư Tương Giang, P. Tương Giang, Tỉnh Bắc Ninh",71000000,Hoạt động
+TLM_BN_CỤ_010,Thanh Lam Mart P. Tam Sơn #10,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Tam Sơn,"Khu di tích Tam Sơn, P. Tam Sơn, Tỉnh Bắc Ninh",81000000,Hoạt động
+TLM_BN_CỤ_011,Thanh Lam Mart P. Hương Mạc #11,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Hương Mạc,"Làng nghề mộc Hương Mạc, P. Hương Mạc, Tỉnh Bắc Ninh",72000000,Hoạt động
+TLM_BN_CỤ_012,Thanh Lam Mart P. Phù Khê #12,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Phù Khê,"Làng nghề Phù Khê, P. Phù Khê, Tỉnh Bắc Ninh",80000000,Hoạt động
+TLM_BN_CỤ_013,Thanh Lam Mart P. Đông Ngàn #13,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Đông Ngàn,"Khu chợ Giầu, P. Đông Ngàn, Tỉnh Bắc Ninh",80000000,Hoạt động
+TLM_BN_CỤ_014,Thanh Lam Mart P. Đồng Kỵ #14,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Đồng Kỵ,"Đường Nguyễn Văn Trỗi, P. Đồng Kỵ, Tỉnh Bắc Ninh",88000000,Hoạt động
+TLM_BN_CỤ_015,Thanh Lam Mart P. Trang Hạ #15,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Trang Hạ,"Phố Trang Liệt, P. Trang Hạ, Tỉnh Bắc Ninh",77000000,Hoạt động
+TLM_BN_CỤ_016,Thanh Lam Mart P. Tân Hồng #16,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Tân Hồng,"Khu dịch vụ Đền Đô, P. Tân Hồng, Tỉnh Bắc Ninh",70000000,Hoạt động
+TLM_BN_CỤ_017,Thanh Lam Mart P. Đình Bảng #17,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Đình Bảng,"Khu dân cư Đình Bảng, P. Đình Bảng, Tỉnh Bắc Ninh",83000000,Hoạt động
+TLM_BN_CỤ_018,Thanh Lam Mart P. Phù Chẩn #18,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Phù Chẩn,"Khu dân cư Belhomes, P. Phù Chẩn, Tỉnh Bắc Ninh",86000000,Hoạt động
+TLM_BN_CỤ_019,Thanh Lam Mart P. Châu Khê #19,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Châu Khê,"Đường Đa Hội, P. Châu Khê, Tỉnh Bắc Ninh",72000000,Hoạt động
+TLM_BN_CỤ_020,Thanh Lam Mart P. Đồng Nguyên #20,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Đồng Nguyên,"Khu công nghiệp Đồng Nguyên, P. Đồng Nguyên, Tỉnh Bắc Ninh",81000000,Hoạt động
+TLM_BN_CỤ_021,Thanh Lam Mart P. Đông Ngàn #21,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Đông Ngàn,"Chung cư Hanaka, P. Đông Ngàn, Tỉnh Bắc Ninh",71000000,Hoạt động
+TLM_BN_CỤ_022,Thanh Lam Mart P. Hương Mạc #22,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Dịch vụ Từ Sơn,P. Hương Mạc,"Đường liên xã Hương Mạc, P. Hương Mạc, Tỉnh Bắc Ninh",86000000,Hoạt động
+TLM_BN_CỤ_001,Thanh Lam Mart Xã Yên Trung #01,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Yên Trung,"Cổng chính KCN Samsung Display, Xã Yên Trung, Tỉnh Bắc Ninh",82000000,Hoạt động
+TLM_BN_CỤ_002,Thanh Lam Mart Xã Yên Trung #02,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Yên Trung,"Khu ký túc xá Samsung, Xã Yên Trung, Tỉnh Bắc Ninh",92000000,Hoạt động
+TLM_BN_CỤ_003,Thanh Lam Mart Xã Long Châu #03,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Long Châu,"Khu dịch vụ KCN Yên Phong 1, Xã Long Châu, Tỉnh Bắc Ninh",84000000,Hoạt động
+TLM_BN_CỤ_004,Thanh Lam Mart Xã Đông Thọ #04,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Đông Thọ,"Khu đô thị Đông Thọ, Xã Đông Thọ, Tỉnh Bắc Ninh",91000000,Hoạt động
+TLM_BN_CỤ_005,Thanh Lam Mart TT. Chờ #05,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,TT. Chờ,"Phố Chờ, Trung tâm TT. Chờ, Tỉnh Bắc Ninh",79000000,Hoạt động
+TLM_BN_CỤ_006,Thanh Lam Mart TT. Chờ #06,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,TT. Chờ,"Đường tỉnh 286, TT. Chờ, Tỉnh Bắc Ninh",75000000,Hoạt động
+TLM_BN_CỤ_007,Thanh Lam Mart Xã Tam Đa #07,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Tam Đa,"Khu dân cư Tam Đa, Xã Tam Đa, Tỉnh Bắc Ninh",74000000,Hoạt động
+TLM_BN_CỤ_008,Thanh Lam Mart Xã Yên Phụ #08,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Yên Phụ,"Khu thương mại Yên Phụ, Xã Yên Phụ, Tỉnh Bắc Ninh",80000000,Hoạt động
+TLM_BN_CỤ_009,Thanh Lam Mart Xã Dũng Liệt #09,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Dũng Liệt,"Đường liên xã Dũng Liệt, Xã Dũng Liệt, Tỉnh Bắc Ninh",82000000,Hoạt động
+TLM_BN_CỤ_010,Thanh Lam Mart Xã Văn Môn #10,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Văn Môn,"Khu làng nghề Văn Môn, Xã Văn Môn, Tỉnh Bắc Ninh",75000000,Hoạt động
+TLM_BN_CỤ_011,Thanh Lam Mart Xã Hòa Tiến #11,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Hòa Tiến,"Khu dân cư Hòa Tiến, Xã Hòa Tiến, Tỉnh Bắc Ninh",80000000,Hoạt động
+TLM_BN_CỤ_012,Thanh Lam Mart Xã Tam Giang #12,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Tam Giang,"Ngã ba Tam Giang, Xã Tam Giang, Tỉnh Bắc Ninh",76000000,Hoạt động
+TLM_BN_CỤ_013,Thanh Lam Mart Xã Thụy Hòa #13,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Thụy Hòa,"Đường liên huyện Thụy Hòa, Xã Thụy Hòa, Tỉnh Bắc Ninh",85000000,Hoạt động
+TLM_BN_CỤ_014,Thanh Lam Mart Xã Yên Trung #14,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Yên Trung,"Khu nhà ở chuyên gia Yên Phong, Xã Yên Trung, Tỉnh Bắc Ninh",81000000,Hoạt động
+TLM_BN_CỤ_015,Thanh Lam Mart Xã Long Châu #15,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Long Châu,"Khu dân cư Mẫn Xá, Xã Long Châu, Tỉnh Bắc Ninh",87000000,Hoạt động
+TLM_BN_CỤ_016,Thanh Lam Mart Xã Đông Phong #16,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Đông Phong,"Khu dân cư Đông Phong, Xã Đông Phong, Tỉnh Bắc Ninh",84000000,Hoạt động
+TLM_BN_CỤ_017,Thanh Lam Mart TT. Chờ #17,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,TT. Chờ,"Khu đô thị Yên Phong Central, TT. Chờ, Tỉnh Bắc Ninh",78000000,Hoạt động
+TLM_BN_CỤ_018,Thanh Lam Mart Xã Yên Trung #18,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Tổ hợp Công nghiệp Samsung - Yên Phong,Xã Yên Trung,"Khu chợ công nhân Ấp Đồn, Xã Yên Trung, Tỉnh Bắc Ninh",84000000,Hoạt động
+TLM_BN_CỤ_001,Thanh Lam Mart P. Phố Mới #01,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Phố Mới,"Đường QL18, P. Phố Mới, Tỉnh Bắc Ninh",80000000,Hoạt động
+TLM_BN_CỤ_002,Thanh Lam Mart P. Phương Liễu #02,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Phương Liễu,"Cổng KCN Quế Võ 1, P. Phương Liễu, Tỉnh Bắc Ninh",75000000,Hoạt động
+TLM_BN_CỤ_003,Thanh Lam Mart P. Phương Liễu #03,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Phương Liễu,"Khu nhà ở xã hội Golden Park, P. Phương Liễu, Tỉnh Bắc Ninh",77000000,Hoạt động
+TLM_BN_CỤ_004,Thanh Lam Mart P. Phượng Mao #04,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Phượng Mao,"Đường Đỗ Đức Dục, P. Phượng Mao, Tỉnh Bắc Ninh",71000000,Hoạt động
+TLM_BN_CỤ_005,Thanh Lam Mart P. Bằng An #05,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Bằng An,"Khu dân cư Bằng An, P. Bằng An, Tỉnh Bắc Ninh",88000000,Hoạt động
+TLM_BN_CỤ_006,Thanh Lam Mart P. Đại Xuân #06,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Đại Xuân,"Khu vực KCN Quế Võ 2, P. Đại Xuân, Tỉnh Bắc Ninh",74000000,Hoạt động
+TLM_BN_CỤ_007,Thanh Lam Mart P. Vân Dương #07,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Vân Dương,"Khu giãn dân Vân Dương, P. Vân Dương, Tỉnh Bắc Ninh",86000000,Hoạt động
+TLM_BN_CỤ_008,Thanh Lam Mart Xã Nam Sơn #08,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,Xã Nam Sơn,"Khu công nghiệp Quế Võ mở rộng, Xã Nam Sơn, Tỉnh Bắc Ninh",76000000,Hoạt động
+TLM_BN_CỤ_009,Thanh Lam Mart P. Việt Hùng #09,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Việt Hùng,"Khu dân cư Việt Hùng, P. Việt Hùng, Tỉnh Bắc Ninh",74000000,Hoạt động
+TLM_BN_CỤ_010,Thanh Lam Mart P. Quế Tân #10,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Quế Tân,"Đường tỉnh 279, P. Quế Tân, Tỉnh Bắc Ninh",83000000,Hoạt động
+TLM_BN_CỤ_011,Thanh Lam Mart P. Phố Mới #11,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Phố Mới,"Chợ Phố Mới, P. Phố Mới, Tỉnh Bắc Ninh",81000000,Hoạt động
+TLM_BN_CỤ_012,Thanh Lam Mart P. Phương Liễu #12,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Phương Liễu,"Khu nhà ở công nhân Giang Liễu, P. Phương Liễu, Tỉnh Bắc Ninh",77000000,Hoạt động
+TLM_BN_CỤ_013,Thanh Lam Mart P. Phượng Mao #13,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Phượng Mao,"Khu đô thị Tây Hồ, P. Phượng Mao, Tỉnh Bắc Ninh",86000000,Hoạt động
+TLM_BN_CỤ_014,Thanh Lam Mart Xã Yên Giả #14,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,Xã Yên Giả,"Đường liên xã Yên Giả, Xã Yên Giả, Tỉnh Bắc Ninh",76000000,Hoạt động
+TLM_BN_CỤ_015,Thanh Lam Mart Xã Đào Viên #15,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,Xã Đào Viên,"Khu đô thị Quế Võ 3, Xã Đào Viên, Tỉnh Bắc Ninh",79000000,Hoạt động
+TLM_BN_CỤ_016,Thanh Lam Mart P. Bằng An #16,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Công nghiệp & Logistics Quế Võ,P. Bằng An,"Khu thương mại dịch vụ Bằng An, P. Bằng An, Tỉnh Bắc Ninh",70000000,Hoạt động
+TLM_BN_CỤ_001,Thanh Lam Mart P. Hồ #01,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,P. Hồ,"Đường Lạc Long Quân, P. Hồ, Tỉnh Bắc Ninh",76000000,Hoạt động
+TLM_BN_CỤ_002,Thanh Lam Mart P. Song Hồ #02,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,P. Song Hồ,"Khu di tích Làng tranh Đông Hồ, P. Song Hồ, Tỉnh Bắc Ninh",70000000,Hoạt động
+TLM_BN_CỤ_003,Thanh Lam Mart P. Gia Đông #03,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,P. Gia Đông,"Khu lăng mộ Kinh Dương Vương, P. Gia Đông, Tỉnh Bắc Ninh",79000000,Hoạt động
+TLM_BN_CỤ_004,Thanh Lam Mart P. An Bình #04,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,P. An Bình,"Đường QL17, P. An Bình, Tỉnh Bắc Ninh",81000000,Hoạt động
+TLM_BN_CỤ_005,Thanh Lam Mart Xã Mão Điền #05,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,Xã Mão Điền,"Khu thương mại Mão Điền, Xã Mão Điền, Tỉnh Bắc Ninh",77000000,Hoạt động
+TLM_BN_CỤ_006,Thanh Lam Mart Xã Xuân Lâm #06,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,Xã Xuân Lâm,"Khu đô thị Khai Sơn, Xã Xuân Lâm, Tỉnh Bắc Ninh",71000000,Hoạt động
+TLM_BN_CỤ_007,Thanh Lam Mart P. Trạm Lộ #07,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,P. Trạm Lộ,"Khu công nghiệp Thuận Thành 2, P. Trạm Lộ, Tỉnh Bắc Ninh",75000000,Hoạt động
+TLM_BN_CỤ_008,Thanh Lam Mart P. Ninh Xá #08,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,P. Ninh Xá,"Đường liên xã Ninh Xá, P. Ninh Xá, Tỉnh Bắc Ninh",87000000,Hoạt động
+TLM_BN_CỤ_009,Thanh Lam Mart P. Thanh Khương #09,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,P. Thanh Khương,"Khu di tích Chùa Dâu, P. Thanh Khương, Tỉnh Bắc Ninh",79000000,Hoạt động
+TLM_BN_CỤ_010,Thanh Lam Mart P. Trí Quả #10,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,P. Trí Quả,"Khu dân cư Trí Quả, P. Trí Quả, Tỉnh Bắc Ninh",75000000,Hoạt động
+TLM_BN_CỤ_011,Thanh Lam Mart P. Hồ #11,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,P. Hồ,"Phố Thác, P. Hồ, Tỉnh Bắc Ninh",84000000,Hoạt động
+TLM_BN_CỤ_012,Thanh Lam Mart Xã Đại Đồng Thành #12,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị & Làng nghề Nam Đuống,Xã Đại Đồng Thành,"Đường đê Sông Đuống, Xã Đại Đồng Thành, Tỉnh Bắc Ninh",81000000,Hoạt động
+TLM_BN_CỤ_001,Thanh Lam Mart TT. Lim #01,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Vệ tinh Du lịch & Công nghiệp Tiên Du,TT. Lim,"Đường Lý Thường Kiệt, Trung tâm TT. Lim, Tỉnh Bắc Ninh",83000000,Hoạt động
+TLM_BN_CỤ_002,Thanh Lam Mart TT. Lim #02,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Vệ tinh Du lịch & Công nghiệp Tiên Du,TT. Lim,"Khu đồi hội Lim, TT. Lim, Tỉnh Bắc Ninh",73000000,Hoạt động
+TLM_BN_CỤ_003,Thanh Lam Mart Xã Đại Đồng #03,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Vệ tinh Du lịch & Công nghiệp Tiên Du,Xã Đại Đồng,"Cổng KCN Đại Đồng - Hoàn Sơn, Xã Đại Đồng, Tỉnh Bắc Ninh",77000000,Hoạt động
+TLM_BN_CỤ_004,Thanh Lam Mart Xã Hoàn Sơn #04,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Vệ tinh Du lịch & Công nghiệp Tiên Du,Xã Hoàn Sơn,"Khu công nghiệp Tiên Sơn, Xã Hoàn Sơn, Tỉnh Bắc Ninh",73000000,Hoạt động
+TLM_BN_CỤ_005,Thanh Lam Mart Xã Phật Tích #05,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Vệ tinh Du lịch & Công nghiệp Tiên Du,Xã Phật Tích,"Khu di tích Chùa Phật Tích, Xã Phật Tích, Tỉnh Bắc Ninh",76000000,Hoạt động
+TLM_BN_CỤ_006,Thanh Lam Mart Xã Nội Duệ #06,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Vệ tinh Du lịch & Công nghiệp Tiên Du,Xã Nội Duệ,"Đường liên xã Nội Duệ, Xã Nội Duệ, Tỉnh Bắc Ninh",86000000,Hoạt động
+TLM_BN_CỤ_007,Thanh Lam Mart Xã Liên Bão #07,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Vệ tinh Du lịch & Công nghiệp Tiên Du,Xã Liên Bão,"Khu dân cư Liên Bão, Xã Liên Bão, Tỉnh Bắc Ninh",86000000,Hoạt động
+TLM_BN_CỤ_008,Thanh Lam Mart Xã Tân Chi #08,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Vệ tinh Du lịch & Công nghiệp Tiên Du,Xã Tân Chi,"Khu bến cảng Tân Chi, Xã Tân Chi, Tỉnh Bắc Ninh",77000000,Hoạt động
+TLM_BN_CỤ_009,Thanh Lam Mart Xã Lạc Vệ #09,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Vệ tinh Du lịch & Công nghiệp Tiên Du,Xã Lạc Vệ,"Ngã tư Lạc Vệ, Xã Lạc Vệ, Tỉnh Bắc Ninh",87000000,Hoạt động
+TLM_BN_CỤ_010,Thanh Lam Mart Xã Cảnh Hưng #10,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Vệ tinh Du lịch & Công nghiệp Tiên Du,Xã Cảnh Hưng,"Đường ven sông Đuống, Xã Cảnh Hưng, Tỉnh Bắc Ninh",82000000,Hoạt động
+TLM_BN_CỤ_001,Thanh Lam Mart TT. Thứa #01,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Nông nghiệp Công nghệ cao Lương Tài,TT. Thứa,"Phố Thứa, TT. Thứa, Tỉnh Bắc Ninh",87000000,Hoạt động
+TLM_BN_CỤ_002,Thanh Lam Mart TT. Thứa #02,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Nông nghiệp Công nghệ cao Lương Tài,TT. Thứa,"Đường tỉnh 280, TT. Thứa, Tỉnh Bắc Ninh",81000000,Hoạt động
+TLM_BN_CỤ_003,Thanh Lam Mart Xã Trung Kênh #03,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Nông nghiệp Công nghệ cao Lương Tài,Xã Trung Kênh,"Khu chợ Trung Kênh, Xã Trung Kênh, Tỉnh Bắc Ninh",80000000,Hoạt động
+TLM_BN_CỤ_004,Thanh Lam Mart Xã An Thịnh #04,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Nông nghiệp Công nghệ cao Lương Tài,Xã An Thịnh,"Khu dân cư An Thịnh, Xã An Thịnh, Tỉnh Bắc Ninh",76000000,Hoạt động
+TLM_BN_CỤ_005,Thanh Lam Mart Xã Mỹ Hương #05,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Nông nghiệp Công nghệ cao Lương Tài,Xã Mỹ Hương,"Đường liên xã Mỹ Hương, Xã Mỹ Hương, Tỉnh Bắc Ninh",73000000,Hoạt động
+TLM_BN_CỤ_006,Thanh Lam Mart Xã Lâm Thao #06,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Đô thị Nông nghiệp Công nghệ cao Lương Tài,Xã Lâm Thao,"Khu làng nghề Lâm Thao, Xã Lâm Thao, Tỉnh Bắc Ninh",85000000,Hoạt động
+TLM_BN_CỤ_001,Thanh Lam Mart TT. Gia Bình #01,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Làng nghề & Sinh thái Gia Bình,TT. Gia Bình,"Phố Gia Bình, TT. Gia Bình, Tỉnh Bắc Ninh",84000000,Hoạt động
+TLM_BN_CỤ_002,Thanh Lam Mart Xã Đại Bái #02,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Làng nghề & Sinh thái Gia Bình,Xã Đại Bái,"Làng nghề đúc đồng Đại Bái, Xã Đại Bái, Tỉnh Bắc Ninh",71000000,Hoạt động
+TLM_BN_CỤ_003,Thanh Lam Mart Xã Đông Cứu #03,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Làng nghề & Sinh thái Gia Bình,Xã Đông Cứu,"Làng nghề thêu ren Đông Cứu, Xã Đông Cứu, Tỉnh Bắc Ninh",70000000,Hoạt động
+TLM_BN_CỤ_004,Thanh Lam Mart Xã Xuân Lai #04,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Làng nghề & Sinh thái Gia Bình,Xã Xuân Lai,"Làng nghề tre trúc Xuân Lai, Xã Xuân Lai, Tỉnh Bắc Ninh",72000000,Hoạt động
+TLM_BN_CỤ_005,Thanh Lam Mart Xã Nhân Thắng #05,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Làng nghề & Sinh thái Gia Bình,Xã Nhân Thắng,"Khu trung tâm Nhân Thắng, Xã Nhân Thắng, Tỉnh Bắc Ninh",73000000,Hoạt động
+TLM_BN_CỤ_006,Thanh Lam Mart Xã Cao Đức #06,Minimart (Thanh Lam Mart),Bắc Ninh,Cụm Làng nghề & Sinh thái Gia Bình,Xã Cao Đức,"Khu đền Cao Lỗ Vương, Xã Cao Đức, Tỉnh Bắc Ninh",74000000,Hoạt động
