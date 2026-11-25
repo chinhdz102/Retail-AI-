@@ -15,7 +15,7 @@ Benchmark tiếng Việt phát hiện ba vấn đề: grader tìm tham số reco
 
 Kết quả kiểm thử: **490 backend**, **41 frontend**, **40/40 P0 regression**, **20/20 shopping sandbox**; TypeScript, production build, Ruff trên source, compileall và diff check đều qua. Đây là bằng chứng test/sandbox và một mẫu Groq live nhỏ, không phải độ chính xác khách hàng thật hay chứng nhận production.
 
-Giới hạn chính: PostgreSQL và Redis đã cấu hình nhưng probe kết nối timeout; demo có 6 sản phẩm; kho Thanh Lam Mart 3.099 dòng là snapshot, không phải tồn kho chi nhánh thời gian thực; ticket nhân viên và payment chỉ là simulator; text chat chưa stream token; voice/STT/TTS và kiosk thật không nằm trong benchmark này.
+Giới hạn chính: PostgreSQL và Redis đã cấu hình nhưng probe kết nối timeout; demo có 6 sản phẩm; danh mục Thanh Lam Mart 3.099 dòng (file kỹ thuật `data/thanh_lam_products.json`) là snapshot, không phải tồn kho chi nhánh thời gian thực; ticket nhân viên và payment chỉ là simulator; text chat chưa stream token; voice/STT/TTS và kiosk thật không nằm trong benchmark này.
 
 ## 2. Repository Audit
 
@@ -52,7 +52,7 @@ Nghiên cứu dưới đây định hình test và lựa chọn kiến trúc; k�
 
 | Nghiên cứu | Bài toán, phương pháp và kết quả công bố | Áp dụng và giới hạn |
 |---|---|---|
-| **ProductAgent: Benchmarking Conversational Product Search Agent with Asking Clarification Questions** — Jingheng Ye, Yong Jiang, Xiaobin Wang, Yinghui Li, Yangning Li, Hai-Tao Zheng, Pengjun Xie, Fei Huang (2024). [arXiv:2407.00942](https://arxiv.org/abs/2407.00942) | PROCLARE đánh giá hỏi làm rõ, tóm tắt thuộc tính, query generation và retrieval động. Trong thí nghiệm retrieval, GTE đạt MRR@10 52,29; rerank GTE 63,82. Hiệu quả phụ thuộc dữ liệu và lượt hội thoại. | Ưu tiên lexical/fuzzy baseline và hỏi khi thiếu thuộc tính ảnh hưởng quyết định. Kết quả không chứng minh vector DB tốt hơn trên Thanh Lam Mart; chưa thêm vector DB khi benchmark dự án chưa cho thấy lợi ích. |
+| **ProductAgent: Benchmarking Conversational Product Search Agent with Asking Clarification Questions** — Jingheng Ye, Yong Jiang, Xiaobin Wang, Yinghui Li, Yangning Li, Hai-Tao Zheng, Pengjun Xie, Fei Huang (2024). [arXiv:2407.00942](https://arxiv.org/abs/2407.00942) | PROCLARE đánh giá hỏi làm rõ, tóm tắt thuộc tính, query generation và retrieval động. Trong thí nghiệm retrieval, GTE đạt MRR@10 52,29; rerank GTE 63,82. Hiệu quả phụ thuộc dữ liệu và lượt hội thoại. | Ưu tiên lexical/fuzzy baseline và hỏi khi thiếu thuộc tính ảnh hưởng quyết định. Kết quả không chứng minh vector DB tốt hơn trên catalog Thanh Lam Mart; chưa thêm vector DB khi benchmark dự án chưa cho thấy lợi ích. |
 | **ShoppingBench: A Real-World Intent-Grounded Shopping Benchmark for LLM-based Agents** — Jiangyuan Wang et al. (2025). [arXiv:2508.04266](https://arxiv.org/abs/2508.04266) | 3.310 chỉ dẫn mua sắm, sandbox hơn 2,5 triệu sản phẩm; GPT‑4.1 đạt success dưới 50% tổng thể trong thiết lập tác giả. | Dùng để nhấn mạnh chuỗi hành động, budget, coupon và nhiều sản phẩm. Không dùng số paper làm kết quả Retail AI. |
 | **Shopping Reasoning Bench: An Expert-Authored Benchmark for Multi-Turn Conversational Shopping Assistants** — Shuxian Fan, Seonwoo Min, Youna Hu, Botao Xia, Jayakrishnan Unnikrishnan, Rowan Musselmann, Yifan Gao, Qingyu Yin, Priyanka Nigam, Bing Yin (2026). [arXiv:2606.12608](https://arxiv.org/abs/2606.12608) | 525 mission (232 single-turn, 293 multi-turn), 10.863 rubric nhị phân có trọng số. Chín model đạt 57–77% overall; rubric tùy chọn thấp hơn rubric bắt buộc 13–29 điểm ở multi-turn và hiệu quả giảm 4–18 điểm khi hội thoại dài thêm. | Tách rubric yêu cầu bắt buộc khỏi tư vấn thêm; thêm ca sửa constraint, tham chiếu cũ, cart và payment. Bộ v2 có 7 hội thoại, nhỏ hơn nhiều và không phải expert annotation. |
 | **Berkeley Function-Calling Leaderboard V4 (BFCL)** — Berkeley Gorilla Team (methodology V4, 2025). [Leaderboard](https://gorilla.cs.berkeley.edu/leaderboard) · [V4 methodology](https://gorilla.cs.berkeley.edu/blogs/15_bfcl_v4_web_search.html) | Mở rộng function call đơn sang tool choice/arguments, multi-turn, memory, web search và error recovery. | Grader kiểm tra state/cart/order/ticket thay vì chỉ câu chữ. Không chạy BFCL đầy đủ; số pass nội bộ không phải BFCL score. |
@@ -263,7 +263,7 @@ Artifact mới được giữ riêng, không ghi đè lịch sử:
 ### Trước demo dùng dữ liệu cửa hàng thật
 
 1. Khôi phục PostgreSQL và Redis; chạy catalog, session, TTL, state ownership và store routing trên staging.
-2. Nạp store master/kiosk mapping, giá/tồn theo chi nhánh, campaign có hạn/terms, receipt event và vị trí kệ đã kiểm chứng. Catalog web không xác nhận stock chi nhánh.
+2. Nạp store master/kiosk mapping, giá/tồn theo chi nhánh, campaign có hạn/terms, receipt event và vị trí kệ đã kiểm chứng. Snapshot danh mục không xác nhận stock chi nhánh.
 3. Thay in-memory cart/order/ticket bằng storage transactional bền vững; test retry đồng thời và multi-replica.
 4. Nếu có thanh toán, dùng sandbox provider và xác minh signature/idempotency/replay/expiry trước production.
 5. Chỉ tích hợp CRM/staff queue khi có API ack; simulator phải giữ nhãn demo.

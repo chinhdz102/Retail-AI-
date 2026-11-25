@@ -16,41 +16,23 @@
       },
       "claims": [
         {
-          "claim_id": "legal_identity_and_group",
+          "claim_id": "store_identity_and_dataset",
           "facts": {
             "vi": "Theo thông tin nhóm cung cấp, Thanh Lam Mart là cửa hàng bán lẻ độc lập gần nhà thành viên nhóm và là đơn vị cung cấp bộ dữ liệu danh mục sản phẩm thực tế cho dự án.",
             "en": "According to the team-provided context, Thanh Lam Mart is a local independent retail store that provided the real product catalog dataset for the project."
           },
           "source_ids": [
-            "thanh_lam_mart_official_profile"
-          ]
-        },
-        {
-          "claim_id": "operated_retail_chains",
-          "facts": {
-            "vi": "Thanh Lam Mart vận hành cửa hàng bán lẻ và cung cấp bộ dữ liệu danh mục sản phẩm phục vụ tư vấn mua sắm.",
-            "en": "Thanh Lam Mart operates a retail store and provides the product catalog dataset for shopping consultation."
-          },
-          "source_ids": [
-            "thanh_lam_mart_official_profile",
-            "thanh_lam_transaction_policy"
+            "team_provided_store_context"
           ]
         }
       ],
       "sources": [
         {
-          "source_id": "thanh_lam_mart_official_profile",
-          "name": "Thanh Lam Mart official company profile",
-          "url": "https://thanhlammart.vn/about",
-          "verified_at": "2026-10-18",
-          "basis": "official_public"
-        },
-        {
-          "source_id": "thanh_lam_transaction_policy",
-          "name": "Thanh Lam Mart official transaction policy",
-          "url": "https://thanhlammart.vn/info/transaction-policy",
-          "verified_at": "2026-10-18",
-          "basis": "official_public"
+          "source_id": "team_provided_store_context",
+          "name": "User-provided store context",
+          "url": null,
+          "verified_at": null,
+          "basis": "user_provided"
         }
       ]
     },

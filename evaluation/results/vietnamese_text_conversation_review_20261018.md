@@ -4,7 +4,7 @@
 
 - Gửi 25 lượt trong 15 đoạn hội thoại, toàn bộ yêu cầu dùng `language=vi`; gọi API Groq thật và runtime API đang chạy.
 - Bao phủ chào hỏi, hỏi đáp ngắn, cách nói khẩu ngữ, tham chiếu qua nhiều lượt, sửa điều kiện, khuyến nghị, dữ kiện catalog, thông tin chưa có, yêu cầu ngoài khả năng agent và xác nhận giao dịch.
-- Đối chiếu với catalog runtime demo gồm 6 sản phẩm. Dataset Thanh Lam Mart có 3.099 dòng (3.081 được chấp nhận, 18 cách ly), nhưng PostgreSQL chưa được benchmark trực tiếp.
+- Đối chiếu với catalog runtime demo gồm 6 sản phẩm. Dataset Thanh Lam Mart (`data/thanh_lam_products.json`) có 3.099 dòng (3.081 được chấp nhận, 18 cách ly), nhưng PostgreSQL chưa được benchmark trực tiếp.
 - Chấm tự động cho grounding/an toàn, chọn tool, tham số, sản phẩm được nhắc và trường hợp không nên gọi tool. Đọc lại toàn bộ câu trả lời theo rubric: trả lời đúng lượt hiện tại, tự nhiên bằng tiếng Việt, tránh lặp, hỏi làm rõ khi mơ hồ, nói rõ khi dữ liệu thiếu.
 
 ## Kết quả

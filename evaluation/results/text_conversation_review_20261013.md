@@ -3,7 +3,7 @@
 ## Phạm vi
 
 - Agent chạy với `CATALOG_REPOSITORY=demo`, gồm 6 sản phẩm trong `backend/products/catalog.py`.
-- `data/thanh_lam_products.json` có 3.099 dòng; dry-run kiểm tra schema nhận 3.081 dòng và cách ly 18 dòng vì giá khuyến mãi cao hơn giá gốc.
+- `data/thanh_lam_products.json` (dữ liệu danh mục xin từ Thanh Lam Mart) có 3.099 dòng; dry-run kiểm tra schema nhận 3.081 dòng và cách ly 18 dòng vì giá khuyến mãi cao hơn giá gốc.
 - PostgreSQL không lắng nghe tại `127.0.0.1:5432`, nên chưa thể đo retrieval hoặc trả lời Groq trên 3.081 dòng Thanh Lam Mart. Kiểm tra dữ liệu offline không được tính là kiểm tra khả năng trả lời của agent.
 - Chỉ kiểm tra text. STT, TTS và đồng bộ khẩu hình không thuộc benchmark này.
 

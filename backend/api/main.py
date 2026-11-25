@@ -840,6 +840,10 @@ def _unverified_retail_information_kind(text: str) -> str | None:
             "du an fpt",
             "fpt chatvrm",
             "chatvrm fpt",
+            "thanh lam mart",
+            "gioi thieu thanh lam mart",
+            "thanh lam mart cua ai",
+            "who owns thanh lam mart",
             "thanh lam mart do ai so huu",
             "who owns thanh lam mart",
             "thanh_lam_mart la cong ty nao",
@@ -946,10 +950,12 @@ def _generic_nearby_places_requested(text: str) -> bool:
         "gan khu vuc",
         "gan minh",
         "gan thanh lam mart",
+        "gan thanh lam mart",
         "quanh day",
         "quanh ",
         "quanh toi",
         "quanh khu vuc",
+        "quanh thanh lam mart",
         "quanh thanh lam mart",
         "xung quanh",
         "lan can",
@@ -968,6 +974,8 @@ def _generic_nearby_places_requested(text: str) -> bool:
         "close to",
         "nearest",
         "closest",
+        "near thanh lam mart",
+        "around thanh lam mart",
         "near thanh lam mart",
         "around thanh lam mart",
     )
@@ -1483,10 +1491,10 @@ def _localized_retail_information_unavailable(
     messages = {
         "company": {
             "en": (
-                "Do you mean the Thanh Lam Mart operator, FPT Corporation, or the ChatVRM/FPT project?"
+                "Do you mean Thanh Lam Mart, FPT Corporation, or the ChatVRM/FPT project?"
             ),
-            "zh": ("您想了解 Thanh Lam Mart/Thanh Lam Mart、FPT Corporation，还是 ChatVRM 零售 AI 项目？"),
-            "vi": ("Bạn muốn hỏi đơn vị vận hành Thanh Lam Mart, công ty FPT hay đồ án ChatVRM/FPT?"),
+            "zh": ("您想了解 Thanh Lam Mart、FPT Corporation，还是 ChatVRM 零售 AI 项目？"),
+            "vi": ("Bạn muốn hỏi cửa hàng Thanh Lam Mart, công ty FPT hay đồ án ChatVRM/FPT?"),
         },
         "store": {
             "en": (

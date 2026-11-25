@@ -36,7 +36,7 @@ The exact screenshot prompt, "the Coca Zero price is how much?", was also sent t
 
 ## Data and feature limits
 
-The active runtime repository is `demo`, with 6 products. The Thanh Lam Mart data file contains 3,099 rows: 3,081 accepted and 18 quarantined during validation. Live search against PostgreSQL was not tested, so these Groq results do not demonstrate coverage of all accepted rows.
+The active runtime repository is `demo`, with 6 products. The Thanh Lam Mart catalog file (`data/thanh_lam_products.json`) contains 3,099 rows: 3,081 accepted and 18 quarantined during validation. Live search against PostgreSQL was not tested, so these Groq results do not demonstrate coverage of all accepted rows.
 
 The smoke benchmark marks these features unsupported: FEFO, cart writes, knowledge-base lookup, cross-turn cart references, payment verification, Redis-backed sessions, and RAG. A separate owner-management agent is also not implemented; price and inventory changes are refused safely.
 

@@ -52,7 +52,7 @@ Build vẫn cảnh báo chunk `model-viewer` khoảng 1.02 MB (gzip 290.30 kB). 
 
 - Giỏ hàng, reservation, order và payment simulator hiện ở bộ nhớ của một process. Đây là **sandbox demo**, không lưu bền và không dùng chung giữa nhiều backend replica.
 - Checkout bị tắt ở production. Không kết nối POS, tồn kho chi nhánh, cơ sở dữ liệu order hoặc cổng thanh toán; `PAID` trong test chỉ là kết quả mô phỏng.
-- Chỉ cho phép ghi giỏ với catalog demo đã biết. Catalog Thanh Lam Mart nhập từ web là snapshot tham khảo, không đủ thẩm quyền để trừ tồn hay đặt hàng.
+- Chỉ cho phép ghi giỏ với catalog demo đã biết. Catalog sản phẩm xin từ Thanh Lam Mart (lưu ở `data/thanh_lam_products.json`) là snapshot tham khảo, không đủ thẩm quyền để trừ tồn hay đặt hàng.
 - Redis adapter có test fail-closed, nhưng không được xác minh với Redis đang chạy trong lượt này. PostgreSQL/Redis không được dùng cho test end-to-end; hạ tầng cửa hàng thật vẫn cần cấu hình và kiểm thử riêng.
 - Không chạy benchmark gọi LLM trực tiếp trong lượt này. Bộ test đánh giá routing, hợp đồng tool, policy và kết quả có cấu trúc; nó không chứng minh tỷ lệ factuality trên khách hàng thật.
 - Thống kê “bán chạy nhất”, “ngon nhất” hoặc sở thích khách hàng chỉ được nêu khi có dữ liệu bán/đánh giá được xác minh; catalog hiện tại không cung cấp các số liệu đó.

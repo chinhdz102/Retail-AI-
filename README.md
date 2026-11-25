@@ -17,7 +17,7 @@ The vertical slice is in place:
 
 English is supported across the chat interface, Groq Whisper transcription, catalog
 intent routing and speech synthesis. English category and product terms such as `milk`,
-`coffee`, `snacks` and `instant noodles` are mapped to the Vietnamese Thanh Lam Mart taxonomy
+`coffee`, `snacks` and `instant noodles` are mapped to the Vietnamese Thanh Lam Mart catalog taxonomy
 when needed; product facts still come from the active catalog. Prices are in VND. The
 catalog does not contain loyalty rules, return policies, store hours, sales rankings,
 taste ratings or interaction analytics. Sky states that those facts are unverified and
@@ -114,7 +114,8 @@ operators. Fact lookups and recommendations return deterministic answers after o
 call. Other searches can continue through the two-round, five-call agent loop. The response
 includes `tools_used` and `grounded_product_ids` for inspection.
 
-The demo catalog remains the default. To validate the tracked Thanh Lam Mart dataset without
+The demo catalog remains the default. To validate the tracked Thanh Lam Mart product catalog dataset
+(stored at `data/thanh_lam_products.json`) without
 writing to the database, run:
 
 ```powershell
@@ -137,14 +138,16 @@ uv run python scripts/import_thanh_lam.py --apply
 ```
 
 The importer hashes the source file for dataset versioning, validates identifiers and
-prices, and quarantines rows whose sale price exceeds their regular price. The dataset's
-shelf locations are crawler-generated placeholders; PostgreSQL preserves them with
-`shelf_source=SIMULATED`, while customer snapshots omit shelf values. Demo shopping actions
-are available only with `CATALOG_REPOSITORY=demo`; the service rejects transaction writes
+prices, and quarantines rows whose sale price exceeds their regular price. The dataset is sourced from
+Thanh Lam Mart (a local independent retail store); because its shelf column contains unverified placeholders
+rather than an audited physical shelf map, PostgreSQL preserves them with `shelf_source=SIMULATED`, while
+customer snapshots omit shelf values. (File/script names `data/thanh_lam_products.json` and
+`scripts/import_thanh_lam.py` keep their historical `Thanh Lam Mart` prefix for codebase and SHA-256 compatibility.)
+Demo shopping actions are available only with `CATALOG_REPOSITORY=demo`; the service rejects transaction writes
 against the imported Thanh Lam Mart snapshot because it is not branch-authoritative inventory.
 
 Branch profiles, active promotion campaigns, receiving events, and nearby-place snapshots
-use separate source tables and freshness checks. The Thanh Lam Mart catalog importer does not populate
+use separate source tables and freshness checks. The catalog importer (`scripts/import_thanh_lam.py`) does not populate
 those operational feeds. Until the store master maps each kiosk to a real branch and the feeds
 are loaded, the assistant will say the information is unavailable. See
 [`docs/retail-information-data-design.md`](docs/retail-information-data-design.md) for the data

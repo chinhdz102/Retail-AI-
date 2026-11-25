@@ -354,7 +354,7 @@ async def test_store_operator_question_defaults_to_thanh_lam_mart_profile(
 ) -> None:
     class UnexpectedGroqService(GroqService):
         async def chat(self, messages, model=None, tools=None, tool_choice=None):
-            raise AssertionError("The verified retail-chain operator is deterministic")
+            raise AssertionError("The verified store operator is deterministic")
 
     app.dependency_overrides[get_groq_service] = lambda: UnexpectedGroqService()
     created = await client.post("/sessions", json={"kiosk_id": "kiosk-chain-operator"})
@@ -371,7 +371,7 @@ async def test_store_operator_question_defaults_to_thanh_lam_mart_profile(
     assert payload["model"] == "organization-profile"
     assert payload["tools_used"] == ["get_organization_profile"]
     assert "Thanh Lam Mart" in payload["text"]
-    assert "https://thanhlammart.vn/about" in payload["text"]
+    assert "danh mục sản phẩm" in payload["text"].casefold()
 
 
 @pytest.mark.asyncio
@@ -2283,7 +2283,7 @@ def test_story_request_does_not_map_to_shelf_intent() -> None:
 def _receipt_observation(items, store_timezone=None, updated_at="2026-11-19T02:00:00+00:00"):
     from backend.services.retail_tools import ToolObservation
 
-    store = {"store_code": "TLM-DEMO-01", "store_name": "Thanh Lam Mart Demo"}
+    store = {"store_code": "TLM-DEMO-01", "store_name": "Thanh Lam Mart"}
     if store_timezone:
         store["timezone"] = store_timezone
     return ToolObservation(
@@ -2302,15 +2302,15 @@ def test_new_arrivals_use_shopper_wording_and_store_local_time() -> None:
     ], store_timezone="Asia/Ho_Chi_Minh")
 
     assert render(observation, "receipts", "vi") == (
-        "Hàng mới về gần đây tại Thanh Lam Mart Demo: Cà chua chocolate 300g (về lúc 18/11/2026 22:06); "
+        "Hàng mới về gần đây tại Thanh Lam Mart: Cà chua chocolate 300g (về lúc 18/11/2026 22:06); "
         "Cải ngọt gói 500g (về lúc 19/11/2026 01:30)"
     )
     assert render(observation, "receipts", "en") == (
-        "Recent new arrivals at Thanh Lam Mart Demo: Cà chua chocolate 300g (arrived 18/11/2026 22:06); "
+        "Recent new arrivals at Thanh Lam Mart: Cà chua chocolate 300g (arrived 18/11/2026 22:06); "
         "Cải ngọt gói 500g (arrived 19/11/2026 01:30)"
     )
     zh = render(observation, "receipts", "zh")
-    assert zh.startswith("Thanh Lam Mart Demo 最近新到的商品：")
+    assert zh.startswith("Thanh Lam Mart 最近新到的商品：")
     assert "到货时间 18/11/2026 22:06" in zh and "到货时间 19/11/2026 01:30" in zh
     for language in ("vi", "en", "zh"):
         text = render(observation, "receipts", language)
@@ -2322,13 +2322,13 @@ def test_no_new_arrivals_in_a_fully_covered_week() -> None:
 
     observation = _receipt_observation([])  # no store timezone: Asia/Ho_Chi_Minh by default
     assert render(observation, "receipts", "vi") == (
-        "Trong 7 ngày qua, Thanh Lam Mart Demo chưa ghi nhận hàng mới về (cập nhật 19/11/2026 09:00)."
+        "Trong 7 ngày qua, Thanh Lam Mart chưa ghi nhận hàng mới về (cập nhật 19/11/2026 09:00)."
     )
     assert render(observation, "receipts", "en") == (
-        "In the past 7 days, Thanh Lam Mart Demo has had no new arrivals (updated 19/11/2026 09:00)."
+        "In the past 7 days, Thanh Lam Mart has had no new arrivals (updated 19/11/2026 09:00)."
     )
     assert render(observation, "receipts", "zh") == (
-        "过去 7 天，Thanh Lam Mart Demo 没有新到的商品（更新时间 19/11/2026 09:00）。"
+        "过去 7 天，Thanh Lam Mart 没有新到的商品（更新时间 19/11/2026 09:00）。"
     )
 
 

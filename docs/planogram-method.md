@@ -3,8 +3,9 @@
 ## What this is
 
 This is a reproducible **location proposal**, not verified store inventory or an
-installation-ready planogram. The source file's existing `shelf` values are crawler
-placeholders; the catalog importer records them as `shelf_source=SIMULATED`. The
+installation-ready planogram. The source file (real catalog data obtained from Thanh Lam Mart,
+kept at `data/thanh_lam_products.json` for SHA-256 compatibility) has existing `shelf` values that are
+unverified placeholders; the catalog importer records them as `shelf_source=SIMULATED`. The
 generated locations therefore live in a separate, versioned file and never replace
 those source values.
 
