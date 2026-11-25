@@ -1282,7 +1282,7 @@ h2 {
   min-height: 44px;
   max-height: 116px;
   flex: 1;
-  resize: vertical;
+  resize: none;
   padding: 11px 0;
   color: var(--text);
   border: 0;
@@ -2527,11 +2527,12 @@ textarea {
     display: flex;
     flex-direction: column;
     border: 0;
+    border-top: 1px solid rgb(179 208 230 / 0.16);
     border-radius: 20px 20px 0 0;
-    background: transparent;
-    box-shadow: none;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+    background: linear-gradient(180deg, rgb(7 14 24 / 0.54) 0%, rgb(7 14 24 / 0.78) 100%);
+    box-shadow: 0 -10px 30px rgb(3 8 15 / 0.38);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
     transition:
       height 240ms cubic-bezier(0.22, 1, 0.36, 1),
       opacity 220ms ease,
@@ -2540,7 +2541,7 @@ textarea {
 
   .mobile-sheet-expanded .text-drawer {
     height: 86dvh;
-    background: transparent;
+    background: linear-gradient(180deg, rgb(7 14 24 / 0.62) 0%, rgb(7 14 24 / 0.84) 100%);
   }
 
   .mobile-sheet-grabber {
@@ -2625,9 +2626,13 @@ textarea {
   }
 
   .text-drawer .microphone-picker select {
-    height: 34px;
-    font-size: 16px;
-    padding: 4px 8px;
+    height: 36px;
+    font-size: 0.85rem;
+    line-height: 1.25;
+    padding: 4px 26px 4px 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .text-drawer .active-microphone-label {
@@ -2788,9 +2793,9 @@ textarea {
 @media (max-width: 768px) and (prefers-color-scheme: light) {
   .text-drawer,
   .mobile-sheet-expanded .text-drawer {
-    background: transparent;
-    border: 0;
-    box-shadow: none;
+    background: linear-gradient(180deg, rgb(7 14 24 / 0.56) 0%, rgb(7 14 24 / 0.8) 100%);
+    border-top: 1px solid rgb(179 208 230 / 0.16);
+    box-shadow: 0 -10px 30px rgb(3 8 15 / 0.34);
   }
 }
 

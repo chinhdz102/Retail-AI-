@@ -11481,6 +11481,14 @@ def _requested_snapshot_fields_for_catalog(
         )
     )
     if (
+        "shelf" in fields
+        and re.search(
+            r"\b(?:xuat xu|san xuat o dau|nguon goc|cua nuoc nao)\b",
+            normalized_query,
+        )
+    ):
+        fields = tuple(field for field in fields if field != "shelf")
+    if (
         "stock" in fields
         and understanding.intent in {"brand", "variant"}
         and not explicit_stock_state
@@ -14018,6 +14026,19 @@ def _product_knowledge_attributes_requested(text: str) -> tuple[str, ...]:
         )
     ):
         attributes.append("allergens")
+    if any(
+        phrase in normalized
+        for phrase in (
+            "xuat xu",
+            "san xuat o dau",
+            "nguon goc",
+            "cua nuoc nao",
+            "made in",
+            "country of origin",
+            "origin",
+        )
+    ):
+        attributes.append("origin")
     if not attributes:
         attributes.append("suitability")
     return tuple(dict.fromkeys(attributes))[:8]
@@ -14040,6 +14061,7 @@ def _localized_product_knowledge_abstention(
             "calories": "calorie content",
             "caffeine": "caffeine content",
             "allergens": "allergens",
+            "origin": "origin",
         },
         "zh": {
             "benefits": "功效或用途",
@@ -14050,6 +14072,7 @@ def _localized_product_knowledge_abstention(
             "calories": "热量",
             "caffeine": "咖啡因含量",
             "allergens": "过敏原",
+            "origin": "产地",
         },
         "vi": {
             "benefits": "công dụng hoặc lợi ích",
@@ -14060,6 +14083,7 @@ def _localized_product_knowledge_abstention(
             "calories": "lượng calo",
             "caffeine": "hàm lượng caffeine",
             "allergens": "thành phần có thể gây dị ứng",
+            "origin": "xuất xứ",
         },
     }[language]
     attribute_text = ", ".join(dict.fromkeys(labels[attr] for attr in attributes if attr in labels))

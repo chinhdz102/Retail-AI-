@@ -252,7 +252,10 @@ async def transcribe_audio_stream(
                     cmd = {"type": text_frame.strip()}
                 action = str(cmd.get("type") or "").lower()
                 if action == "check_turn":
-                    current_text = " ".join([*final_segments, last_partial]).strip()
+                    current_text = (
+                        " ".join([*final_segments, last_partial]).strip()
+                        or str(cmd.get("partial") or cmd.get("text") or "").strip()
+                    )
                     turn_samples = _pcm16_to_float32(bytes(pcm_buffer))
                     turn_res = await asyncio.to_thread(
                         predict_turn_completion,

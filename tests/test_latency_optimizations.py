@@ -476,3 +476,73 @@ async def test_groq_chat_uses_groq_lpu_fast_lane_only_when_opted_in() -> None:
     assert calls[-1] == ("groq", "qwen/qwen3.8-27b", "none")
 
 
+@pytest.mark.asyncio
+async def test_deep_audit_fixes_comparison_origin_deictic_and_chinese_search(
+    snapshot: SnapshotProductRepository,
+) -> None:
+    from backend.services.query_understanding import understand_catalog_query
+
+    class _NoPlannerStub(GroqService):
+        def __init__(self) -> None:
+            super().__init__(settings=Settings(_env_file=None, chat_llm_api_key="test"))
+
+        async def chat(self, *_args, **_kwargs):
+            raise AssertionError("Zero-planner streaming path must not call groq.chat()")
+
+    stub = _NoPlannerStub()
+    store = InMemorySessionStore()
+
+    # 1. Comparison inherits 2-word category head ("tương ớt", never "tương cà")
+    rec_cmp = store.create("cmp-tuong-ot")
+    plan_cmp = await prepare_streaming_consultation(
+        text="so sánh tương ớt Chinsu và Cholimex",
+        record=rec_cmp,
+        repository=snapshot,
+        groq=stub,
+    )
+    assert plan_cmp is not None and len(plan_cmp.products) == 2
+    assert all("tương ớt" in p.name.casefold() for p in plan_cmp.products), [
+        p.name for p in plan_cmp.products
+    ]
+
+    # 2. "Xuất xứ của chai này ở đâu?" is NOT shelf-location intent; returns Selsun origin
+    paths = snapshot.list_category_hierarchies()
+    parsed_origin = understand_catalog_query("Xuất xứ của chai này ở đâu?", paths)
+    assert parsed_origin.intent != "location"
+    rec_orig = store.create("origin-selsun")
+    rec_orig.shopping.selected_product_ids = ["TLM_10016912"]
+    rec_orig.shopping.consultation = {"need": "Selsun"}
+    plan_orig = await prepare_streaming_consultation(
+        text="Xuất xứ của chai này ở đâu?",
+        record=rec_orig,
+        repository=snapshot,
+        groq=stub,
+    )
+    assert plan_orig is not None
+    assert plan_orig.products[0].product_id == "TLM_10016912"
+    assert "Việt Nam" in plan_orig.messages[1]["content"]
+
+    # 3. Deictic detail follow-up ("bánh này") stays locked on visible[0]
+    rec_deic = store.create("deictic-malai")
+    rec_deic.shopping.selected_product_ids = ["TLM_10007184"]
+    rec_deic.shopping.consultation = {"need": "Bánh bao Malai"}
+    plan_deic = await prepare_streaming_consultation(
+        text="cách dùng bánh này thế nào?",
+        record=rec_deic,
+        repository=snapshot,
+        groq=stub,
+    )
+    assert plan_deic is not None
+    assert plan_deic.products[0].product_id == "TLM_10007184"
+
+    # 4. Chinese retail query maps cleanly to milk, never random vegetables
+    import unicodedata
+
+    zh_hits = snapshot.search("请问有没有无糖鲜牛奶？", limit=5)
+    assert zh_hits
+    assert all(
+        "sữa" in unicodedata.normalize("NFC", p.name).casefold() for p in zh_hits[:3]
+    ), [p.name for p in zh_hits[:3]]
+
+
+

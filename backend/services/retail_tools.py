@@ -595,6 +595,8 @@ KnowledgeAttribute = Literal[
     "calories",
     "caffeine",
     "allergens",
+    "storage",
+    "origin",
 ]
 
 

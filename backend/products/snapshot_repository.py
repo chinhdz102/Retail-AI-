@@ -587,9 +587,62 @@ _RELAXABLE_BRAND_MODIFIERS = frozenset(
 )
 
 
+_CJK_RETAIL_PHRASES: tuple[tuple[str, str], ...] = (
+    ("无糖鲜牛奶", " sữa tươi không đường "),
+    ("无糖鲜奶", " sữa tươi không đường "),
+    ("无糖牛奶", " sữa tươi không đường "),
+    ("无糖酸奶", " sữa chua không đường "),
+    ("无糖可乐", " coca zero "),
+    ("无糖", " không đường "),
+    ("低糖", " ít đường "),
+    ("鲜牛奶", " sữa tươi "),
+    ("鲜奶", " sữa tươi "),
+    ("纯牛奶", " sữa tươi "),
+    ("牛奶", " sữa "),
+    ("酸奶", " sữa chua "),
+    ("豆奶", " sữa đậu nành "),
+    ("方便面", " mì ăn liền "),
+    ("泡面", " mì ăn liền "),
+    ("矿泉水", " nước suối "),
+    ("纯净水", " nước suối "),
+    ("可口可乐", " coca cola "),
+    ("洗发水", " dầu gội "),
+    ("沐浴露", " sữa tắm "),
+    ("牙膏", " kem đánh răng "),
+    ("洗衣液", " nước giặt "),
+    ("纸巾", " giấy vệ sinh "),
+    ("辣椒酱", " tương ớt "),
+    ("辣酱", " tương ớt "),
+    ("酱油", " nước tương "),
+    ("鱼露", " nước mắm "),
+    ("咖啡", " cà phê "),
+    ("零食", " snack "),
+    ("饮料", " nước ngọt "),
+)
+_CJK_CHAR_RE = re.compile(r"[\u4e00-\u9fff]+")
+
+
+def _translate_cjk_retail_terms(text: str, *, strip_leftover_cjk: bool = False) -> str:
+    if not _CJK_CHAR_RE.search(text):
+        return text
+    out = text
+    matched = False
+    for zh_term, vi_term in _CJK_RETAIL_PHRASES:
+        if zh_term in out:
+            out = out.replace(zh_term, vi_term)
+            matched = True
+    if matched and strip_leftover_cjk:
+        out = _CJK_CHAR_RE.sub(" ", out)
+    return " ".join(out.split()) if matched else text
+
+
 @lru_cache(maxsize=4096)
 def _query_terms(query: str) -> tuple[tuple[str, ...], bool, bool]:
-    normalized = normalize_search_text(query).strip()
+    translated_query = _translate_cjk_retail_terms(query, strip_leftover_cjk=True)
+    if _CJK_CHAR_RE.search(query):
+        # Avoid turning Chinese "无糖鲜牛奶" into "zero" which only matches "Coca Zero" titles.
+        translated_query = re.sub(r"\bkhông\s+đường\b", " ", translated_query, flags=re.I)
+    normalized = normalize_search_text(translated_query).strip()
     normalized = re.sub(r"\b(?:less|more)\s+than\b", " ", normalized)
     explicit_diaper = bool(re.search(r"\b(?:bỉm|tã\s+quần)\b", query.casefold()))
     comparison = bool(_COMPARISON_PATTERN.search(normalized)) or bool(
@@ -1270,6 +1323,7 @@ class SnapshotProductRepository:
         return self._normalize_noisy_cached(query)
 
     def _normalize_noisy_query(self, text: str) -> str:
+        text = _translate_cjk_retail_terms(text, strip_leftover_cjk=False)
         matches = list(_WORD_RE.finditer(text))
         if not matches:
             return text

@@ -1893,11 +1893,16 @@ def _understand_catalog_query_cached(
         )
     )
     # Accent-folding collapses "ở đây" ("here") and "ở dãy" ("in aisle") to
-    # "o day". Strip explicit "ở đây" before checking shelf-location patterns.
+    # "o day". Strip explicit "ở đây" before checking shelf-location patterns,
+    # and never treat product-origin questions ("xuất xứ ở đâu", "sản xuất ở đâu")
+    # as in-store shelf location queries.
     location_normalized = " ".join(
         normalize_vietnamese(re.sub(r"\bở\s+đây\b", " ", raw, flags=re.IGNORECASE)).split()
     )
-    has_location_cue = bool(_LOCATION.search(location_normalized))
+    is_origin_question = bool(
+        re.search(r"\b(?:xuat xu|san xuat o dau|nguon goc|cua nuoc nao)\b", normalized)
+    )
+    has_location_cue = bool(_LOCATION.search(location_normalized)) and not is_origin_question
     if _PURCHASE_ACTION.search(normalized):
         intent = "purchase_action"
     elif comparison:

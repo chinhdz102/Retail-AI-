@@ -62,7 +62,11 @@ _SINGLE_ITEM_SEASONING_RE = re.compile(
     r"\b(?:gia vi|sot uop|bot uop|goi gia vi|nuoc sot|nuoc cham|tuong ot|muoi cham)\b"
 )
 _SAVORY_MEAL_CUE_RE = re.compile(
-    r"\b(?:bua toi|bua trua|bua com|nau com|lau|mi y|spaghetti|bbq|nuong)\b"
+    r"\b(?:bua toi|bua trua|bua com|nau com|lau|mi y|spaghetti|bbq|nuong|"
+    r"nau |bun |pho |hu tieu|chao |canh |lam mon)\b"
+)
+_HOUSEHOLD_UTENSIL_CUE_RE = re.compile(
+    r"\b(?:coc|ly|chen|bat|dua|muong|thia|noi|chao|khan|giay|mang boc|tui rac)\b"
 )
 _SNACK_JUNK_FOR_MEAL_RE = re.compile(
     r"\b(?:banh que|banh trang|snack|bim bim|keo|bong ca|da ca|kho bo|chan ga)\b"
@@ -406,12 +410,24 @@ async def _prepare_comparison_streaming(
         return None
     norm_a = normalize_category_text(raw_a)
     norm_b = normalize_category_text(raw_b)
-    # Inherit shared category head word (e.g. "sữa TH True Milk" vs "Vinamilk" -> "sữa Vinamilk").
-    head_words = norm_a.split()
     query_a = _clean_lexical_query(raw_a) or raw_a
     query_b = _clean_lexical_query(raw_b) or raw_b
-    if head_words and len(norm_b.split()) <= 2 and head_words[0] not in norm_b.split():
-        query_b_prefixed = f"{head_words[0]} {query_b}"
+
+    # Inherit the full shared category head (e.g. "tương ớt Chinsu" vs "Cholimex" ->
+    # "tương ớt Cholimex", NOT 1-word "tương Cholimex" which matches "Tương cà"!).
+    pt_norm = normalize_category_text(parsed.product_type or "") if parsed is not None else ""
+    shared_head = ""
+    if pt_norm and pt_norm in norm_a:
+        shared_head = pt_norm
+    else:
+        head_words = norm_a.split()
+        if len(head_words) >= 3:
+            shared_head = " ".join(head_words[:2])
+        elif head_words:
+            shared_head = head_words[0]
+
+    if shared_head and shared_head not in norm_b and len(norm_b.split()) <= 2:
+        query_b_prefixed = f"{shared_head} {query_b}"
     else:
         query_b_prefixed = query_b
 
@@ -427,9 +443,30 @@ async def _prepare_comparison_streaming(
     hits_b = _apply_streaming_constraints(hits_b, text, parsed, enforce_budget=False)
     if not hits_a or not hits_b:
         return None
-    best_a = _rank_streaming_candidates(hits_a, raw_a)[0]
+    if shared_head:
+        head_a = [
+            p for p in hits_a
+            if shared_head in normalize_category_text(f"{p.name} {p.category or ''}")
+        ]
+        head_b = [
+            p for p in hits_b
+            if shared_head in normalize_category_text(f"{p.name} {p.category or ''}")
+        ]
+        if head_a:
+            hits_a = head_a
+        if head_b:
+            hits_b = head_b
+    focused_a, scores_a = _filter_streaming_candidates(hits_a, query_a, parsed.product_type)
+    focused_b, scores_b = _filter_streaming_candidates(
+        hits_b, query_b_prefixed, parsed.product_type
+    )
+    best_a = _rank_streaming_candidates(focused_a, raw_a, focus_scores=scores_a)[0]
     best_b = next(
-        (p for p in _rank_streaming_candidates(hits_b, raw_b) if p.product_id != best_a.product_id),
+        (
+            p
+            for p in _rank_streaming_candidates(focused_b, raw_b, focus_scores=scores_b)
+            if p.product_id != best_a.product_id
+        ),
         None,
     )
     if best_b is None:
@@ -604,6 +641,7 @@ async def _prepare_slim_basket_streaming(
 
     norm_request = normalize_category_text(text)
     savory_meal = bool(_SAVORY_MEAL_CUE_RE.search(norm_request))
+    wants_utensil = bool(_HOUSEHOLD_UTENSIL_CUE_RE.search(norm_request))
     excluded = _clean_negative_terms(parsed) if parsed is not None else []
 
     def _search_basket() -> list[tuple[str, list[ProductSnapshot]]]:
@@ -612,6 +650,12 @@ async def _prepare_slim_basket_streaming(
             hits = repository.search(query=kw, limit=12)
             if excluded:
                 hits = [p for p in hits if not _item_violates_exclusions(p, excluded)]
+            if savory_meal and not wants_utensil:
+                hits = [
+                    p
+                    for p in hits
+                    if normalize_category_text(p.department or "") != "phi thuc pham"
+                ]
             if savory_meal:
                 non_snack = [
                     p
@@ -717,12 +761,15 @@ async def _prepare_product_detail_streaming(
     ]
     if not requested_attrs:
         return None
-    cleaned_first = _clean_lexical_query(answer_text)
-    stripped_query = _STREAM_DETAIL_STRIP_RE.sub(" ", cleaned_first)
+    cleaned_native = _NATIVE_STREAM_OPENER_RE.sub(" ", answer_text)
+    cleaned_native = re.sub(r"\bở\s+đâu\b", " ", cleaned_native, flags=re.IGNORECASE)
+    stripped_query = _STREAM_DETAIL_STRIP_RE.sub(
+        " ", normalize_category_text(strip_retrieval_budget(cleaned_native))
+    )
     detail_stop = frozenset(
         {
             "cach", "nhu", "su", "huong", "dan", "thanh",
-            "phan", "bao", "quan", "xuat", "xu",
+            "phan", "bao", "quan", "xuat", "xu", "nuoc",
         }
     )
     target_lex = " ".join(
@@ -732,7 +779,16 @@ async def _prepare_product_detail_streaming(
     )
     target: ProductSnapshot | None = None
     related: list[ProductSnapshot] = []
-    if target_lex:
+    # Keep focus locked on the visible product when the shopper uses a demonstrative
+    # reference ("bánh này", "chai này", "sữa đó") matching the active item.
+    has_deictic_ref = bool(re.search(r"\b(?:này|đó|kia)\b", answer_text, re.IGNORECASE))
+    if visible and has_deictic_ref:
+        vis0_hay = normalize_category_text(f"{visible[0].name} {visible[0].category or ''}")
+        lex_toks = target_lex.split()
+        if not lex_toks or (len(lex_toks) <= 2 and all(t in vis0_hay for t in lex_toks)):
+            target = visible[0]
+            related = visible[1:5]
+    if target is None and target_lex:
         lex_hits = await run_catalog_work(
             repository.search, query=target_lex, limit=8, timeout_seconds=3
         )
@@ -741,7 +797,7 @@ async def _prepare_product_detail_streaming(
             ordered = _rank_streaming_candidates(focused, target_lex, focus_scores=focus_scores)
             target = ordered[0]
             related = _related_candidates(ordered, [target], limit=4)
-    elif visible:
+    elif target is None and visible:
         target = visible[0]
         related = visible[1:5]
     if target is None:
