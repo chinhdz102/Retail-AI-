@@ -18,7 +18,7 @@ Kết quả chi tiết:
 [p0_regression_5x.json](p0_regression_5x.json),
 [smoke_benchmark.json](smoke_benchmark.json).
 
-Ruff toàn repo vẫn báo 4 lỗi có sẵn trong `crawl_winmart.py`; file crawler không
+Ruff toàn repo vẫn báo 4 lỗi có sẵn trong `crawl_winmart.py`; script thu thập cũ không
 thuộc phạm vi P0 và không được sửa trong sprint này.
 
 ## Thay đổi chính

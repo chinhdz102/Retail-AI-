@@ -1,10 +1,11 @@
-# WinMart taxonomy-based planogram draft
+# Thanh Lam Mart taxonomy-based planogram draft
 
 ## What this is
 
 This is a reproducible **location proposal**, not verified store inventory or an
-installation-ready planogram. The source file's existing `shelf` values are crawler
-placeholders; the catalog importer records them as `shelf_source=SIMULATED`. The
+installation-ready planogram. The source file (real catalog data obtained from Thanh Lam Mart,
+kept at `data/winmart_products.json` for SHA-256 compatibility) has existing `shelf` values that are
+unverified placeholders; the catalog importer records them as `shelf_source=SIMULATED`. The
 generated locations therefore live in a separate, versioned file and never replace
 those source values.
 
@@ -38,7 +39,7 @@ levels first and rotates evenly through levels rather than assigning extra space
 products presumed to be popular. Research has measured vertical and horizontal
 position effects, but the dataset has no store-specific demand or margin values with
 which to rank products. The exact five-level/eight-slot bay dimensions below are
-planning assumptions used to create stable coordinates, not measured WinMart fixtures.
+planning assumptions used to create stable coordinates, not measured Thanh Lam Mart fixtures.
 
 Sources:
 

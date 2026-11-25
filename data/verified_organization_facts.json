@@ -2,6 +2,34 @@
   "schema_version": 2,
   "profiles": [
     {
+      "entity_id": "thanh_lam_mart",
+      "entity_type": "organization",
+      "aliases": ["thanh lam mart", "thanh lam", "cửa hàng thanh lam", "siêu thị thanh lam"],
+      "display_name": {
+        "vi": "Thanh Lam Mart",
+        "en": "Thanh Lam Mart"
+      },
+      "claims": [
+        {
+          "claim_id": "store_identity_and_dataset",
+          "facts": {
+            "vi": "Theo thông tin nhóm cung cấp, Thanh Lam Mart là cửa hàng bán lẻ độc lập gần nhà thành viên nhóm và là đơn vị cung cấp bộ dữ liệu danh mục sản phẩm thực tế cho dự án.",
+            "en": "According to the team-provided context, Thanh Lam Mart is a local independent retail store that provided the real product catalog dataset for the project."
+          },
+          "source_ids": ["team_provided_store_context"]
+        }
+      ],
+      "sources": [
+        {
+          "source_id": "team_provided_store_context",
+          "name": "User-provided store context",
+          "url": null,
+          "verified_at": null,
+          "basis": "user_provided"
+        }
+      ]
+    },
+    {
       "entity_id": "wincommerce",
       "entity_type": "organization",
       "aliases": ["wincommerce", "winmart", "winmart+", "winmart plus", "win"],

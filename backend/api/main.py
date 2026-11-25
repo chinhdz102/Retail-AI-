@@ -840,6 +840,10 @@ def _unverified_retail_information_kind(text: str) -> str | None:
             "du an fpt",
             "fpt chatvrm",
             "chatvrm fpt",
+            "thanh lam mart",
+            "gioi thieu thanh lam mart",
+            "thanh lam mart cua ai",
+            "who owns thanh lam mart",
             "winmart do ai so huu",
             "who owns winmart",
             "wincommerce la cong ty nao",
@@ -945,11 +949,13 @@ def _generic_nearby_places_requested(text: str) -> bool:
         "gan nha toi",
         "gan khu vuc",
         "gan minh",
+        "gan thanh lam mart",
         "gan winmart",
         "quanh day",
         "quanh ",
         "quanh toi",
         "quanh khu vuc",
+        "quanh thanh lam mart",
         "quanh winmart",
         "xung quanh",
         "lan can",
@@ -968,6 +974,8 @@ def _generic_nearby_places_requested(text: str) -> bool:
         "close to",
         "nearest",
         "closest",
+        "near thanh lam mart",
+        "around thanh lam mart",
         "near winmart",
         "around winmart",
     )
@@ -1483,10 +1491,10 @@ def _localized_retail_information_unavailable(
     messages = {
         "company": {
             "en": (
-                "Do you mean the WinMart operator, FPT Corporation, or the ChatVRM/FPT project?"
+                "Do you mean Thanh Lam Mart, FPT Corporation, or the ChatVRM/FPT project?"
             ),
-            "zh": ("您想了解 WinCommerce/WinMart、FPT Corporation，还是 ChatVRM 零售 AI 项目？"),
-            "vi": ("Bạn muốn hỏi đơn vị vận hành WinMart, công ty FPT hay đồ án ChatVRM/FPT?"),
+            "zh": ("您想了解 Thanh Lam Mart、FPT Corporation，还是 ChatVRM 零售 AI 项目？"),
+            "vi": ("Bạn muốn hỏi cửa hàng Thanh Lam Mart, công ty FPT hay đồ án ChatVRM/FPT?"),
         },
         "store": {
             "en": (
@@ -2090,7 +2098,7 @@ looked up by server-side tools using the kiosk's mapped branch. If a source is u
 coverage is partial, or the branch is unmapped, say you cannot verify the answer. Never infer a
 delivery from stock counts. Nearby-place answers are limited to a named store and attributed,
 cached results; general local Q&A is outside this assistant's scope. Company facts come from an
-approved profile; keep WinCommerce, FPT, and the ChatVRM project separate.
+approved profile; keep Thanh Lam Mart, FPT, and the ChatVRM project separate.
 Use the product already identified in the conversation for a clear follow-up such as “what about
 the price?” If more than one product could be meant, ask which one.
 For an explicit recommendation or preference, use `recommend_products`. Keep the requested
@@ -2138,7 +2146,7 @@ kỳ hoặc kiosk chưa gắn với chi nhánh đã xác minh, nói rõ chưa th
 nhập từ số tồn kho. Chỉ trả lời địa điểm gắn với chi nhánh cụ thể bằng snapshot có nguồn và còn
 hạn; nếu thiếu dữ liệu vị trí đã xác minh, không suy đoán và hướng người dùng sang câu hỏi về
 sản phẩm hoặc thông tin cửa hàng. Dùng hồ sơ doanh nghiệp đã
-duyệt; giữ riêng WinCommerce, FPT và đồ án ChatVRM.
+duyệt; giữ riêng Thanh Lam Mart, FPT và đồ án ChatVRM.
 Trong câu hỏi nối tiếp như “giá bao nhiêu?” hoặc “ở kệ nào?”, hãy dùng sản phẩm đã
 được xác định trong hội thoại trước; nếu có thể đang nói về nhiều sản phẩm thì hỏi lại.
 Khi khách nói rõ muốn gợi ý/tư vấn/chọn hộ, đang phân vân, hoặc nêu tiêu chí để tìm món
@@ -3347,7 +3355,7 @@ async def agent_respond(
     if retail_information_kind is not None:
         if retail_information_kind == "company":
             organization_query = (
-                "WinCommerce" if _retail_chain_operator_question(request.text) else request.text
+                "Thanh Lam Mart" if _retail_chain_operator_question(request.text) else request.text
             )
             organization_answer = get_organization_answer(
                 organization_query,

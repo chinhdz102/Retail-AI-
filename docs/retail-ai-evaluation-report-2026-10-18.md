@@ -30,7 +30,7 @@ Các tính năng thông tin chi nhánh, khuyến mãi đang chạy, hàng vừa 
 ### Bổ sung sau vòng hoàn thiện dữ liệu
 
 - Mốc sau hoàn thiện hồ sơ doanh nghiệp là 399/399; sau khi mở rộng nhận diện yêu cầu vị trí, kết quả mới nhất là **411/411 pytest pass**. P0 vẫn **40/40**.
-- Câu hỏi như “Ai vận hành cửa hàng này?” và “Cửa hàng này thuộc công ty nào?” được định tuyến xác định tới hồ sơ WinCommerce trong ngữ cảnh chuỗi WinMart, kèm liên kết nguồn chính thức. Kiểm thử xác nhận luồng không gọi LLM.
+- Câu hỏi như “Ai vận hành cửa hàng này?” và “Cửa hàng này thuộc công ty nào?” được định tuyến xác định tới hồ sơ **Thanh Lam Mart** (cửa hàng độc lập cung cấp bộ dữ liệu danh mục cho dự án). Kiểm thử xác nhận luồng không gọi LLM.
 - “Đồ án FPT/ChatVRM” được phân giải thành hồ sơ dự án từ thông tin nhóm cung cấp; “FPT” đứng riêng vẫn phân giải thành FPT Corporation. Claim dự án có provenance riêng và không khẳng định FPT tài trợ, sở hữu hoặc hợp tác chính thức.
 - Hồ sơ doanh nghiệp chuyển sang claim-level provenance: mỗi claim khai báo source ID; dữ liệu không hợp lệ nếu thiếu nguồn, tham chiếu nguồn lạ, ID trùng, hoặc nguồn công khai thiếu URL/ngày xác minh. Facts công khai quá 180 ngày hoặc có ngày xác minh trong tương lai bị loại khỏi câu trả lời.
 - Yêu cầu tìm địa điểm chưa gắn với chi nhánh nhận phản hồi thiếu dữ liệu đã xác minh trước khi gọi LLM/tool. Tra cứu quanh chi nhánh cụ thể cần snapshot có nguồn và dữ liệu vị trí đã xác minh.
@@ -55,18 +55,18 @@ P0 ban đầu chỉ đạt 35/40. Câu **“Coca Zero còn bao nhiêu?”** bị
 | Sản phẩm mới trong danh mục | Có so sánh hai lần import hoàn chỉnh; import chưa phân loại đủ các dòng nguồn không được coi là hoàn chỉnh. | Chưa có lịch sử hai import hoàn chỉnh để trả danh sách mới. “Mới thêm vào catalog” không bị đổi thành “mới ra mắt thị trường”. |
 | Hàng vừa nhập kho | Có tool nhận sự kiện receipt theo cửa hàng, mã hàng, số lượng, thời điểm và chứng từ; feed phải tươi và đủ cửa sổ 7 ngày mới được kết luận không có hàng mới. | Chưa có receipt/feed thật. Không suy diễn hàng nhập từ chênh lệch tồn kho. |
 | Thông tin cửa hàng | Có store master và ánh xạ kiosk → chi nhánh; chỉ dùng hồ sơ còn hạn xác minh. | Chưa có bản ghi chi nhánh/kiosk đã xác minh. Câu hỏi giờ mở cửa phải báo thiếu dữ liệu thay vì tự bịa giờ. |
-| Giới thiệu doanh nghiệp | Có hồ sơ riêng cho WinCommerce, FPT và đồ án ChatVRM; resolver ưu tiên alias dự án như “đồ án FPT/ChatVRM”, còn FPT đứng riêng là FPT Corporation. Câu hỏi đơn vị vận hành cửa hàng mặc định về WinCommerce; mỗi claim công khai có source riêng, ngày xác minh và link trong câu trả lời. | Facts dự án dựa trên thông tin nhóm cung cấp, được gắn nhãn rõ. Không suy ra quan hệ hợp tác chính thức giữa đồ án và FPT. |
+| Giới thiệu doanh nghiệp | Có hồ sơ riêng cho Thanh Lam Mart, FPT và đồ án ChatVRM (kèm WinCommerce khi được hỏi đích danh); resolver ưu tiên alias dự án như “đồ án FPT/ChatVRM”, còn FPT đứng riêng là FPT Corporation. Câu hỏi đơn vị vận hành cửa hàng mặc định về Thanh Lam Mart; mỗi claim có source riêng, nguồn công khai có ngày xác minh và link trong câu trả lời. | Facts cửa hàng và dự án dựa trên thông tin nhóm cung cấp, được gắn nhãn rõ. Không suy ra quan hệ hợp tác chính thức giữa đồ án và FPT. |
 | Địa điểm gần một cửa hàng cụ thể | Có lookup POI theo tọa độ chi nhánh và snapshot có attribution, hạn dùng; bắt buộc gắn với một chi nhánh. | Chưa có tọa độ chi nhánh/POI feed. Luồng cụ thể chưa thể trả kết quả thật đến khi có dữ liệu đã xác minh. |
 | Chăm sóc khách hàng / phân tích tương tác | Các câu hỏi dịch vụ được xử lý bằng phản hồi chính sách an toàn; request quản trị/thanh toán giả bị chặn. | Chưa có quy trình chuyển nhân viên thực, lưu khiếu nại hoặc pipeline thống kê câu hỏi/sản phẩm được hỏi nhiều. Agent không được tuyên bố đã báo nhân viên hay ghi nhận ticket. |
 | Tiếng Anh | Có nhánh trả lời tiếng Anh cho một số chức năng store/company/catalog và test tương ứng. | Benchmark live trong báo cáo này chỉ dùng tiếng Việt; chưa đánh giá bao phủ tiếng Anh đầu-cuối. |
 
 ## Đánh giá dữ liệu catalog và planogram
 
-Đọc kiểm tra `data/winmart_products.json` cho kết quả:
+Đọc kiểm tra `data/winmart_products.json` (dữ liệu danh mục thực tế xin từ Thanh Lam Mart; tên file giữ nguyên để bảo toàn SHA-256) cho kết quả:
 
 - 3.099 dòng nguồn; 3.081 dòng hợp lệ để import; 18 dòng được quarantine vì giá khuyến mãi cao hơn giá thường.
 - 74 danh mục, 699 brand; 580 dòng có chuỗi `discount_promotion`.
-- Thời điểm scrape mới nhất: **15/09/2026 13:53 UTC**. Đây là thời điểm snapshot crawler, không phải ngày nhập hàng hay ngày ra mắt sản phẩm.
+- Thời điểm ghi nhận snapshot danh mục xin từ Thanh Lam Mart: **15/09/2026 13:53 UTC**. Đây là thời điểm xuất snapshot danh mục, không phải ngày nhập hàng hay ngày ra mắt sản phẩm.
 - Code đánh dấu shelf nguồn `SIMULATED`; không sử dụng các vị trí này như vị trí kệ vật lý đã xác minh.
 
 Planogram đề xuất giữ nhóm department/sub-department/category, gán một locator cho SKU hợp lệ và đặt nhãn đầu kệ A01–A13. Chưa có số liệu fixture thực tế, kích thước hàng, doanh số, biên lợi nhuận hay basket affinity; vì vậy layout không thể được gọi là tối ưu doanh thu hoặc bản vẽ thi công. Xem [phương pháp planogram](planogram-method.md) và [ảnh gắn nhãn từng đầu kệ](../data/winmart_planogram_3d_each_aisle.png).

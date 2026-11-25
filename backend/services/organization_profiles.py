@@ -105,6 +105,11 @@ def resolve_organization_profile(text: str) -> OrganizationProfile | None:
             for alias in profile.aliases
         ):
             return profile
+    if re.search(r"(?<!\w)thanh lam(?: mart)?(?!\w)", normalized):
+        return next(
+            (profile for profile in profiles if profile.entity_id == "thanh_lam_mart"),
+            None,
+        )
     if re.search(r"(?<!\w)(?:wincommerce|winmart|winmart\+|win)(?!\w)", normalized):
         return next(
             (profile for profile in profiles if profile.entity_id == "wincommerce"),

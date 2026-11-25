@@ -17,7 +17,7 @@ The vertical slice is in place:
 
 English is supported across the chat interface, Groq Whisper transcription, catalog
 intent routing and speech synthesis. English category and product terms such as `milk`,
-`coffee`, `snacks` and `instant noodles` are mapped to the Vietnamese WinMart taxonomy
+`coffee`, `snacks` and `instant noodles` are mapped to the Vietnamese Thanh Lam Mart catalog taxonomy
 when needed; product facts still come from the active catalog. Prices are in VND. The
 catalog does not contain loyalty rules, return policies, store hours, sales rankings,
 taste ratings or interaction analytics. Sky states that those facts are unverified and
@@ -100,7 +100,7 @@ Then open `http://127.0.0.1:8000/health` or `http://127.0.0.1:8000/docs`.
 
 The architecture document defines the target system. Current runtime status and its
 limits are recorded in [`docs/reports/retail-ai-optimization-report.md`](docs/reports/retail-ai-optimization-report.md).
-The WinMart PostgreSQL catalog is read-only for customer lookups. Development sessions use
+The Thanh Lam Mart PostgreSQL catalog is read-only for customer lookups. Development sessions use
 isolated in-memory state; production selects the Redis session adapter and fails closed if
 Redis is unavailable. Cart and checkout are explicitly sandbox-only, use the demo catalog,
 and are not connected to a POS, persistent order database or payment provider.
@@ -114,7 +114,8 @@ operators. Fact lookups and recommendations return deterministic answers after o
 call. Other searches can continue through the two-round, five-call agent loop. The response
 includes `tools_used` and `grounded_product_ids` for inspection.
 
-The demo catalog remains the default. To validate the tracked WinMart dataset without
+The demo catalog remains the default. To validate the tracked Thanh Lam Mart product catalog dataset
+(stored at `data/winmart_products.json` — historical filename kept for code and SHA-256 compatibility) without
 writing to the database, run:
 
 ```powershell
@@ -137,14 +138,16 @@ uv run python scripts/import_winmart.py --apply
 ```
 
 The importer hashes the source file for dataset versioning, validates identifiers and
-prices, and quarantines rows whose sale price exceeds their regular price. The dataset's
-shelf locations are crawler-generated placeholders; PostgreSQL preserves them with
-`shelf_source=SIMULATED`, while customer snapshots omit shelf values. Demo shopping actions
-are available only with `CATALOG_REPOSITORY=demo`; the service rejects transaction writes
-against the imported WinMart snapshot because it is not branch-authoritative inventory.
+prices, and quarantines rows whose sale price exceeds their regular price. The dataset is sourced from
+Thanh Lam Mart (a local independent retail store); because its shelf column contains unverified placeholders
+rather than an audited physical shelf map, PostgreSQL preserves them with `shelf_source=SIMULATED`, while
+customer snapshots omit shelf values. (File/script names `data/winmart_products.json` and
+`scripts/import_winmart.py` keep their historical `winmart` prefix for codebase and SHA-256 compatibility.)
+Demo shopping actions are available only with `CATALOG_REPOSITORY=demo`; the service rejects transaction writes
+against the imported Thanh Lam Mart snapshot because it is not branch-authoritative inventory.
 
 Branch profiles, active promotion campaigns, receiving events, and nearby-place snapshots
-use separate source tables and freshness checks. The WinMart catalog importer does not populate
+use separate source tables and freshness checks. The catalog importer (`scripts/import_winmart.py`) does not populate
 those operational feeds. Until the store master maps each kiosk to a real branch and the feeds
 are loaded, the assistant will say the information is unavailable. See
 [`docs/retail-information-data-design.md`](docs/retail-information-data-design.md) for the data

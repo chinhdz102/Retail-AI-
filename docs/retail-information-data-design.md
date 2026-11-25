@@ -6,16 +6,16 @@ verified coordinates, and an attributed, current snapshot.
 
 ## What the repository currently has
 
-`data/winmart_products.json` contains 3,099 product rows. It has product identifiers,
-category, brand, regular/sale price, a free-text `discount_promotion`, stock, a crawler
-`scraped_at`, and a placeholder shelf. It has no product launch date, receipt event,
+`data/winmart_products.json` (historical filename kept for SHA-256 compatibility) contains 3,099 product rows obtained from Thanh Lam Mart, a local independent retail store. It has product identifiers,
+category, brand, regular/sale price, a free-text `discount_promotion`, stock, a snapshot
+timestamp `scraped_at`, and an unverified placeholder shelf. It has no product launch date, receipt event,
 physical branch profile, company profile, or coordinates. The current PostgreSQL
 `store_product_snapshots` stores a per-product `discount_promotion` and source timestamp;
-the importer assigns the single source code `WINMART_WEB` and marks shelves `SIMULATED`.
-The latest catalog scrape is 2026-09-15; 580 rows contain a promotion string. These are
+the importer assigns the legacy source code `WINMART_WEB` and marks unverified shelves `SIMULATED`.
+The latest catalog snapshot is dated 2026-09-15; 580 rows contain a promotion string. These are
 historical snapshot records, not confirmation that an offer is still running on 2026-10-18.
 
-The timestamp on a crawl describes when the source snapshot was collected. It is not
+The timestamp on the snapshot describes when the source data was recorded. It is not
 evidence that a product was launched or physically received on that date.
 
 ## Research-backed modeling choices
@@ -73,9 +73,9 @@ evidence that a product was launched or physically received on that date.
 - “Newly stocked” means a receipt event was recorded. If receipt events are absent, ask a
   staff member or say the system cannot verify it; never infer a delivery from stock counts.
 - Company questions are matched to an explicitly named entity. If the visitor only says
-  “the company,” ask whether they mean the WinMart operator, FPT Corporation, or the
-  ChatVRM/FPT project. If they ask who operates the retail store/chain, use the verified
-  WinCommerce profile. An explicit ChatVRM/FPT project mention resolves to project facts;
+  “the company,” ask whether they mean Thanh Lam Mart, FPT Corporation, or the
+  ChatVRM/FPT project. If they ask who operates the retail store, use the
+  Thanh Lam Mart profile in `data/verified_organization_facts.json`. An explicit ChatVRM/FPT project mention resolves to project facts;
   FPT alone resolves to the company profile.
 - Store-specific answers require a `store_id`. Near-store place results require that
   store's verified coordinates; without them, ask which branch the visitor means.
@@ -90,7 +90,7 @@ evidence that a product was launched or physically received on that date.
 | Newly listed products | `list_new_catalog_products` compares two imports explicitly marked complete; import completeness requires accepted plus quarantined rows to equal the source row count. Demo data has no import history. | Report only catalog additions when two complete versions are comparable; do not claim a product launch date. |
 | Products newly received into stock | `list_recent_stock_receipts` reads receiving events for the kiosk-mapped branch; the schema stores event, item, quantity, time, step, and source document. | Only event records from a fresh receiving feed are reported. The agent abstains if the branch mapping/feed is missing; an empty result is called “none” only when the feed certifies a complete seven-day window. |
 | Store address, hours, and contact | `get_store_information` reads the verified branch profile mapped from the session kiosk. The current repository has no branch seed data. | Return only current, source-stamped store master fields; otherwise say the kiosk is not mapped to a verified branch. |
-| Company introduction | `get_organization_profile` resolves distinct WinCommerce, FPT, and ChatVRM project entities. Each claim points to its own source IDs in `data/verified_organization_facts.json`. | Public claims include source links and verification dates. Project claims are marked as team-provided. “Đồ án FPT/ChatVRM” resolves to the project; FPT alone resolves to FPT Corporation. |
+| Company introduction | `get_organization_profile` resolves distinct Thanh Lam Mart, FPT, and ChatVRM project entities (plus legacy WinCommerce lookup when explicitly asked). Each claim points to its own source IDs in `data/verified_organization_facts.json`. | Public claims include source links and verification dates. Store and project claims are marked as team-provided. “Đồ án FPT/ChatVRM” resolves to the project; FPT alone resolves to FPT Corporation. |
 | Nearby places for a specific store | `list_nearby_places_for_store` reads only attributed, unexpired nearby-place snapshots for the kiosk-mapped branch. The current repository has no branch coordinates or POI snapshot. | Require verified branch coordinates and a fresh attributed snapshot. Do not call a public geocoder on every customer turn. |
 
 The PostgreSQL endpoint was unavailable during this check. API behavior and repository guardrails
@@ -99,18 +99,16 @@ receiving, or nearby-place feed was verified. The demo catalog intentionally has
 history or branch data. Production needs a verified `retail_stores` row, a matching
 `retail_kiosks` row, and source records/feed-health rows before those answers can return facts.
 
-## Public company sources found for the demo
+## Organization and store sources for the demo
 
-- WinCommerce's official recruitment site identifies WinCommerce as a Masan Group member
-  operating WinMart and WinMart+/WiN: [About WinCommerce](https://tuyendung.winmart.vn/home).
-- WinMart's official transaction policy identifies the website owner as WinCommerce and
-  a member of Masan Group: [WinMart transaction policy](https://winmart.vn/info/transaction-policy).
+- **Thanh Lam Mart** (`team_provided_store_context` in `data/verified_organization_facts.json`):
+  a local independent retail store that provided the 3,099-row product catalog dataset for this project.
 - FPT's official pages provide its company description and contact information:
   [FPT About Us](https://fpt.com/en/about-us), [FPT Contact](https://fpt.com/en/contact).
 
-These are separate entities. A retail assistant should answer WinMart/WinCommerce facts
-for the catalog's chain by default and answer FPT or ChatVRM only when the question points
-to those profiles. The project association and team responsibilities come only from the
+These are separate entities. A retail assistant should answer Thanh Lam Mart facts
+for the store by default and answer FPT or ChatVRM only when the question points
+to those profiles. The store/project association and team responsibilities come only from the
 user-provided context; they do not establish an FPT sponsorship, ownership, or partnership.
 The source list is a starting point, not a substitute for the store operator's approved
 branch data.

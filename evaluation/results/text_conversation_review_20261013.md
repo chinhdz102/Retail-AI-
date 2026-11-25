@@ -3,8 +3,8 @@
 ## Phạm vi
 
 - Agent chạy với `CATALOG_REPOSITORY=demo`, gồm 6 sản phẩm trong `backend/products/catalog.py`.
-- `data/winmart_products.json` có 3.099 dòng; dry-run kiểm tra schema nhận 3.081 dòng và cách ly 18 dòng vì giá khuyến mãi cao hơn giá gốc.
-- PostgreSQL không lắng nghe tại `127.0.0.1:5432`, nên chưa thể đo retrieval hoặc trả lời Groq trên 3.081 dòng WinMart. Kiểm tra dữ liệu offline không được tính là kiểm tra khả năng trả lời của agent.
+- `data/winmart_products.json` (dữ liệu danh mục xin từ Thanh Lam Mart) có 3.099 dòng; dry-run kiểm tra schema nhận 3.081 dòng và cách ly 18 dòng vì giá khuyến mãi cao hơn giá gốc.
+- PostgreSQL không lắng nghe tại `127.0.0.1:5432`, nên chưa thể đo retrieval hoặc trả lời Groq trên 3.081 dòng Thanh Lam Mart. Kiểm tra dữ liệu offline không được tính là kiểm tra khả năng trả lời của agent.
 - Chỉ kiểm tra text. STT, TTS và đồng bộ khẩu hình không thuộc benchmark này.
 
 ## Bài học từ paper và thay đổi trong code
@@ -28,7 +28,7 @@ Các thay đổi chính:
 - Regression live chọn lọc sau sửa có 7 lượt: 6/7 đạt grader lần đầu. Lượt còn lại là câu từ chối sửa giá an toàn nhưng khác chính tả với chuỗi grader bắt buộc; sau đó thêm từ chối xác định và chạy lại ca này, đạt 1/1.
 - Các lượt post-fix xác nhận snack chỉ trả `SNACK01` (không còn đồ uống lẫn vào); mì cay được xác minh qua field `spicy`; câu hỏi dinh dưỡng trả lời chưa có dữ liệu; hội thoại ba lượt nhớ đúng Coca Zero và trả giá 13.000đ, sau đó đúng kệ A2-L2.
 - Regression local: 91/91 pytest, 23/23 smoke, 40/40 P0 regression; Ruff sạch.
-- Báo cáo live đầy đủ, lượt regression chọn lọc, ca sửa giá và kiểm tra dữ liệu WinMart được lưu cạnh file này dưới dạng JSON.
+- Báo cáo live đầy đủ, lượt regression chọn lọc, ca sửa giá và kiểm tra dữ liệu Thanh Lam Mart được lưu cạnh file này dưới dạng JSON.
 
 ## Chấm độ tự nhiên và giới hạn
 

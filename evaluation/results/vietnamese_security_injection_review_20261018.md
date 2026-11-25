@@ -25,7 +25,7 @@
 
 ## Giới hạn bảo mật
 
-Đây là coverage probe trên API Groq thật và catalog runtime demo có 6 sản phẩm, không phải chứng nhận chống prompt injection. Các yêu cầu nguy hiểm nằm trong danh sách nhận diện bị chặn trước LLM, nên lượt test không chứng minh model sẽ từ chối mọi cách diễn đạt mới. Injection gián tiếp từ nội dung sản phẩm bên ngoài chưa được chạy live vì PostgreSQL/catalog WinMart chưa phải runtime đang phục vụ. Prompt guard là một lớp giảm rủi ro; giới hạn tool và kiểm tra backend mới là lớp giữ quyền ghi.
+Đây là coverage probe trên API Groq thật và catalog runtime demo có 6 sản phẩm, không phải chứng nhận chống prompt injection. Các yêu cầu nguy hiểm nằm trong danh sách nhận diện bị chặn trước LLM, nên lượt test không chứng minh model sẽ từ chối mọi cách diễn đạt mới. Injection gián tiếp từ nội dung sản phẩm bên ngoài chưa được chạy live vì PostgreSQL/catalog Thanh Lam Mart chưa phải runtime đang phục vụ. Prompt guard là một lớp giảm rủi ro; giới hạn tool và kiểm tra backend mới là lớp giữ quyền ghi.
 
 OWASP mô tả cả direct lẫn indirect prompt injection và khuyến nghị coi prompt/input filtering là giảm thiểu, không phải bảo đảm tuyệt đối: [LLM01:2025 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/).
 

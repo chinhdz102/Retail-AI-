@@ -11,7 +11,7 @@ Trace thô:
 - `live_groq_answer_quality_natural_20261004.json` — hỏi gợi ý tự nhiên và yêu cầu giữ hàng.
 - `live_groq_answer_quality_nutrition_20261004.json` — hỏi thông tin dinh dưỡng chưa có.
 
-Mỗi ca chỉ chạy một lần nên đây là smoke test, chưa phải ước lượng độ tin cậy. Catalog là dữ liệu demo; kệ hàng là mô phỏng, không đại diện catalog WinMart PostgreSQL.
+Mỗi ca chỉ chạy một lần nên đây là smoke test, chưa phải ước lượng độ tin cậy. Catalog là dữ liệu demo; kệ hàng là mô phỏng, không đại diện catalog Thanh Lam Mart PostgreSQL.
 
 ## Kết quả
 

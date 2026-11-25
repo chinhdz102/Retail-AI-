@@ -25,9 +25,9 @@ Quy tắc này phù hợp với nghiệp vụ hàng tiêu dùng đóng gói: [Co
 
 ## Kiểm tra dữ liệu hiện có
 
-`data/winmart_products.json` có 3.099 sản phẩm: 3.081 dòng được nhận và 18 dòng bị quarantine vì giá khuyến mãi cao hơn giá thường. Dataset có ID/barcode, tên, brand, category, giá, khuyến mãi, tồn kho và một số metadata. Trường `description` có ở các dòng nhưng sau chuẩn hóa khoảng trắng không có mô tả nào dài hơn tên sản phẩm. Dataset không có trường hướng dẫn sử dụng, công dụng, dinh dưỡng, dị ứng hoặc thành phần đáng tin cậy. PostgreSQL mapper hiện cũng để `ingredients`, `shelf` và `expiry_at` là chưa có dữ liệu xác minh.
+`data/winmart_products.json` (dữ liệu danh mục thực tế xin từ cửa hàng Thanh Lam Mart; giữ tên file lịch sử để khớp mã băm SHA-256) có 3.099 sản phẩm: 3.081 dòng được nhận và 18 dòng bị quarantine vì giá khuyến mãi cao hơn giá thường. Dataset có ID/barcode, tên, brand, category, giá, khuyến mãi, tồn kho và một số metadata. Trường `description` có ở các dòng nhưng sau chuẩn hóa khoảng trắng không có mô tả nào dài hơn tên sản phẩm. Dataset không có trường hướng dẫn sử dụng, công dụng, dinh dưỡng, dị ứng hoặc thành phần đáng tin cậy. PostgreSQL mapper hiện cũng để `ingredients`, `shelf` và `expiry_at` là chưa có dữ liệu xác minh.
 
-Snapshot giá/tồn kho WinMart trong lần benchmark này được ghi ngày **15/09/2026**. Khi trả giá/tồn kho, agent nêu ngày dữ liệu để khách biết đây là snapshot; giá tại quầy có thể đã thay đổi.
+Snapshot giá/tồn kho Thanh Lam Mart trong lần benchmark này được ghi nhận ngày **15/09/2026**. Khi trả giá/tồn kho, agent nêu ngày dữ liệu để khách biết đây là snapshot; giá tại quầy có thể đã thay đổi.
 
 ## Hành vi đã thực hiện
 
@@ -39,7 +39,7 @@ Snapshot giá/tồn kho WinMart trong lần benchmark này được ghi ngày **
 
 ## Kết quả kiểm tra
 
-Live run ngày 18/10/2026 dùng Groq Qwen và catalog PostgreSQL WinMart:
+Live run ngày 18/10/2026 dùng Groq Qwen và catalog PostgreSQL Thanh Lam Mart:
 
 | Tình huống | Kết quả |
 |---|---|

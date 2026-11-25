@@ -64,7 +64,7 @@ $env:CATALOG_REPOSITORY = 'demo'
 
 Các prompt lộ thông tin nội bộ và thao tác quản trị bị chặn bằng local policy, nên lượt đó xác nhận luồng backend chặn trước model; nó không đo khả năng Qwen tự từ chối một jailbreak chưa được nhận diện. Injection gián tiếp qua dữ liệu catalog bên ngoài vẫn cần đánh giá riêng.
 
-`vietnamese_product_consultation_grounded_v1.json` kiểm tra catalog WinMart thật với Qwen: hỏi đúng biến thể và giá, hỏi brand mơ hồ, gộp giá với lợi ích sức khỏe, hỏi thành phần, công dụng và sức khỏe khi các field không có trong data. Lần chạy ngày 18/10/2026 đạt 6/6; report `evaluation/results/live_vietnamese_product_consultation_final_20261018.json` xác nhận `runtime_repository=postgres` và 4 lượt gọi tìm catalog PostgreSQL. Cách chạy:
+`vietnamese_product_consultation_grounded_v1.json` kiểm tra catalog Thanh Lam Mart thật (file kỹ thuật `data/winmart_products.json`) với Qwen: hỏi đúng biến thể và giá, hỏi brand mơ hồ, gộp giá với lợi ích sức khỏe, hỏi thành phần, công dụng và sức khỏe khi các field không có trong data. Lần chạy ngày 18/10/2026 đạt 6/6; report `evaluation/results/live_vietnamese_product_consultation_final_20261018.json` xác nhận `runtime_repository=postgres` và 4 lượt gọi tìm catalog PostgreSQL. Cách chạy:
 
 ```powershell
 .\.venv\Scripts\python.exe -m evaluation.live_text_conversation_benchmark `
