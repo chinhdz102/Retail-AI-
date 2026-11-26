@@ -2,6 +2,7 @@
   "schema_version": "1.0",
   "generated_at": "2026-11-24T06:15:00Z",
   "source_catalog_sha256": "992e87a5929f3a86460fb3440ea3a25e3fab6a37f62de8b371a385abe4af3ef5",
+  "source_catalog_canonical_sha256": "2c8c31374e82d5ce52fcfbf7b547caae576022223a44591b651e1f377cbe9328",
   "records": [
     {
       "product_id": "TLM_10307381",

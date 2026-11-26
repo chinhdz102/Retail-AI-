@@ -245,6 +245,34 @@ def test_enriched_details_surface_selsun_ingredients_usage_and_origin(
     assert facts["origin"].status.value == "VERIFIED"
 
 
+def test_enrichment_binds_across_windows_crlf_and_linux_lf_catalog_hashes(
+    snapshot_repository: SnapshotProductRepository,
+) -> None:
+    from backend.data.catalog_import import canonical_dataset_sha256
+
+    canonical_sha = canonical_dataset_sha256(
+        (Path(__file__).resolve().parents[1] / "data" / "thanh_lam_products.json").read_bytes()
+    )
+    coca_zero = snapshot_repository.get_product_snapshot("TLM_10307381")
+    selsun = snapshot_repository.get_product_snapshot("TLM_10016912")
+    assert coca_zero is not None and selsun is not None
+
+    lf_coca = coca_zero.model_copy(update={"catalog_version": canonical_sha})
+    lf_selsun = selsun.model_copy(update={"catalog_version": canonical_sha})
+
+    coca_cal = product_knowledge_facts(
+        lf_coca, ("calories",), source="thanh_lam_snapshot", catalog_version=canonical_sha
+    )[0]
+    assert coca_cal.status.value == "VERIFIED"
+    assert coca_cal.value == {"energy_kcal": 0, "basis": "per 100 ml"}
+
+    selsun_usage = product_knowledge_facts(
+        lf_selsun, ("usage",), source="thanh_lam_snapshot", catalog_version=canonical_sha
+    )[0]
+    assert selsun_usage.status.value == "VERIFIED"
+    assert "lắc kỹ" in str(selsun_usage.value).casefold()
+
+
 def test_cleaned_thanh_lam_product_details_meets_zero_defect_quality_gate() -> None:
     details_path = (
         Path(__file__).resolve().parents[1] / "data" / "thanh_lam_product_details.json"

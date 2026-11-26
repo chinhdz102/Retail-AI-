@@ -272,8 +272,7 @@ def test_category_plus_brand_search_preserves_brand_filter() -> None:
 
 
 def test_demo_sales_handles_colloquial_vietnamese_noodle_query() -> None:
-    from backend.services.demo_sales import rank_demo_sales
-    from backend.services.demo_sales_store import get_demo_sales_store
+    from backend.services.demo_sales import rank_demo_sales, simulated_units
 
     repo = SnapshotProductRepository(Path("data/thanh_lam_products.json"))
     query = understand_catalog_query(
@@ -281,7 +280,11 @@ def test_demo_sales_handles_colloquial_vietnamese_noodle_query() -> None:
         repo.list_category_hierarchies(),
     )
     items = rank_demo_sales(
-        repo, query, query.product_type, (), sales_counts=get_demo_sales_store().counts()
+        repo,
+        query,
+        query.product_type,
+        (),
+        sales_counts={p.product_id: simulated_units(p.product_id) for p in repo.products},
     )
     assert len(items) >= 3
 

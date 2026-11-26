@@ -151,6 +151,7 @@ class ManufacturerEnrichmentRegistry(BaseModel):
     schema_version: str
     generated_at: datetime
     source_catalog_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    source_catalog_canonical_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     records: tuple[ManufacturerProductEnrichment, ...]
 
     @model_validator(mode="after")
@@ -223,14 +224,17 @@ def _load_manufacturer_enrichment(
     path: str,
     modified_ns: int,
     file_size: int,
-) -> tuple[dict[str, ManufacturerProductEnrichment], str, str]:
+) -> tuple[dict[str, ManufacturerProductEnrichment], str, frozenset[str]]:
     del modified_ns, file_size  # The stat values are part of the cache key.
     raw = Path(path).read_bytes()
     registry = ManufacturerEnrichmentRegistry.model_validate_json(raw)
+    valid_hashes = {registry.source_catalog_sha256.casefold()}
+    if registry.source_catalog_canonical_sha256:
+        valid_hashes.add(registry.source_catalog_canonical_sha256.casefold())
     return (
         {record.product_id: record for record in registry.records},
         hashlib.sha256(raw).hexdigest(),
-        registry.source_catalog_sha256,
+        frozenset(valid_hashes),
     )
 
 
@@ -244,7 +248,7 @@ def _manufacturer_record_for_product(
     except OSError:
         return None, None
     try:
-        records, registry_sha256, source_catalog_sha256 = _load_manufacturer_enrichment(
+        records, registry_sha256, valid_catalog_hashes = _load_manufacturer_enrichment(
             str(source.resolve()),
             stat.st_mtime_ns,
             stat.st_size,
@@ -254,7 +258,7 @@ def _manufacturer_record_for_product(
         return None, None
     if (
         product.catalog_version
-        and source_catalog_sha256.casefold() != product.catalog_version.casefold()
+        and product.catalog_version.casefold() not in valid_catalog_hashes
     ):
         return None, registry_sha256
     record = records.get(product.product_id)
@@ -274,7 +278,7 @@ def _load_retailer_details(
     path: str,
     modified_ns: int,
     file_size: int,
-) -> tuple[dict[str, dict[str, Any]], str, str, datetime | None]:
+) -> tuple[dict[str, dict[str, Any]], str, frozenset[str], datetime | None]:
     del modified_ns, file_size
     raw = Path(path).read_bytes()
     payload = json.loads(raw.decode("utf-8"))
@@ -290,10 +294,15 @@ def _load_retailer_details(
             generated_at = datetime.fromisoformat(generated_raw.replace("Z", "+00:00"))
         except ValueError:
             generated_at = None
+    valid_hashes: set[str] = set()
+    for key in ("source_catalog_sha256", "source_catalog_canonical_sha256"):
+        val = str(payload.get(key) or "").strip()
+        if val:
+            valid_hashes.add(val.casefold())
     return (
         records,
         hashlib.sha256(raw).hexdigest(),
-        str(payload.get("source_catalog_sha256") or ""),
+        frozenset(valid_hashes),
         generated_at,
     )
 
@@ -310,7 +319,7 @@ def _retailer_record_for_product(
     except OSError:
         return None, None, None
     try:
-        records, file_sha256, source_catalog_sha256, generated_at = _load_retailer_details(
+        records, file_sha256, valid_catalog_hashes, generated_at = _load_retailer_details(
             str(_DEFAULT_RETAILER_DETAILS_PATH.resolve()),
             stat.st_mtime_ns,
             stat.st_size,
@@ -319,8 +328,8 @@ def _retailer_record_for_product(
         return None, None, None
     if (
         product.catalog_version
-        and source_catalog_sha256
-        and source_catalog_sha256.casefold() != product.catalog_version.casefold()
+        and valid_catalog_hashes
+        and product.catalog_version.casefold() not in valid_catalog_hashes
     ):
         return None, file_sha256, generated_at
     rec = records.get(product.product_id)

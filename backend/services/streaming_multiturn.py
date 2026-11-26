@@ -15,14 +15,6 @@ from backend.products.catalog import ProductSnapshot
 from backend.products.category_taxonomy import normalize_category_text
 from backend.products.repository import ProductRepository
 from backend.services.bounded_work import run_catalog_work
-from backend.services.customer_consultation import (
-    ConsultationDecision,
-    StreamingConsultationPlan,
-    _batch_base_unit_dims,
-    _product_discount_pct,
-    _related_candidates,
-    _unit_price_info,
-)
 
 _BULK_UOMS = frozenset({"thung", "loc", "goi 6", "khay 6", "hop 6"})
 _BULK_NAME_RE = re.compile(
@@ -132,7 +124,10 @@ def filter_edible_candidates(
             continue
         if not allow_spicy and (p.spicy is True or _SPICY_TITLE_RE.search(name)):
             continue
-        if not allow_carbonated and _CARBONATED_RE.search(f"{name} {hier}"):
+        if not allow_carbonated and (
+            _CARBONATED_RE.search(name)
+            or ("nuoc ngot co ga" in hier and "khong ga" not in name and "khong gas" not in name)
+        ):
             continue
         if not allow_bitter and _BITTER_COFFEE_RE.search(f"{name} {hier}"):
             continue
@@ -1013,12 +1008,17 @@ async def prepare_multiturn_streaming(
                 repository.search, query=target_q, limit=25, timeout_seconds=3
             )
             wants_juice = bool(re.search(r"\b(?:trai cay|nuoc ep|hoa qua|nuoc cam)\b", target_q))
-            hits = (
-                filter_edible_candidates(
-                    hits, ready_to_eat=True, allow_carbonated=not wants_juice
-                )
-                or hits
+            filtered = filter_edible_candidates(
+                hits, ready_to_eat=True, allow_carbonated=not wants_juice
             )
+            if wants_juice and not filtered:
+                juice_hits = await run_catalog_work(
+                    repository.search, query="nuoc ep", limit=25, timeout_seconds=3
+                )
+                filtered = filter_edible_candidates(
+                    juice_hits, ready_to_eat=True, allow_carbonated=False
+                )
+            hits = filtered or hits
             pool = sort_single_unit_first(hits, text, cheaper_first=budget_vnd is not None)
         if pool:
             chosen = pool[0]
@@ -1286,3 +1286,13 @@ def is_pure_situational_query(norm_answer: str) -> bool:
             norm_answer,
         )
     )
+
+
+from backend.services.customer_consultation import (  # noqa: E402
+    ConsultationDecision,
+    StreamingConsultationPlan,
+    _batch_base_unit_dims,
+    _product_discount_pct,
+    _related_candidates,
+    _unit_price_info,
+)
