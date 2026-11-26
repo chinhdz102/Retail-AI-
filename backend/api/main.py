@@ -7859,6 +7859,7 @@ async def agent_respond(
         and not record.shopping.pending_action
         and not record.shopping.pending_clarification
         and classify_support_intent(request.text) is None
+        and _unverified_retail_information_kind(request.text) is None
         and not _explicit_product_knowledge_lookup_requested(request.text, record)
         and not (
             settings.demo_sales_enabled
