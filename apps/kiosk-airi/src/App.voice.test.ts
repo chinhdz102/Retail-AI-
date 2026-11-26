@@ -25,6 +25,8 @@ const apiMocks = vi.hoisted(() => ({
   confirmCheckout: vi.fn(),
   cancelCheckout: vi.fn(),
   simulateSandboxPayment: vi.fn(),
+  submitAssistedOrder: vi.fn(),
+  listAssistedOrders: vi.fn().mockResolvedValue([]),
 }))
 
 const controllerStore = vi.hoisted(() => ({ current: null as any }))

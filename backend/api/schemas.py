@@ -98,6 +98,62 @@ class SandboxPaymentRequest(BaseModel):
     event_id: str = Field(default_factory=lambda: uuid4().hex, min_length=8, max_length=128)
 
 
+class AssistedOrderItemRequest(BaseModel):
+    product_id: str = Field(min_length=1, max_length=64)
+    quantity: int = Field(ge=1, le=20)
+
+
+class AssistedOrderCreateRequest(BaseModel):
+    items: list[AssistedOrderItemRequest] = Field(min_length=1, max_length=20)
+    customer_name: str | None = Field(default=None, max_length=80)
+    customer_phone: str | None = Field(default=None, max_length=32)
+    pickup_location: str | None = Field(default=None, max_length=120)
+    customer_note: str | None = Field(default=None, max_length=300)
+    idempotency_key: str = Field(default_factory=lambda: uuid4().hex, min_length=8, max_length=128)
+
+
+class AssistedOrderItemResponse(BaseModel):
+    product_id: str
+    name: str
+    brand: str | None = None
+    category: str
+    uom: str | None = None
+    image_url: str | None = None
+    unit_price_vnd: int
+    quantity: int
+    line_total_vnd: int
+    shelf_location: str | None = None
+    snapshot_stock: int = 0
+    stock_is_current: bool = False
+
+
+class AssistedOrderResponse(BaseModel):
+    order_id: UUID
+    order_code: str
+    session_id: UUID
+    kiosk_id: str
+    store_name: str
+    items: list[AssistedOrderItemResponse]
+    item_count: int
+    subtotal_vnd: int
+    total_vnd: int
+    customer_name: str | None = None
+    customer_phone: str | None = None
+    pickup_location: str | None = None
+    customer_note: str | None = None
+    status: Literal["SENT_TO_STAFF", "RECORDED_PENDING_STAFF"]
+    ticket_id: UUID
+    created_at: datetime
+    data_source: str
+    stock_is_current: bool = False
+    notified_channel: Literal["zalo", "messenger", "gmail"] | None = None
+    notified_provider: str | None = None
+    notification_status: Literal["DELIVERED", "FAILED", "NOT_CONFIGURED"] = "NOT_CONFIGURED"
+    notification_detail: str | None = None
+    notified_at: datetime | None = None
+    customer_message: str = ""
+
+
 class SupportTicketCreateRequest(BaseModel):
     issue_type: IssueType = IssueType.OTHER
     description: str = Field(min_length=1, max_length=500)

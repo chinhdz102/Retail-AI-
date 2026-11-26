@@ -61,6 +61,36 @@ class ManagerAlertPayload:
 
 
 @dataclass(frozen=True)
+class AssistedOrderAlertItem:
+    product_id: str
+    name: str
+    quantity: int
+    unit_price_vnd: int
+    line_total_vnd: int
+    uom: str | None = None
+    shelf_location: str | None = None
+
+
+@dataclass(frozen=True)
+class AssistedOrderAlertPayload:
+    order_id: UUID
+    order_code: str
+    ticket_id: UUID
+    session_id: UUID
+    kiosk_id: str
+    store_name: str
+    items: tuple[AssistedOrderAlertItem, ...]
+    item_count: int
+    total_vnd: int
+    created_at: datetime
+    customer_name: str | None = None
+    customer_phone: str | None = None
+    pickup_location: str | None = None
+    customer_note: str | None = None
+    stock_is_current: bool = False
+
+
+@dataclass(frozen=True)
 class ChannelAttempt:
     provider: str
     channel_group: ChannelGroup
@@ -152,6 +182,132 @@ def format_manager_alert_email_html(payload: ManagerAlertPayload) -> str:
         "</table>"
         "<div style='padding:14px 20px;background:#f1f5f9;font-size:13px;color:#334155;'>"
         "Tin nhắn được gửi tự động từ trợ lý bán hàng Mai khi khách yêu cầu hỗ trợ."
+        "</div></div></body></html>"
+    )
+
+
+def _format_vnd(amount: int) -> str:
+    return f"{int(amount):,}đ".replace(",", ".")
+
+
+def format_assisted_order_text(payload: AssistedOrderAlertPayload) -> str:
+    time_vn = _format_vietnam_time(payload.created_at)
+    lines = [
+        f"[MAI KIOSK - {payload.store_name}] KHÁCH ĐẶT GIỎ HÀNG · HỖ TRỢ CHỌN & TRAO TRẢ",
+        f"- Mã đơn hỗ trợ: #{payload.order_code}",
+        f"- Điểm hỗ trợ / Kiosk: {payload.kiosk_id}",
+        f"- Thời gian: {time_vn}",
+    ]
+    if payload.customer_name or payload.customer_phone:
+        parts = [p for p in (payload.customer_name, payload.customer_phone) if p]
+        lines.append(f"- Khách hàng: {' · '.join(parts)}")
+    if payload.pickup_location:
+        lines.append(f"- Vị trí khách / Hình thức nhận: {payload.pickup_location}")
+    if payload.customer_note:
+        lines.append(f'- Ghi chú của khách: "{payload.customer_note}"')
+    lines.append(
+        f"- Danh sách sản phẩm ({len(payload.items)} loại · {payload.item_count} sản phẩm):"
+    )
+    max_listed = 12
+    for idx, item in enumerate(payload.items[:max_listed], 1):
+        uom_suffix = f" ({item.uom})" if item.uom else ""
+        shelf_suffix = f" [Kệ gợi ý: {item.shelf_location}]" if item.shelf_location else ""
+        lines.append(
+            f"  {idx}. {item.name}{uom_suffix} x {item.quantity} — "
+            f"{_format_vnd(item.line_total_vnd)}{shelf_suffix}"
+        )
+    if len(payload.items) > max_listed:
+        lines.append(f"  ... và {len(payload.items) - max_listed} mặt hàng khác.")
+    price_label = (
+        "Tổng tạm tính (giá tham khảo)"
+        if not payload.stock_is_current
+        else "Tổng tạm tính"
+    )
+    lines.append(f"- {price_label}: {_format_vnd(payload.total_vnd)}")
+    lines.append(
+        "-> Vui lòng phân công nhân viên hỗ trợ khách chọn đúng hàng, kiểm tra tồn thực tế "
+        "và hướng dẫn trao trả / thanh toán tại quầy."
+    )
+    return "\n".join(lines)[:1950]
+
+
+def format_assisted_order_email_html(payload: AssistedOrderAlertPayload) -> str:
+    time_vn = _format_vietnam_time(payload.created_at)
+    customer_rows = ""
+    if payload.customer_name or payload.customer_phone:
+        parts = [p for p in (payload.customer_name, payload.customer_phone) if p]
+        customer_rows += (
+            "<tr><td style='padding:8px 12px;color:#475569;font-weight:600;'>Khách hàng</td>"
+            f"<td style='padding:8px 12px;color:#0f172a;font-weight:600;'>"
+            f"{html.escape(' · '.join(parts))}</td></tr>"
+        )
+    if payload.pickup_location:
+        customer_rows += (
+            "<tr><td style='padding:8px 12px;color:#475569;font-weight:600;'>"
+            "Vị trí / Nhận hàng</td>"
+            f"<td style='padding:8px 12px;color:#0f172a;'>"
+            f"{html.escape(payload.pickup_location)}</td></tr>"
+        )
+    if payload.customer_note:
+        customer_rows += (
+            "<tr><td style='padding:8px 12px;color:#475569;font-weight:600;'>Ghi chú</td>"
+            f"<td style='padding:8px 12px;color:#0f172a;'>"
+            f"&ldquo;{html.escape(payload.customer_note)}&rdquo;</td></tr>"
+        )
+    item_rows = "".join(
+        "<tr>"
+        f"<td style='padding:8px 12px;border-top:1px solid #e2e8f0;color:#0f172a;'>"
+        f"<strong>{html.escape(item.name)}</strong>"
+        + (
+            f"<div style='font-size:12px;color:#0e7490;'>Kệ gợi ý: "
+            f"{html.escape(item.shelf_location)}</div>"
+            if item.shelf_location
+            else ""
+        )
+        + "</td>"
+        f"<td style='padding:8px 10px;border-top:1px solid #e2e8f0;text-align:center;'>"
+        f"× {item.quantity}</td>"
+        f"<td style='padding:8px 12px;border-top:1px solid #e2e8f0;text-align:right;"
+        f"font-weight:600;white-space:nowrap;'>{html.escape(_format_vnd(item.line_total_vnd))}</td>"
+        "</tr>"
+        for item in payload.items
+    )
+    return (
+        "<!doctype html><html><body style='font-family:Arial,sans-serif;background:#f8fafc;"
+        "padding:20px;color:#0f172a;'>"
+        "<div style='max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;"
+        "border-radius:14px;overflow:hidden;'>"
+        "<div style='background:#0e7490;color:#ffffff;padding:16px 20px;'>"
+        f"<div style='font-size:12px;letter-spacing:0.08em;opacity:0.9;'>MAI RETAIL ASSISTANT · "
+        f"{html.escape(payload.store_name)}</div>"
+        f"<h2 style='margin:6px 0 0;font-size:18px;'>ĐƠN HỖ TRỢ CHỌN HÀNG &amp; TRAO TRẢ · "
+        f"#{html.escape(payload.order_code)}</h2>"
+        "</div>"
+        "<table style='width:100%;border-collapse:collapse;font-size:14px;'>"
+        "<tr><td style='padding:8px 12px;color:#475569;font-weight:600;width:36%;'>Kiosk</td>"
+        f"<td style='padding:8px 12px;color:#0f172a;'>{html.escape(payload.kiosk_id)}</td></tr>"
+        "<tr><td style='padding:8px 12px;color:#475569;font-weight:600;'>Thời gian</td>"
+        f"<td style='padding:8px 12px;color:#0f172a;'>{html.escape(time_vn)}</td></tr>"
+        f"{customer_rows}"
+        "</table>"
+        "<div style='padding:10px 12px 4px;font-size:13px;font-weight:700;color:#0e7490;'>"
+        f"Danh sách chọn hàng ({len(payload.items)} loại · {payload.item_count} sản phẩm)</div>"
+        "<table style='width:100%;border-collapse:collapse;font-size:13px;'>"
+        "<tr style='background:#f1f5f9;color:#475569;'>"
+        "<th style='padding:8px 12px;text-align:left;'>Sản phẩm</th>"
+        "<th style='padding:8px 10px;text-align:center;'>SL</th>"
+        "<th style='padding:8px 12px;text-align:right;'>Thành tiền</th></tr>"
+        f"{item_rows}"
+        "<tr style='background:#f8fafc;'>"
+        "<td colspan='2' style='padding:10px 12px;border-top:2px solid #cbd5e1;font-weight:700;'>"
+        "Tổng tạm tính (giá tham khảo)</td>"
+        f"<td style='padding:10px 12px;border-top:2px solid #cbd5e1;text-align:right;"
+        f"font-weight:800;color:#0e7490;font-size:15px;'>"
+        f"{html.escape(_format_vnd(payload.total_vnd))}</td></tr>"
+        "</table>"
+        "<div style='padding:14px 20px;background:#f1f5f9;font-size:13px;color:#334155;'>"
+        "Vui lòng hỗ trợ khách chọn đúng sản phẩm, kiểm tra tồn thực tế tại quầy và trao trả / "
+        "thanh toán cho khách."
         "</div></div></body></html>"
     )
 
@@ -269,6 +425,194 @@ class ManagerNotifierService:
             provider_message_id=None,
             detail=f"Không gửi được qua các kênh đã cấu hình ({summary[:240]}).",
             attempts=tuple(attempts),
+        )
+
+    async def notify_assisted_order(
+        self,
+        payload: AssistedOrderAlertPayload,
+        *,
+        preferred_provider: str | None = None,
+    ) -> ManagerNotifyResult:
+        """Dispatch an itemized cart pick-and-handover request to the store manager / staff."""
+        providers = list(self.settings.configured_manager_notify_channels)
+        if preferred_provider:
+            key = preferred_provider.strip().lower()
+            if key not in providers:
+                return ManagerNotifyResult(
+                    configured=False,
+                    delivered=False,
+                    channel=None,
+                    provider=None,
+                    provider_message_id=None,
+                    detail=f"Kênh '{key}' chưa được cấu hình trong .env.",
+                )
+            providers = [key]
+
+        if not providers:
+            return ManagerNotifyResult(
+                configured=False,
+                delivered=False,
+                channel=None,
+                provider=None,
+                provider_message_id=None,
+                detail="Chưa cấu hình kênh nhắn tin quản lý (Zalo / Messenger / Gmail).",
+            )
+
+        text = format_assisted_order_text(payload)
+        attempts: list[ChannelAttempt] = []
+        for provider in providers:
+            attempt = await self._dispatch_assisted_order_provider(provider, payload, text)
+            attempts.append(attempt)
+            if attempt.ok:
+                logger.info(
+                    "Assisted order alert delivered order_code=%s provider=%s channel=%s msg_id=%s",
+                    payload.order_code,
+                    provider,
+                    attempt.channel_group,
+                    attempt.provider_message_id,
+                )
+                return ManagerNotifyResult(
+                    configured=True,
+                    delivered=True,
+                    channel=attempt.channel_group,
+                    provider=provider,
+                    provider_message_id=attempt.provider_message_id,
+                    detail=attempt.detail,
+                    attempts=tuple(attempts),
+                    sent_at=datetime.now(UTC),
+                )
+            logger.warning(
+                "Assisted order alert failed order_code=%s provider=%s detail=%s",
+                payload.order_code,
+                provider,
+                attempt.detail,
+            )
+
+        summary = "; ".join(f"{a.provider}: {a.detail}" for a in attempts)
+        return ManagerNotifyResult(
+            configured=True,
+            delivered=False,
+            channel=None,
+            provider=None,
+            provider_message_id=None,
+            detail=f"Không gửi được qua các kênh đã cấu hình ({summary[:240]}).",
+            attempts=tuple(attempts),
+        )
+
+    async def _dispatch_assisted_order_provider(
+        self,
+        provider: str,
+        payload: AssistedOrderAlertPayload,
+        text: str,
+    ) -> ChannelAttempt:
+        group = provider_channel_group(provider)
+        try:
+            if provider == "zalo_bot":
+                return await self._send_zalo_bot(text)
+            if provider == "zalo_oa":
+                return await self._send_zalo_oa(text)
+            if provider == "zalo_webhook":
+                return await self._send_assisted_order_zalo_webhook(payload, text)
+            if provider == "messenger":
+                return await self._send_messenger(text)
+            if provider == "gmail":
+                return await self._send_assisted_order_gmail(payload, text)
+            return ChannelAttempt(provider, group, False, f"Unknown provider: {provider}")
+        except Exception as exc:
+            return ChannelAttempt(provider, group, False, _safe_error_text(exc))
+
+    async def _send_assisted_order_zalo_webhook(
+        self,
+        payload: AssistedOrderAlertPayload,
+        text: str,
+    ) -> ChannelAttempt:
+        url = self.settings.zalo_webhook_url.strip()
+        secret = self.settings.zalo_webhook_secret.get_secret_value().strip()
+        headers = {"Content-Type": "application/json"}
+        if secret:
+            headers["Authorization"] = f"Bearer {secret}"
+            headers["X-Webhook-Secret"] = secret
+        body = {
+            "event": "retail_ai.assisted_order",
+            "channel": "zalo",
+            "order_id": str(payload.order_id),
+            "order_code": payload.order_code,
+            "ticket_id": str(payload.ticket_id),
+            "session_id": str(payload.session_id),
+            "kiosk_id": payload.kiosk_id,
+            "store_name": payload.store_name,
+            "customer_name": payload.customer_name,
+            "customer_phone": payload.customer_phone,
+            "pickup_location": payload.pickup_location,
+            "customer_note": payload.customer_note,
+            "item_count": payload.item_count,
+            "total_vnd": payload.total_vnd,
+            "items": [
+                {
+                    "product_id": item.product_id,
+                    "name": item.name,
+                    "quantity": item.quantity,
+                    "unit_price_vnd": item.unit_price_vnd,
+                    "line_total_vnd": item.line_total_vnd,
+                    "uom": item.uom,
+                    "shelf_location": item.shelf_location,
+                }
+                for item in payload.items
+            ],
+            "created_at_vn": _format_vietnam_time(payload.created_at),
+            "text": text,
+        }
+        async with self._new_client() as client:
+            resp = await client.post(url, json=body, headers=headers)
+        if resp.is_success:
+            data = _try_json(resp)
+            msg_id = str(data.get("message_id") or data.get("id") or "") or None
+            return ChannelAttempt("zalo_webhook", "zalo", True, "Đã gửi qua Zalo Webhook.", msg_id)
+        return ChannelAttempt(
+            "zalo_webhook",
+            "zalo",
+            False,
+            f"Zalo Webhook HTTP {resp.status_code}",
+        )
+
+    async def _send_assisted_order_gmail(
+        self, payload: AssistedOrderAlertPayload, text: str
+    ) -> ChannelAttempt:
+        sender = self.settings.manager_gmail_sender.strip()
+        raw_pw = self.settings.manager_gmail_app_password.get_secret_value().strip()
+        app_password = "".join(raw_pw.split())
+        recipients_raw = self.settings.manager_gmail_to.strip() or sender
+        recipients = [item.strip() for item in recipients_raw.split(",") if item.strip()]
+        host = self.settings.manager_gmail_smtp_host.strip() or "smtp.gmail.com"
+        port = self.settings.manager_gmail_smtp_port
+        timeout = self.settings.manager_notify_timeout_seconds
+
+        msg = EmailMessage()
+        msg["Subject"] = (
+            f"[Mai Kiosk · {payload.kiosk_id}] Đơn hỗ trợ chọn hàng "
+            f"#{payload.order_code} ({payload.item_count} SP · {_format_vnd(payload.total_vnd)})"
+        )
+        msg["From"] = f"Mai Retail Assistant <{sender}>"
+        msg["To"] = ", ".join(recipients)
+        msg.set_content(text)
+        msg.add_alternative(format_assisted_order_email_html(payload), subtype="html")
+
+        await asyncio.to_thread(
+            _smtp_deliver,
+            host=host,
+            port=port,
+            sender=sender,
+            password=app_password,
+            recipients=recipients,
+            message=msg,
+            timeout=timeout,
+        )
+        return ChannelAttempt(
+            "gmail",
+            "gmail",
+            True,
+            f"Đã gửi email Gmail tới {', '.join(recipients)}.",
+            f"gmail-{payload.order_code}",
         )
 
     async def _dispatch_provider(

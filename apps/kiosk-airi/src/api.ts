@@ -1,5 +1,7 @@
 import type {
   AgentResponse,
+  AssistedOrderCreatePayload,
+  AssistedOrderResponse,
   CheckoutQuote,
   LanguageCode,
   ManagerNotifierStatus,
@@ -415,4 +417,30 @@ export function searchProducts(query = '', limit = 6): Promise<ProductSearchResp
 
 export function getManagerNotifierStatus(): Promise<ManagerNotifierStatus> {
   return request<ManagerNotifierStatus>('/support/manager-notifier/status', undefined, 6_000)
+}
+
+export function submitAssistedOrder(
+  sessionId: string,
+  payload: AssistedOrderCreatePayload,
+): Promise<AssistedOrderResponse> {
+  return request<AssistedOrderResponse>(
+    `/sessions/${encodeURIComponent(sessionId)}/assisted-orders`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        idempotency_key: payload.idempotency_key || createRequestId(),
+      }),
+    },
+    20_000,
+  )
+}
+
+export function listAssistedOrders(sessionId: string): Promise<AssistedOrderResponse[]> {
+  return request<AssistedOrderResponse[]>(
+    `/sessions/${encodeURIComponent(sessionId)}/assisted-orders`,
+    undefined,
+    10_000,
+  )
 }

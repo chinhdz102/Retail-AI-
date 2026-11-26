@@ -27,6 +27,8 @@ const apiMocks = vi.hoisted(() => ({
   confirmCheckout: vi.fn(),
   cancelCheckout: vi.fn(),
   simulateSandboxPayment: vi.fn(),
+  submitAssistedOrder: vi.fn(),
+  listAssistedOrders: vi.fn().mockResolvedValue([]),
 }))
 
 const vadMocks = vi.hoisted(() => ({ stream: null as MediaStream | null }))
@@ -59,6 +61,7 @@ describe('kiosk app', () => {
     vi.clearAllMocks()
     document.documentElement.lang = 'vi'
     window.localStorage.removeItem('retail-ai-microphone-device')
+    window.sessionStorage.removeItem('retail-ai-assisted-cart-v1')
     apiMocks.createSession.mockResolvedValue({
       session_id: 'session-test',
       kiosk_id: 'kiosk-01',
@@ -87,6 +90,7 @@ describe('kiosk app', () => {
     Reflect.deleteProperty(window, 'AudioContext')
     Reflect.deleteProperty(navigator, 'mediaDevices')
     window.localStorage.removeItem('retail-ai-microphone-device')
+    window.sessionStorage.removeItem('retail-ai-assisted-cart-v1')
   })
 
   it('keeps the text drawer closed while showing only the avatar controls', async () => {
@@ -911,6 +915,134 @@ describe('kiosk app', () => {
         expect.any(Function),
         expect.any(AbortSignal),
       ))
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('adds snapshot catalog products to the assisted cart and sends a pick-and-handover order to the manager', async () => {
+    const chinsu = {
+      product_id: 'TLM_10141747',
+      name: 'Tương ớt Chin Su chai 1kg',
+      category: 'Tương ớt',
+      brand: 'CHIN-SU',
+      price_vnd: 62_200,
+      stock: 407,
+      stock_is_current: false,
+      uom: 'Chai',
+      image_url: 'https://hcm.fstorage.vn/images/2026/01/chinsu-1kg.jpg',
+      data_timestamp: '2026-09-15T13:53:30Z',
+      data_source: 'thanh_lam_json_snapshot',
+    }
+    apiMocks.getManagerNotifierStatus.mockResolvedValueOnce({
+      enabled: true,
+      store_name: 'Thanh Lam Mart',
+      primary_channel: 'zalo',
+      primary_provider: 'zalo_bot',
+      priority: ['zalo_bot'],
+      configured_providers: ['zalo_bot'],
+      channels: { zalo_bot: true },
+    })
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Mình tìm thấy Tương ớt Chin Su chai 1kg giá tham khảo 62.200đ.',
+      model: 'catalog',
+      grounded_product_ids: [chinsu.product_id],
+      state: 'BROWSING',
+      products: [chinsu],
+    })
+    apiMocks.submitAssistedOrder.mockResolvedValueOnce({
+      order_id: 'order-assisted-1',
+      order_code: 'TLM-998877',
+      session_id: 'session-test',
+      kiosk_id: 'kiosk-01',
+      store_name: 'Thanh Lam Mart',
+      items: [{
+        product_id: chinsu.product_id,
+        name: chinsu.name,
+        brand: chinsu.brand,
+        category: chinsu.category,
+        uom: chinsu.uom,
+        image_url: chinsu.image_url,
+        unit_price_vnd: chinsu.price_vnd,
+        quantity: 2,
+        line_total_vnd: 124_400,
+        shelf_location: 'A05-B02-L03-P01',
+        snapshot_stock: 407,
+        stock_is_current: false,
+      }],
+      item_count: 2,
+      subtotal_vnd: 124_400,
+      total_vnd: 124_400,
+      customer_name: 'Anh Minh',
+      pickup_location: 'Đứng tại Kiosk',
+      customer_note: 'Chọn chai hạn mới',
+      status: 'SENT_TO_STAFF',
+      ticket_id: 'ticket-assisted-1',
+      created_at: new Date().toISOString(),
+      data_source: 'thanh_lam_json_snapshot',
+      stock_is_current: false,
+      notified_channel: 'zalo',
+      notified_provider: 'zalo_bot',
+      notification_status: 'DELIVERED',
+      customer_message: 'Dạ, mình đã gửi đơn hỗ trợ mã #TLM-998877 (2 sản phẩm, tạm tính 124.400đ) qua Zalo tới quản lý cửa hàng rồi ạ.',
+    })
+
+    const wrapper = mount(App)
+    try {
+      await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+      await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+      await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
+      await vi.waitFor(() => expect(wrapper.text()).toContain('Tương ớt Chin Su chai 1kg'))
+
+      // Add from product card and increment to 2 via inline stepper
+      await wrapper.get('.card-cart-btn').trigger('click')
+      await vi.waitFor(() => expect(wrapper.get('.card-stepper-qty').text()).toBe('1'))
+      await wrapper.get('button[aria-label="Tăng số lượng Tương ớt Chin Su chai 1kg"]').trigger('click')
+      await vi.waitFor(() => expect(wrapper.get('.card-stepper-qty').text()).toBe('2'))
+
+      // Sticky cart bar reflects 2 items and total 124.400đ, opens CartDrawer
+      expect(wrapper.get('.assisted-cart-bar').text()).toContain('2 sản phẩm trong giỏ')
+      expect(wrapper.get('.assisted-cart-bar').text()).toContain('124.400đ')
+      await wrapper.get('.assisted-cart-bar-btn').trigger('click')
+      await flushPromises()
+
+      const sheet = document.body.querySelector('.cart-sheet')
+      expect(sheet).not.toBeNull()
+      expect(sheet?.textContent).toContain('Giỏ hàng của bạn')
+      expect(sheet?.textContent).toContain('Đặt mua · Gửi quản lý (Zalo)')
+
+      const nameInput = sheet?.querySelector<HTMLInputElement>('input[autocomplete="name"]')
+      const noteInput = sheet?.querySelector<HTMLInputElement>('input[maxlength="300"]')
+      if (nameInput) {
+        nameInput.value = 'Anh Minh'
+        nameInput.dispatchEvent(new Event('input'))
+      }
+      if (noteInput) {
+        noteInput.value = 'Chọn chai hạn mới'
+        noteInput.dispatchEvent(new Event('input'))
+      }
+      await flushPromises()
+
+      const cta = sheet?.querySelector<HTMLButtonElement>('.cart-checkout-cta')
+      expect(cta).not.toBeNull()
+      cta?.click()
+      await flushPromises()
+
+      await vi.waitFor(() => expect(apiMocks.submitAssistedOrder).toHaveBeenCalledWith(
+        'session-test',
+        expect.objectContaining({
+          items: [{ product_id: chinsu.product_id, quantity: 2 }],
+          customer_name: 'Anh Minh',
+          pickup_location: 'Đứng tại Kiosk',
+          customer_note: 'Chọn chai hạn mới',
+        }),
+      ))
+
+      // Confirmation receipt rendered in drawer + chat history card
+      await vi.waitFor(() => expect(document.body.querySelector('.cart-receipt-card')?.textContent).toContain('#TLM-998877'))
+      expect(document.body.querySelector('.cart-receipt-card')?.textContent).toContain('A05-B02-L03-P01')
+      expect(wrapper.text()).toContain('Đơn hỗ trợ #TLM-998877')
     } finally {
       wrapper.unmount()
     }

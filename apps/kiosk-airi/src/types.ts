@@ -221,6 +221,62 @@ export interface SandboxOrder {
   provider_transaction_id: string | null
 }
 
+export interface AssistedCartItem {
+  product: ProductCard
+  quantity: number
+}
+
+export interface AssistedOrderCreatePayload {
+  items: Array<{ product_id: string; quantity: number }>
+  customer_name?: string
+  customer_phone?: string
+  pickup_location?: string
+  customer_note?: string
+  idempotency_key?: string
+}
+
+export interface AssistedOrderItem {
+  product_id: string
+  name: string
+  brand?: string | null
+  category: string
+  uom?: string | null
+  image_url?: string | null
+  unit_price_vnd: number
+  quantity: number
+  line_total_vnd: number
+  shelf_location?: string | null
+  snapshot_stock: number
+  stock_is_current: boolean
+}
+
+export interface AssistedOrderResponse {
+  order_id: string
+  order_code: string
+  session_id: string
+  kiosk_id: string
+  store_name: string
+  items: AssistedOrderItem[]
+  item_count: number
+  subtotal_vnd: number
+  total_vnd: number
+  customer_name?: string | null
+  customer_phone?: string | null
+  pickup_location?: string | null
+  customer_note?: string | null
+  status: 'SENT_TO_STAFF' | 'RECORDED_PENDING_STAFF'
+  ticket_id: string
+  created_at: string
+  data_source: string
+  stock_is_current: boolean
+  notified_channel?: 'zalo' | 'messenger' | 'gmail' | null
+  notified_provider?: string | null
+  notification_status: 'DELIVERED' | 'FAILED' | 'NOT_CONFIGURED'
+  notification_detail?: string | null
+  notified_at?: string | null
+  customer_message: string
+}
+
 export interface TranscriptionResponse {
   session_id: string
   text: string
@@ -243,4 +299,5 @@ export interface ChatMessage {
   relatedProducts?: ProductCard[]
   shoppingPlan?: ShoppingPlan
   supportTicket?: SupportTicket
+  assistedOrder?: AssistedOrderResponse
 }

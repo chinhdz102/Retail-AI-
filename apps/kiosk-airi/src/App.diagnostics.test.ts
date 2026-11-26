@@ -11,6 +11,7 @@ vi.mock('./api', () => ({
   transcribe: mocks.transcribe, respond: vi.fn(), createSynthesisTicket: vi.fn(),
   addCartItem: vi.fn(), setCartItemQuantity: vi.fn(), prepareCheckout: vi.fn(),
   cancelCheckout: vi.fn(), confirmCheckout: vi.fn(), simulateSandboxPayment: vi.fn(),
+  submitAssistedOrder: vi.fn(), listAssistedOrders: vi.fn().mockResolvedValue([]),
 }))
 vi.mock('./voice-controller', () => ({ VoiceConversationController: class {
   options: any

@@ -5,6 +5,7 @@ import {
   PhChatText as ChatText,
   PhMicrophone as Microphone,
   PhPause as Pause,
+  PhShoppingBagOpen as ShoppingBagOpen,
   PhSpeakerHigh as SpeakerHigh,
   PhStop as Stop,
   PhX as X,
@@ -28,11 +29,20 @@ import {
   respondWithImage,
   setCartItemQuantity,
   simulateSandboxPayment,
+  submitAssistedOrder,
   transcribe,
   type TextDeltaHandler,
 } from './api'
+import CartDrawer from './components/CartDrawer.vue'
 import ChatPanel from './components/ChatPanel.vue'
-import type { CheckoutQuote, SandboxOrder, ShoppingCart } from './types'
+import type {
+  AssistedCartItem,
+  AssistedOrderResponse,
+  CheckoutQuote,
+  ProductCard,
+  SandboxOrder,
+  ShoppingCart,
+} from './types'
 import {
   classifyVietnameseTurnCompleteness,
   isLikelyAssistantEcho,
@@ -58,6 +68,23 @@ const messages = ref<ChatMessage[]>([])
 const cart = ref<ShoppingCart | null>(null)
 const checkoutQuote = ref<CheckoutQuote | null>(null)
 const sandboxOrder = ref<SandboxOrder | null>(null)
+const ASSISTED_CART_STORAGE_KEY = 'retail-ai-assisted-cart-v1'
+const assistedCart = ref<AssistedCartItem[]>([])
+const assistedOrders = ref<AssistedOrderResponse[]>([])
+const isCartOpen = ref(false)
+const cartInitialTab = ref<'cart' | 'orders'>('cart')
+const activeAssistedOrder = ref<AssistedOrderResponse | null>(null)
+const isSubmittingAssistedOrder = ref(false)
+const assistedOrderError = ref<string | null>(null)
+const cartToastMessage = ref<string | null>(null)
+let cartToastTimer: ReturnType<typeof setTimeout> | undefined
+
+const assistedTotalCount = computed(() =>
+  assistedCart.value.reduce((sum, entry) => sum + entry.quantity, 0),
+)
+const assistedTotalVnd = computed(() =>
+  assistedCart.value.reduce((sum, entry) => sum + entry.product.price_vnd * entry.quantity, 0),
+)
 const draft = ref('')
 const status = ref<AssistantStatus>('idle')
 const errorMessage = ref<string | null>(null)
@@ -1343,6 +1370,12 @@ async function resetKioskSession(notice?: string) {
   cart.value = null
   checkoutQuote.value = null
   sandboxOrder.value = null
+  assistedCart.value = []
+  assistedOrders.value = []
+  activeAssistedOrder.value = null
+  assistedOrderError.value = null
+  isCartOpen.value = false
+  persistAssistedCart()
   lastPrompt.value = ''
   errorMessage.value = null
   isHandsFree.value = false
@@ -1671,6 +1704,158 @@ function clearSandboxOrder() {
   sandboxOrder.value = null
 }
 
+function persistAssistedCart() {
+  try {
+    if (!assistedCart.value.length) {
+      window.sessionStorage.removeItem(ASSISTED_CART_STORAGE_KEY)
+    } else {
+      window.sessionStorage.setItem(ASSISTED_CART_STORAGE_KEY, JSON.stringify(assistedCart.value))
+    }
+  } catch {
+    // Session storage may be blocked in strict privacy modes; in-memory cart still works.
+  }
+}
+
+function restoreAssistedCart() {
+  try {
+    const raw = window.sessionStorage.getItem(ASSISTED_CART_STORAGE_KEY)
+    if (!raw) return
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      assistedCart.value = parsed.filter(
+        (entry): entry is AssistedCartItem =>
+          Boolean(entry?.product?.product_id && typeof entry.quantity === 'number' && entry.quantity > 0),
+      )
+    }
+  } catch {
+    // Ignore corrupt stored state.
+  }
+}
+
+function showCartToast(message: string) {
+  cartToastMessage.value = message
+  if (cartToastTimer) clearTimeout(cartToastTimer)
+  cartToastTimer = setTimeout(() => {
+    cartToastMessage.value = null
+    cartToastTimer = undefined
+  }, 2_800)
+}
+
+function handleAddAssistedItem(product: ProductCard) {
+  const existing = assistedCart.value.find((entry) => entry.product.product_id === product.product_id)
+  if (existing) {
+    if (existing.quantity < 20) {
+      existing.quantity += 1
+      existing.product = product
+    }
+  } else {
+    if (assistedCart.value.length >= 20) {
+      showCartToast('Giỏ hàng tối đa 20 loại sản phẩm mỗi đơn.')
+      return
+    }
+    assistedCart.value.push({ product, quantity: 1 })
+  }
+  activeAssistedOrder.value = null
+  assistedOrderError.value = null
+  persistAssistedCart()
+  const cleanName = product.name.replace(/\s+/g, ' ').trim()
+  const shortName = cleanName.length > 34 ? `${cleanName.slice(0, 33)}…` : cleanName
+  showCartToast(`Đã thêm "${shortName}" vào giỏ`)
+}
+
+function handleUpdateAssistedQty(productId: string, quantity: number) {
+  if (quantity <= 0) {
+    handleRemoveAssistedItem(productId)
+    return
+  }
+  const target = assistedCart.value.find((entry) => entry.product.product_id === productId)
+  if (!target) return
+  target.quantity = Math.min(20, Math.max(1, quantity))
+  assistedOrderError.value = null
+  persistAssistedCart()
+}
+
+function handleRemoveAssistedItem(productId: string) {
+  assistedCart.value = assistedCart.value.filter((entry) => entry.product.product_id !== productId)
+  assistedOrderError.value = null
+  persistAssistedCart()
+}
+
+function handleClearAssistedCart() {
+  assistedCart.value = []
+  assistedOrderError.value = null
+  persistAssistedCart()
+}
+
+function handleOpenCart(tab: 'cart' | 'orders' = 'cart') {
+  cartInitialTab.value = tab
+  assistedOrderError.value = null
+  isCartOpen.value = true
+}
+
+function handleBrowseCartSuggestions() {
+  isCartOpen.value = false
+  isTextOpen.value = true
+  void sendMessage('Sản phẩm nào bán chạy nhất cửa hàng?')
+}
+
+async function handleSubmitAssistedOrder(form: {
+  customerName: string
+  customerPhone: string
+  pickupLocation: string
+  customerNote: string
+}) {
+  if (!assistedCart.value.length || isSubmittingAssistedOrder.value) return
+  isSubmittingAssistedOrder.value = true
+  assistedOrderError.value = null
+  const idempotencyKey = createRequestId()
+  const payload = {
+    items: assistedCart.value.map((entry) => ({
+      product_id: entry.product.product_id,
+      quantity: entry.quantity,
+    })),
+    customer_name: form.customerName || undefined,
+    customer_phone: form.customerPhone || undefined,
+    pickup_location: form.pickupLocation || undefined,
+    customer_note: form.customerNote || undefined,
+    idempotency_key: idempotencyKey,
+  }
+  try {
+    if (!sessionId.value) await bootKiosk()
+    if (!sessionId.value) throw new Error('Chưa kết nối được phiên kiosk. Bạn thử lại giúp mình nhé.')
+    let response: AssistedOrderResponse
+    try {
+      response = await submitAssistedOrder(sessionId.value, payload)
+    } catch (firstErr) {
+      const failure = firstErr as { status?: number; message?: string }
+      const sessionGone = /session (?:is )?(?:closed|expired|not found)/i.test(failure?.message ?? '')
+      if (![404, 409, 410].includes(failure?.status ?? 0) || !sessionGone) throw firstErr
+      // Recover seamlessly on serverless cold restart without dropping the shopper's cart.
+      const freshSession = await createSession('kiosk-01')
+      sessionId.value = freshSession.session_id
+      response = await submitAssistedOrder(freshSession.session_id, payload)
+    }
+    if (isUnmounted) return
+    assistedOrders.value = [response, ...assistedOrders.value]
+    activeAssistedOrder.value = response
+    assistedCart.value = []
+    persistAssistedCart()
+    pushMessage('assistant', response.customer_message, {
+      model: 'assisted-order',
+      assistedOrder: response,
+    })
+  } catch (error) {
+    if (!isUnmounted) {
+      assistedOrderError.value = toErrorMessage(
+        error,
+        'Chưa gửi được đơn tới quản lý. Bạn vui lòng thử lại hoặc báo nhân viên tại quầy nhé.',
+      )
+    }
+  } finally {
+    if (!isUnmounted) isSubmittingAssistedOrder.value = false
+  }
+}
+
 function handleEndSession() {
   void resetKioskSession('Phiên đã kết thúc. Nội dung cũ đã được xóa khỏi kiosk.')
 }
@@ -1815,6 +2000,7 @@ onMounted(() => {
   } catch {
     // The OS default remains available when storage is disabled.
   }
+  restoreAssistedCart()
   void bootKiosk()
   if (typeof getManagerNotifierStatus === 'function') {
     void getManagerNotifierStatus()
@@ -1840,6 +2026,7 @@ onUnmounted(() => {
   activeStreamStt = null
   const closingSessionId = sessionId.value
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
+  if (cartToastTimer) clearTimeout(cartToastTimer)
   navigator.mediaDevices?.removeEventListener?.('devicechange', refreshMicrophones)
   voiceController?.stop()
   invalidateSpeechPlayback()
@@ -1851,7 +2038,7 @@ onUnmounted(() => {
 
 <template>
   <main class="vrm-only-shell" :class="{ 'text-is-open': isTextOpen, 'mobile-sheet-expanded': isMobileSheetExpanded && isTextOpen }">
-    <header class="mobile-topbar" aria-hidden="true">
+    <header class="mobile-topbar">
       <div class="mobile-brand">
         <span class="mobile-brand-badge">M</span>
         <div class="mobile-brand-copy">
@@ -1859,9 +2046,22 @@ onUnmounted(() => {
           <span>Trợ lý siêu thị</span>
         </div>
       </div>
-      <div class="mobile-status-pill" :class="`state-${status}`">
-        <span class="mobile-status-dot"></span>
-        <span>{{ statusHint }}</span>
+      <div class="mobile-topbar-right">
+        <button
+          type="button"
+          class="mobile-cart-pill"
+          :class="{ 'has-items': assistedTotalCount > 0 }"
+          :aria-label="assistedTotalCount > 0 ? `Mở giỏ hàng (${assistedTotalCount} sản phẩm)` : 'Mở giỏ hàng'"
+          @click="handleOpenCart(assistedTotalCount === 0 && assistedOrders.length > 0 ? 'orders' : 'cart')"
+        >
+          <ShoppingBagOpen :size="16" weight="duotone" aria-hidden="true" />
+          <span v-if="assistedTotalCount > 0" class="mobile-cart-count">{{ assistedTotalCount }}</span>
+          <span v-else-if="assistedOrders.length > 0" class="mobile-cart-count is-orders">{{ assistedOrders.length }}</span>
+        </button>
+        <div class="mobile-status-pill" :class="`state-${status}`">
+          <span class="mobile-status-dot"></span>
+          <span>{{ statusHint }}</span>
+        </div>
       </div>
     </header>
     <aside v-if="voiceDebugAvailable" class="voice-debug-panel" aria-label="Local voice diagnostics">
@@ -1943,6 +2143,17 @@ onUnmounted(() => {
         </button>
         <button
           type="button"
+          class="vrm-control vrm-cart-control"
+          :class="{ 'has-items': assistedTotalCount > 0 }"
+          :aria-label="assistedTotalCount > 0 ? `Mở giỏ hàng (${assistedTotalCount} sản phẩm)` : 'Mở giỏ hàng'"
+          title="Xem giỏ hàng &amp; nhờ nhân viên chọn hàng"
+          @click="handleOpenCart(assistedTotalCount === 0 && assistedOrders.length > 0 ? 'orders' : 'cart')"
+        >
+          <ShoppingBagOpen :size="21" weight="duotone" aria-hidden="true" />
+          <span v-if="assistedTotalCount > 0" class="vrm-cart-badge">{{ assistedTotalCount }}</span>
+        </button>
+        <button
+          type="button"
           class="vrm-control vrm-text-control"
           :aria-label="textPanelLabel"
           :aria-expanded="isTextOpen"
@@ -1978,6 +2189,10 @@ onUnmounted(() => {
           :cart="cart"
           :checkout-quote="checkoutQuote"
           :order="sandboxOrder"
+          :assisted-items="assistedCart"
+          :assisted-total-count="assistedTotalCount"
+          :assisted-total-vnd="assistedTotalVnd"
+          :assisted-orders-count="assistedOrders.length"
           :status="status"
           :draft="draft"
           :is-recording="isRecording"
@@ -2009,9 +2224,39 @@ onUnmounted(() => {
           @clear-order="clearSandboxOrder"
           @end-session="handleEndSession"
           @request-support="handleRequestSupport"
+          @add-assisted-item="handleAddAssistedItem"
+          @update-assisted-qty="handleUpdateAssistedQty"
+          @open-cart="handleOpenCart"
         />
       </aside>
     </Transition>
+
+    <Transition name="cart-toast">
+      <div v-if="cartToastMessage && !isCartOpen" class="cart-toast" role="status" aria-live="polite">
+        <ShoppingBagOpen :size="16" weight="duotone" aria-hidden="true" />
+        <span>{{ cartToastMessage }}</span>
+        <button type="button" class="cart-toast-link" @click="handleOpenCart('cart')">Xem giỏ</button>
+      </div>
+    </Transition>
+
+    <CartDrawer
+      :open="isCartOpen"
+      :items="assistedCart"
+      :orders="assistedOrders"
+      :active-order="activeAssistedOrder"
+      :initial-tab="cartInitialTab"
+      :is-submitting="isSubmittingAssistedOrder"
+      :submit-error="assistedOrderError"
+      :language="language"
+      :manager-notify-channel="managerNotifyChannel"
+      @close="isCartOpen = false"
+      @update-qty="handleUpdateAssistedQty"
+      @remove-item="handleRemoveAssistedItem"
+      @clear-cart="handleClearAssistedCart"
+      @submit-order="handleSubmitAssistedOrder"
+      @dismiss-active-order="activeAssistedOrder = null"
+      @browse-suggestions="handleBrowseCartSuggestions"
+    />
 
     <audio ref="audioElement" class="sr-only" preload="auto" aria-hidden="true"></audio>
   </main>

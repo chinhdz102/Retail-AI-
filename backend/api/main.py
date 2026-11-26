@@ -22,6 +22,9 @@ from fastapi.responses import Response, StreamingResponse
 from backend.api.schemas import (
     AgentRespondRequest,
     AgentRespondResponse,
+    AssistedOrderCreateRequest,
+    AssistedOrderItemResponse,
+    AssistedOrderResponse,
     CartAddRequest,
     CartQuantityRequest,
     CartResponse,
@@ -60,6 +63,12 @@ from backend.products.category_taxonomy import (
     split_category_hierarchy,
 )
 from backend.products.repository import ProductRepository, get_product_repository
+from backend.services.assisted_orders import (
+    AssistedOrderIdempotencyConflictError,
+    AssistedOrderProductNotFoundError,
+    AssistedOrderRecord,
+    AssistedOrderStore,
+)
 from backend.services.azure_speech import (
     AzureSpeechConfigurationError,
     AzureSpeechProviderError,
@@ -96,6 +105,8 @@ from backend.services.groq import (
 )
 from backend.services.manager_notifier import (
     CHANNEL_DISPLAY_LABELS,
+    AssistedOrderAlertItem,
+    AssistedOrderAlertPayload,
     ManagerAlertPayload,
     ManagerNotifierService,
 )
@@ -221,7 +232,7 @@ from backend.services.vietnamese_intent import (
 from backend.services.vietnamese_intent import (
     unsupported_catalog_attribute_requested as _parse_unsupported_attribute,
 )
-from backend.shared.contracts import HealthResponse, IntentType, SessionState
+from backend.shared.contracts import HealthResponse, IntentType, IssueType, SessionState
 
 settings = get_settings()
 session_store = build_session_store(
@@ -233,6 +244,7 @@ shopping_service = ShoppingService(
     sandbox_enabled=settings.app_env.casefold() not in {"production", "prod"},
 )
 support_ticket_store = SupportTicketStore()
+assisted_order_store = AssistedOrderStore()
 speech_ticket_store = SpeechTicketStore()
 logger = logging.getLogger(__name__)
 _ALLERGEN_PRODUCT_CLARIFICATION = "ALLERGEN_PRODUCT_NAME"
@@ -5163,6 +5175,7 @@ def create_session(request: SessionCreateRequest) -> SessionResponse:
 def close_session(session_id: UUID) -> SessionResponse:
     _session_or_http_error(session_id)
     shopping_service.close_session(session_id)
+    assisted_order_store.clear_session(session_id)
     record = session_store.close(session_id)
     try:
         cart_available = bool(getattr(get_product_repository(), "supports_current_stock", False))
@@ -5390,6 +5403,182 @@ def get_support_ticket(session_id: UUID, ticket_id: UUID) -> SupportTicketRespon
         return _support_ticket_response(support_ticket_store.get(session_id, ticket_id))
     except SupportTicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Support ticket not found") from exc
+
+
+def _assisted_order_customer_message(order: AssistedOrderRecord) -> str:
+    total_fmt = f"{order.total_vnd:,}đ".replace(",", ".")
+    if order.notification_status == "DELIVERED" and order.notified_channel:
+        ch = CHANNEL_DISPLAY_LABELS.get(order.notified_channel, {}).get(
+            "vi", order.notified_channel.title()
+        )
+        return (
+            f"Dạ, mình đã gửi đơn hỗ trợ mã #{order.order_code} ({order.item_count} sản phẩm, "
+            f"tạm tính {total_fmt}) qua {ch} tới quản lý cửa hàng rồi ạ. Nhân viên sẽ kiểm tra "
+            "tồn thực tế, hỗ trợ bạn chọn đúng hàng và trao trả ngay nhé!"
+        )
+    if order.notification_status == "FAILED":
+        return (
+            f"Mình đã tạo phiếu chọn hàng mã #{order.order_code} ({order.item_count} sản phẩm, "
+            f"tạm tính {total_fmt}), nhưng tin nhắn tự động tới quản lý hiện chưa gửi được. "
+            "Bạn vui lòng đưa mã đơn này cho nhân viên tại quầy để được hỗ trợ chọn và trao "
+            "hàng ngay nhé."
+        )
+    return (
+        f"Mình đã ghi nhận giỏ chọn hàng mã #{order.order_code} ({order.item_count} sản phẩm, "
+        f"tạm tính {total_fmt}). Hiện kênh nhắn quản lý tự động chưa bật trên môi trường này; "
+        "bạn đưa mã đơn cho nhân viên quầy để được hỗ trợ chọn hàng và trao trả nhé."
+    )
+
+
+def _assisted_order_response(order: AssistedOrderRecord) -> AssistedOrderResponse:
+    return AssistedOrderResponse(
+        order_id=order.order_id,
+        order_code=order.order_code,
+        session_id=order.session_id,
+        kiosk_id=order.kiosk_id,
+        store_name=order.store_name,
+        items=[
+            AssistedOrderItemResponse(
+                product_id=item.product_id,
+                name=item.name,
+                brand=item.brand,
+                category=item.category,
+                uom=item.uom,
+                image_url=item.image_url,
+                unit_price_vnd=item.unit_price_vnd,
+                quantity=item.quantity,
+                line_total_vnd=item.line_total_vnd,
+                shelf_location=item.shelf_location,
+                snapshot_stock=item.snapshot_stock,
+                stock_is_current=item.stock_is_current,
+            )
+            for item in order.items
+        ],
+        item_count=order.item_count,
+        subtotal_vnd=order.subtotal_vnd,
+        total_vnd=order.total_vnd,
+        customer_name=order.customer_name,
+        customer_phone=order.customer_phone,
+        pickup_location=order.pickup_location,
+        customer_note=order.customer_note,
+        status=order.status,
+        ticket_id=order.ticket_id,
+        created_at=order.created_at,
+        data_source=order.data_source,
+        stock_is_current=order.stock_is_current,
+        notified_channel=order.notified_channel,
+        notified_provider=order.notified_provider,
+        notification_status=order.notification_status,
+        notification_detail=order.notification_detail,
+        notified_at=order.notified_at,
+        customer_message=_assisted_order_customer_message(order),
+    )
+
+
+@app.post(
+    "/sessions/{session_id}/assisted-orders",
+    response_model=AssistedOrderResponse,
+    status_code=201,
+)
+async def create_assisted_order(
+    session_id: UUID,
+    request: AssistedOrderCreateRequest,
+    notifier: ManagerNotifierService = Depends(get_manager_notifier_service),
+    runtime_settings: Settings = Depends(get_settings),
+) -> AssistedOrderResponse:
+    record = _session_or_http_error(session_id)
+    repo = get_product_repository(runtime_settings)
+    summary_desc = (
+        f"Đơn giỏ hàng hỗ trợ chọn & trao trả ({len(request.items)} loại sản phẩm)"
+    )
+    try:
+        ticket, _ = support_ticket_store.create_or_get(
+            session_id=session_id,
+            kiosk_id=record.kiosk_id,
+            issue_type=IssueType.OTHER,
+            description=summary_desc,
+            idempotency_key=f"assisted-order-{request.idempotency_key}",
+            target_role="manager",
+        )
+        order, created_new = assisted_order_store.create_or_get(
+            session_id=session_id,
+            kiosk_id=record.kiosk_id,
+            store_name=notifier.settings.store_name,
+            requested_items=[(item.product_id, item.quantity) for item in request.items],
+            repository=repo,
+            ticket_id=ticket.ticket_id,
+            customer_name=request.customer_name,
+            customer_phone=request.customer_phone,
+            pickup_location=request.pickup_location,
+            customer_note=request.customer_note,
+            idempotency_key=request.idempotency_key,
+        )
+    except AssistedOrderProductNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (AssistedOrderIdempotencyConflictError, SupportIdempotencyConflictError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if created_new and notifier.settings.has_manager_notifier:
+        alert_payload = AssistedOrderAlertPayload(
+            order_id=order.order_id,
+            order_code=order.order_code,
+            ticket_id=order.ticket_id,
+            session_id=order.session_id,
+            kiosk_id=order.kiosk_id,
+            store_name=order.store_name,
+            items=tuple(
+                AssistedOrderAlertItem(
+                    product_id=item.product_id,
+                    name=item.name,
+                    quantity=item.quantity,
+                    unit_price_vnd=item.unit_price_vnd,
+                    line_total_vnd=item.line_total_vnd,
+                    uom=item.uom,
+                    shelf_location=item.shelf_location,
+                )
+                for item in order.items
+            ),
+            item_count=order.item_count,
+            total_vnd=order.total_vnd,
+            created_at=order.created_at,
+            customer_name=order.customer_name,
+            customer_phone=order.customer_phone,
+            pickup_location=order.pickup_location,
+            customer_note=order.customer_note,
+            stock_is_current=order.stock_is_current,
+        )
+        notify_result = await notifier.notify_assisted_order(alert_payload)
+        order = assisted_order_store.record_notification(
+            order.order_id,
+            configured=notify_result.configured,
+            delivered=notify_result.delivered,
+            channel=notify_result.channel,
+            provider=notify_result.provider,
+            detail=notify_result.detail,
+            sent_at=notify_result.sent_at,
+        )
+        support_ticket_store.record_notification(
+            ticket.ticket_id,
+            configured=notify_result.configured,
+            delivered=notify_result.delivered,
+            channel=notify_result.channel,
+            provider=notify_result.provider,
+            detail=notify_result.detail,
+            sent_at=notify_result.sent_at,
+        )
+    return _assisted_order_response(order)
+
+
+@app.get(
+    "/sessions/{session_id}/assisted-orders",
+    response_model=list[AssistedOrderResponse],
+)
+def list_assisted_orders(session_id: UUID) -> list[AssistedOrderResponse]:
+    _session_or_http_error(session_id)
+    orders = assisted_order_store.list_for_session(session_id)
+    return [_assisted_order_response(order) for order in orders]
 
 
 def _cart_response(cart) -> CartResponse:
@@ -9808,7 +9997,21 @@ async def agent_respond(
                     # Also guard diacritic-distinct short words like "áo mưa" that collide with
                     # unrelated folded catalog tokens ("tảo", "mùa") when checking stock.
                     native_stock_miss = False
-                    if "stock" in requested_fields and request.language == "vi":
+                    prior_active_ids = set(record.shopping.selected_product_ids)
+                    if record.last_grounded_product_id:
+                        prior_active_ids.add(record.last_grounded_product_id)
+                    matches_prior_product = bool(
+                        prior_active_ids
+                        and any(
+                            p.product_id in prior_active_ids
+                            for p in candidate_observation.products
+                        )
+                    )
+                    if (
+                        "stock" in requested_fields
+                        and request.language == "vi"
+                        and not matches_prior_product
+                    ):
                         native_core = clean_native_shopper_query(
                             re.sub(
                                 r"\b(?:tồn\s+kho|còn\s+hàng|còn\s+tồn|còn\s+bao\s+nhiêu|"

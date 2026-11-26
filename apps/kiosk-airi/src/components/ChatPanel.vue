@@ -7,11 +7,14 @@ import {
   PhBellRinging as BellRinging,
   PhCamera as Camera,
   PhCaretRight as CaretRight,
+  PhCheckCircle as CheckCircle,
   PhImage as ImageIcon,
   PhMicrophone as Microphone,
   PhPause as Pause,
   PhPlus as Plus,
   PhMinus as Minus,
+  PhReceipt as Receipt,
+  PhShoppingBagOpen as ShoppingBagOpen,
   PhShoppingCart as ShoppingCartIcon,
   PhSparkle as Sparkle,
   PhStop as Stop,
@@ -27,6 +30,7 @@ import {
   type PreprocessedMedia,
 } from '../media-preprocess'
 import type {
+  AssistedCartItem,
   AssistantStatus,
   ChatMessage,
   CheckoutQuote,
@@ -50,6 +54,10 @@ const props = defineProps<{
   cart?: ShoppingCart | null
   checkoutQuote?: CheckoutQuote | null
   order?: SandboxOrder | null
+  assistedItems?: AssistedCartItem[]
+  assistedTotalCount?: number
+  assistedTotalVnd?: number
+  assistedOrdersCount?: number
   microphoneLevel?: number
   microphoneDevices?: Array<{ id: string; label: string }>
   selectedMicrophone?: string
@@ -97,6 +105,9 @@ const emit = defineEmits<{
   'clear-order': []
   'end-session': []
   'request-support': []
+  'add-assisted-item': [product: ProductCard]
+  'update-assisted-qty': [productId: string, quantity: number]
+  'open-cart': [tab?: 'cart' | 'orders']
 }>()
 
 const copy = computed(() => {
@@ -258,6 +269,18 @@ const shoppingText = computed(() => {
 
 const visibleCart = computed(() => props.checkoutQuote?.cart ?? props.cart ?? null)
 const visibleOrder = computed(() => props.order ?? null)
+
+const assistedQtyById = computed(() => {
+  const map: Record<string, number> = {}
+  for (const entry of props.assistedItems ?? []) {
+    map[entry.product.product_id] = entry.quantity
+  }
+  return map
+})
+
+function assistedQty(productId: string): number {
+  return assistedQtyById.value[productId] ?? 0
+}
 
 function channelDisplayName(channel: 'zalo' | 'messenger' | 'gmail' | null | undefined) {
   if (channel === 'zalo') return 'Zalo'
@@ -649,6 +672,18 @@ function onKeydown(event: KeyboardEvent) {
           <span>{{ isHandsFree ? 'AUTO' : 'MIC' }}</span>
         </div>
         <span class="voice-mode-chip" lang="vi">Tiếng Việt</span>
+        <button
+          type="button"
+          class="header-cart-button"
+          :class="{ 'has-items': (assistedTotalCount ?? 0) > 0 }"
+          :aria-label="(assistedTotalCount ?? 0) > 0 ? `Mở giỏ hàng (${assistedTotalCount} sản phẩm)` : 'Mở giỏ hàng'"
+          @click="emit('open-cart', (assistedTotalCount ?? 0) === 0 && (assistedOrdersCount ?? 0) > 0 ? 'orders' : 'cart')"
+        >
+          <ShoppingBagOpen :size="15" weight="duotone" aria-hidden="true" />
+          <span>Giỏ hàng</span>
+          <span v-if="(assistedTotalCount ?? 0) > 0" class="header-cart-badge">{{ assistedTotalCount }}</span>
+          <span v-else-if="(assistedOrdersCount ?? 0) > 0" class="header-cart-badge is-orders">{{ assistedOrdersCount }}</span>
+        </button>
         <button type="button" class="end-session-button" @click="emit('end-session')">
           {{ shoppingText.end }}
         </button>
@@ -704,6 +739,34 @@ function onKeydown(event: KeyboardEvent) {
         >
           <strong>{{ supportTicketTitle(message.supportTicket) }}</strong>
           <small>{{ supportTicketSubnote(message.supportTicket) }}</small>
+        </div>
+        <div
+          v-if="message.assistedOrder"
+          class="assisted-order-chat-card"
+          :class="{ 'is-delivered': message.assistedOrder.notification_status === 'DELIVERED' }"
+          role="status"
+        >
+          <div class="assisted-order-chat-head">
+            <div class="assisted-order-chat-title">
+              <CheckCircle :size="18" weight="fill" aria-hidden="true" />
+              <strong>Đơn hỗ trợ #{{ message.assistedOrder.order_code }}</strong>
+            </div>
+            <span class="assisted-order-chat-pill">
+              {{
+                message.assistedOrder.notification_status === 'DELIVERED' && message.assistedOrder.notified_channel
+                  ? `Đã báo ${channelDisplayName(message.assistedOrder.notified_channel)}`
+                  : 'Phiếu tại quầy'
+              }}
+            </span>
+          </div>
+          <p class="assisted-order-chat-meta">
+            {{ message.assistedOrder.item_count }} sản phẩm · Tạm tính {{ formatVnd(message.assistedOrder.total_vnd) }}
+            <template v-if="message.assistedOrder.pickup_location"> · {{ message.assistedOrder.pickup_location }}</template>
+          </p>
+          <button type="button" class="assisted-order-chat-btn" @click="emit('open-cart', 'orders')">
+            <Receipt :size="15" weight="duotone" aria-hidden="true" />
+            <span>Xem chi tiết phiếu chọn hàng</span>
+          </button>
         </div>
         <section v-if="message.shoppingPlan" class="shopping-plan-card" :aria-label="language === 'en' ? 'Suggested shopping plan' : language === 'zh' ? '购物方案建议' : 'Phương án mua sắm gợi ý'">
           <article v-for="option in message.shoppingPlan.options" :key="option.option_id" class="shopping-plan-option">
@@ -780,9 +843,36 @@ function onKeydown(event: KeyboardEvent) {
               <ShoppingCartIcon :size="16" weight="duotone" aria-hidden="true" />
               {{ shoppingText.add }}
             </button>
-            <span v-else class="product-card-view-hint" aria-hidden="true">
-              <CaretRight :size="15" weight="bold" />
-            </span>
+            <div v-else-if="assistedQty(product.product_id) > 0" class="card-cart-stepper" @click.stop>
+              <button
+                type="button"
+                class="card-stepper-btn"
+                :aria-label="`Giảm số lượng ${formatProductName(product.name)}`"
+                @click="emit('update-assisted-qty', product.product_id, assistedQty(product.product_id) - 1)"
+              >
+                <Minus :size="13" weight="bold" aria-hidden="true" />
+              </button>
+              <span class="card-stepper-qty">{{ assistedQty(product.product_id) }}</span>
+              <button
+                type="button"
+                class="card-stepper-btn"
+                :disabled="assistedQty(product.product_id) >= 20"
+                :aria-label="`Tăng số lượng ${formatProductName(product.name)}`"
+                @click="emit('update-assisted-qty', product.product_id, assistedQty(product.product_id) + 1)"
+              >
+                <Plus :size="13" weight="bold" aria-hidden="true" />
+              </button>
+            </div>
+            <button
+              v-else
+              type="button"
+              class="card-cart-btn"
+              :aria-label="`Thêm ${formatProductName(product.name)} vào giỏ hàng`"
+              @click.stop="emit('add-assisted-item', product)"
+            >
+              <Plus :size="14" weight="bold" aria-hidden="true" />
+              <span>Giỏ</span>
+            </button>
           </article>
         </div>
         <div v-if="message.relatedProducts?.length && !message.shoppingPlan" class="message-related-products">
@@ -835,9 +925,36 @@ function onKeydown(event: KeyboardEvent) {
                 <ShoppingCartIcon :size="16" weight="duotone" aria-hidden="true" />
                 {{ shoppingText.add }}
               </button>
-              <span v-else class="product-card-view-hint" aria-hidden="true">
-                <CaretRight :size="15" weight="bold" />
-              </span>
+              <div v-else-if="assistedQty(product.product_id) > 0" class="card-cart-stepper" @click.stop>
+                <button
+                  type="button"
+                  class="card-stepper-btn"
+                  :aria-label="`Giảm số lượng ${formatProductName(product.name)}`"
+                  @click="emit('update-assisted-qty', product.product_id, assistedQty(product.product_id) - 1)"
+                >
+                  <Minus :size="13" weight="bold" aria-hidden="true" />
+                </button>
+                <span class="card-stepper-qty">{{ assistedQty(product.product_id) }}</span>
+                <button
+                  type="button"
+                  class="card-stepper-btn"
+                  :disabled="assistedQty(product.product_id) >= 20"
+                  :aria-label="`Tăng số lượng ${formatProductName(product.name)}`"
+                  @click="emit('update-assisted-qty', product.product_id, assistedQty(product.product_id) + 1)"
+                >
+                  <Plus :size="13" weight="bold" aria-hidden="true" />
+                </button>
+              </div>
+              <button
+                v-else
+                type="button"
+                class="card-cart-btn"
+                :aria-label="`Thêm ${formatProductName(product.name)} vào giỏ hàng`"
+                @click.stop="emit('add-assisted-item', product)"
+              >
+                <Plus :size="14" weight="bold" aria-hidden="true" />
+                <span>Giỏ</span>
+              </button>
             </article>
           </div>
         </div>
@@ -931,6 +1048,30 @@ function onKeydown(event: KeyboardEvent) {
       </div>
       <p class="sandbox-note">{{ language === 'en' ? 'Demo only. No real payment is made.' : language === 'zh' ? '仅供演示，不会进行真实付款。' : 'Chỉ dùng để demo, không phát sinh thanh toán thật.' }}</p>
     </section>
+
+    <div
+      v-if="(assistedTotalCount ?? 0) > 0 && !visibleOrder && !checkoutQuote && !(visibleCart?.items.length)"
+      class="assisted-cart-bar"
+      role="region"
+      aria-label="Tóm tắt giỏ hàng hiện tại"
+    >
+      <button type="button" class="assisted-cart-bar-btn" @click="emit('open-cart', 'cart')">
+        <span class="assisted-cart-bar-left">
+          <span class="assisted-cart-bar-icon">
+            <ShoppingBagOpen :size="18" weight="duotone" aria-hidden="true" />
+            <span class="assisted-cart-bar-count">{{ assistedTotalCount }}</span>
+          </span>
+          <span class="assisted-cart-bar-copy">
+            <strong>{{ assistedTotalCount }} sản phẩm trong giỏ</strong>
+            <small>Tạm tính {{ formatVnd(assistedTotalVnd ?? 0) }}</small>
+          </span>
+        </span>
+        <span class="assisted-cart-bar-cta">
+          <span>Xem giỏ &amp; Mua</span>
+          <CaretRight :size="15" weight="bold" aria-hidden="true" />
+        </span>
+      </button>
+    </div>
 
     <div v-if="errorMessage" class="chat-error" role="alert">
       <div>
@@ -1173,6 +1314,21 @@ function onKeydown(event: KeyboardEvent) {
           </div>
 
           <footer class="product-modal-actions">
+            <button
+              v-if="activeProductModal.data_source !== 'demo_product_catalog'"
+              type="button"
+              class="product-modal-cart-btn"
+              @click="emit('add-assisted-item', activeProductModal)"
+            >
+              <ShoppingBagOpen :size="17" weight="duotone" aria-hidden="true" />
+              <span>
+                {{
+                  assistedQty(activeProductModal.product_id) > 0
+                    ? `Trong giỏ: ${assistedQty(activeProductModal.product_id)} (+1)`
+                    : 'Thêm vào giỏ'
+                }}
+              </span>
+            </button>
             <button
               type="button"
               class="product-modal-ask-btn"
