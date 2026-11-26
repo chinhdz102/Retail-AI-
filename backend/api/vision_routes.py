@@ -26,7 +26,6 @@ from backend.services.product_vision import (
     format_vision_reply,
     is_default_identify_question,
 )
-from backend.services.sessions import SessionClosedError, SessionExpiredError, SessionNotFoundError
 from backend.shared.contracts import IntentType, SessionState
 
 logger = logging.getLogger(__name__)
@@ -58,11 +57,9 @@ async def respond_to_product_image(
     started = perf_counter()
     try:
         parsed_session_id = UUID(session_id)
-        api_main.session_store.get(parsed_session_id)
-    except (ValueError, SessionNotFoundError) as exc:
+    except ValueError as exc:
         raise HTTPException(status_code=404, detail="Session not found") from exc
-    except (SessionClosedError, SessionExpiredError) as exc:
-        raise HTTPException(status_code=409, detail="Session is no longer active") from exc
+    api_main._session_or_http_error(parsed_session_id)
 
     content_type = (file.content_type or "").split(";")[0].strip().lower()
     filename_lower = (file.filename or "").strip().lower()

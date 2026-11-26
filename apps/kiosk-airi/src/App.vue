@@ -193,6 +193,7 @@ let activeTurnFromVoice = false
 let voiceTurnEpoch = 0
 let streamingSttAvailable: boolean | undefined
 let directAzureSttAvailable = false
+let hasOpenedMicrophoneOnce = false
 const autoSwitchedMicIds = new Set<string>()
 let bargeInCandidateAbort: AbortController | null = null
 
@@ -468,6 +469,7 @@ function handleVoiceState(state: VoiceState) {
   isVoiceActive.value = state.mode !== 'idle'
   isRecording.value = state.phase === 'recording'
   if (state.phase === 'listening') {
+    hasOpenedMicrophoneOnce = true
     maybePrewarmSpeech()
     listeningStartedAt = Date.now()
     void refreshMicrophones()
@@ -839,11 +841,15 @@ async function startHandsFree() {
     void warmAzureDirectStt(sessionId.value)
     void warmDirectAzureTts(sessionId.value)
   }
-  voiceHint.value = language.value === 'en'
-    ? 'Opening the microphone. Allow microphone access if your browser asks.'
-    : language.value === 'zh'
-      ? '正在打开麦克风。如果浏览器询问，请允许使用麦克风。'
-      : 'Đang mở micro. Hãy cho phép dùng micro nếu trình duyệt hỏi.'
+  voiceHint.value = hasOpenedMicrophoneOnce
+    ? languageSettings[language.value].listening
+    : (
+      language.value === 'en'
+        ? 'Opening the microphone. Allow microphone access if your browser asks.'
+        : language.value === 'zh'
+          ? '正在打开麦克风。如果浏览器询问，请允许使用麦克风。'
+          : 'Đang mở micro. Hãy cho phép dùng micro nếu trình duyệt hỏi.'
+    )
   try {
     await ensureVoiceController().start()
   } catch (error) {
@@ -1468,11 +1474,15 @@ async function bootKiosk() {
       streamingSttAvailable = session.streaming_stt_available
       directAzureSttAvailable = Boolean(session.direct_azure_stt_available)
       const expiresAt = Date.parse(session.expires_at)
+      const remainingMs = Number.isFinite(expiresAt) ? expiresAt - Date.now() : 30 * 60 * 1000
+      // Guard against client clocks ahead of UTC triggering an instant 0ms reset loop on boot.
+      sessionIdleTimeoutMs = remainingMs > 5_000 ? remainingMs : 30 * 60 * 1000
       if (Number.isFinite(expiresAt)) {
-        sessionIdleTimeoutMs = Math.max(1_000, expiresAt - Date.now())
-        scheduleSessionExpiry(session.expires_at)
-      } else {
-        sessionIdleTimeoutMs = 30 * 60 * 1000
+        scheduleSessionExpiry(
+          remainingMs > 5_000
+            ? session.expires_at
+            : new Date(Date.now() + sessionIdleTimeoutMs).toISOString(),
+        )
       }
       if (generation === sessionGeneration && sessionId.value === session.session_id) {
         voiceHint.value = languageSettings[language.value].ready
