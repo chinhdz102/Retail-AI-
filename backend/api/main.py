@@ -38,6 +38,7 @@ from backend.api.schemas import (
     PayOSSyncRequest,
     ProductCardResponse,
     ProductCatalogBrowseResponse,
+    ProductCatalogIndexResponse,
     ProductSearchResponse,
     SandboxOrderResponse,
     SandboxPaymentRequest,
@@ -6335,40 +6336,29 @@ def _fold_catalog_text(value: str) -> str:
     return " ".join(stripped.casefold().split())
 
 
-@app.get("/products/catalog", response_model=ProductCatalogBrowseResponse)
-def browse_product_catalog(
-    department: str | None = None,
-    category: str | None = None,
-    q: str = "",
-    sort: str = "popular",
-    offset: int = 0,
-    limit: int = 24,
-) -> ProductCatalogBrowseResponse:
-    if offset < 0:
-        raise HTTPException(status_code=422, detail="offset must be non-negative")
-    if limit < 1 or limit > 60:
-        raise HTTPException(status_code=422, detail="limit must be between 1 and 60")
-    if sort not in {"popular", "price_asc", "price_desc", "promo", "name"}:
-        raise HTTPException(status_code=422, detail="Unsupported sort mode")
+_CATALOG_INDEX_CACHE: dict[tuple[str, int, int, bool], dict[str, object]] = {}
 
-    repository = get_product_repository()
-    try:
-        all_products = _catalog_all_products(repository)
-    except (OSError, asyncpg.PostgresError) as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="Product catalog is temporarily unavailable",
-        ) from exc
 
+def _get_compiled_catalog_index(repository: ProductRepository) -> dict[str, object]:
+    all_products = _catalog_all_products(repository)
+    settings = get_settings()
+    use_demo_sales = bool(settings.demo_sales_enabled and settings.app_env == "development")
+    first_id = all_products[0].product_id if all_products else ""
+    cache_key = (repository.source_name, len(all_products), hash(first_id), use_demo_sales)
+    cached = _CATALOG_INDEX_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    demo_counts = get_demo_sales_store(settings).counts() if use_demo_sales else {}
     dept_sub_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     dept_totals: dict[str, int] = defaultdict(int)
-    product_depts: list[tuple[ProductSnapshot, str]] = []
+    raw_entries: list[tuple[ProductSnapshot, str, str]] = []
     for prod in all_products:
         dept = _catalog_department_label(prod)
         sub = (prod.category or "Khác").strip() or "Khác"
         dept_totals[dept] += 1
         dept_sub_counts[dept][sub] += 1
-        product_depts.append((prod, dept))
+        raw_entries.append((prod, dept, sub))
 
     departments = [
         CatalogDepartmentSummary(
@@ -6387,71 +6377,159 @@ def browse_product_catalog(
             key=lambda kv: (-kv[1], kv[0].casefold()),
         )
     ]
+    dept_index_by_name = {d.name: idx for idx, d in enumerate(departments)}
 
+    compiled_entries: list[tuple[ProductSnapshot, str, str, str, str, float, int, int]] = []
+    for prod, dept, sub in raw_entries:
+        discount = (
+            (prod.list_price_vnd - prod.price_vnd) / prod.list_price_vnd
+            if prod.list_price_vnd and prod.list_price_vnd > prod.price_vnd
+            else (0.01 if prod.promotion else 0.0)
+        )
+        sold = demo_counts.get(prod.product_id, 0)
+        has_img = 0 if _safe_product_image_url(prod.image_url) else 1
+        haystack = _fold_catalog_text(f"{prod.name} {prod.brand or ''} {sub} {dept}")
+        compiled_entries.append(
+            (prod, dept, dept.casefold(), sub.casefold(), haystack, discount, sold, has_img)
+        )
+
+    # Default popular order: crisp photos first, then demo best-sellers, then promos, then name.
+    compiled_entries.sort(
+        key=lambda e: (e[7], -e[6], 0 if e[5] > 0 else 1, e[0].name.casefold(), e[0].product_id)
+    )
+
+    compact_rows: list[list[object]] = []
+    for prod, dept, _df, _cf, _hay, _disc, sold, _img_rank in compiled_entries:
+        list_price = (
+            prod.list_price_vnd
+            if prod.list_price_vnd and prod.list_price_vnd > prod.price_vnd
+            else None
+        )
+        compact_rows.append(
+            [
+                prod.product_id,
+                prod.name,
+                dept_index_by_name[dept],
+                prod.category,
+                prod.brand,
+                prod.price_vnd,
+                list_price,
+                prod.promotion,
+                prod.shelf,
+                _safe_product_image_url(prod.image_url),
+                prod.sellable_stock if prod.stock_is_current else prod.stock,
+                prod.uom,
+                sold if use_demo_sales and prod.product_id in demo_counts else None,
+            ]
+        )
+
+    timestamp = max((item.data_timestamp for item in all_products), default=DATA_TIMESTAMP)
+    stock_is_current = bool(getattr(repository, "supports_current_stock", False))
+    compiled = {
+        "total": len(all_products),
+        "data_source": repository.source_name,
+        "stock_is_current": stock_is_current,
+        "data_timestamp": timestamp,
+        "departments": departments,
+        "entries": compiled_entries,
+        "compact_rows": compact_rows,
+    }
+    if len(_CATALOG_INDEX_CACHE) > 8:
+        _CATALOG_INDEX_CACHE.clear()
+    _CATALOG_INDEX_CACHE[cache_key] = compiled
+    return compiled
+
+
+@app.get("/products/catalog/index", response_model=ProductCatalogIndexResponse)
+def product_catalog_index(response: Response) -> ProductCatalogIndexResponse:
+    """Return a single compact, Edge-CDN-cached index of all catalog products (~135 KB gzip)."""
+    repository = get_product_repository()
+    try:
+        compiled = _get_compiled_catalog_index(repository)
+    except (OSError, asyncpg.PostgresError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Product catalog is temporarily unavailable",
+        ) from exc
+    response.headers["Cache-Control"] = (
+        "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400"
+    )
+    return ProductCatalogIndexResponse(
+        total=int(compiled["total"]),
+        data_source=str(compiled["data_source"]),
+        stock_is_current=bool(compiled["stock_is_current"]),
+        data_timestamp=compiled["data_timestamp"],
+        departments=compiled["departments"],
+        rows=compiled["compact_rows"],
+    )
+
+
+@app.get("/products/catalog", response_model=ProductCatalogBrowseResponse)
+def browse_product_catalog(
+    response: Response,
+    department: str | None = None,
+    category: str | None = None,
+    q: str = "",
+    sort: str = "popular",
+    offset: int = 0,
+    limit: int = 24,
+) -> ProductCatalogBrowseResponse:
+    if offset < 0:
+        raise HTTPException(status_code=422, detail="offset must be non-negative")
+    if limit < 1 or limit > 60:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 60")
+    if sort not in {"popular", "price_asc", "price_desc", "promo", "name"}:
+        raise HTTPException(status_code=422, detail="Unsupported sort mode")
+
+    repository = get_product_repository()
+    try:
+        compiled = _get_compiled_catalog_index(repository)
+    except (OSError, asyncpg.PostgresError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Product catalog is temporarily unavailable",
+        ) from exc
+
+    departments: list[CatalogDepartmentSummary] = compiled["departments"]
+    entries = compiled["entries"]
     dept_filter = department.strip().casefold() if department and department.strip() else None
     cat_filter = category.strip().casefold() if category and category.strip() else None
     q_tokens = _fold_catalog_text(q).split() if q and q.strip() else []
 
-    filtered: list[ProductSnapshot] = []
+    filtered = []
     resolved_dept: str | None = None
     resolved_cat: str | None = None
-    for prod, dept in product_depts:
-        if dept_filter and dept.casefold() != dept_filter:
+    for entry in entries:
+        prod, dept, dept_fold, cat_fold, haystack, _disc, _sold, _img_rank = entry
+        if dept_filter and dept_fold != dept_filter:
             continue
-        if cat_filter and (prod.category or "").strip().casefold() != cat_filter:
+        if cat_filter and cat_fold != cat_filter:
             continue
-        if q_tokens:
-            haystack = _fold_catalog_text(
-                f"{prod.name} {prod.brand or ''} {prod.category} {dept}"
-            )
-            if not all(tok in haystack for tok in q_tokens):
-                continue
+        if q_tokens and not all(tok in haystack for tok in q_tokens):
+            continue
         if dept_filter and resolved_dept is None:
             resolved_dept = dept
         if cat_filter and resolved_cat is None:
             resolved_cat = prod.category
-        filtered.append(prod)
-
-    settings = get_settings()
-    demo_counts: dict[str, int] = {}
-    if settings.demo_sales_enabled and settings.app_env == "development":
-        demo_counts = get_demo_sales_store(settings).counts()
-
-    def _discount_ratio(p: ProductSnapshot) -> float:
-        if p.list_price_vnd and p.list_price_vnd > p.price_vnd:
-            return (p.list_price_vnd - p.price_vnd) / p.list_price_vnd
-        return 0.01 if p.promotion else 0.0
+        filtered.append(entry)
 
     if sort == "price_asc":
-        filtered.sort(key=lambda p: (p.price_vnd, p.name.casefold(), p.product_id))
+        filtered.sort(key=lambda e: (e[0].price_vnd, e[0].name.casefold(), e[0].product_id))
     elif sort == "price_desc":
-        filtered.sort(key=lambda p: (-p.price_vnd, p.name.casefold(), p.product_id))
+        filtered.sort(key=lambda e: (-e[0].price_vnd, e[0].name.casefold(), e[0].product_id))
     elif sort == "name":
-        filtered.sort(key=lambda p: (p.name.casefold(), p.product_id))
+        filtered.sort(key=lambda e: (e[0].name.casefold(), e[0].product_id))
     elif sort == "promo":
-        filtered.sort(
-            key=lambda p: (
-                -_discount_ratio(p),
-                -demo_counts.get(p.product_id, 0),
-                p.name.casefold(),
-            )
-        )
-    else:
-        filtered.sort(
-            key=lambda p: (
-                0 if _safe_product_image_url(p.image_url) else 1,
-                -demo_counts.get(p.product_id, 0),
-                0 if _discount_ratio(p) > 0 else 1,
-                p.name.casefold(),
-            )
-        )
+        filtered.sort(key=lambda e: (-e[5], -e[6], e[0].name.casefold()))
 
     total = len(filtered)
-    page = filtered[offset : offset + limit]
-    timestamp = max((item.data_timestamp for item in all_products), default=DATA_TIMESTAMP)
+    page = [entry[0] for entry in filtered[offset : offset + limit]]
+    response.headers["Cache-Control"] = (
+        "public, max-age=60, s-maxage=300, stale-while-revalidate=3600"
+    )
     return ProductCatalogBrowseResponse(
         total=total,
-        total_catalog=len(all_products),
+        total_catalog=int(compiled["total"]),
         offset=offset,
         limit=limit,
         has_more=(offset + len(page)) < total,
@@ -6459,7 +6537,7 @@ def browse_product_catalog(
         active_category=resolved_cat or (category.strip() if category else None),
         departments=departments,
         items=[_product_card(p) for p in page],
-        data_timestamp=timestamp,
+        data_timestamp=compiled["data_timestamp"],
     )
 
 

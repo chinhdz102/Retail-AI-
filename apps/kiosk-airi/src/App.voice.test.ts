@@ -39,6 +39,10 @@ const apiMocks = vi.hoisted(() => ({
     active_department: null, active_category: null, departments: [], items: [],
     data_timestamp: new Date().toISOString(),
   }),
+  fetchProductCatalogIndex: vi.fn().mockResolvedValue({
+    total: 0, data_source: 'thanh_lam_json_snapshot', stock_is_current: false,
+    data_timestamp: new Date().toISOString(), departments: [], rows: [],
+  }),
 }))
 
 const controllerStore = vi.hoisted(() => ({ current: null as any }))

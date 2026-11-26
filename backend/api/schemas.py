@@ -440,6 +440,15 @@ class ProductCatalogBrowseResponse(BaseModel):
     data_timestamp: datetime
 
 
+class ProductCatalogIndexResponse(BaseModel):
+    total: int
+    data_source: str
+    stock_is_current: bool = False
+    data_timestamp: datetime
+    departments: list[CatalogDepartmentSummary] = Field(default_factory=list)
+    rows: list[list[object]] = Field(default_factory=list)
+
+
 class TranscriptionCorrection(BaseModel):
     """A bounded, opt-in explanation of catalog post-processing."""
 

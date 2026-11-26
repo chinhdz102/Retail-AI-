@@ -23,6 +23,7 @@ import {
   createRequestId,
   createSession,
   createSynthesisTicket,
+  fetchProductCatalogIndex,
   getCart,
   getManagerNotifierStatus,
   getPayOSStatus,
@@ -87,6 +88,7 @@ const payosEnabled = ref(false)
 const assistedOrderError = ref<string | null>(null)
 const cartToastMessage = ref<string | null>(null)
 let cartToastTimer: ReturnType<typeof setTimeout> | undefined
+let catalogPrefetchTimer: ReturnType<typeof setTimeout> | undefined
 let payosPollTimer: ReturnType<typeof setInterval> | undefined
 
 const assistedTotalCount = computed(() =>
@@ -1807,6 +1809,13 @@ function handleOpenCart(tab: 'cart' | 'orders' = 'cart') {
   isCartOpen.value = true
 }
 
+function prefetchCatalogInBackground() {
+  if (typeof fetchProductCatalogIndex !== 'function') return
+  void fetchProductCatalogIndex().catch(() => {
+    // Prefetch is best-effort; modal retries automatically on open.
+  })
+}
+
 function handleOpenCatalog() {
   isCartOpen.value = false
   isCatalogOpen.value = true
@@ -2199,6 +2208,9 @@ onMounted(() => {
         // PayOS status is optional; counter checkout stays available.
       })
   }
+  catalogPrefetchTimer = setTimeout(() => {
+    if (!isUnmounted) prefetchCatalogInBackground()
+  }, 1_200)
   const searchParams = new URLSearchParams(window.location.search)
   const payosResult = searchParams.get('payos')
   const returnedOrderCode = Number(searchParams.get('orderCode') || searchParams.get('payosOrderCode') || 0)
@@ -2267,6 +2279,7 @@ onUnmounted(() => {
   const closingSessionId = sessionId.value
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   if (cartToastTimer) clearTimeout(cartToastTimer)
+  if (catalogPrefetchTimer) clearTimeout(catalogPrefetchTimer)
   stopPayOSPolling()
   navigator.mediaDevices?.removeEventListener?.('devicechange', refreshMicrophones)
   voiceController?.stop()
@@ -2319,6 +2332,7 @@ onUnmounted(() => {
         type="button"
         class="corner-action-btn is-catalog"
         aria-label="Xem tất cả sản phẩm theo danh mục"
+        @pointerenter="prefetchCatalogInBackground"
         @click="handleOpenCatalog"
       >
         <SquaresFour :size="18" weight="duotone" aria-hidden="true" />
@@ -2354,6 +2368,7 @@ onUnmounted(() => {
         :speech-source="speechSourceMode"
         :speech-boundary-token="speechBoundaryToken"
         :speech-boundary-word="speechBoundaryWord"
+        :paused="isCatalogOpen || isCartOpen"
       />
 
       <div class="voice-feedback" role="status" aria-live="polite">

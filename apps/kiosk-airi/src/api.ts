@@ -8,6 +8,7 @@ import type {
   ManagerNotifierStatus,
   PayOSStatus,
   ProductCatalogBrowseResponse,
+  ProductCatalogIndexResponse,
   SandboxOrder,
   ShoppingCart,
   ProductSearchResponse,
@@ -440,6 +441,22 @@ export function browseProductCatalog(options: {
     { signal: options.signal },
     15_000,
   )
+}
+
+let catalogIndexPromise: Promise<ProductCatalogIndexResponse> | null = null
+
+export function fetchProductCatalogIndex(): Promise<ProductCatalogIndexResponse> {
+  if (!catalogIndexPromise) {
+    catalogIndexPromise = request<ProductCatalogIndexResponse>(
+      '/products/catalog/index',
+      undefined,
+      15_000,
+    ).catch((err) => {
+      catalogIndexPromise = null
+      throw err
+    })
+  }
+  return catalogIndexPromise
 }
 
 export function getManagerNotifierStatus(): Promise<ManagerNotifierStatus> {

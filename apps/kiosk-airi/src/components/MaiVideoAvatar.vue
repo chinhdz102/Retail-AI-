@@ -35,6 +35,7 @@ const props = withDefaults(defineProps<{
   poster?: string
   videoBase?: string
   enabled?: boolean
+  paused?: boolean
 }>(), {
   state: 'idle',
   audioPlaying: undefined,
@@ -46,6 +47,7 @@ const props = withDefaults(defineProps<{
   poster: '/avatars/mai-closed-mouth-reference.webp',
   videoBase: '/avatars/mai-clip-v4',
   enabled: true,
+  paused: false,
 })
 
 const videoRefs = ref<Partial<Record<AvatarClipKey, HTMLVideoElement | null>>>({})
@@ -101,7 +103,7 @@ const hasPlayableVideo = computed(() =>
 )
 
 const isLipSyncCanvasVisible = computed(() =>
-  hasPlayableVideo.value && activeClipKey.value === 'speaking' && isLipSyncAssetsReady.value,
+  !props.paused && hasPlayableVideo.value && activeClipKey.value === 'speaking' && isLipSyncAssetsReady.value,
 )
 
 function clipSrc(key: AvatarClipKey, suffix: string): string {
@@ -126,7 +128,7 @@ function configureMuted(element: HTMLVideoElement) {
 }
 
 function playClip(key: AvatarClipKey) {
-  if (!props.enabled || reducedMotion.value || failedClips.value[key]) return
+  if (!props.enabled || props.paused || reducedMotion.value || failedClips.value[key]) return
   const element = videoRefs.value[key]
   if (!element) return
   configureMuted(element)
@@ -331,6 +333,14 @@ async function loadLipSyncAssets() {
 
 function syncPlayback(previousKey?: AvatarClipKey) {
   if (!props.enabled) return
+  if (props.paused) {
+    stopLipSyncLoop()
+    for (const { key } of CLIP_FILES) {
+      clearPauseTimer(key)
+      videoRefs.value[key]?.pause()
+    }
+    return
+  }
   const targetKey = activeClipKey.value
 
   clearPauseTimer(targetKey)
@@ -367,7 +377,7 @@ function syncPlayback(previousKey?: AvatarClipKey) {
 }
 
 function handleClipCanPlay(key: AvatarClipKey) {
-  if (key === activeClipKey.value && !reducedMotion.value) {
+  if (key === activeClipKey.value && !props.paused && !reducedMotion.value) {
     playClip(key)
   }
 }
@@ -416,6 +426,13 @@ watch(
         startLipSyncLoop()
       }
     }
+  },
+)
+
+watch(
+  () => props.paused,
+  () => {
+    syncPlayback()
   },
 )
 

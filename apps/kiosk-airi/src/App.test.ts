@@ -48,6 +48,14 @@ const apiMocks = vi.hoisted(() => ({
     items: [],
     data_timestamp: new Date().toISOString(),
   }),
+  fetchProductCatalogIndex: vi.fn().mockResolvedValue({
+    total: 0,
+    data_source: 'thanh_lam_json_snapshot',
+    stock_is_current: false,
+    data_timestamp: new Date().toISOString(),
+    departments: [],
+    rows: [],
+  }),
 }))
 
 const vadMocks = vi.hoisted(() => ({ stream: null as MediaStream | null }))

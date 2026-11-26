@@ -258,6 +258,31 @@ export interface ProductCatalogBrowseResponse {
   data_timestamp: string
 }
 
+export type CompactCatalogRow = [
+  string,          // 0: product_id
+  string,          // 1: name
+  number,          // 2: dept_idx
+  string,          // 3: category
+  string | null,   // 4: brand
+  number,          // 5: price_vnd
+  number | null,   // 6: list_price_vnd
+  string | null,   // 7: promotion
+  string | null,   // 8: shelf
+  string | null,   // 9: image_url
+  number,          // 10: stock
+  string | null,   // 11: uom
+  number | null,   // 12: demo_units_sold_30d
+]
+
+export interface ProductCatalogIndexResponse {
+  total: number
+  data_source: string
+  stock_is_current: boolean
+  data_timestamp: string
+  departments: CatalogDepartmentSummary[]
+  rows: CompactCatalogRow[]
+}
+
 export interface AssistedOrderCreatePayload {
   items: Array<{ product_id: string; quantity: number }>
   payment_method?: 'counter' | 'payos'

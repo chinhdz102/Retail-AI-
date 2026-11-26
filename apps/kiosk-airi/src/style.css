@@ -3112,9 +3112,7 @@ textarea {
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgb(4 8 15 / 0.78);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgb(4 8 15 / 0.86);
 }
 
 .product-modal-card {
@@ -3767,9 +3765,7 @@ textarea {
   justify-content: flex-end;
   align-items: stretch;
   padding: 16px;
-  background: rgb(3 8 16 / 0.72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgb(3 8 16 / 0.84);
 }
 
 .cart-sheet {
@@ -5071,9 +5067,7 @@ textarea {
   display: grid;
   place-items: center;
   padding: 18px;
-  background: rgb(3 8 16 / 0.76);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgb(3 8 16 / 0.88);
 }
 
 .catalog-modal {
@@ -5320,6 +5314,7 @@ textarea {
   flex-direction: column;
   gap: 4px;
   overscroll-behavior: contain;
+  will-change: scroll-position;
 }
 
 .catalog-dept-btn {
@@ -5384,6 +5379,7 @@ textarea {
   gap: 12px;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
 }
 
 .catalog-subcats {
@@ -5465,12 +5461,14 @@ textarea {
   border-radius: 16px;
   border: 1px solid var(--cat-line);
   background: var(--cat-surface);
-  transition: border-color 160ms ease, transform 160ms ease;
+  contain: layout style paint;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 272px;
+  transition: border-color 120ms ease;
 }
 
 .catalog-card:hover {
-  border-color: rgb(103 232 249 / 0.4);
-  transform: translateY(-1px);
+  border-color: rgb(103 232 249 / 0.42);
 }
 
 .catalog-card-media {
@@ -5732,22 +5730,12 @@ textarea {
 
 .catalog-modal-enter-active,
 .catalog-modal-leave-active {
-  transition: opacity 180ms ease;
-}
-
-.catalog-modal-enter-active .catalog-modal,
-.catalog-modal-leave-active .catalog-modal {
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 140ms ease;
 }
 
 .catalog-modal-enter-from,
 .catalog-modal-leave-to {
   opacity: 0;
-}
-
-.catalog-modal-enter-from .catalog-modal,
-.catalog-modal-leave-to .catalog-modal {
-  transform: translateY(16px) scale(0.985);
 }
 
 @media (max-width: 768px) {
@@ -5855,6 +5843,10 @@ textarea {
   .catalog-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+  }
+
+  .catalog-card {
+    contain-intrinsic-size: auto 244px;
   }
 
   .catalog-card-media {

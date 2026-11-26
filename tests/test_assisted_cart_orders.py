@@ -574,6 +574,19 @@ async def test_browse_product_catalog_departments_subcategories_search_and_pagin
         # Accent-insensitive keyword search across all products
         q_resp = await client.get("/products/catalog", params={"q": "coca zero", "limit": 10})
         assert q_resp.status_code == 200
+        assert "s-maxage=300" in q_resp.headers.get("cache-control", "")
         q_data = q_resp.json()
         assert q_data["total"] >= 1
         assert any("coca" in item["name"].lower() for item in q_data["items"])
+
+        # Compact full-catalog index endpoint for 0ms client-side filtering + Edge CDN caching
+        idx_resp = await client.get("/products/catalog/index")
+        assert idx_resp.status_code == 200, idx_resp.text
+        assert "s-maxage=3600" in idx_resp.headers.get("cache-control", "")
+        idx_data = idx_resp.json()
+        assert idx_data["total"] == len(snapshot.products)
+        assert len(idx_data["rows"]) == len(snapshot.products)
+        assert len(idx_data["departments"]) >= 15
+        first_row = idx_data["rows"][0]
+        assert len(first_row) == 13
+        assert isinstance(first_row[0], str) and isinstance(first_row[5], int)

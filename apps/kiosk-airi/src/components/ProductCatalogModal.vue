@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import {
   PhArrowDown as ArrowDown,
   PhCaretRight as CaretRight,
@@ -16,14 +16,33 @@ import {
   PhX as CloseIcon,
 } from '@phosphor-icons/vue'
 
-import { browseProductCatalog } from '../api'
+import { browseProductCatalog, fetchProductCatalogIndex } from '../api'
 import type {
   AssistedCartItem,
   CatalogDepartmentSummary,
   CatalogSortMode,
   LanguageCode,
   ProductCard,
+  ProductCatalogIndexResponse,
 } from '../types'
+
+interface IndexedCatalogItem {
+  product: ProductCard
+  deptName: string
+  categoryName: string
+  searchText: string
+  discountRatio: number
+  sold: number
+  cleanTitle: string
+}
+
+interface CompiledClientCatalog {
+  totalCatalog: number
+  departments: CatalogDepartmentSummary[]
+  all: IndexedCatalogItem[]
+  byDept: Map<string, IndexedCatalogItem[]>
+  byDeptCat: Map<string, IndexedCatalogItem[]>
+}
 
 const props = defineProps<{
   open: boolean
@@ -41,12 +60,15 @@ const emit = defineEmits<{
   'ask-mai': [prompt: string]
 }>()
 
-const PAGE_SIZE = 24
-const departments = ref<CatalogDepartmentSummary[]>([])
-const items = ref<ProductCard[]>([])
-const total = ref(0)
-const totalCatalog = ref(0)
-const hasMore = ref(false)
+const BATCH_SIZE = 16
+const departments = shallowRef<CatalogDepartmentSummary[]>([])
+const localCatalog = shallowRef<CompiledClientCatalog | null>(null)
+const remoteItems = shallowRef<ProductCard[]>([])
+const remoteTotal = ref(0)
+const remoteTotalCatalog = ref(0)
+const remoteHasMore = ref(false)
+const visibleLimit = ref(BATCH_SIZE)
+
 const activeDepartment = ref<string | null>(null)
 const activeCategory = ref<string | null>(null)
 const searchQuery = ref('')
@@ -57,10 +79,12 @@ const loadError = ref<string | null>(null)
 const brokenImages = ref<Record<string, boolean>>({})
 const detailProduct = ref<ProductCard | null>(null)
 const gridScrollRef = ref<HTMLElement | null>(null)
+const loadMoreSentinel = ref<HTMLElement | null>(null)
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined
 let activeRequestSeq = 0
 let activeAbortController: AbortController | null = null
+let sentinelObserver: IntersectionObserver | null = null
 
 const sortOptions: Array<{ value: CatalogSortMode; label: string }> = [
   { value: 'popular', label: 'Bán chạy' },
@@ -68,6 +92,89 @@ const sortOptions: Array<{ value: CatalogSortMode; label: string }> = [
   { value: 'price_asc', label: 'Giá thấp → cao' },
   { value: 'price_desc', label: 'Giá cao → thấp' },
 ]
+
+function foldSearchText(value: string): string {
+  return value
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function compileClientCatalog(raw: ProductCatalogIndexResponse): CompiledClientCatalog {
+  const all: IndexedCatalogItem[] = new Array(raw.rows.length)
+  const byDept = new Map<string, IndexedCatalogItem[]>()
+  const byDeptCat = new Map<string, IndexedCatalogItem[]>()
+
+  for (let i = 0; i < raw.rows.length; i += 1) {
+    const row = raw.rows[i]
+    const deptName = raw.departments[row[2]]?.name ?? row[3] ?? 'Khác'
+    const price = row[5]
+    const listPrice = row[6]
+    const promo = row[7]
+    const sold = row[12] ?? 0
+    const product: ProductCard = {
+      product_id: row[0],
+      name: row[1],
+      category: row[3],
+      brand: row[4],
+      price_vnd: price,
+      list_price_vnd: listPrice,
+      promotion: promo,
+      shelf: row[8],
+      image_url: row[9],
+      stock: row[10],
+      stock_is_current: raw.stock_is_current,
+      uom: row[11],
+      data_timestamp: raw.data_timestamp,
+      data_source: raw.data_source,
+      demo_units_sold_30d: row[12],
+      sales_data_source: row[12] !== null ? 'SIMULATED' : null,
+    }
+    const discountRatio =
+      listPrice && listPrice > price
+        ? (listPrice - price) / listPrice
+        : promo
+          ? 0.01
+          : 0
+    const entry: IndexedCatalogItem = {
+      product,
+      deptName,
+      categoryName: row[3],
+      searchText: foldSearchText(`${row[1]} ${row[4] ?? ''} ${row[3]} ${deptName}`),
+      discountRatio,
+      sold,
+      cleanTitle: row[1].replace(/\s+/g, ' ').trim(),
+    }
+    all[i] = entry
+
+    let deptBucket = byDept.get(deptName)
+    if (!deptBucket) {
+      deptBucket = []
+      byDept.set(deptName, deptBucket)
+    }
+    deptBucket.push(entry)
+
+    const dcKey = `${deptName}\u0000${row[3]}`
+    let catBucket = byDeptCat.get(dcKey)
+    if (!catBucket) {
+      catBucket = []
+      byDeptCat.set(dcKey, catBucket)
+    }
+    catBucket.push(entry)
+  }
+
+  return {
+    totalCatalog: raw.total,
+    departments: raw.departments,
+    all,
+    byDept,
+    byDeptCat,
+  }
+}
 
 const qtyByProductId = computed(() => {
   const map: Record<string, number> = {}
@@ -87,6 +194,68 @@ const visibleSubcategories = computed(() => {
   if (!dept || dept.subcategories.length <= 1) return []
   return dept.subcategories
 })
+
+const localFilteredList = computed<IndexedCatalogItem[]>(() => {
+  const catalog = localCatalog.value
+  if (!catalog) return []
+
+  let base: IndexedCatalogItem[]
+  if (activeDepartment.value && activeCategory.value) {
+    base = catalog.byDeptCat.get(`${activeDepartment.value}\u0000${activeCategory.value}`) ?? []
+  } else if (activeDepartment.value) {
+    base = catalog.byDept.get(activeDepartment.value) ?? []
+  } else {
+    base = catalog.all
+  }
+
+  const q = foldSearchText(searchQuery.value)
+  let filtered = base
+  if (q) {
+    const tokens = q.split(' ')
+    filtered = base.filter((entry) => {
+      for (let i = 0; i < tokens.length; i += 1) {
+        if (!entry.searchText.includes(tokens[i])) return false
+      }
+      return true
+    })
+  }
+
+  if (sortMode.value === 'popular') {
+    return filtered
+  }
+  const sorted = filtered.slice()
+  if (sortMode.value === 'price_asc') {
+    sorted.sort((a, b) => a.product.price_vnd - b.product.price_vnd)
+  } else if (sortMode.value === 'price_desc') {
+    sorted.sort((a, b) => b.product.price_vnd - a.product.price_vnd)
+  } else if (sortMode.value === 'promo') {
+    sorted.sort((a, b) => (b.discountRatio - a.discountRatio) || (b.sold - a.sold))
+  } else {
+    sorted.sort((a, b) => a.cleanTitle.localeCompare(b.cleanTitle, 'vi'))
+  }
+  return sorted
+})
+
+const totalCatalog = computed(() =>
+  localCatalog.value ? localCatalog.value.totalCatalog : remoteTotalCatalog.value,
+)
+
+const total = computed(() =>
+  localCatalog.value ? localFilteredList.value.length : remoteTotal.value,
+)
+
+const visibleItems = computed<ProductCard[]>(() => {
+  if (localCatalog.value) {
+    return localFilteredList.value.slice(0, visibleLimit.value).map((entry) => entry.product)
+  }
+  return remoteItems.value
+})
+
+const hasMore = computed(() =>
+  localCatalog.value
+    ? visibleLimit.value < localFilteredList.value.length
+    : remoteHasMore.value,
+)
 
 function qtyOf(productId: string): number {
   return qtyByProductId.value[productId] ?? 0
@@ -116,7 +285,35 @@ function discountPercent(product: ProductCard): number | null {
   return pct >= 2 ? pct : null
 }
 
-async function fetchCatalog(append = false) {
+function resetGridScroll() {
+  visibleLimit.value = BATCH_SIZE
+  if (gridScrollRef.value) {
+    gridScrollRef.value.scrollTop = 0
+  }
+}
+
+async function ensureCatalogLoaded() {
+  if (localCatalog.value) return
+  loadError.value = null
+  isLoading.value = true
+  try {
+    if (typeof fetchProductCatalogIndex === 'function') {
+      const rawIndex = await fetchProductCatalogIndex()
+      if (rawIndex && Array.isArray(rawIndex.rows) && rawIndex.rows.length > 0) {
+        const compiled = compileClientCatalog(rawIndex)
+        localCatalog.value = compiled
+        departments.value = compiled.departments
+        isLoading.value = false
+        return
+      }
+    }
+  } catch {
+    // Fall back transparently to paginated endpoint below.
+  }
+  await fetchRemoteCatalog(false)
+}
+
+async function fetchRemoteCatalog(append = false) {
   const requestSeq = ++activeRequestSeq
   activeAbortController?.abort()
   const controller = new AbortController()
@@ -135,18 +332,18 @@ async function fetchCatalog(append = false) {
       category: activeCategory.value ?? undefined,
       q: searchQuery.value.trim() || undefined,
       sort: sortMode.value,
-      offset: append ? items.value.length : 0,
-      limit: PAGE_SIZE,
+      offset: append ? remoteItems.value.length : 0,
+      limit: BATCH_SIZE,
       signal: controller.signal,
     })
     if (requestSeq !== activeRequestSeq) return
     if (res.departments.length) {
       departments.value = res.departments
     }
-    total.value = res.total
-    totalCatalog.value = res.total_catalog
-    hasMore.value = res.has_more
-    items.value = append ? [...items.value, ...res.items] : res.items
+    remoteTotal.value = res.total
+    remoteTotalCatalog.value = res.total_catalog
+    remoteHasMore.value = res.has_more
+    remoteItems.value = append ? [...remoteItems.value, ...res.items] : res.items
     if (!append && gridScrollRef.value) {
       gridScrollRef.value.scrollTop = 0
     }
@@ -164,43 +361,96 @@ async function fetchCatalog(append = false) {
   }
 }
 
+function handleLoadMore() {
+  if (!hasMore.value) return
+  if (localCatalog.value) {
+    visibleLimit.value += BATCH_SIZE
+    return
+  }
+  if (!isLoadingMore.value) {
+    void fetchRemoteCatalog(true)
+  }
+}
+
 function selectDepartment(deptName: string | null) {
   if (activeDepartment.value === deptName && activeCategory.value === null) return
   activeDepartment.value = deptName
   activeCategory.value = null
-  void fetchCatalog(false)
+  resetGridScroll()
+  if (!localCatalog.value) {
+    void fetchRemoteCatalog(false)
+  }
 }
 
 function selectSubcategory(subName: string | null) {
   if (activeCategory.value === subName) return
   activeCategory.value = subName
-  void fetchCatalog(false)
+  resetGridScroll()
+  if (!localCatalog.value) {
+    void fetchRemoteCatalog(false)
+  }
 }
 
 function selectSort(mode: CatalogSortMode) {
   if (sortMode.value === mode) return
   sortMode.value = mode
-  void fetchCatalog(false)
+  resetGridScroll()
+  if (!localCatalog.value) {
+    void fetchRemoteCatalog(false)
+  }
 }
 
 function onSearchInput(event: Event) {
   searchQuery.value = (event.target as HTMLInputElement).value
+  if (localCatalog.value) {
+    resetGridScroll()
+    return
+  }
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   searchDebounceTimer = setTimeout(() => {
-    void fetchCatalog(false)
-  }, 240)
+    void fetchRemoteCatalog(false)
+  }, 220)
 }
 
 function clearSearch() {
   searchQuery.value = ''
+  resetGridScroll()
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
-  void fetchCatalog(false)
+  if (!localCatalog.value) {
+    void fetchRemoteCatalog(false)
+  }
 }
 
 function askMaiAboutProduct(product: ProductCard) {
   const name = cleanName(product.name)
   detailProduct.value = null
   emit('ask-mai', `Cho mình biết thông tin, thành phần và công dụng của ${name}?`)
+}
+
+function teardownSentinelObserver() {
+  sentinelObserver?.disconnect()
+  sentinelObserver = null
+}
+
+function setupSentinelObserver() {
+  teardownSentinelObserver()
+  if (
+    !props.open
+    || typeof IntersectionObserver === 'undefined'
+    || !loadMoreSentinel.value
+    || !gridScrollRef.value
+  ) {
+    return
+  }
+  sentinelObserver = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        handleLoadMore()
+      }
+    },
+    { root: gridScrollRef.value, rootMargin: '280px 0px' },
+  )
+  sentinelObserver.observe(loadMoreSentinel.value)
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -214,21 +464,34 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
-watch(() => props.open, (isOpen) => {
+watch(() => props.open, async (isOpen) => {
   if (isOpen) {
     if (typeof window !== 'undefined') window.addEventListener('keydown', onKeydown)
-    if (!items.value.length || loadError.value) {
-      void fetchCatalog(false)
+    if (!localCatalog.value && (!remoteItems.value.length || loadError.value)) {
+      await ensureCatalogLoaded()
     }
+    await nextTick()
+    setupSentinelObserver()
   } else {
     detailProduct.value = null
+    teardownSentinelObserver()
     if (typeof window !== 'undefined') window.removeEventListener('keydown', onKeydown)
+  }
+})
+
+watch([loadMoreSentinel, hasMore], async () => {
+  await nextTick()
+  if (props.open && hasMore.value) {
+    setupSentinelObserver()
+  } else {
+    teardownSentinelObserver()
   }
 })
 
 onUnmounted(() => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   activeAbortController?.abort()
+  teardownSentinelObserver()
   if (typeof window !== 'undefined') window.removeEventListener('keydown', onKeydown)
 })
 </script>
@@ -391,7 +654,7 @@ onUnmounted(() => {
               <div v-if="loadError" class="catalog-state-box is-error" role="alert">
                 <WarningCircle :size="24" weight="fill" aria-hidden="true" />
                 <p>{{ loadError }}</p>
-                <button type="button" class="catalog-retry-btn" @click="fetchCatalog(false)">
+                <button type="button" class="catalog-retry-btn" @click="ensureCatalogLoaded()">
                   Thử tải lại
                 </button>
               </div>
@@ -405,7 +668,7 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <div v-else-if="items.length === 0" class="catalog-state-box">
+              <div v-else-if="visibleItems.length === 0" class="catalog-state-box">
                 <SquaresFour :size="32" weight="duotone" aria-hidden="true" />
                 <strong>Không tìm thấy sản phẩm phù hợp</strong>
                 <p>Thử xóa từ khóa hoặc chuyển sang danh mục khác nhé.</p>
@@ -422,7 +685,7 @@ onUnmounted(() => {
               <template v-else>
                 <div class="catalog-grid">
                   <article
-                    v-for="product in items"
+                    v-for="(product, idx) in visibleItems"
                     :key="product.product_id"
                     class="catalog-card"
                   >
@@ -439,7 +702,9 @@ onUnmounted(() => {
                         v-if="hasImage(product)"
                         :src="product.image_url!"
                         :alt="cleanName(product.name)"
-                        loading="lazy"
+                        width="140"
+                        height="140"
+                        :loading="idx < 4 ? 'eager' : 'lazy'"
                         decoding="async"
                         @error="onImgError(product.product_id)"
                       />
@@ -510,15 +775,15 @@ onUnmounted(() => {
                   </article>
                 </div>
 
-                <div v-if="hasMore" class="catalog-load-more-wrap">
+                <div v-if="hasMore" ref="loadMoreSentinel" class="catalog-load-more-wrap">
                   <span class="catalog-load-progress">
-                    Đang hiển thị {{ items.length.toLocaleString('vi-VN') }} / {{ total.toLocaleString('vi-VN') }} sản phẩm
+                    Đang hiển thị {{ visibleItems.length.toLocaleString('vi-VN') }} / {{ total.toLocaleString('vi-VN') }} sản phẩm
                   </span>
                   <button
                     type="button"
                     class="catalog-load-more-btn"
                     :disabled="isLoadingMore"
-                    @click="fetchCatalog(true)"
+                    @click="handleLoadMore"
                   >
                     <ArrowDown :size="15" weight="bold" aria-hidden="true" />
                     <span>{{ isLoadingMore ? 'Đang tải thêm...' : 'Xem thêm sản phẩm' }}</span>
