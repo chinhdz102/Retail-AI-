@@ -299,4 +299,55 @@ def test_product_card_exposes_safe_https_image_url(
     assert _safe_product_image_url("https://example.com/a b.jpg") is None
 
 
+def test_canonical_dataset_preserves_benefits_usage_ingredients_and_thanh_lam_profile(
+    snapshot_repository: SnapshotProductRepository,
+) -> None:
+    from backend.services.organization_profiles import get_organization_answer
+
+    # 1. Thanh Lam Mart profile resolves from canonical verified_organization_facts.json.
+    org = get_organization_answer("Giới thiệu Thanh Lam Mart", "vi")
+    assert org is not None
+    assert org.profile.entity_id == "thanh_lam_mart"
+    assert any("Thanh Lam Mart" in fact for fact in org.facts)
+
+    # 2. All three preserved enrichment dimensions (công dụng, cách sử dụng, thành phần chính)
+    #    remain bound and retrievable against the canonical 3,099-SKU catalog.
+    pilot_sku = snapshot_repository.get_product_snapshot("TLM_10016738")
+    assert pilot_sku is not None
+    pilot_benefits = product_knowledge_facts(
+        pilot_sku,
+        ("benefits",),
+        source="thanh_lam_snapshot",
+        catalog_version=snapshot_repository.dataset_sha256,
+    )[0]
+    assert pilot_benefits.value is not None and pilot_benefits.status.value != "UNKNOWN"
+
+    selsun = snapshot_repository.get_product_snapshot("TLM_10016912")
+    assert selsun is not None
+    facts = {
+        fact.attribute: fact
+        for fact in product_knowledge_facts(
+            selsun,
+            ("description", "usage", "ingredients"),
+            source="thanh_lam_snapshot",
+            catalog_version=snapshot_repository.dataset_sha256,
+        )
+    }
+    assert facts["description"].value is not None and facts["description"].status.value != "UNKNOWN"
+    assert facts["usage"].value is not None and facts["usage"].status.value == "VERIFIED"
+    assert (
+        facts["ingredients"].value is not None
+        and facts["ingredients"].status.value == "VERIFIED"
+    )
+
+    # 3. Companion canonical datasets from both repos & bridge are present on disk.
+    data_dir = Path(__file__).resolve().parents[1] / "data"
+    assert (data_dir / "vietnamese_product_terms.json").is_file()
+    assert (data_dir / "retail_reference_guidance.json").is_file()
+    assert (data_dir / "bridge" / "crosswalk.csv").is_file()
+    assert (data_dir / "bridge" / "ops_catalog_overrides.json").is_file()
+    assert (data_dir / "ops_chest_frn" / "frn" / "stores_daily.csv.gz").is_file()
+
+
+
 

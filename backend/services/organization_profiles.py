@@ -105,6 +105,12 @@ def resolve_organization_profile(text: str) -> OrganizationProfile | None:
             for alias in profile.aliases
         ):
             return profile
+    for profile in profiles:
+        if profile.entity_id == "thanh_lam_mart" and any(
+            re.search(rf"(?<!\w){re.escape(_normalize(alias))}(?!\w)", normalized)
+            for alias in profile.aliases
+        ):
+            return profile
     if re.search(r"(?<!\w)(?:thanh_lam_mart|thanh lam mart)(?!\w)", normalized):
         return next(
             (profile for profile in profiles if profile.entity_id == "thanh_lam_mart"),

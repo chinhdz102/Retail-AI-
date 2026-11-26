@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "purpose": "Source-backed general guidance; never evidence about a store SKU or an answer template.",
+  "entries": [
+    {
+      "id": "cosmetic-sensitivity",
+      "triggers": ["nhạy cảm", "dị ứng", "kích ứng"],
+      "context": ["da", "sữa tắm", "sữa rửa mặt", "kem", "tẩy trang", "mỹ phẩm"],
+      "principles": [
+        "A label naming sensitive skin can support that intended target only; it does not prove irritation-free, symptom relief, fragrance-free or universal suitability.",
+        "Tear-free is about eyes; it does not establish suitability for sensitive skin. Do not transfer one label property to a different body area or outcome.",
+        "Avoid ingredients the customer knows they react to. Plant extracts, essential oils and unscented labels are not guarantees against reactions.",
+        "Testing a new cosmetic on a small skin area before general use is useful; stop using it if a reaction develops. Do not invent a test duration or leave-on time.",
+        "Do not call all parabens or all preservatives harmful or irritants for everyone. An individual allergy and a blanket ingredient ban are different claims."
+      ],
+      "sources": [
+        "https://www.aad.org/public/everyday-care/skin-care-secrets/prevent-skin-problems/test-skin-care-products",
+        "https://www.fda.gov/cosmetics/cosmetic-ingredients/allergens-cosmetics",
+        "https://www.fda.gov/cosmetics/cosmetic-ingredients/parabens-cosmetics"
+      ]
+    },
+    {
+      "id": "cleaning-around-pets",
+      "triggers": ["mèo", "thú cưng", "chó"],
+      "context": ["lau", "vệ sinh", "dọn", "tẩy", "sàn", "hóa chất"],
+      "principles": [
+        "General cleaning advice cannot certify an unspecified cleaner as safe for pets. Follow the actual product label for dilution, contact time, rinsing and re-entry.",
+        "Keep pets away during cleaning and until the treated area is dry as directed; keep cleaners away from their food and water. Drying alone does not establish safety for every chemical.",
+        "A floral, natural or essential-oil name does not prove pet safety. Do not mix unknown cleaners or add homemade chemicals."
+      ],
+      "sources": [
+        "https://www.aspca.org/pet-care/aspca-poison-control/poisonous-household-products",
+        "https://www.epa.gov/pets/read-label-first-protect-your-pets"
+      ]
+    }
+  ]
+}

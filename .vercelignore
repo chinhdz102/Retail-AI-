@@ -35,6 +35,8 @@ node_modules
 /data/thanh_lam_planogram_3d*.png
 /data/thanh_lam_planogram_3d*.svg
 /data/*.csv
+/data/ops_chest_frn
+/data/bridge
 /backend/assets/silero/silero_vad_v5.onnx
 
 # Generated during `npm run build` (copy-vad-assets.mjs) + unused PNG poster

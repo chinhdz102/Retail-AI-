@@ -1,0 +1,862 @@
+{
+  "format": "ops-catalog-overrides",
+  "version": 1,
+  "generated_at": "2026-11-25T15:11:24+00:00",
+  "disclaimer": "Giả định demo: tên/giá Thanh Lam Mart gán cho mặt hàng FRN qua crosswalk tự đặt; nguồn hàng là nhà cung cấp giả định, email chỉ rơi vào Mailpit (.test).",
+  "source": {
+    "thanh_lam_catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
+    "crosswalk_sha256": "0027d6d9f16386745c5816ac839c9601731eb2edd379ea548860886dc378de22"
+  },
+  "products": {
+    "F0004": {
+      "name": "MEATDELI Thịt Nạc vai heo (S)",
+      "unit_price": 168900,
+      "thanh_lam_product_id": "TLM_10140279"
+    },
+    "F0005": {
+      "name": "MEATDELI Cánh gà",
+      "unit_price": 123900,
+      "thanh_lam_product_id": "TLM_10283202"
+    },
+    "F0006": {
+      "name": "Cà chua chocolate  300g",
+      "unit_price": 32000,
+      "thanh_lam_product_id": "TLM_10242930"
+    },
+    "F0007": {
+      "name": "MEATDELI Má đùi gà",
+      "unit_price": 95900,
+      "thanh_lam_product_id": "TLM_10283203"
+    },
+    "F0008": {
+      "name": "Cua đồng xay",
+      "unit_price": 205000,
+      "thanh_lam_product_id": "TLM_10053377"
+    },
+    "F0011": {
+      "name": "Dưa hấu giống nhật",
+      "unit_price": 29900,
+      "thanh_lam_product_id": "TLM_10053985"
+    },
+    "F0012": {
+      "name": "Chanh leo (chanh dây)",
+      "unit_price": 49900,
+      "thanh_lam_product_id": "TLM_10054803"
+    },
+    "F0015": {
+      "name": "PACOW Bít tết đùi bò Úc khay 250g",
+      "unit_price": 155000,
+      "thanh_lam_product_id": "TLM_10240585"
+    },
+    "F0016": {
+      "name": "Cải ngọt gói  500g",
+      "unit_price": 19000,
+      "thanh_lam_product_id": "TLM_10281708"
+    },
+    "F0018": {
+      "name": "Hành củ Hải Dương hộp 300g",
+      "unit_price": 29900,
+      "thanh_lam_product_id": "TLM_10314435"
+    },
+    "F0019": {
+      "name": "Củ nghệ 100g",
+      "unit_price": 6000,
+      "thanh_lam_product_id": "TLM_10241437"
+    },
+    "F0021": {
+      "name": "Mùi tàu (Ngò gai) 50g",
+      "unit_price": 5500,
+      "thanh_lam_product_id": "TLM_10282402"
+    },
+    "F0023": {
+      "name": "Hành lá WinEco gói 100g",
+      "unit_price": 10000,
+      "thanh_lam_product_id": "TLM_10281879"
+    },
+    "F0026": {
+      "name": "Hẹ lá WinEco 100g",
+      "unit_price": 9000,
+      "thanh_lam_product_id": "TLM_10281880"
+    },
+    "F0041": {
+      "name": "Củ sả 100g",
+      "unit_price": 4000,
+      "thanh_lam_product_id": "TLM_10281775"
+    },
+    "F0053": {
+      "name": "PACOW Bắp-Shank khay 250g",
+      "unit_price": 118900,
+      "thanh_lam_product_id": "TLM_10240584"
+    },
+    "F0060": {
+      "name": "Khoai lang giống nhật",
+      "unit_price": 37000,
+      "thanh_lam_product_id": "TLM_10053980"
+    },
+    "F0061": {
+      "name": "Cà rốt baby 200g",
+      "unit_price": 30000,
+      "thanh_lam_product_id": "TLM_10242932"
+    },
+    "F0063": {
+      "name": "Lốc 6 gói bánh trứng Karo chà bông 26g",
+      "unit_price": 40000,
+      "thanh_lam_product_id": "TLM_10140247"
+    },
+    "F0070": {
+      "name": "Chanh có hạt 250g",
+      "unit_price": 9900,
+      "thanh_lam_product_id": "TLM_10236467"
+    },
+    "F0071": {
+      "name": "Chanh không hạt 500g",
+      "unit_price": 19900,
+      "thanh_lam_product_id": "TLM_10281774"
+    },
+    "F0074": {
+      "name": "Củ dền",
+      "unit_price": 42900,
+      "thanh_lam_product_id": "TLM_10053941"
+    },
+    "F0077": {
+      "name": "Cải thảo",
+      "unit_price": 21900,
+      "thanh_lam_product_id": "TLM_10053860"
+    },
+    "F0078": {
+      "name": "Cải xoăn 300g",
+      "unit_price": 24000,
+      "thanh_lam_product_id": "TLM_10281809"
+    },
+    "F0079": {
+      "name": "Rau ngổ 50g",
+      "unit_price": 3500,
+      "thanh_lam_product_id": "TLM_10282404"
+    },
+    "F0088": {
+      "name": "Tỏi củ Hải Dương  100g",
+      "unit_price": 7000,
+      "thanh_lam_product_id": "TLM_10626163"
+    },
+    "F0093": {
+      "name": "Củ đậu",
+      "unit_price": 24900,
+      "thanh_lam_product_id": "TLM_10053939"
+    },
+    "F0094": {
+      "name": "Hành Lý Sơn 100g",
+      "unit_price": 10000,
+      "thanh_lam_product_id": "TLM_10626447"
+    },
+    "F0098": {
+      "name": "PACOW Thịt bò Úc xay (Minced) khay 250g",
+      "unit_price": 94900,
+      "thanh_lam_product_id": "TLM_10240587"
+    },
+    "F0099": {
+      "name": "Bắp cải tím",
+      "unit_price": 29900,
+      "thanh_lam_product_id": "TLM_10053857"
+    },
+    "F0100": {
+      "name": "Khô cá thiều ăn liền An Vĩnh 100g",
+      "unit_price": 82000,
+      "thanh_lam_product_id": "TLM_10053604"
+    },
+    "F0104": {
+      "name": "Cà tím dài",
+      "unit_price": 29900,
+      "thanh_lam_product_id": "TLM_10054175"
+    },
+    "F0108": {
+      "name": "Bắp cải trắng",
+      "unit_price": 27000,
+      "thanh_lam_product_id": "TLM_10054020"
+    },
+    "F0109": {
+      "name": "Cải bó xôi gói 300g",
+      "unit_price": 22500,
+      "thanh_lam_product_id": "TLM_10281704"
+    },
+    "F0110": {
+      "name": "MEATDELI Phi lê ức gà",
+      "unit_price": 112900,
+      "thanh_lam_product_id": "TLM_10283198"
+    },
+    "F0115": {
+      "name": "Bí đỏ hồ lô",
+      "unit_price": 20900,
+      "thanh_lam_product_id": "TLM_10316523"
+    },
+    "F0117": {
+      "name": "Hành củ Hải Dương",
+      "unit_price": 85000,
+      "thanh_lam_product_id": "TLM_10140148"
+    },
+    "F0118": {
+      "name": "Củ riềng 100g",
+      "unit_price": 4500,
+      "thanh_lam_product_id": "TLM_10241438"
+    },
+    "F0122": {
+      "name": "Cà chua beef Globalgap khay 500g",
+      "unit_price": 39900,
+      "thanh_lam_product_id": "TLM_10241675"
+    },
+    "F0127": {
+      "name": "Ngô ngọt uyên ương",
+      "unit_price": 25900,
+      "thanh_lam_product_id": "TLM_10281674"
+    },
+    "F0129": {
+      "name": "Đậu cove nhật 300g",
+      "unit_price": 19900,
+      "thanh_lam_product_id": "TLM_10283521"
+    },
+    "F0136": {
+      "name": "Lá sung 100g",
+      "unit_price": 6000,
+      "thanh_lam_product_id": "TLM_10283125"
+    },
+    "F0140": {
+      "name": "Mùi ta 50g",
+      "unit_price": 8500,
+      "thanh_lam_product_id": "TLM_10282401"
+    },
+    "F0150": {
+      "name": "Lá trà xanh gói 300g",
+      "unit_price": 19900,
+      "thanh_lam_product_id": "TLM_10054144"
+    },
+    "F0155": {
+      "name": "Thịt ốc làm sạch",
+      "unit_price": 89000,
+      "thanh_lam_product_id": "TLM_10053348"
+    },
+    "F0181": {
+      "name": "Dưa hấu không hạt",
+      "unit_price": 29900,
+      "thanh_lam_product_id": "TLM_10054788"
+    },
+    "F0190": {
+      "name": "Húng bạc hà 50g",
+      "unit_price": 8500,
+      "thanh_lam_product_id": "TLM_10282396"
+    },
+    "F0192": {
+      "name": "Măng tây xanh 200g",
+      "unit_price": 28900,
+      "thanh_lam_product_id": "TLM_10281713"
+    },
+    "F0194": {
+      "name": "Sầu riêng hạt lép",
+      "unit_price": 109000,
+      "thanh_lam_product_id": "TLM_10054831"
+    },
+    "F0200": {
+      "name": "Cần tây lớn WinEco",
+      "unit_price": 47900,
+      "thanh_lam_product_id": "TLM_10054767"
+    },
+    "F0207": {
+      "name": "Cần tây nhỏ 100g",
+      "unit_price": 7900,
+      "thanh_lam_product_id": "TLM_10281772"
+    },
+    "F0212": {
+      "name": "Đậu cove xanh gói 500g",
+      "unit_price": 19900,
+      "thanh_lam_product_id": "TLM_10281755"
+    },
+    "F0213": {
+      "name": "Tiêu xanh gói 50g",
+      "unit_price": 12000,
+      "thanh_lam_product_id": "TLM_10401692"
+    },
+    "F0215": {
+      "name": "Củ gừng 100g",
+      "unit_price": 6000,
+      "thanh_lam_product_id": "TLM_10241435"
+    },
+    "F0216": {
+      "name": "Khoai tây",
+      "unit_price": 22000,
+      "thanh_lam_product_id": "TLM_10053947"
+    },
+    "F0223": {
+      "name": "Ớt Chuông màu baby HFG 250g",
+      "unit_price": 32900,
+      "thanh_lam_product_id": "TLM_10265802"
+    },
+    "F0247": {
+      "name": "Táo Koru New Zealand",
+      "unit_price": 119000,
+      "thanh_lam_product_id": "TLM_10407045"
+    },
+    "F0249": {
+      "name": "Chà là nguyên cành Devie  hộp 500g",
+      "unit_price": 165000,
+      "thanh_lam_product_id": "TLM_10240240"
+    },
+    "F0250": {
+      "name": "Táo Envy New Zealand size lớn",
+      "unit_price": 249000,
+      "thanh_lam_product_id": "TLM_10060637"
+    },
+    "F0257": {
+      "name": "PACOW Thịt Nạm bụng bò Úc (Flank) 250g",
+      "unit_price": 106900,
+      "thanh_lam_product_id": "TLM_10181528"
+    },
+    "F0259": {
+      "name": "Khoai lang mật",
+      "unit_price": 44900,
+      "thanh_lam_product_id": "TLM_10240000"
+    },
+    "F0276": {
+      "name": "Cải bó xôi WinEco gói 300g",
+      "unit_price": 25900,
+      "thanh_lam_product_id": "TLM_10281825"
+    },
+    "F0285": {
+      "name": "Combo Nấm thủy tiên Biovegi 200g",
+      "unit_price": 54900,
+      "thanh_lam_product_id": "TLM_10283694"
+    },
+    "F0290": {
+      "name": "Kiwi Vàng New Zealand (4trái/hộp)",
+      "unit_price": 165000,
+      "thanh_lam_product_id": "TLM_10235281"
+    },
+    "F0291": {
+      "name": "Táo Rockit hộp 3 - 4 trái",
+      "unit_price": 169000,
+      "thanh_lam_product_id": "TLM_10071566"
+    },
+    "F0292": {
+      "name": "Kiwi xanh New Zealand",
+      "unit_price": 179000,
+      "thanh_lam_product_id": "TLM_10054840"
+    },
+    "F0293": {
+      "name": "Việt Quất Mỹ 125g",
+      "unit_price": 119000,
+      "thanh_lam_product_id": "TLM_10242584"
+    },
+    "F0296": {
+      "name": "Táo Jazz New Zealand",
+      "unit_price": 109000,
+      "thanh_lam_product_id": "TLM_10054890"
+    },
+    "F0298": {
+      "name": "Xà lách lolo xanh WinEco 300g",
+      "unit_price": 24900,
+      "thanh_lam_product_id": "TLM_10281893"
+    },
+    "F0300": {
+      "name": "Bí xanh",
+      "unit_price": 24900,
+      "thanh_lam_product_id": "TLM_10053954"
+    },
+    "F0303": {
+      "name": "Tỏi củ Hải Dương hộp 300g",
+      "unit_price": 27900,
+      "thanh_lam_product_id": "TLM_10314436"
+    },
+    "F0310": {
+      "name": "Táo Jazz NewZealand ( 6 trái/hộp )",
+      "unit_price": 139000,
+      "thanh_lam_product_id": "TLM_10236508"
+    },
+    "F0321": {
+      "name": "Chôm chôm",
+      "unit_price": 75000,
+      "thanh_lam_product_id": "TLM_10054822"
+    },
+    "F0335": {
+      "name": "Nấm kim châm 150g",
+      "unit_price": 14900,
+      "thanh_lam_product_id": "TLM_10053991"
+    },
+    "F0345": {
+      "name": "Táo Royal Gala New Zealand PG size 90-120",
+      "unit_price": 89900,
+      "thanh_lam_product_id": "TLM_10055074"
+    },
+    "F0348": {
+      "name": "MEATDELI [PRE] Bắp giò cuộn (S)",
+      "unit_price": 199900,
+      "thanh_lam_product_id": "TLM_10281594"
+    },
+    "F0351": {
+      "name": "Lá mè 50g",
+      "unit_price": 9000,
+      "thanh_lam_product_id": "TLM_10281814"
+    },
+    "F0359": {
+      "name": "Dưa chuột dài 500g",
+      "unit_price": 24000,
+      "thanh_lam_product_id": "TLM_10281758"
+    },
+    "F0362": {
+      "name": "Thạch đen trân châu Thạch An ly 280g",
+      "unit_price": 21000,
+      "thanh_lam_product_id": "TLM_10283812"
+    },
+    "F0363": {
+      "name": "Củ Sả WinEco 100g",
+      "unit_price": 5000,
+      "thanh_lam_product_id": "TLM_10281875"
+    },
+    "F0366": {
+      "name": "Táo Fuji Nam Phi size nhỏ",
+      "unit_price": 49000,
+      "thanh_lam_product_id": "TLM_10282852"
+    },
+    "F0369": {
+      "name": "Xoài giống Úc",
+      "unit_price": 79000,
+      "thanh_lam_product_id": "TLM_10054807"
+    },
+    "F0373": {
+      "name": "MEATDELI Chân gà",
+      "unit_price": 109900,
+      "thanh_lam_product_id": "TLM_10283201"
+    },
+    "F0374": {
+      "name": "Xoài dài giống Đài Loan",
+      "unit_price": 59900,
+      "thanh_lam_product_id": "TLM_10054792"
+    },
+    "F0379": {
+      "name": "Long nhi Chả cốm ngon 300g",
+      "unit_price": 59000,
+      "thanh_lam_product_id": "TLM_10183389"
+    },
+    "F0380": {
+      "name": "Su su",
+      "unit_price": 15900,
+      "thanh_lam_product_id": "TLM_10053949"
+    },
+    "F0411": {
+      "name": "Bánh Sandwich nhỏ  Bảo Ngọc  gói 275g",
+      "unit_price": 24500,
+      "thanh_lam_product_id": "TLM_10055997"
+    },
+    "F0413": {
+      "name": "Nấm Bunapi Biovegi hộp 100g",
+      "unit_price": 32000,
+      "thanh_lam_product_id": "TLM_10054024"
+    },
+    "F0415": {
+      "name": "Sữa bắp non Sài Gòn 300ml",
+      "unit_price": 15800,
+      "thanh_lam_product_id": "TLM_10240739"
+    },
+    "F0416": {
+      "name": "Nấm hỗn hợp 300g",
+      "unit_price": 45900,
+      "thanh_lam_product_id": "TLM_10281865"
+    },
+    "F0422": {
+      "name": "Nho đen không hạt Mỹ",
+      "unit_price": 289000,
+      "thanh_lam_product_id": "TLM_10054896"
+    },
+    "F0424": {
+      "name": "Kiwi xanh Newzealand (4trái/hộp)",
+      "unit_price": 99000,
+      "thanh_lam_product_id": "TLM_10235280"
+    },
+    "F0425": {
+      "name": "Cam vàng Úc ( 3 trái/hộp)",
+      "unit_price": 119000,
+      "thanh_lam_product_id": "TLM_10401646"
+    },
+    "F0452": {
+      "name": "MEATDELI Giò sống 200g",
+      "unit_price": 39000,
+      "thanh_lam_product_id": "TLM_10281333"
+    },
+    "F0469": {
+      "name": "Nấm đông trùng hạ thảo tươi 100g",
+      "unit_price": 59000,
+      "thanh_lam_product_id": "TLM_10282226"
+    },
+    "F0480": {
+      "name": "Lá vối tươi hộp 200g",
+      "unit_price": 17500,
+      "thanh_lam_product_id": "TLM_10054242"
+    },
+    "F0481": {
+      "name": "Nấm Bunashimeji Biovegi hộp 100g",
+      "unit_price": 32000,
+      "thanh_lam_product_id": "TLM_10054025"
+    },
+    "F0486": {
+      "name": "Quả bầu",
+      "unit_price": 25900,
+      "thanh_lam_product_id": "TLM_10053988"
+    },
+    "F0487": {
+      "name": "Mực viên Kitkool  200g",
+      "unit_price": 39000,
+      "thanh_lam_product_id": "TLM_10183582"
+    },
+    "F0496": {
+      "name": "Táo Breeze Newzealand hộp 6 trái",
+      "unit_price": 139000,
+      "thanh_lam_product_id": "TLM_10242458"
+    },
+    "F0500": {
+      "name": "Chanh tươi không hạt 250g",
+      "unit_price": 12500,
+      "thanh_lam_product_id": "TLM_10241439"
+    },
+    "F0525": {
+      "name": "Kiwi xanh Newzealand (2Trái/Hộp)",
+      "unit_price": 55000,
+      "thanh_lam_product_id": "TLM_10602355"
+    },
+    "F0536": {
+      "name": "Bánh cốm Bảo Minh hộp 85g",
+      "unit_price": 11900,
+      "thanh_lam_product_id": "TLM_10055440"
+    },
+    "F0549": {
+      "name": "Gà Viên Lá Chanh Hoa Doanh 200g",
+      "unit_price": 30000,
+      "thanh_lam_product_id": "TLM_10183282"
+    },
+    "F0554": {
+      "name": "Ớt sừng 100g",
+      "unit_price": 10000,
+      "thanh_lam_product_id": "TLM_10281785"
+    },
+    "F0556": {
+      "name": "Táo Envy New túi 1Kg",
+      "unit_price": 209000,
+      "thanh_lam_product_id": "TLM_10265792"
+    },
+    "F0567": {
+      "name": "Cà chua cherry mix 300g",
+      "unit_price": 29900,
+      "thanh_lam_product_id": "TLM_10242929"
+    },
+    "F0574": {
+      "name": "Nấm đông trùng hạ thảo (bỏ gốc) 50g",
+      "unit_price": 55900,
+      "thanh_lam_product_id": "TLM_10283797"
+    },
+    "F0578": {
+      "name": "Quất 100g",
+      "unit_price": 4900,
+      "thanh_lam_product_id": "TLM_10281786"
+    },
+    "F0580": {
+      "name": "MEATDELI Thịt xay tươi ướp sẵn",
+      "unit_price": 196900,
+      "thanh_lam_product_id": "TLM_10140306"
+    },
+    "F0596": {
+      "name": "Chả heo Lá Chuối Hoa Doanh gói  200g",
+      "unit_price": 49000,
+      "thanh_lam_product_id": "TLM_10182788"
+    },
+    "F0599": {
+      "name": "MEATDELI [PRE] Sườn St. Louis (S)",
+      "unit_price": 299900,
+      "thanh_lam_product_id": "TLM_10281592"
+    },
+    "F0600": {
+      "name": "Chả cốm làng vòng Hoa Doanh gói 200g",
+      "unit_price": 40000,
+      "thanh_lam_product_id": "TLM_10183101"
+    },
+    "F0608": {
+      "name": "Hành củ Hải Dương gói 100g",
+      "unit_price": 9900,
+      "thanh_lam_product_id": "TLM_10626162"
+    },
+    "F0628": {
+      "name": "Khoai môn",
+      "unit_price": 34900,
+      "thanh_lam_product_id": "TLM_10053945"
+    },
+    "F0630": {
+      "name": "Táo Breeze New túi 1Kg",
+      "unit_price": 139000,
+      "thanh_lam_product_id": "TLM_10265793"
+    },
+    "F0632": {
+      "name": "Táo Cosmic Mỹ",
+      "unit_price": 119000,
+      "thanh_lam_product_id": "TLM_10265836"
+    },
+    "F0633": {
+      "name": "Lê Nam Phi",
+      "unit_price": 105000,
+      "thanh_lam_product_id": "TLM_10282148"
+    },
+    "F0634": {
+      "name": "Táo Jazz New Zealand túi 1kg",
+      "unit_price": 115000,
+      "thanh_lam_product_id": "TLM_10140621"
+    },
+    "F0635": {
+      "name": "Kiwi vàng New Zealand",
+      "unit_price": 259000,
+      "thanh_lam_product_id": "TLM_10054905"
+    },
+    "F0636": {
+      "name": "Táo Gala New túi 1Kg",
+      "unit_price": 135000,
+      "thanh_lam_product_id": "TLM_10265791"
+    },
+    "F0638": {
+      "name": "Táo Envy NewZealand 90 - 110",
+      "unit_price": 179000,
+      "thanh_lam_product_id": "TLM_10054909"
+    },
+    "F0642": {
+      "name": "Dưa chuột baby (dưa leo) 500g",
+      "unit_price": 23500,
+      "thanh_lam_product_id": "TLM_10282395"
+    },
+    "F0644": {
+      "name": "Cá chim trắng biển tươi",
+      "unit_price": 249000,
+      "thanh_lam_product_id": "TLM_10053300"
+    },
+    "F0645": {
+      "name": "Nấm Đông Cô ( Nấm Hương) 200g",
+      "unit_price": 35000,
+      "thanh_lam_product_id": "TLM_10241087"
+    },
+    "F0650": {
+      "name": "Cà chua cherry đỏ 300g",
+      "unit_price": 18500,
+      "thanh_lam_product_id": "TLM_10283522"
+    },
+    "F0666": {
+      "name": "Củ cải trắng",
+      "unit_price": 24900,
+      "thanh_lam_product_id": "TLM_10053938"
+    },
+    "F0668": {
+      "name": "Nộm sứa Tĩnh Gia Nhật Minh gói 350g",
+      "unit_price": 39900,
+      "thanh_lam_product_id": "TLM_10005597"
+    },
+    "F0669": {
+      "name": "MEATDELI [PRE] Thịt Sườn thăn (sườn non) (S)",
+      "unit_price": 287900,
+      "thanh_lam_product_id": "TLM_10281593"
+    },
+    "F0670": {
+      "name": "MEAT Đùi tỏi gà",
+      "unit_price": 126900,
+      "thanh_lam_product_id": "TLM_10283199"
+    },
+    "F0673": {
+      "name": "Hồng Xiêm (Sapo)",
+      "unit_price": 65000,
+      "thanh_lam_product_id": "TLM_10054825"
+    },
+    "F0676": {
+      "name": "Hạt sen tươi Senta 200g",
+      "unit_price": 65000,
+      "thanh_lam_product_id": "TLM_10317126"
+    },
+    "F0691": {
+      "name": "Cà rốt",
+      "unit_price": 54900,
+      "thanh_lam_product_id": "TLM_10053936"
+    },
+    "F0694": {
+      "name": "Bánh cốm đậu xanh trần Bảo Minh 85g",
+      "unit_price": 11000,
+      "thanh_lam_product_id": "TLM_10055438"
+    },
+    "F0698": {
+      "name": "Kiwi Newzealand hộp 3 trái(2 vàng+1xanh)",
+      "unit_price": 115000,
+      "thanh_lam_product_id": "TLM_10602358"
+    },
+    "F0707": {
+      "name": "Thạch đen Cao Bằng Thạch An 230g",
+      "unit_price": 24900,
+      "thanh_lam_product_id": "TLM_10628239"
+    },
+    "F0715": {
+      "name": "Dọc mùng 300g",
+      "unit_price": 10900,
+      "thanh_lam_product_id": "TLM_10283517"
+    },
+    "F0717": {
+      "name": "Cam cara Úc ( 3 trái/hộp)",
+      "unit_price": 109000,
+      "thanh_lam_product_id": "TLM_10401721"
+    },
+    "F0738": {
+      "name": "Tỏi củ Lý Sơn 100g",
+      "unit_price": 14900,
+      "thanh_lam_product_id": "TLM_10626448"
+    },
+    "F0740": {
+      "name": "MEATDELI [PRE] Thịt Nạc dăm đầu giòn (S)",
+      "unit_price": 306900,
+      "thanh_lam_product_id": "TLM_10183114"
+    },
+    "F0764": {
+      "name": "Thanh long ruột đỏ",
+      "unit_price": 39900,
+      "thanh_lam_product_id": "TLM_10054790"
+    },
+    "F0769": {
+      "name": "Ớt chuông đỏ Globalgap 400g",
+      "unit_price": 39900,
+      "thanh_lam_product_id": "TLM_10241681"
+    },
+    "F0774": {
+      "name": "Rau Răm 50g",
+      "unit_price": 3500,
+      "thanh_lam_product_id": "TLM_10282403"
+    },
+    "F0775": {
+      "name": "Combo Hành lá + Ngò rí 50g",
+      "unit_price": 10000,
+      "thanh_lam_product_id": "TLM_10242901"
+    },
+    "F0783": {
+      "name": "Ổi lê",
+      "unit_price": 45000,
+      "thanh_lam_product_id": "TLM_10054854"
+    },
+    "F0788": {
+      "name": "Thịt nghêu Lenger 200g",
+      "unit_price": 73000,
+      "thanh_lam_product_id": "TLM_10140828"
+    },
+    "F0793": {
+      "name": "Cá diêu hồng tươi làm sạch",
+      "unit_price": 123900,
+      "thanh_lam_product_id": "TLM_10053318"
+    },
+    "F0797": {
+      "name": "Thì là 50g",
+      "unit_price": 9900,
+      "thanh_lam_product_id": "TLM_10282405"
+    },
+    "F0803": {
+      "name": "Thạch đen Cao Bằng Thạch An 480g",
+      "unit_price": 34100,
+      "thanh_lam_product_id": "TLM_10315702"
+    },
+    "F0806": {
+      "name": "Hành tây",
+      "unit_price": 20900,
+      "thanh_lam_product_id": "TLM_10053944"
+    },
+    "F0816": {
+      "name": "Cá hồi Úc nguyên con",
+      "unit_price": 569000,
+      "thanh_lam_product_id": "TLM_10628264"
+    },
+    "F0817": {
+      "name": "Cá hồi Úc Fillet",
+      "unit_price": 749900,
+      "thanh_lam_product_id": "TLM_10628265"
+    },
+    "F0819": {
+      "name": "Kiwi vàng Newzealand (2Trái/Hộp)",
+      "unit_price": 92000,
+      "thanh_lam_product_id": "TLM_10602360"
+    },
+    "F0823": {
+      "name": "Đu đủ ruột đỏ",
+      "unit_price": 35000,
+      "thanh_lam_product_id": "TLM_10054816"
+    },
+    "F0825": {
+      "name": "Táo xanh",
+      "unit_price": 59900,
+      "thanh_lam_product_id": "TLM_10054817"
+    },
+    "F0826": {
+      "name": "Trà xanh Go Thái Sơn 330ml",
+      "unit_price": 19500,
+      "thanh_lam_product_id": "TLM_10240056"
+    },
+    "F0829": {
+      "name": "Bao tử cá basa",
+      "unit_price": 129000,
+      "thanh_lam_product_id": "TLM_10053346"
+    },
+    "F0830": {
+      "name": "Trà sữa Go Thái Sơn 330ml",
+      "unit_price": 19500,
+      "thanh_lam_product_id": "TLM_10240055"
+    },
+    "F0834": {
+      "name": "Bánh sừng hươu Bảo Ngọc gói 175g",
+      "unit_price": 21900,
+      "thanh_lam_product_id": "TLM_10055996"
+    },
+    "F0841": {
+      "name": "Thịt Thăn bò",
+      "unit_price": 399000,
+      "thanh_lam_product_id": "TLM_10053675"
+    },
+    "F0843": {
+      "name": "Húng quế 50g",
+      "unit_price": 6500,
+      "thanh_lam_product_id": "TLM_10282398"
+    },
+    "F0847": {
+      "name": "Đậu bắp gói 300g",
+      "unit_price": 19900,
+      "thanh_lam_product_id": "TLM_10281714"
+    },
+    "F0855": {
+      "name": "Bánh bông nhài Bảo Minh gói 180g",
+      "unit_price": 36900,
+      "thanh_lam_product_id": "TLM_10005016"
+    },
+    "F0858": {
+      "name": "Kiwi vàng Newzealand Organic (3Trái/Hộp)",
+      "unit_price": 95000,
+      "thanh_lam_product_id": "TLM_10602356"
+    }
+  },
+  "suppliers": {
+    "NCC01": {
+      "name": "Nhà cung cấp Thanh Lam Mart – Bánh mỳ (demo)",
+      "email": "dathang@khotong-demo.test"
+    },
+    "NCC02": {
+      "name": "Nhà cung cấp Thanh Lam Mart – Thức ăn nấu sẵn (demo)",
+      "email": "dathang@khotong-demo.test"
+    },
+    "NCC03": {
+      "name": "Nhà cung cấp Thanh Lam Mart – Thịt (demo)",
+      "email": "dathang@khotong-demo.test"
+    },
+    "NCC04": {
+      "name": "Nhà cung cấp Thanh Lam Mart – Thủy hải sản (demo)",
+      "email": "dathang@khotong-demo.test"
+    },
+    "NCC05": {
+      "name": "Nhà cung cấp Thanh Lam Mart – Thủy hải sản 2 (demo)",
+      "email": "dathang@khotong-demo.test"
+    },
+    "NCC06": {
+      "name": "Nhà cung cấp Thanh Lam Mart – Trái cây (demo)",
+      "email": "dathang@khotong-demo.test"
+    },
+    "NCC07": {
+      "name": "Nhà cung cấp Thanh Lam Mart – Rau củ (demo)",
+      "email": "dathang@khotong-demo.test"
+    }
+  }
+}

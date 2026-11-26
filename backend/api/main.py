@@ -1580,6 +1580,9 @@ def _unverified_retail_information_kind(text: str) -> str | None:
             "thanh_lam_mart la cong ty nao",
             "gioi thieu thanh lam mart",
             "gioi thieu thanh_lam_mart",
+            "thanh lam mart",
+            "cua hang thanh lam",
+            "sieu thi thanh lam",
             "chatvrm",
         )
     ):

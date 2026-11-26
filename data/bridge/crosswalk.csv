@@ -1,0 +1,166 @@
+# GIẢ ĐỊNH DEMO: ánh xạ FRN→Thanh Lam Mart tự đặt bằng thuật toán auto-v1 (bridge crosswalk build), không phản ánh mặt hàng thật của FRN. Dòng method=manual là sửa tay và được giữ khi build lại.
+ops_sku,frn_id,frn_group,frn_cat1,frn_cat2,product_id,thanh_lam_name,thanh_lam_category,price_vnd,method,note
+F0004,4,2,29,78,TLM_10140279,MEATDELI Thịt Nạc vai heo (S),Thịt > Lợn (heo) > Lợn (heo) nội địa,168900,auto-v1,giả định demo
+F0005,5,2,31,79,TLM_10283202,MEATDELI Cánh gà,Thịt > Thịt gà > Gà nội địa,123900,auto-v1,giả định demo
+F0006,6,6,20,50,TLM_10242930,Cà chua chocolate  300g,Rau củ > Rau ăn quả > Cà chua,32000,auto-v1,giả định demo
+F0007,7,2,31,79,TLM_10283203,MEATDELI Má đùi gà,Thịt > Thịt gà > Gà nội địa,95900,auto-v1,giả định demo
+F0008,8,3,25,70,TLM_10053377,Cua đồng xay,"Thủy hải sản > Giáp xác, nhuyễn thể > Giáp xác,nh.thể tươi",205000,auto-v1,giả định demo
+F0011,11,5,18,80,TLM_10053985,Dưa hấu giống nhật,Trái cây > Trái cây nội địa > Dưa NĐ,29900,auto-v1,giả định demo
+F0012,12,5,18,80,TLM_10054803,Chanh leo (chanh dây),Trái cây > Trái cây nội địa > Chanh dây(Chanh leo),49900,auto-v1,giả định demo
+F0015,15,2,0,13,TLM_10240585,PACOW Bít tết đùi bò Úc khay 250g,"Thịt > Thịt Bò, Bê > Bò, Bê NK",155000,auto-v1,giả định demo
+F0016,16,6,8,29,TLM_10281708,Cải ngọt gói  500g,Rau củ > Rau ăn lá > Rau cải,19000,auto-v1,giả định demo
+F0018,18,6,4,28,TLM_10314435,Hành củ Hải Dương hộp 300g,Rau củ > Rau gia vị > Rau gia vị ăn củ,29900,auto-v1,giả định demo
+F0019,19,6,4,28,TLM_10241437,Củ nghệ 100g,Rau củ > Rau gia vị > Rau gia vị ăn củ,6000,auto-v1,giả định demo
+F0021,21,6,4,28,TLM_10282402,Mùi tàu (Ngò gai) 50g,Rau củ > Rau gia vị > Rau gia vị ăn lá,5500,auto-v1,giả định demo
+F0023,23,6,4,53,TLM_10281879,Hành lá WinEco gói 100g,Rau củ > Rau gia vị > Rau gia vị ăn lá,10000,auto-v1,giả định demo
+F0026,26,6,4,53,TLM_10281880,Hẹ lá WinEco 100g,Rau củ > Rau gia vị > Rau gia vị ăn lá,9000,auto-v1,giả định demo
+F0041,41,6,4,53,TLM_10281775,Củ sả 100g,Rau củ > Rau gia vị > Rau gia vị ăn củ,4000,auto-v1,giả định demo
+F0053,53,2,0,19,TLM_10240584,PACOW Bắp-Shank khay 250g,"Thịt > Thịt Bò, Bê > Bò, Bê NK",118900,auto-v1,giả định demo
+F0060,60,6,21,61,TLM_10053980,Khoai lang giống nhật,Rau củ > Rau ăn củ > Củ khoai,37000,auto-v1,giả định demo
+F0061,61,6,21,61,TLM_10242932,Cà rốt baby 200g,Rau củ > Rau ăn củ > Cà rốt,30000,auto-v1,giả định demo
+F0063,63,0,28,52,TLM_10140247,Lốc 6 gói bánh trứng Karo chà bông 26g,Bánh mỳ > Bánh mỳ > Bánh mặn khác,40000,auto-v1,giả định demo
+F0070,70,6,4,28,TLM_10236467,Chanh có hạt 250g,Rau củ > Rau gia vị > Rau gia vị ăn quả,9900,auto-v1,giả định demo
+F0071,71,6,4,28,TLM_10281774,Chanh không hạt 500g,Rau củ > Rau gia vị > Rau gia vị ăn quả,19900,auto-v1,giả định demo
+F0074,74,6,21,61,TLM_10053941,Củ dền,Rau củ > Rau ăn củ > Củ khác,42900,auto-v1,giả định demo
+F0077,77,6,8,29,TLM_10053860,Cải thảo,Rau củ > Rau ăn lá > Rau cải,21900,auto-v1,giả định demo
+F0078,78,6,8,29,TLM_10281809,Cải xoăn 300g,Rau củ > Rau ăn lá > Rau cải,24000,auto-v1,giả định demo
+F0079,79,6,4,28,TLM_10282404,Rau ngổ 50g,Rau củ > Rau gia vị > Rau gia vị ăn lá,3500,auto-v1,giả định demo
+F0088,88,6,4,28,TLM_10626163,Tỏi củ Hải Dương  100g,Rau củ > Rau gia vị > Rau gia vị ăn củ,7000,auto-v1,giả định demo
+F0093,93,6,21,61,TLM_10053939,Củ đậu,Rau củ > Rau ăn củ > Củ khác,24900,auto-v1,giả định demo
+F0094,94,6,4,28,TLM_10626447,Hành Lý Sơn 100g,Rau củ > Rau gia vị > Rau gia vị ăn củ,10000,auto-v1,giả định demo
+F0098,98,2,0,13,TLM_10240587,PACOW Thịt bò Úc xay (Minced) khay 250g,"Thịt > Thịt Bò, Bê > Bò, Bê NK",94900,auto-v1,giả định demo
+F0099,99,6,8,29,TLM_10053857,Bắp cải tím,Rau củ > Rau ăn lá > Rau cải,29900,auto-v1,giả định demo
+F0100,100,3,11,60,TLM_10053604,Khô cá thiều ăn liền An Vĩnh 100g,Thủy hải sản > Thủy hải sản sơ chế > Thủy hải sản sơ chế,82000,auto-v1,giả định demo
+F0104,104,6,20,50,TLM_10054175,Cà tím dài,Rau củ > Rau ăn quả > Cà,29900,auto-v1,giả định demo
+F0108,108,6,8,29,TLM_10054020,Bắp cải trắng,Rau củ > Rau ăn lá > Rau cải,27000,auto-v1,giả định demo
+F0109,109,6,8,29,TLM_10281704,Cải bó xôi gói 300g,Rau củ > Rau ăn lá > Rau cải,22500,auto-v1,giả định demo
+F0110,110,2,31,79,TLM_10283198,MEATDELI Phi lê ức gà,Thịt > Thịt gà > Gà nội địa,112900,auto-v1,giả định demo
+F0115,115,6,10,33,TLM_10316523,Bí đỏ hồ lô,"Rau củ > Rau ăn quả > Bầu, bí",20900,auto-v1,giả định demo
+F0117,117,6,4,28,TLM_10140148,Hành củ Hải Dương,Rau củ > Rau gia vị > Rau gia vị ăn củ,85000,auto-v1,giả định demo
+F0118,118,6,4,28,TLM_10241438,Củ riềng 100g,Rau củ > Rau gia vị > Rau gia vị ăn củ,4500,auto-v1,giả định demo
+F0122,122,6,20,68,TLM_10241675,Cà chua beef Globalgap khay 500g,Rau củ > Rau ăn quả > Cà chua,39900,auto-v1,giả định demo
+F0127,127,6,20,58,TLM_10281674,Ngô ngọt uyên ương,Rau củ > Rau ăn quả > Ngô bắp,25900,auto-v1,giả định demo
+F0129,129,6,10,33,TLM_10283521,Đậu cove nhật 300g,Rau củ > Rau ăn quả > Đậu,19900,auto-v1,giả định demo
+F0136,136,6,4,28,TLM_10283125,Lá sung 100g,Rau củ > Rau gia vị > Rau gia vị ăn lá,6000,auto-v1,giả định demo
+F0140,140,6,4,28,TLM_10282401,Mùi ta 50g,Rau củ > Rau gia vị > Rau gia vị ăn lá,8500,auto-v1,giả định demo
+F0150,150,6,8,29,TLM_10054144,Lá trà xanh gói 300g,Rau củ > Rau ăn lá > Rau khác,19900,auto-v1,giả định demo
+F0155,155,3,11,60,TLM_10053348,Thịt ốc làm sạch,Thủy hải sản > Thủy hải sản sơ chế > Thủy hải sản sơ chế,89000,auto-v1,giả định demo
+F0181,181,5,18,80,TLM_10054788,Dưa hấu không hạt,Trái cây > Trái cây nội địa > Dưa NĐ,29900,auto-v1,giả định demo
+F0190,190,6,4,28,TLM_10282396,Húng bạc hà 50g,Rau củ > Rau gia vị > Rau gia vị ăn lá,8500,auto-v1,giả định demo
+F0192,192,6,8,8,TLM_10281713,Măng tây xanh 200g,Rau củ > Rau ăn lá > Rau khác,28900,auto-v1,giả định demo
+F0194,194,5,18,80,TLM_10054831,Sầu riêng hạt lép,Trái cây > Trái cây nội địa > Sầu riêng NĐ,109000,auto-v1,giả định demo
+F0200,200,6,8,29,TLM_10054767,Cần tây lớn WinEco,Rau củ > Rau ăn lá > Cần tây,47900,auto-v1,giả định demo
+F0207,207,6,4,28,TLM_10281772,Cần tây nhỏ 100g,Rau củ > Rau gia vị > Rau gia vị ăn lá,7900,auto-v1,giả định demo
+F0212,212,6,20,50,TLM_10281755,Đậu cove xanh gói 500g,Rau củ > Rau ăn quả > Đậu,19900,auto-v1,giả định demo
+F0213,213,6,4,28,TLM_10401692,Tiêu xanh gói 50g,Rau củ > Rau gia vị > Rau gia vị ăn quả,12000,auto-v1,giả định demo
+F0215,215,6,4,28,TLM_10241435,Củ gừng 100g,Rau củ > Rau gia vị > Rau gia vị ăn củ,6000,auto-v1,giả định demo
+F0216,216,6,21,64,TLM_10053947,Khoai tây,Rau củ > Rau ăn củ > Củ khoai,22000,auto-v1,giả định demo
+F0223,223,6,20,58,TLM_10265802,Ớt Chuông màu baby HFG 250g,Rau củ > Rau ăn quả > Ớt chuông,32900,auto-v1,giả định demo
+F0247,247,5,16,25,TLM_10407045,Táo Koru New Zealand,Trái cây > Trái cây nhập khẩu > Táo NK,119000,auto-v1,giả định demo
+F0249,249,5,16,25,TLM_10240240,Chà là nguyên cành Devie  hộp 500g,Trái cây > Trái cây nhập khẩu > Chà Là NK,165000,auto-v1,giả định demo
+F0250,250,5,16,27,TLM_10060637,Táo Envy New Zealand size lớn,Trái cây > Trái cây nhập khẩu > Táo NK,249000,auto-v1,giả định demo
+F0257,257,2,0,13,TLM_10181528,PACOW Thịt Nạm bụng bò Úc (Flank) 250g,"Thịt > Thịt Bò, Bê > Bò, Bê NK",106900,auto-v1,giả định demo
+F0259,259,6,21,64,TLM_10240000,Khoai lang mật,Rau củ > Rau ăn củ > Củ khoai,44900,auto-v1,giả định demo
+F0276,276,6,8,29,TLM_10281825,Cải bó xôi WinEco gói 300g,Rau củ > Rau ăn lá > Rau cải,25900,auto-v1,giả định demo
+F0285,285,6,24,51,TLM_10283694,Combo Nấm thủy tiên Biovegi 200g,Rau củ > Nấm > Nấm,54900,auto-v1,giả định demo
+F0290,290,5,16,25,TLM_10235281,Kiwi Vàng New Zealand (4trái/hộp),Trái cây > Trái cây nhập khẩu > Kiwi NK,165000,auto-v1,giả định demo
+F0291,291,5,16,27,TLM_10071566,Táo Rockit hộp 3 - 4 trái,Trái cây > Trái cây nhập khẩu > Táo NK,169000,auto-v1,giả định demo
+F0292,292,5,16,27,TLM_10054840,Kiwi xanh New Zealand,Trái cây > Trái cây nhập khẩu > Kiwi NK,179000,auto-v1,giả định demo
+F0293,293,5,16,27,TLM_10242584,Việt Quất Mỹ 125g,Trái cây > Trái cây nhập khẩu > Việt quất NK,119000,auto-v1,giả định demo
+F0296,296,5,16,25,TLM_10054890,Táo Jazz New Zealand,Trái cây > Trái cây nhập khẩu > Táo NK,109000,auto-v1,giả định demo
+F0298,298,6,8,29,TLM_10281893,Xà lách lolo xanh WinEco 300g,Rau củ > Rau ăn lá > Xà lách,24900,auto-v1,giả định demo
+F0300,300,6,20,50,TLM_10053954,Bí xanh,"Rau củ > Rau ăn quả > Bầu, bí",24900,auto-v1,giả định demo
+F0303,303,6,4,28,TLM_10314436,Tỏi củ Hải Dương hộp 300g,Rau củ > Rau gia vị > Rau gia vị ăn củ,27900,auto-v1,giả định demo
+F0310,310,5,16,25,TLM_10236508,Táo Jazz NewZealand ( 6 trái/hộp ),Trái cây > Trái cây nhập khẩu > Táo NK,139000,auto-v1,giả định demo
+F0321,321,5,18,80,TLM_10054822,Chôm chôm,Trái cây > Trái cây nội địa > Chôm chôm NĐ,75000,auto-v1,giả định demo
+F0335,335,6,21,64,TLM_10053991,Nấm kim châm 150g,Rau củ > Nấm,14900,auto-v1,giả định demo; tràn từ danh mục con Rau ăn củ
+F0345,345,5,16,26,TLM_10055074,Táo Royal Gala New Zealand PG size 90-120,Trái cây > Trái cây nhập khẩu > Táo NK,89900,auto-v1,giả định demo
+F0348,348,2,30,74,TLM_10281594,MEATDELI [PRE] Bắp giò cuộn (S),Thịt > Lợn (heo) > Lợn (heo) nội địa,199900,auto-v1,giả định demo
+F0351,351,6,4,28,TLM_10281814,Lá mè 50g,Rau củ > Rau gia vị > Rau gia vị ăn lá,9000,auto-v1,giả định demo
+F0359,359,6,20,56,TLM_10281758,Dưa chuột dài 500g,Rau củ > Rau ăn quả > Dưa chuột,24000,auto-v1,giả định demo
+F0362,362,1,7,17,TLM_10283812,Thạch đen trân châu Thạch An ly 280g,Thức ăn nấu sẵn > Tráng miệng > Tráng miệng,21000,auto-v1,giả định demo
+F0363,363,6,4,53,TLM_10281875,Củ Sả WinEco 100g,Rau củ > Rau gia vị > Rau gia vị ăn củ,5000,auto-v1,giả định demo
+F0366,366,5,16,25,TLM_10282852,Táo Fuji Nam Phi size nhỏ,Trái cây > Trái cây nhập khẩu > Táo NK,49000,auto-v1,giả định demo
+F0369,369,5,18,80,TLM_10054807,Xoài giống Úc,Trái cây > Trái cây nội địa > Xoài NĐ,79000,auto-v1,giả định demo
+F0373,373,2,31,79,TLM_10283201,MEATDELI Chân gà,Thịt > Thịt gà > Gà nội địa,109900,auto-v1,giả định demo
+F0374,374,5,18,45,TLM_10054792,Xoài dài giống Đài Loan,Trái cây > Trái cây nội địa > Xoài NĐ,59900,auto-v1,giả định demo
+F0379,379,2,29,76,TLM_10183389,Long nhi Chả cốm ngon 300g,Thịt > Lợn (heo) > Sơ chế thịt heo,59000,auto-v1,giả định demo
+F0380,380,6,4,28,TLM_10053949,Su su,Rau củ > Rau ăn quả > Su su,15900,auto-v1,giả định demo; tràn từ danh mục con Rau gia vị
+F0411,411,0,28,72,TLM_10055997,Bánh Sandwich nhỏ  Bảo Ngọc  gói 275g,Bánh mỳ > Bánh mỳ > Bánh mỳ sandwich,24500,auto-v1,giả định demo
+F0413,413,6,24,66,TLM_10054024,Nấm Bunapi Biovegi hộp 100g,Rau củ > Nấm > Nấm,32000,auto-v1,giả định demo
+F0415,415,1,7,17,TLM_10240739,Sữa bắp non Sài Gòn 300ml,Thức ăn nấu sẵn > Tráng miệng > Thức uống tr.miệng,15800,auto-v1,giả định demo
+F0416,416,6,24,51,TLM_10281865,Nấm hỗn hợp 300g,Rau củ > Nấm > Nấm,45900,auto-v1,giả định demo
+F0422,422,5,16,25,TLM_10054896,Nho đen không hạt Mỹ,Trái cây > Trái cây nhập khẩu > Nho NK,289000,auto-v1,giả định demo
+F0424,424,5,16,27,TLM_10235280,Kiwi xanh Newzealand (4trái/hộp),Trái cây > Trái cây nhập khẩu > Kiwi NK,99000,auto-v1,giả định demo
+F0425,425,5,16,27,TLM_10401646,Cam vàng Úc ( 3 trái/hộp),Trái cây > Trái cây nhập khẩu > Cam NK,119000,auto-v1,giả định demo
+F0452,452,2,29,76,TLM_10281333,MEATDELI Giò sống 200g,Thịt > Lợn (heo) > Sơ chế thịt heo,39000,auto-v1,giả định demo
+F0469,469,6,24,69,TLM_10282226,Nấm đông trùng hạ thảo tươi 100g,Rau củ > Nấm > Nấm,59000,auto-v1,giả định demo
+F0480,480,6,8,29,TLM_10054242,Lá vối tươi hộp 200g,Rau củ > Rau ăn lá > Rau khác,17500,auto-v1,giả định demo
+F0481,481,6,24,69,TLM_10054025,Nấm Bunashimeji Biovegi hộp 100g,Rau củ > Nấm > Nấm,32000,auto-v1,giả định demo
+F0486,486,6,20,68,TLM_10053988,Quả bầu,"Rau củ > Rau ăn quả > Bầu, bí",25900,auto-v1,giả định demo
+F0487,487,3,11,62,TLM_10183582,Mực viên Kitkool  200g,Thủy hải sản > Thủy hải sản sơ chế > Thủy hải sản sơ chế,39000,auto-v1,giả định demo
+F0496,496,5,16,25,TLM_10242458,Táo Breeze Newzealand hộp 6 trái,Trái cây > Trái cây nhập khẩu > Táo NK,139000,auto-v1,giả định demo
+F0500,500,6,4,28,TLM_10241439,Chanh tươi không hạt 250g,Rau củ > Rau gia vị > Rau gia vị ăn quả,12500,auto-v1,giả định demo
+F0525,525,5,15,43,TLM_10602355,Kiwi xanh Newzealand (2Trái/Hộp),Trái cây > Trái cây nhập khẩu > Kiwi NK,55000,auto-v1,giả định demo
+F0536,536,0,5,6,TLM_10055440,Bánh cốm Bảo Minh hộp 85g,Bánh mỳ > Bánh ngọt-mặn > Bánh mặn,11900,auto-v1,giả định demo
+F0549,549,2,31,79,TLM_10183282,Gà Viên Lá Chanh Hoa Doanh 200g,Thịt > Thịt gà > Gà nội địa,30000,auto-v1,giả định demo
+F0554,554,6,4,28,TLM_10281785,Ớt sừng 100g,Rau củ > Rau gia vị > Rau gia vị ăn quả,10000,auto-v1,giả định demo
+F0556,556,5,16,25,TLM_10265792,Táo Envy New túi 1Kg,Trái cây > Trái cây nhập khẩu > Táo NK,209000,auto-v1,giả định demo
+F0567,567,6,20,50,TLM_10242929,Cà chua cherry mix 300g,Rau củ > Rau ăn quả > Cà chua,29900,auto-v1,giả định demo
+F0574,574,6,24,51,TLM_10283797,Nấm đông trùng hạ thảo (bỏ gốc) 50g,Rau củ > Nấm > Nấm,55900,auto-v1,giả định demo
+F0578,578,6,4,53,TLM_10281786,Quất 100g,Rau củ > Rau gia vị > Rau gia vị ăn quả,4900,auto-v1,giả định demo
+F0580,580,2,29,76,TLM_10140306,MEATDELI Thịt xay tươi ướp sẵn,Thịt > Lợn (heo) > Sơ chế thịt heo,196900,auto-v1,giả định demo
+F0596,596,2,29,76,TLM_10182788,Chả heo Lá Chuối Hoa Doanh gói  200g,Thịt > Lợn (heo) > Sơ chế thịt heo,49000,auto-v1,giả định demo
+F0599,599,2,30,75,TLM_10281592,MEATDELI [PRE] Sườn St. Louis (S),Thịt > Lợn (heo) > Lợn (heo) nội địa,299900,auto-v1,giả định demo
+F0600,600,2,29,78,TLM_10183101,Chả cốm làng vòng Hoa Doanh gói 200g,Thịt > Lợn (heo) > Sơ chế thịt heo,40000,auto-v1,giả định demo
+F0608,608,6,4,28,TLM_10626162,Hành củ Hải Dương gói 100g,Rau củ > Rau gia vị > Rau gia vị ăn củ,9900,auto-v1,giả định demo
+F0628,628,6,21,61,TLM_10053945,Khoai môn,Rau củ > Rau ăn củ > Củ khoai,34900,auto-v1,giả định demo
+F0630,630,5,16,27,TLM_10265793,Táo Breeze New túi 1Kg,Trái cây > Trái cây nhập khẩu > Táo NK,139000,auto-v1,giả định demo
+F0632,632,5,16,27,TLM_10265836,Táo Cosmic Mỹ,Trái cây > Trái cây nhập khẩu > Táo NK,119000,auto-v1,giả định demo
+F0633,633,5,16,25,TLM_10282148,Lê Nam Phi,Trái cây > Trái cây nhập khẩu > Lê NK,105000,auto-v1,giả định demo
+F0634,634,5,16,25,TLM_10140621,Táo Jazz New Zealand túi 1kg,Trái cây > Trái cây nhập khẩu > Táo NK,115000,auto-v1,giả định demo
+F0635,635,5,16,27,TLM_10054905,Kiwi vàng New Zealand,Trái cây > Trái cây nhập khẩu > Kiwi NK,259000,auto-v1,giả định demo
+F0636,636,5,16,25,TLM_10265791,Táo Gala New túi 1Kg,Trái cây > Trái cây nhập khẩu > Táo NK,135000,auto-v1,giả định demo
+F0638,638,5,16,25,TLM_10054909,Táo Envy NewZealand 90 - 110,Trái cây > Trái cây nhập khẩu > Táo NK,179000,auto-v1,giả định demo
+F0642,642,6,20,50,TLM_10282395,Dưa chuột baby (dưa leo) 500g,Rau củ > Rau ăn quả > Dưa chuột,23500,auto-v1,giả định demo
+F0644,644,4,23,10,TLM_10053300,Cá chim trắng biển tươi,Thủy hải sản > Cá nước mặn > Cá nước mặn tươi,249000,auto-v1,giả định demo
+F0645,645,6,24,69,TLM_10241087,Nấm Đông Cô ( Nấm Hương) 200g,Rau củ > Nấm > Nấm,35000,auto-v1,giả định demo
+F0650,650,6,10,33,TLM_10283522,Cà chua cherry đỏ 300g,Rau củ > Rau ăn quả > Cà chua,18500,auto-v1,giả định demo
+F0666,666,6,21,64,TLM_10053938,Củ cải trắng,Rau củ > Rau ăn củ > Củ cải,24900,auto-v1,giả định demo
+F0668,668,3,25,71,TLM_10005597,Nộm sứa Tĩnh Gia Nhật Minh gói 350g,"Thủy hải sản > Giáp xác, nhuyễn thể > Giáp xác,nh.thể tươi",39900,auto-v1,giả định demo
+F0669,669,2,30,75,TLM_10281593,MEATDELI [PRE] Thịt Sườn thăn (sườn non) (S),Thịt > Lợn (heo) > Lợn (heo) nội địa,287900,auto-v1,giả định demo
+F0670,670,2,31,79,TLM_10283199,MEAT Đùi tỏi gà,Thịt > Thịt gà > Gà nội địa,126900,auto-v1,giả định demo
+F0673,673,5,18,80,TLM_10054825,Hồng Xiêm (Sapo),Trái cây > Trái cây nội địa > Hồng xiêm ( Sapoche),65000,auto-v1,giả định demo
+F0676,676,6,24,69,TLM_10317126,Hạt sen tươi Senta 200g,Rau củ > Rau sơ chế > Hạt tươi sơ chế,65000,auto-v1,giả định demo; tràn từ danh mục con Nấm
+F0691,691,6,21,64,TLM_10053936,Cà rốt,Rau củ > Rau ăn củ > Cà rốt,54900,auto-v1,giả định demo
+F0694,694,0,5,6,TLM_10055438,Bánh cốm đậu xanh trần Bảo Minh 85g,Bánh mỳ > Bánh ngọt-mặn > Bánh mặn,11000,auto-v1,giả định demo
+F0698,698,5,15,43,TLM_10602358,Kiwi Newzealand hộp 3 trái(2 vàng+1xanh),Trái cây > Trái cây nhập khẩu > Kiwi NK,115000,auto-v1,giả định demo
+F0707,707,1,7,17,TLM_10628239,Thạch đen Cao Bằng Thạch An 230g,Thức ăn nấu sẵn > Tráng miệng > Tráng miệng,24900,auto-v1,giả định demo
+F0715,715,6,10,38,TLM_10283517,Dọc mùng 300g,Rau củ > Rau ăn lá > Rau khác,10900,auto-v1,giả định demo; tràn từ danh mục con Rau ăn quả
+F0717,717,5,16,25,TLM_10401721,Cam cara Úc ( 3 trái/hộp),Trái cây > Trái cây nhập khẩu > Cam NK,109000,auto-v1,giả định demo
+F0738,738,6,4,28,TLM_10626448,Tỏi củ Lý Sơn 100g,Rau củ > Rau gia vị > Rau gia vị ăn củ,14900,auto-v1,giả định demo
+F0740,740,2,29,76,TLM_10183114,MEATDELI [PRE] Thịt Nạc dăm đầu giòn (S),Thịt > Lợn (heo) > Lợn (heo) nội địa,306900,auto-v1,giả định demo
+F0764,764,5,18,80,TLM_10054790,Thanh long ruột đỏ,Trái cây > Trái cây nội địa > Thanh Long NĐ,39900,auto-v1,giả định demo
+F0769,769,6,20,68,TLM_10241681,Ớt chuông đỏ Globalgap 400g,Rau củ > Rau ăn quả > Ớt chuông,39900,auto-v1,giả định demo
+F0774,774,6,4,53,TLM_10282403,Rau Răm 50g,Rau củ > Rau gia vị > Rau gia vị ăn lá,3500,auto-v1,giả định demo
+F0775,775,6,4,28,TLM_10242901,Combo Hành lá + Ngò rí 50g,Rau củ > Rau gia vị > Rau gia vị ăn lá,10000,auto-v1,giả định demo
+F0783,783,5,22,81,TLM_10054854,Ổi lê,Trái cây > Trái cây nội địa > Ổi NĐ,45000,auto-v1,giả định demo
+F0788,788,3,11,31,TLM_10140828,Thịt nghêu Lenger 200g,Thủy hải sản > Thủy hải sản sơ chế > Thủy hải sản sơ chế,73000,auto-v1,giả định demo
+F0793,793,3,14,40,TLM_10053318,Cá diêu hồng tươi làm sạch,Thủy hải sản > Cá nước ngọt > Cá nước ngọt tươi,123900,auto-v1,giả định demo
+F0797,797,6,4,28,TLM_10282405,Thì là 50g,Rau củ > Rau gia vị > Rau gia vị ăn lá,9900,auto-v1,giả định demo
+F0803,803,1,7,17,TLM_10315702,Thạch đen Cao Bằng Thạch An 480g,Thức ăn nấu sẵn > Tráng miệng > Tráng miệng,34100,auto-v1,giả định demo
+F0806,806,6,21,64,TLM_10053944,Hành tây,Rau củ > Rau ăn củ > Hành tây,20900,auto-v1,giả định demo
+F0816,816,4,27,0,TLM_10628264,Cá hồi Úc nguyên con,Thủy hải sản > Thủy hải sản nhập khẩu tươi sống > THS nhập khẩu tươi,569000,auto-v1,giả định demo
+F0817,817,4,27,37,TLM_10628265,Cá hồi Úc Fillet,Thủy hải sản > Thủy hải sản nhập khẩu tươi sống > THS nhập khẩu tươi,749900,auto-v1,giả định demo
+F0819,819,5,15,44,TLM_10602360,Kiwi vàng Newzealand (2Trái/Hộp),Trái cây > Trái cây nhập khẩu > Kiwi NK,92000,auto-v1,giả định demo
+F0823,823,5,18,80,TLM_10054816,Đu đủ ruột đỏ,Trái cây > Trái cây nội địa > Đu Đủ NĐ,35000,auto-v1,giả định demo
+F0825,825,5,18,80,TLM_10054817,Táo xanh,Trái cây > Trái cây nội địa > Táo NĐ,59900,auto-v1,giả định demo
+F0826,826,1,7,17,TLM_10240056,Trà xanh Go Thái Sơn 330ml,Thức ăn nấu sẵn > Tráng miệng > Thức uống tr.miệng,19500,auto-v1,giả định demo
+F0829,829,3,11,35,TLM_10053346,Bao tử cá basa,Thủy hải sản > Thủy hải sản sơ chế > Thủy hải sản sơ chế,129000,auto-v1,giả định demo
+F0830,830,1,7,16,TLM_10240055,Trà sữa Go Thái Sơn 330ml,Thức ăn nấu sẵn > Tráng miệng > Thức uống tr.miệng,19500,auto-v1,giả định demo
+F0834,834,0,28,72,TLM_10055996,Bánh sừng hươu Bảo Ngọc gói 175g,Bánh mỳ > Bánh mỳ > Bánh croissant,21900,auto-v1,giả định demo
+F0841,841,2,0,13,TLM_10053675,Thịt Thăn bò,"Thịt > Thịt Bò, Bê > Bò, Bê nội địa",399000,auto-v1,giả định demo
+F0843,843,6,4,28,TLM_10282398,Húng quế 50g,Rau củ > Rau gia vị > Rau gia vị ăn lá,6500,auto-v1,giả định demo
+F0847,847,6,20,50,TLM_10281714,Đậu bắp gói 300g,Rau củ > Rau ăn quả > Đậu,19900,auto-v1,giả định demo
+F0855,855,0,5,6,TLM_10005016,Bánh bông nhài Bảo Minh gói 180g,Bánh mỳ > Bánh ngọt-mặn > Bánh truyền thống,36900,auto-v1,giả định demo
+F0858,858,5,15,43,TLM_10602356,Kiwi vàng Newzealand Organic (3Trái/Hộp),Trái cây > Trái cây nhập khẩu > Kiwi NK,95000,auto-v1,giả định demo
