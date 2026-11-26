@@ -16,6 +16,7 @@ import { LocalVoiceDiagnostics } from './voice-diagnostics'
 import {
   addCartItem,
   cancelCheckout,
+  cancelPayOSPayment,
   closeSession,
   confirmCheckout,
   createRequestId,
@@ -23,6 +24,7 @@ import {
   createSynthesisTicket,
   getCart,
   getManagerNotifierStatus,
+  getPayOSStatus,
   prewarmSpeech,
   prepareCheckout,
   respond,
@@ -30,6 +32,7 @@ import {
   setCartItemQuantity,
   simulateSandboxPayment,
   submitAssistedOrder,
+  syncPayOSPayment,
   transcribe,
   type TextDeltaHandler,
 } from './api'
@@ -69,15 +72,19 @@ const cart = ref<ShoppingCart | null>(null)
 const checkoutQuote = ref<CheckoutQuote | null>(null)
 const sandboxOrder = ref<SandboxOrder | null>(null)
 const ASSISTED_CART_STORAGE_KEY = 'retail-ai-assisted-cart-v1'
+const PENDING_PAYOS_STORAGE_KEY = 'retail-ai-pending-payos-v1'
 const assistedCart = ref<AssistedCartItem[]>([])
 const assistedOrders = ref<AssistedOrderResponse[]>([])
 const isCartOpen = ref(false)
 const cartInitialTab = ref<'cart' | 'orders'>('cart')
 const activeAssistedOrder = ref<AssistedOrderResponse | null>(null)
 const isSubmittingAssistedOrder = ref(false)
+const isCheckingPayOS = ref(false)
+const payosEnabled = ref(false)
 const assistedOrderError = ref<string | null>(null)
 const cartToastMessage = ref<string | null>(null)
 let cartToastTimer: ReturnType<typeof setTimeout> | undefined
+let payosPollTimer: ReturnType<typeof setInterval> | undefined
 
 const assistedTotalCount = computed(() =>
   assistedCart.value.reduce((sum, entry) => sum + entry.quantity, 0),
@@ -1375,6 +1382,8 @@ async function resetKioskSession(notice?: string) {
   activeAssistedOrder.value = null
   assistedOrderError.value = null
   isCartOpen.value = false
+  stopPayOSPolling()
+  persistPendingPayOS(null)
   persistAssistedCart()
   lastPrompt.value = ''
   errorMessage.value = null
@@ -1799,7 +1808,145 @@ function handleBrowseCartSuggestions() {
   void sendMessage('Sản phẩm nào bán chạy nhất cửa hàng?')
 }
 
+function stopPayOSPolling() {
+  if (payosPollTimer) {
+    clearInterval(payosPollTimer)
+    payosPollTimer = undefined
+  }
+}
+
+function persistPendingPayOS(order: AssistedOrderResponse | null) {
+  try {
+    if (!order || !order.payos_order_code || order.payment_status !== 'PENDING_PAYOS') {
+      window.sessionStorage.removeItem(PENDING_PAYOS_STORAGE_KEY)
+      return
+    }
+    window.sessionStorage.setItem(
+      PENDING_PAYOS_STORAGE_KEY,
+      JSON.stringify({
+        payosOrderCode: order.payos_order_code,
+        paymentVerifyToken: order.payment_verify_token || undefined,
+      }),
+    )
+  } catch {
+    // Session storage may be blocked; polling still works in memory.
+  }
+}
+
+function readPendingPayOS(): { payosOrderCode: number; paymentVerifyToken?: string } | null {
+  try {
+    const raw = window.sessionStorage.getItem(PENDING_PAYOS_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { payosOrderCode?: unknown; paymentVerifyToken?: unknown }
+    const code = Number(parsed?.payosOrderCode)
+    if (!Number.isFinite(code) || code <= 0) return null
+    return {
+      payosOrderCode: code,
+      paymentVerifyToken: typeof parsed?.paymentVerifyToken === 'string' ? parsed.paymentVerifyToken : undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
+function upsertAssistedOrder(order: AssistedOrderResponse) {
+  const idx = assistedOrders.value.findIndex(
+    (entry) => entry.order_id === order.order_id || entry.order_code === order.order_code,
+  )
+  if (idx >= 0) {
+    const next = [...assistedOrders.value]
+    next[idx] = order
+    assistedOrders.value = next
+  } else {
+    assistedOrders.value = [order, ...assistedOrders.value]
+  }
+}
+
+function finalizePaidPayOSOrder(synced: AssistedOrderResponse) {
+  stopPayOSPolling()
+  persistPendingPayOS(null)
+  assistedOrderError.value = null
+  activeAssistedOrder.value = synced
+  upsertAssistedOrder(synced)
+  assistedCart.value = []
+  persistAssistedCart()
+  const alreadyInChat = messages.value.some((msg) => msg.assistedOrder?.order_code === synced.order_code)
+  if (!alreadyInChat) {
+    pushMessage('assistant', synced.customer_message, {
+      model: 'assisted-order',
+      assistedOrder: synced,
+    })
+  }
+}
+
+async function handleCheckPayOSPayment(order: AssistedOrderResponse, silent = false) {
+  const payosCode = order.payos_order_code
+  if (!payosCode || isCheckingPayOS.value || isUnmounted) return
+  if (typeof syncPayOSPayment !== 'function') return
+  isCheckingPayOS.value = true
+  if (!silent) assistedOrderError.value = null
+  try {
+    const synced = await syncPayOSPayment(payosCode, order.payment_verify_token)
+    if (isUnmounted) return
+    if (synced.payment_status === 'PAID') {
+      finalizePaidPayOSOrder(synced)
+      return
+    }
+    if (synced.payment_status === 'CANCELLED' || synced.payment_status === 'EXPIRED') {
+      stopPayOSPolling()
+      persistPendingPayOS(null)
+      activeAssistedOrder.value = null
+      assistedOrderError.value = synced.customer_message
+        || 'Mã QR PayOS đã hủy hoặc hết hạn. Giỏ hàng vẫn được giữ để bạn tạo lại mã mới.'
+      return
+    }
+    activeAssistedOrder.value = {
+      ...order,
+      ...synced,
+      payment_verify_token: synced.payment_verify_token || order.payment_verify_token,
+    }
+    if (!silent) {
+      assistedOrderError.value = 'Chưa thấy giao dịch mới trên PayOS. Nếu bạn vừa chuyển khoản xong, đợi 2–3 giây rồi bấm kiểm tra lại nhé.'
+    }
+  } catch (error) {
+    if (!silent && !isUnmounted) {
+      assistedOrderError.value = toErrorMessage(
+        error,
+        'Chưa kiểm tra được trạng thái thanh toán PayOS. Bạn thử bấm kiểm tra lại nhé.',
+      )
+    }
+  } finally {
+    if (!isUnmounted) isCheckingPayOS.value = false
+  }
+}
+
+function startPayOSPolling(order: AssistedOrderResponse) {
+  stopPayOSPolling()
+  if (!order.payos_order_code || typeof syncPayOSPayment !== 'function') return
+  payosPollTimer = setInterval(() => {
+    const current = activeAssistedOrder.value
+    if (isUnmounted || !current || current.payment_status !== 'PENDING_PAYOS') {
+      stopPayOSPolling()
+      return
+    }
+    void handleCheckPayOSPayment(current, true)
+  }, 3_000)
+}
+
+function handleCancelPayOSPayment(order: AssistedOrderResponse) {
+  stopPayOSPolling()
+  persistPendingPayOS(null)
+  assistedOrderError.value = null
+  activeAssistedOrder.value = null
+  if (order.payos_order_code && typeof cancelPayOSPayment === 'function') {
+    void cancelPayOSPayment(order.payos_order_code).catch(() => {
+      // Cancelling an unpaid link is best-effort; the shopper can continue immediately.
+    })
+  }
+}
+
 async function handleSubmitAssistedOrder(form: {
+  paymentMethod?: 'payos' | 'counter'
   customerName: string
   customerPhone: string
   pickupLocation: string
@@ -1809,11 +1956,18 @@ async function handleSubmitAssistedOrder(form: {
   isSubmittingAssistedOrder.value = true
   assistedOrderError.value = null
   const idempotencyKey = createRequestId()
+  const chosenMethod: 'payos' | 'counter' = form.paymentMethod === 'payos' && payosEnabled.value
+    ? 'payos'
+    : 'counter'
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const payload = {
     items: assistedCart.value.map((entry) => ({
       product_id: entry.product.product_id,
       quantity: entry.quantity,
     })),
+    payment_method: chosenMethod,
+    return_url: chosenMethod === 'payos' && origin ? `${origin}/?payos=success` : undefined,
+    cancel_url: chosenMethod === 'payos' && origin ? `${origin}/?payos=cancel` : undefined,
     customer_name: form.customerName || undefined,
     customer_phone: form.customerPhone || undefined,
     pickup_location: form.pickupLocation || undefined,
@@ -1836,7 +1990,15 @@ async function handleSubmitAssistedOrder(form: {
       response = await submitAssistedOrder(freshSession.session_id, payload)
     }
     if (isUnmounted) return
-    assistedOrders.value = [response, ...assistedOrders.value]
+    if (response.payment_method === 'payos' && response.payment_status === 'PENDING_PAYOS') {
+      activeAssistedOrder.value = response
+      persistPendingPayOS(response)
+      startPayOSPolling(response)
+      return
+    }
+    stopPayOSPolling()
+    persistPendingPayOS(null)
+    upsertAssistedOrder(response)
     activeAssistedOrder.value = response
     assistedCart.value = []
     persistAssistedCart()
@@ -1848,7 +2010,9 @@ async function handleSubmitAssistedOrder(form: {
     if (!isUnmounted) {
       assistedOrderError.value = toErrorMessage(
         error,
-        'Chưa gửi được đơn tới quản lý. Bạn vui lòng thử lại hoặc báo nhân viên tại quầy nhé.',
+        chosenMethod === 'payos'
+          ? 'Chưa tạo được mã QR PayOS. Bạn thử lại hoặc chọn "Nhờ nhân viên & trả tại quầy" nhé.'
+          : 'Chưa gửi được đơn tới quản lý. Bạn vui lòng thử lại hoặc báo nhân viên tại quầy nhé.',
       )
     }
   } finally {
@@ -2011,6 +2175,67 @@ onMounted(() => {
         // Optional status badge; never block kiosk startup.
       })
   }
+  if (typeof getPayOSStatus === 'function') {
+    void getPayOSStatus()
+      .then((info) => {
+        if (!isUnmounted) payosEnabled.value = Boolean(info?.enabled)
+      })
+      .catch(() => {
+        // PayOS status is optional; counter checkout stays available.
+      })
+  }
+  const searchParams = new URLSearchParams(window.location.search)
+  const payosResult = searchParams.get('payos')
+  const returnedOrderCode = Number(searchParams.get('orderCode') || searchParams.get('payosOrderCode') || 0)
+  const savedPendingPayOS = readPendingPayOS()
+  const payosStatusParam = (searchParams.get('status') || '').toUpperCase()
+  const payosCancelled = payosResult === 'cancel' || searchParams.get('cancel') === 'true'
+  if (payosCancelled) {
+    persistPendingPayOS(null)
+    isCartOpen.value = true
+    assistedOrderError.value = 'Bạn đã hủy giao dịch PayOS. Giỏ hàng vẫn được giữ nguyên để bạn chọn lại.'
+    try {
+      window.history.replaceState({}, '', window.location.pathname)
+    } catch {
+      // Ignore history restrictions.
+    }
+  } else if (
+    (payosResult === 'success' || payosStatusParam === 'PAID')
+    && typeof syncPayOSPayment === 'function'
+  ) {
+    const syncCode = returnedOrderCode > 0 ? returnedOrderCode : (savedPendingPayOS?.payosOrderCode ?? 0)
+    if (syncCode > 0) {
+      isCartOpen.value = true
+      isCheckingPayOS.value = true
+      void syncPayOSPayment(syncCode, savedPendingPayOS?.paymentVerifyToken)
+        .then((synced) => {
+          if (isUnmounted) return
+          if (synced.payment_status === 'PAID') {
+            finalizePaidPayOSOrder(synced)
+          } else if (synced.payment_status === 'PENDING_PAYOS') {
+            activeAssistedOrder.value = synced
+            persistPendingPayOS(synced)
+            startPayOSPolling(synced)
+          } else {
+            persistPendingPayOS(null)
+            assistedOrderError.value = synced.customer_message || 'Giao dịch PayOS chưa hoàn tất.'
+          }
+        })
+        .catch(() => {
+          if (!isUnmounted) {
+            assistedOrderError.value = 'Chưa xác minh được giao dịch PayOS vừa quay lại. Bạn thử bấm kiểm tra lại nhé.'
+          }
+        })
+        .finally(() => {
+          if (!isUnmounted) isCheckingPayOS.value = false
+        })
+    }
+    try {
+      window.history.replaceState({}, '', window.location.pathname)
+    } catch {
+      // Ignore history restrictions.
+    }
+  }
   void refreshMicrophones()
   navigator.mediaDevices?.addEventListener?.('devicechange', refreshMicrophones)
 })
@@ -2027,6 +2252,7 @@ onUnmounted(() => {
   const closingSessionId = sessionId.value
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer)
   if (cartToastTimer) clearTimeout(cartToastTimer)
+  stopPayOSPolling()
   navigator.mediaDevices?.removeEventListener?.('devicechange', refreshMicrophones)
   voiceController?.stop()
   invalidateSpeechPlayback()
@@ -2246,14 +2472,18 @@ onUnmounted(() => {
       :active-order="activeAssistedOrder"
       :initial-tab="cartInitialTab"
       :is-submitting="isSubmittingAssistedOrder"
+      :is-checking-payment="isCheckingPayOS"
       :submit-error="assistedOrderError"
       :language="language"
       :manager-notify-channel="managerNotifyChannel"
+      :payos-enabled="payosEnabled"
       @close="isCartOpen = false"
       @update-qty="handleUpdateAssistedQty"
       @remove-item="handleRemoveAssistedItem"
       @clear-cart="handleClearAssistedCart"
       @submit-order="handleSubmitAssistedOrder"
+      @check-payment="(ord) => handleCheckPayOSPayment(ord, false)"
+      @cancel-payment="handleCancelPayOSPayment"
       @dismiss-active-order="activeAssistedOrder = null"
       @browse-suggestions="handleBrowseCartSuggestions"
     />

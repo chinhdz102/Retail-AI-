@@ -12,6 +12,8 @@ vi.mock('./api', () => ({
   addCartItem: vi.fn(), setCartItemQuantity: vi.fn(), prepareCheckout: vi.fn(),
   cancelCheckout: vi.fn(), confirmCheckout: vi.fn(), simulateSandboxPayment: vi.fn(),
   submitAssistedOrder: vi.fn(), listAssistedOrders: vi.fn().mockResolvedValue([]),
+  getPayOSStatus: vi.fn().mockResolvedValue({ enabled: false, provider: 'payos', store_name: 'Thanh Lam Mart' }),
+  syncPayOSPayment: vi.fn(), cancelPayOSPayment: vi.fn(),
 }))
 vi.mock('./voice-controller', () => ({ VoiceConversationController: class {
   options: any

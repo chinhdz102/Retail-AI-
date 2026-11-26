@@ -22,7 +22,14 @@ from backend.services.support import NotificationChannel, NotificationStatus
 MAX_ASSISTED_LINES = 20
 MAX_ASSISTED_QTY_PER_LINE = 20
 
-AssistedOrderStatus = Literal["SENT_TO_STAFF", "RECORDED_PENDING_STAFF"]
+AssistedOrderStatus = Literal[
+    "AWAITING_PAYMENT",
+    "SENT_TO_STAFF",
+    "RECORDED_PENDING_STAFF",
+    "CANCELLED",
+]
+AssistedPaymentMethod = Literal["counter", "payos"]
+AssistedPaymentStatus = Literal["UNPAID", "PENDING_PAYOS", "PAID", "CANCELLED", "EXPIRED"]
 
 
 class AssistedOrderError(RuntimeError):
@@ -73,6 +80,22 @@ class AssistedOrderRecord:
     created_at: datetime
     data_source: str
     stock_is_current: bool
+    payment_method: AssistedPaymentMethod = "counter"
+    payment_status: AssistedPaymentStatus = "UNPAID"
+    payos_order_code: int | None = None
+    payos_payment_link_id: str | None = None
+    payos_checkout_url: str | None = None
+    payos_qr_code: str | None = None
+    payos_account_number: str | None = None
+    payos_account_name: str | None = None
+    payos_bin: str | None = None
+    payos_description: str | None = None
+    payos_expired_at: int | None = None
+    payos_paid_amount_vnd: int | None = None
+    payos_transaction_ref: str | None = None
+    paid_at: datetime | None = None
+    paid_notified: bool = False
+    payment_verify_token: str | None = None
     notified_channel: NotificationChannel | None = None
     notified_provider: str | None = None
     notification_status: NotificationStatus = "NOT_CONFIGURED"
@@ -99,6 +122,8 @@ class AssistedOrderStore:
     def __init__(self) -> None:
         self._orders: dict[UUID, AssistedOrderRecord] = {}
         self._by_session: dict[UUID, list[UUID]] = {}
+        self._by_payos_code: dict[int, UUID] = {}
+        self._paid_notified_codes: set[int] = set()
         self._idempotency: dict[tuple[UUID, str], tuple[str, UUID]] = {}
         self._lock = threading.RLock()
 
@@ -111,6 +136,7 @@ class AssistedOrderStore:
         requested_items: list[tuple[str, int]],
         repository: ProductRepository,
         ticket_id: UUID,
+        payment_method: AssistedPaymentMethod = "counter",
         customer_name: str | None = None,
         customer_phone: str | None = None,
         pickup_location: str | None = None,
@@ -145,6 +171,7 @@ class AssistedOrderStore:
 
         digest_body = {
             "items": sorted((pid, qty) for pid, qty in merged.items()),
+            "payment_method": payment_method,
             "name": clean_name or "",
             "phone": clean_phone or "",
             "pickup": clean_pickup or "",
@@ -216,17 +243,127 @@ class AssistedOrderStore:
                 customer_phone=clean_phone,
                 pickup_location=clean_pickup,
                 customer_note=clean_note,
-                status="RECORDED_PENDING_STAFF",
+                status=(
+                    "AWAITING_PAYMENT" if payment_method == "payos" else "RECORDED_PENDING_STAFF"
+                ),
                 ticket_id=ticket_id,
                 created_at=datetime.now(UTC),
                 data_source=repository.source_name,
                 stock_is_current=all(item.stock_is_current for item in resolved_items),
+                payment_method=payment_method,
+                payment_status="PENDING_PAYOS" if payment_method == "payos" else "UNPAID",
             )
             self._orders[order_id] = record
             self._by_session.setdefault(session_id, []).append(order_id)
             if idempotency_key:
                 self._idempotency[(session_id, idempotency_key.strip())] = (digest, order_id)
             return record, True
+
+    def attach_payos_link(
+        self,
+        order_id: UUID,
+        *,
+        payos_order_code: int,
+        payment_link_id: str,
+        checkout_url: str,
+        qr_code: str,
+        account_number: str | None,
+        account_name: str | None,
+        bank_bin: str | None,
+        description: str,
+        expired_at: int | None,
+        payment_verify_token: str,
+    ) -> AssistedOrderRecord:
+        with self._lock:
+            existing = self._orders[order_id]
+            updated = replace(
+                existing,
+                payment_method="payos",
+                payment_status="PENDING_PAYOS",
+                status="AWAITING_PAYMENT",
+                payos_order_code=payos_order_code,
+                payos_payment_link_id=payment_link_id,
+                payos_checkout_url=checkout_url,
+                payos_qr_code=qr_code,
+                payos_account_number=account_number,
+                payos_account_name=account_name,
+                payos_bin=bank_bin,
+                payos_description=description,
+                payos_expired_at=expired_at,
+                payment_verify_token=payment_verify_token,
+            )
+            self._orders[order_id] = updated
+            self._by_payos_code[payos_order_code] = order_id
+            return updated
+
+    def register_reconstructed(self, record: AssistedOrderRecord) -> AssistedOrderRecord:
+        with self._lock:
+            if record.payos_order_code is not None:
+                existing_id = self._by_payos_code.get(record.payos_order_code)
+                if existing_id and existing_id in self._orders:
+                    return self._orders[existing_id]
+                self._by_payos_code[record.payos_order_code] = record.order_id
+            self._orders[record.order_id] = record
+            sess_list = self._by_session.setdefault(record.session_id, [])
+            if record.order_id not in sess_list:
+                sess_list.append(record.order_id)
+            return record
+
+    def get_by_payos_order_code(self, payos_order_code: int) -> AssistedOrderRecord | None:
+        with self._lock:
+            oid = self._by_payos_code.get(payos_order_code)
+            return self._orders.get(oid) if oid else None
+
+    def mark_payos_status(
+        self,
+        payos_order_code: int,
+        *,
+        payment_status: AssistedPaymentStatus,
+        paid_amount_vnd: int | None = None,
+        transaction_ref: str | None = None,
+    ) -> AssistedOrderRecord | None:
+        with self._lock:
+            oid = self._by_payos_code.get(payos_order_code)
+            if not oid or oid not in self._orders:
+                return None
+            existing = self._orders[oid]
+            next_status = existing.status
+            paid_at = existing.paid_at
+            if payment_status == "PAID":
+                if paid_at is None:
+                    paid_at = datetime.now(UTC)
+                if next_status == "AWAITING_PAYMENT":
+                    next_status = "RECORDED_PENDING_STAFF"
+            elif payment_status in {"CANCELLED", "EXPIRED"} and existing.payment_status != "PAID":
+                next_status = "CANCELLED"
+            updated = replace(
+                existing,
+                payment_status=payment_status,
+                status=next_status,
+                payos_paid_amount_vnd=(
+                    paid_amount_vnd
+                    if paid_amount_vnd is not None
+                    else existing.payos_paid_amount_vnd
+                ),
+                payos_transaction_ref=transaction_ref or existing.payos_transaction_ref,
+                paid_at=paid_at,
+            )
+            self._orders[oid] = updated
+            return updated
+
+    def try_claim_paid_notification(self, payos_order_code: int) -> bool:
+        """Atomically claim the right to send the post-payment manager alert once."""
+        with self._lock:
+            if payos_order_code in self._paid_notified_codes:
+                return False
+            oid = self._by_payos_code.get(payos_order_code)
+            if oid and oid in self._orders and self._orders[oid].paid_notified:
+                self._paid_notified_codes.add(payos_order_code)
+                return False
+            self._paid_notified_codes.add(payos_order_code)
+            if oid and oid in self._orders:
+                self._orders[oid] = replace(self._orders[oid], paid_notified=True)
+            return True
 
     def record_notification(
         self,

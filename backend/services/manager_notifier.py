@@ -88,6 +88,11 @@ class AssistedOrderAlertPayload:
     pickup_location: str | None = None
     customer_note: str | None = None
     stock_is_current: bool = False
+    payment_method: Literal["counter", "payos"] = "counter"
+    payment_status: str = "UNPAID"
+    payos_order_code: int | None = None
+    payos_paid_amount_vnd: int | None = None
+    payos_transaction_ref: str | None = None
 
 
 @dataclass(frozen=True)
@@ -192,12 +197,27 @@ def _format_vnd(amount: int) -> str:
 
 def format_assisted_order_text(payload: AssistedOrderAlertPayload) -> str:
     time_vn = _format_vietnam_time(payload.created_at)
+    is_paid = payload.payment_status == "PAID"
+    banner = (
+        f"[MAI KIOSK - {payload.store_name}] ĐÃ THANH TOÁN PAYOS · SOẠN HÀNG & TRAO TRẢ NGAY"
+        if is_paid
+        else f"[MAI KIOSK - {payload.store_name}] KHÁCH ĐẶT GIỎ HÀNG · HỖ TRỢ CHỌN & TRAO TRẢ"
+    )
     lines = [
-        f"[MAI KIOSK - {payload.store_name}] KHÁCH ĐẶT GIỎ HÀNG · HỖ TRỢ CHỌN & TRAO TRẢ",
+        banner,
         f"- Mã đơn hỗ trợ: #{payload.order_code}",
         f"- Điểm hỗ trợ / Kiosk: {payload.kiosk_id}",
         f"- Thời gian: {time_vn}",
     ]
+    if is_paid:
+        paid_amt = payload.payos_paid_amount_vnd or payload.total_vnd
+        ref_part = (
+            f" · Mã GD: {payload.payos_transaction_ref}" if payload.payos_transaction_ref else ""
+        )
+        code_part = f" · PayOS #{payload.payos_order_code}" if payload.payos_order_code else ""
+        lines.append(
+            f"- Thanh toán: ĐÃ THANH TOÁN PAYOS ({_format_vnd(paid_amt)}{code_part}{ref_part})"
+        )
     if payload.customer_name or payload.customer_phone:
         parts = [p for p in (payload.customer_name, payload.customer_phone) if p]
         lines.append(f"- Khách hàng: {' · '.join(parts)}")
@@ -219,21 +239,45 @@ def format_assisted_order_text(payload: AssistedOrderAlertPayload) -> str:
     if len(payload.items) > max_listed:
         lines.append(f"  ... và {len(payload.items) - max_listed} mặt hàng khác.")
     price_label = (
-        "Tổng tạm tính (giá tham khảo)"
-        if not payload.stock_is_current
-        else "Tổng tạm tính"
+        "Tổng đã thanh toán"
+        if is_paid
+        else ("Tổng tạm tính (giá tham khảo)" if not payload.stock_is_current else "Tổng tạm tính")
     )
     lines.append(f"- {price_label}: {_format_vnd(payload.total_vnd)}")
-    lines.append(
-        "-> Vui lòng phân công nhân viên hỗ trợ khách chọn đúng hàng, kiểm tra tồn thực tế "
-        "và hướng dẫn trao trả / thanh toán tại quầy."
-    )
+    if is_paid:
+        lines.append(
+            "-> Khách ĐÃ THANH TOÁN THÀNH CÔNG qua PayOS. Vui lòng phân công nhân viên soạn đúng "
+            "danh sách hàng trên và trao trả ngay cho khách!"
+        )
+    else:
+        lines.append(
+            "-> Vui lòng phân công nhân viên hỗ trợ khách chọn đúng hàng, kiểm tra tồn thực tế "
+            "và hướng dẫn trao trả / thanh toán tại quầy."
+        )
     return "\n".join(lines)[:1950]
 
 
 def format_assisted_order_email_html(payload: AssistedOrderAlertPayload) -> str:
     time_vn = _format_vietnam_time(payload.created_at)
+    is_paid = payload.payment_status == "PAID"
+    header_bg = "#15803d" if is_paid else "#0e7490"
+    header_title = (
+        f"ĐÃ THANH TOÁN PAYOS · SOẠN HÀNG &amp; TRAO TRẢ · #{html.escape(payload.order_code)}"
+        if is_paid
+        else f"ĐƠN HỖ TRỢ CHỌN HÀNG &amp; TRAO TRẢ · #{html.escape(payload.order_code)}"
+    )
     customer_rows = ""
+    if is_paid:
+        paid_amt = payload.payos_paid_amount_vnd or payload.total_vnd
+        ref_txt = (
+            f" (Mã GD: {payload.payos_transaction_ref})" if payload.payos_transaction_ref else ""
+        )
+        customer_rows += (
+            "<tr><td style='padding:8px 12px;color:#475569;font-weight:600;'>Thanh toán</td>"
+            f"<td style='padding:8px 12px;color:#15803d;font-weight:700;'>"
+            f"ĐÃ THANH TOÁN PAYOS · {html.escape(_format_vnd(paid_amt))}{html.escape(ref_txt)}"
+            "</td></tr>"
+        )
     if payload.customer_name or payload.customer_phone:
         parts = [p for p in (payload.customer_name, payload.customer_phone) if p]
         customer_rows += (
@@ -277,11 +321,10 @@ def format_assisted_order_email_html(payload: AssistedOrderAlertPayload) -> str:
         "padding:20px;color:#0f172a;'>"
         "<div style='max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;"
         "border-radius:14px;overflow:hidden;'>"
-        "<div style='background:#0e7490;color:#ffffff;padding:16px 20px;'>"
+        f"<div style='background:{header_bg};color:#ffffff;padding:16px 20px;'>"
         f"<div style='font-size:12px;letter-spacing:0.08em;opacity:0.9;'>MAI RETAIL ASSISTANT · "
         f"{html.escape(payload.store_name)}</div>"
-        f"<h2 style='margin:6px 0 0;font-size:18px;'>ĐƠN HỖ TRỢ CHỌN HÀNG &amp; TRAO TRẢ · "
-        f"#{html.escape(payload.order_code)}</h2>"
+        f"<h2 style='margin:6px 0 0;font-size:18px;'>{header_title}</h2>"
         "</div>"
         "<table style='width:100%;border-collapse:collapse;font-size:14px;'>"
         "<tr><td style='padding:8px 12px;color:#475569;font-weight:600;width:36%;'>Kiosk</td>"
@@ -587,9 +630,14 @@ class ManagerNotifierService:
         port = self.settings.manager_gmail_smtp_port
         timeout = self.settings.manager_notify_timeout_seconds
 
+        subject_prefix = (
+            "ĐÃ THANH TOÁN PAYOS · Đơn"
+            if payload.payment_status == "PAID"
+            else "Đơn hỗ trợ chọn hàng"
+        )
         msg = EmailMessage()
         msg["Subject"] = (
-            f"[Mai Kiosk · {payload.kiosk_id}] Đơn hỗ trợ chọn hàng "
+            f"[Mai Kiosk · {payload.kiosk_id}] {subject_prefix} "
             f"#{payload.order_code} ({payload.item_count} SP · {_format_vnd(payload.total_vnd)})"
         )
         msg["From"] = f"Mai Retail Assistant <{sender}>"

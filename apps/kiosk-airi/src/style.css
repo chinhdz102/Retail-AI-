@@ -3911,7 +3911,7 @@ textarea {
 }
 
 .cart-sheet-body {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   padding: 14px 16px 18px;
@@ -4541,6 +4541,252 @@ textarea {
   font-size: 0.88rem;
 }
 
+/* PayOS Payment Method Chooser & Live VietQR Screen */
+.payos-method-section {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 13px;
+  border-radius: 16px;
+  border: 1px solid rgb(103 232 249 / 0.24);
+  background: rgb(16 28 44 / 0.78);
+}
+
+.payos-method-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.payos-method-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px;
+  border-radius: 13px;
+  border: 1px solid var(--cart-line-strong);
+  background: rgb(7 13 24 / 0.58);
+  color: var(--cart-soft);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.payos-method-card svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--cart-muted);
+}
+
+.payos-method-card strong {
+  display: block;
+  font-size: 0.79rem;
+  font-weight: 800;
+  color: var(--cart-text);
+  line-height: 1.28;
+}
+
+.payos-method-card small {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.68rem;
+  color: var(--cart-muted);
+  line-height: 1.35;
+}
+
+.payos-method-card.is-selected {
+  border-color: var(--cart-accent);
+  background: linear-gradient(145deg, rgb(14 116 144 / 0.34), rgb(8 47 73 / 0.65));
+  box-shadow: 0 0 0 1px rgb(103 232 249 / 0.28);
+}
+
+.payos-method-card.is-selected svg {
+  color: var(--cart-accent);
+}
+
+.payos-method-card.is-selected small {
+  color: var(--cart-soft);
+}
+
+.payos-qr-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.payos-status-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 14px;
+  border: 1px solid rgb(103 232 249 / 0.34);
+  background: rgb(14 116 144 / 0.22);
+}
+
+.payos-status-banner strong {
+  display: block;
+  font-size: 0.84rem;
+  color: var(--cart-text);
+}
+
+.payos-status-banner small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--cart-soft);
+  line-height: 1.4;
+}
+
+.payos-live-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 0 0 rgb(34 211 238 / 0.7);
+  animation: payos-pulse 1.8s infinite;
+}
+
+@keyframes payos-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(34 211 238 / 0.65);
+  }
+  70% {
+    box-shadow: 0 0 0 9px rgb(34 211 238 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(34 211 238 / 0);
+  }
+}
+
+.payos-qr-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--cart-line-strong);
+  background: linear-gradient(180deg, rgb(18 30 48 / 0.96), rgb(11 20 34 / 0.96));
+  text-align: center;
+}
+
+.payos-qr-img {
+  width: 224px;
+  height: 224px;
+  padding: 10px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.35);
+  display: block;
+}
+
+.payos-qr-fallback {
+  width: 224px;
+  min-height: 160px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px dashed var(--cart-line-strong);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--cart-soft);
+  font-size: 0.76rem;
+}
+
+.payos-qr-amount {
+  font-family: 'Rubik', sans-serif;
+  font-size: 1.32rem;
+  font-weight: 800;
+  color: var(--cart-accent);
+}
+
+.payos-qr-hint {
+  font-size: 0.72rem;
+  color: var(--cart-muted);
+}
+
+.payos-bank-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 13px;
+  border-radius: 14px;
+  border: 1px solid var(--cart-line);
+  background: var(--cart-surface);
+}
+
+.payos-bank-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.76rem;
+  color: var(--cart-muted);
+}
+
+.payos-bank-row strong {
+  color: var(--cart-text);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: right;
+  word-break: break-word;
+}
+
+.payos-bank-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.payos-copy-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--cart-line-strong);
+  background: rgb(255 255 255 / 0.06);
+  color: var(--cart-accent);
+  cursor: pointer;
+}
+
+.payos-copy-btn:hover {
+  background: rgb(103 232 249 / 0.16);
+}
+
+.payos-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payos-external-btn {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 12px;
+  border: 1px solid rgb(103 232 249 / 0.36);
+  background: rgb(103 232 249 / 0.12);
+  color: var(--cart-accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.payos-external-btn:hover {
+  background: rgb(103 232 249 / 0.2);
+}
+
 /* Transitions */
 .cart-drawer-enter-active,
 .cart-drawer-leave-active {
@@ -4573,6 +4819,7 @@ textarea {
   .cart-sheet {
     width: 100%;
     max-width: 100vw;
+    height: min(90dvh, 780px);
     max-height: 92dvh;
     border-radius: 22px 22px 0 0;
     border-left: 0;
@@ -4607,8 +4854,19 @@ textarea {
     padding: 12px 14px 16px;
   }
 
-  .cart-form-grid {
+  .cart-form-grid,
+  .payos-method-grid {
     grid-template-columns: 1fr;
+  }
+
+  .payos-qr-img {
+    width: 204px;
+    height: 204px;
+  }
+
+  .payos-copy-btn {
+    width: 34px;
+    height: 34px;
   }
 
   .cart-field input {

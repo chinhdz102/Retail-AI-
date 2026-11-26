@@ -29,6 +29,13 @@ const apiMocks = vi.hoisted(() => ({
   simulateSandboxPayment: vi.fn(),
   submitAssistedOrder: vi.fn(),
   listAssistedOrders: vi.fn().mockResolvedValue([]),
+  getPayOSStatus: vi.fn().mockResolvedValue({
+    enabled: false,
+    provider: 'payos',
+    store_name: 'Thanh Lam Mart',
+  }),
+  syncPayOSPayment: vi.fn(),
+  cancelPayOSPayment: vi.fn().mockResolvedValue({}),
 }))
 
 const vadMocks = vi.hoisted(() => ({ stream: null as MediaStream | null }))
@@ -62,6 +69,7 @@ describe('kiosk app', () => {
     document.documentElement.lang = 'vi'
     window.localStorage.removeItem('retail-ai-microphone-device')
     window.sessionStorage.removeItem('retail-ai-assisted-cart-v1')
+    window.sessionStorage.removeItem('retail-ai-pending-payos-v1')
     apiMocks.createSession.mockResolvedValue({
       session_id: 'session-test',
       kiosk_id: 'kiosk-01',
@@ -91,6 +99,7 @@ describe('kiosk app', () => {
     Reflect.deleteProperty(navigator, 'mediaDevices')
     window.localStorage.removeItem('retail-ai-microphone-device')
     window.sessionStorage.removeItem('retail-ai-assisted-cart-v1')
+    window.sessionStorage.removeItem('retail-ai-pending-payos-v1')
   })
 
   it('keeps the text drawer closed while showing only the avatar controls', async () => {
@@ -1043,6 +1052,152 @@ describe('kiosk app', () => {
       await vi.waitFor(() => expect(document.body.querySelector('.cart-receipt-card')?.textContent).toContain('#TLM-998877'))
       expect(document.body.querySelector('.cart-receipt-card')?.textContent).toContain('A05-B02-L03-P01')
       expect(wrapper.text()).toContain('Đơn hỗ trợ #TLM-998877')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('supports PayOS QR payment flow and updates receipt + chat card once PAID', async () => {
+    const sting = {
+      product_id: 'TLM_STING_330',
+      name: 'Nước tăng lực Sting dâu chai 330ml',
+      category: 'Đồ uống',
+      brand: 'Sting',
+      uom: 'Chai',
+      price_vnd: 10_500,
+      stock: 120,
+      stock_is_current: false,
+      data_source: 'thanh_lam_json_snapshot',
+      data_timestamp: '2026-09-15T00:00:00Z',
+      image_url: 'https://example.com/sting.jpg',
+    }
+    apiMocks.getManagerNotifierStatus.mockResolvedValueOnce({
+      enabled: true,
+      store_name: 'Thanh Lam Mart',
+      primary_channel: 'zalo',
+      primary_provider: 'zalo_bot',
+      priority: ['zalo_bot'],
+      configured_providers: ['zalo_bot'],
+      channels: { zalo: { configured: true, provider: 'zalo_bot' } },
+    })
+    apiMocks.getPayOSStatus.mockResolvedValueOnce({
+      enabled: true,
+      provider: 'payos',
+      store_name: 'Thanh Lam Mart',
+    })
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Sting dâu 330ml giá 10.500đ.',
+      model: 'snapshot-fastpath',
+      grounded_product_ids: [sting.product_id],
+      state: 'BROWSING',
+      products: [sting],
+    })
+    const pendingPayOSOrder = {
+      order_id: 'order-payos-1',
+      order_code: 'TLM-PAY001',
+      session_id: 'session-test',
+      kiosk_id: 'kiosk-01',
+      store_name: 'Thanh Lam Mart',
+      items: [{
+        product_id: sting.product_id,
+        name: sting.name,
+        brand: sting.brand,
+        category: sting.category,
+        uom: sting.uom,
+        image_url: sting.image_url,
+        unit_price_vnd: sting.price_vnd,
+        quantity: 2,
+        line_total_vnd: 21_000,
+        shelf_location: 'A02-B01-L02-P04',
+        snapshot_stock: 120,
+        stock_is_current: false,
+      }],
+      item_count: 2,
+      subtotal_vnd: 21_000,
+      total_vnd: 21_000,
+      customer_name: 'Anh Huy',
+      pickup_location: 'Đứng tại Kiosk',
+      status: 'AWAITING_PAYMENT',
+      payment_method: 'payos',
+      payment_status: 'PENDING_PAYOS',
+      payos_order_code: 987654321,
+      payos_payment_link_id: 'plink-001',
+      payos_checkout_url: 'https://pay.payos.vn/web/plink-001',
+      payos_qr_code: '00020101021238570010A000000727012700069704220113VQRQ00012345653037045405210005802VN6304ABCD',
+      payos_account_number: '19036888999',
+      payos_account_name: 'THANH LAM MART',
+      payos_description: 'TLMPAY001',
+      payment_verify_token: 'signed-verify-token-xyz',
+      ticket_id: 'ticket-payos-1',
+      created_at: new Date().toISOString(),
+      data_source: 'thanh_lam_json_snapshot',
+      stock_is_current: false,
+      notification_status: 'PENDING_PAYMENT',
+      customer_message: 'Vui lòng quét mã QR PayOS để thanh toán 21.000đ.',
+    }
+    const paidPayOSOrder = {
+      ...pendingPayOSOrder,
+      status: 'SENT_TO_STAFF',
+      payment_status: 'PAID',
+      payos_transaction_ref: 'FT261126001',
+      paid_at: new Date().toISOString(),
+      notified_channel: 'zalo',
+      notified_provider: 'zalo_bot',
+      notification_status: 'DELIVERED',
+      customer_message: 'Đã xác nhận thanh toán PayOS 21.000đ cho đơn #TLM-PAY001 và đã báo quản lý qua Zalo soạn hàng ngay!',
+    }
+    apiMocks.submitAssistedOrder.mockResolvedValueOnce(pendingPayOSOrder)
+    apiMocks.syncPayOSPayment.mockResolvedValueOnce(paidPayOSOrder)
+
+    const wrapper = mount(App)
+    try {
+      await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+      await vi.waitFor(() => expect(apiMocks.getPayOSStatus).toHaveBeenCalled())
+      await wrapper.get('button[aria-label="Mở phần chữ"]').trigger('click')
+      await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
+      await vi.waitFor(() => expect(wrapper.text()).toContain('Nước tăng lực Sting dâu chai 330ml'))
+
+      await wrapper.get('.card-cart-btn').trigger('click')
+      await wrapper.get('button[aria-label="Tăng số lượng Nước tăng lực Sting dâu chai 330ml"]').trigger('click')
+      await wrapper.get('.assisted-cart-bar-btn').trigger('click')
+      await flushPromises()
+
+      const sheet = document.body.querySelector('.cart-sheet')
+      expect(sheet?.textContent).toContain('Chuyển khoản QR PayOS')
+      expect(sheet?.textContent).toContain('Thanh toán QR PayOS · 21.000đ')
+
+      const cta = sheet?.querySelector<HTMLButtonElement>('.cart-checkout-cta')
+      cta?.click()
+      await flushPromises()
+
+      await vi.waitFor(() => expect(apiMocks.submitAssistedOrder).toHaveBeenCalledWith(
+        'session-test',
+        expect.objectContaining({
+          payment_method: 'payos',
+          items: [{ product_id: sting.product_id, quantity: 2 }],
+        }),
+      ))
+
+      // Live PayOS QR payment panel appears with bank details
+      await vi.waitFor(() => expect(document.body.querySelector('.payos-qr-panel')).not.toBeNull())
+      const qrPanel = document.body.querySelector('.payos-qr-panel')
+      expect(qrPanel?.textContent).toContain('#TLM-PAY001')
+      expect(qrPanel?.textContent).toContain('19036888999')
+      expect(qrPanel?.textContent).toContain('TLMPAY001')
+      expect(qrPanel?.querySelector('a.payos-external-btn')?.getAttribute('href')).toBe('https://pay.payos.vn/web/plink-001')
+
+      // Manual check triggers syncPayOSPayment and transitions to PAID receipt + chat card
+      const checkBtn = qrPanel?.querySelector<HTMLButtonElement>('.cart-primary-btn')
+      expect(checkBtn).not.toBeNull()
+      checkBtn?.click()
+      await flushPromises()
+
+      await vi.waitFor(() => expect(apiMocks.syncPayOSPayment).toHaveBeenCalledWith(987654321, 'signed-verify-token-xyz'))
+      await vi.waitFor(() => expect(document.body.querySelector('.cart-receipt-card')?.textContent).toContain('Đã thanh toán PayOS · Đã báo Zalo'))
+      expect(document.body.querySelector('.cart-receipt-card')?.textContent).toContain('FT261126001')
+      expect(wrapper.text()).toContain('Đơn đã thanh toán #TLM-PAY001')
+      expect(wrapper.text()).toContain('Đã TT PayOS · Đã báo Zalo')
     } finally {
       wrapper.unmount()
     }

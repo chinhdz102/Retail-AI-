@@ -226,3 +226,307 @@ async def test_assisted_order_without_notifier_still_creates_honest_pickup_recei
     finally:
         api.app.dependency_overrides.pop(api.get_manager_notifier_service, None)
         api.app.dependency_overrides.pop(api.get_settings, None)
+
+
+def test_payos_signatures_and_snapshot_token_roundtrip() -> None:
+    import hashlib
+    import hmac
+
+    from backend.services.payos_client import (
+        create_payment_request_signature,
+        sign_order_snapshot_token,
+        verify_order_snapshot_token,
+        verify_payos_webhook_signature,
+    )
+
+    checksum = "test-payos-checksum-key-123456"
+    sig = create_payment_request_signature(
+        amount=21000,
+        cancel_url="https://example.com/?payos=cancel",
+        description="TLMPAY001",
+        order_code=987654321,
+        return_url="https://example.com/?payos=success",
+        checksum_key=checksum,
+    )
+    expected_canonical = (
+        "amount=21000&cancelUrl=https://example.com/?payos=cancel"
+        "&description=TLMPAY001&orderCode=987654321&returnUrl=https://example.com/?payos=success"
+    )
+    assert sig == hmac.new(
+        checksum.encode("utf-8"), expected_canonical.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+    webhook_data = {
+        "orderCode": 987654321,
+        "amount": 21000,
+        "description": "TLMPAY001",
+        "reference": "FT261126001",
+        "code": "00",
+    }
+    canonical_wh = "&".join(f"{k}={webhook_data[k]}" for k in sorted(webhook_data.keys()))
+    wh_sig = hmac.new(
+        checksum.encode("utf-8"), canonical_wh.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+    assert verify_payos_webhook_signature({"data": webhook_data, "signature": wh_sig}, checksum)
+    tampered = {**webhook_data, "amount": 999999}
+    assert not verify_payos_webhook_signature({"data": tampered, "signature": wh_sig}, checksum)
+    assert not verify_payos_webhook_signature({"data": webhook_data, "signature": "bad"}, checksum)
+
+    token = sign_order_snapshot_token({"order_code": "TLM-ABC123", "total_vnd": 21000}, checksum)
+    assert verify_order_snapshot_token(token, checksum) == {
+        "order_code": "TLM-ABC123",
+        "total_vnd": 21000,
+    }
+    assert verify_order_snapshot_token(token + "x", checksum) is None
+
+
+@pytest.mark.asyncio
+async def test_payos_end_to_end_deferred_zalo_notify_dedupe_and_stateless_sync(
+    snapshot: SnapshotProductRepository,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import hashlib
+    import hmac
+    import json as _json
+
+    from backend.services.assisted_orders import AssistedOrderStore
+    from backend.services.payos_client import PayOSService
+
+    checksum_key = "unit-test-payos-checksum-secret"
+    payos_state = {"status": "PENDING", "last_create": None}
+    sent_zalo: list[tuple[str, dict]] = []
+
+    async def payos_handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST" and request.url.path == "/v2/payment-requests":
+            assert request.headers.get("x-client-id") == "payos-client-unit"
+            assert request.headers.get("x-api-key") == "payos-api-unit"
+            req_body = _json.loads(request.content.decode("utf-8"))
+            payos_state["last_create"] = req_body
+            assert len(req_body["description"]) <= 9
+            return httpx.Response(
+                200,
+                json={
+                    "code": "00",
+                    "desc": "success",
+                    "data": {
+                        "orderCode": req_body["orderCode"],
+                        "paymentLinkId": "plink-unit-001",
+                        "checkoutUrl": f"https://pay.payos.vn/web/{req_body['orderCode']}",
+                        "qrCode": "00020101021238570010A000000727012700069704220113VQRQUNITTEST",
+                        "amount": req_body["amount"],
+                        "description": req_body["description"],
+                        "status": "PENDING",
+                        "accountNumber": "19036888999",
+                        "accountName": "THANH LAM MART",
+                        "bin": "970422",
+                    },
+                },
+            )
+        if request.method == "GET" and request.url.path.startswith("/v2/payment-requests/"):
+            order_code = int(request.url.path.rsplit("/", 1)[-1])
+            amt = int((payos_state["last_create"] or {}).get("amount", 10000))
+            is_paid = payos_state["status"] == "PAID"
+            return httpx.Response(
+                200,
+                json={
+                    "code": "00",
+                    "desc": "success",
+                    "data": {
+                        "id": "plink-unit-001",
+                        "orderCode": order_code,
+                        "amount": amt,
+                        "amountPaid": amt if is_paid else 0,
+                        "amountRemaining": 0 if is_paid else amt,
+                        "status": payos_state["status"],
+                        "transactions": (
+                            [
+                                {
+                                    "reference": "FT261126PAYOS",
+                                    "transactionDateTime": "2026-11-26 20:30:00",
+                                    "counterAccountName": "NGUYEN VAN A",
+                                    "counterAccountNumber": "0011223344",
+                                }
+                            ]
+                            if is_paid
+                            else []
+                        ),
+                    },
+                },
+            )
+        if request.method == "POST" and request.url.path.endswith("/cancel"):
+            order_code = int(request.url.path.split("/")[-2])
+            return httpx.Response(
+                200,
+                json={
+                    "code": "00",
+                    "desc": "success",
+                    "data": {
+                        "id": "plink-unit-001",
+                        "orderCode": order_code,
+                        "amount": 10000,
+                        "amountPaid": 0,
+                        "amountRemaining": 10000,
+                        "status": "CANCELLED",
+                    },
+                },
+            )
+        return httpx.Response(404, json={"code": "404", "desc": "not found"})
+
+    async def zalo_handler(request: httpx.Request) -> httpx.Response:
+        sent_zalo.append((str(request.url), _json.loads(request.content.decode("utf-8"))))
+        return httpx.Response(200, json={"ok": True, "result": {"message_id": "zalo-paid-99"}})
+
+    mock_settings = Settings(
+        store_name="Thanh Lam Mart",
+        payment_provider="payos",
+        payos_client_id="payos-client-unit",
+        payos_api_key="payos-api-unit",
+        payos_checksum_key=checksum_key,
+        payos_return_url="https://retail-ai-kiosk.vercel.app/?payos=success",
+        payos_cancel_url="https://retail-ai-kiosk.vercel.app/?payos=cancel",
+        zalo_bot_token="test-token-12345",
+        zalo_bot_chat_id="manager-chat-01",
+    )
+    notifier = ManagerNotifierService(
+        mock_settings, http_transport=httpx.MockTransport(zalo_handler)
+    )
+    payos = PayOSService(mock_settings, http_transport=httpx.MockTransport(payos_handler))
+    monkeypatch.setattr(api, "get_product_repository", lambda *args, **kwargs: snapshot)
+    monkeypatch.setattr(api, "assisted_order_store", AssistedOrderStore())
+    api.app.dependency_overrides[api.get_manager_notifier_service] = lambda: notifier
+    api.app.dependency_overrides[api.get_payos_service] = lambda: payos
+    api.app.dependency_overrides[api.get_settings] = lambda: mock_settings
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=20
+        ) as client:
+            status_resp = await client.get("/payments/payos/status")
+            assert status_resp.status_code == 200
+            assert status_resp.json()["enabled"] is True
+
+            sid = (await client.post("/sessions", json={"kiosk_id": "kiosk-payos"})).json()[
+                "session_id"
+            ]
+            p1 = next(p for p in snapshot.products if p.price_vnd >= 5000)
+
+            # 1. Creating a PayOS order generates QR & signed token, does NOT alert manager yet!
+            created = await client.post(
+                f"/sessions/{sid}/assisted-orders",
+                json={
+                    "items": [{"product_id": p1.product_id, "quantity": 2}],
+                    "payment_method": "payos",
+                    "customer_name": "Anh Huy",
+                    "customer_phone": "0988777666",
+                    "pickup_location": "Đứng tại Kiosk",
+                    "customer_note": "Lấy chai mát giúp mình",
+                    "idempotency_key": "payos-order-key-1",
+                },
+            )
+            assert created.status_code == 201, created.text
+            order = created.json()
+            assert order["payment_method"] == "payos"
+            assert order["payment_status"] == "PENDING_PAYOS"
+            assert order["payos_order_code"] > 0
+            assert order["payos_qr_code"].startswith("000201")
+            assert order["payos_checkout_url"].startswith("https://pay.payos.vn/")
+            assert order["payment_verify_token"]
+            assert len(sent_zalo) == 0
+
+            # 2. Sync while still PENDING must NOT notify manager
+            pending_sync = await client.post(
+                f"/payments/payos/{order['payos_order_code']}/sync",
+                json={"payment_verify_token": order["payment_verify_token"]},
+            )
+            assert pending_sync.status_code == 200
+            assert pending_sync.json()["payment_status"] == "PENDING_PAYOS"
+            assert len(sent_zalo) == 0
+
+            # 3. Once PayOS marks PAID, sync notifies manager ONCE via Zalo with paid banner & items
+            payos_state["status"] = "PAID"
+            paid_sync = await client.post(
+                f"/payments/payos/{order['payos_order_code']}/sync",
+                json={"payment_verify_token": order["payment_verify_token"]},
+            )
+            assert paid_sync.status_code == 200, paid_sync.text
+            paid_data = paid_sync.json()
+            assert paid_data["payment_status"] == "PAID"
+            assert paid_data["status"] == "SENT_TO_STAFF"
+            assert paid_data["notification_status"] == "DELIVERED"
+            assert paid_data["notified_channel"] == "zalo"
+            assert paid_data["payos_transaction_ref"] == "FT261126PAYOS"
+            assert len(sent_zalo) == 1
+            _, zalo_msg = sent_zalo[0]
+            assert "ĐÃ THANH TOÁN PAYOS" in zalo_msg["text"]
+            assert p1.name in zalo_msg["text"]
+            assert "Anh Huy" in zalo_msg["text"]
+            assert "FT261126PAYOS" in zalo_msg["text"]
+
+            # 4. Duplicate sync + PayOS webhook MUST NOT send a second Zalo alert
+            second_sync = await client.post(
+                f"/payments/payos/{order['payos_order_code']}/sync",
+                json={"payment_verify_token": order["payment_verify_token"]},
+            )
+            assert second_sync.status_code == 200
+            assert len(sent_zalo) == 1
+
+            wh_data = {
+                "orderCode": order["payos_order_code"],
+                "amount": order["total_vnd"],
+                "description": order["payos_description"],
+                "reference": "FT261126PAYOS",
+                "code": "00",
+            }
+            wh_canonical = "&".join(f"{k}={wh_data[k]}" for k in sorted(wh_data.keys()))
+            wh_sig = hmac.new(
+                checksum_key.encode("utf-8"), wh_canonical.encode("utf-8"), hashlib.sha256
+            ).hexdigest()
+            wh_resp = await client.post(
+                "/payments/payos/webhook",
+                json={
+                    "code": "00",
+                    "desc": "success",
+                    "success": True,
+                    "data": wh_data,
+                    "signature": wh_sig,
+                },
+            )
+            assert wh_resp.status_code == 200
+            assert len(sent_zalo) == 1
+
+            # 5. PayOS dashboard verification ping (orderCode=123 / VQRIO123) succeeds with 0 Zalo
+            ping_resp = await client.post(
+                "/payments/payos/webhook",
+                json={
+                    "code": "00",
+                    "desc": "success",
+                    "data": {"orderCode": 123, "description": "VQRIO123", "amount": 3000},
+                    "signature": "ignored-on-payos-test-ping",
+                },
+            )
+            assert ping_resp.status_code == 200
+            assert len(sent_zalo) == 1
+
+            # 6. Invalid webhook signature is rejected with 400
+            bad_wh = await client.post(
+                "/payments/payos/webhook",
+                json={"code": "00", "data": wh_data, "signature": "tampered-signature"},
+            )
+            assert bad_wh.status_code == 400
+
+            # 7. Stateless serverless cold restart: clear in-memory store and sync via signed token
+            monkeypatch.setattr(api, "assisted_order_store", AssistedOrderStore())
+            cold_sync = await client.post(
+                f"/payments/payos/{order['payos_order_code']}/sync",
+                json={"payment_verify_token": order["payment_verify_token"]},
+            )
+            assert cold_sync.status_code == 200, cold_sync.text
+            cold_data = cold_sync.json()
+            assert cold_data["payment_status"] == "PAID"
+            assert cold_data["order_code"] == order["order_code"]
+            assert cold_data["items"][0]["product_id"] == p1.product_id
+            assert len(sent_zalo) == 2
+            assert p1.name in sent_zalo[1][1]["text"]
+    finally:
+        api.app.dependency_overrides.pop(api.get_manager_notifier_service, None)
+        api.app.dependency_overrides.pop(api.get_payos_service, None)
+        api.app.dependency_overrides.pop(api.get_settings, None)

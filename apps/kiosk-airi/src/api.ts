@@ -5,6 +5,7 @@ import type {
   CheckoutQuote,
   LanguageCode,
   ManagerNotifierStatus,
+  PayOSStatus,
   SandboxOrder,
   ShoppingCart,
   ProductSearchResponse,
@@ -442,5 +443,41 @@ export function listAssistedOrders(sessionId: string): Promise<AssistedOrderResp
     `/sessions/${encodeURIComponent(sessionId)}/assisted-orders`,
     undefined,
     10_000,
+  )
+}
+
+export function getPayOSStatus(): Promise<PayOSStatus> {
+  return request<PayOSStatus>('/payments/payos/status', undefined, 6_000)
+}
+
+export function syncPayOSPayment(
+  payosOrderCode: number,
+  paymentVerifyToken?: string | null,
+): Promise<AssistedOrderResponse> {
+  return request<AssistedOrderResponse>(
+    `/payments/payos/${encodeURIComponent(String(payosOrderCode))}/sync`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        payment_verify_token: paymentVerifyToken || undefined,
+      }),
+    },
+    15_000,
+  )
+}
+
+export function cancelPayOSPayment(
+  payosOrderCode: number,
+  reason = 'Khách hủy thanh toán tại kiosk',
+): Promise<AssistedOrderResponse> {
+  return request<AssistedOrderResponse>(
+    `/payments/payos/${encodeURIComponent(String(payosOrderCode))}/cancel`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    },
+    12_000,
   )
 }

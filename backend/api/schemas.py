@@ -105,10 +105,13 @@ class AssistedOrderItemRequest(BaseModel):
 
 class AssistedOrderCreateRequest(BaseModel):
     items: list[AssistedOrderItemRequest] = Field(min_length=1, max_length=20)
+    payment_method: Literal["counter", "payos"] = "counter"
     customer_name: str | None = Field(default=None, max_length=80)
     customer_phone: str | None = Field(default=None, max_length=32)
     pickup_location: str | None = Field(default=None, max_length=120)
     customer_note: str | None = Field(default=None, max_length=300)
+    return_url: str | None = Field(default=None, max_length=400)
+    cancel_url: str | None = Field(default=None, max_length=400)
     idempotency_key: str = Field(default_factory=lambda: uuid4().hex, min_length=8, max_length=128)
 
 
@@ -141,17 +144,46 @@ class AssistedOrderResponse(BaseModel):
     customer_phone: str | None = None
     pickup_location: str | None = None
     customer_note: str | None = None
-    status: Literal["SENT_TO_STAFF", "RECORDED_PENDING_STAFF"]
+    status: Literal["AWAITING_PAYMENT", "SENT_TO_STAFF", "RECORDED_PENDING_STAFF", "CANCELLED"]
     ticket_id: UUID
     created_at: datetime
     data_source: str
     stock_is_current: bool = False
+    payment_method: Literal["counter", "payos"] = "counter"
+    payment_status: Literal["UNPAID", "PENDING_PAYOS", "PAID", "CANCELLED", "EXPIRED"] = "UNPAID"
+    payos_order_code: int | None = None
+    payos_payment_link_id: str | None = None
+    payos_checkout_url: str | None = None
+    payos_qr_code: str | None = None
+    payos_account_number: str | None = None
+    payos_account_name: str | None = None
+    payos_bin: str | None = None
+    payos_description: str | None = None
+    payos_expired_at: int | None = None
+    payos_paid_amount_vnd: int | None = None
+    payos_transaction_ref: str | None = None
+    paid_at: datetime | None = None
+    payment_verify_token: str | None = None
     notified_channel: Literal["zalo", "messenger", "gmail"] | None = None
     notified_provider: str | None = None
     notification_status: Literal["DELIVERED", "FAILED", "NOT_CONFIGURED"] = "NOT_CONFIGURED"
     notification_detail: str | None = None
     notified_at: datetime | None = None
     customer_message: str = ""
+
+
+class PayOSStatusResponse(BaseModel):
+    enabled: bool
+    provider: str = "payos"
+    store_name: str
+
+
+class PayOSSyncRequest(BaseModel):
+    payment_verify_token: str | None = Field(default=None, max_length=4000)
+
+
+class PayOSCancelRequest(BaseModel):
+    reason: str = Field(default="Khách hủy thanh toán tại kiosk", max_length=120)
 
 
 class SupportTicketCreateRequest(BaseModel):

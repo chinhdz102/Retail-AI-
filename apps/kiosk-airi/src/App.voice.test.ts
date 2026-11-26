@@ -27,6 +27,13 @@ const apiMocks = vi.hoisted(() => ({
   simulateSandboxPayment: vi.fn(),
   submitAssistedOrder: vi.fn(),
   listAssistedOrders: vi.fn().mockResolvedValue([]),
+  getPayOSStatus: vi.fn().mockResolvedValue({
+    enabled: false,
+    provider: 'payos',
+    store_name: 'Thanh Lam Mart',
+  }),
+  syncPayOSPayment: vi.fn(),
+  cancelPayOSPayment: vi.fn(),
 }))
 
 const controllerStore = vi.hoisted(() => ({ current: null as any }))

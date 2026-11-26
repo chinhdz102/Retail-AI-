@@ -743,24 +743,26 @@ function onKeydown(event: KeyboardEvent) {
         <div
           v-if="message.assistedOrder"
           class="assisted-order-chat-card"
-          :class="{ 'is-delivered': message.assistedOrder.notification_status === 'DELIVERED' }"
+          :class="{ 'is-delivered': message.assistedOrder.payment_status === 'PAID' || message.assistedOrder.notification_status === 'DELIVERED' }"
           role="status"
         >
           <div class="assisted-order-chat-head">
             <div class="assisted-order-chat-title">
               <CheckCircle :size="18" weight="fill" aria-hidden="true" />
-              <strong>Đơn hỗ trợ #{{ message.assistedOrder.order_code }}</strong>
+              <strong>{{ message.assistedOrder.payment_status === 'PAID' ? 'Đơn đã thanh toán' : 'Đơn hỗ trợ' }} #{{ message.assistedOrder.order_code }}</strong>
             </div>
             <span class="assisted-order-chat-pill">
-              {{
-                message.assistedOrder.notification_status === 'DELIVERED' && message.assistedOrder.notified_channel
-                  ? `Đã báo ${channelDisplayName(message.assistedOrder.notified_channel)}`
-                  : 'Phiếu tại quầy'
-              }}
+              <template v-if="message.assistedOrder.payment_status === 'PAID'">
+                Đã TT PayOS{{ message.assistedOrder.notification_status === 'DELIVERED' && message.assistedOrder.notified_channel ? ` · Đã báo ${channelDisplayName(message.assistedOrder.notified_channel)}` : '' }}
+              </template>
+              <template v-else-if="message.assistedOrder.notification_status === 'DELIVERED' && message.assistedOrder.notified_channel">
+                Đã báo {{ channelDisplayName(message.assistedOrder.notified_channel) }}
+              </template>
+              <template v-else>Phiếu tại quầy</template>
             </span>
           </div>
           <p class="assisted-order-chat-meta">
-            {{ message.assistedOrder.item_count }} sản phẩm · Tạm tính {{ formatVnd(message.assistedOrder.total_vnd) }}
+            {{ message.assistedOrder.item_count }} sản phẩm · {{ message.assistedOrder.payment_status === 'PAID' ? 'Đã thanh toán' : 'Tạm tính' }} {{ formatVnd(message.assistedOrder.total_vnd) }}
             <template v-if="message.assistedOrder.pickup_location"> · {{ message.assistedOrder.pickup_location }}</template>
           </p>
           <button type="button" class="assisted-order-chat-btn" @click="emit('open-cart', 'orders')">

@@ -188,6 +188,17 @@ class Settings(BaseSettings):
     manager_gmail_smtp_host: str = "smtp.gmail.com"
     manager_gmail_smtp_port: int = Field(default=465, ge=1, le=65535)
 
+    # PayOS VietQR payment gateway (https://api-merchant.payos.vn/v2/payment-requests).
+    payment_provider: str = ""
+    payos_client_id: SecretStr = SecretStr("")
+    payos_api_key: SecretStr = SecretStr("")
+    payos_checksum_key: SecretStr = SecretStr("")
+    payos_api_base: str = "https://api-merchant.payos.vn"
+    payos_return_url: str = ""
+    payos_cancel_url: str = ""
+    payos_expected_account_number: str = ""
+    payos_timeout_seconds: float = Field(default=12.0, gt=0, le=30)
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -358,6 +369,14 @@ class Settings(BaseSettings):
     @property
     def has_manager_notifier(self) -> bool:
         return bool(self.configured_manager_notify_channels)
+
+    @property
+    def has_payos(self) -> bool:
+        return bool(
+            self.payos_client_id.get_secret_value().strip()
+            and self.payos_api_key.get_secret_value().strip()
+            and self.payos_checksum_key.get_secret_value().strip()
+        )
 
 
 @lru_cache(maxsize=1)

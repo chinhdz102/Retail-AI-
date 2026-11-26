@@ -226,12 +226,21 @@ export interface AssistedCartItem {
   quantity: number
 }
 
+export interface PayOSStatus {
+  enabled: boolean
+  provider: string
+  store_name: string
+}
+
 export interface AssistedOrderCreatePayload {
   items: Array<{ product_id: string; quantity: number }>
+  payment_method?: 'counter' | 'payos'
   customer_name?: string
   customer_phone?: string
   pickup_location?: string
   customer_note?: string
+  return_url?: string
+  cancel_url?: string
   idempotency_key?: string
 }
 
@@ -264,11 +273,26 @@ export interface AssistedOrderResponse {
   customer_phone?: string | null
   pickup_location?: string | null
   customer_note?: string | null
-  status: 'SENT_TO_STAFF' | 'RECORDED_PENDING_STAFF'
+  status: 'AWAITING_PAYMENT' | 'SENT_TO_STAFF' | 'RECORDED_PENDING_STAFF' | 'CANCELLED'
   ticket_id: string
   created_at: string
   data_source: string
   stock_is_current: boolean
+  payment_method?: 'counter' | 'payos'
+  payment_status?: 'UNPAID' | 'PENDING_PAYOS' | 'PAID' | 'CANCELLED' | 'EXPIRED'
+  payos_order_code?: number | null
+  payos_payment_link_id?: string | null
+  payos_checkout_url?: string | null
+  payos_qr_code?: string | null
+  payos_account_number?: string | null
+  payos_account_name?: string | null
+  payos_bin?: string | null
+  payos_description?: string | null
+  payos_expired_at?: number | null
+  payos_paid_amount_vnd?: number | null
+  payos_transaction_ref?: string | null
+  paid_at?: string | null
+  payment_verify_token?: string | null
   notified_channel?: 'zalo' | 'messenger' | 'gmail' | null
   notified_provider?: string | null
   notification_status: 'DELIVERED' | 'FAILED' | 'NOT_CONFIGURED'

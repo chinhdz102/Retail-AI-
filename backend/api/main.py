@@ -9,7 +9,7 @@ from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import replace
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from time import perf_counter
 from uuid import UUID, uuid4
 
@@ -31,6 +31,9 @@ from backend.api.schemas import (
     CheckoutConfirmRequest,
     CheckoutQuoteResponse,
     LanguageCode,
+    PayOSCancelRequest,
+    PayOSStatusResponse,
+    PayOSSyncRequest,
     ProductCardResponse,
     ProductSearchResponse,
     SandboxOrderResponse,
@@ -65,6 +68,7 @@ from backend.products.category_taxonomy import (
 from backend.products.repository import ProductRepository, get_product_repository
 from backend.services.assisted_orders import (
     AssistedOrderIdempotencyConflictError,
+    AssistedOrderItem,
     AssistedOrderProductNotFoundError,
     AssistedOrderRecord,
     AssistedOrderStore,
@@ -111,6 +115,15 @@ from backend.services.manager_notifier import (
     ManagerNotifierService,
 )
 from backend.services.organization_profiles import OrganizationAnswer, get_organization_answer
+from backend.services.payos_client import (
+    PayOSConfigurationError,
+    PayOSProviderError,
+    PayOSService,
+    generate_payos_order_code,
+    sign_order_snapshot_token,
+    verify_order_snapshot_token,
+    verify_payos_webhook_signature,
+)
 from backend.services.product_comparison import (
     comparison_metric,
     is_comparison_request,
@@ -5405,8 +5418,40 @@ def get_support_ticket(session_id: UUID, ticket_id: UUID) -> SupportTicketRespon
         raise HTTPException(status_code=404, detail="Support ticket not found") from exc
 
 
+def get_payos_service(
+    runtime_settings: Settings = Depends(get_settings),
+) -> PayOSService:
+    return PayOSService(runtime_settings)
+
+
 def _assisted_order_customer_message(order: AssistedOrderRecord) -> str:
     total_fmt = f"{order.total_vnd:,}đ".replace(",", ".")
+    if order.payment_method == "payos":
+        if order.payment_status == "PENDING_PAYOS":
+            return (
+                f"Đã tạo mã QR PayOS cho đơn #{order.order_code} ({order.item_count} sản phẩm, "
+                f"tổng {total_fmt}). Sau khi bạn chuyển khoản xong, hệ thống sẽ tự động báo "
+                "quản lý để nhân viên soạn hàng và trao trả ngay nhé!"
+            )
+        if order.payment_status in {"CANCELLED", "EXPIRED"}:
+            return (
+                f"Mã thanh toán PayOS cho đơn #{order.order_code} đã hủy hoặc hết hạn. "
+                "Bạn có thể tạo mã mới hoặc chọn nhờ nhân viên thanh toán tại quầy."
+            )
+        if order.payment_status == "PAID":
+            if order.notification_status == "DELIVERED" and order.notified_channel:
+                ch = CHANNEL_DISPLAY_LABELS.get(order.notified_channel, {}).get(
+                    "vi", order.notified_channel.title()
+                )
+                return (
+                    f"Thanh toán PayOS thành công ({total_fmt}) cho đơn #{order.order_code}! "
+                    f"Mình đã gửi tin nhắn qua {ch} tới quản lý để nhân viên soạn đúng "
+                    f"{order.item_count} sản phẩm và trao trả ngay cho bạn ạ."
+                )
+            return (
+                f"Thanh toán PayOS thành công ({total_fmt}) cho đơn #{order.order_code}! "
+                "Bạn đưa mã đơn này cho nhân viên tại quầy để nhận hàng ngay nhé."
+            )
     if order.notification_status == "DELIVERED" and order.notified_channel:
         ch = CHANNEL_DISPLAY_LABELS.get(order.notified_channel, {}).get(
             "vi", order.notified_channel.title()
@@ -5466,12 +5511,115 @@ def _assisted_order_response(order: AssistedOrderRecord) -> AssistedOrderRespons
         created_at=order.created_at,
         data_source=order.data_source,
         stock_is_current=order.stock_is_current,
+        payment_method=order.payment_method,
+        payment_status=order.payment_status,
+        payos_order_code=order.payos_order_code,
+        payos_payment_link_id=order.payos_payment_link_id,
+        payos_checkout_url=order.payos_checkout_url,
+        payos_qr_code=order.payos_qr_code,
+        payos_account_number=order.payos_account_number,
+        payos_account_name=order.payos_account_name,
+        payos_bin=order.payos_bin,
+        payos_description=order.payos_description,
+        payos_expired_at=order.payos_expired_at,
+        payos_paid_amount_vnd=order.payos_paid_amount_vnd,
+        payos_transaction_ref=order.payos_transaction_ref,
+        paid_at=order.paid_at,
+        payment_verify_token=order.payment_verify_token,
         notified_channel=order.notified_channel,
         notified_provider=order.notified_provider,
         notification_status=order.notification_status,
         notification_detail=order.notification_detail,
         notified_at=order.notified_at,
         customer_message=_assisted_order_customer_message(order),
+    )
+
+
+def _build_assisted_order_alert_payload(order: AssistedOrderRecord) -> AssistedOrderAlertPayload:
+    return AssistedOrderAlertPayload(
+        order_id=order.order_id,
+        order_code=order.order_code,
+        ticket_id=order.ticket_id,
+        session_id=order.session_id,
+        kiosk_id=order.kiosk_id,
+        store_name=order.store_name,
+        items=tuple(
+            AssistedOrderAlertItem(
+                product_id=item.product_id,
+                name=item.name,
+                quantity=item.quantity,
+                unit_price_vnd=item.unit_price_vnd,
+                line_total_vnd=item.line_total_vnd,
+                uom=item.uom,
+                shelf_location=item.shelf_location,
+            )
+            for item in order.items
+        ),
+        item_count=order.item_count,
+        total_vnd=order.total_vnd,
+        created_at=order.paid_at or order.created_at,
+        customer_name=order.customer_name,
+        customer_phone=order.customer_phone,
+        pickup_location=order.pickup_location,
+        customer_note=order.customer_note,
+        stock_is_current=order.stock_is_current,
+        payment_method=order.payment_method,
+        payment_status=order.payment_status,
+        payos_order_code=order.payos_order_code,
+        payos_paid_amount_vnd=order.payos_paid_amount_vnd,
+        payos_transaction_ref=order.payos_transaction_ref,
+    )
+
+
+async def _notify_manager_for_assisted_order(
+    order: AssistedOrderRecord,
+    notifier: ManagerNotifierService,
+) -> AssistedOrderRecord:
+    if not notifier.settings.has_manager_notifier:
+        return order
+    notify_result = await notifier.notify_assisted_order(
+        _build_assisted_order_alert_payload(order)
+    )
+    order = assisted_order_store.record_notification(
+        order.order_id,
+        configured=notify_result.configured,
+        delivered=notify_result.delivered,
+        channel=notify_result.channel,
+        provider=notify_result.provider,
+        detail=notify_result.detail,
+        sent_at=notify_result.sent_at,
+    )
+    try:
+        support_ticket_store.record_notification(
+            order.ticket_id,
+            configured=notify_result.configured,
+            delivered=notify_result.delivered,
+            channel=notify_result.channel,
+            provider=notify_result.provider,
+            detail=notify_result.detail,
+            sent_at=notify_result.sent_at,
+        )
+    except Exception:
+        pass
+    return order
+
+
+def _safe_payos_redirect_url(candidate: str | None, fallback: str, default_url: str) -> str:
+    for raw in (candidate, fallback, default_url):
+        val = (raw or "").strip()
+        if val.startswith(("https://", "http://")):
+            return val
+    return default_url
+
+
+@app.get("/payments/payos/status", response_model=PayOSStatusResponse)
+def get_payos_status(
+    runtime_settings: Settings = Depends(get_settings),
+) -> PayOSStatusResponse:
+    return PayOSStatusResponse(
+        enabled=runtime_settings.has_payos,
+        provider="payos",
+        store_name=runtime_settings.store_name,
     )
 
 
@@ -5484,12 +5632,18 @@ async def create_assisted_order(
     session_id: UUID,
     request: AssistedOrderCreateRequest,
     notifier: ManagerNotifierService = Depends(get_manager_notifier_service),
+    payos: PayOSService = Depends(get_payos_service),
     runtime_settings: Settings = Depends(get_settings),
 ) -> AssistedOrderResponse:
     record = _session_or_http_error(session_id)
+    if request.payment_method == "payos" and not payos.is_configured:
+        raise HTTPException(
+            status_code=503,
+            detail="Cổng thanh toán PayOS chưa được cấu hình trên máy chủ.",
+        )
     repo = get_product_repository(runtime_settings)
     summary_desc = (
-        f"Đơn giỏ hàng hỗ trợ chọn & trao trả ({len(request.items)} loại sản phẩm)"
+        f"Đơn giỏ hàng ({request.payment_method}) · {len(request.items)} loại sản phẩm"
     )
     try:
         ticket, _ = support_ticket_store.create_or_get(
@@ -5507,6 +5661,7 @@ async def create_assisted_order(
             requested_items=[(item.product_id, item.quantity) for item in request.items],
             repository=repo,
             ticket_id=ticket.ticket_id,
+            payment_method=request.payment_method,
             customer_name=request.customer_name,
             customer_phone=request.customer_phone,
             pickup_location=request.pickup_location,
@@ -5520,55 +5675,297 @@ async def create_assisted_order(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    if created_new and notifier.settings.has_manager_notifier:
-        alert_payload = AssistedOrderAlertPayload(
-            order_id=order.order_id,
-            order_code=order.order_code,
-            ticket_id=order.ticket_id,
-            session_id=order.session_id,
-            kiosk_id=order.kiosk_id,
-            store_name=order.store_name,
-            items=tuple(
-                AssistedOrderAlertItem(
-                    product_id=item.product_id,
-                    name=item.name,
-                    quantity=item.quantity,
-                    unit_price_vnd=item.unit_price_vnd,
-                    line_total_vnd=item.line_total_vnd,
-                    uom=item.uom,
-                    shelf_location=item.shelf_location,
+    if request.payment_method == "payos":
+        if created_new or not order.payos_checkout_url:
+            if order.total_vnd < 2000:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Thanh toán PayOS yêu cầu tổng đơn từ 2.000đ trở lên.",
                 )
-                for item in order.items
-            ),
-            item_count=order.item_count,
-            total_vnd=order.total_vnd,
-            created_at=order.created_at,
-            customer_name=order.customer_name,
-            customer_phone=order.customer_phone,
-            pickup_location=order.pickup_location,
-            customer_note=order.customer_note,
-            stock_is_current=order.stock_is_current,
-        )
-        notify_result = await notifier.notify_assisted_order(alert_payload)
-        order = assisted_order_store.record_notification(
-            order.order_id,
-            configured=notify_result.configured,
-            delivered=notify_result.delivered,
-            channel=notify_result.channel,
-            provider=notify_result.provider,
-            detail=notify_result.detail,
-            sent_at=notify_result.sent_at,
-        )
-        support_ticket_store.record_notification(
-            ticket.ticket_id,
-            configured=notify_result.configured,
-            delivered=notify_result.delivered,
-            channel=notify_result.channel,
-            provider=notify_result.provider,
-            detail=notify_result.detail,
-            sent_at=notify_result.sent_at,
-        )
+            payos_code = generate_payos_order_code()
+            ret_url = _safe_payos_redirect_url(
+                request.return_url,
+                runtime_settings.payos_return_url,
+                "https://retail-ai-kiosk.vercel.app/?payos=success",
+            )
+            can_url = _safe_payos_redirect_url(
+                request.cancel_url,
+                runtime_settings.payos_cancel_url,
+                "https://retail-ai-kiosk.vercel.app/?payos=cancel",
+            )
+            sep_r = "&" if "?" in ret_url else "?"
+            sep_c = "&" if "?" in can_url else "?"
+            ret_url = f"{ret_url}{sep_r}payosOrderCode={payos_code}"
+            can_url = f"{can_url}{sep_c}payosOrderCode={payos_code}"
+            # 9-char ASCII memo works across all VN banks (including non-linked).
+            short_memo = order.order_code.replace("-", "")[:9]
+            try:
+                link = await payos.create_payment_link(
+                    order_code=payos_code,
+                    amount=order.total_vnd,
+                    description=short_memo,
+                    items=[
+                        {
+                            "name": item.name[:50],
+                            "quantity": item.quantity,
+                            "price": item.unit_price_vnd,
+                        }
+                        for item in order.items
+                    ],
+                    return_url=ret_url,
+                    cancel_url=can_url,
+                    buyer_name=order.customer_name,
+                    buyer_phone=order.customer_phone,
+                )
+            except (PayOSConfigurationError, PayOSProviderError) as exc:
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+            snapshot_token = sign_order_snapshot_token(
+                {
+                    "order_id": str(order.order_id),
+                    "order_code": order.order_code,
+                    "session_id": str(order.session_id),
+                    "ticket_id": str(order.ticket_id),
+                    "kiosk_id": order.kiosk_id,
+                    "store_name": order.store_name,
+                    "payos_order_code": link.order_code,
+                    "items": [[it.product_id, it.quantity] for it in order.items],
+                    "customer_name": order.customer_name,
+                    "customer_phone": order.customer_phone,
+                    "pickup_location": order.pickup_location,
+                    "customer_note": order.customer_note,
+                },
+                runtime_settings.payos_checksum_key.get_secret_value().strip(),
+            )
+            order = assisted_order_store.attach_payos_link(
+                order.order_id,
+                payos_order_code=link.order_code,
+                payment_link_id=link.payment_link_id,
+                checkout_url=link.checkout_url,
+                qr_code=link.qr_code,
+                account_number=link.account_number,
+                account_name=link.account_name,
+                bank_bin=link.bin,
+                description=link.description,
+                expired_at=link.expired_at,
+                payment_verify_token=snapshot_token,
+            )
+        # Do NOT alert the manager yet — wait until PayOS confirms PAID!
+        return _assisted_order_response(order)
+
+    if created_new and notifier.settings.has_manager_notifier:
+        order = await _notify_manager_for_assisted_order(order, notifier)
     return _assisted_order_response(order)
+
+
+def _reconstruct_order_from_token(
+    token: str,
+    expected_payos_code: int,
+    *,
+    checksum_key: str,
+    repo: ProductRepository,
+) -> AssistedOrderRecord | None:
+    snap = verify_order_snapshot_token(token, checksum_key)
+    if snap is None or int(snap.get("payos_order_code") or 0) != expected_payos_code:
+        return None
+    raw_items = snap.get("items")
+    if not isinstance(raw_items, list) or not raw_items:
+        return None
+    from backend.products.planogram import recommended_shelf
+
+    resolved: list[AssistedOrderItem] = []
+    for entry in raw_items:
+        if not isinstance(entry, list) or len(entry) != 2:
+            continue
+        pid, qty = str(entry[0]), int(entry[1])
+        prod = repo.get_product_snapshot(pid)
+        if prod is None:
+            continue
+        shelf_loc = (
+            prod.shelf
+            if (prod.shelf and not prod.shelf.startswith("shelf_"))
+            else recommended_shelf(prod.product_id, getattr(prod, "catalog_version", None))
+        )
+        resolved.append(
+            AssistedOrderItem(
+                product_id=prod.product_id,
+                name=prod.name,
+                brand=prod.brand,
+                category=prod.category,
+                uom=prod.uom,
+                image_url=prod.image_url,
+                unit_price_vnd=prod.price_vnd,
+                quantity=qty,
+                line_total_vnd=prod.price_vnd * qty,
+                shelf_location=shelf_loc,
+                snapshot_stock=prod.stock,
+                stock_is_current=prod.stock_is_current,
+            )
+        )
+    if not resolved:
+        return None
+    subtotal = sum(item.line_total_vnd for item in resolved)
+    record = AssistedOrderRecord(
+        order_id=UUID(str(snap["order_id"])),
+        order_code=str(snap["order_code"]),
+        session_id=UUID(str(snap["session_id"])),
+        kiosk_id=str(snap.get("kiosk_id") or "kiosk-01"),
+        store_name=str(snap.get("store_name") or "Thanh Lam Mart"),
+        items=tuple(resolved),
+        item_count=sum(item.quantity for item in resolved),
+        subtotal_vnd=subtotal,
+        total_vnd=subtotal,
+        customer_name=snap.get("customer_name"),
+        customer_phone=snap.get("customer_phone"),
+        pickup_location=snap.get("pickup_location"),
+        customer_note=snap.get("customer_note"),
+        status="AWAITING_PAYMENT",
+        ticket_id=UUID(str(snap["ticket_id"])),
+        created_at=datetime.now(UTC),
+        data_source=repo.source_name,
+        stock_is_current=all(item.stock_is_current for item in resolved),
+        payment_method="payos",
+        payment_status="PENDING_PAYOS",
+        payos_order_code=expected_payos_code,
+        payment_verify_token=token,
+    )
+    return assisted_order_store.register_reconstructed(record)
+
+
+@app.post(
+    "/payments/payos/{payos_order_code}/sync",
+    response_model=AssistedOrderResponse,
+)
+async def sync_payos_payment(
+    payos_order_code: int,
+    request: PayOSSyncRequest,
+    payos: PayOSService = Depends(get_payos_service),
+    notifier: ManagerNotifierService = Depends(get_manager_notifier_service),
+    runtime_settings: Settings = Depends(get_settings),
+) -> AssistedOrderResponse:
+    if not payos.is_configured:
+        raise HTTPException(status_code=503, detail="PayOS chưa được cấu hình.")
+
+    order = assisted_order_store.get_by_payos_order_code(payos_order_code)
+    if order is None and request.payment_verify_token:
+        order = _reconstruct_order_from_token(
+            request.payment_verify_token,
+            payos_order_code,
+            checksum_key=runtime_settings.payos_checksum_key.get_secret_value().strip(),
+            repo=get_product_repository(runtime_settings),
+        )
+    if order is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Không tìm thấy đơn PayOS này trong phiên hiện tại.",
+        )
+
+    if order.payment_status != "PAID":
+        try:
+            remote = await payos.get_payment_status(payos_order_code)
+        except (PayOSConfigurationError, PayOSProviderError) as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        remote_status = remote.status.upper()
+        if remote_status == "PAID" or (remote.amount_paid > 0 and remote.amount_remaining <= 0):
+            updated = assisted_order_store.mark_payos_status(
+                payos_order_code,
+                payment_status="PAID",
+                paid_amount_vnd=remote.amount_paid or order.total_vnd,
+                transaction_ref=remote.transaction_reference,
+            )
+            if updated is not None:
+                order = updated
+            if assisted_order_store.try_claim_paid_notification(payos_order_code):
+                order = await _notify_manager_for_assisted_order(order, notifier)
+        elif remote_status in {"CANCELLED", "CANCELED"}:
+            updated = assisted_order_store.mark_payos_status(
+                payos_order_code, payment_status="CANCELLED"
+            )
+            if updated is not None:
+                order = updated
+        elif remote_status == "EXPIRED":
+            updated = assisted_order_store.mark_payos_status(
+                payos_order_code, payment_status="EXPIRED"
+            )
+            if updated is not None:
+                order = updated
+
+    return _assisted_order_response(order)
+
+
+@app.post(
+    "/payments/payos/{payos_order_code}/cancel",
+    response_model=AssistedOrderResponse,
+)
+async def cancel_payos_payment(
+    payos_order_code: int,
+    request: PayOSCancelRequest,
+    payos: PayOSService = Depends(get_payos_service),
+) -> AssistedOrderResponse:
+    if not payos.is_configured:
+        raise HTTPException(status_code=503, detail="PayOS chưa được cấu hình.")
+    try:
+        await payos.cancel_payment_link(payos_order_code, reason=request.reason)
+    except (PayOSConfigurationError, PayOSProviderError):
+        pass
+    order = assisted_order_store.mark_payos_status(payos_order_code, payment_status="CANCELLED")
+    if order is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn PayOS cần hủy.")
+    return _assisted_order_response(order)
+
+
+@app.post("/payments/payos/webhook")
+async def payos_payment_webhook(
+    raw_request: Request,
+    notifier: ManagerNotifierService = Depends(get_manager_notifier_service),
+    runtime_settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Receive PayOS payment confirmation webhooks, verify HMAC-SHA256, and alert manager."""
+    try:
+        body = await raw_request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload") from exc
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Invalid webhook payload")
+
+    data = body.get("data")
+    # PayOS sends a sample test ping (orderCode=123, description=VQRIO123) when registering URL.
+    if isinstance(data, dict) and (
+        data.get("orderCode") == 123 or data.get("description") == "VQRIO123"
+    ):
+        return {"success": True, "message": "Webhook verified"}
+
+    checksum_key = runtime_settings.payos_checksum_key.get_secret_value().strip()
+    if not checksum_key or not verify_payos_webhook_signature(body, checksum_key):
+        raise HTTPException(status_code=400, detail="Invalid PayOS webhook signature")
+
+    paid_ok = str(body.get("code") or "") == "00" and body.get("success") is not False
+    if not paid_ok or not isinstance(data, dict):
+        return {"success": True, "ignored": True}
+
+    try:
+        payos_code = int(data.get("orderCode") or 0)
+    except (TypeError, ValueError):
+        return {"success": True, "ignored": True}
+    if payos_code <= 0:
+        return {"success": True, "ignored": True}
+
+    amount = int(data.get("amount") or 0)
+    tx_ref = str(data.get("reference") or "") or None
+    order = assisted_order_store.get_by_payos_order_code(payos_code)
+    if order is not None:
+        updated = assisted_order_store.mark_payos_status(
+            payos_code,
+            payment_status="PAID",
+            paid_amount_vnd=amount or order.total_vnd,
+            transaction_ref=tx_ref,
+        )
+        if updated is not None:
+            order = updated
+        if assisted_order_store.try_claim_paid_notification(payos_code):
+            await _notify_manager_for_assisted_order(order, notifier)
+    return {"success": True, "orderCode": payos_code}
 
 
 @app.get(
