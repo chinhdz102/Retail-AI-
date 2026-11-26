@@ -158,7 +158,8 @@ async def respond_to_product_image(
                 for p in (*matched, *related)
             )
             custom_prompt = (
-                "Bạn là Mai, trợ lý siêu thị Thanh Lam Mart. Khách vừa chụp ảnh sản phẩm và hỏi thêm.\n"
+                "Bạn là Mai, trợ lý siêu thị Thanh Lam Mart. "
+                "Khách vừa chụp ảnh sản phẩm và hỏi thêm.\n"
                 "Sản phẩm nhận diện từ ảnh (đã xác minh trong danh mục Thanh Lam Mart):\n"
                 f"{catalog_ctx}\n\n"
                 f"Câu hỏi của khách: {user_q}\n\n"

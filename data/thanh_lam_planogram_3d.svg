@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1560" height="1015" viewBox="0 0 1560 1015">
 <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101827"/><stop offset="1" stop-color="#17283b"/></linearGradient><filter id="shadow" x="-20%" y="-20%" width="150%" height="160%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#020617" flood-opacity=".28"/></filter></defs>
 <rect width="1560" height="1015" fill="url(#bg)"/>
-<text x="40" y="54" fill="#f8fafc" font-family="Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">THANH LAM MART · SƠ ĐỒ KỆ ĐỀ XUẤT</text>
+<text x="40" y="54" fill="#f8fafc" font-family="Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">Thanh Lam Mart · SƠ ĐỒ KỆ ĐỀ XUẤT</text>
 <text x="40" y="88" fill="#b8c7d9" font-family="Segoe UI,Arial,sans-serif" font-size="16">3,081 SKU · 13 aisle · 5 tầng kệ · 8 bay/aisle · nhóm theo ngành và category</text>
 <text x="40" y="116" fill="#fbbf24" font-family="Segoe UI,Arial,sans-serif" font-size="14">Màu thể hiện các khối category · sơ đồ minh hoạ theo vị trí đề xuất, chưa phải bản vẽ thi công</text>
 <text x="40" y="142" fill="#d5e2f0" font-family="Segoe UI,Arial,sans-serif" font-size="13">Đầu dãy có mã và tên nhóm hàng · Mã vị trí: Axx-Bxx-Lxx-Pxx · L1 dưới, L5 trên</text>
@@ -18,7 +18,7 @@
 <rect x="72.33" y="292.80" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Khăn lau tay hình váy búp bê 25x31cm · TLM_10303387 · A01-B01-L01-P02</title></rect>
 <rect x="75.86" y="292.80" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Khăn mặt 2 lớp Mollis FM5A 40*80*87g · TLM_10601537 · A01-B01-L01-P03</title></rect>
 <rect x="79.39" y="292.80" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Combo 2 khăn mặt sợi tre Unobaby CBO2 28x50 · TLM_10306388 · A01-B01-L01-P04</title></rect>
-<rect x="82.92" y="292.80" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Khăn mặt Cotton 32x65x73gr Thanh Lam Mart Home · TLM_10264881 · A01-B01-L01-P05</title></rect>
+<rect x="82.92" y="292.80" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Khăn mặt Cotton 32x65x73gr Thanh Lam Home · TLM_10264881 · A01-B01-L01-P05</title></rect>
 <rect x="86.46" y="292.80" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Khăn tay cotton  Thanh Lam Home 28*42*45g · TLM_10330216 · A01-B01-L01-P06</title></rect>
 <text x="63" y="286.088" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="end">L2</text>
 <line x1="68.00" y1="274.80" x2="96.25" y2="274.80" stroke="#8191a5" stroke-width="1.1"/>
@@ -35,7 +35,7 @@
 <rect x="75.86" y="259.60" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Thảm len chấm bi AP 40x60 · TLM_10164730 · A01-B01-L03-P03</title></rect>
 <rect x="79.39" y="259.60" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Khăn tắm cotton Quảng Phú W630 70*140*415g · TLM_10266054 · A01-B01-L03-P04</title></rect>
 <rect x="82.92" y="259.60" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Khăn tắm siêu mềm nhỡ VP 14 (65x130) Màu ngẫu nhiên · TLM_10194281 · A01-B01-L03-P05</title></rect>
-<rect x="86.46" y="259.60" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Khăn tắm Cotton 50x100x175gr Thanh Lam Mart Home · TLM_10264880 · A01-B01-L03-P06</title></rect>
+<rect x="86.46" y="259.60" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Khăn tắm Cotton 50x100x175gr Thanh Lam Home · TLM_10264880 · A01-B01-L03-P06</title></rect>
 <rect x="89.99" y="259.60" width="2.03" height="14.10" rx="1.2" fill="#a78bfa" stroke="#173044" stroke-width=".35"><title>Thảm  Xuyên Á 40*60cm · TLM_10266096 · A01-B01-L03-P07</title></rect>
 <text x="63" y="252.888" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="end">L4</text>
 <line x1="68.00" y1="241.60" x2="96.25" y2="241.60" stroke="#8191a5" stroke-width="1.1"/>
@@ -889,7 +889,7 @@
 <rect x="981.83" y="243.00" width="2.03" height="14.10" rx="1.2" fill="#38bdf8" stroke="#173044" stroke-width=".35"><title>Nước giặt xả MaxKleen Ultra kép hương nước hoa huyền diệu túi 2.4kg · TLM_10617319 · A03-B07-L04-P02</title></rect>
 <rect x="985.36" y="243.00" width="2.03" height="14.10" rx="1.2" fill="#38bdf8" stroke="#173044" stroke-width=".35"><title>Bột giặt Omo ngất ngây hồng 2,6kg · TLM_10617635 · A03-B07-L04-P03</title></rect>
 <rect x="988.89" y="243.00" width="2.03" height="14.10" rx="1.2" fill="#38bdf8" stroke="#173044" stroke-width=".35"><title>Nước giặt Omo bền đẹp cửa trước túi 2,9kg · TLM_10161177 · A03-B07-L04-P04</title></rect>
-<rect x="992.42" y="243.00" width="2.03" height="14.10" rx="1.2" fill="#38bdf8" stroke="#173044" stroke-width=".35"><title>Nước giặt cửa trước Thanh Lam Mart Home tinh dầu thơm túi 2.9kg · TLM_10170724 · A03-B07-L04-P05</title></rect>
+<rect x="992.42" y="243.00" width="2.03" height="14.10" rx="1.2" fill="#38bdf8" stroke="#173044" stroke-width=".35"><title>Nước giặt cửa trước Thanh Lam Home tinh dầu thơm túi 2.9kg · TLM_10170724 · A03-B07-L04-P05</title></rect>
 <rect x="995.96" y="243.00" width="2.03" height="14.10" rx="1.2" fill="#34d399" stroke="#173044" stroke-width=".35"><title>Nước lau nhà MaxKleen hương ban mai thanh mát chai 1.01 lít · TLM_10170559 · A03-B07-L04-P06</title></rect>
 <rect x="999.49" y="243.00" width="2.03" height="14.10" rx="1.2" fill="#34d399" stroke="#173044" stroke-width=".35"><title>Nước lau sàn Sunlight tinh dầu sả chanh chai 1kg · TLM_10170663 · A03-B07-L04-P07</title></rect>
 <rect x="1003.02" y="243.00" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Nước rửa chén bát Sunlight thiên nhiên lô hội túi 3.4Kg · TLM_10171191 · A03-B07-L04-P08</title></rect>
@@ -1229,7 +1229,7 @@
 <rect x="135.89" y="470.20" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Dao thái Sunhouse EcoFamily KS-KN165ES · TLM_10250979 · A05-B03-L02-P04</title></rect>
 <rect x="139.43" y="470.20" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Thớt công nghiệp Thanh Tú gỗ xà cừ 27*36cm · TLM_10251004 · A05-B03-L02-P05</title></rect>
 <rect x="142.96" y="470.20" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Cốc giấy Thanh Lam Home 9oz 270ml (20c/g) · TLM_10167098 · A05-B03-L02-P06</title></rect>
-<rect x="146.49" y="470.20" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Giấy thấm dầu 20*22cm Thanh Lam Mart Home · TLM_10250997 · A05-B03-L02-P07</title></rect>
+<rect x="146.49" y="470.20" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Giấy thấm dầu 20*22cm Thanh Lam Home · TLM_10250997 · A05-B03-L02-P07</title></rect>
 <rect x="150.02" y="470.20" width="2.03" height="14.10" rx="1.2" fill="#60a5fa" stroke="#173044" stroke-width=".35"><title>Túi Lohas Hạ 43,5x39,5x22-85G · TLM_10270526 · A05-B03-L02-P08</title></rect>
 <text x="63" y="463.488" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="end">L3</text>
 <line x1="124.50" y1="452.20" x2="152.75" y2="452.20" stroke="#8191a5" stroke-width="1.1"/>
@@ -1239,7 +1239,7 @@
 <rect x="135.89" y="453.60" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Dao làm bếp đa năng Sunhouse Ecofamily KS-KN165E · TLM_10250980 · A05-B03-L03-P04</title></rect>
 <rect x="139.43" y="453.60" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Thớt công nghiệp Thanh Tú gỗ xà cừ 19*28cm · TLM_10251002 · A05-B03-L03-P05</title></rect>
 <rect x="142.96" y="453.60" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Bát giấy Thanh Lam Home 18oz 540ml (10c/g) · TLM_10167099 · A05-B03-L03-P06</title></rect>
-<rect x="146.49" y="453.60" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Giấy nướng đa năng (giấy nến) 20*22cm Thanh Lam Mart Home · TLM_10250996 · A05-B03-L03-P07</title></rect>
+<rect x="146.49" y="453.60" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Giấy nướng đa năng (giấy nến) 20*22cm Thanh Lam Home · TLM_10250996 · A05-B03-L03-P07</title></rect>
 <rect x="150.02" y="453.60" width="2.03" height="14.10" rx="1.2" fill="#60a5fa" stroke="#173044" stroke-width=".35"><title>Gối Memory Foam 50D Lock&amp;Lock HLW113 · TLM_10064937 · A05-B03-L03-P08</title></rect>
 <text x="63" y="446.88800000000003" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="end">L4</text>
 <line x1="124.50" y1="435.60" x2="152.75" y2="435.60" stroke="#8191a5" stroke-width="1.1"/>
@@ -1249,7 +1249,7 @@
 <rect x="135.89" y="437.00" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Dao chặt xương Super Chef 15.2cm · TLM_10619795 · A05-B03-L04-P04</title></rect>
 <rect x="139.43" y="437.00" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Thớt gỗ xà cừ tròn Thanh Tú có móc inox 30cm · TLM_10251001 · A05-B03-L04-P05</title></rect>
 <rect x="142.96" y="437.00" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Đĩa giấy Thanh Lam Home 15cm (10c/g) · TLM_10167100 · A05-B03-L04-P06</title></rect>
-<rect x="146.49" y="437.00" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Màng bọc thực phẩm PVC 30CMX150M Dao nhựa Thanh Lam Mart Home · TLM_10166023 · A05-B03-L04-P07</title></rect>
+<rect x="146.49" y="437.00" width="2.03" height="14.10" rx="1.2" fill="#fbbf24" stroke="#173044" stroke-width=".35"><title>Màng bọc thực phẩm PVC 30CMX150M Dao nhựa Thanh Lam Home · TLM_10166023 · A05-B03-L04-P07</title></rect>
 <rect x="150.02" y="437.00" width="2.03" height="14.10" rx="1.2" fill="#60a5fa" stroke="#173044" stroke-width=".35"><title>Túi Lohas Xuân 43,5x39,5x22-85G · TLM_10270524 · A05-B03-L04-P08</title></rect>
 <text x="63" y="430.288" fill="#aebdd0" font-family="Segoe UI,Arial,sans-serif" font-size="8" text-anchor="end">L5</text>
 <line x1="124.50" y1="419.00" x2="152.75" y2="419.00" stroke="#8191a5" stroke-width="1.1"/>

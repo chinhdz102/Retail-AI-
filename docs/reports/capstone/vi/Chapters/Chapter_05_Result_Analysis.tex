@@ -319,7 +319,7 @@ Nhằm chứng minh trực tiếp khả năng phối hợp giữa hai Agent thô
 \toprule
 \textbf{Kịch bản Liên thông} & \textbf{Thao tác trên \texttt{ops\_chest} / Cầu nối} & \textbf{Kết quả} & \textbf{Hành vi Xác minh tại \texttt{Retail-AI-}} \\
 \midrule
-1. Toàn vẹn Crosswalk & Tải \code{data/bridge/crosswalk.csv} đối chiếu \code{thanh_lam_products.json} & Đạt & 164/164 SKU tươi khớp 100\% \code{product_id}, tên \& giá niêm yết; 0 mã cách ly \\
+1. Toàn vẹn Crosswalk & Tải \code{data/bridge/crosswalk.csv} đối chiếu danh mục Thanh Lam Mart & Đạt & 164/164 SKU tươi khớp 100\% \code{product_id}, tên \& giá niêm yết; 0 mã cách ly \\
 2. Ranh giới HITL (\texttt{PENDING}) & Tạo đề xuất giảm 25\% FEFO cho \code{F0005} (\code{TLM_10283202}) chưa duyệt & Đạt & Kiosk giữ nguyên giá gốc 123.900\,đ; không rò rỉ giá chưa phê duyệt \\
 3. Lan truyền Giảm giá FEFO & Quản lý duyệt \code{prop_md_01} $\to$ \texttt{EXECUTED} (92.925\,đ) & Đạt & Kiosk cập nhật giá 92.925\,đ ngay khi hỏi và đưa vào khuyến mãi FEFO \\
 4. Ẩn Sản phẩm Hết hàng & Giảm tồn \code{F0007} (\code{TLM_10283203}) về \code{on_hand = 0} & Đạt & Hỏi trực tiếp báo không còn tồn bán được; lọc \code{in_stock=True} ẩn \code{TLM_10283203} và gợi ý \code{TLM_10283202} \\

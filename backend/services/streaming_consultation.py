@@ -1018,9 +1018,10 @@ async def _prepare_open_need_streaming(
         {
             "role": "system",
             "content": (
-                "Bạn là bộ ánh xạ sản phẩm siêu thị Thanh Lam Mart. Nếu yêu cầu của khách hỏi thuốc "
-                "điều trị bệnh, bệnh lý nặng, dị ứng nghiêm trọng, trẻ sơ sinh, hóa chất nguy "
-                "hiểm hoặc ngoài phạm vi siêu thị, trả đúng []. Ngược lại, gợi ý 1 đến 3 từ "
+                "Bạn là bộ ánh xạ sản phẩm siêu thị Thanh Lam Mart. Nếu yêu cầu của khách "
+                "hỏi thuốc điều trị bệnh, bệnh lý nặng, dị ứng nghiêm trọng, trẻ sơ sinh, "
+                "hóa chất nguy hiểm hoặc ngoài phạm vi siêu thị, trả đúng []. Ngược lại, gợi ý "
+                "1 đến 3 từ "
                 "khóa sản phẩm siêu thị phổ biến (tiếng Việt ngắn gọn) phù hợp nhất với nhu cầu "
                 "đời thường của khách (ví dụ đau rát họng nhẹ -> [\"trà gừng\", \"mật ong\", "
                 "\"kẹo ngậm\"], quà biếu/món quà nhỏ -> [\"bánh quy hộp\", \"trà\", \"cà phê\"], "
@@ -1227,7 +1228,7 @@ _SEMANTIC_BRIDGE_SYSTEM_PROMPT = (
     "Bạn là bộ đối chiếu danh mục siêu thị Thanh Lam Mart (Việt Nam). "
     "Từ câu hỏi khách và danh sách ứng viên thực tế trong kho (nhóm C# hoặc sản phẩm S#), "
     "trả đúng 1 JSON:\n"
-    '{"pick":"C1"|"S1"|null,"kw":["từ khóa chuẩn trên bao bì Thanh Lam Mart nếu cần tìm/lọc hẹp"]}\n'
+    '{"pick":"C1"|"S1"|null,"kw":["từ khóa chuẩn trên bao bì sản phẩm nếu cần tìm/lọc hẹp"]}\n'
     "Quy tắc:\n"
     "1. Chọn C# hoặc S# nếu ĐÚNG loại hàng khách hỏi (chấp nhận đồng nghĩa/từ địa phương/"
     "tiếng Anh: vd kẹo cao su=Kẹo gum, lăn nách=Lăn khử mùi, rau câu=Thạch, xì dầu=Nước tương, "
@@ -1595,7 +1596,8 @@ async def prepare_streaming_consultation(
 
     if resolve_organization_profile(text) is not None and re.search(
         r"\b(?:gioi\s+thieu|thong\s+tin|la\s+gi|la\s+cong\s+ty|do\s+an|du\s+an|"
-        r"cong\s+ty|cua\s+ai|so\s+huu|van\s+hanh|thanh\s+lam|chatvrm)\b",
+        r"cong\s+ty|cua\s+ai|so\s+huu|van\s+hanh|thanh\s+lam\s+mart|"
+        r"cua\s+hang\s+thanh\s+lam|sieu\s+thi\s+thanh\s+lam|chatvrm)\b",
         norm_answer,
     ):
         return None

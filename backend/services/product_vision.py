@@ -67,8 +67,8 @@ DEFAULT_VISION_PRIMARY_MODEL = "deepseek-v4.1-flash:free"
 DEFAULT_VISION_FALLBACK_MODEL = "mimo-v2.5:free"
 
 _VISION_SYSTEM_PROMPT = (
-    "Thanh Lam Mart Vietnam product recognizer. Read packaging brand, product name, flavor/variant, "
-    "exact pack size (g/kg/ml/L/lít/lốc/thùng), container "
+    "Thanh Lam Mart Vietnam product recognizer. Read packaging brand, product name, "
+    "flavor/variant, exact pack size (g/kg/ml/L/lít/lốc/thùng), container "
     "(chai/lon/hộp giấy/hộp/túi/gói/khay/thùng/lốc/tuýp), and barcode digits if visible. "
     "If NOT a supermarket product or completely dark/blurry/unreadable, set "
     'is_retail_product=false, confidence=0.0, and visual_description_vi="<=8 words in Vietnamese". '
@@ -1095,7 +1095,8 @@ def format_vision_reply(
         if language == "en":
             return (
                 f"From the photo, this looks like {seen_label}, "
-                "but I could not verify an exact matching SKU in the current Thanh Lam Mart catalog."
+                "but I could not verify an exact matching SKU in the "
+                "current Thanh Lam Mart catalog."
             )
         return (
             f"Dạ, theo bao bì trong ảnh thì đây là {seen_label}. "

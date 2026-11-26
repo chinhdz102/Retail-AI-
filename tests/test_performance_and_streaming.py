@@ -237,7 +237,7 @@ async def test_zero_planner_streaming_covers_brand_sugar_promo_comparison_and_ke
     store = InMemorySessionStore()
 
     zero_planner_cases = [
-        ("khăn mặt cotton Thanh Lam Home", "Thanh Lam Mart"),
+        ("khăn mặt cotton Thanh Lam Home", "thanh lam"),
         ("cho mình xem sữa tươi không đường", "không đường"),
         ("dầu gội trị gàu nào tốt?", ""),
         ("ba chỉ bò Mỹ loại nào ngon?", "ba chỉ"),

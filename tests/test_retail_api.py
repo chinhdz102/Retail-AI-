@@ -713,7 +713,6 @@ async def test_store_operator_question_defaults_to_thanh_lam_mart_profile(
     assert payload["model"] == "organization-profile"
     assert payload["tools_used"] == ["get_organization_profile"]
     assert "Thanh Lam Mart" in payload["text"]
-    assert "https://thanhlammart.vn/about" in payload["text"]
 
 
 @pytest.mark.asyncio

@@ -2,9 +2,9 @@
   "schema_version": "1.0",
   "generated_at": "2026-11-25T16:20:40.120093Z",
   "cleaned_pipeline": "hf-datatrove-openfoodfacts-sota-v1",
-  "source": "Thanh Lam Mart Official Product Listing",
-  "source_catalog_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
-  "source_catalog_canonical_sha256": "8f2ee3771be548b85a8d8981127b2518b8e8e5868584491df36b96317476cbbc",
+  "source": "Thanh Lam Mart Product Catalog",
+  "source_catalog_sha256": "80c605a5e778f0c4e7a09057d4088edeb8742318bc2e3d40c0b8d907cd03862d",
+  "source_catalog_canonical_sha256": "80c605a5e778f0c4e7a09057d4088edeb8742318bc2e3d40c0b8d907cd03862d",
   "total_catalog_products": 3099,
   "enriched_products": 2205,
   "field_counts": {
@@ -3448,7 +3448,7 @@
       "origin": "Việt Nam.",
       "origin_source": "thông tin nhãn sản phẩm (Kingfoodmart)",
       "origin_source_url": "https://kingfoodmart.com/bot-mi-bot-lam-banh/bot-mi-da-dung-meizan-goi-500g",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10010026": {
       "product_name": "Bột mì đa dụng Meizan gói 500g",
@@ -3481,7 +3481,7 @@
       "origin": "Việt Nam.",
       "origin_source": "thông tin nhãn sản phẩm (Kingfoodmart)",
       "origin_source_url": "https://kingfoodmart.com/bot-mi-bot-lam-banh/bot-mi-da-dung-meizan-goi-500g",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10180848": {
       "product_name": "Bột mì chuyên dụng cho Bánh Mì Meizan gói 1kg",
@@ -3492,7 +3492,7 @@
       "usage": "Dùng làm các loại bánh sandwich, baguette Pháp, bánh pizza, pastries, brioche, bánh mì ngọt và các loại bánh khác….",
       "storage": "Bảo quản nơi khô ráo và thoáng mát, tránh ánh nắng mặt trời.",
       "origin": "Sản xuất tại Việt Nam. Đóng gói: túi zipper 1kg tiện dụng (thùng 10 gói).",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10223985": {
       "product_name": "Bột bánh rán pha sẵn Ajinomoto gói 200g",
@@ -3554,7 +3554,7 @@
       "origin": "Việt Nam.",
       "origin_source": "thông tin nhãn sản phẩm (Kingfoodmart)",
       "origin_source_url": "https://kingfoodmart.com/bot-chien-gion-chien-xu-899/bot-chien-gion-meizan-goi-150gr-60646",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10326501": {
       "product_name": "Bột bánh xèo Meizan 400g",
@@ -3568,7 +3568,7 @@
       "usage": "1. Pha bột với tỉ lệ 400g bột:900 ml - 1000ml nước và khuấy đều cho đến khi bột mịn, không vón cục. Chờ bột nở (hoặc nghỉ) 10 phút để bánh ngon hơn 2. Đun nóng chảo, cho 1 muỗng súp dầu và các nguyên liệu: tôm, thịt, củ hành cắt mỏng, đậu xanh hấp chín vào chảo xào sơ 3. Đun nóng chảo, cho 1 muỗng súp dầu ăn vào chảo tráng đều, cho lượng dầu thừa ra ngoài 4.",
       "storage": "Bảo quản nơi khô ráo và thoáng mát, tránh ánh nắng trực tiếp tế.",
       "origin": "Việt Nam.",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10327464": {
       "product_name": "Bột chiên giòn nêm sẵn gia vị Meizan gói 150g",
@@ -3581,14 +3581,14 @@
       "origin": "Việt Nam.",
       "origin_source": "thông tin nhãn sản phẩm (Kingfoodmart)",
       "origin_source_url": "https://kingfoodmart.com/bot-chien-gion-chien-xu/bot-chien-gion-nem-gia-vi-meizan-goi-150g-1-goi-59686",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10622829": {
       "product_name": "Bột bắp Meizan 150g",
       "brand": "MEIZAN",
       "barcode": "8936231190154",
       "source_url": "https://thanhlammart.vn/products/meizan-bot-bap-meizan-150g--s10622829",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10624151": {
       "product_name": "Lốc 4 gói xốt gia vị hoàn chỉnh gà chiên nước mắm Chin-su gói 70g",
@@ -7882,7 +7882,7 @@
     },
     "TLM_10170576": {
       "product_name": "Giấy vệ sinh Thanh Lam Home 10 cuộn 2 lớp có lõi",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "barcode": "8934954013040",
       "source_url": "https://thanhlammart.vn/products/wmhome-gvs-10-cuon-2-lop-co-loi--s10170576",
       "summary": "Giấy vệ sinh Thanh Lam Home là sản phẩm giấy vệ sinh chất lượng cao được sản xuất trên dây chuyền khép kín với công nghệ mới đảm bảo an toàn vệ sinh. Thiết kế nhỏ gọn dễ mang theo và sử dụng khi cần thiết Sản phẩm giấy vệ sinh có độ dai và khả năng thấm hút nước cao. Được sản xuất bằng chất liệu bột giấy nguyên chất giúp mang lại cảm giác mềm mại khi sử dụng, không gây kích ứng da và dùng được cho cả trẻ em."
@@ -8575,7 +8575,7 @@
       "ingredients": "100% dầu mè thơm nguyên chất. Sản phẩm chứa nguyên liệu có nguồn gốc từ mè (vừng). Chỉ tiêu chất lượng chủ yếu: Trị số I-ốt (Wijs): 104 - 120. Không a-xit béo cấu hình trans theo khuyến nghị của FDA.",
       "usage": "Dùng để trộn salad; làm gia vị ướp, trộn với thức ăn trước hoặc sau khi chế biến.",
       "storage": "Để nơi khô ráo và thoáng mát, tránh ánh nắng trực tiếp.",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10010152": {
       "product_name": "Dầu ăn Danh Tiếng Tường An chai 2L",
@@ -8726,7 +8726,7 @@
       "ingredients": "Dầu đậu nành, dầu gạo lứt, dầu hướng dương, vitamin A palmitat. Thực phẩm tăng cường vi chất dinh dưỡng. Chỉ tiêu chất lượng chủ yếu: Trị số I - ốt (Wijs): tối thiểu 100.",
       "usage": "Dùng cho chiên, xào, trộn salad, làm nước xốt & nấu các món chay.",
       "storage": "Để nơi khô ráo & thoáng mát, tránh ánh nắng trực tiếp.",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, NHÃN HIỆU NEPTUNE Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn nhãn hiệu Neptune - Hình thức khuyến mại: Trong thời gian từ ngày 20/11/2025 đến ngày 03/12/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn nhãn hiệu Neptune* tại siêu thị Thanh Lam Mart, Website www.thanhlammart.vn."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, NHÃN HIỆU NEPTUNE Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn nhãn hiệu Neptune - Hình thức khuyến mại: Trong thời gian từ ngày 20/11/2025 đến ngày 03/12/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn nhãn hiệu Neptune* tại siêu thị Thanh Lam Mart/ Thanh Lam Mart, Website www.Thanh Lam Mart.vn."
     },
     "TLM_10170265": {
       "product_name": "Dầu ăn thượng hạng Neptune Light can 2 lít",
@@ -8736,7 +8736,7 @@
       "ingredients": "Dầu đậu nành, dầu gạo lứt, dầu hướng dương, vitamin A palmitat. Thực phẩm tăng cường vi chất dinh dưỡng. Chỉ tiêu chất lượng chủ yếu: Trị số I - ốt (Wijs): tối thiểu 100.",
       "usage": "Dùng cho chiên, xào, trộn salad, làm nước xốt & nấu các món chay.",
       "storage": "Để nơi khô ráo & thoáng mát, tránh ánh nắng trực tiếp.",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, NHÃN HIỆU NEPTUNE Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn nhãn hiệu Neptune - Hình thức khuyến mại: Trong thời gian từ ngày 20/11/2025 đến ngày 03/12/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn nhãn hiệu Neptune* tại siêu thị Thanh Lam Mart, Website www.thanhlammart.vn."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, NHÃN HIỆU NEPTUNE Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn nhãn hiệu Neptune - Hình thức khuyến mại: Trong thời gian từ ngày 20/11/2025 đến ngày 03/12/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn nhãn hiệu Neptune* tại siêu thị Thanh Lam Mart/ Thanh Lam Mart, Website www.Thanh Lam Mart.vn."
     },
     "TLM_10194215": {
       "product_name": "Dầu ăn cao cấp Coba chai 1L",
@@ -9007,8 +9007,8 @@
       "summary": "Là sản phẩm không thể thiếu trong nhà bếp của bạn. Sản phẩm được làm từ chất liệu cao su, bền bỉ. Đặc biệt an toàn với da tay và sức khỏe của người sử dụng. Găng tay sẽ bảo vệ đôi tay khỏi chất bẩn, chất tẩy rửa trong quá trình vệ sinh nhà cửa. Màu hồng nhẹ nhàng rất thích hợp dùng cho nữ giới. Sản phẩm có còn có thiết kế sẵn móc treo tiện lợi cất giữ sau khi dùng."
     },
     "TLM_10264880": {
-      "product_name": "Khăn tắm Cotton 50x100x175gr Thanh Lam Mart Home",
-      "brand": "WMHOME",
+      "product_name": "Khăn tắm Cotton 50x100x175gr Thanh Lam Home",
+      "brand": "THANH LAM HOME",
       "barcode": "8934954012432",
       "source_url": "https://thanhlammart.vn/products/wmhome-khan-tam-cotton-50x100x175gr--s10264880",
       "ingredients": "Cotton thiên nhiên phối hợp cùng sợi bông tre nên thấm hút tốt, bề mặt mềm mại. Sợi bông được dệt tỉ mỉ, chống tình trạng bung, bở khi sử dụng, các mép viền được viền chắc chắn. Với chất liệu cao cấp và an toàn cùng với quy trình kiểm soát chất lượng nghiêm ngặt, người dùng hoàn toàn có thể yên tâm sử dụng.",
@@ -9257,7 +9257,7 @@
     },
     "TLM_10167098": {
       "product_name": "Cốc giấy Thanh Lam Home 9oz 270ml (20c/g)",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "barcode": "8934954014788",
       "source_url": "https://thanhlammart.vn/products/wmh-coc-giay-9oz-270ml-20cg--s10167098",
       "ingredients": "Giấy cao cấp 1pe.",
@@ -9612,7 +9612,7 @@
     },
     "TLM_10270528": {
       "product_name": "WMHOME Túi Lohas WiN đỏ 30x36x15-55g",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "barcode": "8934976293772",
       "source_url": "https://thanhlammart.vn/products/wmhome-tui-lohas-win-do-30x36x15-55g--s10270528",
       "summary": "Túi Lohas Win 30x36x15-55G Bảo vệ môi trường là vấn đề ngày càng được xã hội và cộng đồng quan tâm. Bên cạnh đó, người tiêu dùng đang có xu hướng đặt niềm tin, lựa chọn các thương hiệu thể hiện trách nhiệm với trái đất qua các hoạt động như trồng cây, gây rừng, giảm thiểu rác thải, khuyến khích sử dụng túi dùng nhiều lần."
@@ -11476,7 +11476,7 @@
       "usage": "Dùng để làm nước chấm, tẩm ướp và chế biến thực phẩm.",
       "storage": "Bảo quản nơi khô ráo, thoáng mát, tránh ánh nắng trực tiếp.",
       "origin": "Nam Ngư Việt Nam Thể tích thực: 1.2L Đơn vị tính: Chai 1.0 Nước mắm Nam Ngư 1.2L là một trong những sản phẩm TỐT & SIÊU.",
-      "summary": "Nước nắm Nam Ngư 1.2L Thông tin sản phẩm Thương hiệu: Nam Ngư Xuất xứ: Việt Nam Thể tích thực: 1.2L Đơn vị tính: Chai 1.0 Nước mắm Nam Ngư 1.2L là một trong những sản phẩm TỐT & SIÊU RẺ - Dòng sản phẩm độc quyền tại Thanh Lam Mart. Nước mắm Nam Ngư 1.2L là sản phẩm chiếm trọn niềm tin của người tiêu dùng Việt Nam với vị ngon tròn vừa vặn. Thành phần cốt cá cơm, dùng được cả nấu và chấm."
+      "summary": "Nước nắm Nam Ngư 1.2L Thông tin sản phẩm Thương hiệu: Nam Ngư Xuất xứ: Việt Nam Thể tích thực: 1.2L Đơn vị tính: Chai 1.0 Nước mắm Nam Ngư 1.2L là một trong những sản phẩm TỐT & SIÊU RẺ - Dòng sản phẩm độc quyền tại Thanh Lam Mart & Thanh Lam Mart. Nước mắm Nam Ngư 1.2L là sản phẩm chiếm trọn niềm tin của người tiêu dùng Việt Nam với vị ngon tròn vừa vặn. Thành phần cốt cá cơm, dùng được cả nấu và chấm."
     },
     "TLM_10007893": {
       "product_name": "Thùng 30 gói mì tôm chua cay Hảo Hảo Vina Acecook 75g",
@@ -15035,7 +15035,7 @@
       "source_url": "https://thanhlammart.vn/products/meizan-mi-trung-cao-cap-meizan-500g--s10327469",
       "usage": "1. Cho vắt mì vào trong nước đang sôi. Luộc khoảng 2 - 3 phút, thỉnh thoảng khuấy đều. Không nên nấu quá chín 2. Vớt mì ra, xả lại bằng nước lạnh và để ráo 3. Cho ít dầu thực vật vào trộn đều để cho các sợi mì không dính vào nhau Món xào: xào chín các loại thịt/hải sản/rau tùy thích. Sau đó cho mì vào xào nóng lên là dùng được Món nước: dùng với nước lèo hoặc lẩu tùy thích.",
       "storage": "Bảo quản nơi khô ráo và thoáng mát, tránh ánh nắng trực tiếp.",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10327470": {
       "product_name": "Mì trứng cao cấp Meizan gói 250g",
@@ -15044,7 +15044,7 @@
       "source_url": "https://thanhlammart.vn/products/meizan-mi-trung-cao-cap-meizan-250g--s10327470",
       "usage": "1. Cho vắt mì vào trong nước đang sôi. Luộc khoảng 2 - 3 phút, thỉnh thoảng khuấy đều. Không nên nấu quá chín 2. Vớt mì ra, xả lại bằng nước lạnh và để ráo 3. Cho ít dầu thực vật vào trộn đều để cho các sợi mì không dính vào nhau Món xào: xào chín các loại thịt/hải sản/rau tùy thích. Sau đó cho mì vào xào nóng lên là dùng được Món nước: dùng với nước lèo hoặc lẩu tùy thích.",
       "storage": "Bảo quản nơi khô ráo và thoáng mát, tránh ánh nắng trực tiếp.",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10327500": {
       "product_name": "3 MIỀN Gold Mì tôm chua cay ĐB 75g",
@@ -15338,7 +15338,7 @@
       "origin": "Việt Nam.",
       "origin_source": "thông tin nhãn sản phẩm (Kingfoodmart)",
       "origin_source_url": "https://kingfoodmart.com/nui/nui-cao-cap-hinh-xoan-meizan-goi-300g-1-goi",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10007952": {
       "product_name": "Bánh đa cua Hoàng Gia gói 120g",
@@ -15812,7 +15812,7 @@
       "usage": "1. Cho nui vào trong nước đang sôi. Luộc khoảng 10 phút, thỉnh thoảng khuấy đều và kiểm tra. Vớt ra khi thấy nui chín đều vừa ăn 2. Xả lại bằng nước lạnh và để ráo 3. Trộn 1 muỗng dầu thực vật để tránh nui dính vào nhau Món xào: xào chín các loại thịt/hải sản/rau tùy thích. Sau đó cho nui vào xào nóng lên là dùng được Món nước: dùng với nước lèo tùy thích.",
       "storage": "Bảo quản nơi khô ráo và thoáng mát, tránh ánh nắng trực tiếp.",
       "origin": "Việt Nam.",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10622826": {
       "product_name": "MEIZAN Mì Chay Cao Cấp Meizan 250g",
@@ -15824,7 +15824,7 @@
       "origin": "Việt Nam.",
       "origin_source": "thông tin nhãn sản phẩm (Kingfoodmart)",
       "origin_source_url": "https://kingfoodmart.com/mi-trung-mi-rau-cu-mi-kho/mi-chay-meizan-cao-cap-goi-250g-63265",
-      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart."
+      "summary": "THÔNG TIN CHƯƠNG TRÌNH TÍCH LŨY CHI TIÊU CỦA DẦU ĂN, DẦU MÈ, BƠ NHÃN HIỆU MEIZAN Các Sản Phẩm được áp dụng khuyến mại: Áp dụng khi mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan - Hình thức khuyến mại: Trong thời gian từ ngày 26/07/2025 đến ngày 26/08/2025 sẽ được áp dụng cơ cấu khuyến mại sau: Cơ cấu 1: Khách hàng mua các sản phẩm dầu ăn, dầu mè, bơ nhãn hiệu Meizan tại siêu thị Thanh Lam Mart/ Thanh Lam Mart."
     },
     "TLM_10622836": {
       "product_name": "Bánh đa khô Vifon 300g",

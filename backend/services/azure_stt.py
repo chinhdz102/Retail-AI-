@@ -58,8 +58,8 @@ _LOCALE_BY_LANGUAGE: dict[str, str] = {
 # High-value Thanh Lam Mart retail/supermarket terms that benefit from Azure PhraseListGrammar.
 _BASE_RETAIL_PHRASES_VI: tuple[str, ...] = (
     "Thanh Lam Mart",
-    "Thanh Lam Mart",
     "Thanh Lam Home",
+    "Thanh Lam Good",
     "PayOS",
     "giỏ hàng",
     "tồn kho",

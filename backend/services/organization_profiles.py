@@ -105,17 +105,19 @@ def resolve_organization_profile(text: str) -> OrganizationProfile | None:
             for alias in profile.aliases
         ):
             return profile
+    is_private_label_product = bool(
+        re.search(r"(?<!\w)thanh\s+lam\s+(?:home|good)(?!\w)", normalized)
+    )
     for profile in profiles:
-        if profile.entity_id == "thanh_lam_mart" and any(
-            re.search(rf"(?<!\w){re.escape(_normalize(alias))}(?!\w)", normalized)
-            for alias in profile.aliases
+        if (
+            profile.entity_id == "thanh_lam_mart"
+            and not is_private_label_product
+            and any(
+                re.search(rf"(?<!\w){re.escape(_normalize(alias))}(?!\w)", normalized)
+                for alias in profile.aliases
+            )
         ):
             return profile
-    if re.search(r"(?<!\w)(?:thanh_lam_mart|thanh lam mart)(?!\w)", normalized):
-        return next(
-            (profile for profile in profiles if profile.entity_id == "thanh_lam_mart"),
-            None,
-        )
     if re.search(r"(?<!\w)fpt(?!\w)", normalized):
         return next((profile for profile in profiles if profile.entity_id == "fpt"), None)
     return None

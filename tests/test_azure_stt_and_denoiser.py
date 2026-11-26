@@ -109,7 +109,7 @@ def test_catalog_transcription_no_longer_corrupts_everyday_vietnamese_words() ->
         assert "Capuchiano" not in corrected
 
     fixed_towel, _ = correct_catalog_words(
-        "Cho mình xem khăn mặt proton Thanh Lam Mart hôn dùng hằng ngày.", snapshot, language="vi"
+        "Cho mình xem khăn mặt proton Thanh Lam hôn dùng hằng ngày.", snapshot, language="vi"
     )
     assert "khăn mặt cotton" in fixed_towel
     assert "Thanh Lam Home" in fixed_towel

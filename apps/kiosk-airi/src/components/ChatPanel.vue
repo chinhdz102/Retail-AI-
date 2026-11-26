@@ -221,7 +221,7 @@ const shoppingText = computed(() => {
       referencePrice: 'Reference price',
       catalogDemo: 'Demo catalog',
       catalogThanhLam: 'Thanh Lam Mart catalog',
-      catalogSnapshot: 'Thanh Lam Mart dated snapshot',
+      catalogSnapshot: 'Thanh Lam Mart catalog',
       catalogUnknown: 'Catalog',
       end: 'End session',
       support: 'Call staff · demo',
@@ -240,7 +240,7 @@ const shoppingText = computed(() => {
       support: '联系店员 · 演示', ticketLabel: '演示服务请求',
       ticketDemo: '仅供演示 · 尚未联系真实店员',
       catalogDemo: '演示商品目录', catalogThanhLam: 'Thanh Lam Mart 商品目录',
-      catalogSnapshot: 'Thanh Lam Mart 历史快照',
+      catalogSnapshot: 'Thanh Lam Mart 商品目录',
       catalogUnknown: '商品目录',
     }
   }

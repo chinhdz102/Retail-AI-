@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024">
 <defs><filter id="tag-shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#020617" flood-opacity=".6"/></filter></defs>
-<image href="file:///C:/Users/Chinhdz/Desktop/retail/Retail-AI--main/Retail-AI--main/data/thanh_lam_planogram_3d_labeled.png" x="0" y="0" width="1536" height="1024"/>
+<image href="file:///C:/Users/Chinhdz/Desktop/retail/Retail-AI--main/Retail-AI--main/data/Thanh Lam Mart_planogram_3d_labeled.png" x="0" y="0" width="1536" height="1024"/>
 <g filter="url(#tag-shadow)"><title>A01 · Dệt may</title>
 <rect x="275" y="330" width="42" height="21" rx="3" fill="#86198f" fill-opacity=".98" stroke="#0f172a" stroke-width="2.2"/>
 <rect x="276.5" y="331.5" width="39" height="18" rx="2" fill="none" stroke="#f0abfc" stroke-width=".8"/>

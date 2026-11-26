@@ -482,7 +482,7 @@ def product_knowledge_facts(
                         product_match_scope="EXACT_VARIANT",
                         confidence=0.85,
                         note=(
-                            "Extracted from the official Thanh Lam Mart product listing; "
+                            "Extracted from the Thanh Lam Mart product listing; "
                             "check the physical package label for the complete ingredient list."
                         ),
                     )

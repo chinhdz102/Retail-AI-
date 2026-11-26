@@ -2,8 +2,8 @@
   "schema_version": 1,
   "planogram_version": "taxonomy-blocks-v1",
   "source_dataset": "thanh_lam_products.json",
-  "source_dataset_sha256": "a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6",
-  "source_dataset_canonical_sha256": "8f2ee3771be548b85a8d8981127b2518b8e8e5868584491df36b96317476cbbc",
+  "source_dataset_sha256": "80c605a5e778f0c4e7a09057d4088edeb8742318bc2e3d40c0b8d907cd03862d",
+  "source_dataset_canonical_sha256": "80c605a5e778f0c4e7a09057d4088edeb8742318bc2e3d40c0b8d907cd03862d",
   "source_shelf_note": "The catalog's existing shelf values are crawler-generated placeholders (shelf_source=SIMULATED), not verified store locations.",
   "strategy": {
     "ordering": [
@@ -20156,7 +20156,7 @@
     {
       "product_id": "TLM_10171168",
       "name": "Lốc 2 Tăm bông Thanh Lam Home  túi zip 200c",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Hoá mỹ phẩm",
       "category_code": "MENU0149",
@@ -20173,7 +20173,7 @@
     {
       "product_id": "TLM_10171169",
       "name": "Tăm bông Thanh Lam Home hộp 200c",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Hoá mỹ phẩm",
       "category_code": "MENU0149",
@@ -21091,7 +21091,7 @@
     {
       "product_id": "TLM_10170576",
       "name": "Giấy vệ sinh Thanh Lam Home 10 cuộn 2 lớp có lõi",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Hoá mỹ phẩm",
       "category_code": "MENU0151",
@@ -21210,7 +21210,7 @@
     {
       "product_id": "TLM_10171259",
       "name": "Giấy vệ sinh Thanh Lam Home Eco 10 cuộn 2 lớp",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Hoá mỹ phẩm",
       "category_code": "MENU0151",
@@ -23964,7 +23964,7 @@
     {
       "product_id": "TLM_10330217",
       "name": "Khăn mặt cotton  Thanh Lam Home 32*65*90g",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Dệt may",
       "category_code": "MENU0197",
@@ -24066,7 +24066,7 @@
     {
       "product_id": "TLM_10330218",
       "name": "Khăn tắm cotton Thanh Lam Home 50*100*235g",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Dệt may",
       "category_code": "MENU0197",
@@ -24133,8 +24133,8 @@
     },
     {
       "product_id": "TLM_10264881",
-      "name": "Khăn mặt Cotton 32x65x73gr Thanh Lam Mart Home",
-      "brand": "WMHOME",
+      "name": "Khăn mặt Cotton 32x65x73gr Thanh Lam Home",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Dệt may",
       "category_code": "MENU0197",
@@ -24269,8 +24269,8 @@
     },
     {
       "product_id": "TLM_10264880",
-      "name": "Khăn tắm Cotton 50x100x175gr Thanh Lam Mart Home",
-      "brand": "WMHOME",
+      "name": "Khăn tắm Cotton 50x100x175gr Thanh Lam Home",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Dệt may",
       "category_code": "MENU0197",
@@ -24286,8 +24286,8 @@
     },
     {
       "product_id": "TLM_10166023",
-      "name": "Màng bọc thực phẩm PVC 30CMX150M Dao nhựa Thanh Lam Mart Home",
-      "brand": "WMHOME",
+      "name": "Màng bọc thực phẩm PVC 30CMX150M Dao nhựa Thanh Lam Home",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU01133",
@@ -24491,7 +24491,7 @@
     {
       "product_id": "TLM_10264882",
       "name": "Khăn tay Thanh Lam Home cotton 30x40x42g",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Dệt may",
       "category_code": "MENU0197",
@@ -24559,7 +24559,7 @@
     {
       "product_id": "TLM_10330216",
       "name": "Khăn tay cotton  Thanh Lam Home 28*42*45g",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Dệt may",
       "category_code": "MENU0197",
@@ -25205,7 +25205,7 @@
     {
       "product_id": "TLM_10166024",
       "name": "Màng bọc thực phẩm PVC Thanh Lam Home 30CM X 30m",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU01133",
@@ -25222,7 +25222,7 @@
     {
       "product_id": "TLM_10167098",
       "name": "Cốc giấy Thanh Lam Home 9oz 270ml (20c/g)",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU01133",
@@ -25239,7 +25239,7 @@
     {
       "product_id": "TLM_10167099",
       "name": "Bát giấy Thanh Lam Home 18oz 540ml (10c/g)",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU01133",
@@ -25256,7 +25256,7 @@
     {
       "product_id": "TLM_10167100",
       "name": "Đĩa giấy Thanh Lam Home 15cm (10c/g)",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU01133",
@@ -25290,7 +25290,7 @@
     {
       "product_id": "TLM_10167101",
       "name": "Đĩa giấy Thanh Lam Home 21cm (10c/g)",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU01133",
@@ -25324,7 +25324,7 @@
     {
       "product_id": "TLM_10167206",
       "name": "Găng tay 1 lần Thanh Lam Home 100c/ hộp-Size M",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU01133",
@@ -25935,8 +25935,8 @@
     },
     {
       "product_id": "TLM_10250996",
-      "name": "Giấy nướng đa năng (giấy nến) 20*22cm Thanh Lam Mart Home",
-      "brand": "WMHOME",
+      "name": "Giấy nướng đa năng (giấy nến) 20*22cm Thanh Lam Home",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU01133",
@@ -25952,8 +25952,8 @@
     },
     {
       "product_id": "TLM_10250997",
-      "name": "Giấy thấm dầu 20*22cm Thanh Lam Mart Home",
-      "brand": "WMHOME",
+      "name": "Giấy thấm dầu 20*22cm Thanh Lam Home",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU01133",
@@ -26820,7 +26820,7 @@
     {
       "product_id": "TLM_10167207",
       "name": "Găng tay cao su tự nhiên Thanh Lam Home M (35cm)",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU01170",
@@ -27143,7 +27143,7 @@
     {
       "product_id": "TLM_10167095",
       "name": "Khăn tắm bamboo Thanh Lam Home 60*120*334g",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Dệt may",
       "category_code": "MENU0197",
@@ -27160,7 +27160,7 @@
     {
       "product_id": "TLM_10167096",
       "name": "Khăn tay bamboo Thanh Lam Home 28*42*60g",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Dệt may",
       "category_code": "MENU0197",
@@ -27177,7 +27177,7 @@
     {
       "product_id": "TLM_10167097",
       "name": "Khăn mặt bamboo Thanh Lam Home  34*75*124g",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Dệt may",
       "category_code": "MENU0197",
@@ -27313,7 +27313,7 @@
     {
       "product_id": "TLM_10270528",
       "name": "WMHOME Túi Lohas WiN đỏ 30x36x15-55g",
-      "brand": "WMHOME",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Homeline",
       "category_code": "MENU0198",
@@ -36254,8 +36254,8 @@
     },
     {
       "product_id": "TLM_10170724",
-      "name": "Nước giặt cửa trước Thanh Lam Mart Home tinh dầu thơm túi 2.9kg",
-      "brand": "WMHOME",
+      "name": "Nước giặt cửa trước Thanh Lam Home tinh dầu thơm túi 2.9kg",
+      "brand": "THANH LAM HOME",
       "department": "Phi thực phẩm",
       "sub_department": "Hoá mỹ phẩm",
       "category_code": "MENU01140",

@@ -319,7 +319,7 @@ To verify cross-agent coordination over the 164-SKU crosswalk (\code{data/bridge
 \toprule
 \textbf{Integration Scenario} & \textbf{Action on \texttt{ops\_chest} / Bridge} & \textbf{Status} & \textbf{Verified Outcome in \texttt{Retail-AI-}} \\
 \midrule
-1. Crosswalk Integrity & Load \code{data/bridge/crosswalk.csv} vs.\ \code{thanh_lam_products.json} & Pass & 164/164 fresh SKUs match 100\% \code{product_id}, name \& price; 0 quarantined \\
+1. Crosswalk Integrity & Load \code{data/bridge/crosswalk.csv} vs.\ Thanh Lam Mart catalog & Pass & 164/164 fresh SKUs match 100\% \code{product_id}, name \& price; 0 quarantined \\
 2. HITL Isolation (\texttt{PENDING}) & Draft 25\% FEFO markdown on \code{F0005} (\code{TLM_10283202}) & Pass & Kiosk retains 123,900\,VND; unapproved price never leaks \\
 3. Approved FEFO Sync & Manager approves \code{prop_md_01} $\to$ \texttt{EXECUTED} (92,925\,VND) & Pass & Kiosk quotes 92,925\,VND immediately and surfaces FEFO promo \\
 4. Live Stockout Hiding & Set \code{F0007} (\code{TLM_10283203}) to \code{on_hand = 0} & Pass & Direct query reports zero sellable stock; \code{in_stock=True} hides \code{TLM_10283203} and returns \code{TLM_10283202} \\

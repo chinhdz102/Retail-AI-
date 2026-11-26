@@ -726,11 +726,15 @@ def _correct_phonetic_catalog_brands(
 
 _ANCHORED_RETAIL_PHRASES: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (
-        re.compile(r"\b(?:Thanh Lam Mart|Wilmart)\s+h[ôo]n\b", flags=re.IGNORECASE),
+        re.compile(r"\bThanh\s+L[aâ]m\s+h[ôo]n\b", flags=re.IGNORECASE),
         "Thanh Lam Home",
         "Thanh Lam Home",
     ),
-    (re.compile(r"\bWilmart\b", flags=re.IGNORECASE), "Thanh Lam Mart", "Thanh Lam Mart"),
+    (
+        re.compile(r"\bThanh\s+L[aâ]m\s+m[aá]t\b", flags=re.IGNORECASE),
+        "Thanh Lam Mart",
+        "Thanh Lam Mart",
+    ),
     (
         re.compile(r"\b(?:ACFOGS|AC\s+FOGS|AC\s+Foods?|Ace\s+Foods?)\b", flags=re.IGNORECASE),
         "ACEFOODS",

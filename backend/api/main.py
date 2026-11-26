@@ -3634,10 +3634,10 @@ def _localized_retail_information_unavailable(
     messages = {
         "company": {
             "en": (
-                "Do you mean the Thanh Lam Mart operator, FPT Corporation, or the ChatVRM/FPT project?"
+                "Do you mean Thanh Lam Mart, FPT Corporation, or the ChatVRM/FPT project?"
             ),
-            "zh": ("您想了解 Thanh Lam Mart/Thanh Lam Mart、FPT Corporation，还是 ChatVRM 零售 AI 项目？"),
-            "vi": ("Bạn muốn hỏi đơn vị vận hành Thanh Lam Mart, công ty FPT hay đồ án ChatVRM/FPT?"),
+            "zh": ("您想了解 Thanh Lam Mart、FPT Corporation，还是 ChatVRM 零售 AI 项目？"),
+            "vi": ("Bạn muốn hỏi siêu thị Thanh Lam Mart, công ty FPT hay đồ án ChatVRM/FPT?"),
         },
         "store": {
             "en": (
