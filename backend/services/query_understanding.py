@@ -85,8 +85,10 @@ _RANKING_CUES: tuple[tuple[RankingCriterion, re.Pattern[str]], ...] = (
         re.compile(
             r"\b(?:ban chay(?: nhat| nhut)?|ban (?:duoc )?nhieu (?:nhat|nhut)|"
             r"luot ban (?:cao|nhieu) (?:nhat|nhut)|duoc mua nhieu(?: nhat| nhut)?|"
-            r"mua nhieu(?: nhat| nhut)?|pho bien nhat|nhieu nguoi chon|"
-            r"duoc ua chuong nhat|best seller|bestseller|most popular|most sold)\b"
+            r"mua nhieu(?: nhat| nhut)?|nhieu nguoi mua(?: nhat| nhut)?|"
+            r"dat khach(?: nhat| nhut)?|hot nhat|pho bien nhat|nhieu nguoi chon|"
+            r"duoc ua chuong nhat|best seller|bestseller|best selling|"
+            r"top seller|top selling|most popular|most sold)\b"
         ),
     ),
     (

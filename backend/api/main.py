@@ -138,6 +138,7 @@ from backend.services.retail_tools import (
 from backend.services.retail_tools import (
     recommendation_catalog_query as _recommendation_catalog_query,
 )
+from backend.services.semantic_nlp_router import clean_native_shopper_query, route_query
 from backend.services.sessions import (
     SessionClosedError,
     SessionError,
@@ -177,6 +178,15 @@ from backend.services.smalltalk import (
     smalltalk_system_prompt,
 )
 from backend.services.speech_tickets import SpeechTicketStore
+from backend.services.stock_inventory import (
+    parse_sales_or_stock_comparison,
+    parse_stock_ranking_request,
+    rank_snapshot_stock,
+    render_sales_or_stock_comparison,
+    render_stock_candidates,
+    render_stock_ranking,
+    resolve_inventory_category,
+)
 from backend.services.support import (
     SupportIdempotencyConflictError,
     SupportTicket,
@@ -3114,6 +3124,7 @@ def _ranking_metric(text: str) -> str:
             r"\b(?:ban chay|ban (?:duoc )?nhieu (?:nhat|nhut)|"
             r"luot ban (?:cao|nhieu) (?:nhat|nhut)|"
             r"ban dat hang|dat hang|dat khach|chay hang|mua nhieu|"
+            r"nhieu nguoi mua|hot nhat|top seller|"
             r"bestseller|best seller|best selling|most popular|top selling)\b",
             normalized,
         )
@@ -7860,6 +7871,35 @@ async def agent_respond(
         and not record.shopping.pending_clarification
         and classify_support_intent(request.text) is None
         and _unverified_retail_information_kind(request.text) is None
+        and parse_stock_ranking_request(request.text) is None
+        and parse_sales_or_stock_comparison(request.text) is None
+        and not (
+            (
+                record.shopping.selected_product_ids
+                or record.last_grounded_product_id
+                or record.shopping.displayed_product_pages
+                or (
+                    isinstance(record.shopping.consultation, dict)
+                    and (
+                        record.shopping.consultation.get("recommended_product_ids")
+                        or record.shopping.consultation.get("shown_product_ids")
+                    )
+                )
+            )
+            and set(_requested_snapshot_fields(request.text)) == {"stock"}
+            and bool(
+                re.fullmatch(
+                    r"(?:ton kho|so luong ton|trong kho|kiem tra ton kho)?\s*"
+                    r"(?:con|co con|con lai)?\s*"
+                    r"(?:hang|bao nhieu|may)?\s*"
+                    r"(?:goi|chai|lon|hop|tuyp|thung|loc|cai|bich|tui|kg|khong|ko|khum|"
+                    r"trong kho|tai quay|o cua hang|nhe|nha|a|\s)*",
+                    " ".join(
+                        re.sub(r"[^\w\s]", " ", _normalize_request_text(request.text)).split()
+                    ),
+                )
+            )
+        )
         and not _explicit_product_knowledge_lookup_requested(request.text, record)
         and not (
             settings.demo_sales_enabled
@@ -8754,6 +8794,49 @@ async def agent_respond(
             model="local-clarification",
         )
 
+    # Deterministic comparison of simulated sales or snapshot stock between two products/brands.
+    if not mission_preemption_requested:
+        cmp_metric_req = parse_sales_or_stock_comparison(request.text)
+        if cmp_metric_req is not None and (
+            cmp_metric_req.metric == "stock"
+            or (settings.demo_sales_enabled and settings.app_env == "development")
+        ):
+            repo_cmp = catalog_repository or get_product_repository(settings)
+            sales_map = (
+                get_demo_sales_store(settings).counts()
+                if cmp_metric_req.metric == "sales"
+                else None
+            )
+            cmp_res = await run_catalog_work(
+                render_sales_or_stock_comparison,
+                cmp_metric_req,
+                repo_cmp,
+                language=request.language,
+                demo_sales_counts=sales_map,
+                timeout_seconds=3.0,
+            )
+            if cmp_res is not None:
+                cmp_reply, cmp_products, cmp_sales = cmp_res
+                cmp_obs = ToolObservation(
+                    content={"comparison_metric": cmp_metric_req.metric},
+                    products=cmp_products,
+                    tool_name="compare_products",
+                    source=repo_cmp.source_name,
+                )
+                cmp_response = _deterministic_tool_response(
+                    request,
+                    record.state,
+                    cmp_obs,
+                    cmp_reply,
+                    model="demo-sales" if cmp_metric_req.metric == "sales" else "catalog-stock",
+                    tools_used=["compare_products"],
+                )
+                for card in cmp_response.products:
+                    if card.product_id in cmp_sales:
+                        card.demo_units_sold_30d = cmp_sales[card.product_id]
+                        card.sales_data_source = "SIMULATED"
+                return cmp_response
+
     comparison_queries = parse_comparison_queries(request.text, catalog_hierarchies)
     if not mission_preemption_requested and (
         comparison_queries is not None
@@ -8787,9 +8870,133 @@ async def agent_respond(
         if category_list is not None:
             return await _handle_multi_category_browse(request, category_list)
 
+    # Deterministic snapshot stock ranking / low-stock / out-of-stock / category inventory overview.
+    if not mission_preemption_requested:
+        stock_rank_req = parse_stock_ranking_request(request.text)
+        if stock_rank_req is not None:
+            repo_inv = catalog_repository or get_product_repository(settings)
+            try:
+                inv_explicit_cat = resolve_catalog_request_category(request.text, repo_inv)
+            except (OSError, RuntimeError, TimeoutError, ValueError):
+                inv_explicit_cat = None
+            inv_cat = resolve_inventory_category(
+                repo_inv,
+                request.text,
+                structured_query.product_type or inv_explicit_cat,
+                stock_rank_req.category_hint,
+            )
+            inv_products, zero_cnt, low_cnt = await run_catalog_work(
+                rank_snapshot_stock,
+                repo_inv,
+                mode=stock_rank_req.mode,
+                category=inv_cat,
+                top_n=stock_rank_req.top_n,
+                timeout_seconds=3.0,
+            )
+            inv_reply = render_stock_ranking(
+                inv_products,
+                mode=stock_rank_req.mode,
+                language=request.language,
+                category=inv_cat,
+                zero_count=zero_cnt,
+                low_count=low_cnt,
+            )
+            inv_obs = ToolObservation(
+                content={"stock_ranking_mode": stock_rank_req.mode, "stock_is_current": False},
+                products=inv_products[:1] if inv_products else (),
+                tool_name="search_products",
+                source=repo_inv.source_name,
+            )
+            inv_resp = _deterministic_tool_response(
+                request,
+                record.state,
+                inv_obs,
+                inv_reply,
+                model="catalog-stock",
+                tools_used=["search_products"],
+            )
+            inv_resp.related_products = [_product_card(p) for p in inv_products[1:]]
+            return inv_resp
+
+    # Bare multi-turn stock follow-up ("Tồn kho còn bao nhiêu hộp?", "Còn bao nhiêu tuýp...")
+    # locked strictly onto Turn 1's active products instead of running a global unit search.
+    raw_norm_mt_stock = " ".join(
+        re.sub(r"[^\w\s]", " ", _normalize_request_text(request.text)).split()
+    )
+    is_bare_mt_stock_followup = bool(
+        re.fullmatch(
+            r"(?:ton kho|so luong ton|trong kho|kiem tra ton kho)?\s*"
+            r"(?:con|co con|con lai)?\s*"
+            r"(?:hang|bao nhieu|may)?\s*"
+            r"(?:goi|chai|lon|hop|tuyp|thung|loc|cai|bich|tui|kg|khong|ko|khum|"
+            r"trong kho|tai quay|o cua hang|nhe|nha|a|\s)*",
+            raw_norm_mt_stock,
+        )
+    )
+    mt_stock_candidate_ids: list[str] = list(record.shopping.selected_product_ids)
+    if not mt_stock_candidate_ids and record.shopping.displayed_product_pages:
+        mt_stock_candidate_ids.extend(record.shopping.displayed_product_pages[-1])
+    if not mt_stock_candidate_ids and isinstance(record.shopping.consultation, dict):
+        for key in ("recommended_product_ids", "shown_product_ids"):
+            vals = record.shopping.consultation.get(key)
+            if isinstance(vals, list):
+                mt_stock_candidate_ids.extend(str(v) for v in vals if v)
+    if not mt_stock_candidate_ids and record.last_grounded_product_id:
+        mt_stock_candidate_ids.append(record.last_grounded_product_id)
+    if (
+        not mission_preemption_requested
+        and mt_stock_candidate_ids
+        and set(_requested_snapshot_fields(request.text)) == {"stock"}
+        and (is_bare_mt_stock_followup or not _fact_product_query(request.text))
+    ):
+        repo_mt_stock = catalog_repository or get_product_repository(settings)
+        active_prods = tuple(
+            p
+            for pid in dict.fromkeys(mt_stock_candidate_ids[:5])
+            if (p := repo_mt_stock.get_product_snapshot(pid)) is not None
+        )
+        if active_prods:
+            if len(active_prods) == 1:
+                single_obs = ToolObservation(
+                    content={"fields": ["stock"]},
+                    products=active_prods,
+                    tool_name="get_product_snapshot",
+                    source=repo_mt_stock.source_name,
+                )
+                mt_reply = _render_snapshot_for_session(
+                    single_obs, request.language, ("stock",), request.session_id
+                )
+            else:
+                mt_reply = render_stock_candidates(active_prods, request.language)
+            mt_obs = ToolObservation(
+                content={"fields": ["stock"]},
+                products=active_prods,
+                tool_name="get_product_snapshot",
+                source=repo_mt_stock.source_name,
+            )
+            return _deterministic_tool_response(
+                request,
+                record.state,
+                mt_obs,
+                mt_reply,
+                model="catalog-stock",
+                tools_used=["get_product_snapshot"],
+            )
+
+    sales_norm_text = re.sub(r"\bsửa\s+tươi\b", "sữa tươi", request.text, flags=re.IGNORECASE)
+    sales_norm_text = re.sub(r"\btương\s+ót\b", "tương ớt", sales_norm_text, flags=re.IGNORECASE)
+    sales_norm_text = re.sub(r"\bnc\s+ngọt\b", "nước ngọt", sales_norm_text, flags=re.IGNORECASE)
+    sales_norm_text = re.sub(
+        r"\binstant\s+noodles?\b", "mì ăn liền", sales_norm_text, flags=re.IGNORECASE
+    )
+    sales_structured_query = (
+        understand_catalog_query(sales_norm_text, catalog_hierarchies)
+        if sales_norm_text != request.text
+        else structured_query
+    )
     try:
         explicit_catalog_category = resolve_catalog_request_category(
-            request.text,
+            sales_norm_text,
             catalog_repository or get_product_repository(settings),
         )
     except (OSError, RuntimeError, TimeoutError, ValueError):
@@ -8800,32 +9007,116 @@ async def agent_respond(
         or record.last_grounded_product_id
     )
     current_ranking_scope = bool(
-        _explicit_recommendation_category(request.text)
+        _explicit_recommendation_category(sales_norm_text)
         or explicit_catalog_category
-        or _has_specific_product_reference(request.text)
+        or _has_specific_product_reference(sales_norm_text)
     )
+    sales_metric_parts = _ranking_metric(sales_norm_text).split("+")
     if (
         settings.demo_sales_enabled and settings.app_env == "development"
-        and structured_query.ranking_criterion == "sales_popularity"
-        and "sales" in _ranking_metric(request.text).split("+")
+        and (
+            sales_structured_query.ranking_criterion == "sales_popularity"
+            or (_product_ranking_requested(sales_norm_text) and "sales" in sales_metric_parts)
+        )
+        and "sales" in sales_metric_parts
         and not mission_preemption_requested
     ):
-        sales_category = explicit_catalog_category or structured_query.product_type
+        sales_repo = catalog_repository or get_product_repository(settings)
+        norm_sales_req = _normalize_request_text(sales_norm_text)
+        m_top_sales = re.search(r"\btop\s+(\d{1,2})\b", norm_sales_req)
+        requested_top_n = max(1, min(int(m_top_sales.group(1)), 5)) if m_top_sales else 1
+        include_stock_in_sales = bool(
+            re.search(r"\b(?:con hang|ton kho|trong kho|con bao nhieu)\b", norm_sales_req)
+        )
+        sales_category = explicit_catalog_category or sales_structured_query.product_type
+        # Strip ranking wrappers and ask our 0.3ms semantic NLP router for synonym categories
+        # like "kẹo cao su" -> "Kẹo gum" or "đồ ăn vặt" -> "Snack".
+        stripped_for_route = re.sub(
+            r"\b(?:top\s+\d+|bán\s+chạy(?:\s+nhất)?|đắt\s+khách(?:\s+nhất)?|"
+            r"nhiều\s+người\s+mua(?:\s+nhất)?|lượt\s+bán\s+cao\s+nhất|hot\s+nhất|"
+            r"best\s*seller|còn\s+hàng(?:\s+không)?|tồn\s+kho(?:\s+bao\s+nhiêu)?|"
+            r"dưới\s+\d+[.,\d]*\s*(?:k|đ|đồng|nghìn|ngàn|vnd)?|"
+            r"không\s+quá\s+\d+[.,\d]*\s*(?:k|đ|đồng|nghìn|ngàn|vnd)?|"
+            r"vừa\s+rẻ|và\s+giá\s+bao\s+nhiêu|giá\s+bao\s+nhiêu|"
+            r"cửa\s+hàng|siêu\s+thị|ở\s+đây|hiện\s+nay|mặt\s+hàng|sản\s+phẩm)\b",
+            " ",
+            sales_norm_text,
+            flags=re.IGNORECASE,
+        )
+        stripped_for_route = " ".join(stripped_for_route.split())
+        if (
+            not sales_category
+            and stripped_for_route
+            and not sales_structured_query.brand_preference
+        ):
+            rt_sales = route_query(stripped_for_route, min_confidence=0.45)
+            if rt_sales is not None:
+                sales_category = rt_sales.categories[0]
         selected_ids = (
             tuple(record.shopping.selected_product_ids)
-            if not sales_category and len(record.shopping.selected_product_ids) > 1
+            if not sales_category
+            and not sales_structured_query.brand_preference
+            and len(record.shopping.selected_product_ids) > 1
+            and not re.search(
+                r"\b(?:cua hang|sieu thi|o day|toan bo)\b", norm_sales_req
+            )
             else ()
         )
-        if not sales_category and not selected_ids:
+        if (
+            not sales_category
+            and not selected_ids
+            and not sales_structured_query.brand_preference
+            and not re.search(r"\b(?:cua hang|sieu thi|o day|toan bo)\b", norm_sales_req)
+        ):
             sales_category = record.shopping.active_category
             if not sales_category and record.shopping.selected_product_ids:
                 selected_ids = tuple(record.shopping.selected_product_ids)
+        is_storewide_sales = bool(
+            not sales_category
+            and not selected_ids
+            and not sales_structured_query.brand_preference
+        )
+        prefer_affordable_sales = bool(
+            re.search(
+                r"\b(?:vua\s+re|gia\s+re|re\s+nhat|vua\s+ban\s+chay\s+vua\s+re|cheap|affordable)\b",
+                norm_sales_req,
+            )
+        )
+        sales_counts_map = get_demo_sales_store(settings).counts()
         try:
             sales_items = await run_catalog_work(
-                rank_demo_sales, catalog_repository or get_product_repository(settings),
-                structured_query, sales_category, selected_ids, timeout_seconds=4.0,
-                sales_counts=get_demo_sales_store(settings).counts(),
+                rank_demo_sales,
+                sales_repo,
+                sales_structured_query,
+                sales_category,
+                selected_ids,
+                timeout_seconds=4.0,
+                sales_counts=sales_counts_map,
+                allow_storewide=True,
+                top_n=max(3, requested_top_n),
+                prefer_affordable=prefer_affordable_sales,
             )
+            # If a narrow Turn-1 slice (e.g. 2 displayed items) had 0 matches under a new Turn-2
+            # filter like "dưới 10k", widen to the active/inferred category from Turn 1.
+            if not sales_items and selected_ids and not sales_category:
+                fallback_cat = record.shopping.active_category
+                if not fallback_cat:
+                    first_prev = sales_repo.get_product_snapshot(selected_ids[0])
+                    if first_prev is not None:
+                        fallback_cat = first_prev.category
+                if fallback_cat:
+                    sales_items = await run_catalog_work(
+                        rank_demo_sales,
+                        sales_repo,
+                        sales_structured_query,
+                        fallback_cat,
+                        (),
+                        timeout_seconds=4.0,
+                        sales_counts=sales_counts_map,
+                        allow_storewide=False,
+                        top_n=max(3, requested_top_n),
+                        prefer_affordable=prefer_affordable_sales,
+                    )
         except (RuntimeError, TimeoutError, OSError, ValueError):
             sales_items = ()
         if sales_items:
@@ -8833,11 +9124,17 @@ async def agent_respond(
                 content={"sales_data_source": "SIMULATED"},
                 products=(sales_items[0].product,),
                 tool_name="recommend_products",
-                source=(catalog_repository or get_product_repository(settings)).source_name,
+                source=sales_repo.source_name,
             )
-            sales_reply = render_demo_sales(sales_items, request.language)
+            sales_reply = render_demo_sales(
+                sales_items,
+                request.language,
+                top_n=requested_top_n,
+                include_stock=include_stock_in_sales,
+                storewide=is_storewide_sales,
+            )
             extra_metrics = [
-                metric for metric in _ranking_metric(request.text).split("+") if metric != "sales"
+                metric for metric in sales_metric_parts if metric != "sales"
             ]
             if extra_metrics:
                 limitation = _ranking_limitation(extra_metrics, request.language)
@@ -8850,13 +9147,34 @@ async def agent_respond(
             response.products[0].demo_units_sold_30d = sales_items[0].units_sold_30d
             response.products[0].sales_data_source = "SIMULATED"
             related_cards: list[ProductCardResponse] = []
-            for item in sales_items[1:]:
+            for item in sales_items[1 : max(3, requested_top_n)]:
                 card = _product_card(item.product)
                 card.demo_units_sold_30d = item.units_sold_30d
                 card.sales_data_source = "SIMULATED"
                 related_cards.append(card)
             response.related_products = related_cards
             return response
+        # If shopper asked best-seller for a specific non-catalog product (e.g. "bóng đèn nào
+        # bán chạy nhất?"), reply truthfully that it's not in catalog instead of "no sales data".
+        if (
+            not sales_category
+            and not selected_ids
+            and not sales_structured_query.negative_constraints
+            and not sales_structured_query.use_case
+            and stripped_for_route
+        ):
+            clean_ooc = clean_native_shopper_query(stripped_for_route, fallback_to_raw=False)
+            if clean_ooc and len(clean_ooc.split()) <= 4:
+                ooc_reply = (
+                    f'Hiện tại trong danh mục tham khảo của cửa hàng mình chưa có sản phẩm '
+                    f'"{clean_ooc}". Bạn có thể kiểm tra với nhân viên quầy hoặc hỏi mình '
+                    "nhóm hàng khác nhé!"
+                    if request.language == "vi"
+                    else _localized_not_found(request.language)
+                )
+                return _record_shopping_turn(
+                    request, ooc_reply, model="local-ooc-gate", tools_used=[]
+                )
     if _product_ranking_requested(request.text) and _ranking_metric(request.text) != "price":
         requested_category = (
             _explicit_recommendation_category(request.text) or explicit_catalog_category
@@ -9459,23 +9777,81 @@ async def agent_respond(
             if requested_fields == ("stock",) and catalog_repository is not None:
                 known_vocab = getattr(catalog_repository, "_known_words", None)
                 if isinstance(known_vocab, frozenset) and len(known_vocab) >= 100:
-                    query_tokens = [
+                    raw_norm_toks = [
                         tok
-                        for tok in _normalize_request_text(explicit_fact_query).split()
+                        for tok in _normalize_request_text(request.text).split()
                         if len(tok) >= 2
                         and not tok.isdigit()
                         and tok not in _FACT_QUERY_STOP_WORDS
-                        and tok not in {"sieu", "thi", "cua", "hang", "ban"}
+                        and tok not in {
+                            "sieu", "thi", "cua", "hang", "ban", "ton", "kho", "con", "bao",
+                            "nhieu", "may", "gia", "khong", "ko", "khum", "tuyp", "goi", "chai",
+                            "lon", "hop", "thung", "loc", "cai", "trong", "hien", "tai",
+                        }
                     ]
+                    query_tokens = list(
+                        dict.fromkeys(
+                            [
+                                *(
+                                    tok
+                                    for tok in _normalize_request_text(explicit_fact_query).split()
+                                    if len(tok) >= 2
+                                    and not tok.isdigit()
+                                    and tok not in _FACT_QUERY_STOP_WORDS
+                                    and tok not in {"sieu", "thi", "cua", "hang", "ban"}
+                                ),
+                                *raw_norm_toks,
+                            ]
+                        )
+                    )
                     unknown_specific = [tok for tok in query_tokens if tok not in known_vocab]
-                    if unknown_specific:
+                    # Also guard diacritic-distinct short words like "áo mưa" that collide with
+                    # unrelated folded catalog tokens ("tảo", "mùa") when checking stock.
+                    native_stock_miss = False
+                    if "stock" in requested_fields and request.language == "vi":
+                        native_core = clean_native_shopper_query(
+                            re.sub(
+                                r"\b(?:tồn\s+kho|còn\s+hàng|còn\s+tồn|còn\s+bao\s+nhiêu|"
+                                r"bao\s+nhiêu\s+(?:gói|chai|lon|hộp|tuýp|thùng|cái))\b",
+                                " ",
+                                request.text,
+                                flags=re.IGNORECASE,
+                            ),
+                            fallback_to_raw=False,
+                        )
+                        native_toks = [
+                            t
+                            for t in native_core.split()
+                            if len(t) >= 2 and t != _normalize_request_text(t)
+                        ]
+                        if native_toks and candidate_observation.products:
+                            cand_native_blob = " ".join(
+                                unicodedata.normalize(
+                                    "NFC",
+                                    (
+                                        f"{p.name} {p.brand or ''} "
+                                        f"{p.category_hierarchy or ''}"
+                                    ).lower(),
+                                )
+                                for p in candidate_observation.products[:5]
+                            )
+                            cand_native_words = set(
+                                re.sub(
+                                    r"[^\w\s]", " ", cand_native_blob, flags=re.UNICODE
+                                ).split()
+                            )
+                            if not any(nt in cand_native_words for nt in native_toks):
+                                native_stock_miss = True
+                    if unknown_specific or native_stock_miss:
                         cand_blob = " ".join(
                             _normalize_request_text(
                                 f"{p.name} {p.brand or ''} {p.category or ''}"
                             )
                             for p in candidate_observation.products
                         )
-                        if not any(tok in cand_blob for tok in unknown_specific):
+                        if native_stock_miss or not any(
+                            tok in cand_blob for tok in unknown_specific
+                        ):
                             return _deterministic_tool_response(
                                 request,
                                 record.state,
@@ -9739,9 +10115,13 @@ async def agent_respond(
                     else (
                         _localized_product_knowledge_disambiguation(candidates, request.language)
                         if "ingredients" in requested_fields and request.language == "vi"
-                        else _localized_product_variant_clarification(
-                            candidate_observation,
-                            request.language,
+                        else (
+                            render_stock_candidates(candidates, request.language)
+                            if "stock" in requested_fields
+                            else _localized_product_variant_clarification(
+                                candidate_observation,
+                                request.language,
+                            )
                         )
                     )
                 )
@@ -12318,7 +12698,11 @@ def _fact_product_query(text: str) -> str:
     )
     requested_fields = _requested_snapshot_fields(text)
     if "stock" in requested_fields and "price_vnd" not in requested_fields:
-        normalized = re.sub(r"\b(?:chai|lon|hop|goi)\b", " ", normalized)
+        normalized = re.sub(
+            r"\b(?:chai|lon|hop|goi|tuyp|thung|loc|bich|tui|cai|trong\s+kho|kho)\b",
+            " ",
+            normalized,
+        )
     normalized = re.sub(
         r"\b(?:giu(?:\s+(?:cho|lai|ho|giup))?|de danh|reserve|reservation|hold)\b",
         " ",
@@ -12394,6 +12778,7 @@ def _fact_product_query(text: str) -> str:
         re.search(r"(?<!\w)tắm(?!\w)", text, re.IGNORECASE)
         or re.search(r"\b(?:sua|xa\s+bong|xa\s+phong|dau|khan|muoi|gel)\s+tam\b", normalized)
     )
+    preserve_mua_product_token = bool(re.search(r"(?<!\w)mưa(?!\w)", text, re.IGNORECASE))
     normalized_words = normalized.split()
     possessive_brand_phrases = {
         _normalize_request_text(match.group(1)).strip(): match.group(0)
@@ -12428,6 +12813,7 @@ def _fact_product_query(text: str) -> str:
             or (word == "nam" and preserve_nam_product_token)
             or (word == "suc" and preserve_suc_product_token)
             or (word == "tam" and preserve_tam_product_token)
+            or (word == "mua" and preserve_mua_product_token)
             or index in pocket_phrase_tokens
             or index in packaging_tui_tokens
             or word in possessive_brand_tokens

@@ -782,20 +782,26 @@ async def prepare_multiturn_streaming(
                 mode="compare",
             )
 
-    # M6. Bare availability follow-up ("Còn hàng không?") -> lock on active product (never jump to
-    # Củ Sả!).
+    # M6. Bare availability/stock follow-up ("Còn hàng không?", "Tồn kho còn bao nhiêu hộp?")
+    # -> lock on active product (never jump to unrelated catalog items!).
     if (
-        re.search(r"^(?:con hang|con khong|con ko|co con hang|con bao nhieu)\b", norm_answer)
+        re.search(
+            r"^(?:ton kho|so luong ton|trong kho con|con hang|con khong|con ko|"
+            r"co con hang|con bao nhieu|con may)\b",
+            norm_answer,
+        )
         and recent_products
     ):
         target = recent_products[0]
         snap_date = (
             target.data_timestamp.date().strftime("%d/%m/%Y") if target.data_timestamp else ""
         )
+        stock_note = f"snapshot ghi nhận {target.stock} {target.uom or 'đơn vị'}"
         reply = (
-            f"Dạ, với {target.name} (giá tham khảo {format_vnd(target.price_vnd)}), hệ thống hiện "
-            f"đang dùng dữ liệu snapshot{f' ngày {snap_date}' if snap_date else ''} nên chưa xác minh "  # noqa: E501
-            "được tồn kho thực tế ngay lúc này tại quầy; bạn kiểm tra trực tiếp trên kệ hoặc hỏi nhân viên giúp mình nhé."  # noqa: E501
+            f"Dạ, với {target.name} (giá tham khảo {format_vnd(target.price_vnd)}), "
+            f"{stock_note}{f' ngày {snap_date}' if snap_date else ''}; "
+            "tồn kho thực tế tại quầy hiện tại chưa được xác minh nên bạn kiểm tra trực tiếp "
+            "trên kệ hoặc hỏi nhân viên giúp mình nhé."
         )
         mem = _make_memory(
             previous_memory,

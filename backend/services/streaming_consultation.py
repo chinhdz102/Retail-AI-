@@ -64,6 +64,10 @@ from backend.services.semantic_nlp_router import (
 )
 from backend.services.sessions import SessionRecord
 from backend.services.shopping_guidance import shopping_guidance
+from backend.services.stock_inventory import (
+    parse_sales_or_stock_comparison,
+    parse_stock_ranking_request,
+)
 from backend.services.streaming_multiturn import (
     _READY_TO_EAT_NEED_RE,
     build_plain_prompt_text,
@@ -1655,6 +1659,10 @@ async def prepare_streaming_consultation(
     if parsed.intent in {"purchase_action", "location"}:
         return None
     if parsed.ranking_criterion == "sales_popularity":
+        return None
+    if parse_stock_ranking_request(text) is not None:
+        return None
+    if parse_sales_or_stock_comparison(text) is not None:
         return None
     budget_followup = bool(previous_memory.get("need") and parsed.budget_vnd is not None)
     if parsed.intent == "price" and not budget_followup:
