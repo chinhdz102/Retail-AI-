@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
+import os
 import re
 import threading
 import wave
@@ -404,6 +405,8 @@ class AzureSTTService:
         content_type: str,
         language: str = "vi",
         vocabulary: Sequence[str] | None = None,
+        *,
+        skip_denoiser: bool = False,
     ) -> GroqTranscriptionResult:
         """Transcribe audio using Silero VAD + DPDFNet2 AI denoiser + Azure Speech STT."""
         del filename, content_type
@@ -473,11 +476,18 @@ class AzureSTTService:
                         quality={**signal_quality, **acoustic_quality},
                     )
 
-        # 3. Dedicated AI neural speech enhancement (DPDFNet2 ONNX + VAD trim + 85 Hz HPF)
+        # 3. Dedicated AI neural speech enhancement (DPDFNet2 ONNX + VAD trim + 85 Hz HPF).
+        # Skip heavy server neural denoising when the user's browser already ran GTCRN WASM
+        # or on Vercel serverless where denoising runs client-side to save server CPU/RAM.
+        run_server_denoiser = (
+            self.settings.speech_denoiser_enabled
+            and not skip_denoiser
+            and not os.getenv("VERCEL")
+        )
         enhanced = await asyncio.to_thread(
             enhance_speech_samples,
             analyzed.samples,
-            enabled=self.settings.speech_denoiser_enabled,
+            enabled=run_server_denoiser,
             model_path=self.settings.speech_denoiser_model_path,
             speech_start_sample=analyzed.speech_start_sample,
             speech_end_sample=analyzed.speech_end_sample,

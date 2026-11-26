@@ -366,14 +366,16 @@ async def _lifespan(_app: FastAPI):
         repo.list_category_hierarchies()
     except (OSError, RuntimeError, TimeoutError, ValueError):
         pass
-    # Pre-warm Silero VAD ONNX, DPDFNet2 neural speech denoiser, and Azure Speech
-    # TLS connections so the very first voice turn avoids cold-start spikes.
-    try:
-        from backend.services.speech_activity import _model_session
+    # Pre-warm Silero VAD ONNX only on persistent hosts (Docker/local). On Vercel
+    # serverless, Silero VAD + GTCRN denoiser run 100% client-side in the user's
+    # browser to avoid wasting server RAM/CPU on cold starts.
+    if not os.getenv("VERCEL"):
+        try:
+            from backend.services.speech_activity import _model_session
 
-        await asyncio.to_thread(_model_session)
-    except Exception:
-        pass
+            await asyncio.to_thread(_model_session)
+        except Exception:
+            pass
     try:
         # Warm the catalog snapshot & taxonomy indexes at startup so the very first
         # customer turn never pays one-time JSON parse + token index latency.
@@ -384,7 +386,7 @@ async def _lifespan(_app: FastAPI):
 
     async def _warm_network_and_audio_pools() -> None:
         async def _warm_denoiser() -> None:
-            if not settings.speech_denoiser_enabled:
+            if not settings.speech_denoiser_enabled or os.getenv("VERCEL"):
                 return
             try:
                 from backend.services.speech_denoiser import warm_speech_denoiser
@@ -396,6 +398,8 @@ async def _lifespan(_app: FastAPI):
                 pass
 
         async def _warm_smart_turn() -> None:
+            if os.getenv("VERCEL"):
+                return
             try:
                 from backend.services.smart_turn import warm_smart_turn
 
@@ -16100,6 +16104,7 @@ async def transcribe_audio(
     session_id: UUID = Form(...),
     language: LanguageCode = Form("vi"),
     include_diagnostics: bool = Form(False),
+    client_denoised: bool = Form(False),
     file: UploadFile = File(...),
     groq: GroqService = Depends(get_groq_service),
     azure_stt: AzureSTTService = Depends(get_azure_stt_service),
@@ -16147,14 +16152,19 @@ async def transcribe_audio(
             )
         )
         stt_backend = azure_stt if use_azure_stt else groq
+        transcribe_kwargs: dict[str, object] = {
+            "language": language,
+            "vocabulary": vocabulary,
+        }
+        if use_azure_stt and client_denoised:
+            transcribe_kwargs["skip_denoiser"] = True
         # One bounded deadline covers STT + neural denoising attempts.
         transcription = await asyncio.wait_for(
             stt_backend.transcribe(
                 file.filename or "voice.webm",
                 content,
                 content_type,
-                language=language,
-                vocabulary=vocabulary,
+                **transcribe_kwargs,
             ),
             timeout=max(0.1, settings.groq_stt_total_timeout_seconds),
         )

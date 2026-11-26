@@ -71,6 +71,11 @@ import {
   clearAzureDirectTokenCache,
   warmAzureDirectStt,
 } from './voice-azure-direct-stt'
+import {
+  closeDirectAzureTts,
+  synthesizeDirectAzureAudioBlob,
+  warmDirectAzureTts,
+} from './voice-azure-direct-tts'
 import { warmBrowserGtcrnDenoiser } from './voice-gtcrn-denoiser'
 
 const SILENT_AUDIO_DATA_URI =
@@ -495,6 +500,12 @@ function maybePrewarmSpeech() {
   if (Date.now() - speechPrewarmLastAttemptAt < 45_000) return
 
   speechPrewarmLastAttemptAt = Date.now()
+  if (directAzureSttAvailable && import.meta.env.MODE !== 'test') {
+    // Pre-warm direct Browser -> Azure WSS TTS/STT instead of waking backend TTS.
+    void warmAzureDirectStt(activeSessionId)
+    void warmDirectAzureTts(activeSessionId)
+    return
+  }
   speechPrewarmInFlight = true
   void prewarmSpeech(activeSessionId, language.value)
     .catch(() => {
@@ -822,10 +833,11 @@ async function startHandsFree() {
   unlockAudio()
   isHandsFree.value = true
   // Warm up browser GTCRN neural denoiser (196 KB WASM) and direct Azure Speech STS token
-  // in parallel so the very first spoken word gets low-latency streaming + fan suppression.
+  // + reusable Azure WSS TTS synthesizer in parallel so all audio models run client-side.
   void warmBrowserGtcrnDenoiser()
   if (directAzureSttAvailable && sessionId.value) {
     void warmAzureDirectStt(sessionId.value)
+    void warmDirectAzureTts(sessionId.value)
   }
   voiceHint.value = language.value === 'en'
     ? 'Opening the microphone. Allow microphone access if your browser asks.'
@@ -1098,6 +1110,43 @@ function prefetchQueuedAudioUrl(audioUrl: string, requestId: number): Promise<st
     .catch(() => audioUrl)
 }
 
+async function resolveSpeechAudioUrl(
+  trimmedText: string,
+  requestId: number,
+  shouldPrefetchBackend: boolean,
+): Promise<string | null> {
+  if (!sessionId.value || typeof Audio === 'undefined') return null
+  // Priority 1: Direct Browser -> Azure Neural TTS over WSS (0 Vercel calls, 0 server load!)
+  if (
+    directAzureSttAvailable
+    && import.meta.env.MODE !== 'test'
+    && typeof URL !== 'undefined'
+    && typeof URL.createObjectURL === 'function'
+  ) {
+    const directBlob = await synthesizeDirectAzureAudioBlob(
+      sessionId.value,
+      trimmedText,
+      language.value,
+    )
+    if (requestId !== speechRequestId || isUnmounted) return null
+    if (directBlob && directBlob.size > 0) {
+      const blobUrl = URL.createObjectURL(directBlob)
+      activePrefetchedBlobUrls.add(blobUrl)
+      return blobUrl
+    }
+  }
+  // Priority 2: Fallback to backend synthesis ticket stream
+  try {
+    const audioUrl = await withSessionRecovery((id) =>
+      createSynthesisTicket(id, trimmedText, language.value),
+    )
+    if (requestId !== speechRequestId || isUnmounted) return null
+    return shouldPrefetchBackend ? await prefetchQueuedAudioUrl(audioUrl, requestId) : audioUrl
+  } catch {
+    return null
+  }
+}
+
 function enqueueStreamedSpeech(requestId: number, chunkText: string) {
   const trimmed = chunkText.trim()
   if (!trimmed || requestId !== speechRequestId || isUnmounted) return
@@ -1106,12 +1155,11 @@ function enqueueStreamedSpeech(requestId: number, chunkText: string) {
   // Stream the first sentence directly for minimum start latency, while eagerly
   // prefetching MP3 bytes for subsequent queued sentences so transitions are gapless.
   const shouldPrefetchBytes = speechChunkPlaying || activeSpeechQueue.length > 0
-  const ticketPromise: Promise<string | null> =
-    sessionId.value && typeof Audio !== 'undefined'
-      ? withSessionRecovery((id) => createSynthesisTicket(id, trimmed, language.value))
-        .then((audioUrl) => (shouldPrefetchBytes ? prefetchQueuedAudioUrl(audioUrl, requestId) : audioUrl))
-        .catch(() => null)
-      : Promise.resolve(null)
+  const ticketPromise: Promise<string | null> = resolveSpeechAudioUrl(
+    trimmed,
+    requestId,
+    shouldPrefetchBytes,
+  )
   activeSpeechQueue.push({ text: trimmed, ticketPromise })
   void drainSpeechQueue(requestId)
 }
@@ -1280,8 +1328,11 @@ async function speak(text: string, afterSpeech?: () => void) {
     if (!sessionId.value || typeof Audio === 'undefined') {
       throw new Error('Cloud audio playback is unavailable')
     }
-    const audioUrl = await withSessionRecovery((id) => createSynthesisTicket(id, text, language.value))
+    const audioUrl = await resolveSpeechAudioUrl(text, requestId, false)
     if (requestId !== speechRequestId || isUnmounted) return
+    if (!audioUrl) {
+      throw new Error('Cloud audio playback is unavailable')
+    }
     pendingSpeechText.value = text
     const audio = audioElement.value ?? new Audio()
     if (!audioElement.value) audioElement.value = audio
@@ -1507,6 +1558,7 @@ async function resetKioskSession(notice?: string) {
   sessionId.value = null
   directAzureSttAvailable = false
   clearAzureDirectTokenCache()
+  closeDirectAzureTts()
   for (const url of messageImageBlobUrls) {
     try { URL.revokeObjectURL(url) } catch { /* ignore */ }
   }
@@ -2440,6 +2492,7 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
   voiceController?.stop()
   invalidateSpeechPlayback()
+  closeDirectAzureTts()
   if (closingSessionId) void closeSession(closingSessionId).catch(() => {
     // The browser may be navigating away; backend TTL still bounds any session that cannot close.
   })

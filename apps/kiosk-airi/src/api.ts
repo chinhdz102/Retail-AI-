@@ -361,11 +361,13 @@ export function transcribe(
   language: LanguageCode = 'vi',
   signal?: AbortSignal,
   includeDiagnostics = false,
+  clientDenoised = false,
 ): Promise<TranscriptionResponse> {
   const form = new FormData()
   form.append('session_id', sessionId)
   form.append('language', language)
   if (includeDiagnostics) form.append('include_diagnostics', 'true')
+  if (clientDenoised) form.append('client_denoised', 'true')
   const audioType = audio.type.split(';')[0].toLowerCase()
   const extension = ({
     'audio/mp4': 'mp4',

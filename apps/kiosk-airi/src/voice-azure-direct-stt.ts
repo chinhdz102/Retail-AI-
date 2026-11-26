@@ -19,7 +19,7 @@ const LOCALE_BY_LANGUAGE: Record<LanguageCode, string> = {
   zh: 'zh-CN',
 }
 
-interface CachedAzureToken {
+export interface CachedAzureToken {
   token: string
   region: string
   expiresAtMs: number
@@ -35,7 +35,7 @@ export function clearAzureDirectTokenCache(): void {
   tokenFetchPromise = null
 }
 
-async function loadSpeechSdk(): Promise<SpeechSdkModule | null> {
+export async function loadAzureSpeechSdk(): Promise<SpeechSdkModule | null> {
   if (import.meta.env.MODE === 'test') return null
   if (!sdkModulePromise) {
     sdkModulePromise = import('microsoft-cognitiveservices-speech-sdk').catch(() => {
@@ -46,7 +46,7 @@ async function loadSpeechSdk(): Promise<SpeechSdkModule | null> {
   return sdkModulePromise
 }
 
-async function ensureAzureToken(sessionId: string): Promise<CachedAzureToken | null> {
+export async function ensureAzureSpeechToken(sessionId: string): Promise<CachedAzureToken | null> {
   if (import.meta.env.MODE === 'test') return null
   const now = Date.now()
   if (cachedToken && cachedToken.expiresAtMs - now > 90_000) {
@@ -81,7 +81,7 @@ async function ensureAzureToken(sessionId: string): Promise<CachedAzureToken | n
  */
 export async function warmAzureDirectStt(sessionId: string): Promise<boolean> {
   if (import.meta.env.MODE === 'test') return false
-  const [sdk, tok] = await Promise.all([loadSpeechSdk(), ensureAzureToken(sessionId)])
+  const [sdk, tok] = await Promise.all([loadAzureSpeechSdk(), ensureAzureSpeechToken(sessionId)])
   return Boolean(sdk && tok)
 }
 
@@ -177,8 +177,8 @@ export class AzureDirectStreamingSttSession implements LiveStreamingSttHandle {
 
   private async initialize(options: AzureDirectSttOptions): Promise<void> {
     try {
-      const sdkLoader = options.loadSdk ?? loadSpeechSdk
-      const tokenLoader = options.fetchToken ?? ensureAzureToken
+      const sdkLoader = options.loadSdk ?? loadAzureSpeechSdk
+      const tokenLoader = options.fetchToken ?? ensureAzureSpeechToken
       const [sdk, tok] = await Promise.all([sdkLoader(), tokenLoader(options.sessionId)])
       if (this.closed || this.failed) return
       if (!sdk || !tok) {
