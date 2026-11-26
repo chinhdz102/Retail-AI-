@@ -65,7 +65,13 @@ import {
   type VoiceState,
   type VoiceCaptureMetadata,
 } from './voice-controller'
-import { canUseStreamingStt, StreamingSttSession } from './voice-stream-stt'
+import { canUseStreamingStt, StreamingSttSession, type LiveStreamingSttHandle } from './voice-stream-stt'
+import {
+  AzureDirectStreamingSttSession,
+  clearAzureDirectTokenCache,
+  warmAzureDirectStt,
+} from './voice-azure-direct-stt'
+import { warmBrowserGtcrnDenoiser } from './voice-gtcrn-denoiser'
 
 const SILENT_AUDIO_DATA_URI =
   'data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA=='
@@ -145,11 +151,16 @@ let audioPlayback: HTMLAudioElement | null = null
 let audioUnlockPromise: Promise<boolean> | null = null
 let speechRequestId = 0
 let startedSpeechRequestId = 0
-// Leave a short tail after TTS finishes so room reverberation settles before
-// normal low-threshold listening resumes.
-const SPEAKER_SETTLE_MS = 400
+// Leave a full tail after TTS finishes so speaker hardware buffers and room
+// reverberation settle completely before re-opening the microphone.
+const SPEAKER_SETTLE_MS = 650
+const STOP_SPEAKING_SETTLE_MS = 240
 const ECHO_GUARD_WINDOW_MS = 25_000
-const ECHO_STRICT_WINDOW_MS = 4_500
+const ECHO_STRICT_WINDOW_MS = 5_000
+function isFullDuplexBargeInEnabled(): boolean {
+  return typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('fullDuplex') === '1'
+}
 let speechResumeTimer: ReturnType<typeof setTimeout> | undefined
 let currentSpeechText: string | null = null
 let bargeInEligible = false
@@ -172,28 +183,12 @@ let speechPrewarmSessionId = ''
 let speechPrewarmLastAttemptAt = 0
 let speechPrewarmInFlight = false
 let activeTranscriptionController: AbortController | null = null
-let activeStreamStt: StreamingSttSession | null = null
+let activeStreamStt: LiveStreamingSttHandle | null = null
 let activeTurnFromVoice = false
 let voiceTurnEpoch = 0
 let streamingSttAvailable: boolean | undefined
+let directAzureSttAvailable = false
 const autoSwitchedMicIds = new Set<string>()
-let bargeInSttRecognition: {
-  lang: string
-  continuous: boolean
-  interimResults: boolean
-  maxAlternatives: number
-  onresult: ((event: { resultIndex?: number; results: ArrayLike<{ isFinal?: boolean; [index: number]: { transcript?: string } | undefined }> }) => void) | null
-  onerror: ((event: { error?: string }) => void) | null
-  onend: (() => void) | null
-  start: () => void
-  stop: () => void
-  abort?: () => void
-} | null = null
-let bargeInSttRestartTimer: ReturnType<typeof setTimeout> | undefined
-let bargeInSttFinalizeTimer: ReturnType<typeof setTimeout> | undefined
-let bargeInSttRestarts = 0
-let bargeInSttSpeechInterrupted = false
-let bargeInSttPendingTranscript = ''
 let bargeInCandidateAbort: AbortController | null = null
 
 const languageSettings: Record<LanguageCode, {
@@ -381,182 +376,13 @@ function isStopSpeechCommand(transcript: string): boolean {
   return /^(?:dung|dung lai|ngung|ngung lai|thoi|thoi duoc roi|im|im di|tat tieng|khoan|khoan da|cho chut|cho minh chut|stop|pause|quiet|wait)$/.test(normalized)
 }
 
-function stopBargeInSttWatcher() {
-  if (bargeInSttRestartTimer !== undefined) {
-    clearTimeout(bargeInSttRestartTimer)
-    bargeInSttRestartTimer = undefined
-  }
-  if (bargeInSttFinalizeTimer !== undefined) {
-    clearTimeout(bargeInSttFinalizeTimer)
-    bargeInSttFinalizeTimer = undefined
-  }
+function stopBargeInCandidateVerification() {
   bargeInCandidateAbort?.abort()
   bargeInCandidateAbort = null
-  bargeInSttSpeechInterrupted = false
-  bargeInSttPendingTranscript = ''
-  const rec = bargeInSttRecognition
-  bargeInSttRecognition = null
-  if (rec) {
-    rec.onresult = null
-    rec.onerror = null
-    rec.onend = null
-    try {
-      rec.stop()
-    } catch {
-      rec.abort?.()
-    }
-  }
-}
-
-function silenceAssistantSpeechOnly() {
-  clearSpeechResume()
-  speechRequestId += 1
-  startedSpeechRequestId = 0
-  if (currentSpeechText) recordSpokenEchoText(currentSpeechText)
-  currentSpeechText = null
-  bargeInEligible = false
-  isAudioPlaying.value = false
-  speechSourceMode.value = 'none'
-  pendingSpeechText.value = null
-  activeSpeechQueue = []
-  speechStreamOpen = false
-  speechChunkPlaying = false
-  speechQueueAfterCallback = undefined
-  releaseAudioPlayback()
-  revokeAllPrefetchedBlobUrls()
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel()
-}
-
-function startBargeInSttWatcher(requestId: number) {
-  stopBargeInSttWatcher()
-  if (import.meta.env.MODE === 'test' || !isHandsFree.value || isUnmounted || requestId !== speechRequestId) {
-    return
-  }
-  const host = window as Window & {
-    SpeechRecognition?: new () => NonNullable<typeof bargeInSttRecognition>
-    webkitSpeechRecognition?: new () => NonNullable<typeof bargeInSttRecognition>
-  }
-  const RecognitionCtor = host.SpeechRecognition ?? host.webkitSpeechRecognition
-  if (!RecognitionCtor) return
-
-  bargeInSttRestarts = 0
-  const launch = () => {
-    if (!isHandsFree.value || isUnmounted || requestId !== speechRequestId || !bargeInEligible) return
-    let rec: NonNullable<typeof bargeInSttRecognition>
-    try {
-      rec = new RecognitionCtor()
-    } catch {
-      return
-    }
-    bargeInSttRecognition = rec
-    rec.lang = languageSettings[language.value].locale
-    rec.continuous = true
-    rec.interimResults = true
-    rec.maxAlternatives = 1
-
-    const commitTranscript = (text: string) => {
-      const cleaned = text.trim()
-      stopBargeInSttWatcher()
-      voiceController?.setBargeInMode?.(false)
-      if (!isHandsFree.value || isUnmounted) return
-      if (!cleaned || !isRealBargeInSpeech(cleaned) || isStopSpeechCommand(cleaned)) {
-        status.value = 'listening'
-        voiceHint.value = language.value === 'vi'
-          ? 'Mình đã dừng lại, bạn cần hỏi gì cứ nói nhé'
-          : languageSettings[language.value].listening
-        void resumeHandsFree()
-        return
-      }
-      void sendMessage(cleaned, true)
-    }
-
-    rec.onresult = (event) => {
-      if (bargeInSttRecognition !== rec || !isHandsFree.value || isUnmounted) return
-      const startIndex = event.resultIndex ?? 0
-      const interimParts: string[] = []
-      const finalParts: string[] = []
-      for (let i = startIndex; i < event.results.length; i += 1) {
-        const res = event.results[i]
-        const text = res?.[0]?.transcript?.trim() ?? ''
-        if (!text) continue
-        if (res?.isFinal) finalParts.push(text)
-        else interimParts.push(text)
-      }
-      const finalText = finalParts.join(' ').trim()
-      const combined = (finalText || interimParts.join(' ')).trim()
-      if (!combined || !isRealBargeInSpeech(combined)) return
-
-      // Real human Vietnamese speech confirmed by STT (not laptop fan or Mai echo)!
-      if (!bargeInSttSpeechInterrupted) {
-        bargeInSttSpeechInterrupted = true
-        lastBargeInAt = Date.now()
-        silenceAssistantSpeechOnly()
-        voiceController?.pause()
-        status.value = 'listening'
-        isVoiceActive.value = true
-        isRecording.value = true
-      }
-      bargeInSttPendingTranscript = combined
-      voiceHint.value = language.value === 'vi' ? `Đang nghe: “${combined}”` : `Hearing: "${combined}"`
-
-      if (bargeInSttFinalizeTimer !== undefined) {
-        clearTimeout(bargeInSttFinalizeTimer)
-        bargeInSttFinalizeTimer = undefined
-      }
-      if (isStopSpeechCommand(combined)) {
-        commitTranscript(combined)
-        return
-      }
-      if (finalText) {
-        commitTranscript(finalText)
-        return
-      }
-      bargeInSttFinalizeTimer = setTimeout(() => {
-        bargeInSttFinalizeTimer = undefined
-        if (bargeInSttRecognition === rec && bargeInSttPendingTranscript) {
-          commitTranscript(bargeInSttPendingTranscript)
-        }
-      }, 1_100)
-    }
-
-    rec.onerror = () => {
-      // Ignore silent/no-speech errors; fallback Azure candidate STT still stays active.
-    }
-
-    rec.onend = () => {
-      if (bargeInSttRecognition !== rec) return
-      bargeInSttRecognition = null
-      if (bargeInSttSpeechInterrupted) {
-        const pending = bargeInSttPendingTranscript
-        commitTranscript(pending)
-        return
-      }
-      if (
-        isHandsFree.value
-        && !isUnmounted
-        && requestId === speechRequestId
-        && bargeInEligible
-        && bargeInSttRestarts < 3
-      ) {
-        bargeInSttRestarts += 1
-        bargeInSttRestartTimer = setTimeout(() => {
-          bargeInSttRestartTimer = undefined
-          launch()
-        }, 250)
-      }
-    }
-
-    try {
-      rec.start()
-    } catch {
-      bargeInSttRecognition = null
-    }
-  }
-  launch()
 }
 
 async function handleBargeInCandidateAudio(audio: Blob) {
-  if (!sessionId.value || !isHandsFree.value || isUnmounted || !bargeInEligible || bargeInSttSpeechInterrupted) {
+  if (!sessionId.value || !isHandsFree.value || isUnmounted || !bargeInEligible) {
     return
   }
   const activeSessionId = sessionId.value
@@ -573,7 +399,6 @@ async function handleBargeInCandidateAudio(audio: Blob) {
       || voiceEpoch !== voiceTurnEpoch
       || !isHandsFree.value
       || !bargeInEligible
-      || bargeInSttSpeechInterrupted
     ) {
       return
     }
@@ -582,7 +407,7 @@ async function handleBargeInCandidateAudio(audio: Blob) {
       return
     }
     lastBargeInAt = Date.now()
-    stopBargeInSttWatcher()
+    stopBargeInCandidateVerification()
     invalidateSpeechPlayback()
     voiceController?.setBargeInMode?.(false)
     if (isStopSpeechCommand(result.text)) {
@@ -605,7 +430,7 @@ function handleVoiceBargeIn() {
   if (!isHandsFree.value || isUnmounted || !bargeInEligible) return
   if (status.value !== 'speaking' && currentSpeechText === null && !audioPlayback) return
   lastBargeInAt = Date.now()
-  stopBargeInSttWatcher()
+  stopBargeInCandidateVerification()
   if (currentSpeechText) {
     recordSpokenEchoText(currentSpeechText)
   }
@@ -808,7 +633,7 @@ function ensureVoiceController(): VoiceConversationController {
           if (lexical === 'complete') return 0
           if (lexical === 'incomplete') return 1_050
         }
-        if (stream && stream.isHealthy) {
+        if (stream && stream.isHealthy && stream.checkTurn) {
           const turn = await stream.checkTurn(240)
           if (turn && !turn.complete) {
             return Math.max(0, Math.min(1_200, turn.holdMs || 1_050))
@@ -841,8 +666,7 @@ function ensureVoiceController(): VoiceConversationController {
         activeStreamStt?.cancel()
         activeStreamStt = null
         if (
-          !canUseStreamingStt(streamingSttAvailable)
-          || !sessionId.value
+          !sessionId.value
           || !isHandsFree.value
           || voiceInputBlocked()
           || (voiceDebugAvailable && voiceDebugEnabled.value)
@@ -852,21 +676,32 @@ function ensureVoiceController(): VoiceConversationController {
         const sttSessionId = sessionId.value
         const sttLanguage = language.value
         const sttEpoch = voiceTurnEpoch
-        const stream = new StreamingSttSession({
-          sessionId: sttSessionId,
-          language: sttLanguage,
-          onPartial: (partial) => {
-            if (isUnmounted || sttEpoch !== voiceTurnEpoch || !isHandsFree.value) return
-            if (isEchoOfRecentAssistantSpeech(partial, true)) return
-            if (status.value === 'listening' || status.value === 'transcribing') {
-              voiceHint.value = sttLanguage === 'en'
-                ? `Hearing: "${partial}"`
-                : sttLanguage === 'zh'
-                  ? `正在听：“${partial}”`
-                  : `Đang nghe: “${partial}”`
-            }
-          },
-        })
+        const handlePartial = (partial: string) => {
+          if (isUnmounted || sttEpoch !== voiceTurnEpoch || !isHandsFree.value) return
+          if (isEchoOfRecentAssistantSpeech(partial, true)) return
+          if (status.value === 'listening' || status.value === 'transcribing') {
+            voiceHint.value = sttLanguage === 'en'
+              ? `Hearing: "${partial}"`
+              : sttLanguage === 'zh'
+                ? `正在听：“${partial}”`
+                : `Đang nghe: “${partial}”`
+          }
+        }
+        let stream: LiveStreamingSttHandle | null = null
+        if (canUseStreamingStt(streamingSttAvailable)) {
+          stream = new StreamingSttSession({
+            sessionId: sttSessionId,
+            language: sttLanguage,
+            onPartial: handlePartial,
+          })
+        } else if (directAzureSttAvailable && import.meta.env.MODE !== 'test') {
+          stream = new AzureDirectStreamingSttSession({
+            sessionId: sttSessionId,
+            language: sttLanguage,
+            onPartial: handlePartial,
+          })
+        }
+        if (!stream) return
         activeStreamStt = stream
         for (const preFrame of preRollFrames) stream.pushFrame(preFrame)
       },
@@ -986,6 +821,12 @@ async function startHandsFree() {
   isTextOpen.value = true
   unlockAudio()
   isHandsFree.value = true
+  // Warm up browser GTCRN neural denoiser (196 KB WASM) and direct Azure Speech STS token
+  // in parallel so the very first spoken word gets low-latency streaming + fan suppression.
+  void warmBrowserGtcrnDenoiser()
+  if (directAzureSttAvailable && sessionId.value) {
+    void warmAzureDirectStt(sessionId.value)
+  }
   voiceHint.value = language.value === 'en'
     ? 'Opening the microphone. Allow microphone access if your browser asks.'
     : language.value === 'zh'
@@ -1003,7 +844,7 @@ async function resumeHandsFree() {
 }
 
 function pauseVoice() {
-  stopBargeInSttWatcher()
+  stopBargeInCandidateVerification()
   activeStreamStt?.cancel()
   activeStreamStt = null
   voiceController?.pause()
@@ -1107,7 +948,7 @@ let speechChunkPlaying = false
 let speechQueueAfterCallback: (() => void) | undefined
 
 function invalidateSpeechPlayback() {
-  stopBargeInSttWatcher()
+  stopBargeInCandidateVerification()
   clearSpeechResume()
   speechRequestId += 1
   startedSpeechRequestId = 0
@@ -1127,9 +968,22 @@ function invalidateSpeechPlayback() {
 
 function armBargeIn(requestId: number) {
   if (!isHandsFree.value || isUnmounted || requestId !== speechRequestId) return
+  // Default Speaker Echo Shield (half-duplex): strictly keep the microphone paused
+  // while Mai plays through laptop/phone speakers so acoustic self-echo is 0%.
+  // Shoppers can interrupt Mai instantly by tapping "Ngắt & nói" or pressing Space.
+  if (!isFullDuplexBargeInEnabled()) {
+    bargeInEligible = false
+    pauseVoice()
+    voiceHint.value = language.value === 'vi'
+      ? 'Đang trả lời — bấm "Ngắt & nói" hoặc phím Space nếu muốn nói ngay'
+      : language.value === 'en'
+        ? 'Speaking — tap Pause or press Space to interrupt'
+        : '正在回答 — 点击暂停或按空格键打断'
+    return
+  }
   bargeInEligible = true
   voiceHint.value = language.value === 'vi'
-    ? 'Đang trả lời — nói rõ để ngắt lời Mai (tự lọc tiếng quạt)'
+    ? 'Đang trả lời — nói rõ để ngắt lời Mai (chế độ tai nghe)'
     : language.value === 'en'
       ? 'Speaking — speak clearly to interrupt'
       : '正在回答 — 清晰说话可打断'
@@ -1138,7 +992,6 @@ function armBargeIn(requestId: number) {
   void controller.start().catch(() => {
     // Keep TTS playing even if the microphone cannot re-arm immediately.
   })
-  startBargeInSttWatcher(requestId)
 }
 
 function markSpeechPlaybackStarted(requestId: number, text: string) {
@@ -1497,15 +1350,19 @@ function clearSpeechResume() {
   speechResumeTimer = undefined
 }
 
-function resumeAfterSpeech(afterSpeech: (() => void) | undefined, requestId: number) {
-  stopBargeInSttWatcher()
+function resumeAfterSpeech(
+  afterSpeech: (() => void) | undefined,
+  requestId: number,
+  settleMs = SPEAKER_SETTLE_MS,
+) {
+  stopBargeInCandidateVerification()
   clearSpeechResume()
   currentSpeechText = null
   bargeInEligible = false
   isAudioPlaying.value = false
   speechSourceMode.value = 'none'
   if (voiceController?.isActive) {
-    voiceController.setBargeInMode?.(true, SPEAKER_SETTLE_MS)
+    voiceController.setBargeInMode?.(true, settleMs)
   }
   speechResumeTimer = setTimeout(() => {
     speechResumeTimer = undefined
@@ -1521,7 +1378,7 @@ function resumeAfterSpeech(afterSpeech: (() => void) | undefined, requestId: num
       return
     }
     afterSpeech?.()
-  }, SPEAKER_SETTLE_MS)
+  }, settleMs)
 }
 
 async function activateAudio() {
@@ -1558,6 +1415,7 @@ async function bootKiosk() {
       }
       sessionId.value = session.session_id
       streamingSttAvailable = session.streaming_stt_available
+      directAzureSttAvailable = Boolean(session.direct_azure_stt_available)
       const expiresAt = Date.parse(session.expires_at)
       if (Number.isFinite(expiresAt)) {
         sessionIdleTimeoutMs = Math.max(1_000, expiresAt - Date.now())
@@ -1647,6 +1505,8 @@ async function resetKioskSession(notice?: string) {
   releaseAudioPlayback()
   if ('speechSynthesis' in window) window.speechSynthesis.cancel()
   sessionId.value = null
+  directAzureSttAvailable = false
+  clearAzureDirectTokenCache()
   for (const url of messageImageBlobUrls) {
     try { URL.revokeObjectURL(url) } catch { /* ignore */ }
   }
@@ -2439,7 +2299,26 @@ function stopSpeaking() {
   pauseVoice()
   status.value = 'idle'
   voiceHint.value = languageSettings[language.value].ready
-  resumeAfterSpeech(resumeHandsFree, speechRequestId)
+  resumeAfterSpeech(resumeHandsFree, speechRequestId, STOP_SPEAKING_SETTLE_MS)
+}
+
+function handleGlobalKeydown(event: KeyboardEvent) {
+  if (event.code !== 'Space' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return
+  if (status.value !== 'speaking' || isCatalogOpen.value || isCartOpen.value) return
+  const target = event.target as HTMLElement | null
+  if (
+    target
+    && (
+      target.tagName === 'INPUT'
+      || target.tagName === 'TEXTAREA'
+      || target.tagName === 'SELECT'
+      || target.isContentEditable
+    )
+  ) {
+    return
+  }
+  event.preventDefault()
+  stopSpeaking()
 }
 
 function retryLastPrompt() {
@@ -2540,6 +2419,7 @@ onMounted(() => {
   }
   void refreshMicrophones()
   navigator.mediaDevices?.addEventListener?.('devicechange', refreshMicrophones)
+  window.addEventListener('keydown', handleGlobalKeydown)
 })
 onUnmounted(() => {
   clearVoiceDiagnostics()
@@ -2557,6 +2437,7 @@ onUnmounted(() => {
   if (catalogPrefetchTimer) clearTimeout(catalogPrefetchTimer)
   stopPayOSPolling()
   navigator.mediaDevices?.removeEventListener?.('devicechange', refreshMicrophones)
+  window.removeEventListener('keydown', handleGlobalKeydown)
   voiceController?.stop()
   invalidateSpeechPlayback()
   if (closingSessionId) void closeSession(closingSessionId).catch(() => {
@@ -2685,11 +2566,13 @@ onUnmounted(() => {
         <button
           v-if="status === 'speaking'"
           type="button"
-          class="vrm-control"
+          class="vrm-control vrm-interrupt-control"
           :aria-label="language === 'en' ? 'Stop Mai speaking' : language === 'zh' ? '停止 Mai 说话' : 'Dừng Mai nói'"
+          :title="language === 'vi' ? 'Ngắt lời Mai để nói ngay (hoặc nhấn phím Space)' : 'Interrupt Mai (Space)'"
           @click="stopSpeaking"
         >
-          <Pause :size="21" weight="fill" aria-hidden="true" />
+          <Pause :size="20" weight="fill" aria-hidden="true" />
+          <span>{{ language === 'en' ? 'Interrupt' : language === 'zh' ? '打断' : 'Ngắt & nói' }}</span>
         </button>
         <button
           type="button"

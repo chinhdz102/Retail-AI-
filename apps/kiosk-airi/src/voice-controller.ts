@@ -1,6 +1,7 @@
 import { SpeechEnvelopeGate } from './voice-speech-gate'
 import { PcmCaptureBuffer } from './voice-pcm'
 import { createLocalNeuralVad, type NeuralVadCallbacks, type NeuralVadSession } from './voice-neural'
+import { createBrowserGtcrnDenoiser, type BrowserSpeechDenoiser } from './voice-gtcrn-denoiser'
 
 export type VoiceMode = 'idle' | 'recognition' | 'recorder'
 export type VoicePhase = 'idle' | 'listening' | 'recording'
@@ -158,6 +159,7 @@ export interface VoiceControllerDependencies {
   createAudioContext?: () => AudioContextLike
   createPcmWorkletNode?: (context: AudioContextLike) => PcmWorkletNodeLike
   createNeuralVad?: (callbacks: NeuralVadCallbacks) => Promise<NeuralVadSession>
+  createDenoiser?: () => Promise<BrowserSpeechDenoiser | null>
   setTimeout?: (handler: () => void, timeout: number) => number
   clearTimeout?: (timer: number) => void
   now?: () => number
@@ -435,6 +437,7 @@ export class VoiceConversationController {
   private pcmBuffer: PcmCaptureBuffer | null = null
   private pcmWorkletNode: PcmWorkletNodeLike | null = null
   private neuralVad: NeuralVadSession | null = null
+  private neuralDenoiser: BrowserSpeechDenoiser | null = null
   private neuralFilterHandle: HighPassStreamHandle | null = null
   private neuralTurnHoldTimer: number | null = null
   private neuralUnavailable = false
@@ -739,6 +742,7 @@ export class VoiceConversationController {
     let postConfirmAudioFrames: Float32Array[] = []
     let postDisarmVoicedFrames = 0
     let postDisarmAudioFrames: Float32Array[] = []
+    let denoisedSegmentFrames: Float32Array[] = []
     let postDisarmPromoted = false
     let pendingContinuationChunks: Float32Array[] = []
     let pendingHoldStartedAt = 0
@@ -840,6 +844,7 @@ export class VoiceConversationController {
       postConfirmAudioFrames = []
       postDisarmVoicedFrames = 0
       postDisarmAudioFrames = []
+      denoisedSegmentFrames = []
       postDisarmPromoted = false
       neuralEnvelope.reset()
       this.bargeInSpeechPeakRms = 0
@@ -864,11 +869,27 @@ export class VoiceConversationController {
         return
       }
       this.stream = stream
-      // Route real browser streams through a 90 Hz high-pass filter before Silero VAD
+      // Route real browser streams through a 135 Hz high-pass filter before Silero VAD
       // to suppress AC hum, laptop fan rumble, and desk bumps without altering tests.
       const filteredHandle = this.dependencies.createNeuralVad ? null : buildPreVadHighPassStream(stream)
       this.neuralFilterHandle = filteredHandle
       const vadInputStream = filteredHandle?.stream ?? stream
+      // Warm up real-time GTCRN WASM neural speech denoiser (196 KB) in parallel.
+      const denoiserFactory = this.dependencies.createDenoiser
+        ?? (this.dependencies.createNeuralVad ? undefined : createBrowserGtcrnDenoiser)
+      if (denoiserFactory) {
+        void Promise.resolve(denoiserFactory())
+          .then((instance) => {
+            if (!instance) return
+            if (!this.active || token !== this.generation) {
+              instance.destroy()
+              return
+            }
+            this.neuralDenoiser?.destroy()
+            this.neuralDenoiser = instance
+          })
+          .catch(() => undefined)
+      }
       const callbacks: NeuralVadCallbacks = {
         getStream: async () => vadInputStream as unknown as MediaStream,
         onSpeechStart: () => {
@@ -968,10 +989,12 @@ export class VoiceConversationController {
             this.emitError('runtime', 'Câu nói dài hơn 12 giây. Bạn chia yêu cầu thành câu ngắn hơn nhé.')
             return
           }
+          const denoisedMetrics = this.neuralDenoiser ? this.neuralDenoiser.processFrame(frame) : null
+          const activeFrame = denoisedMetrics ? denoisedMetrics.frame : frame
           let sum = 0
-          for (const sample of frame) sum += sample * sample
-          const frameRms = Math.sqrt(sum / frame.length)
-          const frameZcr = frameZeroCrossingRate(frame)
+          for (const sample of activeFrame) sum += sample * sample
+          const frameRms = denoisedMetrics ? denoisedMetrics.denoisedRms : Math.sqrt(sum / activeFrame.length)
+          const frameZcr = frameZeroCrossingRate(activeFrame)
           const speechProb = typeof probabilities?.isSpeech === 'number' ? probabilities.isSpeech : 0
           const rawPlayback = this.options.getPlaybackLevel?.() ?? 0
           const livePlayback = Number.isFinite(rawPlayback) && rawPlayback > 0 ? Math.min(1, rawPlayback) : 0
@@ -1056,6 +1079,12 @@ export class VoiceConversationController {
               return
             }
 
+            if (denoisedMetrics && !this.bargeInMode) {
+              if (denoisedSegmentFrames.length === 0 && preRollFrames.length > 0) {
+                for (const buffered of preRollFrames) denoisedSegmentFrames.push(new Float32Array(buffered))
+              }
+              denoisedSegmentFrames.push(new Float32Array(activeFrame))
+            }
             if (this.bargeInMode) {
               this.bargeInNeuralFrames += 1
               if (frameRms > this.bargeInSpeechPeakRms) this.bargeInSpeechPeakRms = frameRms
@@ -1097,20 +1126,20 @@ export class VoiceConversationController {
               ) {
                 postBargeInVoicedAfterTailFrames += 1
               }
-              postConfirmAudioFrames.push(new Float32Array(frame))
+              postConfirmAudioFrames.push(new Float32Array(activeFrame))
             } else if (segmentStartedInBargeIn) {
               // Silero opened this segment while Mai was speaking and never confirmed
               // barge-in. Drop speaker tail frames, but still recover cleanly if a real
               // customer starts speaking after Mai has fully settled.
               if (postDisarmPromoted) {
-                postDisarmAudioFrames.push(new Float32Array(frame))
+                postDisarmAudioFrames.push(new Float32Array(activeFrame))
               } else if (
                 now >= this.bargeInDisarmedAt + BARGE_IN_POST_DISARM_MARGIN_MS
                 && speechProb >= 0.72
                 && frameRms >= minVoiceRms
               ) {
                 postDisarmVoicedFrames += 1
-                postDisarmAudioFrames.push(new Float32Array(frame))
+                postDisarmAudioFrames.push(new Float32Array(activeFrame))
                 if (postDisarmVoicedFrames >= BARGE_IN_POST_DISARM_VOICED_FRAMES) {
                   postDisarmPromoted = true
                   this.setState('recorder', 'recording')
@@ -1136,17 +1165,17 @@ export class VoiceConversationController {
             }
 
             if (streamingSpeechActive) {
-              this.options.onSpeechFrame?.(frame)
+              this.options.onSpeechFrame?.(activeFrame)
             } else if (!segmentStartedInBargeIn || this.bargeInMode) {
-              preRollFrames.push(new Float32Array(frame))
+              preRollFrames.push(new Float32Array(activeFrame))
               if (preRollFrames.length > 14) preRollFrames.shift()
             }
           } else {
             if (streamingSpeechActive && pendingContinuationChunks.length > 0) {
               // Keep feeding silence/continuation frames into the open WS STT during hold.
-              this.options.onSpeechFrame?.(frame)
+              this.options.onSpeechFrame?.(activeFrame)
             } else {
-              preRollFrames.push(new Float32Array(frame))
+              preRollFrames.push(new Float32Array(activeFrame))
               if (preRollFrames.length > 12) preRollFrames.shift()
             }
           }
@@ -1166,6 +1195,7 @@ export class VoiceConversationController {
           const observedPostBargeInVoiced = postBargeInVoicedAfterTailFrames
           const trimmedPostConfirmFrames = postConfirmAudioFrames
           const trimmedPostDisarmFrames = postDisarmAudioFrames
+          const capturedDenoisedFrames = denoisedSegmentFrames
           const isStationaryFanNoise = observedFrames >= 12 && neuralEnvelope.stationaryNoiseLevel() !== null
           speechStartedAt = null
           neuralRealStarted = false
@@ -1243,6 +1273,11 @@ export class VoiceConversationController {
             const mergedConfirm = mergeFloat32Chunks(trimmedPostConfirmFrames)
             if (mergedConfirm.length >= 16_000 * 0.2) {
               segmentAudio = mergedConfirm
+            }
+          } else if (capturedDenoisedFrames.length >= 6) {
+            const mergedDenoised = mergeFloat32Chunks(capturedDenoisedFrames)
+            if (mergedDenoised.length >= 16_000 * 0.2) {
+              segmentAudio = mergedDenoised
             }
           }
           const combinedAudio = pendingContinuationChunks.length > 0
@@ -1760,6 +1795,9 @@ export class VoiceConversationController {
     const vad = this.neuralVad
     this.neuralVad = null
     this.destroyNeuralSession(vad)
+    const denoiser = this.neuralDenoiser
+    this.neuralDenoiser = null
+    denoiser?.destroy()
     const filterHandle = this.neuralFilterHandle
     this.neuralFilterHandle = null
     filterHandle?.close()

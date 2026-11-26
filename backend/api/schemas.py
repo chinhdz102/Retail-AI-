@@ -24,6 +24,7 @@ class SessionResponse(BaseModel):
     cart_available: bool = False
     session_token: str | None = None
     streaming_stt_available: bool = False
+    direct_azure_stt_available: bool = False
 
 
 class AgentRespondRequest(BaseModel):
@@ -494,3 +495,15 @@ class SpeechPrewarmResponse(BaseModel):
 
 class SynthesizeTicketResponse(BaseModel):
     audio_url: str
+
+
+class AzureSpeechTokenRequest(BaseModel):
+    session_id: UUID
+
+
+class AzureSpeechTokenResponse(BaseModel):
+    enabled: bool
+    token: str | None = None
+    region: str | None = None
+    expires_in_seconds: int = 0
+    phrases_vi: list[str] = Field(default_factory=list)

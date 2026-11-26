@@ -57,7 +57,11 @@ _LOCALE_BY_LANGUAGE: dict[str, str] = {
 # High-value Thanh Lam Mart retail/supermarket terms that benefit from Azure PhraseListGrammar.
 _BASE_RETAIL_PHRASES_VI: tuple[str, ...] = (
     "Thanh Lam Mart",
+    "Thanh Lam Mart",
     "Thanh Lam Home",
+    "PayOS",
+    "giỏ hàng",
+    "tồn kho",
     "ACEFOODS",
     "TH True Milk",
     "Vinamilk",
@@ -65,6 +69,7 @@ _BASE_RETAIL_PHRASES_VI: tuple[str, ...] = (
     "Coca-Cola Zero",
     "Head & Shoulders",
     "Hảo Hảo",
+    "Omachi",
     "Nam Ngư",
     "Chin-su",
     "Chinsu",
@@ -124,18 +129,65 @@ def _build_phrase_list(
 
 
 _WARM_SDK_MAX_AGE_SECONDS = 35.0
+_STS_TOKEN_TTL_SECONDS = 480.0
 _BASE_PHRASES_VI_KEYS = frozenset(term.casefold() for term in _BASE_RETAIL_PHRASES_VI)
 
 
 class AzureSTTService:
     """Primary Vietnamese/EN/ZH Speech-to-Text backed by Azure AI Speech + DPDFNet2."""
 
-    def __init__(self, settings: Settings | None = None, client: Any | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        client: Any | None = None,
+        sts_client: Any | None = None,
+    ) -> None:
         self.settings = settings or get_settings()
         self._rest_client: Any | None = client
+        self._sts_client: Any | None = sts_client
         self._injected_rest_client: bool = client is not None
         self._sdk_lock = threading.Lock()
         self._warm_sdk: dict[str, tuple[Any, Any, Any, float]] = {}
+        self._sts_token_cache: tuple[str, str, float] | None = None
+        self._sts_lock = asyncio.Lock()
+
+    async def issue_auth_token(self) -> tuple[str, str, int]:
+        """Issue (or return cached) 10-minute Azure Speech STS token for direct browser WSS."""
+        key, region = self._credentials_or_raise()
+        now = perf_counter()
+        cached = self._sts_token_cache
+        if cached is not None and cached[1] == region:
+            age = now - cached[2]
+            if age < _STS_TOKEN_TTL_SECONDS:
+                remaining = max(30, int(600 - age))
+                return cached[0], region, remaining
+
+        async with self._sts_lock:
+            now = perf_counter()
+            cached = self._sts_token_cache
+            if cached is not None and cached[1] == region:
+                age = now - cached[2]
+                if age < _STS_TOKEN_TTL_SECONDS:
+                    remaining = max(30, int(600 - age))
+                    return cached[0], region, remaining
+
+            sts_url = f"https://{region}.api.cognitive.microsoft.com/sts/v1.0/issueToken"
+            headers = {
+                "Ocp-Apim-Subscription-Key": key,
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Content-Length": "0",
+            }
+            if self._sts_client is not None:
+                resp = await self._sts_client.post(sts_url, headers=headers, timeout=6.0)
+            else:
+                async with httpx.AsyncClient(timeout=6.0) as client:
+                    resp = await client.post(sts_url, headers=headers)
+            resp.raise_for_status()
+            token = resp.text.strip()
+            if not token:
+                raise GroqProviderError("Azure Speech STS returned an empty token")
+            self._sts_token_cache = (token, region, perf_counter())
+            return token, region, 540
 
     def _credentials_or_raise(self) -> tuple[str, str]:
         key = self.settings.azure_speech_key.get_secret_value().strip()

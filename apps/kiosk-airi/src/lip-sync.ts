@@ -432,13 +432,14 @@ export class LipSyncAnalyzerState {
 
 interface AudioTapHandle {
   context: AudioContext
-  source: MediaElementAudioSourceNode
+  source: AudioNode
   analyser: AnalyserNode
+  mode: 'capture-stream' | 'media-element'
   timeBuffer: Float32Array<ArrayBuffer>
   freqBuffer: Uint8Array<ArrayBuffer>
 }
 
-// Keep at most one MediaElementAudioSourceNode per HTMLAudioElement to prevent InvalidStateError.
+// Keep at most one Web Audio tap per HTMLAudioElement to prevent InvalidStateError.
 const audioTapCache = new WeakMap<HTMLAudioElement, AudioTapHandle>()
 
 function getAudioContextConstructor(): typeof AudioContext | null {
@@ -450,9 +451,20 @@ function getAudioContextConstructor(): typeof AudioContext | null {
   return host.AudioContext ?? host.webkitAudioContext ?? null
 }
 
+type CapturableAudioElement = HTMLAudioElement & {
+  captureStream?: () => MediaStream
+  mozCaptureStream?: () => MediaStream
+}
+
 /**
  * Safely attaches a Web Audio `AnalyserNode` tap to an `HTMLAudioElement` for real-time
- * 60fps lip-sync analysis without interrupting speaker output or failing on reuse.
+ * 60fps lip-sync analysis WITHOUT triggering Chromium Issue #687574 (where routing
+ * `createMediaElementSource()` into `AudioContext.destination` detaches the audio from
+ * Chrome's WebRTC AEC3 reference loop and causes microphone self-echo).
+ *
+ * When `audio.captureStream()` is supported (Chrome/Edge/Firefox), we passively tap a
+ * silent copy into `AnalyserNode` and NEVER connect to `context.destination`, keeping
+ * native `<audio>` speaker playback 100% visible to browser/OS echo cancellation.
  */
 export function ensureAudioLipSyncTap(audio: HTMLAudioElement): AudioTapHandle | null {
   const existing = audioTapCache.get(audio)
@@ -464,22 +476,55 @@ export function ensureAudioLipSyncTap(audio: HTMLAudioElement): AudioTapHandle |
   }
   const AudioCtx = getAudioContextConstructor()
   if (!AudioCtx) return null
+  const capturable = audio as CapturableAudioElement
+  const captureFn = typeof capturable.captureStream === 'function'
+    ? capturable.captureStream
+    : typeof capturable.mozCaptureStream === 'function'
+      ? capturable.mozCaptureStream
+      : null
+
   try {
     const context = new AudioCtx()
-    if (typeof context.createMediaElementSource !== 'function' || typeof context.createAnalyser !== 'function') {
+    if (typeof context.createAnalyser !== 'function') {
       void context.close?.().catch(() => undefined)
       return null
     }
-    const source = context.createMediaElementSource(audio)
     const analyser = context.createAnalyser()
     analyser.fftSize = 512
     analyser.smoothingTimeConstant = 0.25
-    source.connect(analyser)
-    analyser.connect(context.destination)
+
+    let source: AudioNode | null = null
+    let mode: AudioTapHandle['mode'] = 'media-element'
+
+    if (captureFn && typeof context.createMediaStreamSource === 'function') {
+      try {
+        const stream = captureFn.call(capturable)
+        // Passive read-only tap: do NOT connect analyser to context.destination!
+        // <audio> continues playing natively with Chromium/OS AEC intact.
+        source = context.createMediaStreamSource(stream)
+        source.connect(analyser)
+        mode = 'capture-stream'
+      } catch {
+        // On Chromium where captureStream exists, never fall back to
+        // createMediaElementSource -> context.destination (which breaks AEC3).
+        void context.close?.().catch(() => undefined)
+        return null
+      }
+    } else if (typeof context.createMediaElementSource === 'function') {
+      source = context.createMediaElementSource(audio)
+      source.connect(analyser)
+      analyser.connect(context.destination)
+      mode = 'media-element'
+    } else {
+      void context.close?.().catch(() => undefined)
+      return null
+    }
+
     const handle: AudioTapHandle = {
       context,
       source,
       analyser,
+      mode,
       timeBuffer: new Float32Array(new ArrayBuffer(analyser.fftSize * 4)),
       freqBuffer: new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount)),
     }

@@ -701,3 +701,59 @@ async def test_docker_spa_static_serving_headers_and_path_traversal_guard(
         assert missing_api.status_code == 404
         missing_unlisted_api = await client.get("/api/does-not-exist-xyz")
         assert missing_unlisted_api.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_azure_speech_ephemeral_token_endpoint_and_caching(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.services.azure_stt import AzureSTTService
+
+    sts_calls = 0
+
+    async def sts_handler(request: httpx.Request) -> httpx.Response:
+        nonlocal sts_calls
+        sts_calls += 1
+        assert request.url == httpx.URL(
+            "https://southeastasia.api.cognitive.microsoft.com/sts/v1.0/issueToken"
+        )
+        assert request.headers.get("ocp-apim-subscription-key") == "azure-secret-test-key"
+        return httpx.Response(200, text="eyJhbGciOiJub25lIn0.ephemeral-azure-token")
+
+    mock_settings = Settings(
+        azure_speech_key="azure-secret-test-key",
+        azure_speech_region="southeastasia",
+    )
+    sts_client = httpx.AsyncClient(transport=httpx.MockTransport(sts_handler))
+    azure_stt = AzureSTTService(settings=mock_settings, sts_client=sts_client)
+    api.app.dependency_overrides[api.get_settings] = lambda: mock_settings
+    api.app.dependency_overrides[api.get_azure_stt_service] = lambda: azure_stt
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=20
+        ) as client:
+            created = await client.post("/sessions", json={"kiosk_id": "kiosk-azure-tok"})
+            assert created.status_code == 201
+            payload = created.json()
+            assert payload["direct_azure_stt_available"] is True
+            sid = payload["session_id"]
+
+            r1 = await client.post("/audio/azure-speech-token", json={"session_id": sid})
+            assert r1.status_code == 200
+            d1 = r1.json()
+            assert d1["enabled"] is True
+            assert d1["token"] == "eyJhbGciOiJub25lIn0.ephemeral-azure-token"
+            assert d1["region"] == "southeastasia"
+            assert d1["expires_in_seconds"] >= 300
+            assert "Thanh Lam Mart" in d1["phrases_vi"]
+            assert "azure-secret-test-key" not in r1.text
+
+            # Second request reuses cached STS token without hitting Azure STS again
+            r2 = await client.post("/audio/azure-speech-token", json={"session_id": sid})
+            assert r2.status_code == 200
+            assert r2.json()["token"] == d1["token"]
+            assert sts_calls == 1
+    finally:
+        await sts_client.aclose()
+        api.app.dependency_overrides.pop(api.get_settings, None)
+        api.app.dependency_overrides.pop(api.get_azure_stt_service, None)

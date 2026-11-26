@@ -6,6 +6,7 @@ const apiMocks = vi.hoisted(() => ({
   createRequestId: vi.fn(() => 'request-test-id'),
   closeSession: vi.fn().mockResolvedValue({}),
   prewarmSpeech: vi.fn().mockResolvedValue({ warmed: true, provider: 'azure-speech' }),
+  getAzureSpeechToken: vi.fn().mockResolvedValue({ enabled: false }),
   respond: vi.fn(),
   transcribe: vi.fn(),
   createSynthesisTicket: vi.fn(),
@@ -126,6 +127,7 @@ async function startSpokenReply() {
 }
 
 afterEach(() => {
+  window.history.replaceState({}, '', '/')
   Reflect.deleteProperty(HTMLAudioElement.prototype, 'play')
   Reflect.deleteProperty(HTMLAudioElement.prototype, 'pause')
   Reflect.deleteProperty(HTMLVideoElement.prototype, 'play')
@@ -620,7 +622,39 @@ describe('voice transcript integration', () => {
     expect(play).toHaveBeenCalled()
   })
 
-  it('arms barge-in during cloud speech, stops Mai immediately when the customer speaks, and rejects self-echo', async () => {
+  it('default Speaker Echo Shield strictly pauses the mic while Mai speaks (0% self-recording) and resumes after 650ms settle or Spacebar interrupt', async () => {
+    const { pause } = setupCloudReply()
+    const wrapper = await startSpokenReply()
+    const audio = wrapper.get('audio').element as HTMLAudioElement
+    await vi.waitFor(() => expect(audio.getAttribute('src')).toContain('/stream/current'))
+    const mic = controllerStore.current
+    // Mic MUST remain strictly paused during loudspeaker playback so Mai can never hear herself!
+    expect(mic.isActive).toBe(false)
+    expect(mic.bargeInMode).toBe(false)
+
+    // Any stray audio/transcript while Mai speaks is strictly ignored
+    mic.options.onAudio(new Blob(['speaker output']))
+    mic.options.onTranscript('Mình gợi ý chai nước này.')
+    expect(apiMocks.transcribe).not.toHaveBeenCalled()
+    expect(apiMocks.respond).toHaveBeenCalledOnce()
+
+    // Pressing Spacebar immediately silences Mai and resumes listening after 240ms speaker decay
+    pause.mockClear()
+    vi.useFakeTimers()
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', cancelable: true }))
+    expect(pause).toHaveBeenCalledOnce()
+    expect(audio.getAttribute('src')).toBeNull()
+    expect(mic.isActive).toBe(false)
+    await vi.advanceTimersByTimeAsync(239)
+    expect(mic.isActive).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(mic.isActive).toBe(true)
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it('arms barge-in during cloud speech when ?fullDuplex=1 headset mode is enabled, stops Mai on customer speech, and rejects self-echo', async () => {
+    window.history.replaceState({}, '', '/?fullDuplex=1')
     const { pause } = setupCloudReply()
     const wrapper = await startSpokenReply()
     const audio = wrapper.get('audio').element as HTMLAudioElement
@@ -667,6 +701,7 @@ describe('voice transcript integration', () => {
   })
 
   it('discards transcribed assistant loudspeaker echo after barge-in without answering itself', async () => {
+    window.history.replaceState({}, '', '/?fullDuplex=1')
     setupCloudReply()
     const wrapper = await startSpokenReply()
     const audio = wrapper.get('audio').element as HTMLAudioElement
@@ -688,19 +723,19 @@ describe('voice transcript integration', () => {
     wrapper.unmount()
   })
 
-  it('waits for the loudspeaker tail after speech ends before disarming barge-in guard', async () => {
+  it('waits for the 650ms loudspeaker tail after speech ends before re-opening the mic', async () => {
     setupCloudReply()
     const wrapper = await startSpokenReply()
     const audio = wrapper.get('audio').element as HTMLAudioElement
     await vi.waitFor(() => expect(audio.onended).toBeTypeOf('function'))
     const mic = controllerStore.current
-    await vi.waitFor(() => expect(mic.bargeInMode).toBe(true))
+    expect(mic.isActive).toBe(false)
     vi.useFakeTimers()
     audio.onended?.call(audio, new Event('ended'))
     mic.options.onAudio(new Blob(['reverberation']))
     mic.options.onTranscript('Tiếng vọng cuối câu')
-    await vi.advanceTimersByTimeAsync(399)
-    expect(mic.bargeInMode).toBe(true)
+    await vi.advanceTimersByTimeAsync(649)
+    expect(mic.isActive).toBe(false)
     expect(apiMocks.transcribe).not.toHaveBeenCalled()
     expect(apiMocks.respond).toHaveBeenCalledOnce()
     await vi.advanceTimersByTimeAsync(1)
@@ -721,7 +756,7 @@ describe('voice transcript integration', () => {
     expect(pause).toHaveBeenCalledOnce()
     expect(wrapper.get('audio').element.getAttribute('src')).toBeNull()
     expect(controllerStore.current.isActive).toBe(false)
-    await vi.advanceTimersByTimeAsync(400)
+    await vi.advanceTimersByTimeAsync(240)
     expect(controllerStore.current.isActive).toBe(true)
     wrapper.unmount()
     vi.useRealTimers()
@@ -733,7 +768,6 @@ describe('voice transcript integration', () => {
     const audio = wrapper.get('audio').element as HTMLAudioElement
     await vi.waitFor(() => expect(audio.onended).toBeTypeOf('function'))
     const mic = controllerStore.current
-    await vi.waitFor(() => expect(mic.bargeInMode).toBe(true))
     const startsBeforeEnd = mic.startCalls
     vi.useFakeTimers()
     audio.onended?.call(audio, new Event('ended'))
@@ -746,14 +780,14 @@ describe('voice transcript integration', () => {
     } else {
       wrapper.unmount()
     }
-    await vi.advanceTimersByTimeAsync(500)
+    await vi.advanceTimersByTimeAsync(750)
     expect(mic.startCalls).toBe(startsBeforeEnd)
     expect(mic.isActive).toBe(false)
     if (action !== 'unmount') wrapper.unmount()
     vi.useRealTimers()
   })
 
-  it.each(['end', 'error'] as const)('arms barge-in during browser TTS and disarms cleanly after %s', async (event) => {
+  it.each(['end', 'error'] as const)('keeps mic paused during browser TTS in Speaker Echo Shield and resumes cleanly after %s', async (event) => {
     setupCloudReply()
     let utterance: any
     vi.stubGlobal('speechSynthesis', {
@@ -768,14 +802,14 @@ describe('voice transcript integration', () => {
     const wrapper = await startSpokenReply()
     await vi.waitFor(() => expect(utterance).toBeDefined())
     const mic = controllerStore.current
-    expect(mic.isActive).toBe(true)
-    expect(mic.bargeInMode).toBe(true)
+    expect(mic.isActive).toBe(false)
+    expect(mic.bargeInMode).toBe(false)
     mic.options.onAudio(new Blob(['browser TTS echo']))
     expect(apiMocks.transcribe).not.toHaveBeenCalled()
     vi.useFakeTimers()
     utterance[event === 'end' ? 'onend' : 'onerror']()
-    await vi.advanceTimersByTimeAsync(399)
-    expect(mic.bargeInMode).toBe(true)
+    await vi.advanceTimersByTimeAsync(649)
+    expect(mic.isActive).toBe(false)
     await vi.advanceTimersByTimeAsync(1)
     expect(mic.isActive).toBe(true)
     expect(mic.bargeInMode).toBe(false)
@@ -915,18 +949,18 @@ describe('voice transcript integration', () => {
     await vi.waitFor(() => expect(controllerStore.current).not.toBeNull())
     controllerStore.current.options.onTranscript('Cho tôi hỏi một chút')
     await vi.waitFor(() => expect(utterances).toHaveLength(1))
-    await vi.waitFor(() => expect(controllerStore.current.bargeInMode).toBe(true))
+    expect(controllerStore.current.isActive).toBe(false)
     await wrapper.get('button[aria-label="Dừng Mai nói"]').trigger('click')
-    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(3))
+    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(2))
     controllerStore.current.options.onTranscript('Và thêm một câu nữa')
     await vi.waitFor(() => expect(utterances).toHaveLength(2))
-    await vi.waitFor(() => expect(controllerStore.current.bargeInMode).toBe(true))
+    expect(controllerStore.current.isActive).toBe(false)
 
-    // Stale end event from the cancelled first utterance must not disarm the second turn's barge-in guard.
+    // Stale end event from the cancelled first utterance must not re-open the mic during the second turn.
     utterances[0].onend?.()
-    expect(controllerStore.current.bargeInMode).toBe(true)
+    expect(controllerStore.current.isActive).toBe(false)
     utterances[1].onend?.()
-    await vi.waitFor(() => expect(controllerStore.current.bargeInMode).toBe(false))
+    await vi.waitFor(() => expect(controllerStore.current.isActive).toBe(true), { timeout: 2_000 })
     wrapper.unmount()
   })
 
@@ -944,7 +978,8 @@ describe('voice transcript integration', () => {
     const mic = controllerStore.current
     vi.useFakeTimers()
     audio.onended?.call(audio, new Event('ended'))
-    await vi.advanceTimersByTimeAsync(400)
+    await vi.advanceTimersByTimeAsync(650)
+    expect(mic.isActive).toBe(true)
     expect(mic.bargeInMode).toBe(false)
     vi.useRealTimers()
 
@@ -979,7 +1014,8 @@ describe('voice transcript integration', () => {
     wrapper.unmount()
   })
 
-  it('requires real non-echo STT words before interrupting Mai so laptop fan noise cannot barge in', async () => {
+  it('requires real non-echo STT words before interrupting Mai in ?fullDuplex=1 headset mode so laptop fan noise cannot barge in', async () => {
+    window.history.replaceState({}, '', '/?fullDuplex=1')
     const { pause } = setupCloudReply()
     const wrapper = await startSpokenReply()
     const mic = controllerStore.current

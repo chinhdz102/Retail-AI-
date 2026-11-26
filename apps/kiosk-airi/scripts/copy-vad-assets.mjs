@@ -4,6 +4,7 @@ import { resolve, join } from 'node:path'
 const root = resolve(import.meta.dirname, '..')
 const sourceVad = join(root, 'node_modules/@ricky0123/vad-web/dist')
 const sourceOrt = join(root, 'node_modules/onnxruntime-web/dist')
+const sourceGtcrn = join(root, 'node_modules/@sapphi-red/gtcrn-wasm/dist/gtcrn.wasm')
 const destination = join(root, 'public/vad')
 const targetOrt = join(destination, 'onnx')
 await mkdir(destination, { recursive: true })
@@ -14,6 +15,7 @@ if (!files.includes('vad.worklet.bundle.min.js') || !files.includes('silero_vad_
   throw new Error('The local Silero VAD package does not contain the required model/worklet assets')
 }
 for (const name of files) await copyFile(join(sourceVad, name), join(destination, name))
+await copyFile(sourceGtcrn, join(destination, 'gtcrn.wasm'))
 const runtime = (await readdir(sourceOrt)).filter((name) =>
   /\.(wasm|mjs)$/.test(name) && name.startsWith('ort-'))
 if (!runtime.some((name) => name.endsWith('.wasm')) || !runtime.some((name) => name.endsWith('.mjs'))) {
@@ -21,6 +23,7 @@ if (!runtime.some((name) => name.endsWith('.wasm')) || !runtime.some((name) => n
 }
 for (const name of runtime) await copyFile(join(sourceOrt, name), join(targetOrt, name))
 const sizes = await Promise.all([...files.map(name => join(destination, name)),
+  join(destination, 'gtcrn.wasm'),
   ...runtime.map(name => join(targetOrt, name))].map(async name => (await stat(name)).size))
-console.info('Local VAD assets prepared', files.length + runtime.length, 'files',
+console.info('Local VAD + GTCRN WASM assets prepared', files.length + runtime.length + 1, 'files',
   Math.round(sizes.reduce((sum, size) => sum + size, 0) / 1024), 'KiB')

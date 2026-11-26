@@ -59,7 +59,16 @@ export interface SmartTurnStatus {
   reason?: string
 }
 
-export class StreamingSttSession {
+export interface LiveStreamingSttHandle {
+  readonly isHealthy: boolean
+  readonly latestPartialText: string
+  pushFrame: (frame: Float32Array) => void
+  checkTurn?: (timeoutMs?: number) => Promise<SmartTurnStatus | null>
+  finish: (timeoutMs?: number) => Promise<TranscriptionResponse | null>
+  cancel: () => void
+}
+
+export class StreamingSttSession implements LiveStreamingSttHandle {
   private ws: WebSocket | null = null
   private readonly pendingFrames: ArrayBuffer[] = []
   private isReady = false

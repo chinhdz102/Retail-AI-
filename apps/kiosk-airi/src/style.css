@@ -1928,6 +1928,27 @@ body {
   font-weight: 800;
 }
 
+.vrm-interrupt-control {
+  width: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 14px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  white-space: nowrap;
+  color: #fef3c7;
+  border-color: rgb(251 191 36 / 0.45);
+  background: rgb(245 158 11 / 0.22);
+}
+
+.vrm-interrupt-control:hover {
+  color: #fffbeb;
+  border-color: rgb(251 191 36 / 0.72);
+  background: rgb(245 158 11 / 0.34);
+}
+
 .vrm-mic-control.active,
 .vrm-mic-control.recording,
 .vrm-audio-control {
@@ -2139,6 +2160,11 @@ body {
 
   .vrm-mic-control {
     width: auto;
+  }
+
+  .vrm-interrupt-control {
+    width: auto;
+    padding-inline: 12px;
   }
 
   .text-drawer {
@@ -2495,6 +2521,12 @@ textarea {
     color: #ffffff;
     background: linear-gradient(135deg, #fb7185, #e11d48);
     box-shadow: 0 0 0 5px rgb(251 113 133 / 0.22), 0 8px 24px rgb(225 29 72 / 0.34);
+  }
+
+  .vrm-interrupt-control {
+    width: auto;
+    padding-inline: 10px;
+    font-size: 0.78rem;
   }
 
   /* Keep Mai full-screen directly behind the transparent mobile chat overlay */

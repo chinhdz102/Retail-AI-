@@ -158,4 +158,44 @@ describe('lip-sync acoustic DSP and viseme classification', () => {
     expect(createSourceSpy).toHaveBeenCalledTimes(1)
     vi.unstubAllGlobals()
   })
+
+  it('uses passive captureStream without connecting to AudioContext.destination when supported (Chromium #687574 AEC fix)', () => {
+    const fakeStream = { getAudioTracks: () => [{}] } as unknown as MediaStream
+    const streamSourceConnect = vi.fn()
+    const createMediaStreamSourceSpy = vi.fn().mockReturnValue({ connect: streamSourceConnect })
+    const createMediaElementSourceSpy = vi.fn()
+    const analyserConnect = vi.fn()
+    const analyserMock = {
+      fftSize: 512,
+      frequencyBinCount: 256,
+      smoothingTimeConstant: 0.25,
+      connect: analyserConnect,
+      getFloatTimeDomainData: vi.fn(),
+      getByteFrequencyData: vi.fn(),
+    }
+    class FakeAudioContext {
+      state = 'running'
+      sampleRate = 48000
+      destination = {}
+      createMediaStreamSource = createMediaStreamSourceSpy
+      createMediaElementSource = createMediaElementSourceSpy
+      createAnalyser = vi.fn().mockReturnValue(analyserMock)
+      resume = vi.fn().mockResolvedValue(undefined)
+    }
+    vi.stubGlobal('AudioContext', FakeAudioContext)
+
+    const audio = new Audio() as HTMLAudioElement & { captureStream?: () => MediaStream }
+    audio.captureStream = vi.fn().mockReturnValue(fakeStream)
+
+    const tap = ensureAudioLipSyncTap(audio)
+    expect(tap).not.toBeNull()
+    expect(tap?.mode).toBe('capture-stream')
+    expect(createMediaStreamSourceSpy).toHaveBeenCalledWith(fakeStream)
+    expect(streamSourceConnect).toHaveBeenCalledWith(analyserMock)
+    // CRITICAL: Must NEVER touch createMediaElementSource or connect analyser to destination
+    // so Chrome WebRTC AEC3 continues cancelling Mai's TTS voice from the microphone!
+    expect(createMediaElementSourceSpy).not.toHaveBeenCalled()
+    expect(analyserConnect).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
 })

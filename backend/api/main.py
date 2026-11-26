@@ -32,6 +32,8 @@ from backend.api.schemas import (
     AssistedOrderCreateRequest,
     AssistedOrderItemResponse,
     AssistedOrderResponse,
+    AzureSpeechTokenRequest,
+    AzureSpeechTokenResponse,
     CartAddRequest,
     CartQuantityRequest,
     CartResponse,
@@ -89,7 +91,7 @@ from backend.services.azure_speech import (
     AzureSpeechProviderError,
     AzureSpeechService,
 )
-from backend.services.azure_stt import AzureSTTService
+from backend.services.azure_stt import _BASE_RETAIL_PHRASES_VI, AzureSTTService
 from backend.services.bounded_work import run_catalog_work
 from backend.services.catalog_browse import explicit_catalog_category_list
 from backend.services.catalog_preferences import preparation_terms
@@ -5280,8 +5282,14 @@ def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
     return HealthResponse(status="ok", service="ai-retail-backend", version=settings.app_version)
 
 
+def _resolve_active_settings() -> Settings:
+    override = app.dependency_overrides.get(get_settings)
+    return override() if callable(override) else get_settings()
+
+
 @app.post("/sessions", response_model=SessionResponse, status_code=201)
 def create_session(request: SessionCreateRequest) -> SessionResponse:
+    current_settings = _resolve_active_settings()
     try:
         record = session_store.create(request.kiosk_id)
     except SessionUnavailableError as exc:
@@ -5298,13 +5306,17 @@ def create_session(request: SessionCreateRequest) -> SessionResponse:
         state=record.state,
         expires_at=record.expires_at,
         cart_available=cart_available,
-        session_token=_sign_session_token(record.session_id, record.kiosk_id, record.expires_at),
+        session_token=_sign_session_token(
+            record.session_id, record.kiosk_id, record.expires_at, current_settings
+        ),
         streaming_stt_available=_is_streaming_stt_available(),
+        direct_azure_stt_available=bool(current_settings.has_azure_speech),
     )
 
 
 @app.post("/sessions/{session_id}/close", response_model=SessionResponse)
 def close_session(session_id: UUID) -> SessionResponse:
+    current_settings = _resolve_active_settings()
     _session_or_http_error(session_id)
     shopping_service.close_session(session_id)
     assisted_order_store.clear_session(session_id)
@@ -5321,6 +5333,7 @@ def close_session(session_id: UUID) -> SessionResponse:
         cart_available=cart_available,
         session_token=None,
         streaming_stt_available=_is_streaming_stt_available(),
+        direct_azure_stt_available=bool(current_settings.has_azure_speech),
     )
 
 
@@ -16255,6 +16268,32 @@ async def synthesize_audio(
             "X-TTS-Provider": provider,
             "X-TTS-Model": model,
         },
+    )
+
+
+@app.post("/audio/azure-speech-token", response_model=AzureSpeechTokenResponse)
+async def issue_azure_speech_token(
+    request: AzureSpeechTokenRequest,
+    azure_stt: AzureSTTService = Depends(get_azure_stt_service),
+    current_settings: Settings = Depends(get_settings),
+) -> AzureSpeechTokenResponse:
+    """Issue short-lived Azure Speech STS token for direct browser WSS streaming."""
+    record = _session_or_http_error(request.session_id)
+    if record.state in {SessionState.CLOSED, SessionState.EXPIRED}:
+        raise HTTPException(status_code=409, detail="Session is closed")
+    if not current_settings.has_azure_speech:
+        return AzureSpeechTokenResponse(enabled=False)
+    try:
+        token, region, expires_in = await azure_stt.issue_auth_token()
+    except Exception as exc:
+        logger.warning("Azure Speech STS token request failed error_type=%s", type(exc).__name__)
+        return AzureSpeechTokenResponse(enabled=False)
+    return AzureSpeechTokenResponse(
+        enabled=True,
+        token=token,
+        region=region,
+        expires_in_seconds=expires_in,
+        phrases_vi=list(_BASE_RETAIL_PHRASES_VI),
     )
 
 

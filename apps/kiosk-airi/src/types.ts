@@ -9,6 +9,15 @@ export interface SessionResponse {
   cart_available?: boolean
   session_token?: string | null
   streaming_stt_available?: boolean
+  direct_azure_stt_available?: boolean
+}
+
+export interface AzureSpeechTokenResponse {
+  enabled: boolean
+  token?: string | null
+  region?: string | null
+  expires_in_seconds?: number
+  phrases_vi?: string[]
 }
 
 export interface ProductSnapshot {

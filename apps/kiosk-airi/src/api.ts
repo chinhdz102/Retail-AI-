@@ -2,6 +2,7 @@ import type {
   AgentResponse,
   AssistedOrderCreatePayload,
   AssistedOrderResponse,
+  AzureSpeechTokenResponse,
   CatalogSortMode,
   CheckoutQuote,
   LanguageCode,
@@ -390,6 +391,20 @@ export function prewarmSpeech(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ session_id: sessionId, language }),
   })
+}
+
+export function getAzureSpeechToken(
+  sessionId: string,
+): Promise<AzureSpeechTokenResponse> {
+  return request<AzureSpeechTokenResponse>(
+    '/audio/azure-speech-token',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId }),
+    },
+    8_000,
+  )
 }
 
 export async function createSynthesisTicket(
