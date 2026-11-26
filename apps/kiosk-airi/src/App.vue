@@ -2291,7 +2291,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="vrm-only-shell" :class="{ 'text-is-open': isTextOpen, 'mobile-sheet-expanded': isMobileSheetExpanded && isTextOpen }">
+  <main
+    class="vrm-only-shell"
+    :class="{
+      'text-is-open': isTextOpen,
+      'mobile-sheet-expanded': isMobileSheetExpanded && isTextOpen,
+      'modal-is-open': isCatalogOpen || isCartOpen,
+    }"
+  >
     <header class="mobile-topbar">
       <div class="mobile-brand">
         <span class="mobile-brand-badge">M</span>

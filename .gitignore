@@ -25,6 +25,7 @@ data/models/
 
 # Generated local ONNX/VAD assets (copied from pinned npm packages)
 apps/kiosk-airi/public/vad/
+apps/kiosk-airi/public/catalog-index.json
 .vercel
 .env*
 .cache/

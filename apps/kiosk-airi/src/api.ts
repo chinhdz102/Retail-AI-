@@ -445,13 +445,34 @@ export function browseProductCatalog(options: {
 
 let catalogIndexPromise: Promise<ProductCatalogIndexResponse> | null = null
 
+async function fetchStaticCatalogIndex(): Promise<ProductCatalogIndexResponse | null> {
+  if (typeof fetch !== 'function') return null
+  try {
+    const res = await fetch('/catalog-index.json', { cache: 'default' })
+    if (!res.ok) return null
+    const ct = res.headers.get('content-type') ?? ''
+    if (!ct.includes('json')) return null
+    const data = (await res.json()) as ProductCatalogIndexResponse
+    if (data && Array.isArray(data.rows) && data.rows.length > 0) {
+      return data
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function fetchProductCatalogIndex(): Promise<ProductCatalogIndexResponse> {
   if (!catalogIndexPromise) {
-    catalogIndexPromise = request<ProductCatalogIndexResponse>(
-      '/products/catalog/index',
-      undefined,
-      15_000,
-    ).catch((err) => {
+    catalogIndexPromise = (async () => {
+      const staticIndex = await fetchStaticCatalogIndex()
+      if (staticIndex) return staticIndex
+      return request<ProductCatalogIndexResponse>(
+        '/products/catalog/index',
+        undefined,
+        15_000,
+      )
+    })().catch((err) => {
       catalogIndexPromise = null
       throw err
     })
