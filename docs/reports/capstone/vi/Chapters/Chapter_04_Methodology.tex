@@ -212,15 +212,15 @@ Nhằm hỗ trợ tương tác tự nhiên tại quầy, \texttt{Retail-AI-} tí
 \midrule
 Tập dữ liệu \& Phân chia & 4.850.000 dòng (848 cửa hàng train / 50 cửa hàng held-out); mô hình chính: \textbf{14.905.752 mẫu train / 2.004.786 mẫu validation}; mô hình backtest (trước $T_0$): \textbf{6.209.287 mẫu train / 2.051.590 mẫu validation} \\
 Hàm mục tiêu \& Đầu ra & 3 mô hình hồi quy phân vị độc lập (\code{objective="quantile"}) cho $q \in \{0{,}10;\,0{,}50;\,0{,}90\}$ trên 29 đặc trưng ($h=1\dots 7$) \\
-Tìm kiếm siêu tham số (7 cấu hình trên \code{valid\_pinball50}) &
-(1) \code{leaves=63, min\_leaf=200}: 0,24970 (234 vòng, 135\,s);
-(2) \textbf{\code{leaves=127, min\_leaf=200}}: \textbf{0,24959} (111 vòng, 107\,s -- \textbf{Chọn});
-(3) \code{leaves=255, min\_leaf=100}: 0,24971;
-(4) \code{leaves=255, min\_leaf=500, l2=10}: 0,24965;
-(5) \code{leaves=511, min\_leaf=300, ff=0.7}: 0,24964;
-(6) \code{leaves=127, min\_leaf=50, ff=0.6}: 0,24961;
-(7) \code{leaves=255, min\_leaf=200, max\_bin=511}: 0,24962 \\
-Số vòng dừng sớm \& Thời gian huấn luyện & \textbf{Mô hình đánh giá chính:} \code{q50} = 502 vòng (1.245\,s), \code{q10} = 677 vòng (1.343\,s), \code{q90} = 310 vòng (960\,s). \textbf{Mô hình backtest:} \code{bt\_q50} = 291 vòng (406\,s), \code{bt\_q10} = 257 vòng (355\,s), \code{bt\_q90} = 270 vòng (359\,s). \textbf{Huấn luyện lại toàn tập:} \code{q50} = 552 vòng (1.013\,s), \code{q10} = 744 vòng (1.169\,s), \code{q90} = 341 vòng (642\,s) \\
+Tìm kiếm siêu tham số (7 cấu hình trên \code{valid_pinball50}) &
+(1) \code{leaves=63, min_leaf=200}: 0,24970 (234 vòng, 135\,s);
+(2) \textbf{\code{leaves=127, min_leaf=200}}: \textbf{0,24959} (111 vòng, 107\,s -- \textbf{Chọn});
+(3) \code{leaves=255, min_leaf=100}: 0,24971;
+(4) \code{leaves=255, min_leaf=500, l2=10}: 0,24965;
+(5) \code{leaves=511, min_leaf=300, ff=0.7}: 0,24964;
+(6) \code{leaves=127, min_leaf=50, ff=0.6}: 0,24961;
+(7) \code{leaves=255, min_leaf=200, max_bin=511}: 0,24962 \\
+Số vòng dừng sớm \& Thời gian huấn luyện & \textbf{Mô hình đánh giá chính:} \code{q50} = 502 vòng (1.245\,s), \code{q10} = 677 vòng (1.343\,s), \code{q90} = 310 vòng (960\,s). \textbf{Mô hình backtest:} \code{bt_q50} = 291 vòng (406\,s), \code{bt_q10} = 257 vòng (355\,s), \code{bt_q90} = 270 vòng (359\,s). \textbf{Huấn luyện lại toàn tập:} \code{q50} = 552 vòng (1.013\,s), \code{q10} = 744 vòng (1.169\,s), \code{q90} = 341 vòng (642\,s) \\
 Môi trường \& Khả năng tái lập & Chạy trên Kaggle CPU (\code{ops_chest/ml/kaggle/train_frn.py}); phân chia cửa hàng và kiểm định chéo 2 nếp cố định danh sách 50 cửa hàng (Phụ lục~C); độ quan trọng đặc trưng lưu tại \code{importance_q50} \\
 \bottomrule
 \end{tabularx}
@@ -235,12 +235,12 @@ Môi trường \& Khả năng tái lập & Chạy trên Kaggle CPU (\code{ops_ch
 \toprule
 \textbf{Tham số / Ngưỡng} & \textbf{Giá trị Chọn} & \textbf{Cơ sở Lựa chọn Định lượng / Lý thuyết} \\
 \midrule
-Ngưỡng cỡ cửa hàng \& biến thể \texttt{B-Gate} & \code{size_cut = 30}, \code{ewma_sigma} & Tìm kiếm lưới 12 ứng viên ($\{\text{sym}, \text{split}, \text{ewma\_sigma}\}$ $\times$ $\{\text{None}, 30, 50, 75\}$): đạt cực đại hàm mục tiêu lợi nhuận \textbf{0,38984} tại \code{ewma_sigma + size_cut=30} (so với 0,30202 khi không cắt hoặc cắt 50/75, và 0,17303 ở \code{sym}) \\
-Sàn mức phục vụ Newsvendor ($SL_{\text{floor}}$) & 0,95 (hút khách), 0,90 (ABC-A), 0,50 (khác) & Phân tích ablation \code{no_floor} trên 20 cửa hàng FRN: bỏ sàn làm lợi nhuận đảo từ $+5{,}46\%$ xuống \textbf{$-0{,}54\%$} và tỷ lệ OOS vọt từ 14,44\% lên \textbf{22,12\%} \\
+Ngưỡng cỡ cửa hàng \& biến thể \texttt{B-Gate} & \texttt{size\_cut=30}, \texttt{ewma\_sigma} & Tìm kiếm lưới 12 ứng viên (\{\texttt{sym}, \texttt{split}, \texttt{ewma\_sigma}\} $\times$ \{\texttt{None}, 30, 50, 75\}): đạt cực đại hàm mục tiêu lợi nhuận \textbf{0,38984} tại \texttt{ewma\_sigma} + \texttt{size\_cut=30} (so với 0,30202 khi không cắt hoặc cắt 50/75, và 0,17303 ở \texttt{sym}) \\
+Sàn mức phục vụ Newsvendor ($SL_{\text{floor}}$) & 0,95 (hút khách), 0,90 (ABC-A), 0,50 (khác) & Phân tích ablation \texttt{no\_floor} trên 20 cửa hàng FRN: bỏ sàn làm lợi nhuận đảo từ $+5{,}46\%$ xuống \textbf{$-0{,}54\%$} và tỷ lệ OOS vọt từ 14,44\% lên \textbf{22,12\%} \\
 Hệ số quy đổi đơn vị FRN & $K = 10$ & Đưa trung vị cầu SKU từ 0,85 lên 8,51 đơn vị/ngày, giảm sàn $\text{CV}_{\text{Poisson}}$ từ 1,084 xuống 0,343 và tránh sai số làm tròn lô FEFO \\
 Ngưỡng SNR âm thanh (\texttt{Retail-AI-}) & Bỏ qua $\ge 28$\,dB; cứu hộ $< 13$\,dB & Phân tách mic sạch (tránh lọc chồng làm méo giọng, hạ chi phí CPU từ 609\,ms xuống 30,9\,ms) khỏi mức nhiễu siêu thị 12\,dB \\
 Ngưỡng Fast-Path Thị giác & $\text{sim}_1 \ge 0{,}82$, $m \ge 0{,}08$ ($\ge 0{,}92$ nếu trùng dòng) & Toàn bộ ảnh OOD thực có $\text{sim}_1 \le 0{,}588 < 0{,}72$; cổng trùng dòng chuyển các mã đồng mẫu sang Hybrid VLM tránh nhầm dung tích \\
-TTL cầu nối liên Agent & \code{TTL = 300\,s} & Cân bằng giữa độ mới của tồn kho/giảm giá FEFO và tải truy vấn; quá hạn tự động fail-closed về cảnh báo snapshot \\
+TTL cầu nối liên Agent & \texttt{TTL = 300\,s} & Cân bằng giữa độ mới của tồn kho/giảm giá FEFO và tải truy vấn; quá hạn tự động fail-closed về cảnh báo snapshot \\
 \bottomrule
 \end{tabularx}
 \end{table}

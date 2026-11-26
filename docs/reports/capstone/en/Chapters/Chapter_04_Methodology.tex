@@ -200,15 +200,15 @@ Table~\ref{tab:lgbm_training_setup} documents the complete LightGBM~v3 training 
 \midrule
 Dataset \& Sample Counts & 4,850,000 rows (848 train / 50 held-out stores); main evaluation model: \textbf{14,905,752 train / 2,004,786 validation rows}; pre-$T_0$ backtest model: \textbf{6,209,287 train / 2,051,590 validation rows} \\
 Objective \& Quantiles & Three independent quantile regressors (\code{objective="quantile"}) for $q \in \{0.10, 0.50, 0.90\}$ over 29 features ($h=1\dots 7$) \\
-Hyperparameter Grid (7 candidates on \code{valid\_pinball50}) &
-(1) \code{leaves=63, min\_leaf=200}: 0.24970 (234 rounds, 135\,s);
-(2) \textbf{\code{leaves=127, min\_leaf=200}}: \textbf{0.24959} (111 rounds, 107\,s -- \textbf{Selected});
-(3) \code{leaves=255, min\_leaf=100}: 0.24971;
-(4) \code{leaves=255, min\_leaf=500, l2=10}: 0.24965;
-(5) \code{leaves=511, min\_leaf=300, ff=0.7}: 0.24964;
-(6) \code{leaves=127, min\_leaf=50, ff=0.6}: 0.24961;
-(7) \code{leaves=255, min\_leaf=200, max\_bin=511}: 0.24962 \\
-Early-Stopped Rounds \& Training Time & \textbf{Main eval fit:} \code{q50} = 502 rounds (1,245\,s), \code{q10} = 677 rounds (1,343\,s), \code{q90} = 310 rounds (960\,s). \textbf{Backtest fit:} \code{bt\_q50} = 291 rounds (406\,s), \code{bt\_q10} = 257 rounds (355\,s), \code{bt\_q90} = 270 rounds (359\,s). \textbf{Full retrain:} \code{q50} = 552 (1,013\,s), \code{q10} = 744 (1,169\,s), \code{q90} = 341 (642\,s) \\
+Hyperparameter Grid (7 candidates on \code{valid_pinball50}) &
+(1) \code{leaves=63, min_leaf=200}: 0.24970 (234 rounds, 135\,s);
+(2) \textbf{\code{leaves=127, min_leaf=200}}: \textbf{0.24959} (111 rounds, 107\,s -- \textbf{Selected});
+(3) \code{leaves=255, min_leaf=100}: 0.24971;
+(4) \code{leaves=255, min_leaf=500, l2=10}: 0.24965;
+(5) \code{leaves=511, min_leaf=300, ff=0.7}: 0.24964;
+(6) \code{leaves=127, min_leaf=50, ff=0.6}: 0.24961;
+(7) \code{leaves=255, min_leaf=200, max_bin=511}: 0.24962 \\
+Early-Stopped Rounds \& Training Time & \textbf{Main eval fit:} \code{q50} = 502 rounds (1,245\,s), \code{q10} = 677 rounds (1,343\,s), \code{q90} = 310 rounds (960\,s). \textbf{Backtest fit:} \code{bt_q50} = 291 rounds (406\,s), \code{bt_q10} = 257 rounds (355\,s), \code{bt_q90} = 270 rounds (359\,s). \textbf{Full retrain:} \code{q50} = 552 (1,013\,s), \code{q10} = 744 (1,169\,s), \code{q90} = 341 (642\,s) \\
 Environment \& Reproducibility & Kaggle CPU runner (\code{ops_chest/ml/kaggle/train_frn.py}); fixed 50-store 2-fold CV split (Appendix~C); gain importances logged in \code{importance_q50} \\
 \bottomrule
 \end{tabularx}
@@ -223,12 +223,12 @@ Environment \& Reproducibility & Kaggle CPU runner (\code{ops_chest/ml/kaggle/tr
 \toprule
 \textbf{Parameter / Threshold} & \textbf{Selected Value} & \textbf{Quantitative / Theoretical Justification} \\
 \midrule
-\texttt{B-Gate} store-size cut \& variance variant & \code{size_cut = 30}, \code{ewma_sigma} & 12-candidate grid search ($\{\text{sym}, \text{split}, \text{ewma\_sigma}\}$ $\times$ $\{\text{None}, 30, 50, 75\}$): global maximum profit objective \textbf{0.38984} at \code{ewma_sigma + size_cut=30} (vs.\ 0.30202 at None/50/75 and 0.17303 for \code{sym}) \\
-Newsvendor service-level floors ($SL_{\text{floor}}$) & 0.95 (traffic), 0.90 (ABC-A), 0.50 (other) & \code{no_floor} ablation on 20 FRN stores: removing floors flips profit from $+5.46\%$ to \textbf{$-0.54\%$} and spikes OOS from 14.44\% to \textbf{22.12\%} \\
+\texttt{B-Gate} store-size cut \& variance variant & \texttt{size\_cut=30}, \texttt{ewma\_sigma} & 12-candidate grid search (\{\texttt{sym}, \texttt{split}, \texttt{ewma\_sigma}\} $\times$ \{\texttt{None}, 30, 50, 75\}): global maximum profit objective \textbf{0.38984} at \texttt{ewma\_sigma} + \texttt{size\_cut=30} (vs.\ 0.30202 at None/50/75 and 0.17303 for \texttt{sym}) \\
+Newsvendor service-level floors ($SL_{\text{floor}}$) & 0.95 (traffic), 0.90 (ABC-A), 0.50 (other) & \texttt{no\_floor} ablation on 20 FRN stores: removing floors flips profit from $+5.46\%$ to \textbf{$-0.54\%$} and spikes OOS from 14.44\% to \textbf{22.12\%} \\
 FRN unit scaling factor & $K = 10$ & Maps median SKU velocity from 0.85 to 8.51 units/day, cutting Poisson floor CV from 1.084 to 0.343 and limiting FEFO rounding error \\
 Speech SNR thresholds (\texttt{Retail-AI-}) & Bypass $\ge 28$\,dB; rescue $< 13$\,dB & Separates clean mics (avoiding double-filtering distortion; CPU drops 609\,ms $\to$ 30.9\,ms) from 12\,dB supermarket noise \\
 Visual Fast-Path thresholds & $\text{sim}_1 \ge 0.82$, $m \ge 0.08$ ($\ge 0.92$ sibling) & All real OOD photos scored $\text{sim}_1 \le 0.588 < 0.72$; sibling guard escalates identical-layout sizes to Hybrid VLM \\
-Bridge freshness TTL & \code{TTL = 300\,s} & Balances stock/markdown freshness against polling overhead; expires fail-closed to static snapshot caveats \\
+Bridge freshness TTL & \texttt{TTL = 300\,s} & Balances stock/markdown freshness against polling overhead; expires fail-closed to static snapshot caveats \\
 \bottomrule
 \end{tabularx}
 \end{table}
