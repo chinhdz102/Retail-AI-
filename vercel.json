@@ -8,7 +8,7 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 60,
-      "excludeFiles": "{apps/**,docs/**,tests/**,scripts/**,.venv/**,.github/**,*.md,*.pdf,*.log,data/*.jsonl,data/ops_chest_frn/**,data/models/gipformer1.5-68M-rnnt/**,data/models/speech-enhancement/**,data/models/turn-detection/**,data/models/product-vision/*.tflite,data/models/product-vision/*.bin,data/*.png,data/*.svg,data/*.csv}"
+      "excludeFiles": "{apps/**,docs/**,tests/**,scripts/**,.venv/**,*.md,data/ops_chest_frn/**,data/models/gipformer*/**,data/models/speech-enhancement/**,data/models/turn-detection/**,data/models/product-vision/*.tflite,data/*.png,data/*.svg,data/*.csv}"
     }
   },
   "headers": [
