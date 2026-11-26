@@ -7,6 +7,7 @@ import hmac
 import importlib.util
 import json
 import logging
+import mimetypes
 import os
 import re
 import unicodedata
@@ -15,6 +16,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta, timezone
+from pathlib import Path
 from time import perf_counter
 from uuid import UUID, uuid4
 
@@ -22,7 +24,7 @@ import anyio
 import asyncpg
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 
 from backend.api.schemas import (
     AgentRespondRequest,
@@ -514,8 +516,15 @@ class _ObservabilityAndRateLimitMiddleware:
         method = scope.get("method", "")
 
         # Enforce per-IP sliding-window rate limiting in production while keeping
-        # local development/benchmarks unthrottled.
-        if settings.app_env.casefold() in {"production", "prod"} and path != "/health":
+        # local development/benchmarks and static SPA assets unthrottled.
+        is_static_asset = path == "/catalog-index.json" or path.startswith(
+            ("/assets/", "/avatars/", "/vad/")
+        )
+        if (
+            settings.app_env.casefold() in {"production", "prod"}
+            and path != "/health"
+            and not is_static_asset
+        ):
             client = scope.get("client")
             client_ip = client[0] if client else "unknown"
             bucket = _rate_limit_buckets[client_ip]
@@ -578,15 +587,15 @@ class _StripApiPrefixMiddleware:
         if scope.get("type") in {"http", "websocket"}:
             path = scope.get("path") or ""
             if path == "/api":
-                scope = {**scope, "path": "/"}
+                scope = {**scope, "path": "/", "_api_prefixed": True}
             elif path.startswith("/api/"):
-                scope = {**scope, "path": path[4:]}
+                scope = {**scope, "path": path[4:], "_api_prefixed": True}
             raw_path = scope.get("raw_path")
             if isinstance(raw_path, (bytes, bytearray)):
                 if raw_path == b"/api":
-                    scope = {**scope, "raw_path": b"/"}
+                    scope = {**scope, "raw_path": b"/", "_api_prefixed": True}
                 elif raw_path.startswith(b"/api/"):
-                    scope = {**scope, "raw_path": bytes(raw_path[4:])}
+                    scope = {**scope, "raw_path": bytes(raw_path[4:]), "_api_prefixed": True}
         await self.app(scope, receive, send)
 
 
@@ -16393,4 +16402,73 @@ async def stream_synthesis_ticket(
             "X-TTS-Provider": provider,
             "X-TTS-Model": model,
         },
+    )
+
+
+mimetypes.add_type("application/wasm", ".wasm")
+mimetypes.add_type("application/javascript", ".mjs")
+mimetypes.add_type("application/octet-stream", ".onnx")
+mimetypes.add_type("image/webp", ".webp")
+
+_API_ROUTE_PREFIXES = (
+    "health",
+    "sessions",
+    "agent",
+    "audio",
+    "products",
+    "payments",
+    "support",
+    "docs",
+    "redoc",
+    "openapi.json",
+)
+
+
+def _resolve_frontend_dist_dir() -> Path | None:
+    configured = (os.getenv("FRONTEND_DIST_DIR") or "").strip()
+    if configured:
+        candidate = Path(configured).resolve()
+        if (candidate / "index.html").is_file():
+            return candidate
+    return None
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def serve_frontend_spa(full_path: str, request: Request) -> FileResponse:
+    """Serve built Vite SPA assets in Docker / single-container deployments."""
+    if request.scope.get("_api_prefixed"):
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    dist_dir = _resolve_frontend_dist_dir()
+    if dist_dir is None:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    cleaned = full_path.lstrip("/")
+    first_segment = cleaned.split("/", 1)[0]
+    if first_segment in _API_ROUTE_PREFIXES:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    if cleaned:
+        try:
+            target = (dist_dir / cleaned).resolve()
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=404, detail="Not Found") from exc
+        if target.is_relative_to(dist_dir) and target.is_file():
+            media_type, _ = mimetypes.guess_type(str(target))
+            if cleaned.startswith(("assets/", "avatars/", "vad/")):
+                cache_control = "public, max-age=31536000, immutable"
+            elif cleaned == "catalog-index.json":
+                cache_control = "public, max-age=300, stale-while-revalidate=3600"
+            else:
+                cache_control = "public, max-age=3600"
+            return FileResponse(
+                target,
+                media_type=media_type,
+                headers={"Cache-Control": cache_control},
+            )
+
+    return FileResponse(
+        dist_dir / "index.html",
+        media_type="text/html; charset=utf-8",
+        headers={"Cache-Control": "no-cache"},
     )

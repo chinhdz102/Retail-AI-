@@ -1,5 +1,45 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: retail-ai-kiosk:latest
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "8000"
+      FRONTEND_DIST_DIR: /app/static
+      REDIS_URL: redis://redis:6379/0
+      CATALOG_REPOSITORY: ${CATALOG_REPOSITORY:-snapshot}
+      CATALOG_SNAPSHOT_PATH: ${CATALOG_SNAPSHOT_PATH:-data/thanh_lam_products.json}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 20s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - retail-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   postgres:
+    profiles: ["postgres"]
     image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
@@ -14,19 +54,6 @@ services:
       test: ["CMD-SHELL", "pg_isready -U retail -d retail"]
       interval: 5s
       timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - retail-redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
       retries: 10
 
 volumes:

@@ -659,3 +659,45 @@ async def test_serverless_session_token_and_signed_speech_ticket_survive_contain
             assert consumed["text"] == "Xin chào"
     finally:
         api.app.dependency_overrides.pop(api.get_settings, None)
+
+
+@pytest.mark.asyncio
+async def test_docker_spa_static_serving_headers_and_path_traversal_guard(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "vad" / "onnx").mkdir(parents=True)
+    (dist / "index.html").write_text("<!doctype html><div id='app'>Mai</div>", encoding="utf-8")
+    (dist / "catalog-index.json").write_text('{"total":1,"rows":[]}', encoding="utf-8")
+    (dist / "vad" / "onnx" / "ort.wasm").write_bytes(b"\x00asm\x01\x00\x00\x00")
+    (tmp_path / "secret.txt").write_text("top-secret", encoding="utf-8")
+
+    monkeypatch.setenv("FRONTEND_DIST_DIR", str(dist))
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=20
+    ) as client:
+        root = await client.get("/")
+        assert root.status_code == 200
+        assert "Mai" in root.text
+        assert "no-cache" in root.headers.get("cache-control", "")
+
+        idx = await client.get("/catalog-index.json")
+        assert idx.status_code == 200
+        assert idx.json()["total"] == 1
+
+        wasm = await client.get("/vad/onnx/ort.wasm")
+        assert wasm.status_code == 200
+        assert "application/wasm" in wasm.headers.get("content-type", "")
+        assert "immutable" in wasm.headers.get("cache-control", "")
+
+        # Path traversal cannot escape FRONTEND_DIST_DIR
+        escape = await client.get("/..%2Fsecret.txt")
+        assert "top-secret" not in escape.text
+
+        # Unknown /api route still returns 404 JSON rather than index.html
+        missing_api = await client.get("/api/products/nonexistent-route-xyz")
+        assert missing_api.status_code == 404
+        missing_unlisted_api = await client.get("/api/does-not-exist-xyz")
+        assert missing_unlisted_api.status_code == 404
