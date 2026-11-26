@@ -7,18 +7,21 @@ from __future__ import annotations
 import argparse
 import ast
 import asyncio
-from datetime import datetime, timezone
 import hashlib
 import json
-from pathlib import Path
 import sys
 import time
 import traceback
+from datetime import UTC, datetime
+from pathlib import Path
 
 from backend.config import Settings
 from backend.products.repository import get_product_repository
 from backend.services.customer_consultation import (
-    consult_customer, ConsultationDecision, GroundedSelection, ConsultationReview,
+    ConsultationDecision,
+    ConsultationReview,
+    GroundedSelection,
+    consult_customer,
 )
 from backend.services.groq import GroqService
 from backend.services.sessions import InMemorySessionStore
@@ -186,7 +189,7 @@ async def main():
         artifact.write('{}')
     report = {
         'kind': 'direct consultation authored development diagnostic',
-        'created_at': datetime.now(timezone.utc).isoformat(),
+        'created_at': datetime.now(UTC).isoformat(),
         'source_sha256': hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
         'rows': [],
     }
@@ -241,8 +244,9 @@ async def main():
 
     async def traced(messages, **kwargs):
         nonlocal rate_limited
+        response_format = kwargs.get('response_format') or {}
         row = {
-            'stage': (kwargs.get('response_format') or {}).get('json_schema', {}).get('name', 'chat'),
+            'stage': response_format.get('json_schema', {}).get('name', 'chat'),
             'context': messages, 'max_tokens': kwargs.get('max_tokens'),
         }
         calls.append(row)
@@ -297,8 +301,12 @@ async def main():
                 sys.settrace(previous_trace)
             row['elapsed_s'] = round(time.perf_counter() - started, 3)
             save()
-            print(json.dumps({key: value for key, value in row.items()
-                              if key not in {'calls', 'local_validation_events'}}, ensure_ascii=False), flush=True)
+            summary_row = {
+                key: value
+                for key, value in row.items()
+                if key not in {'calls', 'local_validation_events'}
+            }
+            print(json.dumps(summary_row, ensure_ascii=False), flush=True)
             if rate_limited:
                 report['stop_reason'] = 'Rate limit/cooldown observed; no next prompt attempted.'
                 break

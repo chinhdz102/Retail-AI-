@@ -639,6 +639,23 @@ def _translate_cjk_retail_terms(text: str, *, strip_leftover_cjk: bool = False) 
 @lru_cache(maxsize=4096)
 def _query_terms(query: str) -> tuple[tuple[str, ...], bool, bool]:
     translated_query = _translate_cjk_retail_terms(query, strip_leftover_cjk=True)
+    # Fix common Vietnamese shopper typos & protect native homographs BEFORE accent folding
+    # ("ăn vặt" != "thực vật", "đói" != "bộ đôi", "nhỏ" != "nho khô", "tương tự" != "tương ớt").
+    translated_query = re.sub(r"\btương\s+ót\b", "tương ớt", translated_query, flags=re.I)
+    translated_query = re.sub(r"\bsửa\s+tươi\b", "sữa tươi", translated_query, flags=re.I)
+    translated_query = re.sub(r"\b(?:ko|k)\s+đường\b", "không đường", translated_query, flags=re.I)
+    translated_query = re.sub(r"\b(?:đồ\s+)?ăn\s+vặt\b", "snack", translated_query, flags=re.I)
+    translated_query = re.sub(r"\btương\s+tự\b", " ", translated_query, flags=re.I)
+    translated_query = re.sub(r"\b(?:đang\s+)?đói\b", " ", translated_query, flags=re.I)
+    translated_query = re.sub(
+        r"\btổng(?:\s+(?:tiền|cộng|hết))?\b", " ", translated_query, flags=re.I
+    )
+    translated_query = re.sub(
+        r"(?<!trái\s)(?<!quả\s)\bnhỏ(?=\s+(?:hơn|nhất|gọn|xíu)\b|\s*$|[.,?!])",
+        " small ",
+        translated_query,
+        flags=re.I,
+    )
     if _CJK_CHAR_RE.search(query):
         # Avoid turning Chinese "无糖鲜牛奶" into "zero" which only matches "Coca Zero" titles.
         translated_query = re.sub(r"\bkhông\s+đường\b", " ", translated_query, flags=re.I)
@@ -705,6 +722,8 @@ def _query_terms(query: str) -> tuple[tuple[str, ...], bool, bool]:
             protected_tokens.add("cung")
         elif tok == "san" and prev_tok == "lau":
             protected_tokens.add("san")
+        elif tok in {"my", "mi"} and prev_tok == "banh":
+            protected_tokens.add(tok)
         elif tok == "tui" and (
             next_tok in {"lon", "nho", "to", "cham", "refill"}
             or (bool(next_tok) and next_tok[0].isdigit())
@@ -1070,6 +1089,19 @@ def _score_prepared(
         score += 5.0
         if "bim" in title_words:
             score += 2.0
+    if "banh" in terms and "bot" not in terms:
+        cat_joined = " ".join(candidate.category_segment_texts)
+        if "bot" in title_words and (
+            candidate.title_space_text.startswith("bot ")
+            or "bot nau an" in cat_joined
+        ):
+            score -= 6.0
+        if ("mi" in terms or "my" in terms) and (
+            "banh mi" in candidate.title_space_text
+            or "banh my" in candidate.title_space_text
+            or "sandwich" in candidate.title_space_text
+        ):
+            score += 4.5
 
     if pq.wants_small:
         preferred_measure = (

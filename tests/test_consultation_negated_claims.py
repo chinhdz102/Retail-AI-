@@ -1,6 +1,8 @@
 """Evidence warnings must not become false claims or authorize other promises."""
 import pytest
-from backend.services.customer_consultation import ConsultationReply,ConsultationDecision,_render
+
+from backend.services.customer_consultation import ConsultationDecision, ConsultationReply, _render
+
 
 @pytest.mark.parametrize('text',[
  'Không thể khẳng định loại này không gây kích ứng; nên xem thành phần trên nhãn.',
@@ -27,7 +29,11 @@ def test_narrow_evidence_warning_allowed(text):
 ])
 def test_affirmative_claims_and_mixed_scopes_remain_rejected(text):
  with pytest.raises(ValueError,match='Unsupported'):
-  _render(ConsultationReply(text=text+' Bạn có thể xem quy cách.'),[],ConsultationDecision(action='advise'))
+  _render(
+   ConsultationReply(text=text + ' Bạn có thể xem quy cách.'),
+   [],
+   ConsultationDecision(action='advise'),
+  )
 
 
 @pytest.mark.parametrize('condition', ['mụn', 'viêm da'])

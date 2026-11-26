@@ -2206,6 +2206,23 @@ def _non_supermarket_out_of_catalog_requested(text: str) -> bool:
         normalized,
     ):
         return False
+    raw_lower = text.casefold()
+    pet_food_requested = bool(
+        re.search(
+            r"\b(?:thức ăn|đồ ăn|pate|cát vệ sinh)\s+(?:hạt\s+)?(?:cho\s+)?"
+            r"(?:chó|mèo|thú cưng|chó con|mèo con)\b",
+            raw_lower,
+        )
+        or re.search(
+            r"\b(?:thuc an|do an|pate|cat ve sinh)\s+(?:hat\s+)?"
+            r"(?:cho\s+(?:cho|meo|thu cung|cho con|meo con)|meo|thu cung|cho con|meo con)\b"
+            r"|\b(?:dog food|cat food|pet food|cat litter)\b"
+            r"|\bthuc an\s+hat\b.{0,30}\b(?:cho|meo|thu cung)\b",
+            normalized,
+        )
+    )
+    if pet_food_requested:
+        return True
     return bool(
         re.search(
             r"\b(?:iphone|macbook|ipad|samsung galaxy|dien thoai|smartphone|laptop|"
@@ -2215,10 +2232,7 @@ def _non_supermarket_out_of_catalog_requested(text: str) -> bool:
             r"(?<!bang )(?<!tren )(?<!di )(?<!len )(?:xe may|o to)|"
             r"ve may bay|ve tau|dat phong khach san|tour du lich|"
             r"may loc khong khi|may dieu hoa|dieu hoa nhiet do|may lanh|tu lanh|"
-            r"noi chien khong dau|"
-            r"(?:thuc an|do an|pate|cat ve sinh)\s+(?:hat\s+)?(?:cho\s+)?"
-            r"(?:cho|meo|thu cung|cho con|meo con)|"
-            r"thuc an\s+hat\b.{0,30}\b(?:cho|meo|thu cung))\b",
+            r"noi chien khong dau)\b",
             normalized,
         )
     )
@@ -4356,12 +4370,27 @@ def _localized_location_candidates(
 def _localized_price_candidates(
     products: tuple[ProductSnapshot, ...],
     language: LanguageCode,
+    request_text: str = "",
 ) -> str:
     listed = products[:5]
     snapshot_dates = sorted(
         {product.data_timestamp.date().strftime("%d/%m/%Y") for product in listed}
     )
     snapshot_date = ", ".join(snapshot_dates)
+    norm_req = _normalize_request_text(request_text) if request_text else ""
+    asked_single_unit = bool(
+        norm_req
+        and re.search(r"\b(?:1|mot|le|tung)\s+(?:chai|lon|hop|goi|bich|tui)\b", norm_req)
+        and not re.search(r"\b(?:thung|loc|carton|case)\b", norm_req)
+    )
+    all_bulk_packs = bool(
+        listed
+        and all(
+            _normalize_request_text(p.uom or "") in {"thung", "loc", "goi 6"}
+            or bool(re.search(r"\bthung\b", _normalize_request_text(p.name)))
+            for p in listed
+        )
+    )
     details: list[str] = []
     for product in listed:
         formatted_price = f"{product.price_vnd:,}".replace(",", ".")
@@ -4370,6 +4399,18 @@ def _localized_price_candidates(
             detail = f"{product.name}: {formatted_price}đ"
             if unit:
                 detail += f"/{unit.casefold()}"
+            if asked_single_unit and all_bulk_packs:
+                pack_match = re.search(
+                    r"\bthung\s+(\d{1,2})\s+(chai|lon|hop|goi)\b",
+                    _normalize_request_text(product.name),
+                )
+                if pack_match:
+                    cnt = int(pack_match.group(1))
+                    unit_word = pack_match.group(2)
+                    if cnt >= 2:
+                        approx = round(product.price_vnd / cnt / 100) * 100
+                        approx_fmt = f"{approx:,}".replace(",", ".")
+                        detail += f" (~{approx_fmt}đ/{unit_word} nếu tính chia theo thùng)"
             if (
                 product.sale_price_vnd is not None
                 and product.list_price_vnd is not None
@@ -4411,8 +4452,14 @@ def _localized_price_candidates(
                 else "。价格来自目录快照；门店实际价格可能不同。"
             )
         )
+    vi_prefix = (
+        "Hiện trong catalog chỉ ghi nhận quy cách theo thùng "
+        "(chưa có mã giá bán lẻ từng chai/lon): "
+        if asked_single_unit and all_bulk_packs
+        else "Mình thấy các quy cách và giá tham khảo trong catalog: "
+    )
     return (
-        "Mình thấy các quy cách và giá tham khảo trong catalog: "
+        vi_prefix
         + "; ".join(details)
         + (
             f". Đây là giá tham khảo theo snapshot ngày {snapshot_date}. "
@@ -5669,6 +5716,14 @@ def _safe_product_image_url(value: str | None) -> str | None:
     if not cleaned or any(ch.isspace() or ord(ch) < 0x20 for ch in cleaned):
         return None
     if cleaned.startswith(("https://", "http://")):
+        if not cleaned.isascii():
+            from urllib.parse import quote, urlsplit, urlunsplit
+
+            parts = urlsplit(cleaned)
+            encoded_path = quote(parts.path, safe="/%:@!$&'()*+,;=-._~")
+            return urlunsplit(
+                (parts.scheme, parts.netloc, encoded_path, parts.query, parts.fragment)
+            )
         return cleaned
     return None
 
@@ -9663,7 +9718,7 @@ async def agent_respond(
             )
             session_store.set_last_grounded_product(request.session_id, None)
             multi_reply = (
-                _localized_price_candidates(candidates, request.language)
+                _localized_price_candidates(candidates, request.language, request.text)
                 if "price_vnd" in requested_fields
                 else (
                     _localized_location_candidates(candidates, request.language)
@@ -11240,43 +11295,95 @@ async def agent_respond_stream(
             collected: list[str] = []
             used_model = settings.effective_chat_model
             disconnected = False
-            try:
-                async for delta_text, model_name in groq.stream_chat(
-                    outcome.messages, max_tokens=200
-                ):
+            if outcome.direct_reply:
+                used_model = "consultation-fast-direct"
+                for chunk in _validated_text_chunks(outcome.direct_reply):
                     if await http_request.is_disconnected():
                         disconnected = True
                         return
-                    used_model = model_name
-                    clean_delta = delta_text.replace("**", "")
-                    if not clean_delta:
-                        continue
-                    collected.append(clean_delta)
+                    collected.append(chunk)
                     yield (
                         "event: delta\ndata: "
-                        + json.dumps(
-                            {"text": clean_delta}, ensure_ascii=False, separators=(",", ":")
-                        )
+                        + json.dumps({"text": chunk}, ensure_ascii=False, separators=(",", ":"))
                         + "\n\n"
                     )
-            except asyncio.CancelledError:
-                disconnected = True
-                raise
-            except (GroqProviderError, ValueError, RuntimeError, TimeoutError):
-                if not collected:
-                    used_model = "consultation-local-fallback"
-                    for chunk in _validated_text_chunks(outcome.fallback_text):
+            else:
+                try:
+                    opening_buf = ""
+                    opening_checked = False
+                    aborted_json_leak = False
+                    async for delta_text, model_name in groq.stream_chat(
+                        outcome.messages, max_tokens=220
+                    ):
                         if await http_request.is_disconnected():
                             disconnected = True
                             return
-                        collected.append(chunk)
+                        used_model = model_name
+                        clean_delta = delta_text.replace("**", "")
+                        if not clean_delta:
+                            continue
+                        if not opening_checked:
+                            opening_buf += clean_delta
+                            stripped_open = opening_buf.lstrip()
+                            if stripped_open and stripped_open[0] in {"{", "["}:
+                                aborted_json_leak = True
+                                break
+                            if len(stripped_open) >= 6:
+                                opening_checked = True
+                                collected.append(opening_buf)
+                                yield (
+                                    "event: delta\ndata: "
+                                    + json.dumps(
+                                        {"text": opening_buf},
+                                        ensure_ascii=False,
+                                        separators=(",", ":"),
+                                    )
+                                    + "\n\n"
+                                )
+                                opening_buf = ""
+                            continue
+                        collected.append(clean_delta)
                         yield (
                             "event: delta\ndata: "
                             + json.dumps(
-                                {"text": chunk}, ensure_ascii=False, separators=(",", ":")
+                                {"text": clean_delta}, ensure_ascii=False, separators=(",", ":")
                             )
                             + "\n\n"
                         )
+                    if not aborted_json_leak and opening_buf and not disconnected:
+                        if opening_buf.lstrip().startswith(("{", "[")):
+                            aborted_json_leak = True
+                        else:
+                            collected.append(opening_buf)
+                            yield (
+                                "event: delta\ndata: "
+                                + json.dumps(
+                                    {"text": opening_buf},
+                                    ensure_ascii=False,
+                                    separators=(",", ":"),
+                                )
+                                + "\n\n"
+                            )
+                    if aborted_json_leak and not collected:
+                        raise ValueError("Model leaked raw JSON instead of Vietnamese prose")
+                except asyncio.CancelledError:
+                    disconnected = True
+                    raise
+                except (GroqProviderError, ValueError, RuntimeError, TimeoutError):
+                    if not collected:
+                        used_model = "consultation-local-fallback"
+                        for chunk in _validated_text_chunks(outcome.fallback_text):
+                            if await http_request.is_disconnected():
+                                disconnected = True
+                                return
+                            collected.append(chunk)
+                            yield (
+                                "event: delta\ndata: "
+                                + json.dumps(
+                                    {"text": chunk}, ensure_ascii=False, separators=(",", ":")
+                                )
+                                + "\n\n"
+                            )
             if disconnected:
                 return
             final_text = re.sub(r"(\d)để\b", r"\1đ để", "".join(collected).strip())
@@ -13953,6 +14060,9 @@ def _explicit_product_knowledge_lookup_requested(text: str, record) -> bool:
     and ambiguous variants remain the knowledge controller's responsibility.
     """
     if is_recommendation_request(text):
+        return False
+    norm_pk = " ".join(_normalize_request_text(text).split())
+    if re.search(r"\b(?:chai|loai|goi|hop)\s+nho\s+hon\b|\btuong\s+tu\b", norm_pk):
         return False
     snapshot_fields = _requested_snapshot_fields(text)
     has_knowledge_attr = (

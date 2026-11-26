@@ -482,6 +482,7 @@ class StreamingConsultationPlan:
     memory: dict
     messages: list[dict[str, str]]
     fallback_text: str
+    direct_reply: str | None = None
 
 
 _STREAM_HIGH_RISK_DOMAINS = frozenset({
@@ -513,12 +514,13 @@ _STREAM_FILLER_TOKENS = frozenset({
     "cho", "minh", "toi", "em", "anh", "chi", "xem", "coi", "tim", "mua",
     "chon", "goi", "y", "tu", "van", "gioi", "thieu", "giup", "voi", "nhe",
     "nha", "a", "oi", "mai", "ban", "shop", "sieu", "thi", "cua", "hang",
-    "co", "khong", "loai", "nao", "cai", "mon", "san", "pham", "ngon", "tot",
+    "co", "khong", "ko", "khum", "loai", "nao", "cai", "mon", "san", "pham", "ngon", "tot",
     "nhat", "hon", "re", "dat", "tiet", "kiem", "gia", "bao", "nhieu", "dung",
     "hang", "ngay", "hien", "tai", "hom", "nay", "dang", "duoc", "khuyen",
     "giam", "uu", "dai", "la", "gi", "the", "sao", "muon", "can", "lay",
     "so", "sanh", "giua", "va", "hay", "hoac", "duoi", "tren", "tam", "khoang",
     "hoi", "nhi", "vay", "vang", "chu", "cung", "kia", "day", "do", "chung",
+    "nhung", "cac", "nua", "thoi", "ay", "dc",
 })
 
 
@@ -2043,12 +2045,17 @@ def _allowed(product: ProductSnapshot, plan: ConsultationDecision, search: Searc
     ):
         return False
     if plan.sugar != "any":
-        markers = ["khong duong", "zero", "sugar free", "unsweetened"]
+        markers = [
+            "khong duong", "zero", "sugar free", "unsweetened",
+            "khong calo", "k calo",
+        ]
         if plan.sugar == "less":
             markers += ["it duong", "less sugar", "low sugar"]
         leaf = normalize_category_text(
             (product.category_hierarchy or product.category).split(" > ")[-1]
         )
+        if "nuoc" in leaf or "tra" in leaf or "sua" in leaf:
+            markers.append("light")
         is_plain_water = leaf in {"nuoc tinh khiet", "nuoc khoang"} and not re.search(
             r"\b(?:ngot|duong|chanh|cam|dao|dau|nho|tao|vai|vi|sua|tra|siro|"
             r"tang luc|lemona|soda|muoi)\b",

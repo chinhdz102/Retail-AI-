@@ -37,7 +37,6 @@ from backend.services.customer_consultation import (
     _advice_followup,
     _allowed,
     _ambiguous_identity_question,
-    _batch_base_unit_dims,
     _explicit_sugar_level,
     _fast_path_single_category_plan,
     _local_fallback_text,
@@ -57,6 +56,26 @@ from backend.services.query_understanding import (
 )
 from backend.services.sessions import SessionRecord
 from backend.services.shopping_guidance import shopping_guidance
+from backend.services.streaming_multiturn import (
+    _READY_TO_EAT_NEED_RE,
+    build_plain_prompt_text,
+    filter_edible_candidates,
+    is_bulk_pack,
+    is_food_or_drink_need,
+    is_pure_situational_query,
+    prepare_multiturn_streaming,
+    prepare_special_turn1_streaming,
+    wants_bulk_pack,
+)
+
+_EXTENDED_BASKET_RE = re.compile(
+    r"\b(?:lien\s+hoan|chuyen\s+di|di\s+xa|cho\s+(?:hai|ba|bon|2|3|4|nhieu)\s+nguoi|"
+    r"nhom\s+ban|combo|bua\s+sang|an\s+sang|xem\s+phim|do\s+an\s+va\s+nuoc\s+uong)\b"
+)
+_ATTR_MODIFIER_STRIP_RE = re.compile(
+    r"\b(?:khong\s+duong|it\s+duong|giam\s+duong|it\s+ngot|khong\s+calo|"
+    r"it\s+calo|khong\s+co\s+gas|khong\s+gas|khong\s+cay|cay\s+nhat|protein\s+cao)\b"
+)
 
 _SINGLE_ITEM_SEASONING_RE = re.compile(
     r"\b(?:gia vi|sot uop|bot uop|goi gia vi|nuoc sot|nuoc cham|tuong ot|muoi cham)\b"
@@ -206,6 +225,21 @@ def _lean_streaming_product_card(
 def _clean_lexical_query(text: str) -> str:
     """Strip Vietnamese conversational fillers & budgets to isolate product keywords."""
     cleaned_native = _NATIVE_STREAM_OPENER_RE.sub(" ", text)
+    cleaned_native = re.sub(r"\btương\s+ót\b", "tương ớt", cleaned_native, flags=re.I)
+    cleaned_native = re.sub(r"\bsửa\s+tươi\b", "sữa tươi", cleaned_native, flags=re.I)
+    cleaned_native = re.sub(r"\b(?:ko|k)\s+đường\b", "không đường", cleaned_native, flags=re.I)
+    cleaned_native = re.sub(r"\b(?:đồ\s+)?ăn\s+vặt\b", "snack", cleaned_native, flags=re.I)
+    cleaned_native = re.sub(r"\btương\s+tự\b", " ", cleaned_native, flags=re.I)
+    cleaned_native = re.sub(r"\b(?:đang\s+)?đói\b", " ", cleaned_native, flags=re.I)
+    cleaned_native = re.sub(
+        r"\btổng(?:\s+(?:tiền|cộng|hết))?\b", " ", cleaned_native, flags=re.I
+    )
+    cleaned_native = re.sub(
+        r"(?<!trái\s)(?<!quả\s)\bnhỏ(?=\s+(?:hơn|nhất|gọn|xíu)\b|\s*$|[.,?!])",
+        " ",
+        cleaned_native,
+        flags=re.I,
+    )
     stripped = normalize_category_text(strip_retrieval_budget(cleaned_native))
     tokens = [
         tok
@@ -213,6 +247,11 @@ def _clean_lexical_query(text: str) -> str:
         if len(tok) >= 2 and tok not in _STREAM_FILLER_TOKENS
     ]
     return " ".join(tokens)
+
+
+def _strip_attribute_modifiers_for_lex(query: str) -> str:
+    cleaned = _ATTR_MODIFIER_STRIP_RE.sub(" ", query)
+    return " ".join(cleaned.split())
 
 
 def _focus_tokens_for_streaming(text: str, product_type: str | None = None) -> list[str]:
@@ -261,22 +300,19 @@ def _rank_streaming_candidates(
     focus_scores: dict[str, int] | None = None,
     cheaper_priority: bool = False,
 ) -> list[ProductSnapshot]:
-    """Order verified candidates by lexical fit, value/unit-price, or promo discount."""
+    """Order verified candidates by single-unit preference, lexical fit, value, or promo."""
     norm_text = normalize_category_text(text)
     promo_priority = bool(_PROMO_NEED_RE.search(norm_text))
     value_priority = bool(_STREAM_VALUE_RANK_RE.search(norm_text))
-    wants_bulk = bool(re.search(r"\b(?:thung|loc|si|so luong lon|gia dinh lon)\b", norm_text))
+    wants_bulk = wants_bulk_pack(text)
+    has_single_unit = any(not is_bulk_pack(item) for item in candidates)
     scores = focus_scores or {}
 
     def _sort_key(item: ProductSnapshot) -> tuple[int, int, float, float, int, str]:
         lex = -scores.get(item.product_id, 0)
         is_bulk_carton = (
             1
-            if (
-                not wants_bulk
-                and not value_priority
-                and re.search(r"\bthung\b", normalize_category_text(item.name))
-            )
+            if (not wants_bulk and has_single_unit and is_bulk_pack(item))
             else 0
         )
         discount = float(_product_discount_pct(item) or 0)
@@ -284,14 +320,14 @@ def _rank_streaming_candidates(
         unit_price = float(unit_info[0]) if unit_info is not None else float("inf")
         if cheaper_priority:
             return (
-                lex, is_bulk_carton, float(item.price_vnd), unit_price, item.price_vnd, item.name,
+                is_bulk_carton, lex, float(item.price_vnd), unit_price, item.price_vnd, item.name,
             )
         if value_priority:
-            return (lex, 0, unit_price, -discount, item.price_vnd, item.name)
+            return (is_bulk_carton, lex, unit_price, -discount, item.price_vnd, item.name)
         if promo_priority:
-            return (lex, 0, -discount, unit_price, item.price_vnd, item.name)
+            return (is_bulk_carton, lex, -discount, unit_price, item.price_vnd, item.name)
         has_strong_discount = 1.0 if discount >= 15.0 else 0.0
-        return (lex, is_bulk_carton, -has_strong_discount, -discount, item.price_vnd, item.name)
+        return (is_bulk_carton, lex, -has_strong_discount, -discount, item.price_vnd, item.name)
 
     return sorted(candidates, key=_sort_key)
 
@@ -307,24 +343,8 @@ def _build_streaming_plan_payload(
     plan_for_fallback: ConsultationDecision,
     mode: Literal["recommend", "compare", "promo", "basket"] = "recommend",
     budget_vnd: int | None = None,
+    extra_note: str = "",
 ) -> StreamingConsultationPlan:
-    force_base_dims = _batch_base_unit_dims([*primary_products, *related_products])
-    primary_facts = [
-        _lean_streaming_product_card(p, force_base_dims=force_base_dims)
-        for p in primary_products
-    ]
-    related_summary = [
-        {
-            k: v
-            for k, v in (
-                ("name", p.name),
-                ("price_vnd", p.price_vnd),
-                ("promotion", p.promotion),
-            )
-            if v
-        }
-        for p in related_products[:3]
-    ]
     excluded_terms = list(
         dict.fromkeys(
             term
@@ -335,64 +355,79 @@ def _build_streaming_plan_payload(
     )
     mode_hint = {
         "recommend": (
-            "Giải thích ngắn gọn vì sao sản phẩm nổi bật (primary_products) hợp nhu cầu "
-            "của khách dựa trên giá, khuyến mãi, quy cách hoặc đơn giá quy đổi."
+            "Giải thích ngắn gọn vì sao sản phẩm nổi bật trong phần SẢN PHẨM GỢI Ý CHÍNH "
+            "hợp nhu cầu của khách dựa trên giá, khuyến mãi, quy cách hoặc đơn giá quy đổi."
         ),
         "compare": (
-            "So sánh trực tiếp 2 sản phẩm trong primary_products về giá tham khảo, "
+            "So sánh trực tiếp 2 sản phẩm trong SẢN PHẨM GỢI Ý CHÍNH về giá tham khảo, "
             "quy cách/dung tích, đơn giá quy đổi và khuyến mãi để khách dễ chọn."
         ),
         "promo": (
-            "Giới thiệu nhanh các ưu đãi nổi bật hiện có trong catalog (primary_products "
-            "và other_catalog_products) theo mức giảm giá và giá tham khảo."
+            "Giới thiệu nhanh các ưu đãi nổi bật hiện có trong danh sách theo mức giảm giá "
+            "và giá tham khảo."
         ),
         "basket": (
-            "Gợi ý gọn bộ sản phẩm trong primary_products theo đúng nhu cầu và ngân sách "
-            "(nêu đúng tổng tiền basket_total_vnd nếu có)."
+            "Gợi ý gọn bộ sản phẩm trong SẢN PHẨM GỢI Ý CHÍNH theo đúng nhu cầu và ngân sách "
+            "(nêu đúng tổng tiền đã tính sẵn nếu có)."
         ),
     }[mode]
     exclusion_rule = (
-        " (5) Khách có yêu cầu tránh/loại trừ (excluded_requested): chỉ giới thiệu món phù hợp "
-        "và nhắc nhẹ khách kiểm tra thêm nhãn/gói gia vị trên bao bì."
+        " (5) Khách có yêu cầu tránh/loại trừ: chỉ giới thiệu món phù hợp và nhắc nhẹ khách "
+        "kiểm tra thêm nhãn/gói gia vị trên bao bì."
         if excluded_terms
         else ""
     )
     system_prompt = (
-        "Bạn là Mai, trợ lý siêu thị thân thiện. Trả lời trực tiếp bằng tiếng Việt tự nhiên, "
-        "ngắn gọn trong 2–3 câu liền mạch (không gạch đầu dòng, không markdown **). "
+        "Bạn là Mai, trợ lý siêu thị thân thiện. CHỈ trả lời bằng văn xuôi tiếng Việt tự nhiên, "
+        "ngắn gọn trong 2–3 câu liền mạch (TUYỆT ĐỐI KHÔNG xuất JSON, KHÔNG dùng ký tự { } [ ], "
+        "không gạch đầu dòng, không markdown **). "
         "XƯNG HÔ BẮT BUỘC: luôn xưng 'mình' và gọi khách là 'bạn' nhất quán trong toàn bộ câu "
         "(TUYỆT ĐỐI KHÔNG xưng 'em' hay 'tôi', KHÔNG viết 'Chào bạn, em...'; hãy mở đầu tự "
         "nhiên như 'Dạ, mình gợi ý...' hoặc 'Với nhu cầu này, mình gợi ý...'). "
-        "QUY TẮC: (1) CHỈ nêu tên sản phẩm, giá VND, khuyến mãi, quy cách, đơn giá có thật "
-        "trong JSON. (2) " + mode_hint + " "
-        "LUÔN giới thiệu ĐÚNG sản phẩm trong primary_products làm gợi ý chính trước tiên "
-        "(KHÔNG lấy sản phẩm từ other_catalog_products làm gợi ý chính để khớp thẻ trên màn hình). "
-        "(3) Nếu có other_catalog_products, nhắc nhẹ 1 ý rằng bên dưới còn các mẫu khác để chọn. "
+        "QUY TẮC: (1) CHỈ nêu ĐÚNG tên sản phẩm, ĐÚNG giá VND đã định dạng (không tự thêm bớt "
+        "số 0), khuyến mãi, quy cách, đơn giá có thật trong ngữ cảnh. (2) " + mode_hint + " "
+        "LUÔN giới thiệu ĐÚNG sản phẩm trong mục SẢN PHẨM GỢI Ý CHÍNH trước tiên để khớp thẻ "
+        "trên màn hình. "
+        "(3) Nếu có mục sản phẩm cùng loại khác bên dưới, nhắc nhẹ 1 ý để khách tham khảo thêm. "
         "(4) Không bịa thành phần, công dụng chữa bệnh, cam kết dị ứng, số bán thật hay tồn kho."
         + exclusion_rule
     )
-    payload_obj: dict[str, object] = {
-        "customer_request": text,
-        "primary_products": primary_facts,
-    }
-    if related_summary:
-        payload_obj["other_catalog_products"] = related_summary
-    if excluded_terms:
-        payload_obj["excluded_requested"] = excluded_terms
-    if mode == "basket" and primary_products:
-        payload_obj["basket_total_vnd"] = sum(p.price_vnd for p in primary_products)
-        if budget_vnd is not None:
-            payload_obj["customer_budget_vnd"] = budget_vnd
+    enriched_memory = dict(memory)
+    if "working_basket" not in enriched_memory and primary_products:
+        enriched_memory["working_basket"] = [
+            {
+                "product_id": p.product_id,
+                "name": p.name,
+                "price_vnd": p.price_vnd,
+                "qty": 1,
+            }
+            for p in primary_products
+        ]
+    if budget_vnd is not None and "working_budget_vnd" not in enriched_memory:
+        enriched_memory["working_budget_vnd"] = int(budget_vnd)
+    recent_ids = list(enriched_memory.get("recent_product_ids") or [])
+    for p in primary_products:
+        if p.product_id in recent_ids:
+            recent_ids.remove(p.product_id)
+        recent_ids.insert(0, p.product_id)
+    if recent_ids:
+        enriched_memory["recent_product_ids"] = recent_ids[:8]
+    user_context = build_plain_prompt_text(
+        customer_request=text,
+        primary_products=primary_products,
+        related_products=related_products,
+        excluded_terms=excluded_terms,
+        mode=mode,
+        budget_vnd=budget_vnd,
+        extra_note=extra_note,
+    )
     return StreamingConsultationPlan(
         products=primary_products,
         related_products=related_products,
-        memory=memory,
+        memory=enriched_memory,
         messages=[
             {"role": "system", "content": system_prompt},
-            {
-                "role": "user",
-                "content": json.dumps(payload_obj, ensure_ascii=False, separators=(",", ":")),
-            },
+            {"role": "user", "content": user_context},
         ],
         fallback_text=_local_fallback_text(text, plan_for_fallback, primary_products),
     )
@@ -603,9 +638,11 @@ async def _prepare_slim_basket_streaming(
                 "không giải thích. Quy tắc: bữa cơm/tối dùng thịt/trứng/đậu + rau xanh (KHÔNG "
                 "chọn snack/bánh kẹo); lẩu/BBQ dùng sốt/nước lẩu + thịt/chả viên + rau/mì; "
                 "mì Ý dùng mì Ý + sốt mì Ý/cà chua + thịt bò; "
-                "tiệc trà dùng trà + bánh quy/bông lan; "
-                "ăn sáng dùng bánh mì/ngũ cốc/cháo/phở + sữa/cà phê. "
-                "Ví dụ: [\"nước lẩu thái\", \"thịt bò\", \"rau cải\", \"mì gói\"]."
+                "xem phim/liên hoan/tiệc nhẹ dùng snack + bánh quy + nước ngọt/trà; "
+                "đi xa/mang đi học/không có lò vi sóng dùng bánh mì tươi + bánh bông lan + "
+                "xúc xích ăn liền + sữa tươi/nước suối (TUYỆT ĐỐI KHÔNG chọn bột nấu ăn, bóng cá, "
+                "sữa bột trẻ em); ăn sáng dùng bánh mì tươi/ngũ cốc/phở/xúc xích + sữa/cà phê. "
+                "Ví dụ: [\"bánh mì tươi\", \"sữa tươi\", \"snack\"]."
             ),
         },
         {"role": "user", "content": text[:240]},
@@ -644,16 +681,19 @@ async def _prepare_slim_basket_streaming(
     norm_request = normalize_category_text(text)
     savory_meal = bool(_SAVORY_MEAL_CUE_RE.search(norm_request))
     wants_utensil = bool(_HOUSEHOLD_UTENSIL_CUE_RE.search(norm_request))
+    ready_eat = bool(_READY_TO_EAT_NEED_RE.search(norm_request))
+    food_need = is_food_or_drink_need(text)
+    wants_bulk = wants_bulk_pack(text)
     excluded = _clean_negative_terms(parsed) if parsed is not None else []
 
     def _search_basket() -> list[tuple[str, list[ProductSnapshot]]]:
         grouped: list[tuple[str, list[ProductSnapshot]]] = []
         for kw in clean_keywords:
-            hits = repository.search(query=kw, limit=12)
+            hits = repository.search(query=kw, limit=18)
             if excluded:
                 hits = [p for p in hits if not _item_violates_exclusions(p, excluded)]
-            if savory_meal and not wants_utensil:
-                hits = [
+            if (food_need or savory_meal) and not wants_utensil:
+                hits = filter_edible_candidates(hits, ready_to_eat=ready_eat) or [
                     p
                     for p in hits
                     if normalize_category_text(p.department or "") != "phi thuc pham"
@@ -667,6 +707,10 @@ async def _prepare_slim_basket_streaming(
                     )
                 ]
                 hits = non_snack or hits
+            if not wants_bulk:
+                singles = [p for p in hits if not is_bulk_pack(p)]
+                if singles:
+                    hits = singles
             if hits:
                 grouped.append((kw, hits))
         return grouped
@@ -928,9 +972,13 @@ async def _prepare_open_need_streaming(
                 "hiểm hoặc ngoài phạm vi siêu thị, trả đúng []. Ngược lại, gợi ý 1 đến 3 từ "
                 "khóa sản phẩm siêu thị phổ biến (tiếng Việt ngắn gọn) phù hợp nhất với nhu cầu "
                 "đời thường của khách (ví dụ đau rát họng nhẹ -> [\"trà gừng\", \"mật ong\", "
-                "\"kẹo ngậm\"], quà biếu -> [\"trà\", \"bánh quy\", \"cà phê\"], trời nóng -> "
-                "[\"trà bí đao\", \"nước dừa\", \"nước suối\"]). CHỈ trả đúng 1 JSON array "
-                "chuỗi, không giải thích."
+                "\"kẹo ngậm\"], quà biếu/món quà nhỏ -> [\"bánh quy hộp\", \"trà\", \"cà phê\"], "
+                "đói/ăn ngay/không lò vi sóng/đi học -> [\"bánh mì tươi\", \"bánh bông lan\", "
+                "\"xúc xích ăn liền\"], ăn kiêng -> [\"yến mạch\", \"sữa tươi không đường\", "
+                "\"bánh ăn kiêng\"], tỉnh táo/đỡ buồn ngủ -> [\"cà phê nước\", \"nước tăng lực\", "
+                "\"trà xanh\"], trời nóng -> [\"trà bí đao\", \"nước dừa\", \"nước suối\"]). "
+                "TUYỆT ĐỐI KHÔNG chọn nguyên liệu sống, bột nấu ăn, bóng cá, hay đồ phi thực phẩm "
+                "cho nhu cầu ăn uống. CHỈ trả đúng 1 JSON array chuỗi, không giải thích."
             ),
         },
         {"role": "user", "content": text[:240]},
@@ -959,12 +1007,23 @@ async def _prepare_open_need_streaming(
     except Exception:
         return None
 
+    food_need = is_food_or_drink_need(answer_text)
+    ready_eat = bool(_READY_TO_EAT_NEED_RE.search(normalize_category_text(answer_text)))
+    wants_bulk = wants_bulk_pack(answer_text)
+
     def _search_open() -> list[ProductSnapshot]:
         seen_ids: set[str] = set()
         merged: list[ProductSnapshot] = []
         for kw in clean_keywords:
             norm_kw = normalize_category_text(kw)
-            hits = repository.search(query=kw, limit=10)
+            hits = repository.search(query=kw, limit=18)
+            if food_need:
+                edible = filter_edible_candidates(hits, ready_to_eat=ready_eat)
+                hits = edible if ready_eat else (edible or hits)
+            if not wants_bulk:
+                singles = [p for p in hits if not is_bulk_pack(p)]
+                if singles:
+                    hits = singles
             hits = _apply_streaming_constraints(hits, answer_text, parsed)
             # Prefer products whose title starts with the keyword or whose category matches
             # it directly (e.g. 'Trà gừng' / 'Mật ong', not 'Chân gà vị mật ong').
@@ -985,8 +1044,16 @@ async def _prepare_open_need_streaming(
     if not candidates:
         return None
     top = candidates[0]
+    norm_ans_open = normalize_category_text(answer_text)
+    is_non_clinical_diet_open = bool(
+        re.search(r"\ban\s+kieng\b", norm_ans_open)
+        and not re.search(
+            r"\b(?:tieu duong|huyet ap|tim mach|gout|benh|than|gan|di ung|mang thai|tre so sinh)\b",
+            norm_ans_open,
+        )
+    )
     post_guidance = shopping_guidance(f"{answer_text} {top.name} {top.category or ''}", limit=16)
-    if any(
+    if not is_non_clinical_diet_open and any(
         item.get("domain") in _STREAM_HIGH_RISK_DOMAINS
         and item.get("id") not in _STREAM_SAFE_GUIDANCE_IDS
         for item in post_guidance
@@ -1061,9 +1128,10 @@ async def prepare_streaming_consultation(
 
     normalize_noisy = getattr(repository, "normalize_noisy_query", None)
     answer_text = normalize_noisy(text) if callable(normalize_noisy) else text
+    answer_text = re.sub(r"\btương\s+ót\b", "tương ớt", answer_text, flags=re.IGNORECASE)
+    answer_text = re.sub(r"\bsửa\s+tươi\b", "sữa tươi", answer_text, flags=re.IGNORECASE)
+    answer_text = re.sub(r"\b(?:ko|k)\s+đường\b", "không đường", answer_text, flags=re.IGNORECASE)
     norm_answer = normalize_category_text(answer_text)
-    if _STREAM_LABEL_OR_EFFICACY_RE.search(norm_answer):
-        return None
 
     is_detail_query = bool(_STREAM_DETAIL_QUERY_RE.search(norm_answer))
     is_advice_followup = bool(_advice_followup(text) and previous_memory.get("need"))
@@ -1080,6 +1148,45 @@ async def prepare_streaming_consultation(
         return None
     understood_text = _shopping_utterance(answer_text)
     parsed = understand_catalog_query(understood_text, paths)
+    # Path M: Stateful multi-turn working-basket & context-locked follow-ups (runs BEFORE
+    # Turn-1 intent filters so "Tổng hết bao nhiêu tiền?", "Cho tôi 3 lon", "Còn hàng không?",
+    # "Có chai nhỏ hơn không?" stay locked to the active conversation in <1.3s).
+    if not is_detail_query and (
+        previous_memory.get("need")
+        or previous_memory.get("working_basket")
+        or previous_memory.get("recent_product_ids")
+        or visible
+    ):
+        mt_plan = await prepare_multiturn_streaming(
+            text=text,
+            answer_text=answer_text,
+            norm_answer=norm_answer,
+            visible=visible,
+            repository=repository,
+            previous_memory=previous_memory,
+            parsed=parsed,
+            build_payload=_build_streaming_plan_payload,
+        )
+        if mt_plan is not None:
+            return mt_plan
+
+    # Special Turn-1 Fast-Lane (runs BEFORE label/purchase filters so "5 chai nước ngọt và
+    # 3 gói bánh", "protein cao nhất", "kem ăn", "chai lớn hay chai nhỏ" return <1.2s cleanly).
+    special_plan = await prepare_special_turn1_streaming(
+        text=text,
+        answer_text=answer_text,
+        norm_answer=norm_answer,
+        repository=repository,
+        previous_memory=previous_memory,
+        parsed=parsed,
+        build_payload=_build_streaming_plan_payload,
+    )
+    if special_plan is not None:
+        return special_plan
+
+    if _STREAM_LABEL_OR_EFFICACY_RE.search(norm_answer):
+        return None
+
     if parsed.intent in {"purchase_action", "location"}:
         return None
     if parsed.ranking_criterion == "sales_popularity":
@@ -1091,7 +1198,14 @@ async def prepare_streaming_consultation(
         return None
 
     guidance_items = shopping_guidance(understood_text, limit=32)
-    if any(
+    is_non_clinical_diet = bool(
+        re.search(r"\ban\s+kieng\b", norm_answer)
+        and not re.search(
+            r"\b(?:tieu duong|huyet ap|tim mach|gout|benh|than|gan|di ung|mang thai|tre so sinh)\b",
+            norm_answer,
+        )
+    )
+    if not is_non_clinical_diet and any(
         item.get("domain") in _STREAM_HIGH_RISK_DOMAINS
         and item.get("id") not in _STREAM_SAFE_GUIDANCE_IDS
         for item in guidance_items
@@ -1147,7 +1261,7 @@ async def prepare_streaming_consultation(
     # Path E (prioritized ahead of single-item C/D): Multi-item meal/combo/basket
     # requests (excluding single-item seasoning queries like "gia vị ướp BBQ").
     if (
-        _STREAM_BASKET_OR_MEAL_RE.search(norm_answer)
+        (_STREAM_BASKET_OR_MEAL_RE.search(norm_answer) or _EXTENDED_BASKET_RE.search(norm_answer))
         and not _SINGLE_ITEM_SEASONING_RE.search(norm_answer)
     ):
         basket_plan = await _prepare_slim_basket_streaming(
@@ -1162,15 +1276,21 @@ async def prepare_streaming_consultation(
             return basket_plan
 
     # Path C: Single-category / Brand / Sugar / Follow-up (0 planner calls).
-    plan = _fast_path_single_category_plan(
-        answer_text,
-        parsed,
-        paths,
-        previous_memory,
-        budget_followup=budget_followup,
-        explicit_sizes=_product_sizes(answer_text),
-        repository=repository,
-        for_streaming=True,
+    # Skip on pure situational eating queries ("100k đồ ăn cho 2 người", "không có lò vi sóng")
+    # so they route cleanly to Path E/G with ready-to-eat filtering instead of "Bóng cá chay".
+    plan = (
+        None
+        if is_pure_situational_query(norm_answer)
+        else _fast_path_single_category_plan(
+            answer_text,
+            parsed,
+            paths,
+            previous_memory,
+            budget_followup=budget_followup,
+            explicit_sizes=_product_sizes(answer_text),
+            repository=repository,
+            for_streaming=True,
+        )
     )
     cheaper_followup = bool(
         re.search(
@@ -1295,6 +1415,7 @@ async def prepare_streaming_consultation(
             )
 
     # Path D: Direct lexical product search (e.g. "ba chỉ bò Mỹ loại nào ngon?", 0 planner calls).
+    # Skip pure situational needs ("đang đói", "ăn kiêng", "mang đi học") -> route to Path G.
     excluded_terms = _clean_negative_terms(parsed)
     cleaned_lex = _clean_lexical_query(answer_text)
     if excluded_terms and cleaned_lex:
@@ -1304,21 +1425,48 @@ async def prepare_streaming_consultation(
         cleaned_lex = " ".join(
             tok for tok in cleaned_lex.split() if tok not in excluded_toks
         )
+    lex_search_q = _strip_attribute_modifiers_for_lex(cleaned_lex) or cleaned_lex
     if (
-        cleaned_lex
+        lex_search_q
+        and not is_pure_situational_query(norm_answer)
         and (
             not _STREAM_BASKET_OR_MEAL_RE.search(norm_answer)
             or _SINGLE_ITEM_SEASONING_RE.search(norm_answer)
         )
         and not _FAST_PATH_MULTI_OR_COMPARE.search(norm_answer)
     ):
-        def _lex_search() -> list[ProductSnapshot]:
-            hits = repository.search(query=cleaned_lex, limit=24)
-            return _apply_streaming_constraints(hits, answer_text, parsed)
+        def _lex_search() -> tuple[list[ProductSnapshot], list[ProductSnapshot]]:
+            if lex_search_q in {"do uong", "nuoc uong"} and _explicit_sugar_level(answer_text):
+                raw_hits = [
+                    *repository.search(query="sua chua uong it duong", limit=10),
+                    *repository.search(query="nuoc giai khat", limit=16),
+                    *repository.search(query="nuoc tra", limit=12),
+                ]
+            else:
+                raw_hits = repository.search(query=lex_search_q, limit=32)
+            if is_food_or_drink_need(answer_text):
+                edible = filter_edible_candidates(
+                    raw_hits,
+                    ready_to_eat=bool(_READY_TO_EAT_NEED_RE.search(norm_answer)),
+                )
+                if edible:
+                    raw_hits = edible
+            filtered_hits = _apply_streaming_constraints(raw_hits, answer_text, parsed)
+            return filtered_hits, raw_hits
 
-        lex_hits = await run_catalog_work(_lex_search, timeout_seconds=3)
+        lex_hits, raw_lex_hits = await run_catalog_work(_lex_search, timeout_seconds=3)
+        zero_hit_attr_note = ""
+        if not lex_hits and raw_lex_hits and _explicit_sugar_level(answer_text) is not None:
+            # Stay strictly inside the matched category ("tương ớt ít đường" / "cà phê ít đường")
+            # rather than falling back to the slow planner and jumping to biscuits or bird's nest!
+            lex_hits = raw_lex_hits
+            zero_hit_attr_note = (
+                "BẮT BUỘC nói rõ: trong catalog hiện chưa có mẫu nào ghi nhãn ít/không đường "
+                "hoặc bảng định lượng đường cụ thể cho nhóm này, nên mình giới thiệu các mẫu "
+                "phổ biến đúng nhóm để khách kiểm tra bảng dinh dưỡng trên nhãn bao bì."
+            )
         if lex_hits:
-            focused, focus_scores = _filter_streaming_candidates(lex_hits, answer_text, None)
+            focused, focus_scores = _filter_streaming_candidates(lex_hits, lex_search_q, None)
             ordered = _rank_streaming_candidates(
                 focused,
                 answer_text,
@@ -1327,12 +1475,12 @@ async def prepare_streaming_consultation(
             )
             primary_products = ordered[:1]
             related_products = _related_candidates(ordered, primary_products, limit=4)
-            top_cat = primary_products[0].category or cleaned_lex
+            top_cat = primary_products[0].category or lex_search_q
             lex_plan = ConsultationDecision(
                 action="recommend",
                 need=text[:500],
                 searches=[
-                    SearchNeed(category=top_cat, role=cleaned_lex, excluded=excluded_terms)
+                    SearchNeed(category=top_cat, role=lex_search_q, excluded=excluded_terms)
                 ],
                 max_price_vnd=parsed.budget_vnd,
                 sugar=_explicit_sugar_level(answer_text) or "any",
@@ -1360,6 +1508,8 @@ async def prepare_streaming_consultation(
                 memory=memory,
                 plan_for_fallback=lex_plan,
                 mode="recommend",
+                budget_vnd=parsed.budget_vnd,
+                extra_note=zero_hit_attr_note,
             )
 
     # Path G: Open/situational 1-call keyword expansion on Groq LPU fast-lane (~1.1s total).

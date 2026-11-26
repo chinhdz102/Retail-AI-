@@ -1,9 +1,13 @@
 """Negative editorial suggestions need a bounded independent final-text check."""
 import pytest
 from test_customer_consultation import Model, Repository, product
+
 from backend.services.customer_consultation import (
-    ConsultationDecision, ConsultationReview, GroundedSelection,
-    _editorial_proposal, consult_customer,
+    ConsultationDecision,
+    ConsultationReview,
+    GroundedSelection,
+    _editorial_proposal,
+    consult_customer,
 )
 from backend.services.sessions import InMemorySessionStore
 
@@ -16,7 +20,10 @@ def check(row, **overrides):
 def inputs():
     row=product(name='Sổ Nova A5',price=20000,path='Cửa hàng > Văn phòng > Sổ')
     plan={'action':'recommend','need':'Sổ dùng hằng ngày','searches':[{'category':'Sổ'}]}
-    selected={'picks':[{'candidate':0}], 'text':'Mình chọn {name:0} ({price:0}) vì dùng bền nhiều năm.'}
+    selected = {
+        'picks': [{'candidate': 0}],
+        'text': 'Mình chọn {name:0} ({price:0}) vì dùng bền nhiều năm.',
+    }
     revised='Mình ưu tiên {name:0} ({price:0}), khổ A5 theo tên sản phẩm.'
     return row,plan,selected,revised
 
@@ -49,7 +56,7 @@ async def test_fresh_rejection_cannot_leak_negative_revision_or_select_again():
 
 @pytest.mark.asyncio
 async def test_failed_fresh_review_propagates_without_unreviewed_result():
-    from unittest.mock import AsyncMock,patch
+    from unittest.mock import AsyncMock, patch
     row,plan,selected,revised=inputs()
     model=Model(plan,selected,{'acceptable':False,'product_checks':[check(row)],'revised_text':revised})
     with patch('backend.services.customer_consultation._review_editorial_proposal',
@@ -83,15 +90,35 @@ async def test_last_rejected_revision_can_be_checked_without_publishing_rejected
 def test_editorial_proposal_rejects_changed_identity_question_or_price(text):
     row,plan,selected,_=inputs()
     review=ConsultationReview(acceptable=False,product_checks=[check(row)],revised_text=text)
-    assert _editorial_proposal(review,GroundedSelection.model_validate(selected),[row],
-                              ConsultationDecision.model_validate(plan),{row.product_id:[0]}) is None
+    assert (
+        _editorial_proposal(
+            review,
+            GroundedSelection.model_validate(selected),
+            [row],
+            ConsultationDecision.model_validate(plan),
+            {row.product_id: [0]},
+        )
+        is None
+    )
 
 
 def test_wrong_function_does_not_enter_editorial_repair():
     row,plan,selected,revised=inputs()
-    review=ConsultationReview(acceptable=False,product_checks=[check(row,fits_need=False)],revised_text=revised)
-    assert _editorial_proposal(review,GroundedSelection.model_validate(selected),[row],
-                              ConsultationDecision.model_validate(plan),{row.product_id:[0]}) is None
+    review = ConsultationReview(
+        acceptable=False,
+        product_checks=[check(row, fits_need=False)],
+        revised_text=revised,
+    )
+    assert (
+        _editorial_proposal(
+            review,
+            GroundedSelection.model_validate(selected),
+            [row],
+            ConsultationDecision.model_validate(plan),
+            {row.product_id: [0]},
+        )
+        is None
+    )
 
 
 def test_overbudget_decision_is_not_repaired_by_prose():
@@ -99,5 +126,13 @@ def test_overbudget_decision_is_not_repaired_by_prose():
     plan.update(basket=True,total_budget_vnd=1000)
     selected['picks']=[{'candidate':0,'search_index':0}]
     review=ConsultationReview(acceptable=False,product_checks=[check(row)],revised_text=revised)
-    assert _editorial_proposal(review,GroundedSelection.model_validate(selected),[row],
-                              ConsultationDecision.model_validate(plan),{row.product_id:[0]}) is None
+    assert (
+        _editorial_proposal(
+            review,
+            GroundedSelection.model_validate(selected),
+            [row],
+            ConsultationDecision.model_validate(plan),
+            {row.product_id: [0]},
+        )
+        is None
+    )
