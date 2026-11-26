@@ -50,6 +50,7 @@ from backend.services.customer_consultation import (
     _unit_price_info,
 )
 from backend.services.groq import GroqService
+from backend.services.organization_profiles import resolve_organization_profile
 from backend.services.product_constraints import title_has_descriptor
 from backend.services.query_understanding import (
     strip_retrieval_budget,
@@ -1587,6 +1588,13 @@ async def prepare_streaming_consultation(
     answer_text = re.sub(r"\bsửa\s+rửa\s+mặt\b", "sữa rửa mặt", answer_text, flags=re.IGNORECASE)
     answer_text = re.sub(r"\b(?:ko|k)\s+đường\b", "không đường", answer_text, flags=re.IGNORECASE)
     norm_answer = normalize_category_text(answer_text)
+
+    if resolve_organization_profile(text) is not None and re.search(
+        r"\b(?:gioi\s+thieu|thong\s+tin|la\s+gi|la\s+cong\s+ty|do\s+an|du\s+an|"
+        r"cong\s+ty|cua\s+ai|so\s+huu|van\s+hanh|thanh\s+lam|chatvrm)\b",
+        norm_answer,
+    ):
+        return None
 
     is_detail_query = bool(_STREAM_DETAIL_QUERY_RE.search(norm_answer))
     is_advice_followup = bool(_advice_followup(text) and previous_memory.get("need"))

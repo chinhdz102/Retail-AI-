@@ -304,11 +304,32 @@ def test_canonical_dataset_preserves_benefits_usage_ingredients_and_thanh_lam_pr
 ) -> None:
     from backend.services.organization_profiles import get_organization_answer
 
-    # 1. Thanh Lam Mart profile resolves from canonical verified_organization_facts.json.
+    # 1. Thanh Lam Mart profile resolves from canonical verified_organization_facts.json
+    #    and is never intercepted as an out-of-catalog product by streaming consultation.
     org = get_organization_answer("Giới thiệu Thanh Lam Mart", "vi")
     assert org is not None
     assert org.profile.entity_id == "thanh_lam_mart"
     assert any("Thanh Lam Mart" in fact for fact in org.facts)
+    from backend.config import Settings
+    from backend.services.customer_consultation import prepare_streaming_consultation
+    from backend.services.groq import GroqService
+    from backend.services.sessions import InMemorySessionStore
+
+    stub = GroqService(settings=Settings(_env_file=None, chat_llm_api_key="test-key"))
+    rec = InMemorySessionStore().create("thanh-lam-org")
+    import asyncio
+
+    assert (
+        asyncio.run(
+            prepare_streaming_consultation(
+                text="Giới thiệu Thanh Lam Mart",
+                record=rec,
+                repository=snapshot_repository,
+                groq=stub,
+            )
+        )
+        is None
+    )
 
     # 2. All three preserved enrichment dimensions (công dụng, cách sử dụng, thành phần chính)
     #    remain bound and retrievable against the canonical 3,099-SKU catalog.
