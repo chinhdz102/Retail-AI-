@@ -17,6 +17,7 @@ import {
   PhShoppingBagOpen as ShoppingBagOpen,
   PhShoppingCart as ShoppingCartIcon,
   PhSparkle as Sparkle,
+  PhSquaresFour as SquaresFour,
   PhStop as Stop,
   PhTrash as Trash,
   PhWaveform as Waveform,
@@ -108,6 +109,7 @@ const emit = defineEmits<{
   'add-assisted-item': [product: ProductCard]
   'update-assisted-qty': [productId: string, quantity: number]
   'open-cart': [tab?: 'cart' | 'orders']
+  'open-catalog': []
 }>()
 
 const copy = computed(() => {
@@ -672,6 +674,15 @@ function onKeydown(event: KeyboardEvent) {
           <span>{{ isHandsFree ? 'AUTO' : 'MIC' }}</span>
         </div>
         <span class="voice-mode-chip" lang="vi">Tiếng Việt</span>
+        <button
+          type="button"
+          class="header-cart-button"
+          aria-label="Xem tất cả sản phẩm theo danh mục"
+          @click="emit('open-catalog')"
+        >
+          <SquaresFour :size="15" weight="duotone" aria-hidden="true" />
+          <span>Sản phẩm</span>
+        </button>
         <button
           type="button"
           class="header-cart-button"

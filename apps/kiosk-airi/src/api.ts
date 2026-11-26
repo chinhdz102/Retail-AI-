@@ -2,10 +2,12 @@ import type {
   AgentResponse,
   AssistedOrderCreatePayload,
   AssistedOrderResponse,
+  CatalogSortMode,
   CheckoutQuote,
   LanguageCode,
   ManagerNotifierStatus,
   PayOSStatus,
+  ProductCatalogBrowseResponse,
   SandboxOrder,
   ShoppingCart,
   ProductSearchResponse,
@@ -414,6 +416,30 @@ export function respondWithImage(
 export function searchProducts(query = '', limit = 6): Promise<ProductSearchResponse> {
   const params = new URLSearchParams({ q: query, limit: String(limit) })
   return request<ProductSearchResponse>(`/products/search?${params.toString()}`)
+}
+
+export function browseProductCatalog(options: {
+  department?: string
+  category?: string
+  q?: string
+  sort?: CatalogSortMode
+  offset?: number
+  limit?: number
+  signal?: AbortSignal
+} = {}): Promise<ProductCatalogBrowseResponse> {
+  const params = new URLSearchParams()
+  if (options.department) params.set('department', options.department)
+  if (options.category) params.set('category', options.category)
+  if (options.q) params.set('q', options.q)
+  if (options.sort) params.set('sort', options.sort)
+  if (typeof options.offset === 'number') params.set('offset', String(options.offset))
+  if (typeof options.limit === 'number') params.set('limit', String(options.limit))
+  const qs = params.toString()
+  return request<ProductCatalogBrowseResponse>(
+    `/products/catalog${qs ? `?${qs}` : ''}`,
+    { signal: options.signal },
+    15_000,
+  )
 }
 
 export function getManagerNotifierStatus(): Promise<ManagerNotifierStatus> {

@@ -488,7 +488,7 @@ onUnmounted(() => {
                 @click="emit('browse-suggestions')"
               >
                 <Sparkle :size="16" weight="duotone" aria-hidden="true" />
-                <span>Xem sản phẩm bán chạy nhất</span>
+                <span>Xem tất cả sản phẩm theo danh mục</span>
               </button>
             </div>
 

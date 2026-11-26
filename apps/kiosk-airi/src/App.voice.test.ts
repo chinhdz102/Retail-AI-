@@ -34,6 +34,11 @@ const apiMocks = vi.hoisted(() => ({
   }),
   syncPayOSPayment: vi.fn(),
   cancelPayOSPayment: vi.fn(),
+  browseProductCatalog: vi.fn().mockResolvedValue({
+    total: 0, total_catalog: 0, offset: 0, limit: 24, has_more: false,
+    active_department: null, active_category: null, departments: [], items: [],
+    data_timestamp: new Date().toISOString(),
+  }),
 }))
 
 const controllerStore = vi.hoisted(() => ({ current: null as any }))

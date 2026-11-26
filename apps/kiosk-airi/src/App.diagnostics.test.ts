@@ -14,6 +14,11 @@ vi.mock('./api', () => ({
   submitAssistedOrder: vi.fn(), listAssistedOrders: vi.fn().mockResolvedValue([]),
   getPayOSStatus: vi.fn().mockResolvedValue({ enabled: false, provider: 'payos', store_name: 'Thanh Lam Mart' }),
   syncPayOSPayment: vi.fn(), cancelPayOSPayment: vi.fn(),
+  browseProductCatalog: vi.fn().mockResolvedValue({
+    total: 0, total_catalog: 0, offset: 0, limit: 24, has_more: false,
+    active_department: null, active_category: null, departments: [], items: [],
+    data_timestamp: new Date().toISOString(),
+  }),
 }))
 vi.mock('./voice-controller', () => ({ VoiceConversationController: class {
   options: any

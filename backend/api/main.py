@@ -28,6 +28,8 @@ from backend.api.schemas import (
     CartAddRequest,
     CartQuantityRequest,
     CartResponse,
+    CatalogDepartmentSummary,
+    CatalogSubcategorySummary,
     CheckoutConfirmRequest,
     CheckoutQuoteResponse,
     LanguageCode,
@@ -35,6 +37,7 @@ from backend.api.schemas import (
     PayOSStatusResponse,
     PayOSSyncRequest,
     ProductCardResponse,
+    ProductCatalogBrowseResponse,
     ProductSearchResponse,
     SandboxOrderResponse,
     SandboxPaymentRequest,
@@ -6302,6 +6305,162 @@ def product_search(
         ) from exc
     timestamp = max((item.data_timestamp for item in items), default=DATA_TIMESTAMP)
     return ProductSearchResponse(items=items, data_timestamp=timestamp)
+
+
+def _catalog_department_label(product: ProductSnapshot) -> str:
+    parts = [p.strip() for p in (product.category_hierarchy or "").split(">") if p.strip()]
+    if len(parts) >= 3:
+        return parts[2]
+    if len(parts) == 2:
+        return parts[1]
+    if len(parts) == 1:
+        return parts[0]
+    return (product.category or "Khác").strip() or "Khác"
+
+
+def _catalog_all_products(repository: ProductRepository) -> tuple[ProductSnapshot, ...]:
+    raw_products = getattr(repository, "products", None)
+    if isinstance(raw_products, (tuple, list)):
+        return tuple(raw_products)
+    if repository.source_name == "demo_product_catalog":
+        from backend.products.catalog import DEMO_PRODUCTS
+
+        return tuple(DEMO_PRODUCTS)
+    return tuple(repository.search(query="", limit=500))
+
+
+def _fold_catalog_text(value: str) -> str:
+    nfkd = unicodedata.normalize("NFKD", value.replace("đ", "d").replace("Đ", "D"))
+    stripped = "".join(ch for ch in nfkd if not unicodedata.combining(ch))
+    return " ".join(stripped.casefold().split())
+
+
+@app.get("/products/catalog", response_model=ProductCatalogBrowseResponse)
+def browse_product_catalog(
+    department: str | None = None,
+    category: str | None = None,
+    q: str = "",
+    sort: str = "popular",
+    offset: int = 0,
+    limit: int = 24,
+) -> ProductCatalogBrowseResponse:
+    if offset < 0:
+        raise HTTPException(status_code=422, detail="offset must be non-negative")
+    if limit < 1 or limit > 60:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 60")
+    if sort not in {"popular", "price_asc", "price_desc", "promo", "name"}:
+        raise HTTPException(status_code=422, detail="Unsupported sort mode")
+
+    repository = get_product_repository()
+    try:
+        all_products = _catalog_all_products(repository)
+    except (OSError, asyncpg.PostgresError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Product catalog is temporarily unavailable",
+        ) from exc
+
+    dept_sub_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    dept_totals: dict[str, int] = defaultdict(int)
+    product_depts: list[tuple[ProductSnapshot, str]] = []
+    for prod in all_products:
+        dept = _catalog_department_label(prod)
+        sub = (prod.category or "Khác").strip() or "Khác"
+        dept_totals[dept] += 1
+        dept_sub_counts[dept][sub] += 1
+        product_depts.append((prod, dept))
+
+    departments = [
+        CatalogDepartmentSummary(
+            name=dept_name,
+            count=dept_count,
+            subcategories=[
+                CatalogSubcategorySummary(name=sub_name, count=sub_count)
+                for sub_name, sub_count in sorted(
+                    dept_sub_counts[dept_name].items(),
+                    key=lambda kv: (-kv[1], kv[0].casefold()),
+                )
+            ],
+        )
+        for dept_name, dept_count in sorted(
+            dept_totals.items(),
+            key=lambda kv: (-kv[1], kv[0].casefold()),
+        )
+    ]
+
+    dept_filter = department.strip().casefold() if department and department.strip() else None
+    cat_filter = category.strip().casefold() if category and category.strip() else None
+    q_tokens = _fold_catalog_text(q).split() if q and q.strip() else []
+
+    filtered: list[ProductSnapshot] = []
+    resolved_dept: str | None = None
+    resolved_cat: str | None = None
+    for prod, dept in product_depts:
+        if dept_filter and dept.casefold() != dept_filter:
+            continue
+        if cat_filter and (prod.category or "").strip().casefold() != cat_filter:
+            continue
+        if q_tokens:
+            haystack = _fold_catalog_text(
+                f"{prod.name} {prod.brand or ''} {prod.category} {dept}"
+            )
+            if not all(tok in haystack for tok in q_tokens):
+                continue
+        if dept_filter and resolved_dept is None:
+            resolved_dept = dept
+        if cat_filter and resolved_cat is None:
+            resolved_cat = prod.category
+        filtered.append(prod)
+
+    settings = get_settings()
+    demo_counts: dict[str, int] = {}
+    if settings.demo_sales_enabled and settings.app_env == "development":
+        demo_counts = get_demo_sales_store(settings).counts()
+
+    def _discount_ratio(p: ProductSnapshot) -> float:
+        if p.list_price_vnd and p.list_price_vnd > p.price_vnd:
+            return (p.list_price_vnd - p.price_vnd) / p.list_price_vnd
+        return 0.01 if p.promotion else 0.0
+
+    if sort == "price_asc":
+        filtered.sort(key=lambda p: (p.price_vnd, p.name.casefold(), p.product_id))
+    elif sort == "price_desc":
+        filtered.sort(key=lambda p: (-p.price_vnd, p.name.casefold(), p.product_id))
+    elif sort == "name":
+        filtered.sort(key=lambda p: (p.name.casefold(), p.product_id))
+    elif sort == "promo":
+        filtered.sort(
+            key=lambda p: (
+                -_discount_ratio(p),
+                -demo_counts.get(p.product_id, 0),
+                p.name.casefold(),
+            )
+        )
+    else:
+        filtered.sort(
+            key=lambda p: (
+                0 if _safe_product_image_url(p.image_url) else 1,
+                -demo_counts.get(p.product_id, 0),
+                0 if _discount_ratio(p) > 0 else 1,
+                p.name.casefold(),
+            )
+        )
+
+    total = len(filtered)
+    page = filtered[offset : offset + limit]
+    timestamp = max((item.data_timestamp for item in all_products), default=DATA_TIMESTAMP)
+    return ProductCatalogBrowseResponse(
+        total=total,
+        total_catalog=len(all_products),
+        offset=offset,
+        limit=limit,
+        has_more=(offset + len(page)) < total,
+        active_department=resolved_dept or (department.strip() if department else None),
+        active_category=resolved_cat or (category.strip() if category else None),
+        departments=departments,
+        items=[_product_card(p) for p in page],
+        data_timestamp=timestamp,
+    )
 
 
 @app.get("/products/{product_id}/snapshot")

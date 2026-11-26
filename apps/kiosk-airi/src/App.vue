@@ -7,6 +7,7 @@ import {
   PhPause as Pause,
   PhShoppingBagOpen as ShoppingBagOpen,
   PhSpeakerHigh as SpeakerHigh,
+  PhSquaresFour as SquaresFour,
   PhStop as Stop,
   PhX as X,
 } from '@phosphor-icons/vue'
@@ -38,6 +39,7 @@ import {
 } from './api'
 import CartDrawer from './components/CartDrawer.vue'
 import ChatPanel from './components/ChatPanel.vue'
+import ProductCatalogModal from './components/ProductCatalogModal.vue'
 import type {
   AssistedCartItem,
   AssistedOrderResponse,
@@ -76,6 +78,7 @@ const PENDING_PAYOS_STORAGE_KEY = 'retail-ai-pending-payos-v1'
 const assistedCart = ref<AssistedCartItem[]>([])
 const assistedOrders = ref<AssistedOrderResponse[]>([])
 const isCartOpen = ref(false)
+const isCatalogOpen = ref(false)
 const cartInitialTab = ref<'cart' | 'orders'>('cart')
 const activeAssistedOrder = ref<AssistedOrderResponse | null>(null)
 const isSubmittingAssistedOrder = ref(false)
@@ -1382,6 +1385,7 @@ async function resetKioskSession(notice?: string) {
   activeAssistedOrder.value = null
   assistedOrderError.value = null
   isCartOpen.value = false
+  isCatalogOpen.value = false
   stopPayOSPolling()
   persistPendingPayOS(null)
   persistAssistedCart()
@@ -1797,15 +1801,26 @@ function handleClearAssistedCart() {
 }
 
 function handleOpenCart(tab: 'cart' | 'orders' = 'cart') {
+  isCatalogOpen.value = false
   cartInitialTab.value = tab
   assistedOrderError.value = null
   isCartOpen.value = true
 }
 
+function handleOpenCatalog() {
+  isCartOpen.value = false
+  isCatalogOpen.value = true
+}
+
 function handleBrowseCartSuggestions() {
   isCartOpen.value = false
+  isCatalogOpen.value = true
+}
+
+function handleAskMaiFromCatalog(prompt: string) {
+  isCatalogOpen.value = false
   isTextOpen.value = true
-  void sendMessage('Sản phẩm nào bán chạy nhất cửa hàng?')
+  void sendMessage(prompt)
 }
 
 function stopPayOSPolling() {
@@ -2275,6 +2290,15 @@ onUnmounted(() => {
       <div class="mobile-topbar-right">
         <button
           type="button"
+          class="mobile-catalog-pill"
+          aria-label="Xem tất cả sản phẩm theo danh mục"
+          @click="handleOpenCatalog"
+        >
+          <SquaresFour :size="15" weight="duotone" aria-hidden="true" />
+          <span>Sản phẩm</span>
+        </button>
+        <button
+          type="button"
           class="mobile-cart-pill"
           :class="{ 'has-items': assistedTotalCount > 0 }"
           :aria-label="assistedTotalCount > 0 ? `Mở giỏ hàng (${assistedTotalCount} sản phẩm)` : 'Mở giỏ hàng'"
@@ -2284,12 +2308,35 @@ onUnmounted(() => {
           <span v-if="assistedTotalCount > 0" class="mobile-cart-count">{{ assistedTotalCount }}</span>
           <span v-else-if="assistedOrders.length > 0" class="mobile-cart-count is-orders">{{ assistedOrders.length }}</span>
         </button>
-        <div class="mobile-status-pill" :class="`state-${status}`">
+        <div class="mobile-status-pill" :class="`state-${status}`" :title="statusHint">
           <span class="mobile-status-dot"></span>
-          <span>{{ statusHint }}</span>
+          <span class="mobile-status-text">{{ statusHint }}</span>
         </div>
       </div>
     </header>
+    <nav class="kiosk-corner-actions" aria-label="Xem sản phẩm và giỏ hàng">
+      <button
+        type="button"
+        class="corner-action-btn is-catalog"
+        aria-label="Xem tất cả sản phẩm theo danh mục"
+        @click="handleOpenCatalog"
+      >
+        <SquaresFour :size="18" weight="duotone" aria-hidden="true" />
+        <span>Sản phẩm</span>
+      </button>
+      <button
+        type="button"
+        class="corner-action-btn is-cart"
+        :class="{ 'has-items': assistedTotalCount > 0 }"
+        :aria-label="assistedTotalCount > 0 ? `Mở giỏ hàng (${assistedTotalCount} sản phẩm)` : 'Mở giỏ hàng'"
+        @click="handleOpenCart(assistedTotalCount === 0 && assistedOrders.length > 0 ? 'orders' : 'cart')"
+      >
+        <ShoppingBagOpen :size="18" weight="duotone" aria-hidden="true" />
+        <span>Giỏ hàng</span>
+        <span v-if="assistedTotalCount > 0" class="corner-cart-badge">{{ assistedTotalCount }}</span>
+        <span v-else-if="assistedOrders.length > 0" class="corner-cart-badge is-orders">{{ assistedOrders.length }}</span>
+      </button>
+    </nav>
     <aside v-if="voiceDebugAvailable" class="voice-debug-panel" aria-label="Local voice diagnostics">
       <label><input type="checkbox" :checked="voiceDebugEnabled" @change="setVoiceDebug"> Keep latest voice turn locally</label>
       <template v-if="voiceDiagnostics.audioUrl">
@@ -2453,17 +2500,31 @@ onUnmounted(() => {
           @add-assisted-item="handleAddAssistedItem"
           @update-assisted-qty="handleUpdateAssistedQty"
           @open-cart="handleOpenCart"
+          @open-catalog="handleOpenCatalog"
         />
       </aside>
     </Transition>
 
     <Transition name="cart-toast">
-      <div v-if="cartToastMessage && !isCartOpen" class="cart-toast" role="status" aria-live="polite">
+      <div v-if="cartToastMessage && !isCartOpen && !isCatalogOpen" class="cart-toast" role="status" aria-live="polite">
         <ShoppingBagOpen :size="16" weight="duotone" aria-hidden="true" />
         <span>{{ cartToastMessage }}</span>
         <button type="button" class="cart-toast-link" @click="handleOpenCart('cart')">Xem giỏ</button>
       </div>
     </Transition>
+
+    <ProductCatalogModal
+      :open="isCatalogOpen"
+      :assisted-items="assistedCart"
+      :assisted-total-count="assistedTotalCount"
+      :assisted-total-vnd="assistedTotalVnd"
+      :language="language"
+      @close="isCatalogOpen = false"
+      @add-item="handleAddAssistedItem"
+      @update-qty="handleUpdateAssistedQty"
+      @open-cart="handleOpenCart('cart')"
+      @ask-mai="handleAskMaiFromCatalog"
+    />
 
     <CartDrawer
       :open="isCartOpen"

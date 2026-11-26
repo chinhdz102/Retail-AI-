@@ -530,3 +530,50 @@ async def test_payos_end_to_end_deferred_zalo_notify_dedupe_and_stateless_sync(
         api.app.dependency_overrides.pop(api.get_manager_notifier_service, None)
         api.app.dependency_overrides.pop(api.get_payos_service, None)
         api.app.dependency_overrides.pop(api.get_settings, None)
+
+
+@pytest.mark.asyncio
+async def test_browse_product_catalog_departments_subcategories_search_and_pagination(
+    snapshot: SnapshotProductRepository,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(api, "get_product_repository", lambda *args, **kwargs: snapshot)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=20
+    ) as client:
+        all_resp = await client.get("/products/catalog", params={"limit": 24, "offset": 0})
+        assert all_resp.status_code == 200, all_resp.text
+        all_data = all_resp.json()
+        assert all_data["total_catalog"] == len(snapshot.products)
+        assert all_data["total"] == len(snapshot.products)
+        assert len(all_data["items"]) == 24
+        assert all_data["has_more"] is True
+        assert len(all_data["departments"]) >= 15
+        dept_names = [d["name"] for d in all_data["departments"]]
+        assert "Bánh kẹo" in dept_names
+        assert "Đồ uống, thuốc lá" in dept_names
+
+        # Filter by department + subcategory + price sort
+        snack_resp = await client.get(
+            "/products/catalog",
+            params={
+                "department": "Bánh kẹo",
+                "category": "Bánh Snack",
+                "sort": "price_asc",
+                "limit": 12,
+            },
+        )
+        assert snack_resp.status_code == 200
+        snack_data = snack_resp.json()
+        assert snack_data["total"] > 12
+        assert snack_data["has_more"] is True
+        prices = [item["price_vnd"] for item in snack_data["items"]]
+        assert prices == sorted(prices)
+        assert all(item["category"] == "Bánh Snack" for item in snack_data["items"])
+
+        # Accent-insensitive keyword search across all products
+        q_resp = await client.get("/products/catalog", params={"q": "coca zero", "limit": 10})
+        assert q_resp.status_code == 200
+        q_data = q_resp.json()
+        assert q_data["total"] >= 1
+        assert any("coca" in item["name"].lower() for item in q_data["items"])

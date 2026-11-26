@@ -232,6 +232,32 @@ export interface PayOSStatus {
   store_name: string
 }
 
+export type CatalogSortMode = 'popular' | 'promo' | 'price_asc' | 'price_desc' | 'name'
+
+export interface CatalogSubcategorySummary {
+  name: string
+  count: number
+}
+
+export interface CatalogDepartmentSummary {
+  name: string
+  count: number
+  subcategories: CatalogSubcategorySummary[]
+}
+
+export interface ProductCatalogBrowseResponse {
+  total: number
+  total_catalog: number
+  offset: number
+  limit: number
+  has_more: boolean
+  active_department: string | null
+  active_category: string | null
+  departments: CatalogDepartmentSummary[]
+  items: ProductCard[]
+  data_timestamp: string
+}
+
 export interface AssistedOrderCreatePayload {
   items: Array<{ product_id: string; quantity: number }>
   payment_method?: 'counter' | 'payos'

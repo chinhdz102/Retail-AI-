@@ -36,6 +36,18 @@ const apiMocks = vi.hoisted(() => ({
   }),
   syncPayOSPayment: vi.fn(),
   cancelPayOSPayment: vi.fn().mockResolvedValue({}),
+  browseProductCatalog: vi.fn().mockResolvedValue({
+    total: 0,
+    total_catalog: 0,
+    offset: 0,
+    limit: 24,
+    has_more: false,
+    active_department: null,
+    active_category: null,
+    departments: [],
+    items: [],
+    data_timestamp: new Date().toISOString(),
+  }),
 }))
 
 const vadMocks = vi.hoisted(() => ({ stream: null as MediaStream | null }))
@@ -1198,6 +1210,120 @@ describe('kiosk app', () => {
       expect(document.body.querySelector('.cart-receipt-card')?.textContent).toContain('FT261126001')
       expect(wrapper.text()).toContain('Đơn đã thanh toán #TLM-PAY001')
       expect(wrapper.text()).toContain('Đã TT PayOS · Đã báo Zalo')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('opens all-products catalog modal by category from corner button and adds to cart', async () => {
+    const snack = {
+      product_id: 'TLM_SNACK_01',
+      name: 'Bánh Snack khoai tây Lay\'s vị tự nhiên 52g',
+      category: 'Bánh Snack',
+      brand: 'LAY\'S',
+      uom: 'Gói',
+      price_vnd: 12_500,
+      list_price_vnd: 15_000,
+      stock: 40,
+      stock_is_current: false,
+      data_source: 'thanh_lam_json_snapshot',
+      data_timestamp: '2026-09-15T00:00:00Z',
+      image_url: 'https://example.com/lays.jpg',
+    }
+    const drink = {
+      product_id: 'TLM_COKE_01',
+      name: 'Nước ngọt Coca-Cola Zero lon 320ml',
+      category: 'Nước Ngọt',
+      brand: 'COCA-COLA',
+      uom: 'Lon',
+      price_vnd: 10_000,
+      stock: 80,
+      stock_is_current: false,
+      data_source: 'thanh_lam_json_snapshot',
+      data_timestamp: '2026-09-15T00:00:00Z',
+      image_url: 'https://example.com/coke.jpg',
+    }
+    const departments = [
+      {
+        name: 'Bánh kẹo',
+        count: 473,
+        subcategories: [
+          { name: 'Kẹo - Chocolate', count: 167 },
+          { name: 'Bánh Snack', count: 93 },
+        ],
+      },
+      {
+        name: 'Đồ uống, thuốc lá',
+        count: 327,
+        subcategories: [{ name: 'Nước Ngọt', count: 158 }],
+      },
+    ]
+    apiMocks.browseProductCatalog.mockImplementation(async (opts?: { department?: string }) => {
+      if (opts?.department === 'Bánh kẹo') {
+        return {
+          total: 473,
+          total_catalog: 3081,
+          offset: 0,
+          limit: 24,
+          has_more: true,
+          active_department: 'Bánh kẹo',
+          active_category: null,
+          departments,
+          items: [snack],
+          data_timestamp: '2026-09-15T00:00:00Z',
+        }
+      }
+      return {
+        total: 3081,
+        total_catalog: 3081,
+        offset: 0,
+        limit: 24,
+        has_more: true,
+        active_department: null,
+        active_category: null,
+        departments,
+        items: [drink, snack],
+        data_timestamp: '2026-09-15T00:00:00Z',
+      }
+    })
+
+    const wrapper = mount(App)
+    try {
+      await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalled())
+      await wrapper.get('.corner-action-btn.is-catalog').trigger('click')
+      await flushPromises()
+
+      await vi.waitFor(() => expect(document.body.querySelector('.catalog-modal')).not.toBeNull())
+      const modal = document.body.querySelector('.catalog-modal')!
+      expect(modal.textContent).toContain('Tất cả sản phẩm')
+      expect(modal.textContent).toContain('Bánh kẹo')
+      expect(modal.textContent).toContain('Đồ uống, thuốc lá')
+
+      // Click department "Bánh kẹo" and verify subcategory chips + filtered card appear
+      const deptButtons = Array.from(modal.querySelectorAll<HTMLButtonElement>('.catalog-dept-btn'))
+      const snackDeptBtn = deptButtons.find((btn) => btn.textContent?.includes('Bánh kẹo'))
+      expect(snackDeptBtn).toBeTruthy()
+      snackDeptBtn?.click()
+      await flushPromises()
+
+      await vi.waitFor(() => expect(apiMocks.browseProductCatalog).toHaveBeenCalledWith(
+        expect.objectContaining({ department: 'Bánh kẹo' }),
+      ))
+      await vi.waitFor(() => expect(modal.textContent).toContain('Bánh Snack'))
+
+      // Add item directly from catalog grid and verify corner cart badge + CartDrawer handoff
+      const addBtn = modal.querySelector<HTMLButtonElement>('.catalog-add-btn')
+      expect(addBtn).not.toBeNull()
+      addBtn?.click()
+      await flushPromises()
+
+      await vi.waitFor(() => expect(wrapper.get('.corner-cart-badge').text()).toBe('1'))
+      const cartBarBtn = modal.querySelector<HTMLButtonElement>('.catalog-cart-bar .assisted-cart-bar-btn')
+      expect(cartBarBtn).not.toBeNull()
+      cartBarBtn?.click()
+      await flushPromises()
+
+      await vi.waitFor(() => expect(document.body.querySelector('.cart-sheet')?.textContent).toContain('Lay\'s'))
     } finally {
       wrapper.unmount()
     }

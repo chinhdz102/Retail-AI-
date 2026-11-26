@@ -416,6 +416,30 @@ class ProductSearchResponse(BaseModel):
     data_timestamp: datetime
 
 
+class CatalogSubcategorySummary(BaseModel):
+    name: str
+    count: int
+
+
+class CatalogDepartmentSummary(BaseModel):
+    name: str
+    count: int
+    subcategories: list[CatalogSubcategorySummary] = Field(default_factory=list)
+
+
+class ProductCatalogBrowseResponse(BaseModel):
+    total: int
+    total_catalog: int
+    offset: int
+    limit: int
+    has_more: bool
+    active_department: str | None = None
+    active_category: str | None = None
+    departments: list[CatalogDepartmentSummary] = Field(default_factory=list)
+    items: list[ProductCardResponse] = Field(default_factory=list)
+    data_timestamp: datetime
+
+
 class TranscriptionCorrection(BaseModel):
     """A bounded, opt-in explanation of catalog post-processing."""
 
