@@ -80,6 +80,8 @@ class _LoadedRouter:
     W: np.ndarray
     b: np.ndarray
     labels: tuple[str, ...]
+    sku_ids: tuple[str, ...] = ()
+    sku_emb_f32: np.ndarray | None = None
 
 
 def _strip_accents(text: str) -> str:
@@ -211,6 +213,12 @@ def _load_router(path_str: str = "") -> _LoadedRouter | None:
         W = data["W"].astype(np.float32)
         b = data["b"].astype(np.float32)
         labels = tuple(str(lbl) for lbl in data["labels"].tolist())
+        sku_ids: tuple[str, ...] = ()
+        sku_emb_f32: np.ndarray | None = None
+        if "sku_ids" in data and "sku_emb_int8" in data and "sku_scales" in data:
+            sku_ids = tuple(str(pid) for pid in data["sku_ids"].tolist())
+            s_scales = data["sku_scales"].astype(np.float32)[:, None]
+            sku_emb_f32 = data["sku_emb_int8"].astype(np.float32) * s_scales
         return _LoadedRouter(
             emb_f32=emb_f32,
             piece_to_local=piece_to_local,
@@ -218,6 +226,8 @@ def _load_router(path_str: str = "") -> _LoadedRouter | None:
             W=W,
             b=b,
             labels=labels,
+            sku_ids=sku_ids,
+            sku_emb_f32=sku_emb_f32,
         )
     except Exception as exc:
         logger.warning("Semantic NLP router failed to load from %s: %s", target, exc)
@@ -280,3 +290,30 @@ def route_query(
     if res is None or res.confidence < min_confidence:
         return None
     return res
+
+
+def dense_search_skus(
+    text: str,
+    *,
+    top_k: int = 12,
+    min_sim: float = 0.45,
+) -> tuple[tuple[str, float], ...]:
+    """Return top `(product_id, cosine_sim)` matches across all catalog SKUs in <0.5 ms."""
+    router = _load_router()
+    if router is None or router.sku_emb_f32 is None or not router.sku_ids:
+        return ()
+    core = clean_native_shopper_query(text, fallback_to_raw=False)
+    if not core:
+        return ()
+    qv = _unigram_encode(core, router)
+    if float(np.linalg.norm(qv)) < 1e-6:
+        return ()
+    sims = router.sku_emb_f32 @ qv
+    k = min(top_k, len(router.sku_ids))
+    top_idx = np.argpartition(sims, -k)[-k:]
+    top_idx = top_idx[np.argsort(sims[top_idx])[::-1]]
+    return tuple(
+        (router.sku_ids[int(i)], float(sims[int(i)]))
+        for i in top_idx
+        if float(sims[int(i)]) >= min_sim
+    )

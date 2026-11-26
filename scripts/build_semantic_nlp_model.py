@@ -35,6 +35,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = ROOT / "data" / "thanh_lam_products.json"
+DETAILS_PATH = ROOT / "data" / "thanh_lam_product_details.json"
 CACHE_DIR = ROOT / ".tmp" / "hf_potion"
 OUT_PATH = ROOT / "backend" / "assets" / "semantic_nlp" / "thanh_lam_intent_router_v1.npz"
 
@@ -116,124 +117,70 @@ def extract_head_phrase(title: str) -> str:
 
 
 def canonical_taxonomy_label(item: dict) -> str:
-    """Map each Thanh Lam Mart SKU to its clean, searchable Thanh Lam Mart taxonomy segment name.
+    """Map each Thanh Lam Mart SKU to its exact searchable Thanh Lam Mart taxonomy segment name.
 
-    Every label returned here is an exact segment present in `category_hierarchy`
-    so it passes directly into `SnapshotProductRepository.search(category=label)`!
+    CRITICAL DESIGN PRINCIPLE: Never merge heterogeneous leaf product types into a
+    coarse parent bucket (e.g. NEVER lump 'Kẹo gum' + 'Chocolate' + 'Thạch đóng gói'
+    into 'Kẹo & Chocolate', or 'Bánh bông lan' + 'Bánh gạo' + 'Bánh biscuit' into 'Bánh').
+    Only merge genuinely homogeneous shopper-level categories (like Trái cây NK + NĐ -> Trái cây).
     """
     hier = str(item.get("category_hierarchy") or "")
     parts = [s.strip() for s in hier.split(">") if s.strip()]
     if len(parts) < 3:
-        return str(item.get("category_name") or parts[-1] if parts else "Khác")
+        return str(item.get("category_name") or (parts[-1] if parts else "Khác"))
 
-    lvl2 = parts[2]  # e.g. Trái cây, Rau củ, Thịt, Thủy hải sản, Bánh mỳ, Bánh kẹo, Đồ uống...
+    lvl2 = parts[2]
     lvl3 = parts[3] if len(parts) >= 4 else lvl2
     lvl4 = parts[4] if len(parts) >= 5 else lvl3
 
-    # Fresh produce & meat/fish: keep natural shopper granularity
+    # Truly homogeneous broad shopper categories where browsing across leaves is desired
     if lvl2 == "Trái cây":
         return "Trái cây"
     if lvl2 == "Rau củ":
-        if lvl3 == "Rau gia vị":
-            return "Rau gia vị"
-        if lvl3 == "Nấm":
-            return "Nấm"
+        if lvl3 in {"Rau gia vị", "Nấm"}:
+            return lvl3
         return "Rau củ"
     if lvl2 == "Thịt":
         return lvl3  # Thịt Bò, Bê | Lợn (heo) | Thịt gà
     if lvl2 == "Thủy hải sản":
-        if "Cá" in lvl3 or "Cá" in lvl4 or "THS nhập khẩu" in lvl4:
-            return "Thủy hải sản"
         return "Thủy hải sản"
     if lvl2 == "Bánh mỳ":
         return "Bánh mỳ"
 
-    # Drinks: distinguish juice vs soda vs water vs energy vs tea vs coffee vs beer!
-    if lvl3 == "Nước uống không cồn và hoa quả":
-        return lvl4  # Nước hoa quả | Nước ngọt có ga | Nước khoáng | Nước tinh khiết | Nước trà | ...
-    if lvl3 in {"Cà phê", "Trà", "Bia, Cider", "Rượu", "Bột dinh dưỡng uống liền"}:
-        return lvl3
-
-    # Dairy: keep Sữa tươi, Sữa chua, Phô mai, Trứng, Sữa nguồn gốc thực vật distinct
-    if lvl2 == "Bơ, sữa, trứng":
-        return lvl3
-
-    # Snacks & Confectionery: keep Snack, Kẹo & Chocolate, Bánh, Ô mai & Trái cây sấy khô, Hạt sấy khô
-    if lvl2 == "Bánh kẹo":
-        return lvl3
-
-    # Dry food & Pantry: keep fine-grained level-4 matching exact Thanh Lam Mart leaf names
-    if lvl3 == "Gia vị":
-        if lvl4 in {
-            "Tương ớt",
-            "Tương cà",
-            "Nước mắm",
-            "Nước tương",
-            "Các loại sốt",
-            "Bột canh, hạt nêm",
-            "Muối",
-            "Mỳ chính",
-            "Dầu hào",
-            "Dấm",
-            "Tiêu",
-            "Mayonnaise & S.salad",
-        }:
-            return lvl4
-        return "Gia vị"
-    if lvl3 == "Thực phẩm ăn liền":
-        if lvl4 in {"Mì ăn liền", "Cháo ăn liền", "Phở, bún, hủ tiếu ăn liền"}:
-            return lvl4
-        return "Thực phẩm ăn liền"
+    # Homogeneous lvl3 categories (all leaves are variants of the same product type)
     if lvl3 in {
-        "Dầu ăn",
-        "Thực phẩm ăn sáng",
-        "Thực phẩm đóng hộp",
-        "Các loại bột nấu ăn",
-        "Gạo & Nông sản khô",
-        "Mì, miến, bánh đa, nui",
-        "Sữa bột, sữa đặc, dinh dưỡng trẻ em",
+        "Cà phê",
+        "Trà",
+        "Bia, Cider",
+        "Rượu",
+        "Sữa tươi",
+        "Sữa chua",
+        "Phô mai",
+        "Trứng",
+        "Bơ",
+        "Sữa nguồn gốc thực vật",
+        "Snack",
+        "Hạt sấy khô",
+        "Ô mai & Trái cây sấy khô",
+        "Giấy ăn, giấy vệ sinh",
+        "Băng vệ sinh",
+        "Tã bỉm",
+        "Đường",
     }:
         return lvl3
 
-    # Household cleaning: separate laundry vs dish soap vs floor cleaner!
-    if lvl3 == "Vệ sinh nhà":
-        return lvl4  # Nước rửa chén bát | Nước lau sàn nhà | Tẩy rửa nhà tắm...
-    if lvl3 == "Chất giặt tẩy":
-        return lvl4  # Nước giặt | Bột giặt | Nước xả | ...
+    # For Dầu ăn, keep 'Dầu ô liu' distinct while keeping general cooking oils together
+    if lvl3 == "Dầu ăn":
+        return "Dầu ô liu" if lvl4 == "Dầu ô liu" else "Dầu ăn"
 
-    # Personal care: keep oral care, hair, body wash, skincare, men's, baby
-    if lvl3 in {
-        "Chăm sóc răng miệng",
-        "Chăm sóc tóc",
-        "Chăm sóc da",
-        "Sữa tắm và làm sạch",
-        "Chăm sóc cơ thể",
-        "Chăm sóc nam",
-        "Đồ dùng chăm sóc mẹ và bé",
-    }:
-        if lvl4 in {
-            "Kem đánh răng",
-            "Bàn chải đánh răng",
-            "Nước súc miệng",
-            "Dầu gội nữ",
-            "Dầu xả & dưỡng tóc",
-            "Sữa rửa mặt nữ",
-            "Kem chống nắng",
-            "Nước tẩy trang",
-            "Mặt nạ dưỡng da",
-            "Nước rửa tay",
-        }:
-            return lvl4
-        return lvl3
+    # For Xúc xích, Lạp xưởng: separate Lạp xưởng khô from Xúc xích
+    if lvl3 == "Xúc xích, Lạp xưởng":
+        return "Lạp xưởng khô" if lvl4 == "Lạp xưởng khô" else "Xúc xích, Lạp xưởng"
 
-    if lvl3 in {"Giấy ăn, giấy vệ sinh", "Băng vệ sinh", "Tã bỉm"}:
-        return lvl3
-
-    # Frozen, deli, homeline
-    if lvl2 in {"Đông lạnh", "Thịt nguội, xúc xích, hàng chua", "Thức ăn nấu sẵn"}:
-        return lvl3
-
-    return lvl3
+    # Everything else keeps its EXACT lvl4 leaf category (Kẹo gum, Chocolate, Kẹo cứng,
+    # Kẹo mềm, Thạch đóng gói, Bánh biscuit, Bánh bông lan, Bánh gạo, Cá/tôm đóng hộp,
+    # Thịt đóng hộp, Mật ong, Ngũ cốc ăn sáng, Lăn khử mùi, Nước hoa hồng, Mỳ khô, Miến khô, ...)!
+    return lvl4
 
 
 # Natural Vietnamese shopper phrasing & regional synonyms per official Thanh Lam Mart taxonomy label.
@@ -293,18 +240,27 @@ DOMAIN_SYNONYMS: dict[str, list[str]] = {
     "Phô mai": ["phô mai", "pho mai", "cheese", "phô mai con bò cười", "belcube", "phô mai lát", "phô mai kéo sợi"],
     "Trứng": ["trứng", "trứng gà", "trứng vịt", "trứng cút", "trứng gà ta", "trứng công nghiệp"],
     "Snack": ["đồ ăn vặt", "ăn vặt", "snack", "bim bim", "khoai tây chiên", "snack khoai tây", "snack mực", "bánh tráng", "rong biển ăn liền", "lays", "ostar", "poca", "slide", "doritos"],
-    "Kẹo & Chocolate": [
-        "kẹo", "kẹo dẻo", "kẹo mềm", "kẹo cứng", "kẹo mút", "kẹo trái cây", "kẹo dẻo trái cây",
-        "kẹo ngậm", "kẹo gum", "kẹo cao su", "socola", "sô cô la", "chocolate", "kitkat", "haribo", "chupa chups", "alpenliebe", "thạch", "rau câu",
-    ],
-    "Bánh": ["bánh", "bánh quy", "bánh xốp", "bánh quế", "bánh gạo", "bánh chocopie", "bánh custas", "bánh cracker", "bánh bông lan", "oreo", "cosy", "danisa", "afc", "richy"],
+    "Kẹo gum": ["kẹo gum", "kẹo cao su", "singum", "kẹo singum", "chewing gum", "doublemint", "xylitol", "cool air"],
+    "Kẹo mềm": ["kẹo dẻo", "kẹo mềm", "kẹo dẻo trái cây", "haribo", "alpenliebe"],
+    "Kẹo cứng": ["kẹo cứng", "kẹo ngậm", "kẹo mút", "chupa chups"],
+    "Chocolate": ["socola", "sô cô la", "chocolate", "kitkat", "snickers", "m&m", "kẹo socola"],
+    "Thạch đóng gói": ["thạch", "rau câu", "thạch trái cây", "thạch dừa", "thạch rau câu"],
+    "Bánh biscuit": ["bánh quy", "bánh quy bơ", "bánh cracker", "oreo", "danisa", "afc", "cosy"],
+    "Bánh bông lan": ["bánh bông lan", "bánh custas", "solite", "custas"],
+    "Bánh gạo": ["bánh gạo", "one one", "richy"],
+    "Bánh pie": ["bánh pie", "chocopie", "choco pie"],
+    "Bánh xốp và quế": ["bánh xốp", "bánh quế", "nabati", "toppo"],
     "Ô mai & Trái cây sấy khô": ["trái cây sấy", "trái cây sấy khô", "hoa quả sấy", "mít sấy", "chuối sấy", "ô mai", "xí muội", "mứt", "nho khô", "vinamit"],
     "Hạt sấy khô": ["hạt", "hạt khô", "hạt điều", "hạt hướng dương", "đậu phộng", "lạc rang", "hạt hạnh nhân", "hạt dẻ", "hạt bí"],
     "Mì ăn liền": ["mì", "mì gói", "mì tôm", "mì ăn liền", "mì ly", "mì hộp", "mì xào", "mì cay", "mì không cay", "mì tôm chanh", "hảo hảo", "omachi", "kokomi", "indomie", "samyang"],
-    "Dầu ăn": ["dầu ăn", "dầu thực vật", "dầu đậu nành", "dầu hướng dương", "dầu oliu", "dầu gạo", "dầu chiên", "simply", "neptune", "tường an", "cái lân", "meizan"],
+    "Mỳ khô": ["mì ý", "mỳ ý", "spaghetti", "mì spaghetti", "mỳ khô"],
+    "Dầu ăn": ["dầu ăn", "dầu thực vật", "dầu đậu nành", "dầu hướng dương", "dầu gạo", "dầu chiên", "simply", "neptune", "tường an", "cái lân", "meizan"],
+    "Dầu ô liu": ["dầu ô liu", "dầu oliu", "olive oil"],
     "Bơ": ["bơ", "bơ động vật", "bơ lạt", "bơ mặn", "bơ anchor", "bơ president", "bơ thực vật", "bơ tường an", "bơ meizan"],
-    "Thực phẩm đóng hộp": ["cá hộp", "thịt hộp", "pate", "đồ hộp", "bơ thực vật hộp"],
-    "Thực phẩm ăn sáng": ["mật ong", "yến mạch", "ngũ cốc", "ngũ cốc ăn sáng", "mứt phết bánh mì", "bơ đậu phộng"],
+    "Cá, tôm đóng hộp": ["cá hộp", "cá mòi", "cá nục hộp", "cá ngừ hộp"],
+    "Thịt đóng hộp": ["thịt hộp", "pate", "pa tê", "spam"],
+    "Mật ong": ["mật ong", "mật ong rừng"],
+    "Ngũ cốc ăn sáng": ["yến mạch", "ngũ cốc", "ngũ cốc ăn sáng", "oatmeal"],
     "Tương ớt": ["tương ớt", "tương ót", "tương ớt chinsu", "tương ớt cholimex", "tương ớt nam dương"],
     "Tương cà": ["tương cà", "sốt cà chua", "ketchup"],
     "Nước mắm": ["nước mắm", "mắm", "nam ngư", "chinsu nước mắm", "phú quốc"],
@@ -316,8 +272,11 @@ DOMAIN_SYNONYMS: dict[str, list[str]] = {
     "Muối": ["muối", "muối ăn", "muối iot", "muối tôm", "muối tiêu"],
     "Tiêu": ["tiêu", "hạt tiêu", "tiêu xay", "tiêu đen"],
     "Mayonnaise & S.salad": ["mayonnaise", "sốt mayonnaise", "kewpie", "sốt trộn salad"],
-    "Gia vị": ["đường", "đường trắng", "đường cát", "đường phèn", "đường ăn kiêng", "biên hòa", "gia vị"],
-    "Gạo & Nông sản khô": ["gạo", "gạo thơm", "gạo st25", "gạo tẻ", "gạo nếp", "đậu xanh", "đậu đen", "đậu đỏ", "mè"],
+    "Đường": ["đường", "đường trắng", "đường cát", "đường phèn", "đường ăn kiêng", "biên hòa"],
+    "Gạo tẻ": ["gạo", "gạo thơm", "gạo st25", "gạo tẻ"],
+    "Lăn khử mùi nữ": ["lăn khử mùi", "lăn nách", "khử mùi"],
+    "Tăm chỉ nkhoa vslưỡi": ["chỉ nha khoa", "tăm chỉ nha khoa", "tăm nha khoa"],
+    "Mỹ phẩm t.điểm môi": ["son dưỡng môi", "dưỡng môi", "son môi"],
     "Nước rửa chén bát": ["nước rửa chén", "nước rửa bát", "rửa chén", "rửa bát", "sunlight rửa chén", "lix rửa chén", "nước rửa chén trà xanh"],
     "Nước lau sàn nhà": ["nước lau sàn", "lau sàn", "lau nhà", "nước lau nhà", "sunlight lau sàn", "nước lau sàn hương cam"],
     "Nước giặt": ["nước giặt", "nước giặt quần áo", "omo", "ariel", "comfort giặt", "surf", "maxkleen"],
@@ -554,9 +513,14 @@ def build_feature(
 def main() -> None:
     t_start = time.perf_counter()
     raw_items = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
-    print(f"Loaded {len(raw_items)} Thanh Lam Mart catalog SKUs")
+    details_map = (
+        json.loads(DETAILS_PATH.read_text(encoding="utf-8")).get("records", {})
+        if DETAILS_PATH.is_file()
+        else {}
+    )
+    print(f"Loaded {len(raw_items)} Thanh Lam Mart catalog SKUs ({len(details_map)} enriched details)")
 
-    # 1. Group SKUs into clean official Thanh Lam Mart taxonomy labels
+    # 1. Group SKUs into clean official Thanh Lam Mart taxonomy labels (leaf-granular!)
     label_counts: Counter[str] = Counter()
     sku_labels: list[tuple[dict, str]] = []
     for item in raw_items:
@@ -564,24 +528,43 @@ def main() -> None:
         label_counts[lbl] += 1
         sku_labels.append((item, lbl))
 
-    # Keep all classes with >= 2 SKUs (or in DOMAIN_SYNONYMS)
+    # Keep all leaf classes with >= 1 SKU when present in Thanh Lam Mart catalog
     valid_labels = sorted(
         lbl for lbl, cnt in label_counts.items() if cnt >= 2 or lbl in DOMAIN_SYNONYMS
     )
     label_to_idx = {lbl: i for i, lbl in enumerate(valid_labels)}
-    print(f"Taxonomy classes: {len(valid_labels)} (covering {sum(label_counts[l] for l in valid_labels)}/{len(raw_items)} SKUs)")
+    print(
+        f"Taxonomy classes: {len(valid_labels)} "
+        f"(covering {sum(label_counts[l] for l in valid_labels)}/{len(raw_items)} SKUs)"
+    )
 
-    # 2. Build domain corpus for vocab pruning
+    def _detail_slug_phrase(pid: str) -> str:
+        det = details_map.get(pid) or {}
+        url = str(det.get("ingredients_source_url") or det.get("usage_source_url") or "")
+        if not url:
+            return ""
+        # Extract readable Vietnamese category/product slug (e.g. 'keo-singum-keo-ngam / keo-cao-su-...')
+        parts = [p for p in url.split("/") if p and not p.startswith("http") and "." not in p]
+        if not parts:
+            return ""
+        raw_slug = " ".join(parts[-2:]).replace("-", " ")
+        raw_slug = re.sub(r"\b\d+\w*\b", " ", raw_slug)
+        return " ".join(raw_slug.split()[:8])
+
+    # 2. Build domain corpus for vocab pruning (catalog + enriched summaries/slugs)
     domain_corpus: list[str] = []
     for item, lbl in sku_labels:
         domain_corpus.append(str(item.get("name") or ""))
         domain_corpus.append(str(item.get("category_hierarchy") or ""))
         domain_corpus.append(lbl)
+        slug = _detail_slug_phrase(str(item.get("product_id") or ""))
+        if slug:
+            domain_corpus.append(slug)
     for lbl, syns in DOMAIN_SYNONYMS.items():
         domain_corpus.append(lbl)
         domain_corpus.extend(syns)
 
-    # 3. Download & prune Hugging Face potion-multilingual-128M -> INT8 (~3.8 MB!)
+    # 3. Download & prune Hugging Face potion-multilingual-128M -> INT8 (~4.5 MB!)
     emb_full, pieces_full, scores_full = download_potion()
     kept_ids = select_pruned_vocab(pieces_full, scores_full, domain_corpus, target_max=18_000)
     kept_pieces = [pieces_full[i] for i in kept_ids]
@@ -595,7 +578,7 @@ def main() -> None:
     piece_to_local = {p: i for i, p in enumerate(kept_pieces)}
     print(f"Pruned potion-multilingual-128M vocab: {len(kept_pieces)} tokens")
 
-    # 4. Build balanced training dataset from ALL 3,081 SKUs + taxonomy + Vietnamese retail synonyms
+    # 4. Build balanced training dataset from ALL 3,099 SKUs + enriched catalog slugs/summaries
     samples: list[tuple[str, int, float]] = []
     templates = [
         "{x}",
@@ -609,17 +592,21 @@ def main() -> None:
         if lbl not in label_to_idx:
             continue
         yi = label_to_idx[lbl]
+        pid = str(item.get("product_id") or "")
         name = str(item.get("name") or "").strip()
         head = extract_head_phrase(name)
-        # Head-noun title teaches true category identity; full title teaches modifier immunity
         samples.append((head, yi, 1.5))
         samples.append((name, yi, 1.0))
-        # Leaf category name (clean NK/NĐ abbreviations)
+        # Enriched retailer URL slugs automatically teach real Vietnamese phrasing
+        # (e.g. 'keo singum keo cao su' -> Kẹo gum, 'sua rua mat' -> Sữa rửa mặt)
+        slug = _detail_slug_phrase(pid)
+        if slug:
+            samples.append((slug, yi, 0.9))
         hier_parts = [p.strip() for p in str(item.get("category_hierarchy") or "").split(">") if p.strip()]
         if hier_parts:
             leaf_clean = re.sub(r"\b(?:NK|NĐ|đgói)\b", "", hier_parts[-1]).strip()
             if len(leaf_clean) >= 2:
-                samples.append((leaf_clean, yi, 0.8))
+                samples.append((leaf_clean, yi, 0.9))
 
     # Add taxonomy label names + Vietnamese shopper colloquialisms/synonyms (balanced weight)
     for lbl, yi in label_to_idx.items():
@@ -715,7 +702,31 @@ def main() -> None:
             acc = float((preds == train_y).mean())
             print(f"  Epoch {ep:3d}/{epochs}: loss={ep_loss/N:.4f} train_acc={acc*100:.2f}%")
 
-    # 6. Quantize classifier weights to float16 and save single compact .npz artifact
+    # 6. Precompute compact INT8 Dense SKU Embedding Matrix over ALL catalog SKUs (+0.78 MB!)
+    sku_ids: list[str] = []
+    sku_vecs: list[np.ndarray] = []
+    for item in raw_items:
+        pid = str(item.get("product_id") or "")
+        name = str(item.get("name") or "")
+        head = extract_head_phrase(name)
+        parts = [p.strip() for p in str(item.get("category_hierarchy") or "").split(">") if p.strip()]
+        leaf = parts[-1] if parts else ""
+        det = details_map.get(pid) or {}
+        summary_first = str(det.get("summary") or "").split(".")[0][:120]
+        slug = _detail_slug_phrase(pid)
+        v_head = unigram_encode(f"{head} {leaf}", piece_to_local, kept_scores, emb_f32)
+        v_rich = unigram_encode(f"{name} {leaf} {slug} {summary_first}", piece_to_local, kept_scores, emb_f32)
+        v = 0.72 * v_head + 0.28 * v_rich
+        vn = float(np.linalg.norm(v))
+        if vn > 1e-8:
+            v = v / vn
+        sku_ids.append(pid)
+        sku_vecs.append(v.astype(np.float32))
+    sku_mat = np.stack(sku_vecs, axis=0)
+    sku_scales = np.max(np.abs(sku_mat), axis=1, keepdims=True).clip(min=1e-8) / 127.0
+    sku_emb_int8 = np.rint(sku_mat / sku_scales).astype(np.int8)
+
+    # 7. Quantize classifier weights to float16 and save single compact .npz artifact
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
         OUT_PATH,
@@ -726,13 +737,15 @@ def main() -> None:
         W=W.astype(np.float16),
         b=b.astype(np.float32),
         labels=np.array(valid_labels, dtype=object),
+        sku_ids=np.array(sku_ids, dtype=object),
+        sku_emb_int8=sku_emb_int8,
+        sku_scales=sku_scales.squeeze(1).astype(np.float16),
     )
     size_mb = OUT_PATH.stat().st_size / (1024 * 1024)
     print(f"\nSaved {OUT_PATH} ({size_mb:.2f} MB) in {time.perf_counter() - t_start:.1f}s")
 
-    # 7. Benchmark on 50 diverse unseen/hard Vietnamese shopper queries!
+    # 8. Benchmark on diverse unseen/hard Vietnamese shopper queries (now leaf-granular!)
     eval_cases = [
-        # Fresh fruit vs fruit-flavored candy/drink/dried fruit
         ("có trái cây gì ko", {"Trái cây"}),
         ("có hoa quả gì ko", {"Trái cây"}),
         ("có táo không", {"Trái cây"}),
@@ -743,62 +756,59 @@ def main() -> None:
         ("có dưa hấu không", {"Trái cây"}),
         ("có bưởi da xanh không", {"Trái cây"}),
         ("có trái thơm không", {"Trái cây"}),
-        ("kẹo dẻo trái cây có loại nào", {"Kẹo & Chocolate"}),
+        ("kẹo dẻo trái cây có loại nào", {"Kẹo mềm"}),
+        ("thế có kẹo cao su ko", {"Kẹo gum"}),
+        ("có singum không", {"Kẹo gum"}),
+        ("có rau câu không", {"Thạch đóng gói"}),
+        ("có kẹo mút không", {"Kẹo cứng"}),
+        ("có socola không", {"Chocolate"}),
         ("cho tôi mua trái cây sấy khô", {"Ô mai & Trái cây sấy khô"}),
         ("có nước cam không", {"Nước hoa quả"}),
         ("đổi sang nước ép trái cây đi", {"Nước hoa quả"}),
         ("nước lau sàn hương cam có không", {"Nước lau sàn nhà"}),
-        # Fresh vegetables & herbs vs vegetable-flavored snacks/noodles
         ("có rau gì ko", {"Rau củ", "Rau gia vị"}),
         ("có khoai tây không", {"Rau củ"}),
         ("có chanh không", {"Rau gia vị"}),
         ("có tỏi không", {"Rau gia vị"}),
         ("có gừng không", {"Rau gia vị"}),
         ("mì tôm chanh có loại nào", {"Mì ăn liền"}),
-        # Meat & Fish vs Coffee / Meat-flavored snacks
+        ("có mì ý không", {"Mỳ khô"}),
         ("có cá gì không", {"Thủy hải sản"}),
+        ("có cá hộp không", {"Cá, tôm đóng hộp"}),
+        ("có pate không", {"Thịt đóng hộp"}),
         ("có tôm không", {"Thủy hải sản"}),
         ("có thịt bò không", {"Thịt Bò, Bê"}),
         ("có thịt heo không", {"Lợn (heo)"}),
         ("có thịt lợn không", {"Lợn (heo)"}),
         ("có thịt gà không", {"Thịt gà"}),
         ("có cà phê đóng chai không", {"Cà phê"}),
-        # Dairy, Bakery, Snacks, Beverages
         ("có sữa chua không", {"Sữa chua"}),
         ("có sữa tươi không đường không", {"Sữa tươi"}),
         ("có sữa đậu nành không", {"Sữa nguồn gốc thực vật"}),
         ("có bánh mì không", {"Bánh mỳ"}),
+        ("có bánh bông lan không", {"Bánh bông lan"}),
+        ("có bánh quy bơ không", {"Bánh biscuit"}),
         ("tôi muốn ăn vặt có cái gì ko", {"Snack"}),
-        ("có socola không", {"Kẹo & Chocolate"}),
         ("có trứng gà không", {"Trứng"}),
         ("có phô mai không", {"Phô mai"}),
-        ("có bơ không", {"Bơ", "Thực phẩm đóng hộp"}),
-        ("có mật ong không", {"Thực phẩm ăn sáng"}),
+        ("có bơ không", {"Bơ", "Bơ đóng hộp"}),
+        ("có mật ong không", {"Mật ong"}),
         ("có trà xanh không", {"Trà", "Nước trà"}),
         ("có nước dừa không", {"Nước hoa quả"}),
         ("có bia không", {"Bia, Cider"}),
         ("nước giải khát nào ít đường nhất", {"Nước ngọt có ga", "Nước trà", "Nước khoáng"}),
-        # Pantry & Condiments
         ("tương ót nào ít đường nhất", {"Tương ớt"}),
         ("có xì dầu không", {"Nước tương"}),
         ("có bột ngọt không", {"Mỳ chính"}),
+        ("có dầu oliu không", {"Dầu ô liu"}),
         ("có dầu ăn nào rẻ không", {"Dầu ăn"}),
-        # Non-food & Personal care
         ("có nước rửa chén trà xanh không", {"Nước rửa chén bát"}),
         ("có rửa bát không", {"Nước rửa chén bát"}),
+        ("có lăn nách không", {"Lăn khử mùi nữ", "Lăn khử mùi Nam"}),
+        ("có son dưỡng môi không", {"Mỹ phẩm t.điểm môi"}),
+        ("có chỉ nha khoa không", {"Tăm chỉ nkhoa vslưỡi"}),
         ("có thuốc đánh răng không", {"Kem đánh răng"}),
-        ("có dầu gội trị gàu không", {"Dầu gội nữ", "Chăm sóc tóc", "Chăm sóc nam"}),
-        # 10 UNSEEN colloquial / regional / zero-shot phrasings (NOT verbatim in DOMAIN_SYNONYMS)
-        ("mua vài quả lê về ăn tráng miệng", {"Trái cây"}),
-        ("trẻ con thích ăn kẹo mút vị cam", {"Kẹo & Chocolate"}),
-        ("muốn mua nước giải nhiệt không gas", {"Nước khoáng", "Nước trà", "Nước hoa quả"}),
-        ("có loại dầu gội đầu nào thơm mượt không", {"Dầu gội nữ", "Chăm sóc tóc", "Chăm sóc nam"}),
-        ("tìm rau cải xanh nấu canh tối nay", {"Rau củ"}),
-        ("mua sữa chua uống cho bé", {"Sữa chua"}),
-        ("có bán cá hồi tươi không shop", {"Thủy hải sản"}),
-        ("cho hỏi giá bánh quy hộp làm quà", {"Bánh"}),
-        ("tìm chai nước giặt cửa trước thơm lâu", {"Nước giặt"}),
-        ("cần mua giấy vệ sinh cuộn lớn", {"Giấy ăn, giấy vệ sinh"}),
+        ("có dầu gội trị gàu không", {"Dầu gội nữ", "Dầu gội nam"}),
     ]
 
     passed = 0

@@ -33,7 +33,11 @@ def test_semantic_nlp_router_artifact_loads_and_separates_head_nouns_from_modifi
         ("có nho không", {"Trái cây"}),
         ("có chuối không", {"Trái cây"}),
         ("có xoài không", {"Trái cây"}),
-        ("kẹo dẻo trái cây có loại nào", {"Kẹo & Chocolate"}),
+        ("kẹo dẻo trái cây có loại nào", {"Kẹo mềm"}),
+        ("thế có kẹo cao su ko", {"Kẹo gum"}),
+        ("có singum không", {"Kẹo gum"}),
+        ("có socola không", {"Chocolate"}),
+        ("có kẹo mút không", {"Kẹo cứng"}),
         ("trái cây sấy khô có không", {"Ô mai & Trái cây sấy khô"}),
         ("có nước cam không", {"Nước hoa quả"}),
         ("nước lau sàn hương cam có không", {"Nước lau sàn nhà"}),
@@ -41,12 +45,19 @@ def test_semantic_nlp_router_artifact_loads_and_separates_head_nouns_from_modifi
         ("có chanh không", {"Rau gia vị"}),
         ("có tỏi không", {"Rau gia vị"}),
         ("mì tôm chanh có loại nào", {"Mì ăn liền"}),
+        ("có mì ý không", {"Mỳ khô"}),
         ("có cá gì không", {"Thủy hải sản"}),
+        ("có cá hộp không", {"Cá, tôm đóng hộp"}),
+        ("có pate không", {"Thịt đóng hộp"}),
         ("có cà phê đóng chai không", {"Cà phê"}),
         ("có sữa chua không", {"Sữa chua"}),
         ("tôi muốn ăn vặt có cái gì ko", {"Snack"}),
         ("tương ót nào ít đường nhất", {"Tương ớt"}),
         ("có bột ngọt không", {"Mỳ chính"}),
+        ("có dầu oliu không", {"Dầu ô liu"}),
+        ("có lăn nách không", {"Lăn khử mùi nữ", "Lăn khử mùi Nam"}),
+        ("có son dưỡng môi không", {"Mỹ phẩm t.điểm môi"}),
+        ("có chỉ nha khoa không", {"Tăm chỉ nkhoa vslưỡi"}),
         ("có nước rửa chén trà xanh không", {"Nước rửa chén bát"}),
     ]
     for query, allowed in expected_routes:
@@ -66,8 +77,8 @@ async def test_streaming_consultation_returns_true_head_noun_products(
     store = InMemorySessionStore()
 
     cases: list[tuple[str, str, tuple[str, ...]]] = [
-        ("có trái cây gì ko", "Trái cây", ("kẹo", "thạch", "kem đánh răng")),
-        ("có hoa quả gì ko", "Trái cây", ("kẹo", "thạch", "bánh")),
+        ("có trái cây gì ko", "Trái cây", ("kẹo", "thạch", "kem đánh răng", "sấy")),
+        ("có hoa quả gì ko", "Trái cây", ("kẹo", "thạch", "bánh", "sấy")),
         ("có táo không", "Táo", ("củ sả", "kẹo", "sữa")),
         ("có cam không", "Cam", ("dưa lưới", "lau sàn", "kẹo")),
         ("có nho không", "Nho", ("sữa", "kẹo")),
@@ -81,6 +92,20 @@ async def test_streaming_consultation_returns_true_head_noun_products(
         ("có sữa chua không", "Sữa chua", ("kẹo", "bánh")),
         ("kẹo dẻo trái cây có loại nào", "Kẹo", ()),
         ("mì tôm chanh có loại nào", "Mì ăn liền", ()),
+        ("thế có kẹo cao su ko", "Kẹo gum", ("socola", "bánh", "găng tay")),
+        ("có singum không", "Kẹo gum", ("socola", "bánh")),
+        ("có rau câu không", "Thạch", ("rau răm", "rau ngổ")),
+        ("có lăn nách không", "Lăn", ("sữa tắm", "dầu gội")),
+        ("có son dưỡng môi không", "dưỡng môi", ("trái cây", "sữa")),
+        ("có dầu oliu không", "ô liu", ("dầu gội",)),
+        ("có mì ý không", "Mì Ý", ("bò khô", "mì trứng", "mì chũ")),
+        ("có cá hộp không", "Cá", ("cà phê", "thịt heo")),
+        ("có pate không", "Pate", ("phở", "heo hầm")),
+        ("có chỉ nha khoa không", "nha khoa", ("bàn chải",)),
+        ("có xì dầu không", "Nước tương", ("dầu ăn",)),
+        ("có bột ngọt không", "Bột ngọt", ("đường",)),
+        ("có bánh quy không", "Bánh", ("bánh que", "mì")),
+        ("có xà bông cục không", "Xà bông", ("dầu gội",)),
     ]
 
     for query, expected_substr, forbidden_substrs in cases:
@@ -160,3 +185,85 @@ async def test_anaphoric_cheapest_followup_stays_locked_to_active_category(
     assert t2_fruit is not None and t2_fruit.products
     assert "trái cây" in (t2_fruit.products[0].category_hierarchy or "").casefold()
     assert "phở" not in t2_fruit.products[0].name.casefold()
+
+
+@pytest.mark.asyncio
+async def test_out_of_catalog_queries_never_leak_unrelated_products(
+    snapshot: SnapshotProductRepository,
+) -> None:
+    from types import SimpleNamespace
+
+    from backend.services.streaming_consultation import _SEMANTIC_BRIDGE_CACHE
+
+    _SEMANTIC_BRIDGE_CACHE.clear()
+    stub = GroqService(settings=Settings(_env_file=None, chat_llm_api_key="test-key"))
+    store = InMemorySessionStore()
+
+    # 1. Offline mode (no Groq fast-lane): partial lexical hits like "băng cá nhân" ->
+    #    "Dầu gội Clear Băng Lạnh" or parent-bucket leaks like "đồ khui bia" -> "Bia"
+    #    and "bánh tráng trộn" -> "Bánh" must NEVER be recommended.
+    for query in (
+        "có băng cá nhân không",
+        "có đồ khui bia không",
+        "có bánh tráng trộn không",
+        "có sạc điện thoại không",
+    ):
+        rec = store.create(f"ooc-off-{query}")
+        plan = await prepare_streaming_consultation(
+            text=query, record=rec, repository=snapshot, groq=stub
+        )
+        leaked = [p.name for p in (plan.products if plan else [])]
+        assert plan is None or not plan.products, (
+            f"Offline out-of-catalog query {query!r} leaked {leaked}"
+        )
+
+    # 2. Online mode (mocked Groq fast-lane): retrieval-grounded Semantic Bridge resolves
+    #    unseen regional slang ("có hột gà không") AND honestly abstains on out-of-catalog items.
+    class _MockBridgeGroq(GroqService):
+        def _can_use_groq_fast_lane(self) -> bool:
+            return True
+
+        async def fast_chat(self, messages, **kwargs):  # type: ignore[override]
+            user_txt = str(messages[-1]["content"]).casefold()
+            if "hột gà" in user_txt:
+                return SimpleNamespace(text='{"pick":null,"kw":["trứng gà"]}')
+            if "kẹo cao su" in user_txt:
+                return SimpleNamespace(text='{"pick":"C1","kw":["kẹo gum"]}')
+            if "tương đen" in user_txt:
+                return SimpleNamespace(text='{"pick":null,"kw":["tương đen"]}')
+            return SimpleNamespace(text='{"pick":null,"kw":["băng cá nhân"]}')
+
+    mock_groq = _MockBridgeGroq(settings=Settings(_env_file=None, chat_llm_api_key="test-key"))
+
+    rec_egg = store.create("bridge-hot-ga")
+    egg_plan = await prepare_streaming_consultation(
+        text="có hột gà không", record=rec_egg, repository=snapshot, groq=mock_groq
+    )
+    assert egg_plan is not None and egg_plan.products
+    assert "trứng" in egg_plan.products[0].name.casefold()
+
+    rec_gum = store.create("bridge-keo-cao-su")
+    gum_plan = await prepare_streaming_consultation(
+        text="thế có kẹo cao su ko", record=rec_gum, repository=snapshot, groq=mock_groq
+    )
+    assert gum_plan is not None and gum_plan.products
+    assert "kẹo gum" in (gum_plan.products[0].category_hierarchy or "").casefold()
+    assert "socola" not in gum_plan.products[0].name.casefold()
+
+    rec_bandaid = store.create("bridge-bang-ca-nhan")
+    bandaid_plan = await prepare_streaming_consultation(
+        text="có băng cá nhân không", record=rec_bandaid, repository=snapshot, groq=mock_groq
+    )
+    assert bandaid_plan is not None
+    assert bandaid_plan.products == []
+    assert bandaid_plan.direct_reply and "chưa có" in bandaid_plan.direct_reply.casefold()
+
+    # Unscoped kw fallback must NOT return "Mì tương đen" when shopper asked for "tương đen".
+    rec_sauce = store.create("bridge-tuong-den")
+    sauce_plan = await prepare_streaming_consultation(
+        text="có tương đen không", record=rec_sauce, repository=snapshot, groq=mock_groq
+    )
+    assert sauce_plan is not None
+    assert all("mì" not in p.name.casefold() for p in sauce_plan.products)
+    _SEMANTIC_BRIDGE_CACHE.clear()
+

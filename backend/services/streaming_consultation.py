@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import unicodedata
 from typing import Literal
 
 from backend.products.catalog import ProductSnapshot
@@ -54,7 +55,12 @@ from backend.services.query_understanding import (
     strip_retrieval_budget,
     understand_catalog_query,
 )
-from backend.services.semantic_nlp_router import clean_native_shopper_query, route_query
+from backend.services.semantic_nlp_router import (
+    SemanticRoute,
+    clean_native_shopper_query,
+    dense_search_skus,
+    route_query,
+)
 from backend.services.sessions import SessionRecord
 from backend.services.shopping_guidance import shopping_guidance
 from backend.services.streaming_multiturn import (
@@ -250,18 +256,20 @@ def _clean_native_lexical_query(text: str) -> str:
 def _clean_lexical_query(text: str) -> str:
     """Strip Vietnamese conversational fillers & budgets to isolate product keywords."""
     native_core = _clean_native_lexical_query(text)
-    stripped = normalize_category_text(native_core)
-    # Keep short diacritic-protected product tokens (e.g. "tỏi"->"toi", "táo"->"tao", "cá"->"ca")
-    # that collide with ASCII stopwords after accent folding.
+    # Keep short diacritic-protected product tokens (e.g. "tỏi"->"toi", "táo"->"tao", "cá"->"ca",
+    # "ý" in "mì ý") that collide with ASCII stopwords or 1-char filter after accent folding.
     protected_folded: set[str] = set()
+    tokens: list[str] = []
     for nw in native_core.split():
+        folded = normalize_category_text(nw)
+        if not folded:
+            continue
         if nw in {"tỏi", "táo", "cá", "cà", "bơ", "bò", "gà", "mì", "trà", "đá", "cua", "ổi", "lê"}:
-            protected_folded.add(normalize_category_text(nw))
-    tokens = [
-        tok
-        for tok in stripped.split()
-        if len(tok) >= 2 and (tok not in _STREAM_FILLER_TOKENS or tok in protected_folded)
-    ]
+            protected_folded.add(folded)
+        if len(folded) >= 2 and (folded not in _STREAM_FILLER_TOKENS or folded in protected_folded):
+            tokens.append(folded)
+        elif nw == "ý":
+            tokens.append(folded)
     return " ".join(tokens)
 
 
@@ -286,17 +294,39 @@ def _filter_streaming_candidates(
     focus = _focus_tokens_for_streaming(text, product_type)
     if not focus:
         return candidates, {}
+    native_core_toks = set(_clean_native_lexical_query(text).split())
+    require_native_y = "ý" in native_core_toks
     scores: dict[str, int] = {}
     for item in candidates:
-        hay = normalize_category_text(
-            f"{item.name} {item.brand or ''} {item.category or ''}"
-        )
+        title_hay = normalize_category_text(f"{item.name} {item.brand or ''}")
+        title_words = set(title_hay.split())
+        title_compact = title_hay.replace(" ", "")
+        raw_hay = f"{item.name} {item.brand or ''} {item.category or ''}"
+        hay = normalize_category_text(raw_hay)
+        hay_words = set(hay.split())
         hay_compact = hay.replace(" ", "")
-        hits = sum(
-            1
-            for tok in focus
-            if tok in hay or (len(tok) >= 4 and tok in hay_compact)
+        hay_native_toks = set(
+            re.sub(
+                r"[^\w\s]",
+                " ",
+                unicodedata.normalize("NFC", raw_hay.lower()),
+                flags=re.UNICODE,
+            ).split()
         )
+        hits = 0
+        for tok in focus:
+            if tok == "y" and require_native_y:
+                if "ý" in hay_native_toks:
+                    hits += 2
+            elif len(tok) <= 3:
+                if tok in title_words:
+                    hits += 2
+                elif tok in hay_words:
+                    hits += 1
+            elif tok in title_hay or tok in title_compact:
+                hits += 2
+            elif tok in hay or tok in hay_compact:
+                hits += 1
         if hits > 0:
             scores[item.product_id] = hits
     if not scores:
@@ -1033,6 +1063,12 @@ async def _prepare_open_need_streaming(
         for kw in clean_keywords:
             norm_kw = normalize_category_text(kw)
             hits = repository.search(query=kw, limit=18)
+            grounded_open = [p for p in hits if _hit_is_grounded(kw, p)]
+            if grounded_open:
+                hits = grounded_open
+            else:
+                # Reject false partial-token noise (e.g. 'kẹo cao su' -> 'Bánh cao cấp Orion')
+                continue
             if food_need:
                 edible = filter_edible_candidates(hits, ready_to_eat=ready_eat)
                 hits = edible if ready_eat else (edible or hits)
@@ -1114,6 +1150,407 @@ async def _prepare_open_need_streaming(
         memory=memory,
         plan_for_fallback=open_plan,
         mode="recommend",
+    )
+
+
+_PACK_OR_MEASURE_PREFIX_RE = re.compile(
+    r"^(?:thùng|lốc|bịch|hộp|gói|túi|chai|lon|vỉ|khay|can|hũ|lọ|cặp|combo|bộ|set)\s+"
+    r"(?:\d+\s*(?:gói|chai|lon|hộp|túi|vỉ|miếng|chiếc|cuộn|cây|thanh|quả|trái)?\s*)?",
+    flags=re.IGNORECASE,
+)
+_TITLE_MODIFIER_SPLIT_RE = re.compile(
+    r"\b(?:vị|hương\s+vị|hương|chiết\s+xuất|tinh\s+chất|tinh\s+dầu|ruột|nhân)\b",
+    flags=re.IGNORECASE,
+)
+_GENERIC_ATTR_FOCUS_WORDS = frozenset(
+    {
+        "duong", "ngot", "calo", "gas", "cay", "tuoi", "lanh", "nong", "mat", "dong",
+        "chai", "lon", "hop", "goi", "thung", "loc", "tui", "bich", "can", "tuyp",
+        "hu", "lo", "vi", "khay", "cuc", "vien", "mieng", "thanh", "thoi", "cuon",
+        "an", "lien", "uong", "giai", "khat", "nho", "to",
+        "be", "mini", "it", "khong", "giam", "cao", "thap", "sach", "thom", "mem",
+        "min", "gion", "deo", "ngon", "chua", "man", "dam", "nhat", "nguyen", "chat",
+        "huu", "co", "tu", "nhien", "nhap", "khau", "noi", "dia", "viet", "nam",
+        "han", "quoc", "nhat", "ban", "thai", "lan", "my", "uc", "phap", "duc",
+        "cho", "tre", "em", "nguoi", "lon", "gia", "dinh", "loai", "hang", "tot",
+    }
+)
+_HOMOGENEOUS_MULTI_LEAF_CATS = frozenset(
+    {
+        "Trái cây",
+        "Rau củ",
+        "Rau gia vị",
+        "Nấm",
+        "Thủy hải sản",
+        "Bánh mỳ",
+        "Sữa tươi",
+        "Sữa chua",
+        "Snack",
+        "Cà phê",
+        "Trà",
+        "Bia, Cider",
+        "Dầu ăn",
+        "Phô mai",
+        "Trứng",
+        "Đường",
+        "Bơ",
+        "Thịt Bò, Bê",
+        "Lợn (heo)",
+        "Thịt gà",
+        "Sữa nguồn gốc thực vật",
+        "Hạt sấy khô",
+        "Ô mai & Trái cây sấy khô",
+        "Giấy ăn, giấy vệ sinh",
+        "Băng vệ sinh",
+        "Tã bỉm",
+    }
+)
+_SITUATIONAL_OR_ADVICE_RE = re.compile(
+    r"\b(?:mua\s+gi|an\s+gi|uong\s+gi|dung\s+gi|tang\s+gi|lam\s+gi|chon\s+gi|"
+    r"dau\s+hong|say\s+xe|troi\s+nong|buon\s+ngu|tinh\s+tao|an\s+kieng|giam\s+can|"
+    r"qua\s+bieu|tang\s+qua|dang\s+doi|di\s+hoc|di\s+lam|di\s+choi|du\s+lich|"
+    r"cam\s+cum|dau\s+bung|di\s+ung|tieu\s+duong|huyet\s+ap|mang\s+thai|"
+    r"tre\s+so\s+sinh|em\s+be|cho\s+be|thuoc\s+(?:cam|ho|sot|dau|khang|tri))\b"
+)
+_OFFLINE_NON_CATALOG_HEAD_RE = re.compile(
+    r"\b(?:do\s+khui|mo\s+nap|dung\s+cu\s+mo|bang\s+ca\s+nhan|urgo|"
+    r"sac\s+dien\s+thoai|cap\s+sac|ao\s+mua|o\s+du|bong\s+den|banh\s+trang\s+tron)\b"
+)
+_SEMANTIC_BRIDGE_CACHE: dict[str, tuple[str, str | None, tuple[str, ...]]] = {}
+_SEMANTIC_BRIDGE_CACHE_MAX = 512
+_SEMANTIC_BRIDGE_SYSTEM_PROMPT = (
+    "Bạn là bộ đối chiếu danh mục siêu thị Thanh Lam Mart (Việt Nam). "
+    "Từ câu hỏi khách và danh sách ứng viên thực tế trong kho (nhóm C# hoặc sản phẩm S#), "
+    "trả đúng 1 JSON:\n"
+    '{"pick":"C1"|"S1"|null,"kw":["từ khóa chuẩn trên bao bì Thanh Lam Mart nếu cần tìm/lọc hẹp"]}\n'
+    "Quy tắc:\n"
+    "1. Chọn C# hoặc S# nếu ĐÚNG loại hàng khách hỏi (chấp nhận đồng nghĩa/từ địa phương/"
+    "tiếng Anh: vd kẹo cao su=Kẹo gum, lăn nách=Lăn khử mùi, rau câu=Thạch, xì dầu=Nước tương, "
+    "pin tiểu=Pin AA/AAA, tàu hũ=Đậu phụ/Đậu hũ).\n"
+    "2. Nếu chọn nhóm rộng hơn món khách hỏi (vd khách hỏi mì ý mà nhóm là Mỳ khô), ghi từ "
+    'lọc chuẩn vào kw (vd ["spaghetti","mì ý"]).\n'
+    "3. TUYỆT ĐỐI KHÔNG chọn nhầm/đánh tráo: phụ kiện ≠ đồ chính (đồ khui bia ≠ bia), "
+    "y tế/điện tử/quần áo không có trong ứng viên -> pick=null (vd băng cá nhân ≠ băng keo/"
+    "dầu gội/băng vệ sinh; bánh tráng trộn ≠ bánh tráng sống). Nếu pick=null nhưng món đó có "
+    "thể bán ở siêu thị dưới tên khác, ghi 1-2 tên phổ biến nhất vào kw; nếu không có ở ứng "
+    "viên vẫn giữ pick=null.\n"
+    "CHỈ trả JSON, không giải thích."
+)
+
+
+def _leaf_category_segment(product: ProductSnapshot) -> str:
+    hier = product.category_hierarchy or ""
+    parts = [s.strip() for s in hier.split(">") if s.strip()]
+    return parts[-1] if parts else (product.category or "")
+
+
+def _native_words(text: str) -> list[str]:
+    norm = unicodedata.normalize("NFC", text.strip().lower())
+    return [t for t in re.sub(r"[^\w\s]", " ", norm, flags=re.UNICODE).split() if t]
+
+
+def _is_direct_category_browse(native_q: str, sem_cat: str) -> bool:
+    """True when the shopper's query directly names the predicted category (safe 0ms browse)."""
+    q_toks = _native_words(native_q)
+    cat_toks = set(normalize_category_text(sem_cat).split())
+    if not q_toks or not cat_toks:
+        return False
+    return all(normalize_category_text(tok) in cat_toks for tok in q_toks)
+
+
+def _hit_is_grounded(
+    query: str,
+    product: ProductSnapshot,
+    *,
+    require_head_start: bool = False,
+) -> bool:
+    """Verify a lexical candidate genuinely matches query identity in title + leaf category.
+
+    Prevents false partial-token or department-only matches (e.g. 'băng cá nhân' ->
+    'Dầu gội Clear Băng Lạnh' via department 'Chăm sóc cá nhân', or 'kẹo cao su' ->
+    'Bánh cao cấp Orion', or 'tương đen' -> 'Mì tương đen').
+    """
+    q_nt = _native_words(query)
+    if not q_nt:
+        return False
+    leaf = _leaf_category_segment(product)
+    raw_name = unicodedata.normalize("NFC", product.name.strip().lower())
+    brand_raw = unicodedata.normalize("NFC", (product.brand or "").strip().lower())
+    hay_native = unicodedata.normalize("NFC", f"{raw_name} {brand_raw} {leaf.lower()}")
+    hay_nt = set(_native_words(hay_native))
+    hay_f = normalize_category_text(hay_native)
+    hay_ft = set(hay_f.split())
+    hay_c = hay_f.replace(" ", "")
+
+    head_part = _TITLE_MODIFIER_SPLIT_RE.split(raw_name, maxsplit=1)[0]
+    stripped_head = _PACK_OR_MEASURE_PREFIX_RE.sub("", head_part).strip()
+    head_nt = _native_words(stripped_head)
+    brand_nt = _native_words(brand_raw)
+    leaf_nt = set(_native_words(leaf))
+    leaf_ft = set(normalize_category_text(leaf).split())
+    # Strip leading brand prefix from title head (e.g. "ORCHID Dầu Thực Vật" -> "dầu thực vật").
+    non_brand_head = list(head_nt)
+    if brand_nt and len(non_brand_head) > len(brand_nt):
+        if non_brand_head[: len(brand_nt)] == brand_nt:
+            non_brand_head = non_brand_head[len(brand_nt) :]
+    head_and_leaf_nt = set(head_nt) | set(brand_nt) | leaf_nt
+    head_and_leaf_ft = (
+        set(normalize_category_text(stripped_head).split())
+        | set(normalize_category_text(brand_raw).split())
+        | leaf_ft
+    )
+    head_and_leaf_c = normalize_category_text(f"{stripped_head} {brand_raw} {leaf}").replace(
+        " ", ""
+    )
+
+    def _tok_in(nt: str, nt_set: set[str], ft_set: set[str], compact: str) -> bool:
+        ft = normalize_category_text(nt)
+        if not ft:
+            return False
+        has_accent = nt != ft
+        if has_accent and len(nt) <= 3:
+            return nt in nt_set
+        return nt in nt_set or ft in ft_set or (len(ft) >= 4 and ft in compact)
+
+    if len(q_nt) == 1:
+        # 1-word query must match in head/brand/leaf (never solely after flavor 'hương'/'vị').
+        return _tok_in(q_nt[0], head_and_leaf_nt, head_and_leaf_ft, head_and_leaf_c)
+
+    if require_head_start:
+        first_nt = q_nt[0]
+        first_ft = normalize_category_text(first_nt)
+        head0_nt = {non_brand_head[0]} if non_brand_head else set()
+        head0_ft = {normalize_category_text(non_brand_head[0])} if non_brand_head else set()
+        brand_ft = set(normalize_category_text(brand_raw).split())
+        brand_compact = normalize_category_text(brand_raw).replace(" ", "")
+        leaf_compact = normalize_category_text(leaf).replace(" ", "")
+        head_start_compact = "".join(
+            normalize_category_text(t) for t in non_brand_head[:2]
+        )
+        q_head2_compact = (
+            normalize_category_text(q_nt[0] + q_nt[1]) if len(q_nt) >= 2 else ""
+        )
+        in_start_or_leaf = (
+            _tok_in(first_nt, head0_nt, head0_ft, "")
+            or _tok_in(first_nt, set(brand_nt), brand_ft, brand_compact)
+            or _tok_in(first_nt, leaf_nt, leaf_ft, leaf_compact)
+            or (
+                first_ft
+                and len(q_head2_compact) >= 4
+                and (
+                    q_head2_compact == head_start_compact
+                    or q_head2_compact in leaf_compact
+                )
+            )
+        )
+        if not in_start_or_leaf:
+            return False
+
+    matched = sum(1 for nt in q_nt if _tok_in(nt, hay_nt, hay_ft, hay_c))
+    if matched < len(q_nt):
+        q_comp = "".join(normalize_category_text(t) for t in q_nt)
+        if len(q_comp) >= 4 and q_comp in hay_c:
+            matched = len(q_nt)
+    if len(q_nt) == 2:
+        return matched == 2
+    return matched >= max(2, (len(q_nt) * 2 + 2) // 3)
+
+
+def _unmatched_identity_tokens(
+    answer_text: str,
+    product_type: str | None,
+    candidates: list[ProductSnapshot],
+) -> list[str]:
+    """Return concrete product-identity tokens from query absent from every candidate."""
+    focus = _focus_tokens_for_streaming(answer_text, product_type)
+    identity_toks = [
+        tok
+        for tok in focus
+        if tok not in _GENERIC_ATTR_FOCUS_WORDS
+        and tok not in {"do", "vat", "dung", "cu"}
+        and not any(ch.isdigit() for ch in tok)
+        and (len(tok) >= 2 or tok == "y")
+    ]
+    if not identity_toks:
+        return []
+    cand_blobs: list[tuple[str, set[str], str]] = []
+    for item in candidates[:24]:
+        leaf_seg = _leaf_category_segment(item)
+        hay = normalize_category_text(f"{item.name} {item.brand or ''} {leaf_seg}")
+        cand_blobs.append((hay, set(hay.split()), hay.replace(" ", "")))
+    missing: list[str] = []
+    for tok in identity_toks:
+        matched_any = any(
+            (tok in words) if len(tok) <= 3 else (tok in hay or tok in compact)
+            for hay, words, compact in cand_blobs
+        )
+        if not matched_any:
+            missing.append(tok)
+    return missing
+
+
+async def _semantic_bridge_zero_hit_query(
+    *,
+    query: str,
+    native_q: str,
+    repository: ProductRepository,
+    groq: GroqService,
+    sem_route: SemanticRoute | None,
+) -> tuple[list[ProductSnapshot], str | None, bool]:
+    """Layer 3 (~250ms, cached) retrieval-grounded semantic catalog bridge for zero-hit queries.
+
+    Grounds the LLM strictly on the top local Thanh Lam Mart leaf candidates + dense SKU matches so
+    colloquial Vietnamese synonyms ('kẹo cao su' -> 'Kẹo gum', 'lăn nách' -> 'Lăn khử mùi',
+    'hột gà' -> 'Trứng gà') resolve accurately while genuinely out-of-catalog items
+    ('băng cá nhân', 'đồ khui bia', 'sạc điện thoại') return confirmed_absent=True.
+    """
+    cache_key = normalize_category_text(native_q or query)
+    cached = _SEMANTIC_BRIDGE_CACHE.get(cache_key) if cache_key else None
+
+    def _resolve_decision(
+        pick_kind: str,
+        pick_val: str | None,
+        kws: tuple[str, ...],
+    ) -> tuple[list[ProductSnapshot], str | None]:
+        if pick_kind == "cat" and pick_val:
+            for kw in kws:
+                scoped = repository.search(query=kw, category=pick_val, limit=24)
+                grounded = [p for p in scoped if _hit_is_grounded(kw, p)]
+                if grounded:
+                    return grounded, pick_val
+            browse = repository.search(
+                query="",
+                category=pick_val,
+                diversify_by_subcategory=True,
+                limit=32,
+            )
+            if browse:
+                return browse, pick_val
+        elif pick_kind == "sku" and pick_val:
+            sku = repository.get_product_snapshot(pick_val)
+            if sku is not None:
+                leaf = _leaf_category_segment(sku)
+                siblings = repository.search(query="", category=leaf, limit=16) if leaf else []
+                merged = [sku, *(p for p in siblings if p.product_id != sku.product_id)]
+                return merged, leaf or sku.category
+        else:
+            for kw in kws:
+                hits = repository.search(query=kw, limit=24)
+                grounded = [p for p in hits if _hit_is_grounded(kw, p, require_head_start=True)]
+                if grounded:
+                    return grounded, _leaf_category_segment(grounded[0])
+        return [], None
+
+    if cached is not None:
+        pick_kind, pick_val, kws = cached
+        resolved, resolved_cat = await run_catalog_work(
+            _resolve_decision, pick_kind, pick_val, kws, timeout_seconds=2
+        )
+        return resolved, resolved_cat, (not resolved)
+
+    def _build_shortlist() -> tuple[list[str], dict[str, str], dict[str, ProductSnapshot]]:
+        rt = sem_route if sem_route is not None else route_query(query, top_k=3, min_confidence=0.0)
+        cand_lines: list[str] = []
+        cat_map: dict[str, str] = {}
+        sku_map: dict[str, ProductSnapshot] = {}
+        if rt is not None:
+            for idx, (cat, score) in enumerate(zip(rt.categories, rt.scores), 1):
+                if score < 0.08 and idx > 1:
+                    continue
+                samples = repository.search(query="", category=cat, limit=3)
+                if not samples:
+                    continue
+                cid = f"C{idx}"
+                cat_map[cid] = cat
+                samp_s = "; ".join(p.name[:42] for p in samples[:2])
+                cand_lines.append(f"{cid}: [{cat}] ({samp_s})")
+        dense_hits = dense_search_skus(query, top_k=2, min_sim=0.38)
+        for j, (pid, _sim) in enumerate(dense_hits, 1):
+            prod = repository.get_product_snapshot(pid)
+            if prod is not None:
+                sid = f"S{j}"
+                sku_map[sid] = prod
+                cand_lines.append(f"{sid}: {prod.name[:55]} [{_leaf_category_segment(prod)}]")
+        return cand_lines, cat_map, sku_map
+
+    cand_lines, cat_map, sku_map = await run_catalog_work(_build_shortlist, timeout_seconds=2)
+    user_msg = f"Khách hỏi: {query[:200]}\nỨng viên:\n" + ("\n".join(cand_lines) or "(không có)")
+    try:
+        res = await asyncio.wait_for(
+            groq.fast_chat(
+                [
+                    {"role": "system", "content": _SEMANTIC_BRIDGE_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_msg},
+                ],
+                max_tokens=75,
+                temperature=0.0,
+            ),
+            timeout=4.5,
+        )
+        raw_val = getattr(res, "text", None) or getattr(res, "content", None) or res
+        raw = str(raw_val).strip()
+        s_i, e_i = raw.find("{"), raw.rfind("}")
+        if s_i < 0 or e_i <= s_i:
+            return [], None, False
+        data = json.loads(raw[s_i : e_i + 1])
+        if not isinstance(data, dict):
+            return [], None, False
+    except Exception:
+        return [], None, False
+
+    pick = data.get("pick")
+    kws = tuple(
+        str(k).strip()[:60]
+        for k in (data.get("kw") or [])
+        if isinstance(k, str) and str(k).strip()
+    )[:3]
+
+    if isinstance(pick, str) and pick in cat_map:
+        pick_kind, pick_val = "cat", cat_map[pick]
+    elif isinstance(pick, str) and pick in sku_map:
+        pick_kind, pick_val = "sku", sku_map[pick].product_id
+    else:
+        pick_kind, pick_val = "none", None
+
+    if cache_key:
+        if len(_SEMANTIC_BRIDGE_CACHE) >= _SEMANTIC_BRIDGE_CACHE_MAX:
+            _SEMANTIC_BRIDGE_CACHE.pop(next(iter(_SEMANTIC_BRIDGE_CACHE)))
+        _SEMANTIC_BRIDGE_CACHE[cache_key] = (pick_kind, pick_val, kws)
+
+    resolved, resolved_cat = await run_catalog_work(
+        _resolve_decision, pick_kind, pick_val, kws, timeout_seconds=2
+    )
+    return resolved, resolved_cat, (not resolved)
+
+
+def _build_out_of_catalog_streaming_plan(
+    *,
+    text: str,
+    query_label: str,
+    previous_memory: dict,
+) -> StreamingConsultationPlan:
+    """Instant truthful abstention when confirmed absent from the Thanh Lam Mart catalog."""
+    clean_label = query_label.strip() or text.strip()[:60]
+    reply = (
+        f'Hiện tại trong danh mục tham khảo của cửa hàng mình chưa có sản phẩm "{clean_label}". '
+        "Bạn có thể kiểm tra trực tiếp với nhân viên tại quầy hoặc hỏi mình nhóm hàng khác nhé!"
+    )
+    memory = {
+        "need": text[:500],
+        "last_action": "abstain",
+        "last_question": "",
+        "pending_question": None,
+        "answered_slots": previous_memory.get("answered_slots", []),
+        "constraints": {},
+        "selection": {"picks": []},
+    }
+    return StreamingConsultationPlan(
+        products=[],
+        related_products=[],
+        memory=memory,
+        messages=[],
+        fallback_text=reply,
+        direct_reply=reply,
     )
 
 
@@ -1380,6 +1817,7 @@ async def prepare_streaming_consultation(
             focused, focus_scores = _filter_streaming_candidates(
                 candidates, answer_text, parsed.product_type
             )
+            lex_extra: list[ProductSnapshot] = []
             if not focus_scores and _focus_tokens_for_streaming(answer_text, parsed.product_type):
                 cleaned_focus_q = _clean_native_lexical_query(answer_text)
                 if cleaned_focus_q:
@@ -1405,43 +1843,74 @@ async def prepare_streaming_consultation(
                         focused, focus_scores = _filter_streaming_candidates(
                             combined, answer_text, parsed.product_type
                         )
-            if other_followup and visible:
-                visible_ids = {item.product_id for item in visible}
-                unseen = [item for item in focused if item.product_id not in visible_ids]
-                focused = unseen or focused
-            ordered = _rank_streaming_candidates(
-                focused,
-                answer_text,
-                focus_scores=focus_scores,
-                cheaper_priority=cheaper_followup,
+                        if not focus_scores:
+                            focused = lex_extra
+                            focus_scores = {item.product_id: 1 for item in lex_extra}
+            # If the shopper specified concrete product-identity words (e.g. 'đồ khui bia',
+            # 'bánh tráng trộn', 'pin tiểu') that matched ZERO candidates in Path C's parent
+            # category, verify with synonym-aware scoped search before handing off to Path D.
+            unmatched_toks = (
+                []
+                if (lex_extra or other_followup or cheaper_followup or budget_followup)
+                else _unmatched_identity_tokens(answer_text, parsed.product_type, focused)
             )
-            pick_count = 2 if plan.max_options == 2 and len(ordered) >= 2 else 1
-            primary_products = ordered[:pick_count]
-            related_products = _related_candidates(ordered, primary_products, limit=4)
-            memory = {
-                "need": plan.need or previous_memory.get("need", text[:500]),
-                "last_action": "recommend",
-                "last_question": "",
-                "pending_question": None,
-                "answered_slots": previous_memory.get("answered_slots", []),
-                "constraints": plan.model_dump(
-                    exclude={
-                        "question", "need", "guidance", "action",
-                        "pending_question", "clarification_answer",
-                    }
-                ),
-                "selection": {"picks": [{"candidate": i} for i in range(len(primary_products))]},
-            }
-            return _build_streaming_plan_payload(
-                text=text,
-                primary_products=primary_products,
-                related_products=related_products,
-                repository=repository,
-                sources=sources,
-                memory=memory,
-                plan_for_fallback=plan,
-                mode="recommend",
-            )
+            if unmatched_toks:
+                cleaned_syn_q = _clean_native_lexical_query(answer_text)
+                scoped_syn_cat = (
+                    plan.searches[0].category
+                    if len(plan.searches) == 1 and plan.searches[0].category
+                    else None
+                )
+                if cleaned_syn_q and scoped_syn_cat:
+                    syn_hits = await run_catalog_work(
+                        repository.search,
+                        query=cleaned_syn_q,
+                        category=scoped_syn_cat,
+                        limit=6,
+                        timeout_seconds=2,
+                    )
+                    if syn_hits:
+                        unmatched_toks = []
+            unmatched_identity = bool(unmatched_toks)
+            if not unmatched_identity:
+                if other_followup and visible:
+                    visible_ids = {item.product_id for item in visible}
+                    unseen = [item for item in focused if item.product_id not in visible_ids]
+                    focused = unseen or focused
+                ordered = _rank_streaming_candidates(
+                    focused,
+                    answer_text,
+                    focus_scores=focus_scores,
+                    cheaper_priority=cheaper_followup,
+                )
+                pick_count = 2 if plan.max_options == 2 and len(ordered) >= 2 else 1
+                primary_products = ordered[:pick_count]
+                related_products = _related_candidates(ordered, primary_products, limit=4)
+                picks_payload = [{"candidate": i} for i in range(len(primary_products))]
+                memory = {
+                    "need": plan.need or previous_memory.get("need", text[:500]),
+                    "last_action": "recommend",
+                    "last_question": "",
+                    "pending_question": None,
+                    "answered_slots": previous_memory.get("answered_slots", []),
+                    "constraints": plan.model_dump(
+                        exclude={
+                            "question", "need", "guidance", "action",
+                            "pending_question", "clarification_answer",
+                        }
+                    ),
+                    "selection": {"picks": picks_payload},
+                }
+                return _build_streaming_plan_payload(
+                    text=text,
+                    primary_products=primary_products,
+                    related_products=related_products,
+                    repository=repository,
+                    sources=sources,
+                    memory=memory,
+                    plan_for_fallback=plan,
+                    mode="recommend",
+                )
 
     # Path D: Ultra-fast Semantic NLP Router (<1ms) + Diacritic-Preserving Lexical Search.
     # Skip pure situational needs ("đang đói", "ăn kiêng", "mang đi học") -> route to Path G.
@@ -1484,8 +1953,39 @@ async def prepare_streaming_consultation(
         )
         and not _FAST_PATH_MULTI_OR_COMPARE.search(norm_answer)
     ):
-        sem_route = route_query(answer_text, min_confidence=0.48)
+        sem_route = route_query(answer_text, min_confidence=0.40)
         explicit_brand = getattr(parsed, "brand", None) or getattr(parsed, "brand_preference", None)
+        _RAW_PRODUCE_CATS = frozenset(
+            {
+                "Trái cây",
+                "Rau củ",
+                "Rau gia vị",
+                "Nấm",
+                "Thủy hải sản",
+                "Thịt Bò, Bê",
+                "Lợn (heo)",
+                "Thịt gà",
+                "Bơ",
+            }
+        )
+
+        def _postprocess_hits(
+            raw_items: list[ProductSnapshot],
+            sem_cat_name: str | None,
+        ) -> tuple[list[ProductSnapshot], list[ProductSnapshot]]:
+            processed = list(raw_items)
+            if (
+                processed
+                and is_food_or_drink_need(answer_text)
+                and sem_cat_name not in _RAW_PRODUCE_CATS
+            ):
+                edible = filter_edible_candidates(
+                    processed,
+                    ready_to_eat=bool(_READY_TO_EAT_NEED_RE.search(norm_answer)),
+                )
+                if edible:
+                    processed = edible
+            return _apply_streaming_constraints(processed, answer_text, parsed), processed
 
         def _lex_search() -> tuple[list[ProductSnapshot], list[ProductSnapshot], str | None]:
             matched_sem_cat: str | None = None
@@ -1499,63 +1999,195 @@ async def prepare_streaming_consultation(
                 raw_hits = []
                 if sem_route is not None and not explicit_brand:
                     sem_cat = sem_route.categories[0]
-                    scoped_hits = repository.search(
-                        query=native_search_q, category=sem_cat, limit=32
+                    # Stage 1a: Direct category browse when shopper explicitly names the category
+                    # (e.g. 'trái cây', 'rau củ', 'sữa chua', 'snack', 'kẹo gum', 'thạch').
+                    if _is_direct_category_browse(native_search_q, sem_cat):
+                        cat_browse = repository.search(
+                            query="",
+                            category=sem_cat,
+                            diversify_by_subcategory=True,
+                            limit=32,
+                        )
+                        if cat_browse:
+                            raw_hits = cat_browse
+                            matched_sem_cat = sem_cat
+                    if not raw_hits:
+                        scoped_hits = repository.search(
+                            query=native_search_q, category=sem_cat, limit=32
+                        )
+                        grounded_scoped = [
+                            p for p in scoped_hits if _hit_is_grounded(native_search_q, p)
+                        ]
+                        if grounded_scoped:
+                            raw_hits = grounded_scoped
+                            matched_sem_cat = sem_cat
+                    if (
+                        not raw_hits
+                        and len(sem_route.categories) >= 2
+                        and sem_route.scores[1] >= 0.18
+                    ):
+                        sec_cat = sem_route.categories[1]
+                        sec_hits = repository.search(
+                            query=native_search_q, category=sec_cat, limit=32
+                        )
+                        grounded_sec = [
+                            p for p in sec_hits if _hit_is_grounded(native_search_q, p)
+                        ]
+                        if grounded_sec:
+                            raw_hits = grounded_sec
+                            matched_sem_cat = sec_cat
+                # Only fall back to unscoped lexical search when semantic router isn't already
+                # strongly locked onto a category (prevents 'hoa quả' escaping Trái cây into
+                # 'Thạch kem hoa quả'), and enforce strict head-noun grounding (or sibling-leaf
+                # agreement with sem_route, e.g. 'Thạch rau câu' in 'Thạch cân ký').
+                if not raw_hits and (
+                    explicit_brand
+                    or sem_route is None
+                    or sem_route.confidence < 0.65
+                ):
+                    unscoped = repository.search(query=native_search_q, limit=32)
+                    sem_head = (
+                        normalize_category_text(sem_route.categories[0]).split()[:1]
+                        if sem_route is not None
+                        else []
                     )
-                    if scoped_hits:
-                        raw_hits = scoped_hits
-                        matched_sem_cat = sem_cat
-                    else:
-                        # Check secondary semantic category when close in score (e.g. Trà/Nước trà)
-                        if (
-                            len(sem_route.categories) >= 2
-                            and sem_route.scores[1] >= 0.18
-                        ):
-                            sec_cat = sem_route.categories[1]
-                            sec_hits = repository.search(
-                                query=native_search_q, category=sec_cat, limit=32
-                            )
-                            if sec_hits:
-                                raw_hits = sec_hits
-                                matched_sem_cat = sec_cat
-                        if not raw_hits:
-                            # Broad category browsing ("có trái cây gì ko", "có hoa quả gì ko",
-                            # "có rau gì ko", "có sữa chua không") where category name/synonym
-                            # does not appear literally in individual SKU titles.
-                            cat_browse = repository.search(
-                                query="",
-                                category=sem_cat,
-                                diversify_by_subcategory=True,
-                                limit=32,
-                            )
-                            if cat_browse:
-                                raw_hits = cat_browse
-                                matched_sem_cat = sem_cat
-                if not raw_hits:
-                    raw_hits = repository.search(query=native_search_q, limit=32)
-            if is_food_or_drink_need(answer_text) and matched_sem_cat not in {
-                "Trái cây",
-                "Rau củ",
-                "Rau gia vị",
-                "Nấm",
-                "Thủy hải sản",
-                "Thịt Bò, Bê",
-                "Lợn (heo)",
-                "Thịt gà",
-                "Bơ",
-            }:
-                edible = filter_edible_candidates(
-                    raw_hits,
-                    ready_to_eat=bool(_READY_TO_EAT_NEED_RE.search(norm_answer)),
-                )
-                if edible:
-                    raw_hits = edible
-            filtered_hits = _apply_streaming_constraints(raw_hits, answer_text, parsed)
-            return filtered_hits, raw_hits, matched_sem_cat
+                    raw_hits = [
+                        p
+                        for p in unscoped
+                        if _hit_is_grounded(
+                            native_search_q,
+                            p,
+                            require_head_start=not (
+                                bool(explicit_brand)
+                                or (
+                                    bool(sem_head)
+                                    and normalize_category_text(
+                                        _leaf_category_segment(p)
+                                    ).split()[:1]
+                                    == sem_head
+                                )
+                            ),
+                        )
+                    ]
+            filtered_hits, final_raw = _postprocess_hits(raw_hits, matched_sem_cat)
+            return filtered_hits, final_raw, matched_sem_cat
 
         lex_hits, raw_lex_hits, matched_sem_cat = await run_catalog_work(
             _lex_search, timeout_seconds=3
         )
+
+        # Stage 2 (Zero-hit Semantic Catalog Bridge): runs ONLY when Stage 1 found 0 grounded
+        # lexical hits (colloquial synonyms like 'kẹo cao su', 'lăn nách', 'son dưỡng môi',
+        # 'hột gà', 'pin tiểu' OR out-of-catalog queries like 'băng cá nhân', 'đồ khui bia').
+        if not raw_lex_hits and not _SITUATIONAL_OR_ADVICE_RE.search(norm_answer):
+            raw_native_q = _clean_native_lexical_query(text) or native_search_q
+            norm_raw_text = normalize_category_text(text)
+
+            def _single_leaf_fast_match(
+                *, allow_broad_homogeneous: bool
+            ) -> tuple[list[ProductSnapshot], str | None]:
+                if _OFFLINE_NON_CATALOG_HEAD_RE.search(
+                    norm_answer
+                ) or _OFFLINE_NON_CATALOG_HEAD_RE.search(norm_raw_text):
+                    return [], None
+                if (
+                    sem_route is not None
+                    and sem_route.confidence >= 0.55
+                    and not explicit_brand
+                ):
+                    sem_cat = sem_route.categories[0]
+                    browse = repository.search(
+                        query="",
+                        category=sem_cat,
+                        diversify_by_subcategory=True,
+                        limit=32,
+                    )
+                    if browse:
+                        leaves = {_leaf_category_segment(p) for p in browse}
+                        if len(leaves) == 1 and (
+                            allow_broad_homogeneous
+                            or (sem_route.confidence >= 0.58 and sem_route.margin >= 0.40)
+                        ):
+                            return browse, sem_cat
+                        if (
+                            allow_broad_homogeneous
+                            and sem_cat in _HOMOGENEOUS_MULTI_LEAF_CATS
+                            and sem_route.confidence >= 0.65
+                        ):
+                            return browse, sem_cat
+                if allow_broad_homogeneous:
+                    dense_hits = dense_search_skus(answer_text, top_k=3, min_sim=0.50)
+                    if dense_hits:
+                        rt_any = sem_route or route_query(answer_text, top_k=2, min_confidence=0.0)
+                        top_prod = repository.get_product_snapshot(dense_hits[0][0])
+                        if top_prod is not None and rt_any is not None:
+                            top_leaf = _leaf_category_segment(top_prod)
+                            hier_norm = normalize_category_text(
+                                top_prod.category_hierarchy or top_leaf
+                            )
+                            rt_cat = rt_any.categories[0]
+                            rt_cat_norm = normalize_category_text(rt_cat)
+                            if rt_cat_norm and rt_cat_norm in hier_norm:
+                                leaf_prods = repository.search(
+                                    query="", category=rt_cat, limit=24
+                                )
+                                if leaf_prods:
+                                    return leaf_prods, rt_cat
+                return [], None
+
+            # Stage 2a (<1ms): High-confidence, wide-margin SINGLE-LEAF match (e.g.
+            # 'kẹo cao su' -> 'Kẹo gum' 0.60, 'lăn nách' -> 'Lăn khử mùi nữ' 0.71,
+            # 'son dưỡng môi' -> 'Mỹ phẩm t.điểm môi' 0.89) avoids an extra LLM round-trip.
+            if (
+                sem_route is not None
+                and sem_route.confidence >= 0.58
+                and sem_route.margin >= 0.40
+                and len(raw_native_q.split()) <= 3
+            ):
+                fast_raw, fast_cat = await run_catalog_work(
+                    _single_leaf_fast_match, allow_broad_homogeneous=False, timeout_seconds=2
+                )
+                if fast_raw:
+                    matched_sem_cat = fast_cat
+                    lex_hits, raw_lex_hits = _postprocess_hits(fast_raw, matched_sem_cat)
+
+            # Stage 2b (~250ms, cached): Retrieval-Grounded Groq LPU Semantic Bridge for
+            # unseen slang/regional synonyms ('hột gà') & truthful out-of-catalog rejection
+            # ('băng cá nhân', 'đồ khui bia', 'bánh tráng trộn', 'sạc điện thoại').
+            if not raw_lex_hits:
+                can_fast_lane_fn = getattr(groq, "_can_use_groq_fast_lane", None)
+                bridge_confirmed_absent = False
+                if callable(can_fast_lane_fn) and can_fast_lane_fn():
+                    bridge_raw, bridge_cat, bridge_confirmed_absent = (
+                        await _semantic_bridge_zero_hit_query(
+                            query=text,
+                            native_q=raw_native_q,
+                            repository=repository,
+                            groq=groq,
+                            sem_route=sem_route,
+                        )
+                    )
+                    if bridge_raw:
+                        matched_sem_cat = bridge_cat
+                        lex_hits, raw_lex_hits = _postprocess_hits(bridge_raw, matched_sem_cat)
+                    elif (
+                        bridge_confirmed_absent
+                        and not is_advice_followup
+                        and 1 <= len(raw_native_q.split()) <= 4
+                    ):
+                        return _build_out_of_catalog_streaming_plan(
+                            text=text,
+                            query_label=raw_native_q,
+                            previous_memory=previous_memory,
+                        )
+                # Offline or transient timeout fallback (never runs if bridge confirmed absent).
+                if not raw_lex_hits and not bridge_confirmed_absent:
+                    fb_raw, fb_cat = await run_catalog_work(
+                        _single_leaf_fast_match, allow_broad_homogeneous=True, timeout_seconds=2
+                    )
+                    if fb_raw:
+                        matched_sem_cat = fb_cat
+                        lex_hits, raw_lex_hits = _postprocess_hits(fb_raw, matched_sem_cat)
         zero_hit_attr_note = ""
         if not lex_hits and raw_lex_hits and _explicit_sugar_level(answer_text) is not None:
             # Stay strictly inside the matched category ("tương ớt ít đường" / "cà phê ít đường")
