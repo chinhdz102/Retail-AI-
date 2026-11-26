@@ -183,7 +183,7 @@ export interface ProductCard {
   data_timestamp: string
   data_source: string
   demo_units_sold_30d?: number | null
-  sales_data_source?: 'SIMULATED' | null
+  sales_data_source?: 'SIMULATED' | 'FRN_STORE_18' | 'CATALOG_MONTHLY' | null
 }
 
 export interface CartLine {
@@ -290,6 +290,7 @@ export interface ProductCatalogIndexResponse {
   data_source: string
   stock_is_current: boolean
   data_timestamp: string
+  sales_data_source?: 'SIMULATED' | 'FRN_STORE_18' | 'CATALOG_MONTHLY' | null
   departments: CatalogDepartmentSummary[]
   rows: CompactCatalogRow[]
 }

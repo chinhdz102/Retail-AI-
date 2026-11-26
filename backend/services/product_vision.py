@@ -1119,22 +1119,22 @@ def format_vision_reply(
         )
         return reply
 
-    reply = f"Dạ, trong ảnh là {top.name}, giá tham khảo {price_str}{promo_note}."
+    reply = f"Dạ, trong ảnh là {top.name}, giá {price_str}{promo_note}."
     if len(result.matched_products) > 1:
         alt = result.matched_products[1]
         reply += f" Ngoài ra trong danh mục còn có {alt.name} ({_format_vnd(alt.price_vnd)})."
     elif result.related_products:
-        reply += " Bên dưới mình có để thêm các quy cách cùng dòng để bạn tiện đối chiếu."
+        reply += " Bên dưới mình có để thêm các sản phẩm cùng dòng để bạn tiện tham khảo."
 
     q_norm = normalize_search_text(user_question)
     if any(w in q_norm for w in ("gia", "bao nhieu", "nhieu tien")):
         reply += " Bạn cần mình so sánh đơn giá hay tìm loại tiết kiệm hơn không ạ?"
     elif any(w in q_norm for w in ("khuyen mai", "giam gia", "uu dai")):
         if not promo_note:
-            reply += " Hiện sản phẩm này chưa ghi nhận khuyến mãi riêng trong bản chụp danh mục."
+            reply += " Hiện sản phẩm này chưa ghi nhận khuyến mãi riêng."
     else:
         reply += (
-            " Bạn muốn mình kiểm tra thêm quy cách khác, so sánh "
+            " Bạn muốn mình xem thêm sản phẩm khác, so sánh "
             "hay gợi ý món dùng kèm không ạ?"
         )
     return reply

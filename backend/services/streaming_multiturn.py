@@ -742,8 +742,7 @@ async def prepare_multiturn_streaming(
         grand = sub_a + sub_b
         reply = (
             f"Dạ, nếu mua mỗi loại {qty} phần thì: {qty} × {p_a.name} là {format_vnd(sub_a)}, "
-            f"và {qty} × {p_b.name} là {format_vnd(sub_b)} — tổng cộng cả hai là {format_vnd(grand)} "  # noqa: E501
-            "(giá tham khảo theo catalog, giá tại cửa hàng có thể khác)."
+            f"và {qty} × {p_b.name} là {format_vnd(sub_b)} — tổng cộng cả hai là {format_vnd(grand)}."  # noqa: E501
         )
         mem = _make_memory(
             previous_memory,
@@ -819,8 +818,8 @@ async def prepare_multiturn_streaming(
     ):
         target = recent_products[0]
         reply = (
-            f"Dạ, {target.name} có giá tham khảo {format_vnd(target.price_vnd)}"
-            f"{'/' + target.uom.lower() if target.uom else ''} theo snapshot catalog (giá tại cửa hàng có thể khác)."  # noqa: E501
+            f"Dạ, {target.name} có giá {format_vnd(target.price_vnd)}"
+            f"{'/' + target.uom.lower() if target.uom else ''} nhé."
         )
         mem = _make_memory(
             previous_memory,

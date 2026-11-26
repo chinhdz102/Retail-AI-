@@ -6,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const appDir = path.resolve(__dirname, '..')
 const repoRoot = path.resolve(appDir, '..', '..')
 const sourcePath = path.join(repoRoot, 'data', 'thanh_lam_products.json')
+const syncedSalesPath = path.join(repoRoot, 'data', 'synced_sales_30d.json')
 const outPath = path.join(appDir, 'public', 'catalog-index.json')
 
 function safeImageUrl(raw) {
@@ -42,6 +43,15 @@ function main() {
   }
   const raw = JSON.parse(fs.readFileSync(sourcePath, 'utf-8'))
   const records = Array.isArray(raw) ? raw : (Array.isArray(raw?.products) ? raw.products : [])
+  let syncedSalesCounts = {}
+  let salesDataSource = null
+  if (fs.existsSync(syncedSalesPath)) {
+    const rawSales = JSON.parse(fs.readFileSync(syncedSalesPath, 'utf-8'))
+    if (rawSales && typeof rawSales.counts === 'object' && rawSales.counts) {
+      syncedSalesCounts = rawSales.counts
+      salesDataSource = 'CATALOG_MONTHLY'
+    }
+  }
 
   const seen = new Set()
   const deptTotals = new Map()
@@ -89,6 +99,9 @@ function main() {
       ? (listPriceVnd - priceVnd) / listPriceVnd
       : (promotion ? 0.01 : 0)
 
+    const rawSold = syncedSalesCounts[productId]
+    const sold30d = typeof rawSold === 'number' && Number.isFinite(rawSold) ? Math.max(0, Math.round(rawSold)) : null
+
     entries.push({
       productId,
       name,
@@ -102,6 +115,7 @@ function main() {
       imageUrl,
       stock,
       uom,
+      sold30d,
       hasImgRank: imageUrl ? 0 : 1,
       hasPromoRank: discountRatio > 0 ? 0 : 1,
     })
@@ -121,6 +135,7 @@ function main() {
 
   entries.sort((a, b) =>
     (a.hasImgRank - b.hasImgRank)
+    || ((b.sold30d ?? 0) - (a.sold30d ?? 0))
     || (a.hasPromoRank - b.hasPromoRank)
     || a.name.localeCompare(b.name, 'vi')
     || a.productId.localeCompare(b.productId),
@@ -139,7 +154,7 @@ function main() {
     e.imageUrl,
     e.stock,
     e.uom,
-    null,
+    e.sold30d,
   ])
 
   const payload = {
@@ -147,6 +162,7 @@ function main() {
     data_source: 'thanh_lam_json_snapshot',
     stock_is_current: false,
     data_timestamp: latestTimestamp,
+    sales_data_source: salesDataSource,
     departments,
     rows,
   }

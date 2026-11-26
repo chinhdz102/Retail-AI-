@@ -233,6 +233,7 @@ from backend.services.support import (
     _safe_description,
     classify_support_intent,
 )
+from backend.services.synced_sales import SalesSource, get_synced_sales_data
 from backend.services.vietnamese_intent import (
     consultation_product_query as _consultation_product_query,
 )
@@ -4544,10 +4545,6 @@ def _localized_price_candidates(
     request_text: str = "",
 ) -> str:
     listed = products[:5]
-    snapshot_dates = sorted(
-        {product.data_timestamp.date().strftime("%d/%m/%Y") for product in listed}
-    )
-    snapshot_date = ", ".join(snapshot_dates)
     norm_req = _normalize_request_text(request_text) if request_text else ""
     asked_single_unit = bool(
         norm_req
@@ -4603,42 +4600,16 @@ def _localized_price_candidates(
                 detail += f" (regular price {list_price} VND)"
         details.append(detail)
     if language == "en":
-        return (
-            "I found these catalog options and reference prices: "
-            + "; ".join(details)
-            + (
-                f". These are reference prices from the snapshot dated {snapshot_date}. "
-                if snapshot_date
-                else ". These are reference prices from the catalog snapshot. "
-            )
-            + "Store prices may differ."
-        )
+        return "I found these options and prices: " + "; ".join(details) + "."
     if language == "zh":
-        return (
-            "目录中的这些规格及参考价格为："
-            + "；".join(details)
-            + (
-                f"。价格来自 {snapshot_date} 的快照；门店实际价格可能不同。"
-                if snapshot_date
-                else "。价格来自目录快照；门店实际价格可能不同。"
-            )
-        )
+        return "目录中的商品及价格为：" + "；".join(details) + "。"
     vi_prefix = (
-        "Hiện trong catalog chỉ ghi nhận quy cách theo thùng "
+        "Hiện trong danh mục chỉ ghi nhận quy cách theo thùng "
         "(chưa có mã giá bán lẻ từng chai/lon): "
         if asked_single_unit and all_bulk_packs
-        else "Mình thấy các quy cách và giá tham khảo trong catalog: "
+        else "Mình thấy các sản phẩm và giá: "
     )
-    return (
-        vi_prefix
-        + "; ".join(details)
-        + (
-            f". Đây là giá tham khảo theo snapshot ngày {snapshot_date}. "
-            if snapshot_date
-            else ". Đây là giá tham khảo theo snapshot catalog. "
-        )
-        + "Giá tại cửa hàng có thể khác."
-    )
+    return vi_prefix + "; ".join(details) + "."
 
 
 def _localized_product_selection_clarification(language: LanguageCode) -> str:
@@ -6470,20 +6441,39 @@ def _fold_catalog_text(value: str) -> str:
     return " ".join(stripped.casefold().split())
 
 
-_CATALOG_INDEX_CACHE: dict[tuple[str, int, int, bool], dict[str, object]] = {}
+_CATALOG_INDEX_CACHE: dict[tuple[str, int, int, str], dict[str, object]] = {}
+
+
+def _resolve_active_sales(
+    settings: Settings,
+    repository: ProductRepository,
+) -> tuple[dict[str, int], dict[str, SalesSource], SalesSource | None]:
+    if settings.synced_sales_enabled and repository.source_name != "demo_product_catalog":
+        synced_path = Path(settings.synced_sales_path)
+        if not synced_path.is_absolute():
+            synced_path = Path(__file__).resolve().parents[2] / synced_path
+        synced = get_synced_sales_data(synced_path)
+        if synced.has_data:
+            return synced.counts, synced.sources, "CATALOG_MONTHLY"
+    if settings.demo_sales_enabled and settings.app_env == "development":
+        demo = get_demo_sales_store(settings).counts()
+        if demo:
+            return demo, {pid: "SIMULATED" for pid in demo}, "SIMULATED"
+    return {}, {}, None
 
 
 def _get_compiled_catalog_index(repository: ProductRepository) -> dict[str, object]:
     all_products = _catalog_all_products(repository)
     settings = get_settings()
-    use_demo_sales = bool(settings.demo_sales_enabled and settings.app_env == "development")
+    sales_counts, _sales_sources, sales_mode = _resolve_active_sales(settings, repository)
     first_id = all_products[0].product_id if all_products else ""
-    cache_key = (repository.source_name, len(all_products), hash(first_id), use_demo_sales)
+    cache_key = (repository.source_name, len(all_products), hash(first_id), sales_mode or "none")
     cached = _CATALOG_INDEX_CACHE.get(cache_key)
     if cached is not None:
         return cached
 
-    demo_counts = get_demo_sales_store(settings).counts() if use_demo_sales else {}
+    demo_counts = sales_counts
+    use_demo_sales = bool(demo_counts)
     dept_sub_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     dept_totals: dict[str, int] = defaultdict(int)
     raw_entries: list[tuple[ProductSnapshot, str, str]] = []
@@ -6564,6 +6554,7 @@ def _get_compiled_catalog_index(repository: ProductRepository) -> dict[str, obje
         "data_source": repository.source_name,
         "stock_is_current": stock_is_current,
         "data_timestamp": timestamp,
+        "sales_data_source": sales_mode,
         "departments": departments,
         "entries": compiled_entries,
         "compact_rows": compact_rows,
@@ -6593,6 +6584,7 @@ def product_catalog_index(response: Response) -> ProductCatalogIndexResponse:
         data_source=str(compiled["data_source"]),
         stock_is_current=bool(compiled["stock_is_current"]),
         data_timestamp=compiled["data_timestamp"],
+        sales_data_source=compiled.get("sales_data_source"),
         departments=compiled["departments"],
         rows=compiled["compact_rows"],
     )
@@ -6709,11 +6701,12 @@ def _safe_product_image_url(value: str | None) -> str | None:
 
 
 def _product_card(product: ProductSnapshot) -> ProductCardResponse:
-    source = get_product_repository().source_name
+    repo = get_product_repository()
+    source = repo.source_name
     settings = get_settings()
-    demo_units = None
-    if settings.demo_sales_enabled and settings.app_env == "development":
-        demo_units = get_demo_sales_store(settings).counts().get(product.product_id)
+    sales_counts, sales_sources, _sales_mode = _resolve_active_sales(settings, repo)
+    sold_units = sales_counts.get(product.product_id)
+    sold_source = sales_sources.get(product.product_id) if sold_units is not None else None
     return ProductCardResponse(
         product_id=product.product_id,
         name=product.name,
@@ -6733,8 +6726,8 @@ def _product_card(product: ProductSnapshot) -> ProductCardResponse:
         uom=product.uom,
         data_timestamp=product.data_timestamp,
         data_source=source,
-        demo_units_sold_30d=demo_units,
-        sales_data_source="SIMULATED" if demo_units is not None else None,
+        demo_units_sold_30d=sold_units,
+        sales_data_source=sold_source,
     )
 
 
@@ -8088,8 +8081,8 @@ async def _handle_product_comparison(
                 for idx, (_query, options) in enumerate(comparison_option_groups, 1)
             ]
             size_note = (
-                f"Lưu ý: catalog hiện chưa có đúng quy cách ‘{', '.join(missing_size_notes)}’, "
-                "nên mình liệt kê các quy cách cùng dòng gần nhất để bạn đối chiếu nhé.\n"
+                f"Lưu ý: danh mục hiện chưa có đúng phân loại ‘{', '.join(missing_size_notes)}’, "
+                "nên mình liệt kê các sản phẩm cùng dòng gần nhất để bạn tham khảo nhé.\n"
                 if missing_size_notes
                 else ""
             )
@@ -8859,8 +8852,10 @@ async def agent_respond(
         )
         and not _explicit_product_knowledge_lookup_requested(request.text, record)
         and not (
-            settings.demo_sales_enabled
-            and settings.app_env == "development"
+            (
+                settings.synced_sales_enabled
+                or (settings.demo_sales_enabled and settings.app_env == "development")
+            )
             and _product_ranking_requested(request.text)
             and "sales" in _ranking_metric(request.text).split("+")
         )
@@ -9751,48 +9746,51 @@ async def agent_respond(
             model="local-clarification",
         )
 
-    # Deterministic comparison of simulated sales or snapshot stock between two products/brands.
+    # Deterministic comparison of synced/simulated sales or snapshot stock between two items.
     if not mission_preemption_requested:
         cmp_metric_req = parse_sales_or_stock_comparison(request.text)
-        if cmp_metric_req is not None and (
-            cmp_metric_req.metric == "stock"
-            or (settings.demo_sales_enabled and settings.app_env == "development")
-        ):
+        if cmp_metric_req is not None:
             repo_cmp = catalog_repository or get_product_repository(settings)
-            sales_map = (
-                get_demo_sales_store(settings).counts()
+            cmp_sales_counts, cmp_sales_sources, cmp_sales_mode = (
+                _resolve_active_sales(settings, repo_cmp)
                 if cmp_metric_req.metric == "sales"
-                else None
+                else ({}, {}, None)
             )
-            cmp_res = await run_catalog_work(
-                render_sales_or_stock_comparison,
-                cmp_metric_req,
-                repo_cmp,
-                language=request.language,
-                demo_sales_counts=sales_map,
-                timeout_seconds=3.0,
-            )
-            if cmp_res is not None:
-                cmp_reply, cmp_products, cmp_sales = cmp_res
-                cmp_obs = ToolObservation(
-                    content={"comparison_metric": cmp_metric_req.metric},
-                    products=cmp_products,
-                    tool_name="compare_products",
-                    source=repo_cmp.source_name,
+            if cmp_metric_req.metric == "stock" or cmp_sales_counts:
+                cmp_res = await run_catalog_work(
+                    render_sales_or_stock_comparison,
+                    cmp_metric_req,
+                    repo_cmp,
+                    language=request.language,
+                    demo_sales_counts=(
+                        cmp_sales_counts if cmp_metric_req.metric == "sales" else None
+                    ),
+                    sales_source=cmp_sales_mode or "SIMULATED",
+                    timeout_seconds=3.0,
                 )
-                cmp_response = _deterministic_tool_response(
-                    request,
-                    record.state,
-                    cmp_obs,
-                    cmp_reply,
-                    model="demo-sales" if cmp_metric_req.metric == "sales" else "catalog-stock",
-                    tools_used=["compare_products"],
-                )
-                for card in cmp_response.products:
-                    if card.product_id in cmp_sales:
-                        card.demo_units_sold_30d = cmp_sales[card.product_id]
-                        card.sales_data_source = "SIMULATED"
-                return cmp_response
+                if cmp_res is not None:
+                    cmp_reply, cmp_products, cmp_sales = cmp_res
+                    cmp_obs = ToolObservation(
+                        content={"comparison_metric": cmp_metric_req.metric},
+                        products=cmp_products,
+                        tool_name="compare_products",
+                        source=repo_cmp.source_name,
+                    )
+                    cmp_response = _deterministic_tool_response(
+                        request,
+                        record.state,
+                        cmp_obs,
+                        cmp_reply,
+                        model="demo-sales" if cmp_metric_req.metric == "sales" else "catalog-stock",
+                        tools_used=["compare_products"],
+                    )
+                    for card in cmp_response.products:
+                        if card.product_id in cmp_sales:
+                            card.demo_units_sold_30d = cmp_sales[card.product_id]
+                            card.sales_data_source = cmp_sales_sources.get(
+                                card.product_id, cmp_sales_mode or "SIMULATED"
+                            )
+                    return cmp_response
 
     comparison_queries = parse_comparison_queries(request.text, catalog_hierarchies)
     if not mission_preemption_requested and (
@@ -9969,8 +9967,12 @@ async def agent_respond(
         or _has_specific_product_reference(sales_norm_text)
     )
     sales_metric_parts = _ranking_metric(sales_norm_text).split("+")
+    sales_repo = catalog_repository or get_product_repository(settings)
+    sales_counts_map, sales_sources_map, active_sales_mode = _resolve_active_sales(
+        settings, sales_repo
+    )
     if (
-        settings.demo_sales_enabled and settings.app_env == "development"
+        bool(sales_counts_map)
         and (
             sales_structured_query.ranking_criterion == "sales_popularity"
             or (_product_ranking_requested(sales_norm_text) and "sales" in sales_metric_parts)
@@ -9978,7 +9980,6 @@ async def agent_respond(
         and "sales" in sales_metric_parts
         and not mission_preemption_requested
     ):
-        sales_repo = catalog_repository or get_product_repository(settings)
         norm_sales_req = _normalize_request_text(sales_norm_text)
         m_top_sales = re.search(r"\btop\s+(\d{1,2})\b", norm_sales_req)
         requested_top_n = max(1, min(int(m_top_sales.group(1)), 5)) if m_top_sales else 1
@@ -10039,7 +10040,6 @@ async def agent_respond(
                 norm_sales_req,
             )
         )
-        sales_counts_map = get_demo_sales_store(settings).counts()
         try:
             sales_items = await run_catalog_work(
                 rank_demo_sales,
@@ -10077,8 +10077,10 @@ async def agent_respond(
         except (RuntimeError, TimeoutError, OSError, ValueError):
             sales_items = ()
         if sales_items:
+            top_pid = sales_items[0].product.product_id
+            top_source = sales_sources_map.get(top_pid, active_sales_mode or "SIMULATED")
             observation = ToolObservation(
-                content={"sales_data_source": "SIMULATED"},
+                content={"sales_data_source": top_source},
                 products=(sales_items[0].product,),
                 tool_name="recommend_products",
                 source=sales_repo.source_name,
@@ -10089,6 +10091,7 @@ async def agent_respond(
                 top_n=requested_top_n,
                 include_stock=include_stock_in_sales,
                 storewide=is_storewide_sales,
+                sales_source=active_sales_mode or "SIMULATED",
             )
             extra_metrics = [
                 metric for metric in sales_metric_parts if metric != "sales"
@@ -10102,12 +10105,14 @@ async def agent_respond(
                 model="demo-sales", tools_used=["get_demo_sales_ranking"],
             )
             response.products[0].demo_units_sold_30d = sales_items[0].units_sold_30d
-            response.products[0].sales_data_source = "SIMULATED"
+            response.products[0].sales_data_source = top_source
             related_cards: list[ProductCardResponse] = []
             for item in sales_items[1 : max(3, requested_top_n)]:
                 card = _product_card(item.product)
                 card.demo_units_sold_30d = item.units_sold_30d
-                card.sales_data_source = "SIMULATED"
+                card.sales_data_source = sales_sources_map.get(
+                    item.product.product_id, active_sales_mode or "SIMULATED"
+                )
                 related_cards.append(card)
             response.related_products = related_cards
             return response

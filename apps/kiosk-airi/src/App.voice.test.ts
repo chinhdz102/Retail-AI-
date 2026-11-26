@@ -622,13 +622,14 @@ describe('voice transcript integration', () => {
     expect(play).toHaveBeenCalled()
   })
 
-  it('default Speaker Echo Shield strictly pauses the mic while Mai speaks (0% self-recording) and resumes after 650ms settle or Spacebar interrupt', async () => {
+  it('optional ?halfDuplex=1 Speaker Echo Shield strictly pauses the mic while Mai speaks (0% self-recording) and resumes after 650ms settle or Spacebar interrupt', async () => {
+    window.history.replaceState({}, '', '/?halfDuplex=1')
     const { pause } = setupCloudReply()
     const wrapper = await startSpokenReply()
     const audio = wrapper.get('audio').element as HTMLAudioElement
     await vi.waitFor(() => expect(audio.getAttribute('src')).toContain('/stream/current'))
     const mic = controllerStore.current
-    // Mic MUST remain strictly paused during loudspeaker playback so Mai can never hear herself!
+    // Mic MUST remain strictly paused during loudspeaker playback in half-duplex mode!
     expect(mic.isActive).toBe(false)
     expect(mic.bargeInMode).toBe(false)
 
@@ -653,8 +654,7 @@ describe('voice transcript integration', () => {
     vi.useRealTimers()
   })
 
-  it('arms barge-in during cloud speech when ?fullDuplex=1 headset mode is enabled, stops Mai on customer speech, and rejects self-echo', async () => {
-    window.history.replaceState({}, '', '/?fullDuplex=1')
+  it('arms verified barge-in during cloud speech by default, stops Mai on customer speech, and rejects self-echo', async () => {
     const { pause } = setupCloudReply()
     const wrapper = await startSpokenReply()
     const audio = wrapper.get('audio').element as HTMLAudioElement
@@ -701,7 +701,6 @@ describe('voice transcript integration', () => {
   })
 
   it('discards transcribed assistant loudspeaker echo after barge-in without answering itself', async () => {
-    window.history.replaceState({}, '', '/?fullDuplex=1')
     setupCloudReply()
     const wrapper = await startSpokenReply()
     const audio = wrapper.get('audio').element as HTMLAudioElement
@@ -723,19 +722,19 @@ describe('voice transcript integration', () => {
     wrapper.unmount()
   })
 
-  it('waits for the 650ms loudspeaker tail after speech ends before re-opening the mic', async () => {
+  it('guards the 650ms loudspeaker tail after speech ends before disarming barge-in to open mic', async () => {
     setupCloudReply()
     const wrapper = await startSpokenReply()
     const audio = wrapper.get('audio').element as HTMLAudioElement
     await vi.waitFor(() => expect(audio.onended).toBeTypeOf('function'))
     const mic = controllerStore.current
-    expect(mic.isActive).toBe(false)
+    await vi.waitFor(() => expect(mic.bargeInMode).toBe(true))
     vi.useFakeTimers()
     audio.onended?.call(audio, new Event('ended'))
     mic.options.onAudio(new Blob(['reverberation']))
     mic.options.onTranscript('Tiếng vọng cuối câu')
     await vi.advanceTimersByTimeAsync(649)
-    expect(mic.isActive).toBe(false)
+    expect(mic.bargeInMode).toBe(true)
     expect(apiMocks.transcribe).not.toHaveBeenCalled()
     expect(apiMocks.respond).toHaveBeenCalledOnce()
     await vi.advanceTimersByTimeAsync(1)
@@ -787,7 +786,8 @@ describe('voice transcript integration', () => {
     vi.useRealTimers()
   })
 
-  it.each(['end', 'error'] as const)('keeps mic paused during browser TTS in Speaker Echo Shield and resumes cleanly after %s', async (event) => {
+  it.each(['end', 'error'] as const)('keeps mic paused during browser TTS in ?halfDuplex=1 Speaker Echo Shield and resumes cleanly after %s', async (event) => {
+    window.history.replaceState({}, '', '/?halfDuplex=1')
     setupCloudReply()
     let utterance: any
     vi.stubGlobal('speechSynthesis', {
@@ -949,18 +949,19 @@ describe('voice transcript integration', () => {
     await vi.waitFor(() => expect(controllerStore.current).not.toBeNull())
     controllerStore.current.options.onTranscript('Cho tôi hỏi một chút')
     await vi.waitFor(() => expect(utterances).toHaveLength(1))
-    expect(controllerStore.current.isActive).toBe(false)
+    expect(controllerStore.current.bargeInMode).toBe(true)
+    const startsBeforeStop = controllerStore.current.startCalls
     await wrapper.get('button[aria-label="Dừng Mai nói"]').trigger('click')
-    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(2))
+    await vi.waitFor(() => expect(controllerStore.current.startCalls).toBe(startsBeforeStop + 1))
     controllerStore.current.options.onTranscript('Và thêm một câu nữa')
     await vi.waitFor(() => expect(utterances).toHaveLength(2))
-    expect(controllerStore.current.isActive).toBe(false)
+    expect(controllerStore.current.bargeInMode).toBe(true)
 
-    // Stale end event from the cancelled first utterance must not re-open the mic during the second turn.
+    // Stale end event from the cancelled first utterance must not disarm barge-in during the second turn.
     utterances[0].onend?.()
-    expect(controllerStore.current.isActive).toBe(false)
+    expect(controllerStore.current.bargeInMode).toBe(true)
     utterances[1].onend?.()
-    await vi.waitFor(() => expect(controllerStore.current.isActive).toBe(true), { timeout: 2_000 })
+    await vi.waitFor(() => expect(controllerStore.current.bargeInMode).toBe(false), { timeout: 2_000 })
     wrapper.unmount()
   })
 
@@ -1014,8 +1015,7 @@ describe('voice transcript integration', () => {
     wrapper.unmount()
   })
 
-  it('requires real non-echo STT words before interrupting Mai in ?fullDuplex=1 headset mode so laptop fan noise cannot barge in', async () => {
-    window.history.replaceState({}, '', '/?fullDuplex=1')
+  it('requires real non-echo STT words before interrupting Mai by default so laptop fan noise and self-echo cannot barge in', async () => {
     const { pause } = setupCloudReply()
     const wrapper = await startSpokenReply()
     const mic = controllerStore.current

@@ -792,11 +792,18 @@ export class VoiceConversationController {
       // (bargeInAmbientRms), NOT raw digital MP3 RMS — because Chrome AEC can
       // suppress a 0.30 digital TTS track down to 0.015 on the mic, whereas
       // blasting speakers without AEC raise bargeInAmbientRms to 0.08-0.12.
-      const ambientMultiplier = bargeInPlaybackEnvelope >= BARGE_IN_SPEAKER_ACTIVE_ENVELOPE ? 1.55 : 1.4
+      // When STT echo-verification gates barge-in, allow a slightly gentler
+      // threshold so shoppers don't need to shout over Mai while echo text is
+      // still rejected 100% by isLikelyAssistantEcho().
+      const sttGuarded = Boolean(this.options.requireSttForBargeIn)
+      const ambientMultiplier = sttGuarded
+        ? (bargeInPlaybackEnvelope >= BARGE_IN_SPEAKER_ACTIVE_ENVELOPE ? 1.35 : 1.25)
+        : (bargeInPlaybackEnvelope >= BARGE_IN_SPEAKER_ACTIVE_ENVELOPE ? 1.55 : 1.4)
       const ambientFloor = Math.min(0.165, this.bargeInAmbientRms * ambientMultiplier)
+      const baseMin = sttGuarded ? 0.036 : BARGE_IN_NEURAL_MIN_RMS
       const activeMargin = bargeInPlaybackEnvelope >= BARGE_IN_SPEAKER_ACTIVE_ENVELOPE
-        ? BARGE_IN_NEURAL_MIN_RMS + 0.01
-        : BARGE_IN_NEURAL_MIN_RMS
+        ? baseMin + 0.008
+        : baseMin
       return Math.max(activeMargin, ambientFloor)
     }
     const canConfirmNeuralBargeIn = (now: number, allowImmediateOnly = false) => {
@@ -1208,9 +1215,9 @@ export class VoiceConversationController {
               && this.options.onBargeInCandidateAudio
               && !isStationaryFanNoise
               && observedPeakRms >= requiredBargeInRms()
-              && observedHighFrames >= 6
-              && observedMaxConsecutiveVoiced >= 4
-              && audio.length >= 16_000 * 0.28
+              && observedHighFrames >= 5
+              && observedMaxConsecutiveVoiced >= 3
+              && audio.length >= 16_000 * 0.25
               && audio.length <= 16_000 * 8
             ) {
               const candidateCapture = new PcmCaptureBuffer(16_000, 0)

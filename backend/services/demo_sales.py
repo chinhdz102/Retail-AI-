@@ -228,31 +228,44 @@ def render_demo_sales(
     top_n: int = 1,
     include_stock: bool = False,
     storewide: bool = False,
+    sales_source: str = "SIMULATED",
 ) -> str:
     first = items[0]
     product = first.product
+    is_simulated = sales_source == "SIMULATED"
     snap_date = (
         product.data_timestamp.date().strftime("%d/%m/%Y") if product.data_timestamp else ""
     )
     if language == "en":
+        prefix_en = (
+            "Based on simulated 30-day demo sales"
+            if is_simulated
+            else "Based on the last 30 days of sales"
+        )
         if top_n > 1 and len(items) > 1:
             listed = "; ".join(
                 f"{i}. {it.product.name} ({it.units_sold_30d} units/30d, "
                 f"{it.product.price_vnd:,}đ)".replace(",", ".")
                 for i, it in enumerate(items[:top_n], 1)
             )
-            return f"Based on simulated 30-day demo sales, top items are: {listed}."
+            return f"{prefix_en}, top items are: {listed}."
         return (
-            f"Based on simulated demo sales in the last 30 days, {product.name} leads this "
+            f"{prefix_en}, {product.name} leads this "
             f"selection with {first.units_sold_30d} units sold. "
             "Would you like its price or suggested shelf location?"
         )
     if language == "zh":
+        prefix_zh = "根据近30天演示销量数据" if is_simulated else "根据近30天销量数据"
         return (
-            f"根据近30天演示销量数据，{product.name}以{first.units_sold_30d}件排名第一。"
+            f"{prefix_zh}，{product.name}以{first.units_sold_30d}件排名第一。"
             "您想查看价格还是建议货架位置？"
         )
     scope_vi = "toàn cửa hàng" if storewide else "trong nhóm này"
+    prefix_vi = (
+        f"Theo số liệu bán mô phỏng (demo) {scope_vi}"
+        if is_simulated
+        else f"Theo số liệu bán 30 ngày gần nhất {scope_vi}"
+    )
     if top_n > 1 and len(items) > 1:
         shown = items[:top_n]
         entries = []
@@ -260,11 +273,11 @@ def render_demo_sales(
             p = it.product
             price_s = f"{p.price_vnd:,}đ".replace(",", ".")
             stock_s = (
-                f", snapshot tồn {p.stock} {p.uom or 'đơn vị'}" if include_stock else ""
+                f", tồn ghi nhận {p.stock} {p.uom or 'đơn vị'}" if include_stock else ""
             )
             entries.append(
                 f"{idx}. {p.name} ({it.units_sold_30d} sản phẩm/30 ngày, "
-                f"giá tham khảo {price_s}{stock_s})"
+                f"giá {price_s}{stock_s})"
             )
         tail = (
             f" Lưu ý tồn kho ghi nhận theo snapshot ngày {snap_date}, tồn thực tế tại quầy "
@@ -273,16 +286,16 @@ def render_demo_sales(
             else ""
         )
         return (
-            f"Theo số liệu bán mô phỏng (demo) {scope_vi}, top {len(shown)} bán chạy nhất là: "
+            f"{prefix_vi}, top {len(shown)} bán chạy nhất là: "
             + "; ".join(entries)
             + "."
             + tail
         )
     price = f"{product.price_vnd:,}đ".replace(",", ".")
     base = (
-        f"Theo số liệu bán mô phỏng (demo) {scope_vi}, {product.name} bán nhiều nhất: "
+        f"{prefix_vi}, {product.name} bán nhiều nhất: "
         f"{first.units_sold_30d} sản phẩm trong 30 ngày. "
-        f"Giá tham khảo {price}."
+        f"Giá {price}."
     )
     if include_stock:
         date_vi = f" ngày {snap_date}" if snap_date else ""

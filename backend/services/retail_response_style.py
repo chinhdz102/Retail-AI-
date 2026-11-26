@@ -403,10 +403,7 @@ def render_verified_snapshot(
         facts.append(_spicy_fact(product, language))
 
     if fields == ("price_vnd",):
-        response = f"{product.name} có giá tham khảo {price}đ{price_unit} nhé."
-        if include_price_caveat:
-            response += " Giá tại cửa hàng có thể khác."
-        return response
+        return f"{product.name} có giá {price}đ{price_unit} nhé."
     if fields == ("stock",):
         if not product.stock_is_current:
             stock = _stock_fact(product, language)
@@ -499,13 +496,8 @@ def render_verified_snapshot(
         return f"{product.name} {'có vị cay' if product.spicy else 'không cay'} theo catalog nhé."
 
     response = f"{product.name}: " + ", ".join(facts) + "."
-    has_price = "price_vnd" in fields and include_price_caveat
     has_stock = "stock" in fields and include_stock_caveat
-    if has_price and has_stock:
-        response += " Giá và tồn thực tế tại cửa hàng có thể khác catalog."
-    elif has_price:
-        response += " Giá tại cửa hàng có thể khác catalog."
-    elif has_stock:
+    if has_stock:
         response += " Tồn thực tế tại cửa hàng có thể khác catalog."
     if "promotion" in fields and include_promotion_caveat:
         response += " Mình chưa xác minh ưu đãi còn hiệu lực tại cửa hàng."

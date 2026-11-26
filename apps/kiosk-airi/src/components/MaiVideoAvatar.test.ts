@@ -55,9 +55,21 @@ describe('MaiVideoAvatar', () => {
     wrapper.unmount()
   })
 
-  it('renders lip-sync canvas layer and falls back to standalone speaking clip if track fails', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('offline'))
+  it('defaults to the natural full-face speaking clip with all 4 layers preloaded (no 2D mouth sticker overlay)', () => {
     const wrapper = mount(MaiVideoAvatar, { props: { state: 'speaking', audioPlaying: true } })
+    const videos = wrapper.findAll('video')
+    expect(videos).toHaveLength(4)
+    for (const v of videos) {
+      expect(v.attributes('preload')).toBe('auto')
+    }
+    expect(wrapper.get('video[data-clip="speaking"]').attributes('src')).toBe('/avatars/mai-clip-v4-04-speaking.mp4')
+    expect(wrapper.find('canvas.sky-lipsync-canvas').classes()).not.toContain('is-active')
+    wrapper.unmount()
+  })
+
+  it('renders lip-sync canvas layer when explicitly opted in and falls back to standalone speaking clip if track fails', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('offline'))
+    const wrapper = mount(MaiVideoAvatar, { props: { state: 'speaking', audioPlaying: true, lipSyncEnabled: true } })
     expect(wrapper.find('canvas.sky-lipsync-canvas').exists()).toBe(true)
     await new Promise((resolve) => setTimeout(resolve, 0))
     await wrapper.vm.$nextTick()

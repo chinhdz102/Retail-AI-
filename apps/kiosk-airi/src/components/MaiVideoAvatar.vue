@@ -43,7 +43,7 @@ const props = withDefaults(defineProps<{
   speechSource: 'none',
   speechBoundaryToken: 0,
   speechBoundaryWord: '',
-  lipSyncEnabled: true,
+  lipSyncEnabled: false,
   poster: '/avatars/mai-closed-mouth-reference.webp',
   videoBase: '/avatars/mai-clip-v4',
   enabled: true,
@@ -132,6 +132,7 @@ function playClip(key: AvatarClipKey) {
   const element = videoRefs.value[key]
   if (!element) return
   configureMuted(element)
+  if (!element.paused && !element.ended) return
   void Promise.resolve(element.play?.()).catch(() => {
     // Autoplay can be blocked by a browser policy. The poster remains usable.
   })
@@ -498,7 +499,7 @@ onUnmounted(() => {
           volume="0"
           loop
           playsinline
-          :preload="clip.key === activeClipKey ? 'auto' : 'none'"
+          preload="auto"
           :aria-label="clip.label"
           :aria-hidden="activeClipKey !== clip.key"
           @error="handleClipError(clip.key)"

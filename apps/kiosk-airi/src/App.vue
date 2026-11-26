@@ -163,8 +163,12 @@ const STOP_SPEAKING_SETTLE_MS = 240
 const ECHO_GUARD_WINDOW_MS = 25_000
 const ECHO_STRICT_WINDOW_MS = 5_000
 function isFullDuplexBargeInEnabled(): boolean {
-  return typeof window !== 'undefined'
-    && new URLSearchParams(window.location.search).get('fullDuplex') === '1'
+  if (typeof window === 'undefined') return true
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('halfDuplex') === '1' || params.get('fullDuplex') === '0') {
+    return false
+  }
+  return true
 }
 let speechResumeTimer: ReturnType<typeof setTimeout> | undefined
 let currentSpeechText: string | null = null
@@ -984,11 +988,22 @@ function invalidateSpeechPlayback() {
   if ('speechSynthesis' in window) window.speechSynthesis.cancel()
 }
 
+function suspendMicForSpeech() {
+  stopBargeInCandidateVerification()
+  activeStreamStt?.cancel()
+  activeStreamStt = null
+  if (isHandsFree.value && isFullDuplexBargeInEnabled() && voiceController?.isActive) {
+    voiceController.setBargeInMode?.(true)
+    isRecording.value = false
+    return
+  }
+  pauseVoice()
+}
+
 function armBargeIn(requestId: number) {
   if (!isHandsFree.value || isUnmounted || requestId !== speechRequestId) return
-  // Default Speaker Echo Shield (half-duplex): strictly keep the microphone paused
-  // while Mai plays through laptop/phone speakers so acoustic self-echo is 0%.
-  // Shoppers can interrupt Mai instantly by tapping "Ngắt & nói" or pressing Space.
+  // Optional half-duplex shield (?halfDuplex=1 / ?fullDuplex=0) keeps the mic paused
+  // while Mai plays; shoppers interrupt via "Ngắt & nói" or Space.
   if (!isFullDuplexBargeInEnabled()) {
     bargeInEligible = false
     pauseVoice()
@@ -1001,15 +1016,17 @@ function armBargeIn(requestId: number) {
   }
   bargeInEligible = true
   voiceHint.value = language.value === 'vi'
-    ? 'Đang trả lời — nói rõ để ngắt lời Mai (chế độ tai nghe)'
+    ? 'Đang trả lời — bạn cứ nói để ngắt lời hoặc bấm "Ngắt & nói"'
     : language.value === 'en'
       ? 'Speaking — speak clearly to interrupt'
       : '正在回答 — 清晰说话可打断'
   const controller = ensureVoiceController()
   controller.setBargeInMode?.(true)
-  void controller.start().catch(() => {
-    // Keep TTS playing even if the microphone cannot re-arm immediately.
-  })
+  if (!controller.isActive) {
+    void controller.start().catch(() => {
+      // Keep TTS playing even if the microphone cannot re-arm immediately.
+    })
+  }
 }
 
 function markSpeechPlaybackStarted(requestId: number, text: string) {
@@ -1066,7 +1083,7 @@ function speakWithBrowser(text: string, afterSpeech?: () => void, requestId = sp
     recordSpokenEchoText(text)
     if (currentSpeechText === text) currentSpeechText = null
     pendingSpeechText.value = null
-    status.value = 'idle'
+    status.value = isHandsFree.value ? 'listening' : 'idle'
     resumeAfterSpeech(afterSpeech, requestId)
   }
   utterance.onend = finish
@@ -1088,7 +1105,7 @@ function startStreamedSpeech(afterSpeech?: () => void): number {
   speechStreamOpen = true
   speechChunkPlaying = false
   speechQueueAfterCallback = afterSpeech
-  pauseVoice()
+  suspendMicForSpeech()
   releaseAudioPlayback()
   if ('speechSynthesis' in window) window.speechSynthesis.cancel()
   status.value = 'speaking'
@@ -1232,7 +1249,7 @@ async function drainSpeechQueue(requestId: number) {
       releaseAudioPlayback()
       pendingSpeechText.value = null
       currentSpeechText = null
-      status.value = 'idle'
+      status.value = isHandsFree.value ? 'listening' : 'idle'
       const cb = speechQueueAfterCallback
       speechQueueAfterCallback = undefined
       resumeAfterSpeech(cb, requestId)
@@ -1325,7 +1342,7 @@ async function speak(text: string, afterSpeech?: () => void) {
   bargeInEligible = false
   isAudioPlaying.value = false
   speechSourceMode.value = 'none'
-  pauseVoice()
+  suspendMicForSpeech()
   releaseAudioPlayback()
   if ('speechSynthesis' in window) window.speechSynthesis.cancel()
   status.value = 'speaking'
@@ -1359,7 +1376,7 @@ async function speak(text: string, afterSpeech?: () => void) {
       releaseAudioPlayback()
       pendingSpeechText.value = null
       if (currentSpeechText === text) currentSpeechText = null
-      status.value = 'idle'
+      status.value = isHandsFree.value ? 'listening' : 'idle'
       resumeAfterSpeech(afterSpeech, requestId)
     }
     audio.onerror = () => {

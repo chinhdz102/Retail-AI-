@@ -132,7 +132,7 @@ function compileClientCatalog(raw: ProductCatalogIndexResponse): CompiledClientC
       data_timestamp: raw.data_timestamp,
       data_source: raw.data_source,
       demo_units_sold_30d: row[12],
-      sales_data_source: row[12] !== null ? 'SIMULATED' : null,
+      sales_data_source: row[12] !== null ? (raw.sales_data_source ?? 'CATALOG_MONTHLY') : null,
     }
     const discountRatio =
       listPrice && listPrice > price
@@ -725,8 +725,8 @@ onUnmounted(() => {
                       >
                         {{ cleanName(product.name) }}
                       </button>
-                      <small v-if="product.sales_data_source === 'SIMULATED' && product.demo_units_sold_30d" class="catalog-card-sales">
-                        Đã bán (demo): {{ product.demo_units_sold_30d }}/30 ngày
+                      <small v-if="product.sales_data_source && product.demo_units_sold_30d" class="catalog-card-sales">
+                        {{ product.sales_data_source === 'SIMULATED' ? 'Đã bán (demo)' : 'Đã bán' }}: {{ product.demo_units_sold_30d.toLocaleString('vi-VN') }}/30 ngày
                       </small>
                     </div>
 

@@ -279,8 +279,8 @@ class ProductCardResponse(BaseModel):
     uom: str | None = None
     data_timestamp: datetime
     data_source: str = "unknown"
-    demo_units_sold_30d: int | None = Field(default=None, ge=0, le=999)
-    sales_data_source: Literal["SIMULATED"] | None = None
+    demo_units_sold_30d: int | None = Field(default=None, ge=0)
+    sales_data_source: Literal["SIMULATED", "FRN_STORE_18", "CATALOG_MONTHLY"] | None = None
 
 
 class ShoppingPlanQuantityEstimate(BaseModel):
@@ -448,6 +448,7 @@ class ProductCatalogIndexResponse(BaseModel):
     data_source: str
     stock_is_current: bool = False
     data_timestamp: datetime
+    sales_data_source: Literal["SIMULATED", "FRN_STORE_18", "CATALOG_MONTHLY"] | None = None
     departments: list[CatalogDepartmentSummary] = Field(default_factory=list)
     rows: list[list[object]] = Field(default_factory=list)
 

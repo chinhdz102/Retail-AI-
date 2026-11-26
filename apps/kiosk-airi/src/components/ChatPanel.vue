@@ -255,12 +255,12 @@ const shoppingText = computed(() => {
     simulatePaid: 'Mô phỏng thanh toán thành công',
     simulateFailed: 'Mô phỏng thất bại',
     add: 'Thêm',
-    stock: 'còn bán trong demo',
-    snapshotStock: 'ghi nhận trong snapshot · tồn hiện tại chưa xác minh',
-    referencePrice: 'Giá tham khảo',
+    stock: 'còn hàng',
+    snapshotStock: 'tồn ghi nhận trong danh mục',
+    referencePrice: 'Giá bán',
     catalogDemo: 'Catalog demo',
-    catalogThanhLam: 'Catalog Thanh Lam Mart',
-    catalogSnapshot: 'Snapshot Thanh Lam Mart có ngày dữ liệu',
+    catalogThanhLam: 'Danh mục Thanh Lam Mart',
+    catalogSnapshot: 'Danh mục Thanh Lam Mart',
     catalogUnknown: 'Catalog',
     end: 'Kết thúc phiên',
     support: 'Gọi nhân viên · demo',
@@ -354,10 +354,14 @@ function productStockLabel(product: ProductCard) {
 }
 
 function productPriceLabel(product: ProductCard) {
-  const price = formatVnd(product.price_vnd)
-  return product.stock_is_current === false
-    ? `${shoppingText.value.referencePrice}: ${price}`
-    : price
+  return formatVnd(product.price_vnd)
+}
+
+function productSalesLabel(product: ProductCard) {
+  const isSim = product.sales_data_source === 'SIMULATED'
+  if (props.language === 'en') return isSim ? 'Demo sales' : 'Sold'
+  if (props.language === 'zh') return isSim ? '演示销量' : '已售'
+  return isSim ? 'Đã bán (demo)' : 'Đã bán'
 }
 
 const quickPrompts = computed(() => {
@@ -841,9 +845,9 @@ function onKeydown(event: KeyboardEvent) {
             </div>
             <div class="message-product-copy">
               <strong>{{ formatProductName(product.name) }}</strong>
-              <small v-if="product.sales_data_source === 'SIMULATED'" class="product-provenance">
-                {{ language === 'en' ? 'Demo sales' : language === 'zh' ? '演示销量' : 'Đã bán (demo)' }}:
-                {{ product.demo_units_sold_30d }} / 30 {{ language === 'en' ? 'days' : language === 'zh' ? '天' : 'ngày' }}
+              <small v-if="product.sales_data_source && product.demo_units_sold_30d" class="product-provenance">
+                {{ productSalesLabel(product) }}:
+                {{ product.demo_units_sold_30d.toLocaleString('vi-VN') }} / 30 {{ language === 'en' ? 'days' : language === 'zh' ? '天' : 'ngày' }}
               </small>
               <span>{{ productPriceLabel(product) }}<template v-if="product.stock_is_current !== false"> · {{ productStockLabel(product) }}</template></span>
               <details class="product-provenance" @click.stop>
@@ -923,9 +927,9 @@ function onKeydown(event: KeyboardEvent) {
               </div>
               <div class="message-product-copy">
                 <strong>{{ formatProductName(product.name) }}</strong>
-                <small v-if="product.sales_data_source === 'SIMULATED'" class="product-provenance">
-                  {{ language === 'en' ? 'Demo sales' : language === 'zh' ? '演示销量' : 'Đã bán (demo)' }}:
-                  {{ product.demo_units_sold_30d }} / 30 {{ language === 'en' ? 'days' : language === 'zh' ? '天' : 'ngày' }}
+                <small v-if="product.sales_data_source && product.demo_units_sold_30d" class="product-provenance">
+                  {{ productSalesLabel(product) }}:
+                  {{ product.demo_units_sold_30d.toLocaleString('vi-VN') }} / 30 {{ language === 'en' ? 'days' : language === 'zh' ? '天' : 'ngày' }}
                 </small>
                 <span>{{ productPriceLabel(product) }}<template v-if="product.stock_is_current !== false"> · {{ productStockLabel(product) }}</template></span>
                 <details class="product-provenance" @click.stop>
@@ -1318,9 +1322,9 @@ function onKeydown(event: KeyboardEvent) {
             </div>
             <p v-if="activeProductModal.promotion" class="product-modal-promo">{{ activeProductModal.promotion }}</p>
             <div class="product-modal-meta">
-              <span v-if="activeProductModal.sales_data_source === 'SIMULATED'">
-                {{ language === 'en' ? 'Demo sales' : language === 'zh' ? '演示销量' : 'Đã bán (demo)' }}:
-                {{ activeProductModal.demo_units_sold_30d }} / 30 {{ language === 'en' ? 'days' : language === 'zh' ? '天' : 'ngày' }}
+              <span v-if="activeProductModal.sales_data_source && activeProductModal.demo_units_sold_30d">
+                {{ productSalesLabel(activeProductModal) }}:
+                {{ activeProductModal.demo_units_sold_30d.toLocaleString('vi-VN') }} / 30 {{ language === 'en' ? 'days' : language === 'zh' ? '天' : 'ngày' }}
               </span>
               <span>{{ productProvenance(activeProductModal) }}</span>
             </div>

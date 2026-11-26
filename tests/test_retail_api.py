@@ -372,7 +372,7 @@ def test_catalog_promotion_response_keeps_validity_caveat_without_repeating_date
 @pytest.mark.parametrize(
     ("fields", "expected", "forbidden"),
     [
-        (("price_vnd",), "giá tham khảo 13.000đ", "Theo dữ liệu ngày"),
+        (("price_vnd",), "giá 13.000đ", "Giá tại cửa hàng có thể khác"),
         (("stock",), "16 lon có thể bán được", "Theo dữ liệu ngày"),
         (("shelf",), "A2-L2", "31/08/2026"),
     ],
@@ -392,8 +392,6 @@ def test_verified_snapshot_answers_are_concise_and_keep_critical_caveat(
 
     assert expected in reply
     assert forbidden not in reply
-    if fields == ("price_vnd",):
-        assert "Giá tại cửa hàng có thể khác" in reply
     if fields == ("stock",):
         assert "Tồn thực tế tại cửa hàng có thể khác" in reply
 
@@ -1820,7 +1818,8 @@ async def test_ambiguous_brand_price_question_lists_variant_prices_from_catalog(
     assert "21.600đ/gói" in response.json()["text"]
     assert "Khoai tây Lay's vị tảo biển Nori 150g" in response.json()["text"]
     assert "33.000đ/gói" in response.json()["text"]
-    assert "giá tham khảo" in response.json()["text"]
+    assert "Đây là giá tham khảo theo snapshot" not in response.json()["text"]
+    assert "Giá tại cửa hàng có thể khác" not in response.json()["text"]
     assert "/gói" in response.json()["text"]
     assert "get_product_snapshot" not in response.json()["tools_used"]
 
@@ -3941,10 +3940,11 @@ async def test_snapshot_caveat_is_not_repeated_in_a_session_and_metadata_is_pres
     isolated = await ask(second_session.json()["session_id"])
 
     assert first.status_code == repeat.status_code == isolated.status_code == 200
-    assert "Giá tại cửa hàng có thể khác" in first.json()["text"]
+    assert "Giá tại cửa hàng có thể khác" not in first.json()["text"]
     assert "Giá tại cửa hàng có thể khác" not in repeat.json()["text"]
-    assert "Giá tại cửa hàng có thể khác" in isolated.json()["text"]
+    assert "Giá tại cửa hàng có thể khác" not in isolated.json()["text"]
     for response in (first, repeat, isolated):
+        assert "13.000đ" in response.json()["text"]
         assert response.json()["data_timestamp"] == "2026-08-31T00:00:00Z"
         assert response.json()["data_source"] == "demo_product_catalog"
     assert service.calls == 0

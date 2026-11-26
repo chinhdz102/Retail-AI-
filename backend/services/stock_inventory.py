@@ -387,6 +387,7 @@ def render_sales_or_stock_comparison(
     *,
     language: str,
     demo_sales_counts: Mapping[str, int] | None = None,
+    sales_source: str = "SIMULATED",
 ) -> tuple[str, tuple[ProductSnapshot, ...], dict[str, int]] | None:
     """Deterministically compare simulated 30-day sales or snapshot stock for two items."""
     hits_a = repository.search(query=req.target_a, limit=40)
@@ -426,15 +427,22 @@ def render_sales_or_stock_comparison(
             return None
         sa = demo_sales_counts.get(prod_a.product_id, 0)
         sb = demo_sales_counts.get(prod_b.product_id, 0)
+        is_sim = sales_source == "SIMULATED"
+        sim_tag = " mô phỏng" if is_sim else ""
+        prefix = (
+            "Theo số liệu bán mô phỏng (demo 30 ngày)"
+            if is_sim
+            else "Theo số liệu bán 30 ngày gần nhất"
+        )
         if sa == sb:
-            verdict = f"Hai mẫu này hiện có lượt bán mô phỏng ngang nhau ({sa} sản phẩm/30 ngày)."
+            verdict = f"Hai mẫu này hiện có lượt bán{sim_tag} ngang nhau ({sa} sản phẩm/30 ngày)."
         else:
             leader_name = name_a if sa > sb else name_b
-            verdict = f"Trong hai mẫu này, {leader_name} có lượt bán mô phỏng cao hơn."
+            verdict = f"Trong hai mẫu này, {leader_name} có lượt bán{sim_tag} cao hơn."
         reply = (
-            f"Theo số liệu bán mô phỏng (demo 30 ngày), đại diện bán chạy nhất của hai dòng là: "
-            f"{name_a} ({sa} sản phẩm, giá tham khảo {_format_vnd(prod_a.price_vnd)}) và "
-            f"{name_b} ({sb} sản phẩm, giá tham khảo {_format_vnd(prod_b.price_vnd)}). "
+            f"{prefix}, đại diện bán chạy nhất của hai dòng là: "
+            f"{name_a} ({sa} sản phẩm, giá {_format_vnd(prod_a.price_vnd)}) và "
+            f"{name_b} ({sb} sản phẩm, giá {_format_vnd(prod_b.price_vnd)}). "
             f"{verdict}"
         )
         return reply, (prod_a, prod_b), {prod_a.product_id: sa, prod_b.product_id: sb}
