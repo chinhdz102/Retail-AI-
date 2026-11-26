@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
+import hmac
+import importlib.util
 import json
 import logging
+import os
 import re
 import unicodedata
 from collections import defaultdict, deque
@@ -172,6 +177,7 @@ from backend.services.sessions import (
     SessionError,
     SessionExpiredError,
     SessionMissionConflictError,
+    SessionNotFoundError,
     SessionUnavailableError,
     build_session_store,
 )
@@ -262,7 +268,86 @@ shopping_service = ShoppingService(
 )
 support_ticket_store = SupportTicketStore()
 assisted_order_store = AssistedOrderStore()
-speech_ticket_store = SpeechTicketStore()
+_CURRENT_SESSION_TOKEN: ContextVar[str] = ContextVar("kiosk_session_token", default="")
+
+
+def _serverless_hmac_secret(current_settings: Settings | None = None) -> str:
+    cfg = current_settings or get_settings()
+    for attr in ("payos_checksum_key", "azure_speech_key", "groq_api_key", "llm_api_key"):
+        secret = getattr(cfg, attr, None)
+        if secret is None:
+            continue
+        raw = (
+            secret.get_secret_value().strip()
+            if hasattr(secret, "get_secret_value")
+            else str(secret).strip()
+        )
+        if raw:
+            return hashlib.sha256(f"retail-ai-session-v1:{raw}".encode()).hexdigest()
+    return ""
+
+
+def _sign_session_token(
+    session_id: UUID,
+    kiosk_id: str,
+    expires_at: datetime,
+    current_settings: Settings | None = None,
+) -> str | None:
+    key = _serverless_hmac_secret(current_settings)
+    if not key:
+        return None
+    payload = {
+        "sid": str(session_id),
+        "kid": kiosk_id[:64],
+        "exp": int(expires_at.timestamp()),
+    }
+    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    b64 = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+    sig = hmac.new(key.encode("utf-8"), b64.encode("ascii"), hashlib.sha256).hexdigest()[:32]
+    return f"st1.{b64}.{sig}"
+
+
+def _verify_session_token(
+    token: str,
+    expected_session_id: UUID,
+    current_settings: Settings | None = None,
+) -> tuple[str, datetime] | None:
+    if not token or not token.startswith("st1."):
+        return None
+    key = _serverless_hmac_secret(current_settings)
+    if not key:
+        return None
+    parts = token.split(".")
+    if len(parts) != 3:
+        return None
+    _prefix, b64, sig = parts
+    expected = hmac.new(
+        key.encode("utf-8"), b64.encode("ascii"), hashlib.sha256
+    ).hexdigest()[:32]
+    if not hmac.compare_digest(expected, sig):
+        return None
+    try:
+        padded = b64 + ("=" * (-len(b64) % 4))
+        data = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+    except Exception:
+        return None
+    if not isinstance(data, dict) or data.get("sid") != str(expected_session_id):
+        return None
+    exp_ts = int(data.get("exp") or 0)
+    expires_at = datetime.fromtimestamp(exp_ts, tz=UTC)
+    if expires_at <= datetime.now(UTC):
+        return None
+    kiosk_id = str(data.get("kid") or "kiosk-01")[:64]
+    return kiosk_id, expires_at
+
+
+def _is_streaming_stt_available() -> bool:
+    if os.getenv("VERCEL"):
+        return False
+    return importlib.util.find_spec("azure.cognitiveservices.speech") is not None
+
+
+speech_ticket_store = SpeechTicketStore(signing_key_provider=_serverless_hmac_secret)
 logger = logging.getLogger(__name__)
 _ALLERGEN_PRODUCT_CLARIFICATION = "ALLERGEN_PRODUCT_NAME"
 _groq_service: GroqService | None = None
@@ -416,10 +501,13 @@ class _ObservabilityAndRateLimitMiddleware:
 
         headers_raw = scope.get("headers") or ()
         incoming_id = ""
+        session_token = ""
         for key, value in headers_raw:
-            if key.lower() == b"x-request-id":
+            lowered = key.lower()
+            if lowered == b"x-request-id":
                 incoming_id = value.decode("latin-1", errors="ignore").strip()[:64]
-                break
+            elif lowered == b"x-kiosk-session-token":
+                session_token = value.decode("latin-1", errors="ignore").strip()[:512]
         request_id = incoming_id or uuid4().hex[:16]
         started = perf_counter()
         path = scope.get("path", "")
@@ -473,7 +561,11 @@ class _ObservabilityAndRateLimitMiddleware:
                     )
             await send(message)
 
-        await self.app(scope, receive, send_with_observability)
+        token_reset = _CURRENT_SESSION_TOKEN.set(session_token)
+        try:
+            await self.app(scope, receive, send_with_observability)
+        finally:
+            _CURRENT_SESSION_TOKEN.reset(token_reset)
 
 
 class _StripApiPrefixMiddleware:
@@ -547,6 +639,18 @@ def _session_or_http_error(session_id: UUID):
         raise HTTPException(
             status_code=503, detail="Session store is temporarily unavailable"
         ) from exc
+    except SessionNotFoundError as exc:
+        verified = _verify_session_token(_CURRENT_SESSION_TOKEN.get(), session_id)
+        rehydrate_fn = getattr(session_store, "rehydrate", None)
+        if verified is not None and callable(rehydrate_fn):
+            kiosk_id, expires_at = verified
+            try:
+                return rehydrate_fn(session_id, kiosk_id, expires_at)
+            except SessionClosedError as closed_exc:
+                raise HTTPException(status_code=409, detail="Session is closed") from closed_exc
+            except SessionExpiredError as exp_exc:
+                raise HTTPException(status_code=410, detail="Session expired") from exp_exc
+        raise HTTPException(status_code=404, detail="Session not found") from exc
     except SessionError as exc:
         raise HTTPException(status_code=404, detail="Session not found") from exc
 
@@ -5185,6 +5289,8 @@ def create_session(request: SessionCreateRequest) -> SessionResponse:
         state=record.state,
         expires_at=record.expires_at,
         cart_available=cart_available,
+        session_token=_sign_session_token(record.session_id, record.kiosk_id, record.expires_at),
+        streaming_stt_available=_is_streaming_stt_available(),
     )
 
 
@@ -5204,6 +5310,8 @@ def close_session(session_id: UUID) -> SessionResponse:
         state=record.state,
         expires_at=record.expires_at,
         cart_available=cart_available,
+        session_token=None,
+        streaming_stt_available=_is_streaming_stt_available(),
     )
 
 
@@ -16181,7 +16289,18 @@ async def stream_synthesis_ticket(
     if payload is None:
         raise HTTPException(status_code=404, detail="Speech request expired")
     request = SynthesizeRequest.model_validate(payload)
-    record = _session_or_http_error(request.session_id)
+    try:
+        record = _session_or_http_error(request.session_id)
+    except HTTPException as exc:
+        rehydrate_fn = getattr(session_store, "rehydrate", None)
+        if exc.status_code == 404 and token.startswith("s1.") and callable(rehydrate_fn):
+            record = rehydrate_fn(
+                request.session_id,
+                "kiosk-01",
+                datetime.now(UTC) + timedelta(seconds=settings.session_ttl_seconds),
+            )
+        else:
+            raise
     if record.state in {SessionState.CLOSED, SessionState.EXPIRED}:
         raise HTTPException(status_code=409, detail="Session is closed")
 

@@ -304,6 +304,30 @@ class InMemorySessionStore:
         with self._lock:
             return copy.deepcopy(self._active_record(session_id))
 
+    def rehydrate(
+        self,
+        session_id: UUID,
+        kiosk_id: str,
+        expires_at: datetime,
+    ) -> SessionRecord:
+        """Restore a verified active session on a fresh serverless container."""
+        now = self._now()
+        with self._lock:
+            existing = self._sessions.get(session_id)
+            if existing is not None:
+                return copy.deepcopy(self._active_record(session_id))
+            if expires_at <= now:
+                raise SessionExpiredError("Session expired")
+            record = SessionRecord(
+                session_id=session_id,
+                kiosk_id=kiosk_id or "kiosk-01",
+                state=SessionState.BROWSING,
+                created_at=now,
+                expires_at=max(expires_at, now + self.ttl),
+            )
+            self._sessions[session_id] = record
+            return copy.deepcopy(record)
+
     def close(self, session_id: UUID) -> SessionRecord:
         with self._lock:
             record = self._active_record(session_id)

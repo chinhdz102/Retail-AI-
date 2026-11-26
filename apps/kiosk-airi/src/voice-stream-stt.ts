@@ -12,9 +12,18 @@ export interface StreamingSttOptions {
   WebSocketCtor?: typeof WebSocket
 }
 
-export function canUseStreamingStt(): boolean {
+export function canUseStreamingStt(serverSupported?: boolean): boolean {
   if (import.meta.env.MODE === 'test') return false
-  return typeof WebSocket !== 'undefined'
+  if (serverSupported === false) return false
+  if (typeof WebSocket === 'undefined') return false
+  if (
+    serverSupported === undefined
+    && typeof window !== 'undefined'
+    && /\.vercel\.app$/i.test(window.location?.hostname ?? '')
+  ) {
+    return false
+  }
+  return true
 }
 
 export function buildStreamingSttUrl(sessionId: string, language: LanguageCode): string {

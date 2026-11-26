@@ -175,6 +175,26 @@ let activeTranscriptionController: AbortController | null = null
 let activeStreamStt: StreamingSttSession | null = null
 let activeTurnFromVoice = false
 let voiceTurnEpoch = 0
+let streamingSttAvailable: boolean | undefined
+const autoSwitchedMicIds = new Set<string>()
+let bargeInSttRecognition: {
+  lang: string
+  continuous: boolean
+  interimResults: boolean
+  maxAlternatives: number
+  onresult: ((event: { resultIndex?: number; results: ArrayLike<{ isFinal?: boolean; [index: number]: { transcript?: string } | undefined }> }) => void) | null
+  onerror: ((event: { error?: string }) => void) | null
+  onend: (() => void) | null
+  start: () => void
+  stop: () => void
+  abort?: () => void
+} | null = null
+let bargeInSttRestartTimer: ReturnType<typeof setTimeout> | undefined
+let bargeInSttFinalizeTimer: ReturnType<typeof setTimeout> | undefined
+let bargeInSttRestarts = 0
+let bargeInSttSpeechInterrupted = false
+let bargeInSttPendingTranscript = ''
+let bargeInCandidateAbort: AbortController | null = null
 
 const languageSettings: Record<LanguageCode, {
   label: string
@@ -338,10 +358,254 @@ function isEchoOfRecentAssistantSpeech(transcript: string, forceStrict = false):
   return isLikelyAssistantEcho(transcript, combined, echoOptions)
 }
 
+function isRealBargeInSpeech(transcript: string): boolean {
+  const cleaned = transcript.trim()
+  if (!cleaned) return false
+  const letters = cleaned.match(/\p{L}/gu)
+  if (!letters || letters.length < 2) return false
+  if (isLikelyRepeatedSpeechTranscript(cleaned)) return false
+  if (isEchoOfRecentAssistantSpeech(cleaned, true)) return false
+  return true
+}
+
+function isStopSpeechCommand(transcript: string): boolean {
+  const normalized = transcript
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return /^(?:dung|dung lai|ngung|ngung lai|thoi|thoi duoc roi|im|im di|tat tieng|khoan|khoan da|cho chut|cho minh chut|stop|pause|quiet|wait)$/.test(normalized)
+}
+
+function stopBargeInSttWatcher() {
+  if (bargeInSttRestartTimer !== undefined) {
+    clearTimeout(bargeInSttRestartTimer)
+    bargeInSttRestartTimer = undefined
+  }
+  if (bargeInSttFinalizeTimer !== undefined) {
+    clearTimeout(bargeInSttFinalizeTimer)
+    bargeInSttFinalizeTimer = undefined
+  }
+  bargeInCandidateAbort?.abort()
+  bargeInCandidateAbort = null
+  bargeInSttSpeechInterrupted = false
+  bargeInSttPendingTranscript = ''
+  const rec = bargeInSttRecognition
+  bargeInSttRecognition = null
+  if (rec) {
+    rec.onresult = null
+    rec.onerror = null
+    rec.onend = null
+    try {
+      rec.stop()
+    } catch {
+      rec.abort?.()
+    }
+  }
+}
+
+function silenceAssistantSpeechOnly() {
+  clearSpeechResume()
+  speechRequestId += 1
+  startedSpeechRequestId = 0
+  if (currentSpeechText) recordSpokenEchoText(currentSpeechText)
+  currentSpeechText = null
+  bargeInEligible = false
+  isAudioPlaying.value = false
+  speechSourceMode.value = 'none'
+  pendingSpeechText.value = null
+  activeSpeechQueue = []
+  speechStreamOpen = false
+  speechChunkPlaying = false
+  speechQueueAfterCallback = undefined
+  releaseAudioPlayback()
+  revokeAllPrefetchedBlobUrls()
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+}
+
+function startBargeInSttWatcher(requestId: number) {
+  stopBargeInSttWatcher()
+  if (import.meta.env.MODE === 'test' || !isHandsFree.value || isUnmounted || requestId !== speechRequestId) {
+    return
+  }
+  const host = window as Window & {
+    SpeechRecognition?: new () => NonNullable<typeof bargeInSttRecognition>
+    webkitSpeechRecognition?: new () => NonNullable<typeof bargeInSttRecognition>
+  }
+  const RecognitionCtor = host.SpeechRecognition ?? host.webkitSpeechRecognition
+  if (!RecognitionCtor) return
+
+  bargeInSttRestarts = 0
+  const launch = () => {
+    if (!isHandsFree.value || isUnmounted || requestId !== speechRequestId || !bargeInEligible) return
+    let rec: NonNullable<typeof bargeInSttRecognition>
+    try {
+      rec = new RecognitionCtor()
+    } catch {
+      return
+    }
+    bargeInSttRecognition = rec
+    rec.lang = languageSettings[language.value].locale
+    rec.continuous = true
+    rec.interimResults = true
+    rec.maxAlternatives = 1
+
+    const commitTranscript = (text: string) => {
+      const cleaned = text.trim()
+      stopBargeInSttWatcher()
+      voiceController?.setBargeInMode?.(false)
+      if (!isHandsFree.value || isUnmounted) return
+      if (!cleaned || !isRealBargeInSpeech(cleaned) || isStopSpeechCommand(cleaned)) {
+        status.value = 'listening'
+        voiceHint.value = language.value === 'vi'
+          ? 'Mình đã dừng lại, bạn cần hỏi gì cứ nói nhé'
+          : languageSettings[language.value].listening
+        void resumeHandsFree()
+        return
+      }
+      void sendMessage(cleaned, true)
+    }
+
+    rec.onresult = (event) => {
+      if (bargeInSttRecognition !== rec || !isHandsFree.value || isUnmounted) return
+      const startIndex = event.resultIndex ?? 0
+      const interimParts: string[] = []
+      const finalParts: string[] = []
+      for (let i = startIndex; i < event.results.length; i += 1) {
+        const res = event.results[i]
+        const text = res?.[0]?.transcript?.trim() ?? ''
+        if (!text) continue
+        if (res?.isFinal) finalParts.push(text)
+        else interimParts.push(text)
+      }
+      const finalText = finalParts.join(' ').trim()
+      const combined = (finalText || interimParts.join(' ')).trim()
+      if (!combined || !isRealBargeInSpeech(combined)) return
+
+      // Real human Vietnamese speech confirmed by STT (not laptop fan or Mai echo)!
+      if (!bargeInSttSpeechInterrupted) {
+        bargeInSttSpeechInterrupted = true
+        lastBargeInAt = Date.now()
+        silenceAssistantSpeechOnly()
+        voiceController?.pause()
+        status.value = 'listening'
+        isVoiceActive.value = true
+        isRecording.value = true
+      }
+      bargeInSttPendingTranscript = combined
+      voiceHint.value = language.value === 'vi' ? `Đang nghe: “${combined}”` : `Hearing: "${combined}"`
+
+      if (bargeInSttFinalizeTimer !== undefined) {
+        clearTimeout(bargeInSttFinalizeTimer)
+        bargeInSttFinalizeTimer = undefined
+      }
+      if (isStopSpeechCommand(combined)) {
+        commitTranscript(combined)
+        return
+      }
+      if (finalText) {
+        commitTranscript(finalText)
+        return
+      }
+      bargeInSttFinalizeTimer = setTimeout(() => {
+        bargeInSttFinalizeTimer = undefined
+        if (bargeInSttRecognition === rec && bargeInSttPendingTranscript) {
+          commitTranscript(bargeInSttPendingTranscript)
+        }
+      }, 1_100)
+    }
+
+    rec.onerror = () => {
+      // Ignore silent/no-speech errors; fallback Azure candidate STT still stays active.
+    }
+
+    rec.onend = () => {
+      if (bargeInSttRecognition !== rec) return
+      bargeInSttRecognition = null
+      if (bargeInSttSpeechInterrupted) {
+        const pending = bargeInSttPendingTranscript
+        commitTranscript(pending)
+        return
+      }
+      if (
+        isHandsFree.value
+        && !isUnmounted
+        && requestId === speechRequestId
+        && bargeInEligible
+        && bargeInSttRestarts < 3
+      ) {
+        bargeInSttRestarts += 1
+        bargeInSttRestartTimer = setTimeout(() => {
+          bargeInSttRestartTimer = undefined
+          launch()
+        }, 250)
+      }
+    }
+
+    try {
+      rec.start()
+    } catch {
+      bargeInSttRecognition = null
+    }
+  }
+  launch()
+}
+
+async function handleBargeInCandidateAudio(audio: Blob) {
+  if (!sessionId.value || !isHandsFree.value || isUnmounted || !bargeInEligible || bargeInSttSpeechInterrupted) {
+    return
+  }
+  const activeSessionId = sessionId.value
+  const generation = sessionGeneration
+  const voiceEpoch = voiceTurnEpoch
+  bargeInCandidateAbort?.abort()
+  const controller = new AbortController()
+  bargeInCandidateAbort = controller
+  try {
+    const result = await transcribe(activeSessionId, audio, language.value, controller.signal, false)
+    if (
+      isUnmounted
+      || generation !== sessionGeneration
+      || voiceEpoch !== voiceTurnEpoch
+      || !isHandsFree.value
+      || !bargeInEligible
+      || bargeInSttSpeechInterrupted
+    ) {
+      return
+    }
+    if (result.speech_detected === false || !isRealBargeInSpeech(result.text)) {
+      // Fan noise or loudspeaker echo — keep Mai talking without any interruption!
+      return
+    }
+    lastBargeInAt = Date.now()
+    stopBargeInSttWatcher()
+    invalidateSpeechPlayback()
+    voiceController?.setBargeInMode?.(false)
+    if (isStopSpeechCommand(result.text)) {
+      status.value = 'listening'
+      voiceHint.value = 'Mình đã dừng lại, bạn cần hỏi gì cứ nói nhé'
+      void resumeHandsFree()
+      return
+    }
+    await sendMessage(result.text, true)
+  } catch {
+    // Never break active playback on background verification error.
+  } finally {
+    if (bargeInCandidateAbort === controller) {
+      bargeInCandidateAbort = null
+    }
+  }
+}
+
 function handleVoiceBargeIn() {
   if (!isHandsFree.value || isUnmounted || !bargeInEligible) return
   if (status.value !== 'speaking' && currentSpeechText === null && !audioPlayback) return
   lastBargeInAt = Date.now()
+  stopBargeInSttWatcher()
   if (currentSpeechText) {
     recordSpokenEchoText(currentSpeechText)
   }
@@ -532,6 +796,7 @@ function ensureVoiceController(): VoiceConversationController {
       preferRecorder: true,
       preferPcmWorklet: true,
       preferNeuralVad: true,
+      requireSttForBargeIn: true,
       validateSpeechEnvelope: true,
       deviceId: selectedMicrophone.value,
       getPlaybackLevel: getCurrentPlaybackLevel,
@@ -553,6 +818,7 @@ function ensureVoiceController(): VoiceConversationController {
       },
       onState: handleVoiceState,
       onBargeIn: handleVoiceBargeIn,
+      onBargeInCandidateAudio: (audio) => { void handleBargeInCandidateAudio(audio) },
       onTranscript: (text) => {
         if (!isHandsFree.value || isUnmounted) return
         if (bargeInEligible && (status.value === 'speaking' || currentSpeechText !== null)) {
@@ -575,7 +841,7 @@ function ensureVoiceController(): VoiceConversationController {
         activeStreamStt?.cancel()
         activeStreamStt = null
         if (
-          !canUseStreamingStt()
+          !canUseStreamingStt(streamingSttAvailable)
           || !sessionId.value
           || !isHandsFree.value
           || voiceInputBlocked()
@@ -683,8 +949,12 @@ async function refreshMicrophones() {
       && isHandsFree.value
       && isVoiceActive.value
       && activeMicrophone.value
+      && isLikelyVirtualMicrophone(activeMicrophone.value)
+      && preferredId
+      && !autoSwitchedMicIds.has(preferredId)
       && normalizeDeviceLabel(activeMicrophone.value) !== normalizeDeviceLabel(selectedLabel)
     ) {
+      autoSwitchedMicIds.add(preferredId)
       void changeMicrophone(preferredId)
     }
   } catch {
@@ -733,6 +1003,7 @@ async function resumeHandsFree() {
 }
 
 function pauseVoice() {
+  stopBargeInSttWatcher()
   activeStreamStt?.cancel()
   activeStreamStt = null
   voiceController?.pause()
@@ -836,6 +1107,7 @@ let speechChunkPlaying = false
 let speechQueueAfterCallback: (() => void) | undefined
 
 function invalidateSpeechPlayback() {
+  stopBargeInSttWatcher()
   clearSpeechResume()
   speechRequestId += 1
   startedSpeechRequestId = 0
@@ -857,15 +1129,16 @@ function armBargeIn(requestId: number) {
   if (!isHandsFree.value || isUnmounted || requestId !== speechRequestId) return
   bargeInEligible = true
   voiceHint.value = language.value === 'vi'
-    ? 'Đang trả lời — bạn có thể nói xen bất cứ lúc nào để ngắt'
+    ? 'Đang trả lời — nói rõ để ngắt lời Mai (tự lọc tiếng quạt)'
     : language.value === 'en'
-      ? 'Speaking — interrupt anytime by speaking'
-      : '正在回答 — 随时可以直接打断说话'
+      ? 'Speaking — speak clearly to interrupt'
+      : '正在回答 — 清晰说话可打断'
   const controller = ensureVoiceController()
   controller.setBargeInMode?.(true)
   void controller.start().catch(() => {
     // Keep TTS playing even if the microphone cannot re-arm immediately.
   })
+  startBargeInSttWatcher(requestId)
 }
 
 function markSpeechPlaybackStarted(requestId: number, text: string) {
@@ -1225,6 +1498,7 @@ function clearSpeechResume() {
 }
 
 function resumeAfterSpeech(afterSpeech: (() => void) | undefined, requestId: number) {
+  stopBargeInSttWatcher()
   clearSpeechResume()
   currentSpeechText = null
   bargeInEligible = false
@@ -1283,6 +1557,7 @@ async function bootKiosk() {
         return
       }
       sessionId.value = session.session_id
+      streamingSttAvailable = session.streaming_stt_available
       const expiresAt = Date.parse(session.expires_at)
       if (Number.isFinite(expiresAt)) {
         sessionIdleTimeoutMs = Math.max(1_000, expiresAt - Date.now())

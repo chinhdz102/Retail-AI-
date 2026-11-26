@@ -22,6 +22,8 @@ class SessionResponse(BaseModel):
     state: SessionState
     expires_at: datetime
     cart_available: bool = False
+    session_token: str | None = None
+    streaming_stt_available: bool = False
 
 
 class AgentRespondRequest(BaseModel):

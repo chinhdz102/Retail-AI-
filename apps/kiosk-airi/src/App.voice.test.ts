@@ -978,4 +978,57 @@ describe('voice transcript integration', () => {
     expect(apiMocks.respond.mock.calls[1][1]).toBe('Thêm vào giỏ')
     wrapper.unmount()
   })
+
+  it('requires real non-echo STT words before interrupting Mai so laptop fan noise cannot barge in', async () => {
+    const { pause } = setupCloudReply()
+    const wrapper = await startSpokenReply()
+    const mic = controllerStore.current
+    await vi.waitFor(() => expect(mic.bargeInMode).toBe(true))
+    expect(mic.options.requireSttForBargeIn).toBe(true)
+
+    // 1. Candidate burst from laptop cooling fan returns speech_detected=false -> Mai keeps speaking uninterrupted!
+    pause.mockClear()
+    apiMocks.transcribe.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: '',
+      language: 'vi',
+      speech_detected: false,
+    })
+    mic.options.onBargeInCandidateAudio(new Blob(['laptop fan noise']))
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledTimes(1))
+    expect(pause).not.toHaveBeenCalled()
+    expect(mic.bargeInMode).toBe(true)
+    expect(apiMocks.respond).toHaveBeenCalledTimes(1)
+
+    // 2. Candidate burst with Mai's own speaker echo -> still ignored, Mai keeps speaking!
+    apiMocks.transcribe.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Mình gợi ý chai nước này.',
+      language: 'vi',
+      speech_detected: true,
+    })
+    mic.options.onBargeInCandidateAudio(new Blob(['assistant echo']))
+    await vi.waitFor(() => expect(apiMocks.transcribe).toHaveBeenCalledTimes(2))
+    expect(pause).not.toHaveBeenCalled()
+    expect(apiMocks.respond).toHaveBeenCalledTimes(1)
+
+    // 3. Genuine human Vietnamese speech verified by STT -> interrupts Mai and answers immediately!
+    apiMocks.transcribe.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Cho mình hỏi giá sữa tươi',
+      language: 'vi',
+      speech_detected: true,
+    })
+    apiMocks.respond.mockResolvedValueOnce({
+      session_id: 'session-test',
+      text: 'Sữa tươi Vinamilk có giá 32.000đ.',
+      grounded_product_ids: [],
+      state: 'BROWSING',
+    })
+    mic.options.onBargeInCandidateAudio(new Blob(['real customer speech']))
+    await vi.waitFor(() => expect(apiMocks.respond).toHaveBeenCalledTimes(2))
+    expect(pause).toHaveBeenCalled()
+    expect(apiMocks.respond.mock.calls[1][1]).toBe('Cho mình hỏi giá sữa tươi')
+    wrapper.unmount()
+  })
 })

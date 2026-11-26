@@ -173,6 +173,13 @@ export interface VoiceConversationOptions extends VoiceControllerDependencies {
   preferPcmWorklet?: boolean
   /** Prefer local Silero VAD before the RMS fallback (opt-in per deployment). */
   preferNeuralVad?: boolean
+  /**
+   * When true, never interrupt assistant speech from raw VAD/RMS spikes alone
+   * (prevents laptop cooling fans / airflow from cutting off TTS). Instead,
+   * emit verified candidate audio via `onBargeInCandidateAudio` so real STT
+   * confirms spoken human words before interrupting.
+   */
+  requireSttForBargeIn?: boolean
   /** Optional real-time loudspeaker output RMS (0..1) while kiosk TTS is playing. */
   getPlaybackLevel?: () => number
   /**
@@ -183,6 +190,7 @@ export interface VoiceConversationOptions extends VoiceControllerDependencies {
   shouldHoldTurnEnd?: () => number | Promise<number>
   onState: (state: VoiceState) => void
   onBargeIn?: () => void
+  onBargeInCandidateAudio?: (audio: Blob) => void
   onTranscript: (text: string) => void
   onAudio: (audio: Blob) => void
   onSpeechStartFrame?: (preRollFrames: Float32Array[]) => void
@@ -371,7 +379,8 @@ function buildPreVadHighPassStream(rawStream: MediaStreamLike): HighPassStreamHa
     const source = context.createMediaStreamSource(rawStream as unknown as MediaStream)
     const highpass = context.createBiquadFilter()
     highpass.type = 'highpass'
-    highpass.frequency.value = 90
+    // 135 Hz strips laptop cooling fan fundamental & blade rumble without touching Vietnamese formants.
+    highpass.frequency.value = 135
     highpass.Q.value = 0.707
     const destination = context.createMediaStreamDestination()
     source.connect(highpass)
@@ -914,6 +923,9 @@ export class VoiceConversationController {
             }
             return
           }
+          if (this.options.requireSttForBargeIn) {
+            return
+          }
           const now = this.dependencies.now?.() ?? Date.now()
           if (canConfirmNeuralBargeIn(now)) {
             triggerNeuralBargeIn()
@@ -1070,7 +1082,8 @@ export class VoiceConversationController {
                   : BARGE_IN_NEURAL_SUSTAINED_FRAMES
               )
               if (
-                !this.bargeInTriggered
+                !this.options.requireSttForBargeIn
+                && !this.bargeInTriggered
                 && (sustainedReady || (neuralRealStarted && canConfirmNeuralBargeIn(now, true)))
               ) {
                 triggerNeuralBargeIn()
@@ -1160,6 +1173,22 @@ export class VoiceConversationController {
           resetSegmentMetrics()
           if ((this.bargeInMode || wasStartedInBargeIn) && !wasConfirmedBargeIn && !wasPostDisarmPromoted) {
             streamingSpeechActive = false
+            if (
+              this.options.requireSttForBargeIn
+              && this.options.onBargeInCandidateAudio
+              && !isStationaryFanNoise
+              && observedPeakRms >= requiredBargeInRms()
+              && observedHighFrames >= 6
+              && observedMaxConsecutiveVoiced >= 4
+              && audio.length >= 16_000 * 0.28
+              && audio.length <= 16_000 * 8
+            ) {
+              const candidateCapture = new PcmCaptureBuffer(16_000, 0)
+              candidateCapture.start()
+              candidateCapture.append(audio)
+              this.options.onBargeInCandidateAudio(candidateCapture.finish())
+              return
+            }
             this.options.onSpeechMisfire?.()
             this.setState('recorder', 'listening')
             return
@@ -1485,7 +1514,11 @@ export class VoiceConversationController {
         this.lastVoiceAt = now
         this.voicedDurationMs += elapsed
         this.bargeInSustainedMs += elapsed
-        if (!this.bargeInTriggered && this.bargeInSustainedMs >= BARGE_IN_FALLBACK_CONFIRM_MS) {
+        if (
+          !this.options.requireSttForBargeIn
+          && !this.bargeInTriggered
+          && this.bargeInSustainedMs >= BARGE_IN_FALLBACK_CONFIRM_MS
+        ) {
           this.confirmBargeIn('recorder')
         }
       } else if (this.segmentRecorder && !this.bargeInTriggered && now - this.lastVoiceAt >= 240) {
@@ -1582,10 +1615,14 @@ export class VoiceConversationController {
         const blob = new Blob(this.segmentChunks, { type: mimeType })
         const unconfirmedBargeIn = (this.bargeInMode || this.fallbackSegmentStartedInBargeIn)
           && !this.fallbackSegmentConfirmedBargeIn
-        const hasSpeech = !unconfirmedBargeIn && (this.forceSegmentEmit || (
-          this.voicedDurationMs >= MIN_VOICED_DURATION_MS
+        const envelopeValid = this.voicedDurationMs >= MIN_VOICED_DURATION_MS
           && (!this.options.validateSpeechEnvelope || this.envelopeGate.hasSpeechEvidence())
-        ))
+        const hasSpeech = !unconfirmedBargeIn && (this.forceSegmentEmit || envelopeValid)
+        const emitSttBargeInCandidate = unconfirmedBargeIn
+          && Boolean(this.options.requireSttForBargeIn)
+          && Boolean(this.options.onBargeInCandidateAudio)
+          && blob.size > 0
+          && envelopeValid
         this.segmentRecorder = null
         this.segmentChunks = []
         this.voicedDurationMs = 0
@@ -1595,7 +1632,13 @@ export class VoiceConversationController {
         this.envelopeGate.reset()
         this.stationaryNoiseSamples = 0
         this.forceSegmentEmit = false
-        if (blob.size > 0 && token === this.generation && hasSpeech) {
+        if (emitSttBargeInCandidate && token === this.generation && !this.destroyed) {
+          this.options.onBargeInCandidateAudio?.(blob)
+          this.active = true
+          this.lastPollAt = this.dependencies.now?.() ?? Date.now()
+          this.setState('recorder', 'listening')
+          this.pollAudio(token)
+        } else if (blob.size > 0 && token === this.generation && hasSpeech) {
           const metadata = captureMetadata(this.stream, this.pcmBuffer ? 'pcm' : 'mediarecorder')
           this.releaseAudioResources()
           this.lastPollAt = null

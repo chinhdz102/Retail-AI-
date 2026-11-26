@@ -58,6 +58,14 @@ function createTimedController(timeoutMs: number, parentSignal?: AbortSignal | n
   }
 }
 
+const sessionTokens = new Map<string, string>()
+let activeSessionToken: string | null = null
+
+function sessionTokenHeader(sessionId?: string): Record<string, string> {
+  const token = (sessionId ? sessionTokens.get(sessionId) : null) ?? activeSessionToken
+  return token ? { 'X-Kiosk-Session-Token': token } : {}
+}
+
 async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000): Promise<T> {
   const { signal: parentSignal, ...requestInit } = init ?? {}
   const timed = createTimedController(timeoutMs, parentSignal)
@@ -67,6 +75,7 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000):
       signal: timed.controller.signal,
       headers: {
         Accept: 'application/json',
+        ...sessionTokenHeader(),
         ...requestInit.headers,
       },
     })
@@ -114,6 +123,7 @@ async function requestAgentStream(
       headers: {
         Accept: 'text/event-stream',
         'Content-Type': 'application/json',
+        ...sessionTokenHeader(sessionId),
       },
       body: JSON.stringify({
         session_id: sessionId,
@@ -221,18 +231,31 @@ function assertResponseSession(
   }
 }
 
-export function createSession(kioskId = 'kiosk-01'): Promise<SessionResponse> {
-  return request<SessionResponse>('/sessions', {
+export async function createSession(kioskId = 'kiosk-01'): Promise<SessionResponse> {
+  const session = await request<SessionResponse>('/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ kiosk_id: kioskId }),
   })
+  if (session.session_token) {
+    sessionTokens.set(session.session_id, session.session_token)
+    activeSessionToken = session.session_token
+  }
+  return session
 }
 
-export function closeSession(sessionId: string): Promise<SessionResponse> {
-  return request<SessionResponse>(`/sessions/${encodeURIComponent(sessionId)}/close`, {
-    method: 'POST',
-  })
+export async function closeSession(sessionId: string): Promise<SessionResponse> {
+  const closedToken = sessionTokens.get(sessionId)
+  try {
+    return await request<SessionResponse>(`/sessions/${encodeURIComponent(sessionId)}/close`, {
+      method: 'POST',
+    })
+  } finally {
+    sessionTokens.delete(sessionId)
+    if (closedToken && activeSessionToken === closedToken) {
+      activeSessionToken = null
+    }
+  }
 }
 
 export function respond(

@@ -590,3 +590,72 @@ async def test_browse_product_catalog_departments_subcategories_search_and_pagin
         first_row = idx_data["rows"][0]
         assert len(first_row) == 13
         assert isinstance(first_row[0], str) and isinstance(first_row[5], int)
+
+
+@pytest.mark.asyncio
+async def test_serverless_session_token_and_signed_speech_ticket_survive_container_switch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.services.sessions import InMemorySessionStore
+    from backend.services.speech_tickets import SpeechTicketStore
+
+    signed_settings = Settings(
+        store_name="Thanh Lam Mart",
+        payos_checksum_key="serverless-signing-secret-123",
+    )
+    monkeypatch.setattr(api, "get_settings", lambda: signed_settings)
+    api.app.dependency_overrides[api.get_settings] = lambda: signed_settings
+    store_a = InMemorySessionStore(ttl_seconds=1800)
+    tickets_a = SpeechTicketStore(
+        signing_key_provider=lambda: api._serverless_hmac_secret(signed_settings)
+    )
+    monkeypatch.setattr(api, "session_store", store_a)
+    monkeypatch.setattr(api, "speech_ticket_store", tickets_a)
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=api.app), base_url="http://test", timeout=20
+        ) as client:
+            # 1. Container A creates session + returns signed session_token
+            sess = await client.post("/sessions", json={"kiosk_id": "kiosk-01"})
+            assert sess.status_code == 201
+            body = sess.json()
+            sid = body["session_id"]
+            token = body["session_token"]
+            assert token and token.startswith("st1.")
+
+            # 2. Simulate Vercel scale-out to fresh Container B (empty RAM stores)
+            store_b = InMemorySessionStore(ttl_seconds=1800)
+            tickets_b = SpeechTicketStore(
+                signing_key_provider=lambda: api._serverless_hmac_secret(signed_settings)
+            )
+            monkeypatch.setattr(api, "session_store", store_b)
+            monkeypatch.setattr(api, "speech_ticket_store", tickets_b)
+
+            # Without token, Container B still strictly rejects unknown session with 404
+            no_tok = await client.post(
+                "/audio/synthesize/tickets",
+                json={"session_id": sid, "text": "Xin chào", "language": "vi"},
+            )
+            assert no_tok.status_code == 404
+
+            # With signed X-Kiosk-Session-Token, Container B transparently rehydrates session!
+            with_tok = await client.post(
+                "/audio/synthesize/tickets",
+                headers={"X-Kiosk-Session-Token": token},
+                json={"session_id": sid, "text": "Xin chào", "language": "vi"},
+            )
+            assert with_tok.status_code == 200, with_tok.text
+            audio_url = with_tok.json()["audio_url"]
+            ticket_token = audio_url.rsplit("/", 1)[-1]
+            assert ticket_token.startswith("s1.")
+
+            # Signed speech ticket can also be consumed on yet another fresh Container C!
+            tickets_c = SpeechTicketStore(
+                signing_key_provider=lambda: api._serverless_hmac_secret(signed_settings)
+            )
+            consumed = tickets_c.consume(ticket_token)
+            assert consumed is not None
+            assert consumed["session_id"] == sid
+            assert consumed["text"] == "Xin chào"
+    finally:
+        api.app.dependency_overrides.pop(api.get_settings, None)

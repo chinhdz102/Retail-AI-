@@ -7,6 +7,8 @@ export interface SessionResponse {
   state: string
   expires_at: string
   cart_available?: boolean
+  session_token?: string | null
+  streaming_stt_available?: boolean
 }
 
 export interface ProductSnapshot {
