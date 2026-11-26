@@ -14,7 +14,11 @@ node_modules
 .env.*
 !.env.example
 
-# Docs, reports, tests, root training scripts (not needed at runtime)
+# Docs, reports, tests, caches, root training scripts (not needed at runtime)
+/.tmp
+/evaluation
+/output
+/.playwright-cli
 /docs
 /tests
 /scripts
