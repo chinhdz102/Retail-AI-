@@ -595,6 +595,7 @@ async def prepare_multiturn_streaming(
     previous_memory: dict,
     parsed,
     build_payload: Callable[..., StreamingConsultationPlan],
+    active_category_hint: str | None = None,
 ) -> StreamingConsultationPlan | None:
     """Path M: Stateful multi-turn working-basket & context-locked follow-up controller."""
     has_context = bool(
@@ -602,6 +603,7 @@ async def prepare_multiturn_streaming(
         or previous_memory.get("working_basket")
         or previous_memory.get("recent_product_ids")
         or visible
+        or active_category_hint
     )
     if not has_context:
         return None
@@ -1057,26 +1059,53 @@ async def prepare_multiturn_streaming(
                 mode="recommend",
             )
 
-    # M12. Context-locked follow-ups ("Trong số đó loại nào cay nhất?", "Có loại nào rẻ hơn nhưng
-    # vẫn cay không?",
-    # "Có chai nhỏ hơn không?", "Tìm loại tương tự nhưng dưới 15.000đ", "Ưu tiên sản phẩm đang
-    # khuyến mãi",
-    #      "Tôi không thích uống sữa", "Tôi không thích vị đắng", "Loại nào ít ngọt nhất?",
-    #      "Có loại nào ít đường hơn không?", "Một người không uống được nước có gas",
-    # "Hai người không ăn được đồ cay", "Giảm ngân sách xuống còn 100.000đ", "Tổng cộng dưới
-    # 30.000đ")
+    # M12. Universal context-locked anaphoric follow-ups (works for BOTH food & non-food after
+    # ANY Turn 1 — price lookup, search, recommendation, or comparison):
+    # - Superlatives/rankings: "loại nào rẻ nhất?", "cái nào đắt nhất?", "loại nào giảm giá nhiều
+    #   nhất?", "loại nào tiết kiệm nhất?", "trong số đó loại nào cay nhất?"
+    # - Comparatives & browsing: "có loại nào rẻ hơn không?", "còn loại nào khác không?",
+    #   "có chai nhỏ hơn không?", "có loại nào lớn hơn không?", "có loại nào dưới 100k không?"
+    # - Preferences/exclusions: "ưu tiên khuyến mãi", "không thích sữa/đắng/cay/gas",
+    #   "loại nào ít ngọt nhất?", "giảm ngân sách xuống còn 100k"
+    from backend.services.semantic_nlp_router import clean_native_shopper_query
+
+    no_new_product_noun = not getattr(parsed, "product_type", None) and (
+        not clean_native_shopper_query(answer_text, fallback_to_raw=False)
+    )
+    is_anaphoric_ranking_or_browse = bool(
+        not getattr(parsed, "product_type", None)
+        and re.search(
+            r"\b(?:re nhat|re hon|gia re|gia thap nhat|thap nhat|gia mem|mem nhat|tiet kiem nhat|"
+            r"loi nhat|dat nhat|mac nhat|cao cap nhat|lon nhat|to nhat|nho nhat|lon hon|to hon|"
+            r"giam gia.*nhat|khuyen mai.*nhat|dang giam gia|dang khuyen mai|dang sale|"
+            r"loai khac|mau khac|mon khac|cai khac|xem them|con loai nao|con mau nao)\b",
+            norm_answer,
+        )
+    )
+    is_anaphoric_budget_only = bool(no_new_product_noun and turn_budget is not None)
     is_context_refine = bool(
-        re.search(
+        is_anaphoric_ranking_or_browse
+        or is_anaphoric_budget_only
+        or re.search(
             r"\b(?:trong so do|cay nhat|van cay|chai nho hon|loai nho hon|goi nho hon|"
             r"tuong tu nhung|uu tien.*khuyen mai|khong thich|khong uong duoc|khong an duoc|"
             r"it ngot nhat|it duong hon|giam ngan sach|ngan sach cua toi|tong cong duoi)\b",
             norm_answer,
         )
     )
-    if is_context_refine and (recent_products or basket):
-        active_prod = recent_products[0] if recent_products else basket[0][0]
-        active_cat = active_prod.category or ""
+    if is_context_refine and (recent_products or basket or active_category_hint):
+        active_prod = (
+            recent_products[0]
+            if recent_products
+            else (basket[0][0] if basket else None)
+        )
+        active_cat = (active_prod.category if active_prod else "") or (active_category_hint or "")
         prior_need = str(previous_memory.get("need") or "")
+        is_food_domain = (
+            normalize_category_text(active_prod.department or "") != "phi thuc pham"
+            if active_prod is not None
+            else True
+        )
         exclusions = list(previous_memory.get("session_exclusions") or [])
         if "sua" in norm_answer and "khong thich" in norm_answer:
             exclusions.append("sua")
@@ -1089,37 +1118,131 @@ async def prepare_multiturn_streaming(
 
         wants_spicy = bool(re.search(r"\b(?:cay nhat|van cay)\b", norm_answer))
         wants_smaller = bool(
-            re.search(r"\b(?:chai nho hon|loai nho hon|goi nho hon|nho hon)\b", norm_answer)
+            re.search(
+                r"\b(?:chai nho hon|loai nho hon|goi nho hon|nho hon|nho nhat)\b",
+                norm_answer,
+            )
         )
-        wants_promo = bool(re.search(r"\b(?:khuyen mai|giam gia)\b", norm_answer))
+        wants_larger = bool(
+            re.search(
+                r"\b(?:chai lon hon|loai lon hon|lon hon|to hon|lon nhat|to nhat)\b",
+                norm_answer,
+            )
+        )
+        wants_promo = bool(re.search(r"\b(?:khuyen mai|giam gia|sale)\b", norm_answer))
         wants_less_sweet = bool(re.search(r"\b(?:it ngot|it duong)\b", norm_answer))
-        wants_cheaper = bool(re.search(r"\b(?:re hon|thap hon)\b", norm_answer))
+        wants_cheapest = bool(
+            re.search(
+                r"\b(?:re nhat|gia thap nhat|thap nhat|mem nhat|tiet kiem nhat|loi nhat)\b",
+                norm_answer,
+            )
+        )
+        wants_cheaper = bool(
+            re.search(r"\b(?:re hon|thap hon|mem hon|gia re|it tien hon)\b", norm_answer)
+        )
+        wants_priciest = bool(re.search(r"\b(?:dat nhat|mac nhat|cao cap nhat)\b", norm_answer))
+        wants_other = bool(
+            re.search(
+                r"\b(?:loai khac|mau khac|mon khac|cai khac|xem them|con loai nao|con mau nao)\b",
+                norm_answer,
+            )
+        )
 
         # Choose search scope strictly inside the active domain!
-        if "dang" in exclusions and _BITTER_COFFEE_RE.search(
-            normalize_category_text(f"{active_prod.name} {active_cat}")
+        if (
+            active_prod is not None
+            and "dang" in exclusions
+            and _BITTER_COFFEE_RE.search(
+                normalize_category_text(f"{active_prod.name} {active_cat}")
+            )
         ):
-            scope_q = "nuoc tra"
-        elif "sua" in exclusions and _DAIRY_MILK_RE.search(
-            normalize_category_text(f"{active_prod.name} {active_cat}")
+            scope_hits = await run_catalog_work(
+                repository.search, query="nuoc tra", limit=40, timeout_seconds=3
+            )
+        elif (
+            active_prod is not None
+            and "sua" in exclusions
+            and _DAIRY_MILK_RE.search(
+                normalize_category_text(f"{active_prod.name} {active_cat}")
+            )
         ):
-            scope_q = "banh mi"
+            scope_hits = await run_catalog_work(
+                repository.search, query="banh mi", limit=40, timeout_seconds=3
+            )
         elif "gas" in exclusions:
-            scope_q = "nuoc khoang"
-        elif active_cat:
-            scope_q = active_cat
+            scope_hits = await run_catalog_work(
+                repository.search, query="nuoc khoang", limit=40, timeout_seconds=3
+            )
         else:
-            scope_q = prior_need or active_prod.name
+            # Prefer the most specific active category (leaf of category_hierarchy or
+            # active_category_hint) so "Sữa rửa mặt" stays inside face washes (never pulling
+            # cheaper sheet masks from broad parent "Chăm Sóc Da"!).
+            leaf_cat = ""
+            if active_prod is not None and active_prod.category_hierarchy:
+                parts = [
+                    seg.strip()
+                    for seg in active_prod.category_hierarchy.split(">")
+                    if seg.strip()
+                ]
+                if parts:
+                    leaf_cat = parts[-1]
+            # If displayed items share multiple leaves under one parent (e.g. Trái cây: Táo NK +
+            # Dưa NĐ), use active_category_hint or the shared parent instead of a single fruit leaf.
+            visible_leaves = {
+                [seg.strip() for seg in p.category_hierarchy.split(">") if seg.strip()][-1]
+                for p in recent_products
+                if p.category_hierarchy
+            }
+            if len(visible_leaves) >= 2 and active_category_hint:
+                cat_target = active_category_hint
+            elif len(visible_leaves) >= 2 and active_prod and active_prod.category_hierarchy:
+                parts = [
+                    seg.strip()
+                    for seg in active_prod.category_hierarchy.split(">")
+                    if seg.strip()
+                ]
+                cat_target = parts[-2] if len(parts) >= 2 else (active_cat or leaf_cat)
+            else:
+                cat_target = leaf_cat or active_category_hint or active_cat
+            scope_hits = []
+            if cat_target:
+                scope_hits = await run_catalog_work(
+                    repository.search,
+                    query="",
+                    category=cat_target,
+                    limit=60,
+                    timeout_seconds=3,
+                )
+            if not scope_hits and cat_target:
+                scope_hits = await run_catalog_work(
+                    repository.search, query=cat_target, limit=50, timeout_seconds=3
+                )
+            if not scope_hits and (prior_need or (active_prod and active_prod.name)):
+                scope_hits = await run_catalog_work(
+                    repository.search,
+                    query=prior_need or (active_prod.name if active_prod else ""),
+                    limit=40,
+                    timeout_seconds=3,
+                )
 
-        hits = await run_catalog_work(repository.search, query=scope_q, limit=40, timeout_seconds=3)
-        hits = filter_edible_candidates(
-            hits,
-            ready_to_eat=is_food_or_drink_need(prior_need) or is_food_or_drink_need(text),
-            allow_milk="sua" not in exclusions,
-            allow_spicy="cay" not in exclusions,
-            allow_carbonated="gas" not in exclusions,
-            allow_bitter="dang" not in exclusions,
-        )
+        # Always include already-displayed items from the same active domain so we never lose them.
+        seen_ids = {p.product_id for p in scope_hits}
+        hits = list(scope_hits)
+        for p in recent_products:
+            if p.product_id not in seen_ids:
+                hits.append(p)
+                seen_ids.add(p.product_id)
+
+        if is_food_domain:
+            food_filtered = filter_edible_candidates(
+                hits,
+                ready_to_eat=is_food_or_drink_need(prior_need) or is_food_or_drink_need(text),
+                allow_milk="sua" not in exclusions,
+                allow_spicy="cay" not in exclusions,
+                allow_carbonated="gas" not in exclusions,
+                allow_bitter="dang" not in exclusions,
+            )
+            hits = food_filtered or hits
         if wants_spicy:
             spicy_hits = [
                 p
@@ -1127,7 +1250,7 @@ async def prepare_multiturn_streaming(
                 if p.spicy is True or _SPICY_TITLE_RE.search(normalize_category_text(p.name))
             ]
             hits = spicy_hits or hits
-        if wants_smaller:
+        if wants_smaller and active_prod is not None:
             cur_vol = _extract_volume_ml(active_prod.name)
             smaller = [
                 p
@@ -1135,8 +1258,7 @@ async def prepare_multiturn_streaming(
                 if not is_bulk_pack(p)
                 and (_extract_volume_ml(p.name) or 999999) < (cur_vol or 999999)
             ]
-            if not smaller:
-                # Broaden to single-bottle drinks if current item was tea bag box (200g)
+            if not smaller and is_food_domain:
                 drink_hits = await run_catalog_work(
                     repository.search, query="nuoc tra", limit=30, timeout_seconds=3
                 )
@@ -1146,6 +1268,13 @@ async def prepare_multiturn_streaming(
                     if not is_bulk_pack(p)
                 ]
             hits = smaller or hits
+        elif wants_larger:
+            sized = [p for p in hits if not is_bulk_pack(p) and _extract_volume_ml(p.name)]
+            if sized:
+                hits = sorted(
+                    sized,
+                    key=lambda p: (-(_extract_volume_ml(p.name) or 0), p.price_vnd),
+                )
         if wants_less_sweet:
             low_s = [
                 p
@@ -1164,23 +1293,47 @@ async def prepare_multiturn_streaming(
                 )
             ]
             hits = low_s or hits
-        price_cap = turn_budget if re.search(r"\bduoi\s+\d", norm_answer) else None
+        price_cap = (
+            turn_budget
+            if turn_budget is not None
+            and (
+                is_anaphoric_budget_only
+                or re.search(r"\b(?:duoi|khong qua|tam)\s+\d", norm_answer)
+            )
+            else None
+        )
         if price_cap is not None:
             under_cap = [p for p in hits if p.price_vnd <= price_cap]
             hits = under_cap or hits
-        if wants_cheaper and active_prod.price_vnd:
+        if wants_other and visible:
+            visible_ids = {p.product_id for p in visible}
+            unseen = [p for p in hits if p.product_id not in visible_ids]
+            hits = unseen or hits
+        if (
+            wants_cheaper
+            and not wants_cheapest
+            and active_prod is not None
+            and active_prod.price_vnd
+        ):
             cheaper_pool = [
                 p
                 for p in hits
                 if p.price_vnd < active_prod.price_vnd and p.product_id != active_prod.product_id
             ]
             hits = cheaper_pool or hits
-        hits = sort_single_unit_first(
-            hits,
-            text,
-            cheaper_first=wants_cheaper or (price_cap is not None),
-            promo_first=wants_promo,
-        )
+
+        if wants_priciest:
+            allow_bulk = wants_bulk_pack(text)
+            singles = [p for p in hits if allow_bulk or not is_bulk_pack(p)] or hits
+            hits = sorted(singles, key=lambda p: (-p.price_vnd, p.name))
+        elif not wants_larger:
+            hits = sort_single_unit_first(
+                hits,
+                text,
+                cheaper_first=wants_cheapest or wants_cheaper or (price_cap is not None),
+                promo_first=wants_promo,
+            )
+
         if hits:
             # If user reduced total budget or set group budget, rebuild affordable basket cleanly
             if budget_vnd is not None and re.search(
@@ -1223,8 +1376,17 @@ async def prepare_multiturn_streaming(
                 )
 
             pick = hits[0]
+            cat_label = active_category_hint or active_cat or (pick.category or "nhóm này")
             note = ""
-            if wants_spicy and "cay nhat" in norm_answer:
+            if wants_cheapest:
+                note = (
+                    f"Khách đang hỏi loại rẻ nhất trong nhóm {cat_label}; giới thiệu đúng sản phẩm "
+                    f"có giá thấp nhất trong catalog ({pick.name} — {format_vnd(pick.price_vnd)}) "
+                    "và nêu gọn các mẫu giá mềm kế tiếp bên dưới."
+                )
+            elif wants_priciest:
+                note = f"Khách đang hỏi mẫu giá cao nhất trong nhóm {cat_label}."
+            elif wants_spicy and "cay nhat" in norm_answer:
                 note = "Nói rõ catalog không có thang đo độ cay Scoville chính thức, nên giới thiệu mẫu mì ghi rõ vị cay nổi bật nhất trong nhóm."  # noqa: E501
             elif wants_less_sweet:
                 note = "Nói rõ ưu tiên mẫu ghi không đường/ít đường theo tên catalog và khuyên khách kiểm tra bảng dinh dưỡng trên nhãn."  # noqa: E501
@@ -1241,7 +1403,7 @@ async def prepare_multiturn_streaming(
                 new_basket = [(pick, 1)]
             mem = _make_memory(
                 previous_memory,
-                need=prior_need or text,
+                need=prior_need or cat_label or text,
                 primary_products=[pick],
                 basket=new_basket,
                 budget_vnd=budget_vnd,
@@ -1254,7 +1416,9 @@ async def prepare_multiturn_streaming(
                 repository=repository,
                 sources={pick.product_id: [0]},
                 memory=mem,
-                plan_for_fallback=ConsultationDecision(action="recommend", need=text[:400]),
+                plan_for_fallback=ConsultationDecision(
+                    action="recommend", need=(prior_need or cat_label or text)[:400]
+                ),
                 mode="recommend",
                 extra_note=note,
             )

@@ -229,6 +229,7 @@ def _clean_native_lexical_query(text: str) -> str:
     cleaned_native = re.sub(r"\btương\s+ót\b", "tương ớt", cleaned_native, flags=re.I)
     cleaned_native = re.sub(r"\bsửa\s+tươi\b", "sữa tươi", cleaned_native, flags=re.I)
     cleaned_native = re.sub(r"\bsửa\s+chua\b", "sữa chua", cleaned_native, flags=re.I)
+    cleaned_native = re.sub(r"\bsửa\s+rửa\s+mặt\b", "sữa rửa mặt", cleaned_native, flags=re.I)
     cleaned_native = re.sub(r"\b(?:ko|k)\s+đường\b", "không đường", cleaned_native, flags=re.I)
     cleaned_native = re.sub(r"\b(?:đồ\s+)?ăn\s+vặt\b", "snack", cleaned_native, flags=re.I)
     cleaned_native = re.sub(r"\btương\s+tự\b", " ", cleaned_native, flags=re.I)
@@ -1145,6 +1146,8 @@ async def prepare_streaming_consultation(
     answer_text = normalize_noisy(text) if callable(normalize_noisy) else text
     answer_text = re.sub(r"\btương\s+ót\b", "tương ớt", answer_text, flags=re.IGNORECASE)
     answer_text = re.sub(r"\bsửa\s+tươi\b", "sữa tươi", answer_text, flags=re.IGNORECASE)
+    answer_text = re.sub(r"\bsửa\s+chua\b", "sữa chua", answer_text, flags=re.IGNORECASE)
+    answer_text = re.sub(r"\bsửa\s+rửa\s+mặt\b", "sữa rửa mặt", answer_text, flags=re.IGNORECASE)
     answer_text = re.sub(r"\b(?:ko|k)\s+đường\b", "không đường", answer_text, flags=re.IGNORECASE)
     norm_answer = normalize_category_text(answer_text)
 
@@ -1171,6 +1174,7 @@ async def prepare_streaming_consultation(
         or previous_memory.get("working_basket")
         or previous_memory.get("recent_product_ids")
         or visible
+        or record.shopping.active_category
     ):
         mt_plan = await prepare_multiturn_streaming(
             text=text,
@@ -1181,6 +1185,7 @@ async def prepare_streaming_consultation(
             previous_memory=previous_memory,
             parsed=parsed,
             build_payload=_build_streaming_plan_payload,
+            active_category_hint=record.shopping.active_category,
         )
         if mt_plan is not None:
             return mt_plan

@@ -99,3 +99,64 @@ async def test_streaming_consultation_returns_true_head_noun_products(
             assert bad not in top.name.casefold(), (
                 f"Query {query!r} leaked modifier product {top.name!r} (matched {bad!r})"
             )
+
+
+@pytest.mark.asyncio
+async def test_anaphoric_cheapest_followup_stays_locked_to_active_category(
+    snapshot: SnapshotProductRepository,
+) -> None:
+    from backend.services.semantic_nlp_router import clean_native_shopper_query
+
+    # Pure superlative/filler follow-up must NEVER route or search "nhất" -> "Phở Đệ Nhất".
+    assert clean_native_shopper_query("loại nào rẻ nhất", fallback_to_raw=False) == ""
+    assert route_query("loại nào rẻ nhất") is None
+
+    stub = GroqService(settings=Settings(_env_file=None, chat_llm_api_key="test-key"))
+    store = InMemorySessionStore()
+
+    # 1. Non-food Turn 1 (price lookup sets selected_product_ids + active_category,
+    #    consultation memory empty) -> Turn 2: "loại nào rẻ nhất" / "loại nào đắt nhất"
+    face_washes = snapshot.search(query="", category="Sữa rửa mặt nữ", limit=5)
+    assert face_washes
+    rec = store.create("srm-followup")
+    rec = store.update_shopping(
+        rec.session_id,
+        selected_product_ids=[p.product_id for p in face_washes],
+        active_category="Sữa rửa mặt nữ",
+    )
+    cheap_plan = await prepare_streaming_consultation(
+        text="loại nào rẻ nhất", record=rec, repository=snapshot, groq=stub
+    )
+    assert cheap_plan is not None and cheap_plan.products
+    top_cheap = cheap_plan.products[0]
+    assert "sữa rửa mặt" in top_cheap.name.casefold()
+    assert "phở" not in top_cheap.name.casefold()
+    assert "mặt nạ" not in top_cheap.name.casefold()
+    all_srm = snapshot.search(query="", category="Sữa rửa mặt nữ", limit=60)
+    assert top_cheap.price_vnd == min(p.price_vnd for p in all_srm)
+
+    expensive_plan = await prepare_streaming_consultation(
+        text="loại nào đắt nhất", record=rec, repository=snapshot, groq=stub
+    )
+    assert expensive_plan is not None and expensive_plan.products
+    assert "sữa rửa mặt" in (expensive_plan.products[0].category_hierarchy or "").casefold()
+    assert expensive_plan.products[0].price_vnd >= top_cheap.price_vnd
+
+    # 2. Food Turn 1 ("có trái cây gì ko") -> Turn 2: "loại nào rẻ nhất"
+    rec2 = store.create("fruit-followup")
+    t1_fruit = await prepare_streaming_consultation(
+        text="có trái cây gì ko", record=rec2, repository=snapshot, groq=stub
+    )
+    assert t1_fruit is not None and t1_fruit.products
+    rec2 = store.update_shopping(
+        rec2.session_id,
+        selected_product_ids=[p.product_id for p in t1_fruit.products],
+        active_category="Trái cây",
+        consultation=t1_fruit.memory,
+    )
+    t2_fruit = await prepare_streaming_consultation(
+        text="loại nào rẻ nhất", record=rec2, repository=snapshot, groq=stub
+    )
+    assert t2_fruit is not None and t2_fruit.products
+    assert "trái cây" in (t2_fruit.products[0].category_hierarchy or "").casefold()
+    assert "phở" not in t2_fruit.products[0].name.casefold()

@@ -46,14 +46,17 @@ _CONVERSATIONAL_STRIP_RE = re.compile(
     r"(?:mình|tôi|tao|em|anh|chị)\s+(?:muốn|cần|đang\s+tìm|muốn\s+mua|muốn\s+hỏi)|"
     r"tư\s+vấn|gợi\s+ý|giới\s+thiệu|đề\s+xuất|bán\s+chạy|khuyến\s+mãi|giảm\s+giá|"
     r"giá\s+bao\s+nhiêu|bao\s+nhiêu\s+tiền|còn\s+hàng|"
-    r"loại\s+nào|món\s+nào|cái\s+nào|sản\s+phẩm\s+nào|thứ\s+nào|"
+    r"loại\s+nào|món\s+nào|cái\s+nào|mẫu\s+nào|chai\s+nào|tuýp\s+nào|hộp\s+nào|gói\s+nào|"
+    r"sản\s+phẩm\s+nào|thứ\s+nào|trong\s+số\s+đó|trong\s+mấy\s+loại\s+đó|"
     r"dưới\s+\d+(?:[.,]\d+)?\s*(?:k|nghìn|ngàn|đ|đồng|vnd)?|"
     r"trên\s+\d+(?:[.,]\d+)?\s*(?:k|nghìn|ngàn|đ|đồng|vnd)?|"
     r"tầm\s+\d+(?:[.,]\d+)?\s*(?:k|nghìn|ngàn|đ|đồng|vnd)?|"
     r"khoảng\s+\d+(?:[.,]\d+)?\s*(?:k|nghìn|ngàn|đ|đồng|vnd)?|"
-    r"có\s+bán|có\s+những|có\s+các|có|không|ko|k(?=\s*$|\s*[?.,!])|khum|"
-    r"gì|nào|ngon|tốt|rẻ|nhất|nhé|nha|ạ|ơi|đi|với|giúp|xem|tìm|mua|lấy|thử|xíu|"
-    r"vậy|thế|sao|nhỉ|được|dc|đc|hả|à|ư|ừ|mà|thì|nữa|thôi|này|kia|đó)"
+    r"có\s+bán|có\s+những|có\s+các|còn\s+loại|có|còn|không|ko|k(?=\s*$|\s*[?.,!])|khum|"
+    r"rẻ\s+nhất|đắt\s+nhất|tốt\s+nhất|ngon\s+nhất|lớn\s+nhất|nhỏ\s+nhất|cao\s+nhất|thấp\s+nhất|"
+    r"rẻ\s+hơn|đắt\s+hơn|tốt\s+hơn|lớn\s+hơn|nhỏ\s+hơn|tiết\s+kiệm|lợi\s+nhất|"
+    r"gì|nào|loại|cái|món|mẫu|khác|ngon|tốt|rẻ|đắt|mắc|nhất|hơn|nhé|nha|ạ|ơi|đi|với|giúp|"
+    r"xem|tìm|mua|lấy|thử|xíu|thêm|vậy|thế|sao|nhỉ|được|dc|đc|hả|à|ư|ừ|mà|thì|nữa|thôi|này|kia|đó)"
     r"(?=$|[\s,.;:!?])"
 )
 
@@ -84,12 +87,13 @@ def _strip_accents(text: str) -> str:
     return "".join(ch for ch in text if not unicodedata.combining(ch)).lower()
 
 
-def clean_native_shopper_query(text: str) -> str:
+def clean_native_shopper_query(text: str, *, fallback_to_raw: bool = False) -> str:
     """Strip Vietnamese conversational wrappers while preserving exact Vietnamese diacritics."""
     s = unicodedata.normalize("NFC", text.strip().lower())
     s = re.sub(r"\btương\s+ót\b", "tương ớt", s)
     s = re.sub(r"\bsửa\s+tươi\b", "sữa tươi", s)
     s = re.sub(r"\bsửa\s+chua\b", "sữa chua", s)
+    s = re.sub(r"\bsửa\s+rửa\s+mặt\b", "sữa rửa mặt", s)
     s = re.sub(r"\b(?:ko|k)\s+đường\b", "không đường", s)
     prev = None
     while prev != s:
@@ -97,7 +101,9 @@ def clean_native_shopper_query(text: str) -> str:
         s = _CONVERSATIONAL_STRIP_RE.sub(" ", s)
     s = re.sub(r"[^\w\s]", " ", s, flags=re.UNICODE)
     s = " ".join(s.split())
-    return s or unicodedata.normalize("NFC", text.strip().lower())
+    if s:
+        return s
+    return unicodedata.normalize("NFC", text.strip().lower()) if fallback_to_raw else ""
 
 
 def _hash_bucket(key: str) -> tuple[int, float]:
