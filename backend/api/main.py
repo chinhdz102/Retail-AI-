@@ -275,6 +275,14 @@ async def _lifespan(_app: FastAPI):
             except Exception:
                 pass
 
+        async def _warm_semantic_nlp() -> None:
+            try:
+                from backend.services.semantic_nlp_router import warm_semantic_nlp_router
+
+                await asyncio.to_thread(warm_semantic_nlp_router)
+            except Exception:
+                pass
+
         async def _warm_azure_tts() -> None:
             if not settings.has_azure_speech:
                 return
@@ -308,6 +316,7 @@ async def _lifespan(_app: FastAPI):
             _warm_azure_stt(),
             _warm_denoiser(),
             _warm_smart_turn(),
+            _warm_semantic_nlp(),
             return_exceptions=True,
         )
 

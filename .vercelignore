@@ -26,6 +26,7 @@ node_modules
 /data/models/gipformer1.5-68M-rnnt
 /data/models/product-vision/*.tflite
 /data/models/product-vision/*.bin
+/data/models/speech-enhancement/dpdfnet2.onnx
 /data/models/speech-enhancement/gtcrn_simple.onnx
 /data/thanh_lam_planogram_3d*.png
 /data/thanh_lam_planogram_3d*.svg

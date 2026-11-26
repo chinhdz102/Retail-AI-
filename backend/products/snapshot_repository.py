@@ -252,6 +252,12 @@ _MEASURE_TOKEN_RE = re.compile(r"(\d+)(ml|lit|l|kg|g|gr|gam)")
 _BABY_QUERY_RE = re.compile(r"\b(?:tre em|em be|cho be|baby|kids|children)\b")
 
 
+_MODIFIER_PREPOSITION_RE = re.compile(
+    r"\b(?:vị|hương\s+vị|hương|chiết\s+xuất|tinh\s+chất|tinh\s+dầu|ruột|nhân)\b",
+    flags=re.IGNORECASE,
+)
+
+
 @dataclass(frozen=True)
 class _Candidate:
     product: ProductSnapshot
@@ -280,6 +286,9 @@ class _Candidate:
     has_pack_uom: bool = False
     is_baby_dept_parent: bool = False
     title_space_text: str = ""
+    head_words: frozenset[str] = frozenset()
+    lead_words: frozenset[str] = frozenset()
+    modifier_only_words: frozenset[str] = frozenset()
 
 
 @lru_cache(maxsize=32768)
@@ -470,6 +479,21 @@ _DIACRITIC_PRODUCT_WORDS = frozenset(
         "táo",
         "tảo",
         "tạo",
+        "tỏi",
+        "cá",
+        "cà",
+        "bò",
+        "bơ",
+        "gà",
+        "mì",
+        "đá",
+        "ớt",
+        "lê",
+        "ổi",
+        "mận",
+        "dứa",
+        "dưa",
+        "bưởi",
         "vệ",
         "thị",
         "chưng",
@@ -1060,6 +1084,24 @@ def _score_prepared(
         score += 1.5 * native_exact_hits
     if title_hits >= 2:
         score += 2.0
+    # Vietnamese head-noun vs flavor/scent modifier disambiguation:
+    # A product whose leading head noun matches the query ("Cam Sành", "Chanh có hạt")
+    # must outrank products where the term only appears after a flavor/scent/part marker
+    # ("Dưa lưới ruột cam", "Bánh cracker vị rau", "Sữa trái cây hương nho").
+    if terms and candidate.lead_words and not pq.snack_slang:
+        if any(t in candidate.lead_words for t in terms):
+            score += 1.8
+        elif (
+            candidate.modifier_only_words
+            and all(
+                t in candidate.modifier_only_words
+                for t in terms
+                if t in title_words
+            )
+            and any(t in candidate.modifier_only_words for t in terms)
+            and not any(t in candidate.head_words for t in terms)
+        ):
+            score -= 2.5
     if len(terms) >= 2 and candidate.title_space_text:
         leaf_cat = candidate.category_segment_texts[-1] if candidate.category_segment_texts else ""
         non_phrase_words = (
@@ -1589,6 +1631,15 @@ class SnapshotProductRepository:
         is_baby_dept_parent = any(
             segment == _BABY_DEPARTMENT_SEGMENT for segment in category_segment_words[:-1]
         )
+        mod_parts = _MODIFIER_PREPOSITION_RE.split(product.name, maxsplit=1)
+        head_toks = _tokens(normalize_search_text(mod_parts[0])) if mod_parts else title_tokens
+        tail_toks = (
+            _tokens(normalize_search_text(mod_parts[1])) if len(mod_parts) > 1 else ()
+        )
+        head_words = frozenset(head_toks)
+        non_pack_head = [t for t in head_toks if t not in _PACK_WORDS and t not in _PACKAGING_WORDS]
+        lead_words = frozenset(non_pack_head[:2])
+        modifier_only_words = frozenset(t for t in tail_toks if t not in head_words)
         return _Candidate(
             product=product,
             title=title,
@@ -1614,6 +1665,9 @@ class SnapshotProductRepository:
             has_pack_uom=not uom_words.isdisjoint(_PACK_WORDS),
             is_baby_dept_parent=is_baby_dept_parent,
             title_space_text=" ".join(_tokens(product.name)),
+            head_words=head_words,
+            lead_words=lead_words,
+            modifier_only_words=modifier_only_words,
         )
 
     def search(

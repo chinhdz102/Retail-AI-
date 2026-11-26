@@ -54,6 +54,7 @@ from backend.services.query_understanding import (
     strip_retrieval_budget,
     understand_catalog_query,
 )
+from backend.services.semantic_nlp_router import clean_native_shopper_query, route_query
 from backend.services.sessions import SessionRecord
 from backend.services.shopping_guidance import shopping_guidance
 from backend.services.streaming_multiturn import (
@@ -222,11 +223,12 @@ def _lean_streaming_product_card(
     return card
 
 
-def _clean_lexical_query(text: str) -> str:
-    """Strip Vietnamese conversational fillers & budgets to isolate product keywords."""
+def _clean_native_lexical_query(text: str) -> str:
+    """Strip Vietnamese conversational wrappers & budgets while preserving diacritics."""
     cleaned_native = _NATIVE_STREAM_OPENER_RE.sub(" ", text)
     cleaned_native = re.sub(r"\btương\s+ót\b", "tương ớt", cleaned_native, flags=re.I)
     cleaned_native = re.sub(r"\bsửa\s+tươi\b", "sữa tươi", cleaned_native, flags=re.I)
+    cleaned_native = re.sub(r"\bsửa\s+chua\b", "sữa chua", cleaned_native, flags=re.I)
     cleaned_native = re.sub(r"\b(?:ko|k)\s+đường\b", "không đường", cleaned_native, flags=re.I)
     cleaned_native = re.sub(r"\b(?:đồ\s+)?ăn\s+vặt\b", "snack", cleaned_native, flags=re.I)
     cleaned_native = re.sub(r"\btương\s+tự\b", " ", cleaned_native, flags=re.I)
@@ -240,11 +242,24 @@ def _clean_lexical_query(text: str) -> str:
         cleaned_native,
         flags=re.I,
     )
-    stripped = normalize_category_text(strip_retrieval_budget(cleaned_native))
+    cleaned_native = strip_retrieval_budget(cleaned_native)
+    return clean_native_shopper_query(cleaned_native)
+
+
+def _clean_lexical_query(text: str) -> str:
+    """Strip Vietnamese conversational fillers & budgets to isolate product keywords."""
+    native_core = _clean_native_lexical_query(text)
+    stripped = normalize_category_text(native_core)
+    # Keep short diacritic-protected product tokens (e.g. "tỏi"->"toi", "táo"->"tao", "cá"->"ca")
+    # that collide with ASCII stopwords after accent folding.
+    protected_folded: set[str] = set()
+    for nw in native_core.split():
+        if nw in {"tỏi", "táo", "cá", "cà", "bơ", "bò", "gà", "mì", "trà", "đá", "cua", "ổi", "lê"}:
+            protected_folded.add(normalize_category_text(nw))
     tokens = [
         tok
         for tok in stripped.split()
-        if len(tok) >= 2 and tok not in _STREAM_FILLER_TOKENS
+        if len(tok) >= 2 and (tok not in _STREAM_FILLER_TOKENS or tok in protected_folded)
     ]
     return " ".join(tokens)
 
@@ -1361,10 +1376,19 @@ async def prepare_streaming_consultation(
                 candidates, answer_text, parsed.product_type
             )
             if not focus_scores and _focus_tokens_for_streaming(answer_text, parsed.product_type):
-                cleaned_focus_q = _clean_lexical_query(answer_text)
+                cleaned_focus_q = _clean_native_lexical_query(answer_text)
                 if cleaned_focus_q:
+                    scoped_cat = (
+                        plan.searches[0].category
+                        if len(plan.searches) == 1 and plan.searches[0].category
+                        else None
+                    )
                     lex_extra = await run_catalog_work(
-                        repository.search, query=cleaned_focus_q, limit=12, timeout_seconds=3
+                        repository.search,
+                        query=cleaned_focus_q,
+                        category=scoped_cat,
+                        limit=12,
+                        timeout_seconds=3,
                     )
                     lex_extra = _apply_streaming_constraints(lex_extra, answer_text, parsed)
                     if lex_extra:
@@ -1414,9 +1438,10 @@ async def prepare_streaming_consultation(
                 mode="recommend",
             )
 
-    # Path D: Direct lexical product search (e.g. "ba chỉ bò Mỹ loại nào ngon?", 0 planner calls).
+    # Path D: Ultra-fast Semantic NLP Router (<1ms) + Diacritic-Preserving Lexical Search.
     # Skip pure situational needs ("đang đói", "ăn kiêng", "mang đi học") -> route to Path G.
     excluded_terms = _clean_negative_terms(parsed)
+    cleaned_native_lex = _clean_native_lexical_query(answer_text)
     cleaned_lex = _clean_lexical_query(answer_text)
     if excluded_terms and cleaned_lex:
         excluded_toks = {
@@ -1425,9 +1450,28 @@ async def prepare_streaming_consultation(
         cleaned_lex = " ".join(
             tok for tok in cleaned_lex.split() if tok not in excluded_toks
         )
+        cleaned_native_lex = " ".join(
+            tok
+            for tok in cleaned_native_lex.split()
+            if normalize_category_text(tok) not in excluded_toks
+        )
     lex_search_q = _strip_attribute_modifiers_for_lex(cleaned_lex) or cleaned_lex
+    native_search_q = cleaned_native_lex or lex_search_q
+    if _explicit_sugar_level(answer_text) or re.search(
+        r"\b(?:khong\s+cay|khong\s+gas|khong\s+co\s+gas|it\s+calo)\b", norm_answer
+    ):
+        native_attr_stripped = re.sub(
+            r"\b(?:không\s+đường|ít\s+đường|giảm\s+đường|ít\s+ngọt|không\s+calo|ít\s+calo|"
+            r"không\s+có\s+gas|không\s+gas|không\s+cay|cay\s+nhất)\b",
+            " ",
+            native_search_q,
+            flags=re.IGNORECASE,
+        )
+        native_attr_stripped = " ".join(native_attr_stripped.split())
+        if native_attr_stripped:
+            native_search_q = native_attr_stripped
     if (
-        lex_search_q
+        (lex_search_q or native_search_q)
         and not is_pure_situational_query(norm_answer)
         and (
             not _STREAM_BASKET_OR_MEAL_RE.search(norm_answer)
@@ -1435,7 +1479,11 @@ async def prepare_streaming_consultation(
         )
         and not _FAST_PATH_MULTI_OR_COMPARE.search(norm_answer)
     ):
-        def _lex_search() -> tuple[list[ProductSnapshot], list[ProductSnapshot]]:
+        sem_route = route_query(answer_text, min_confidence=0.48)
+        explicit_brand = getattr(parsed, "brand", None) or getattr(parsed, "brand_preference", None)
+
+        def _lex_search() -> tuple[list[ProductSnapshot], list[ProductSnapshot], str | None]:
+            matched_sem_cat: str | None = None
             if lex_search_q in {"do uong", "nuoc uong"} and _explicit_sugar_level(answer_text):
                 raw_hits = [
                     *repository.search(query="sua chua uong it duong", limit=10),
@@ -1443,8 +1491,54 @@ async def prepare_streaming_consultation(
                     *repository.search(query="nuoc tra", limit=12),
                 ]
             else:
-                raw_hits = repository.search(query=lex_search_q, limit=32)
-            if is_food_or_drink_need(answer_text):
+                raw_hits = []
+                if sem_route is not None and not explicit_brand:
+                    sem_cat = sem_route.categories[0]
+                    scoped_hits = repository.search(
+                        query=native_search_q, category=sem_cat, limit=32
+                    )
+                    if scoped_hits:
+                        raw_hits = scoped_hits
+                        matched_sem_cat = sem_cat
+                    else:
+                        # Check secondary semantic category when close in score (e.g. Trà/Nước trà)
+                        if (
+                            len(sem_route.categories) >= 2
+                            and sem_route.scores[1] >= 0.18
+                        ):
+                            sec_cat = sem_route.categories[1]
+                            sec_hits = repository.search(
+                                query=native_search_q, category=sec_cat, limit=32
+                            )
+                            if sec_hits:
+                                raw_hits = sec_hits
+                                matched_sem_cat = sec_cat
+                        if not raw_hits:
+                            # Broad category browsing ("có trái cây gì ko", "có hoa quả gì ko",
+                            # "có rau gì ko", "có sữa chua không") where category name/synonym
+                            # does not appear literally in individual SKU titles.
+                            cat_browse = repository.search(
+                                query="",
+                                category=sem_cat,
+                                diversify_by_subcategory=True,
+                                limit=32,
+                            )
+                            if cat_browse:
+                                raw_hits = cat_browse
+                                matched_sem_cat = sem_cat
+                if not raw_hits:
+                    raw_hits = repository.search(query=native_search_q, limit=32)
+            if is_food_or_drink_need(answer_text) and matched_sem_cat not in {
+                "Trái cây",
+                "Rau củ",
+                "Rau gia vị",
+                "Nấm",
+                "Thủy hải sản",
+                "Thịt Bò, Bê",
+                "Lợn (heo)",
+                "Thịt gà",
+                "Bơ",
+            }:
                 edible = filter_edible_candidates(
                     raw_hits,
                     ready_to_eat=bool(_READY_TO_EAT_NEED_RE.search(norm_answer)),
@@ -1452,9 +1546,11 @@ async def prepare_streaming_consultation(
                 if edible:
                     raw_hits = edible
             filtered_hits = _apply_streaming_constraints(raw_hits, answer_text, parsed)
-            return filtered_hits, raw_hits
+            return filtered_hits, raw_hits, matched_sem_cat
 
-        lex_hits, raw_lex_hits = await run_catalog_work(_lex_search, timeout_seconds=3)
+        lex_hits, raw_lex_hits, matched_sem_cat = await run_catalog_work(
+            _lex_search, timeout_seconds=3
+        )
         zero_hit_attr_note = ""
         if not lex_hits and raw_lex_hits and _explicit_sugar_level(answer_text) is not None:
             # Stay strictly inside the matched category ("tương ớt ít đường" / "cà phê ít đường")
@@ -1466,7 +1562,24 @@ async def prepare_streaming_consultation(
                 "phổ biến đúng nhóm để khách kiểm tra bảng dinh dưỡng trên nhãn bao bì."
             )
         if lex_hits:
-            focused, focus_scores = _filter_streaming_candidates(lex_hits, lex_search_q, None)
+            focused, focus_scores = _filter_streaming_candidates(
+                lex_hits, lex_search_q, matched_sem_cat
+            )
+            # When the semantic NLP router already locked onto a clean Thanh Lam Mart category
+            # (e.g. "Trái cây" for "có cam không"), prioritize SKUs whose leading head noun
+            # matches the shopper's query so "Cam Sành / Cam Úc" beats "Dưa lưới ruột cam".
+            if matched_sem_cat and lex_search_q:
+                q_toks = set(lex_search_q.split())
+                head_matched = [
+                    p
+                    for p in focused
+                    if (
+                        p_toks := normalize_category_text(p.name).split()
+                    )
+                    and any(tok in q_toks for tok in p_toks[:2])
+                ]
+                if head_matched:
+                    focused = head_matched
             ordered = _rank_streaming_candidates(
                 focused,
                 answer_text,

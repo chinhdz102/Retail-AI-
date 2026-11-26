@@ -494,7 +494,8 @@ _STREAM_SAFE_GUIDANCE_IDS = frozenset({
     "foodsafety-meat-doneness",
 })
 _STREAM_LABEL_OR_EFFICACY_RE = re.compile(
-    r"\b(?:chua\s+|di ung|nhay cam|tieu duong|huyet ap|tim mach|"
+    r"\b(?:chua\s+(?:benh|tri|dau|viem|nam|ho|sot|chat|gluten|lactose|caffeine|con)|"
+    r"di ung|nhay cam|tieu duong|huyet ap|tim mach|"
     r"so sinh|mang thai|ba bau|uong thuoc|benh|dau da day|trao nguoc|"
     r"viem|nhiem trung|tron hoa chat|pha tay|javel|"
     r"cho be an|tre em an|tre nho an|giam can|an kieng)\b"
@@ -1564,10 +1565,10 @@ def _fast_path_single_category_plan(
             not parent_leaves or set(parent_leaves) <= set(matching_leaves)
         ):
             target_categories = matching_leaves
-        elif 1 <= len(parent_leaves) <= 10:
+        elif 1 <= len(parent_leaves) <= (30 if for_streaming else 10):
             # Narrow a multi-product parent (e.g. "Gạo & Nông sản khô") to leaves
             # whose leading word appears in the customer's query (e.g. "gạo"),
-            # or search the homogeneous parent directly (e.g. "Dầu ăn").
+            # or search the homogeneous parent directly (e.g. "Dầu ăn", "Trái cây", "Rau củ").
             norm_words = set(norm_text.split())
             narrowed = [
                 leaf
