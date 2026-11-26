@@ -322,7 +322,7 @@ def svg_overview(
                 svg_text(
                     40,
                     158,
-                    f"Nguồn: catalog Thanh Lam Mart · dataset version {dataset_version}",
+                    f"Nguồn: danh mục Thanh Lam Mart · dataset version {dataset_version}",
                     "#91a8c0",
                     9,
                 )

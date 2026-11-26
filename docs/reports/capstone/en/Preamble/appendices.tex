@@ -100,7 +100,7 @@ All three repositories (\texttt{Retail-AI-}, \texttt{ops\_chest}, \texttt{ops-re
     \item \textbf{Reproducible verification commands:}
     \begin{itemize}
         \item \emph{Inter-agent E2E integration:} \code{pytest tests/test_ops_bridge_e2e.py -v} (2/2 suites passing).
-        \item \emph{\texttt{Retail-AI-} software suites:} \code{pytest tests/ -q} (3,044 tests across 114 files, including 19/19 knowledge QA gates and 100/100 bestseller/stock checks), \code{ruff check backend tests}, and frontend \code{npx vitest run} (178/178 tests).
+        \item \emph{\texttt{Retail-AI-} software suites:} \code{pytest tests/ -q} (3,044 tests across 114 files, including 19/19 knowledge QA gates and 100/100 bestseller/stock checks), \code{ruff check backend tests}, and frontend \code{npm run test:run} (179/179 tests).
         \item \emph{\texttt{ops\_chest} backtest \& tests:} \code{pytest backend/tests/ -q} (20 suites), \code{python -m app.sim.frn_backtest} (50-store 2-fold CV, 553\,s), and \code{eval_failover.json} (20 runtime grounding scenarios).
     \end{itemize}
 \end{itemize}

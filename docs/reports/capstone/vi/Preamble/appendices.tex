@@ -100,7 +100,7 @@ Ba kho mã nguồn (\texttt{Retail-AI-}, \texttt{ops\_chest}, \texttt{ops-retail
     \item \textbf{Lệnh tái lập toàn bộ kiểm thử và thực nghiệm:}
     \begin{itemize}
         \item \emph{Kiểm thử liên Agent E2E (\texttt{Retail-AI-}):} \code{pytest tests/test_ops_bridge_e2e.py -v} (2/2 kịch bản toàn tuyến đạt).
-        \item \emph{Kiểm thử phần mềm \texttt{Retail-AI-}:} \code{pytest tests/ -q} (3.044 ca trên 114 tệp, gồm 19/19 ca cổng dữ liệu sạch và 100/100 ca bán chạy/tồn kho), \code{ruff check backend tests}, và kiểm thử giao diện \code{npx vitest run} (178/178 ca).
+        \item \emph{Kiểm thử phần mềm \texttt{Retail-AI-}:} \code{pytest tests/ -q} (3.044 ca trên 114 tệp, gồm 19/19 ca cổng dữ liệu sạch và 100/100 ca bán chạy/tồn kho), \code{ruff check backend tests}, và kiểm thử giao diện \code{npm run test:run} (179/179 ca).
         \item \emph{Backtest \& kiểm thử \texttt{ops\_chest}:} \code{pytest backend/tests/ -q} (20 bộ), \code{python -m app.sim.frn_backtest} (50 cửa hàng 2-fold CV, 553\,s), và \code{eval_failover.json} (20 kịch bản).
     \end{itemize}
 \end{itemize}

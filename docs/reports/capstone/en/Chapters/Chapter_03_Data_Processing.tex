@@ -7,7 +7,7 @@ This chapter documents all datasets and the shared cross-agent SKU mapping, pres
 Three core data assets are cryptographically synchronized via SHA-256 hashes across \texttt{Retail-AI-}, \texttt{ops\_chest}, and \texttt{ops-retail-bridge} (Table~\ref{tab:dataset_stats}).
 
 \begin{enumerate}
-    \item \textbf{Retail Product Catalog \& Knowledge Store (\texttt{Retail-AI-}):} The 15 September 2026 Thanh Lam Mart catalog snapshot (JSON/CSV, SHA-256 \code{80c605a5e778f0c4...})~\cite{thanh_lam_catalog} holds \textbf{3,099 raw SKUs} across 698 valid brands, 74 leaf categories, and 346 hierarchical paths. Quarantining 18 malformed rows (\code{sale_price_vnd > price_vnd}) yields \textbf{3,081 validated SKUs} (580 active discounts, 9 snapshot zero-stock items). Multi-source enrichment (JSON knowledge store) provides clean attributes for \textbf{2,205/3,099 SKUs (71.15\%)}, including 1,366 retailer ingredient records combined with 20 manufacturer declarations for \textbf{1,374 verified ingredient SKUs}. Demonstration 30-day sales for all 3,081 valid SKUs are isolated in \code{data/demo_sales.sqlite3} under mandatory \texttt{SIMULATED} metadata.
+    \item \textbf{Retail Product Catalog, Knowledge Store \& Synchronized Sales (\texttt{Retail-AI-}):} The 15 September 2026 Thanh Lam Mart catalog snapshot (JSON/CSV, SHA-256 \code{80c605a5e778f0c4...})~\cite{thanh_lam_catalog} holds \textbf{3,099 raw SKUs} across 699 raw brands (697 valid brands after quarantine), 74 leaf categories, and 346 hierarchical paths. Quarantining 18 malformed rows (\code{sale_price_vnd > price_vnd}) yields \textbf{3,081 validated SKUs} (580 active discounts, 9 snapshot zero-stock items). Multi-source enrichment (JSON knowledge store) provides clean attributes for \textbf{2,205/3,099 SKUs (71.15\%)}, including 1,366 retailer ingredient records combined with 20 manufacturer declarations for \textbf{1,374 verified ingredient SKUs}. For 30-day sales velocity, live production runs directly on \code{data/synced_sales_30d.json} (\texttt{2026-10} period, covering all \textbf{3,099 SKUs} and \textbf{269,936 total units}: \textbf{164 fresh SKUs} synchronized from FreshRetailNet-50K Store~18 totaling 60,871 units, median 238/SKU, plus \textbf{2,935 monthly catalog SKUs} totaling 209,065 units, median 53/SKU), while \code{data/demo_sales.sqlite3} (\texttt{SIMULATED}) is retained strictly as an isolated unit-testing fixture.
     \item \textbf{FreshRetailNet-50K Real Perishable Demand (\texttt{ops\_chest}):} Drawn from the public \emph{FreshRetailNet-50K} dataset (CC BY 4.0)~\cite{freshretailnet50k}, the full panel spans \textbf{4,850,000 daily rows} (50,000 SKU-store series $\times$ 97 days, 28 March--2 July 2024) across \textbf{898 stores} with hourly stockout indicators. Stores are strictly partitioned into \textbf{848 training stores} (47,325 series) and \textbf{50 held-out test stores} (2,675 series, 259,475 rows). Demo Store~18 (164 active fresh SKUs) serves as the interactive operational branch.
     \item \textbf{Shared 164-SKU Crosswalk (\texttt{ops-retail-bridge}):} Because FreshRetailNet-50K anonymizes product identities and prices, \texttt{ops-retail-bridge}~\cite{ops_retail_bridge_repo} constructs \code{data/bridge/crosswalk.csv} mapping \textbf{164/164 fresh SKUs} (\code{F0004}--\code{F0793}) of Store~18 to 164 valid \code{product_id} entries in the Thanh Lam Mart catalog (0 name diffs, 0 list-price diffs, 0 references to quarantined SKUs), paired with \code{ops_catalog_overrides.json} (164 SKUs, 7 simulated suppliers). The mapping carries an explicit demo-assumption label (\code{method=auto-v1}); transparently, 6/164 mapped SKUs have static snapshot \code{stock=0} on 15 September 2026 while \texttt{ops\_chest} tracks dynamic daily fresh lots independently.
 \end{enumerate}
@@ -21,9 +21,9 @@ Three core data assets are cryptographically synchronized via SHA-256 hashes acr
 \toprule
 \textbf{Dataset / Corpus} & \textbf{Module} & \textbf{Scale \& Structure} & \textbf{Provenance \& Research Role} \\
 \midrule
-Thanh Lam Mart Retail Catalog & \texttt{Retail-AI-} & 3,099 raw (3,081 valid, 18 quarantined); 698 brands; 74 leaf categories; 346 paths & 15 Sep 2026 snapshot; grounded catalog for search, unit-price ranking, and promos \\
-Product Knowledge Store & \texttt{Retail-AI-} & 2,205/3,099 SKUs (71.15\%): 1,374 ingredients, 1,403 usage, 650 storage, 1,236 origin & Multi-source SSR + EAN-13 verification; 8-stage cleaned (4,606 $\to$ 0 defects) \\
-Demo Sales Store (\code{demo_sales.sqlite3}) & \texttt{Retail-AI-} & 3,081 SKU 30-day counts & Isolated deterministic bestseller ranking explicitly tagged \texttt{SIMULATED} \\
+Thanh Lam Mart Retail Catalog & \texttt{Retail-AI-} & 3,099 raw (3,081 valid, 18 quarantined); 697 valid brands; 74 leaf categories; 346 paths & 15 Sep 2026 snapshot; grounded catalog for search, unit-price ranking, and promos \\
+Product Knowledge Store & \texttt{Retail-AI-} & 2,205/3,099 SKUs (71.15\%): 2,059 summaries, 1,374 ingredients, 1,403 usage, 650 storage, 1,236 origin & Multi-source SSR + EAN-13 verification; 8-stage cleaned (4,606 $\to$ 0 defects) \\
+Synced 30-Day Sales (\code{synced_sales_30d.json}) & Inter-Agent & 3,099 SKUs (269,936 units/30d): 164 \texttt{FRN\_STORE\_18} (60,871) + 2,935 monthly \texttt{2026-10} (209,065) & Live production bestseller source (\code{demo_sales.sqlite3} kept only for unit tests) \\
 Shared SKU Crosswalk (\code{data/bridge/crosswalk.csv}) & Inter-Agent & 164/164 fresh SKUs matching 100\% \code{product_id}, name \& list price & Shared identifier bridge between \texttt{ops\_chest} and \texttt{Retail-AI-} for E2E sync \\
 Dialogue \& Visual Eval Suites & \texttt{Retail-AI-} & 100Q SOTA~V2 (Dev); 100Q Expert + 50Q Independent Test + 100Q Bestseller/Stock; 16+4 unseen photos & Separates development tuning from held-out accuracy, ablation, safety, and vision tests \\
 Pilot Speech Corpus & \texttt{Retail-AI-} & 8 human + 8 brand clips $\times$ 3 SNR levels (Clean, 12\,dB, 5\,dB) & Pilot acoustic feasibility study for the supporting voice interface \\
@@ -40,8 +40,17 @@ Integrity checks across all 3,099 raw records confirm \textbf{0 duplicate \code{
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.98\textwidth]{Images/fig_catalog_distribution.png}
-    \caption{True top-10 leaf product categories (\code{category_name}, left) and reference price distribution with median, mean, and P95 markers (right) across 3,081 valid Thanh Lam Mart SKUs.}
+    \caption{True top-10 leaf product categories (\code{category_name}, left) and reference price distribution with median, mean, and P95 markers (right, 98.0\% of SKUs $\le 400\text{k}$\,VND) across 3,081 valid Thanh Lam Mart SKUs.}
     \label{fig:catalog_dist}
+\end{figure}
+
+EDA on the synchronized 30-day sales store (\code{data/synced_sales_30d.json}, \texttt{2026-10}) confirms a sharp turnover gap between perishables and ambient groceries: the 164 fresh SKUs synchronized from FreshRetailNet-50K Store~18 average a median of \textbf{238 units/30d} (mean 371.2, peak 3,754 on \emph{Bí xanh}), \textbf{4.5$\times$} higher than the 53-unit median across the 2,935 monthly catalog SKUs, placing \emph{Củ, Quả} (26,820 units), \emph{Rau Lá} (13,893), and \emph{Trái cây tươi} (11,111) among the top-10 store categories by volume (Figure~\ref{fig:synced_sales_enrichment}a). Figure~\ref{fig:synced_sales_enrichment}b summarizes verified attribute coverage after our 8-stage cleaning pipeline (reducing 4,606 raw defects to 0 across 2,205/3,099 SKUs, 71.2\%).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{Images/fig_synced_sales_and_enrichment.png}
+    \caption{Top-10 categories by synchronized 30-day sales volume split across \texttt{FRN\_STORE\_18} fresh SKUs and \texttt{CATALOG\_MONTHLY} groceries (left), and 8-stage cleaned product knowledge coverage (right).}
+    \label{fig:synced_sales_enrichment}
 \end{figure}
 
 \subsection*{FreshRetailNet-50K Perishable Demand EDA (\texttt{ops\_chest})}

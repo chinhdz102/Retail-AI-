@@ -40,31 +40,31 @@ Bảng~\ref{tab:retail_ablation_50q} đánh giá bốn cấu hình có kiểm so
 \end{tabularx}
 \end{table}
 
-\subsection*{So sánh Độ trễ Trước--Sau Bỏ Planner trên 11 Truy vấn Trực tiếp và Định tuyến Lai}
-Để lượng hóa lợi ích của việc loại bỏ các lượt gọi planner LLM tuần tự trên các truy vấn cần sinh văn bản tự nhiên, Bảng~\ref{tab:latency_10q} và Hình~\ref{fig:latency_comparison} so sánh 11 truy vấn bán lẻ đại diện trước và sau khi áp dụng \emph{Zero-Planner SSE Streaming}. Trên 10/11 truy vấn, tổng thời gian phản hồi giảm rõ rệt: lượt chào hỏi từ 10.891\,ms xuống 6\,ms; tư vấn sản phẩm đạt thời gian hiển thị thẻ 24--59\,ms và TTFT 1,30--1,50\,s (nhanh hơn 2,6--3,2 lần tổng thời gian); giỏ hàng ngân sách giảm từ 13,3--14,2\,s xuống 3,72--3,78\,s với đầy đủ 4 thẻ đúng ngân sách. Riêng truy vấn khuyến mãi (\emph{``Hôm nay siêu thị có gì khuyến mãi?''}) có tổng thời gian hoàn tất tăng nhẹ từ 2.232\,ms lên 2.410\,ms (+7,9\%) do câu trả lời phát luồng liệt kê chi tiết 5 khuyến mãi dài hơn bản cũ, nhưng người dùng đã nhìn thấy 5 thẻ sản phẩm chỉ sau \textbf{24\,ms} và token đầu sau 1.796\,ms. Khi kết hợp thêm tuyến suy luận phát luồng độ trễ thấp, bộ đệm ngữ nghĩa Turn-1 và đặt máy chủ gần khu vực (\texttt{sin1}), độ trễ HTTPS thực tế trên 7 truy vấn kiểm chứng giảm tiếp xuống \textbf{508--1.149\,ms} ở lượt lạnh (giỏ bữa tối $<150\text{k}$ giảm từ 5,50\,s xuống 870\,ms) và \textbf{125--140\,ms} khi trúng bộ đệm ngữ nghĩa (Bảng~\ref{tab:prod_latency_sin1} và Hình~\ref{fig:prod_latency_sin1}).
+\subsection*{So sánh Độ trễ Trước--Sau Bỏ Planner trên 11 Truy vấn Trực tiếp và Đo kiểm Production \texttt{sin1}}
+Để lượng hóa lợi ích của việc loại bỏ các lượt gọi planner LLM tuần tự trên các truy vấn cần sinh văn bản tự nhiên, Bảng~\ref{tab:latency_10q} và Hình~\ref{fig:latency_comparison} đối chiếu đầy đủ \textbf{11 truy vấn bán lẻ đại diện} qua ba mốc: trước tối ưu (planner đa bước), Zero-Planner SSE cục bộ và đo kiểm trực tuyến mới nhất trên cụm production Singapore (\texttt{hkg1::sin1}, tháng 11/2026). Trên toàn bộ 11 truy vấn production thực tế, tổng thời gian phản hồi đầu-cuối giảm xuống chỉ còn \textbf{188--887\,ms}: nhóm tư vấn đơn ngành đạt 597--748\,ms (thẻ hiển thị sau 224--279\,ms, TTFT 379--461\,ms), còn các giỏ hàng ngân sách phức tạp (\emph{Lẩu thái $<300\text{k}$}, \emph{Combo ăn sáng $<100\text{k}$}) giảm từ 13,3--14,2\,s xuống \textbf{886--887\,ms (nhanh hơn 15--16 lần)}. Bảng~\ref{tab:prod_latency_sin1} và Hình~\ref{fig:prod_latency_sin1} phân rã chi tiết tiến triển độ trễ HTTPS giữa các vùng triển khai (\texttt{iad1} $\to$ \texttt{sin1}) cùng thời gian hiển thị thẻ (\code{start}), TTFT và tổng phản hồi trên 7 dạng truy vấn đại diện---bao gồm truy vấn bán chạy sử dụng dữ liệu đồng bộ 30 ngày (\textbf{239\,ms}, trả đúng \emph{Bí xanh} 3.754 lượt từ \texttt{FRN\_STORE\_18}) và truy vấn diễn đạt lại trúng bộ đệm ngữ nghĩa (\textbf{184\,ms}).
 
 \begin{table}[H]
 \centering
-\caption{Độ trễ 11 truy vấn thực tế tại \code{/agent/respond/stream} trước và sau áp dụng Zero-Planner SSE}
+\caption{Độ trễ 11 truy vấn thực tế tại \code{/agent/respond/stream}: trước tối ưu, SSE cục bộ và production \texttt{sin1}}
 \label{tab:latency_10q}
 \footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabularx}{\textwidth}{Y r r r r L{2.25cm}}
+\setlength{\tabcolsep}{3.6pt}
+\begin{tabularx}{\textwidth}{Y r r r r L{2.1cm}}
 \toprule
-\textbf{Truy vấn Kiểm thử (11 Câu)} & \textbf{Trước} & \textbf{Thẻ} & \textbf{TTFT} & \textbf{Tổng} & \textbf{Chế độ \& Thẻ} \\
- & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \\
+\textbf{Truy vấn Kiểm thử (11 Câu)} & \textbf{Trước} & \textbf{Local TTFT} & \textbf{Live \texttt{sin1}} & \textbf{Giảm} & \textbf{Chế độ} \\
+ & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \textbf{($\times$)} & \\
 \midrule
-\emph{Chào Mai, bạn tư vấn giúp mình nhé} & 10.891 & 6 & 6 & 6 & Tức thì (0) \\
-\emph{Mì Hảo Hảo giá bao nhiêu?} & 117 & 112 & 112 & 112 & Tức thì (5) \\
-\emph{Hôm nay siêu thị có gì khuyến mãi?} & 2.232 & \textbf{24} & 1.796 & 2.410 & Stream (5 KM) \\
-\emph{Khăn mặt cotton Thanh Lam Home} & 5.605 & 47 & 1.490 & 2.160 & Stream (5) \\
-\emph{Cho mình xem sữa tươi không đường} & 6.847 & 47 & 1.492 & 2.110 & Stream (5) \\
-\emph{Dầu gội trị gàu nào tốt?} & 5.431 & 52 & 1.298 & 1.936 & Stream (5) \\
-\emph{Ba chỉ bò Mỹ loại nào ngon?} & 5.815 & 39 & 1.356 & 2.015 & Stream (4) \\
-\emph{So sánh sữa TH True Milk và Vinamilk} & 7.238 & 59 & 1.367 & 2.274 & Stream (6) \\
-\emph{Nước giặt OMO loại nào tiết kiệm nhất?} & 5.410 & 43 & 1.499 & 1.959 & Stream (3 OMO) \\
-\emph{Mua đồ nấu lẩu thái dưới 300k} & 14.241 & 1.790 & 2.928 & 3.719 & Giỏ 1 lượt (4+4) \\
-\emph{Combo ăn sáng dưới 100k} & 13.255 & 1.771 & 3.068 & 3.777 & Giỏ 1 lượt (4+4) \\
+\emph{Chào Mai, bạn tư vấn giúp mình nhé} & 10.891 & 6 & \textbf{188} & 57,9$\times$ & Tức thì \\
+\emph{Mì Hảo Hảo giá bao nhiêu?} & 117 & 112 & 282 & --- & HTTPS Tức thì \\
+\emph{Hôm nay siêu thị có gì khuyến mãi?} & 2.232 & 1.796 & \textbf{202} & 11,0$\times$ & Stream + Cache \\
+\emph{Khăn mặt cotton Thanh Lam Home} & 5.605 & 1.490 & \textbf{193} & 29,0$\times$ & Stream + Cache \\
+\emph{Cho mình xem sữa tươi không đường} & 6.847 & 1.492 & \textbf{617} & 11,1$\times$ & Stream Lạnh \\
+\emph{Dầu gội trị gàu nào tốt?} & 5.431 & 1.298 & \textbf{719} & 7,6$\times$ & Stream Lạnh \\
+\emph{Ba chỉ bò Mỹ loại nào ngon?} & 5.815 & 1.356 & \textbf{659} & 8,8$\times$ & Stream Lạnh \\
+\emph{So sánh sữa TH True Milk và Vinamilk} & 7.238 & 1.367 & \textbf{748} & 9,7$\times$ & So sánh Lạnh \\
+\emph{Nước giặt OMO loại nào tiết kiệm nhất?} & 5.410 & 1.499 & \textbf{597} & 9,1$\times$ & Stream Lạnh \\
+\emph{Mua đồ nấu lẩu thái dưới 300k} & 14.241 & 2.928 & \textbf{887} & 16,1$\times$ & Giỏ 1 lượt \\
+\emph{Combo ăn sáng dưới 100k} & 13.255 & 3.068 & \textbf{886} & 15,0$\times$ & Giỏ 1 lượt \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -72,29 +72,29 @@ Bảng~\ref{tab:retail_ablation_50q} đánh giá bốn cấu hình có kiểm so
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.96\textwidth]{Images/fig_latency_streaming_comparison.png}
-    \caption{So sánh độ trễ phản hồi trực tiếp trước và sau khi loại bỏ vòng planner đa bước trên các truy vấn bán lẻ đại diện.}
+    \caption{So sánh độ trễ trên toàn bộ 11 truy vấn đại diện giữa planner đa bước, Zero-Planner SSE cục bộ (TTFT) và tổng độ trễ HTTPS đo trực tiếp trên production \texttt{sin1}.}
     \label{fig:latency_comparison}
 \end{figure}
 
 \begin{table}[H]
 \centering
-\caption{Độ trễ HTTPS thực tế (\texttt{iad1} so với \texttt{sin1}) khi kết hợp tuyến phát luồng độ trễ thấp và bộ đệm ngữ nghĩa}
+\caption{Độ trễ HTTPS thực tế (\texttt{iad1} so với \texttt{sin1}, đo kiểm trực tiếp tháng 11/2026) và phân rã từng pha}
 \label{tab:prod_latency_sin1}
 \footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabularx}{\textwidth}{Y r r r r L{2.45cm}}
+\setlength{\tabcolsep}{3.8pt}
+\begin{tabularx}{\textwidth}{Y r r r r L{2.4cm}}
 \toprule
-\textbf{Truy vấn Kiểm chứng HTTPS} & \textbf{Gốc} & \textbf{Mỹ \texttt{iad1}} & \textbf{SG \texttt{sin1}} & \textbf{TTFT} & \textbf{Tuyến Xử lý} \\
+\textbf{Truy vấn Kiểm chứng HTTPS Live} & \textbf{Gốc} & \textbf{Mỹ \texttt{iad1}} & \textbf{SG \texttt{sin1}} & \textbf{TTFT} & \textbf{Tuyến Xử lý} \\
  & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \\
 \midrule
-\code{POST /api/sessions} (tạo phiên) & $\approx 275$ & $\approx 275$ & \textbf{90--104} & --- & \texttt{hkg1::sin1} \\
-\emph{Sữa hạt không đậu nành có loại nào?} & $\approx 2.500$ & 846 & \textbf{508} & 319 & LPU Cold \\
-\emph{Bia lon dưới 25k có loại nào?} & 2.484 & 1.073 & \textbf{554} & 329 & LPU Cold \\
-\emph{Sữa tươi không đường loại nào ngon?} & $\approx 2.450$ & --- & \textbf{728} & 516 & LPU Cold \\
-\emph{Gợi ý bữa tối dưới 150k cho 2 người} & 5.497 & 2.239 & \textbf{870} & 572 & LPU Basket \\
-\emph{Cà phê hòa tan loại nào đậm vị?} & 2.439 & 1.365 & \textbf{1.149} & 901 & LPU Cold \\
-\emph{Diễn đạt lại cà phê đậm vị (Cache)} & 2.439 & 460 & \textbf{125} & 124 & Semantic (0 tok) \\
-\emph{Diễn đạt lại sữa hạt không đậu nành} & $\approx 2.500$ & $\approx 460$ & \textbf{140} & 139 & Semantic (0 tok) \\
+\code{POST /api/sessions} (tạo phiên) & $\approx 275$ & $\approx 275$ & \textbf{177--206} & --- & \texttt{hkg1::sin1} \\
+\emph{Sữa hạt không đậu nành có loại nào?} & $\approx 2.500$ & 846 & \textbf{736} & 444 & Cold (Warm 209) \\
+\emph{Bia lon dưới 25k có loại nào?} & 2.484 & 1.073 & \textbf{631} & 445 & Cold (Warm 188) \\
+\emph{Sữa tươi không đường loại nào ngon?} & $\approx 2.450$ & --- & \textbf{752} & 520 & Cold Stream \\
+\emph{Gợi ý bữa tối dưới 150k cho 2 người} & 5.497 & 2.239 & \textbf{887} & 634 & Basket (Warm 585) \\
+\emph{Cà phê hòa tan loại nào đậm vị?} & 2.439 & 1.365 & \textbf{662} & 445 & Cold (Warm 184) \\
+\emph{Có cà phê gói nào vị đậm đà không?} & 2.439 & 460 & \textbf{184} & 183 & Semantic Cache \\
+\emph{Sản phẩm nào bán chạy nhất?} & --- & --- & \textbf{239} & 239 & Synced 30d FRN \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -102,7 +102,7 @@ Bảng~\ref{tab:retail_ablation_50q} đánh giá bốn cấu hình có kiểm so
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.96\textwidth]{Images/fig_production_latency_sin1.png}
-    \caption{Tiến triển độ trễ HTTPS giữa các cấu hình triển khai (trái) và đối chiếu tốc độ--chi phí giữa các nhà cung cấp mô hình trong tuyến lai (phải).}
+    \caption{Tiến triển độ trễ HTTPS giữa các vùng triển khai (trái) và phân rã thời gian từng pha (sự kiện thẻ \code{start}, TTFT, tổng luồng) trên 7 dạng truy vấn đo trực tiếp tại cụm Singapore \texttt{sin1} (phải).}
     \label{fig:prod_latency_sin1}
 \end{figure}
 
@@ -111,7 +111,7 @@ Bảng~\ref{tab:retail_ablation_50q} đánh giá bốn cấu hình có kiểm so
 \begin{enumerate}
     \item \textbf{Tập Phát triển 100 câu SOTA~V2 (Dev Set, 113 lượt thoại):} Bộ này được dùng lặp qua các chu kỳ phân tích lỗi để hoàn thiện cổng an toàn và bộ truy xuất. Trong Bảng~\ref{tab:sota_v2} và Hình~\ref{fig:sota_v2}, \emph{Đạt Chức năng (Functional Pass)} yêu cầu trả đúng nhóm sản phẩm, giá bán chính xác và không vi phạm ngân sách/an toàn; \emph{Đạt Nghiêm ngặt (Strict Pass)} đòi hỏi thỏa mãn đồng thời mọi điều kiện phụ (đơn vị quy đổi, trích dẫn nguồn gốc, định dạng thẻ và không dư sản phẩm lạc đề). \emph{Thang điểm 8 Trụ cột (8-Pillar Scorecard)} tổng hợp trung bình có trọng số tám tiêu chí nội bộ: độ chính xác chức năng (20\%), căn cứ dữ liệu (15\%), an toàn y tế/OWASP (15\%), độ trễ P50 (15\%), độ bền tiếng nói (10\%), nhất quán đa lượt/diễn đạt (10\%), chất lượng làm sạch dữ liệu (10\%) và độ phủ kiểm thử tự động (5\%). Qua các vòng tinh chỉnh trên Dev Set, tỷ lệ đạt nghiêm ngặt tăng từ 59/100 lên 94/100 (chức năng 96/100, XSTest 10/10, OWASP 10/10, điểm tổng hợp 68,5 $\to$ 88,2/100).
     \item \textbf{Tập Đánh giá Chuyên gia Độc lập 100 câu (\code{Q01}--\code{Q100}, 0\% trùng Dev Set):} Chấm độc lập theo năm khung đánh giá (RAGAS, DeepEval, RAGChecker, $\tau$-bench~\cite{yao2024taubench} và ShoppingBench) ghi nhận \textbf{174/174 (100\%)} mã SKU hợp lệ thuộc danh mục, \textbf{100/100} chính xác giá bán--khuyến mãi--tổng giỏ, \textbf{14/14} tuân thủ ngân sách, \textbf{7/7} hàng rào an toàn/ngoài danh mục, \textbf{94,0\%} trung thực mức mệnh đề và \textbf{9/10} theo dõi trạng thái đa lượt $\tau$-bench, đồng thời bộc lộ điểm yếu ở \textbf{Context Recall (74,7\%)} với các câu hỏi dùng khẩu ngữ hiếm.
-    \item \textbf{Bộ 100 Câu hỏi Bán chạy nhất \& Tồn kho (Bảng~\ref{tab:bestseller_stock_100q}):} Kiểm chứng 10 nhóm câu hỏi về bán chạy mô phỏng và tồn kho snapshot (trước sửa 43/100 $\to$ sau hợp nhất bộ định tuyến ngữ nghĩa và tuyến \code{catalog-stock} đạt 100/100 với trung vị 190\,ms, P95 448\,ms; 100\% câu trả lời công bố rõ nguồn \texttt{SIMULATED} hoặc mốc chụp 15/09/2026; kiểm chứng lại trên 12 truy vấn trực tuyến đạt 12/12 trong 271--677\,ms).
+    \item \textbf{Bộ 100 Câu hỏi Bán chạy nhất \& Tồn kho (Bảng~\ref{tab:bestseller_stock_100q}):} Kiểm chứng 10 nhóm câu hỏi về xếp hạng bán chạy và tồn kho snapshot (trước sửa 43/100 $\to$ sau hợp nhất bộ định tuyến ngữ nghĩa và tuyến \code{catalog-stock} đạt 100/100 với trung vị 190\,ms, P95 448\,ms; 100\% câu trả lời công bố minh bạch nguồn dữ liệu). Trên production hiện tại (\code{SYNCED_SALES_ENABLED=True}), các câu hỏi bán chạy đọc trực tiếp từ \code{data/synced_sales_30d.json} (164 SKU tươi \texttt{FRN\_STORE\_18} + 2.935 SKU tháng \texttt{2026-10}; ví dụ hỏi toàn cửa hàng trả đúng \emph{Bí xanh} 3.754 lượt/30 ngày trong 239\,ms), trong khi các ca kiểm thử đơn vị ngoại tuyến giữ cô lập với \code{demo_sales.sqlite3} (\texttt{SIMULATED}).
 \end{enumerate}
 
 \begin{table}[H]
@@ -136,7 +136,7 @@ Thang điểm 8 Trụ cột (có trọng số) & 68,5/100 & 88,2/100 & Tổng h�
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.96\textwidth]{Images/fig_sota_v2_benchmark.png}
-    \caption{Kết quả tinh chỉnh trên Tập Phát triển 100 câu SOTA~V2 (trái) và phân rã điểm 8 trụ cột đánh giá (phải).}
+    \caption{Kết quả tinh chỉnh trên Tập Phát triển 100 câu SOTA~V2 theo 10 nhóm (trái) và nghiên cứu loại bỏ A1--A4 về độ chính xác cùng độ trễ P50/P95/P99 trên tập kiểm thử độc lập 50 câu, $N=150$ lượt đo (phải).}
     \label{fig:sota_v2}
 \end{figure}
 
@@ -242,7 +242,7 @@ Trên bài kiểm tra che khuất giờ cuối ngày ($n=200.000$), khôi phục
 Bảng~\ref{tab:ops_chest_backtest} trình bày kết quả mô phỏng A/B 37 ngày trên 50 cửa hàng độc lập (kiểm định chéo 2 nếp) kèm khoảng tin cậy bootstrap 95\% và kiểm định Wilcoxon, trực quan hóa tại Hình~\ref{fig:ops_chest_frn} và Hình~\ref{fig:ops_sensitivity_ci}:
 \begin{itemize}
     \item \textbf{Nghịch lý WAPE so với Lợi nhuận:} Dù LightGBM~v3 giảm WAPE 4,9 điểm phần trăm, cấu hình \textbf{B3 (\texttt{B-ML sym})} dùng độ rộng khoảng phân vị của chính LightGBM lại \emph{kém hơn} EWMA tới \textbf{$-0{,}39\%$} trung vị (trung bình $-1{,}70\%$, $p = 0{,}017$, chỉ thắng 19/50 cửa hàng) và lỗ nặng \textbf{$-5{,}59\%$} trên 13 cửa hàng nhỏ ($\le 30$ SKU, $p=0{,}012$, tỷ lệ hủy vọt lên 8,97\%). Cấu hình bất đối xứng \textbf{B3s (\texttt{B-ML split})} còn kém hơn ($-2{,}17\%$ so với EWMA, hủy 6,45\%).
-    \item \textbf{Hiệu quả có ý nghĩa thống kê của \texttt{B-Gate} (B5):} Ghép trung vị LightGBM với $\sigma_{\text{EWMA}}$ (B4) đảo chiều sang $+0{,}78\%$ trung vị nhưng vẫn âm $-0{,}52\%$ ở cửa hàng nhỏ. Bổ sung cổng định tuyến theo lợi nhuận ngoài mẫu với \code{size_cut=30} (\textbf{B5 / \texttt{B-Gate}}) đạt mức tăng lợi nhuận mô phỏng trung vị \textbf{+4,90\%} so với Baseline~A (95\% CI $[+3{,}70\%;\,+5{,}82\%]$, $p = 5{,}4\times 10^{-7}$) và \textbf{+0,78\%} so với \texttt{B-EWMA} (95\% CI \textbf{$[+0{,}48\%;\,+1{,}21\%]$}, trung bình $+0{,}82\%$, Wilcoxon \textbf{$p = 6{,}39\times 10^{-6}$}, thắng \textbf{38/50 = 76,0\%} cửa hàng).
+    \item \textbf{Hiệu quả có ý nghĩa thống kê của \texttt{B-Gate} (B5):} Ghép trung vị LightGBM với $\sigma_{\text{EWMA}}$ (B4) đảo chiều sang $+0{,}77\%$ trung vị nhưng vẫn âm $-0{,}52\%$ ở cửa hàng nhỏ. Bổ sung cổng định tuyến theo lợi nhuận ngoài mẫu với \code{size_cut=30} (\textbf{B5 / \texttt{B-Gate}}) đạt mức tăng lợi nhuận mô phỏng trung vị \textbf{+4,90\%} so với Baseline~A (95\% CI $[+3{,}70\%;\,+5{,}81\%]$, $p = 5{,}4\times 10^{-7}$) và \textbf{+0,78\%} so với \texttt{B-EWMA} (95\% CI \textbf{$[+0{,}48\%;\,+1{,}21\%]$}, trung bình $+0{,}82\%$, Wilcoxon \textbf{$p = 6{,}39\times 10^{-6}$}, thắng \textbf{38/50 = 76,0\%} cửa hàng).
     \item \textbf{Phân tích theo quy mô cửa hàng (Bảng~\ref{tab:ops_subgroup_sensitivity}):} Trên \textbf{37 cửa hàng vừa/lớn ($>30$ SKU)}, \texttt{B-Gate} đạt mức tăng trung vị \textbf{+0,87\%} (95\% CI $[+0{,}56\%;\,+1{,}26\%]$, $p = 1{,}26\times 10^{-5}$, thắng \textbf{32/37 = 86,5\%} cửa hàng). Trên \textbf{13 cửa hàng nhỏ ($\le 30$ SKU)}, \texttt{B-Gate} khống chế hoàn toàn rủi ro lỗ của ML (từ $-5{,}59\%$ về $-0{,}01\%$ trung vị / $+0{,}39\%$ trung bình, $p=0{,}58$, đồng thời giảm tỷ lệ hủy từ 7,42\% xuống 6,94\%).
     \item \textbf{Giải thích đánh đổi giữa Lợi nhuận, Hủy hàng và Tỷ lệ Hết hàng (OOS):} So với EWMA, \texttt{B-Gate} giảm tỷ lệ hủy hàng (5,17\% $\to$ \textbf{4,82\%}) và giảm đứt hàng nhóm sản phẩm hút khách (3,94\% $\to$ \textbf{3,37\%}), nhưng \textbf{tỷ lệ OOS tổng thể nhích nhẹ từ 13,61\% lên 14,12\% (+0,51 điểm phần trăm)}. Sự đánh đổi này phản ánh đúng bản chất toán học của Newsvendor với hàng hạn dùng 1--3 ngày: vì chi phí hủy mất trắng 100\% giá vốn lớn hơn nhiều biên lãi gộp trên các SKU biên mỏng bán chậm, bộ tối ưu chủ động cắt bớt tồn kho an toàn ở nhóm biên thấp (chấp nhận tăng nhẹ OOS ở nhóm ít ảnh hưởng lưu lượng) trong khi giữ sàn phục vụ $SL_{\text{floor}} = 0{,}95$ cho nhóm hút khách, tạo ra tổng lãi gộp mô phỏng cao hơn.
     \item \textbf{Phân tích độ nhạy trên 8 kịch bản (Bảng~\ref{tab:ops_subgroup_sensitivity}, Hình~\ref{fig:ops_sensitivity_ci}b):} Ngay cả khi phản ứng giảm giá của khách chỉ bằng 1/4 giả định (\code{world_25}: $+4{,}38\%$), khi tắt hoàn toàn giảm giá/trả NCC để đo riêng động cơ đặt hàng (\code{order_only}: $+4{,}73\%$), hay khi quản lý chỉ duyệt 60\% đơn đề xuất (\code{approve_60}: $+3{,}76\%$), hệ thống vẫn giữ mức lãi mô phỏng dương ổn định. Ngược lại, nếu bỏ sàn mức phục vụ (\code{no_floor}), lợi nhuận đảo chiều thành \textbf{$-0{,}54\%$} và OOS tăng vọt lên \textbf{22,12\%}, chứng minh vai trò thiết yếu của các sàn $SL_{\text{floor}}$. Cần nhấn mạnh rằng mọi con số lợi nhuận đều là kết quả trong \emph{môi trường mô phỏng với giá vốn và hạn dùng giả định}, chưa thể đồng nhất trực tiếp với lợi nhuận tại cửa hàng thực tế.
@@ -260,9 +260,9 @@ Bảng~\ref{tab:ops_chest_backtest} trình bày kết quả mô phỏng A/B 37 n
 \midrule
 Baseline A (giảm phẳng 30\%) & 0,00\% & --- & --- & --- & 5,33 & 14,49 & 8,69 \\
 \textbf{B1:} \texttt{B-EWMA} & +4,18\% & 0,00\% & --- & --- & 5,17 & 13,61 & 3,94 \\
-\textbf{B3:} \texttt{B-ML} (\code{sym} $\sigma$) & +3,58\% & $-0{,}39\%$ & $[-1{,}10; +0{,}05]$ & 38\% & 5,68 & 13,14 & 2,71 \\
-\textbf{B3s:} \texttt{B-ML split} & +1,65\% & $-2{,}17\%$ & $[-3{,}20; -1{,}30]$ & 6\% & 6,45 & \textbf{12,22} & \textbf{2,26} \\
-\textbf{B4:} \texttt{B-ML ewma\_sigma} & +4,51\% & +0,78\% & $[+0{,}48; +1{,}16]$ & 74\% & 4,83 & 14,35 & 3,37 \\
+\textbf{B3:} \texttt{B-ML} (\code{sym} $\sigma$) & +3,58\% & $-0{,}39\%$ & $[-1{,}10; +0{,}07]$ & 38\% & 5,68 & 13,14 & 2,71 \\
+\textbf{B3s:} \texttt{B-ML split} & +1,64\% & $-2{,}17\%$ & $[-3{,}20; -1{,}30]$ & 6\% & 6,45 & \textbf{12,22} & \textbf{2,26} \\
+\textbf{B4:} \texttt{B-ML ewma\_sigma} & +4,50\% & +0,77\% & $[+0{,}48; +1{,}15]$ & 74\% & 4,83 & 14,35 & 3,37 \\
 \textbf{B5:} \textbf{\texttt{B-Gate}} ($p=6{,}4\times 10^{-6}$) & \textbf{+4,90\%} & \textbf{+0,78\%} & \textbf{$[+0{,}48; +1{,}21]$} & \textbf{76\%} & \textbf{4,82} & 14,12 & 3,37 \\
 \bottomrule
 \end{tabularx}
