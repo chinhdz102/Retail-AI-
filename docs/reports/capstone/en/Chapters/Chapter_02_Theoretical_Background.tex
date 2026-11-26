@@ -1,80 +1,71 @@
 \chapter{Theoretical Background}
 
-This chapter establishes the technical concepts and mathematical foundations underpinning both the customer-floor voice kiosk agent (\texttt{Retail-AI-}) and the back-office store operations agent (\texttt{ops\_chest}).
+This chapter establishes the theoretical and mathematical foundations directly supporting our four research pillars: bounded LLM agent routing, supporting speech pre-processing, censored demand recovery, and profit-gated perishable inventory optimization.
 
 \section{Fundamental Concepts}
 
-\subsection*{LLM-Powered AI Agents and Bounded Tool-Use Orchestration}
-An \textbf{AI agent} augments a pretrained Large Language Model (LLM) with structured perception, persistent session memory, external tool execution, and explicit policy control loops~\cite{yao2023react,schick2023toolformer}. In enterprise retail, unconstrained ReAct loops are unsuitable because open-ended generation can fabricate prices, promotions, or stock availability, while chained planning calls multiply response latency. Both repositories therefore adopt \textbf{bounded, tool-grounded agent architectures}:
+\subsection*{Bounded LLM Agents and Zero-Planner Hybrid Routing}
+An \textbf{AI agent} augments a Large Language Model (LLM) with structured perception, session memory, typed external tools, and explicit policy control~\cite{yao2023react,schick2023toolformer}. In retail operations, open-ended ReAct loops suffer from cumulative planning latency and factual drift on prices or stock. Extending adaptive query-routing principles~\cite{chen2023frugalgpt,ong2024routellm}, our architecture enforces \textbf{deterministic-first, LLM-bounded routing}:
 \begin{itemize}
-    \item \textbf{Tiered Hybrid Routing (\texttt{Retail-AI-}):} Incoming turns pass through sub-3\,ms deterministic gates (session state, cart/checkout actions, medical/medication safety, off-topic filtering, OWASP prompt-injection checks, and social smalltalk). Verified catalog lookups and common shopping turns bypass multi-step LLM planning entirely via a \emph{Zero-Planner Grounded SSE Streaming Engine} (\code{streaming_consultation.py}), whereas high-risk clinical, allergy, infant-food, or unresolved multi-constraint consultations escalate to a bounded structured planner and verification pipeline (\code{customer_consultation.py}).
-    \item \textbf{Read/Proposal Separation and HITL Governance (\texttt{ops\_chest}):} The store-operations agent (\code{orchestrator.py}) exposes 31 typed function-calling tools split strictly into \emph{read/UI-form tools} (22) and \emph{proposal-creation/revision tools} (9). Direct mutation tools (sending supplier PO emails, changing shelf prices, writing off lots, delisting SKUs) are excluded from the LLM tool schema altogether; every operational mutation transitions through a persistent database proposal state machine (\texttt{PENDING} $\to$ \texttt{APPROVED}/\texttt{REJECTED} $\to$ \texttt{EXECUTED}) triggered solely by authenticated Store Manager action.
-    \item \textbf{Runtime Grounding Verification:} In \texttt{ops\_chest}, \code{guard.py} inspects every generated answer at runtime before display, verifying that every numerical figure $\ge 1{,}000$ appears verbatim in the turn's tool outputs or user prompt and flagging any false execution claim (\code{FALSE_EXEC}).
+    \item \textbf{Zero-Planner Hybrid Routing (\texttt{Retail-AI-}):} Every customer turn passes through sub-3\,ms deterministic gates (medical/medication refusal, out-of-catalog filtering, OWASP prompt-injection defense). Standard catalog requests (pricing, unit-price comparison, promotions, stock, simulated best-sellers) execute directly via inverted-index search and deterministic calculators before streaming concise explanations, bypassing multi-step JSON planner loops; only high-risk clinical/allergen or unresolved multi-constraint queries escalate to bounded structured planning.
+    \item \textbf{Read/Proposal Separation and HITL Governance (\texttt{ops\_chest}):} The store-operations agent accesses 22 read/UI-form tools and 9 proposal tools, with zero direct-execution tools in the LLM schema. Every operational change traverses a persistent proposal state machine (\texttt{PENDING} $\to$ \texttt{APPROVED}/\texttt{REJECTED} $\to$ \texttt{EXECUTED}) triggered strictly by authenticated manager approval.
 \end{itemize}
 
-\subsection*{Real-Time Neural Speech Pipeline}
-Deploying hands-free Vietnamese voice interaction inside a supermarket requires coordinating four specialized acoustic and speech models:
+\subsection*{Supporting Speech Processing Front-End}
+To support hands-free Vietnamese voice queries at the sales counter, \texttt{Retail-AI-} incorporates a modular audio front-end combining recurrent voice activity detection (\emph{Silero VAD~v6}~\cite{silero_vad} on 32\,ms frames at 16\,kHz), high-pass filtering with neural speech enhancement (e.g., \texttt{DPDFNet2} from the DeepFilterNet family~\cite{schroter2022deepfilternet,sherpa_onnx}), streaming ASR with domain phrase biasing (\code{PhraseListGrammar}~\cite{azure_speech}), and clause-level TTS. Software implementation details (browser edge denoising, AEC preservation, and deployment configs) are deferred to Appendix~A.
+
+\subsection*{Censored Demand Recovery, Quantile Forecasting, and Profit-Gated Routing}
+Short-shelf-life perishables (1--3 days) exhibit three defining analytical properties:
 \begin{itemize}
-    \item \textbf{Silero VAD~v6~\cite{silero_vad}:} A compact recurrent neural network compiled to ONNX/WebAssembly operating on 512-sample (32\,ms) frames at 16\,kHz with 64-sample recurrent context. Running locally both in the browser AudioWorklet (for endpointing and barge-in detection) and on the backend (as an independent acoustic verification gate) guarantees that ambient hum or clicks never trigger spurious ASR calls.
-    \item \textbf{Dual-Path Deep Filtering (\texttt{DPDFNet2} ONNX)~\cite{schroter2022deepfilternet,sherpa_onnx}:} A 9.77\,MB neural speech enhancement architecture from the DeepFilterNet family that operates in the short-time Fourier transform (STFT) domain using dual-path temporal--frequency modeling to estimate complex deep-filtering masks. Unlike lightweight single-path denoisers (e.g., GTCRN) that distort tonal Vietnamese syllables under heavy 5\,dB babble, \texttt{DPDFNet2} preserves formant and tone contours while suppressing broadband and non-stationary supermarket noise on CPU.
-    \item \textbf{Real-Time WebSocket Streaming ASR with Domain Phrase Biasing:} Rather than buffering an entire utterance and uploading a WAV file after silence detection, streaming ASR pipes 16\,kHz PCM16 frames continuously into \emph{Azure AI Speech SDK}~\cite{azure_speech} over a persistent WebSocket (\code{/audio/transcribe/stream}) while loading a dynamic \texttt{PhraseListGrammar} populated with active Thanh Lam Mart brands and session terms. Partial hypotheses stream back to the kiosk UI during speech, and finalization completes shortly after the end-of-speech marker. An offline local RNN-Transducer (\texttt{gipformer1.5-68M-rnnt}) provides zero-cloud fallback if external connectivity drops.
-    \item \textbf{Full-Duplex Anti-Echo Barge-In and Progressive Clause TTS:} Keeping the microphone armed during avatar playback allows natural human interruption, protected by hardware AEC, a 450\,ms startup grace window, an elevated speech-RMS confirmation gate, and post-ASR lexical self-echo filtering. On output, \code{speech-queue.ts} extracts natural clauses from streaming LLM tokens without splitting inside Vietnamese thousands separators (e.g., \texttt{29.000đ}) and dispatches parallel one-use Azure Neural TTS tickets so audio playback overlaps text generation.
+    \item \textbf{Right-Censored Demand:} Whenever shelves empty before closing, observed sales underestimate true demand~\cite{wecker1978stockouts,vulcano2012primary}. Using empirical hourly sales-share profiles learned on fully stocked days of FreshRetailNet-50K~\cite{freshretailnet50k}, daily demand is uncensored prior to feature generation.
+    \item \textbf{Demand Taxonomy and LightGBM vs.\ EWMA:} Under the Syntetos--Boylan ADI/$\text{CV}^2$ taxonomy~\cite{syntetos2005intermittent}, store-SKU series span smooth, erratic, and lumpy regimes. \emph{LightGBM}~\cite{ke2017lightgbm} learns nonlinear lag, calendar, and stockout interactions under pinball loss at quantiles $q \in \{0.10, 0.50, 0.90\}$, whereas seasonal \emph{EWMA} with a Poisson variance floor supplies a low-variance statistical estimator for noisy small-store segments.
+    \item \textbf{Decision-Focused Routing (Predict-then-Optimize):} Consistent with Ban--Rudin~\cite{ban2019bigdata} and Elmachtoub--Grigas~\cite{elmachtoub2022spo}, minimizing statistical error (WAPE) does not automatically maximize gross profit under asymmetric FEFO--Newsvendor costs~\cite{nahmias2011perishable,silver2017inventory}. \texttt{B-Gate} decouples point estimation ($\hat{q}_{50}^{\text{LGBM}}$) from dispersion estimation ($\sigma_{\text{EWMA}}$) and activates ML only on segments delivering strictly positive out-of-sample simulated profit gains.
 \end{itemize}
 
-\subsection*{Perishable Demand Forecasting, Quantile Routing, and FEFO Optimization}
-Fresh convenience-store SKUs (1--3 day shelf lives) violate standard infinite-shelf-life inventory assumptions:
-\begin{itemize}
-    \item \textbf{Hourly Censored-Demand Recovery:} On days when a SKU stocks out before closing, observed sales reflect supply rather than demand. Using hourly sales-share profiles learned from non-stockout days, \texttt{ops\_chest} reconstructs uncensored daily demand prior to forecasting.
-    \item \textbf{LightGBM Quantile Forecasting vs. EWMA:} \emph{LightGBM}~\cite{ke2017lightgbm} trains histogram-based gradient-boosted decision trees with pinball loss at quantiles $q \in \{0.10, 0.50, 0.90\}$ over 29 lag, rolling, stockout, calendar, EWMA, and category features. Exponentially Weighted Moving Average (\emph{EWMA}) with weekday seasonality and a Poisson dispersion floor provides a low-variance statistical baseline for small stores or sparse SKUs.
-    \item \textbf{Profit-Gated Routing and FEFO Lot Simulation:} Because quantile-interval width from LightGBM can over-order perishable stock on small stores, \code{forecast_router.py} couples LightGBM's point median ($\hat{q}_{50}$) with EWMA's dispersion ($\sigma_{\text{EWMA}}$) and routes each (sales-tier $\times$ intermittency $\times$ store-size) segment to ML or EWMA strictly according to out-of-sample simulated store profit. Lot-level First-Expired-First-Out (FEFO) simulation projects usable inventory at arrival and caps orders by sellable demand before expiration.
-\end{itemize}
+\section{Mathematical Formulations}
 
-\section{Mathematical or Theoretical Basis}
-
-\subsection*{Acoustic Pre-Processing, SNR-Adaptive Denoising, and Voice Latency}
-Before neural speech enhancement, \code{speech_denoiser.py} strips low-frequency HVAC and 50/100\,Hz electrical hum using a zero-phase fourth-order Butterworth-like frequency-domain high-pass filter with cutoff $f_c = 85\,\text{Hz}$:
+\subsection*{Supporting Audio Conditioning and ASR Metrics}
+On the server denoising path, a zero-phase fourth-order frequency-domain high-pass filter ($f_c = 85\,\text{Hz}$) attenuates low-frequency hum:
 \begin{equation}
     H(f) = \frac{1}{1 + \left(\frac{f_c}{\max(f,\,1)}\right)^4}, \qquad H(0) = 0, \qquad x_{\text{HPF}} = \mathcal{F}^{-1}\!\left\{\mathcal{F}\{x\} \cdot H(f)\right\}.
     \label{eq:hpf85}
 \end{equation}
-Clip Signal-to-Noise Ratio ($\widehat{\text{SNR}}_{\text{dB}}$) is estimated over non-overlapping 20\,ms frames ($N_f = 320$ samples at 16\,kHz) using the 88th percentile RMS (active speech) against the 15th percentile RMS (background noise floor):
+Clip SNR ($\widehat{\text{SNR}}_{\text{dB}}$) is estimated across 20\,ms frames ($N_f = 320$ samples at 16\,kHz) via the ratio of 88th-percentile active RMS to 15th-percentile floor RMS, controlling adaptive wet/dry mixing:
 \begin{equation}
-    \widehat{\text{SNR}}_{\text{dB}} = \operatorname{clip}\!\left(20 \log_{10}\!\left(\frac{P_{88}(\text{RMS}_{\text{frame}})}{\max(P_{15}(\text{RMS}_{\text{frame}}),\,10^{-6})}\right),\,-5,\,45\right).
+    \widehat{\text{SNR}}_{\text{dB}} = \operatorname{clip}\!\left(20 \log_{10}\!\left(\frac{P_{88}(\text{RMS}_{\text{frame}})}{\max(P_{15}(\text{RMS}_{\text{frame}}),\,10^{-6})}\right),\,-5,\,45\right),
     \label{eq:snr_est}
 \end{equation}
-To avoid double-suppression artifacts on clean microphones while aggressively removing supermarket noise, \code{enhance_speech_samples} applies SNR-adaptive wet/dry blending with a clean-studio bypass at $\widehat{\text{SNR}}_{\text{dB}} \ge 28\,\text{dB}$:
 \begin{equation}
-\begin{aligned}
-    y[n] &= w(\widehat{\text{SNR}}_{\text{dB}})\, x_{\text{DPDFNet2}}[n] + \bigl(1 - w(\widehat{\text{SNR}}_{\text{dB}})\bigr)\, x_{\text{HPF}}[n], \\
-    w(\widehat{\text{SNR}}_{\text{dB}}) &= \begin{cases}
-        0.00 & \text{if } \widehat{\text{SNR}}_{\text{dB}} \ge 28\,\text{dB}, \\
-        0.85 & \text{if } 10 \le \widehat{\text{SNR}}_{\text{dB}} < 28\,\text{dB}, \\
-        0.75 & \text{if } \widehat{\text{SNR}}_{\text{dB}} < 10\,\text{dB}.
+    y[n] = w(\widehat{\text{SNR}}_{\text{dB}})\, x_{\text{DPDFNet2}}[n] + \bigl(1 - w(\widehat{\text{SNR}}_{\text{dB}})\bigr)\, x_{\text{HPF}}[n], \quad
+    w = \begin{cases}
+        0.00 & \widehat{\text{SNR}}_{\text{dB}} \ge 28\,\text{dB}, \\
+        0.85 & 10 \le \widehat{\text{SNR}}_{\text{dB}} < 28\,\text{dB}, \\
+        0.75 & \widehat{\text{SNR}}_{\text{dB}} < 10\,\text{dB}.
     \end{cases}
-\end{aligned}
     \label{eq:snr_blend}
 \end{equation}
-Speech recognition accuracy is evaluated by Word Error Rate (WER), and perceived end-to-end voice turn latency from user speech cessation to first spoken output decomposes as:
+Recognition accuracy is measured by Word Error Rate (WER), and end-to-end voice turn latency decomposes into five stages:
 \begin{equation}
-    \text{WER} = \frac{S + D + I}{N}, \qquad T_{\text{E2E}} = T_{\text{VAD}} + T_{\text{STT-post}} + T_{\text{retrieval}} + T_{\text{TTFT}} + T_{\text{TTS-1st}},
+    \text{WER} = \frac{S + D + I}{N}, \qquad T_{\text{E2E}} = T_{\text{VAD}} + T_{\text{STT-post}} + T_{\text{retrieval}} + T_{\text{TTFT}} + T_{\text{TTS-1st}}.
     \label{eq:wer_latency}
 \end{equation}
-where $S, D, I$ denote word substitutions, deletions, and insertions over $N$ reference words. Under real-time WebSocket streaming, acoustic decoding overlaps user speech, collapsing $T_{\text{STT-post}}$ from $>2{,}000\,\text{ms}$ to $\approx 260\,\text{ms}$.
 
-\subsection*{Catalog Unit-Price Normalization and Value Ranking}
-To compare SKUs packaged in heterogeneous sizes (e.g., 90\,g vs.\ 73\,g towels, or 180\,ml vs.\ 1\,L milk cartons), \texttt{Retail-AI-} converts each candidate's reference price $P_{\text{VND}}$ into a canonical base-unit price (per 100\,g, per kg, or per L) and discount percentage:
+\subsection*{Unit-Price Normalization (\texttt{Retail-AI-})}
+To compare heterogeneous package sizes fairly (e.g., per 100\,g, per kg, or per L), reference price $P_{\text{VND}}$ is normalized into canonical base-unit price and percentage discount:
 \begin{equation}
     P_{\text{unit}} = \frac{P_{\text{VND}}}{Q_{\text{base}}}, \qquad d_{\%} = \max\!\left(0,\, \frac{P_{\text{regular}} - P_{\text{VND}}}{P_{\text{regular}}} \times 100\right).
     \label{eq:unit_price}
 \end{equation}
 
-\subsection*{Censored-Demand Recovery, Perishable Newsvendor, and Profit-Gated Routing}
-In \texttt{ops\_chest}, let $s_{i,t}$ be observed units sold of SKU $i$ on day $t$, and let $f_{i,t} \in (0,1]$ be the cumulative empirical hourly demand share elapsed before stockout on day $t$ (derived from non-stockout days). Uncensored daily demand and forecasting error (WAPE) are computed as:
+\subsection*{Demand Recovery, Pinball Loss, Perishable Newsvendor--FEFO, and Profit Gate}
+Let $s_{i,t}$ denote observed sales of SKU $i$ on day $t$ and $f_{i,t} \in (0,1]$ the cumulative empirical hourly demand share elapsed prior to stockout. Recovered demand $\hat{D}_{i,t}$, WAPE, and quantile pinball loss $\mathcal{L}_q$ are defined as:
 \begin{equation}
-    \hat{D}_{i,t} = \frac{s_{i,t}}{\max(f_{i,t},\,\epsilon)}, \qquad \text{WAPE} = \frac{\sum_{i,t} \left|D_{i,t} - \hat{y}_{i,t}\right|}{\sum_{i,t} \left|D_{i,t}\right|}.
+    \hat{D}_{i,t} = \frac{s_{i,t}}{\max(f_{i,t},\,\epsilon)}, \qquad
+    \text{WAPE} = \frac{\sum_{i,t} \left|D_{i,t} - \hat{y}_{i,t}\right|}{\sum_{i,t} \left|D_{i,t}\right|}, \qquad
+    \mathcal{L}_q(y, \hat{y}) = \max\bigl(q(y-\hat{y}),\,(q-1)(y-\hat{y})\bigr).
     \label{eq:wape_recovery}
 \end{equation}
-For perishable replenishment (\code{backend/app/engines/replenishment.py}), let $p$ be unit selling price, $c$ unit cost, $v$ expected salvage value per unsold unit (markdown or supplier return), and $s_{\text{out}}$ opportunity cost per stocked-out unit. The optimal Newsvendor service level $SL^*$ and shelf-life-capped order quantity $Q^*$ with review period $R$, arrival-day FEFO unmet demand $U_R$, leftover stock $L_R$, and shelf-life sellable window $W = \min(90, \text{shelf\_life})$ are:
+Given selling price $p$, unit cost $c$, salvage value $v$, and stockout opportunity cost $s_{\text{out}}$, the optimal Newsvendor service level $SL^*$ and shelf-life-capped order quantity $Q^*$ (review period $R$, arrival-day FEFO unmet demand $U_R$, leftover $L_R$, sellable window $W = \min(90, L)$, available shelf capacity $C_{\text{room}}$) are:
 \begin{equation}
     SL^* = \max\!\left(SL_{\text{floor}},\, \operatorname{clip}\!\left(\frac{p - c + s_{\text{out}}}{(p - c + s_{\text{out}}) + (c - v)},\,0.30,\,0.98\right)\right), \qquad z = \Phi^{-1}(SL^*),
     \label{eq:newsvendor}
@@ -87,7 +78,7 @@ For perishable replenishment (\code{backend/app/engines/replenishment.py}), let 
 \end{aligned}
     \label{eq:order_qty}
 \end{equation}
-where $SL_{\text{floor}} \in \{0.95\text{ (traffic driver)},\, 0.90\text{ (ABC class A)},\, 0.50\text{ (other)}\}$, $S_W$ is demand over window $W$ already served by existing lots under FEFO simulation, and $C_{\text{room}}$ is remaining shelf capacity. Finally, the profit gate (\code{decision_gate.json}) assigns each segment $g$ (sales tier $\times$ intermittency $\times$ store-size tier) to LightGBM if and only if its normalized store-profit gain over EWMA is strictly positive:
+with $SL_{\text{floor}} \in \{0.95\text{ (traffic driver)},\,0.90\text{ (ABC-A)},\,0.50\text{ (other)}\}$. The profit gate (\texttt{B-Gate}) routes segment $g = (\text{sales tier} \times \text{intermittency} \times \text{store-size tier})$ to LightGBM if and only if its normalized store-profit gain over EWMA on training folds is strictly positive:
 \begin{equation}
 \begin{aligned}
     V(g) &= \sum_{s \in \mathcal{S}_{\text{train}}} \frac{\sum_{i \in g \cap s}\bigl(\Pi^{\text{ML}}_{i,s} - \Pi^{\text{EWMA}}_{i,s}\bigr)}{\Pi^{\text{EWMA}}_s} > 0, \\

@@ -1,43 +1,52 @@
 \appendix
 
-\chapter{\texttt{Retail-AI-} Catalog Schema, Safety Gates, and Tool Inventory}
+\chapter{Software Architecture, Configuration, and Engineering Verification of \texttt{Retail-AI-}}
 \label{app:retail_ai}
 
-\section*{A.1 Grounded Catalog Schema and Quarantine Policy}
-\texttt{Retail-AI-} ingests \code{data/thanh_lam_products.csv} through the strict Pydantic model \code{ThanhLamRow}~\cite{retail_ai_repo,thanh_lam_snapshot}. Core fields include \code{product_id}, \code{name}, \code{brand}, \code{regular_price}, \code{sale_price}, \code{promo_text}, \code{unit}, \code{pack_spec}, and \code{category_path} (346 hierarchy paths). Eighteen of 3,099 rows whose \code{sale_price > regular_price} are quarantined cleanly, leaving 3,081 verified active SKUs. Extended demo analytics fields (\code{sold_count_30d}, \code{revenue_30d}, \code{is_bestseller}) live exclusively inside \code{data/demo_sales.sqlite3} and are returned with explicit \texttt{SIMULATED} provenance metadata.
+This appendix consolidates software implementation details, supporting audio/UI engineering, deployment configuration, and automated software verification for \texttt{Retail-AI-}, keeping Chapters~1--6 focused strictly on AI research contributions.
 
-\section*{A.2 Deterministic Safety Gates and Read-Only Consultation Tools}
-Before invoking any LLM, incoming turns traverse deterministic guards ($<3$\,ms): (i)~cart and checkout action parser, (ii)~medical/clinical/medication refusal gate (preserving benign food items verified by XSTest 10/10), (iii)~off-topic deflection, (iv)~OWASP prompt-injection and secret-exfiltration blocker (10/10 red-team pass), and (v)~instant social smalltalk (\code{smalltalk.py}). Table~\ref{tab:retail_tools} lists the seven read-only catalog and consultation capabilities exposed inside the agent runtime.
+\section*{A.1 Catalog Schema, 8-Stage Knowledge Cleaning, and Consultation Tools}
+\texttt{Retail-AI-} loads \code{data/thanh_lam_products.json} (SHA-256 \code{a0eb16ac1ae2557e...}, 3,099 rows, 20 structured fields including \code{product_id}, \code{barcode}, \code{name}, \code{brand}, \code{price_vnd}, \code{sale_price_vnd}, \code{discount_promotion}, \code{stock}, \code{shelf}, \code{uom}, \code{image_url}, \code{category_hierarchy}) via the Pydantic validator \code{ThanhLamRow}, quarantining 18 rows with \code{sale_price_vnd > price_vnd} and retaining 3,081 valid SKUs alongside a 13-aisle planogram (\code{data/thanh_lam_planogram_assignments.json}).
+
+The product knowledge enrichment pipeline combines 3,099 SSR product pages with EAN-13 barcode verification (333 exact barcode matches, 226 strict brand--form matches) and an 8-stage cleaning pipeline inspired by Hugging Face \code{datatrove}~\cite{hf_datatrove} and OpenFoodFacts~\cite{openfoodfacts} (Unicode NFC folding, invisible-character removal, HTML \code{<li>} period restoration, parenthesis balancing, cross-field separation, OCR noise filtering, and unverified allergen quarantine), reducing 4,606 raw defects across 11 QA dimensions to 0 defects (locked by 19/19 regression tests) and covering 2,205/3,099 SKUs (71.15\%). Table~\ref{tab:retail_tools} lists the read-only and bridge capabilities inside the consultation runtime.
 
 \begin{table}[H]
 \centering
-\caption{Read-only tool and retrieval capabilities in \texttt{Retail-AI-}}
+\caption{Read-only retrieval and bridge capabilities in \texttt{Retail-AI-}}
 \label{tab:retail_tools}
 \footnotesize
 \begin{tabularx}{\textwidth}{L{0.7cm} L{4.2cm} Y}
 \toprule
-\textbf{\#} & \textbf{Capability / Tool} & \textbf{Deterministic Behavior \& Grounding Contract} \\
+\textbf{\#} & \textbf{Tool / Capability} & \textbf{Deterministic Behavior \& Grounding Contract} \\
 \midrule
-1 & \code{search_products} & Pre-indexed diacritic-stripped hybrid search over 3,081 verified Thanh Lam Mart SKUs \\
-2 & \code{get_product_detail} & Exact price, promo text, pack size, and canonical base-unit price lookup \\
-3 & \code{compare_products} & Side-by-side price, unit-price (Eq.~\ref{eq:unit_price}), brand, and promo comparison \\
-4 & \code{list_promotions} & Active discounted SKUs filtered by department or minimum discount percentage \\
+1 & \code{search_products} & Diacritic-stripped inverted-index search over 3,081 valid SKUs with exclusion filters \\
+2 & \code{get_product_detail} & Exact price, promotion, pack size, shelf location, and canonical unit-price lookup \\
+3 & \code{compare_products} & Side-by-side price, unit price (Eq.~\ref{eq:unit_price}), and promotion comparison \\
+4 & \code{list_promotions} & Filters 580 catalog promos and prioritizes manager-approved FEFO markdowns from \code{ops_bridge} \\
 5 & \code{rank_bestsellers} & Deterministic 30-day ranking from \code{demo_sales.sqlite3} with mandatory \texttt{SIMULATED} tag \\
-6 & \code{assemble_budget_basket} & Slot-based meal/household combo retrieval enforcing $\sum P(p) \le B$ \\
-7 & \code{manage_kiosk_cart} & Local session cart add/remove/quantity/total inspection (no ERP write access) \\
+6 & \code{check_snapshot_stock} & Deterministic stock lookup/ranking citing 15 Sep 2026 snapshot or live bridge stock \\
+7 & \code{assemble_budget_basket} & Template-constrained meal/combo selection satisfying $\sum P(p) \le B$ \\
+8 & \code{ops_bridge_overlay} & Read-only overlay of live stock and approved FEFO markdowns from \texttt{ops\_chest} (TTL 300\,s) \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\chapter{\texttt{ops\_chest} 31-Tool Registry, Perishable Rules, and HITL Governance}
+\section*{A.2 LLM Tiering, On-Demand Vision, Supporting Speech Interface, and Deployment}
+\begin{itemize}
+    \item \textbf{Tiered LLM routing:} Lean streaming prose routes preferentially to Groq LPU (\code{qwen/qwen3.8-27b} $\to$ \code{openai/gpt-oss-20b/120b}, 6\,s timeout, 3,600\,s HTTP~429 cooldown) with failover to DeepSeek (\code{deepseek-v4.1-flash:free} $\to$ \code{deepseek-v4.1-flash-1017}); complex structured JSON passes run on DeepSeek; Turn-1 semantic cache holds up to 256 entries (TTL 300\,s, Jaccard $\ge 0.88$, bypassing clinical/allergen turns).
+    \item \textbf{On-demand \texttt{MobileNetV3Large-224} TFLite:} Distilled from \texttt{CLIP-ViT-B/32} (512-d) + \texttt{DINOv2-Small} (384-d) $\to$ SVD-256 (88.85\% variance); 7.04\,MB FP16 / 3.81\,MB INT8 + 1.58\,MB gallery (3,093 SKUs); Kaggle training (39.1\,min) using Direct Cosine ($w=6.0$), Relational ($w=3.0$), Sub-Center ArcFace ($K=3, w=0.35$), and SupCon ($w=0.50$); lazy-loaded at \code{POST /agent/respond/image}.
+    \item \textbf{Supporting voice interface and deployment stack:} The Vue~3 + TypeScript client supports dual deployment: (i)~Vercel Singapore (\texttt{sin1}, \url{https://retail-ai-kiosk.vercel.app}) running client-side Silero VAD~v6, GTCRN WebAssembly SIMD denoising (192.3\,KB), passive \code{captureStream()} AEC3 preservation, half-duplex \emph{Speaker Echo Shield}, direct browser $\rightleftarrows$ Azure Speech WSS (STT/TTS via 10-minute STS tokens at \code{/api/audio/azure-speech-token}), and stateless HMAC session tokens; and (ii)~single-port multi-stage Docker (\code{Dockerfile} + \code{docker-compose.yml} + Redis~7) adding server WebSocket \code{/audio/transcribe/stream}, \texttt{DPDFNet2} ONNX (9.77\,MB), and offline \texttt{gipformer1.5-68M-rnnt} (69.8\,MB). Auxiliary product features (static edge catalog browser \code{/catalog-index.json}, assisted cart, PayOS VietQR HMAC checkout, and Zalo Bot alerts) are prototype engineering features rather than AI research claims.
+\end{itemize}
+
+\chapter{31-Tool Registry and HITL Architecture of \texttt{ops\_chest}}
 \label{app:ops_chest}
 
-\section*{B.1 Complete 31-Tool Agent Registry (0 Direct-Execution Tools)}
-In \code{backend/app/agent/tools.py}~\cite{ops_chest_repo}, the Store Manager agent accesses exactly 31 typed tools divided cleanly into 22 read/UI-form tools and 9 proposal-creation/revision tools (Table~\ref{tab:ops_tools}). Direct external mutations (sending supplier emails, updating shelf prices, writing off stock, delisting SKUs) are structurally absent from the LLM tool schema.
+\section*{B.1 Typed 31-Tool Agent Registry (Zero Direct-Execution Tools)}
+In \code{backend/app/agent/tools.py}~\cite{ops_chest_repo}, the operations agent exposes exactly 31 typed tools partitioned into 22 read/form tools and 9 proposal tools (Table~\ref{tab:ops_tools}). Auxiliary UI capabilities such as inline expiry OCR forms, manager edit-habit tracking (\code{edit_learning.py}), and hypothesis logging (\code{hypotheses.py}) are unbenchmarked prototype features documented here rather than claimed as evaluated research contributions.
 
 \begin{table}[H]
 \centering
-\caption{Categorized inventory of the 31 typed agent tools in \texttt{ops\_chest}}
+\caption{Categorized inventory of the 31 typed tools in \texttt{ops\_chest}}
 \label{tab:ops_tools}
 \footnotesize
 \begin{tabularx}{\textwidth}{L{3.2cm} r Y}
@@ -48,45 +57,50 @@ Inventory \& Lot Read & 5 & \code{get_inventory_summary}, \code{search_inventory
 Sales, Margin \& Strategy Read & 6 & \code{get_sales_summary}, \code{get_abc_xyz_classification}, \code{get_delist_candidates}, \code{get_suppliers}, \code{get_return_eligible_lots}, \code{get_store_scorecard} \\
 Planning, Audit \& Learning Read & 6 & \code{preview_purchase_order}, \code{list_proposals}, \code{get_kpi_dashboard}, \code{list_hypotheses}, \code{get_edit_patterns}, \code{render_chart} \\
 Inline Manager UI Forms & 5 & \code{open_receive_goods_form}, \code{open_stock_count_form}, \code{open_date_check_form}, \code{open_shelf_pull_form}, \code{open_ocr_label_scan} \\
-Proposal Creation \& Revision (HITL) & 9 & \code{propose_po}, \code{propose_markdown}, \code{propose_return}, \code{propose_dispose}, \code{propose_write_off}, \code{propose_delist}, \code{revise_proposal}, \code{propose_hypothesis}, \code{propose_adjustment} \\
-\textbf{Direct Execution Tools} & \textbf{0} & \textit{Intentionally omitted; execution requires authenticated Store Manager HTTP approval} \\
+Proposal Creation \& Revision & 9 & \code{propose_po}, \code{propose_markdown}, \code{propose_return}, \code{propose_dispose}, \code{propose_write_off}, \code{propose_delist}, \code{revise_proposal}, \code{propose_hypothesis}, \code{propose_adjustment} \\
+\textbf{Direct-Execution Tools} & \textbf{0} & \textit{Structurally omitted from LLM schema; execution requires authenticated Manager approval} \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section*{B.2 HITL Proposal State Machine and Perishable Business Rules}
-Every operational change persists in PostgreSQL (\code{proposals} table) with immutable audit records:
-\begin{itemize}
-    \item \textbf{State transitions:} \texttt{PENDING} $\to$ \texttt{APPROVED} $\to$ \texttt{EXECUTED} (dispatching PO emails via Mailpit/SMTP, updating markdown prices, or posting stock adjustments), or \texttt{PENDING} $\to$ \texttt{REJECTED} / \texttt{REVISED}.
-    \item \textbf{Core retail safeguards:} Blind stock counts hide book quantities from clerks during physical counting; negative-margin pricing triggers automatic escalation; FEFO markdown engine only discounts lots whose projected remaining stock exceeds full-price demand before expiry; and \code{guard.py} blocks ungrounded numbers ($\ge 1{,}000$) and \code{FALSE_EXEC} phrasing.
-\end{itemize}
+\section*{B.2 HITL State Machine and Persistence Stack}
+All proposals persist in PostgreSQL (\code{proposals} table, SQLAlchemy + 6 Alembic migrations) following \texttt{PENDING} $\to$ \texttt{APPROVED} $\to$ \texttt{EXECUTED} (dispatching Mailpit/SMTP purchase orders or updating approved FEFO prices) or \texttt{REJECTED}/\texttt{REVISED}. Blind stock counts conceal book quantities during physical audits, negative-margin pricing triggers warnings, and \code{guard.py} verifies figures $\ge 1{,}000$ and flags \code{FALSE_EXEC} statements.
 
-\chapter{Cross-Module Integration Contract and Reproducible Benchmark Prompts}
+\chapter{Cross-Agent Integration Contract and Reproducibility Specification}
 \label{app:integration}
 
-\section*{C.1 Read-Only Branch Integration Contract (\texttt{Retail-AI-} $\leftrightarrow$ \texttt{ops\_chest})}
-To synchronize front-of-house customer recommendations with back-of-house operational state without weakening HITL isolation, \texttt{Retail-AI-} consumes three read-only endpoints exposed by \texttt{ops\_chest} (Table~\ref{tab:cross_contract}).
+\section*{C.1 Read-Only Cross-Agent API Contract}
+All three repositories (\texttt{Retail-AI-}, \texttt{ops\_chest}, \texttt{ops-retail-bridge}) share \code{data/bridge/crosswalk.csv} (164 fresh SKUs) and the three read-only endpoints summarized in Table~\ref{tab:cross_contract}, implemented in \code{backend/services/ops_bridge.py} and tested end-to-end in \code{tests/test_ops_bridge_e2e.py}.
 
 \begin{table}[H]
 \centering
-\caption{Cross-module read-only API contract linking \texttt{ops\_chest} and \texttt{Retail-AI-}}
+\caption{Read-only cross-agent API contract linking \texttt{ops\_chest} and \texttt{Retail-AI-}}
 \label{tab:cross_contract}
 \footnotesize
 \begin{tabularx}{\textwidth}{L{4.8cm} L{2.8cm} Y}
 \toprule
-\textbf{\texttt{ops\_chest} Endpoint} & \textbf{Direction} & \textbf{Operational Use in \texttt{Retail-AI-} Kiosk} \\
+\textbf{\texttt{ops\_chest} Endpoint} & \textbf{Direction} & \textbf{Behavior in \code{BridgedProductRepository}} \\
 \midrule
-\code{GET /api/inventory/items?sku=...} & \texttt{ops\_chest} $\to$ Kiosk & Suppresses out-of-stock SKUs from kiosk cards and suggests in-stock substitutes \\
-\code{GET /api/inventory/expiring} & \texttt{ops\_chest} $\to$ Kiosk & Surfaces manager-approved near-expiry FEFO markdowns in kiosk promotion queries \\
-\code{GET /api/inventory/summary} & \texttt{ops\_chest} $\to$ Kiosk & Supplies branch-level freshness and promotional health metadata for store status banners \\
+\code{GET /api/inventory/items?sku=...} & \texttt{ops\_chest} $\to$ Kiosk & Overlays live stock (\code{stock_is_current=True}); suppresses out-of-stock SKUs from available search \\
+\code{GET /api/inventory/expiring} & \texttt{ops\_chest} $\to$ Kiosk & Accepts only \texttt{APPROVED}/\texttt{EXECUTED} FEFO markdowns (blocks \texttt{PENDING}) \\
+\code{GET /api/inventory/summary} & \texttt{ops\_chest} $\to$ Kiosk & Supplies \code{as_of} timestamp for fail-closed \code{freshness_ttl_seconds=300} enforcement \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section*{C.2 Reproducible Live Benchmark Verification Commands}
-The quantitative metrics in Chapter~5 can be independently reproduced using the verification suites shipped in both repositories:
+\section*{C.2 2-Fold CV Held-Out Store Lists and Reproducibility Metadata}
 \begin{itemize}
-    \item \textbf{\texttt{Retail-AI-} Backend \& Voice Suites:} \code{pytest tests/ -q} (2,900+ tests; consultation/voice subset 1,038 tests), \code{ruff check backend tests}, and live SSE latency / WS STT audits against \code{127.0.0.1:8000}.
-    \item \textbf{\texttt{Retail-AI-} Frontend Suite:} \texttt{cd apps/kiosk-airi \&\& npx vitest run \&\& npm run build} (148/148 Vitest passing, clean TypeScript/Vite production build).
-    \item \textbf{\texttt{ops\_chest} Backend, Backtest \& Guard Suites:} \code{pytest backend/tests/ -q} (20 suites), \code{python -m app.sim.frn_backtest} (50-store 2-fold CV FreshRetailNet-50K backtest), and \code{eval_failover.json} (20-turn runtime grounding evaluation).
+    \item \textbf{50 Held-Out FreshRetailNet-50K Store IDs (0\% overlap with 848 training stores):}
+    \begin{itemize}
+        \item \emph{Fold~0 (25 stores):} 4, 18, 40, 48, 103, 114, 192, 223, 298, 303, 399, 407, 443, 449, 552, 620, 691, 713, 714, 753, 765, 766, 867, 869, 888.
+        \item \emph{Fold~1 (25 stores):} 104, 143, 193, 243, 245, 258, 264, 390, 415, 420, 432, 488, 494, 513, 532, 548, 583, 629, 663, 701, 710, 752, 786, 803, 879.
+        \item \emph{13 Small Stores ($\le 30$ SKUs):} 114, 223, 407, 443, 629, 663, 691, 710, 752, 766, 786, 803, 869.
+    \end{itemize}
+    \item \textbf{Environment, dataset hashes, and random seeds:} Python~3.13.15, NumPy~2.5.4, Pandas~3.1.1, Matplotlib~3.11.2, FastAPI/Pydantic~v2, Pytest~9.1.1; SHA-256 of \code{data/thanh_lam_products.json}: \code{a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6}; canonical LF SHA-256: \code{8f2ee3771be548b85a8d8981127b2518b8e8e5868584491df36b96317476cbbc}; statistical testing seed \code{seed=42} (20,000 bootstrap resamples, 50,000 paired permutations).
+    \item \textbf{Reproducible verification commands:}
+    \begin{itemize}
+        \item \emph{Inter-agent E2E integration:} \code{pytest tests/test_ops_bridge_e2e.py -v} (2/2 suites passing).
+        \item \emph{\texttt{Retail-AI-} software suites:} \code{pytest tests/ -q} (3,044 tests across 114 files, including 19/19 knowledge QA gates and 100/100 bestseller/stock checks), \code{ruff check backend tests}, and frontend \code{npx vitest run} (178/178 tests).
+        \item \emph{\texttt{ops\_chest} backtest \& tests:} \code{pytest backend/tests/ -q} (20 suites), \code{python -m app.sim.frn_backtest} (50-store 2-fold CV, 553\,s), and \code{eval_failover.json} (20 runtime grounding scenarios).
+    \end{itemize}
 \end{itemize}

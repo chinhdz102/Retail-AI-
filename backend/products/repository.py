@@ -186,7 +186,26 @@ def get_product_repository(settings: Settings | None = None) -> ProductRepositor
         if not snapshot_path.is_absolute():
             snapshot_path = Path(__file__).resolve().parents[2] / snapshot_path
         stat = snapshot_path.stat()
-        return _snapshot_repository(snapshot_path.resolve(), stat.st_mtime_ns, stat.st_size)
+        base_repo = _snapshot_repository(snapshot_path.resolve(), stat.st_mtime_ns, stat.st_size)
+        if selected.ops_chest_api_url.strip():
+            crosswalk_path = Path(selected.ops_chest_crosswalk_path)
+            if not crosswalk_path.is_absolute():
+                crosswalk_path = Path(__file__).resolve().parents[2] / crosswalk_path
+            if crosswalk_path.exists():
+                from backend.services.ops_bridge import (
+                    BridgedProductRepository,
+                    OpsChestBridgeClient,
+                    OpsCrosswalkIndex,
+                )
+
+                crosswalk = OpsCrosswalkIndex.from_csv(crosswalk_path)
+                client = OpsChestBridgeClient(
+                    base_url=selected.ops_chest_api_url.strip(),
+                    crosswalk=crosswalk,
+                    freshness_ttl_seconds=selected.ops_chest_freshness_ttl_seconds,
+                )
+                return BridgedProductRepository(base=base_repo, bridge=client)
+        return base_repo
     raise ValueError(f"Unknown catalog repository: {selected.catalog_repository}")
 
 

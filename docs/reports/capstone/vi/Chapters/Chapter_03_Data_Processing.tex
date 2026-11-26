@@ -1,87 +1,148 @@
-\chapter{Xử lý Dữ liệu}
+\chapter{Dữ liệu và Phân tích Khám phá (EDA)}
 
-Chương này trình bày chi tiết các bộ dữ liệu, lược đồ chuẩn hóa, quy trình làm sạch, kỹ thuật tạo đặc trưng và tiền xử lý tín hiệu âm thanh phục vụ đồng thời cả \texttt{Retail-AI-} và \texttt{ops\_chest}.
+Chương này mô tả đầy đủ các nguồn dữ liệu sử dụng trên hai phân hệ cùng bảng ánh xạ liên kết, thực hiện phân tích khám phá dữ liệu (EDA) định lượng cho cả danh mục bán lẻ lẫn bộ dữ liệu FreshRetailNet-50K, giải thích tác động toán học của phép quy đổi đơn vị $K=10$, và thiết lập quy trình phân chia dữ liệu chống rò rỉ (\emph{anti-leakage protocol}).
 
-\section{Mô tả Dữ liệu}
+\section{Mô tả Dữ liệu và Bảng Ánh xạ Liên phân hệ}
 
-Trên toàn nền tảng tác nhân kép, sáu bộ dữ liệu và tập kiểm chuẩn thực nghiệm được tổ chức rõ ràng cho việc neo danh mục sản phẩm, kiểm thử chống nhiễu giọng nói, đánh giá an toàn và tối ưu nhu cầu hàng tươi sống.
+Hệ thống sử dụng ba nhóm dữ liệu chính được đồng bộ mã băm SHA-256 xuyên suốt ba kho mã nguồn (\texttt{Retail-AI-}, \texttt{ops\_chest}, \texttt{ops-retail-bridge}), tóm tắt tại Bảng~\ref{tab:dataset_stats}.
 
-\textbf{Bản chụp Danh mục Siêu thị Thanh Lam Mart (\texttt{Retail-AI-}).}
-Thu thập ngày 15/09/2026 và lưu tại \code{data/thanh_lam_products.csv} cùng bản chỉ mục JSON \code{data/thanh_lam_products.json}~\cite{thanh_lam_snapshot}, bộ dữ liệu gồm \textbf{3.099 SKU thô} trải rộng trên \textbf{699 thương hiệu} và \textbf{346 đường dẫn ngành hàng phân cấp} (đồ uống, sữa, thịt tươi, thực phẩm khô, chăm sóc cá nhân, hóa phẩm giặt tẩy và đồ gia dụng). Mỗi bản ghi lõi gồm 20 trường cấu trúc (mã SKU, tên sản phẩm chuẩn hóa Việt/Anh, thương hiệu, giá niêm yết, giá khuyến mãi, nội dung ưu đãi, đơn vị tính, quy cách đóng gói và cây ngành hàng). Mười hai trường thống kê mở rộng (số lượng bán 30 ngày, doanh thu, đánh giá, nhãn bán chạy) được tách biệt chủ đích sang \code{data/demo_sales.sqlite3} và gắn nhãn \texttt{SIMULATED} để dữ liệu minh họa không bao giờ bị nhầm với lịch sử POS thực tế.
-
-\textbf{Bộ Kiểm chuẩn SOTA~V2 và Tập Tiếng nói Siêu thị Nhiều Mức Nhiễu (\texttt{Retail-AI-}).}
-Để đánh giá khả năng tổng quát hóa mà không học tủ unit test, nhóm xây dựng bộ 100 câu hỏi tiếng Việt và song ngữ chưa từng thấy (113 lượt hội thoại phủ 10 nhóm: tra cứu trực tiếp, đa thuộc tính, giỏ hàng ngân sách, so sánh, khuyến mãi, an toàn y tế/lâm sàng, phương ngữ/lỗi nhận dạng, câu hỏi vô hại XSTest, tấn công tiêm lệnh red-team OWASP và nhất quán diễn đạt tương đương). Đánh giá âm học kết hợp 8 đoạn giọng người Việt sạch và 8 câu lệnh thương hiệu Thanh Lam Mart dưới 3 mức SNR (sạch, nhiễu siêu thị 12\,dB và nhiễu nặng 5\,dB), cùng 10 truy vấn thực tế đo độ trễ streaming đầu-cuối.
-
-\textbf{Bộ Dữ liệu Nhu cầu Hàng Tươi sống Thực FreshRetailNet-50K (\texttt{ops\_chest}).}
-Nhu cầu vận hành hậu cần được hiệu chuẩn trên bộ dữ liệu công khai \emph{FreshRetailNet-50K} (\code{Dingdong-Inc/FreshRetailNet-50K}, giấy phép CC BY 4.0)~\cite{freshretailnet50k}, ghi nhận lượng bán theo giờ và cờ đứt hàng tại các cửa hàng tiện lợi thực tế. \texttt{ops\_chest} sử dụng \textbf{50 cửa hàng kiểm định độc lập} (2.675 chuỗi thời gian SKU--cửa hàng) cho huấn luyện, đánh giá ML ngoài mẫu và backtest lợi nhuận từ 28/03/2024 đến 02/07/2024 (90 ngày lịch sử đến mốc cắt $T_{\text{cut}} = \text{25/06/2024}$, mốc khởi đầu backtest $T_0 = \text{26/05/2024}$ và tuần đánh giá 7 ngày). \textbf{Cửa hàng mẫu số 18} đóng vai trò môi trường vận hành tương tác với \textbf{164 SKU tươi sống} trong 90 ngày. Vì FreshRetailNet-50K ẩn danh tên hàng và không kèm giá bán/hợp đồng nhà cung cấp, mô-đun \code{frn_catalog.py} gán xác định tên hiển thị trung tính, giá bán (12.000--80.000\,VND), tỷ lệ giá vốn (62--75\%), hạn dùng 1--3 ngày, nhà cung cấp giả lập (\texttt{*.test}) và cờ top-5 mặt hàng hút khách. Một môi trường tổng hợp phụ 263 SKU $\times$ 365 ngày (\code{--source synthetic}) được giữ riêng để chạy kiểm thử đơn vị cho các quy tắc nghiệp vụ.
+\begin{enumerate}
+    \item \textbf{Danh mục Sản phẩm Bán lẻ và Kho Tri thức (\texttt{Retail-AI-}):} Bản chụp danh mục ngày 15/09/2026 (\code{data/thanh_lam_products.json/.csv}, SHA-256 \code{a0eb16ac1ae2557e...})~\cite{thanh_lam_snapshot} gồm \textbf{3.099 SKU thô} thuộc 698 thương hiệu hợp lệ, 74 danh mục lá và 346 đường dẫn phân cấp. Sau khi cách ly 18 bản ghi có lỗi giá (\code{sale_price_vnd > price_vnd}), tập hoạt động gồm \textbf{3.081 SKU hợp lệ} (580 SKU có khuyến mãi, 9 SKU có tồn chụp bằng 0). Kho tri thức làm giàu đa nguồn (\code{data/thanh_lam_product_details.json}) bổ sung thông tin thành phần, hướng dẫn sử dụng, bảo quản và xuất xứ cho \textbf{2.205/3.099 SKU (71,15\%)}, bao gồm 1.366 bản ghi thành phần bán lẻ hợp cùng 20 bản ghi công bố nhà sản xuất thành \textbf{1.374 SKU} có thành phần xác minh. Dữ liệu lượt bán 30 ngày của 3.081 SKU được lưu tách biệt tại \code{data/demo_sales.sqlite3} dưới nhãn bắt buộc \texttt{SIMULATED}.
+    \item \textbf{Dữ liệu Nhu cầu Hàng Tươi sống Thực FreshRetailNet-50K (\texttt{ops\_chest}):} Khai thác bộ dữ liệu mở \emph{FreshRetailNet-50K} (CC BY 4.0)~\cite{freshretailnet50k} gồm \textbf{4.850.000 dòng} (50.000 chuỗi SKU--cửa hàng $\times$ 97 ngày, từ 28/03/2024 đến 02/07/2024) trên \textbf{898 cửa hàng} có cờ đứt hàng theo giờ. Tập được tách chặt theo cấp cửa hàng thành \textbf{848 cửa hàng huấn luyện} (47.325 chuỗi) và \textbf{50 cửa hàng kiểm định độc lập} (2.675 chuỗi, 259.475 dòng). Cửa hàng mẫu số 18 (164 SKU tươi sống) đóng vai trò môi trường mô phỏng vận hành.
+    \item \textbf{Bảng Ánh xạ SKU Dùng chung (\texttt{ops-retail-bridge}):} Do FreshRetailNet-50K ẩn danh tên sản phẩm và giá bán, kho cầu nối \texttt{ops-retail-bridge}~\cite{ops_retail_bridge_repo} xây dựng bảng \code{data/bridge/crosswalk.csv} ánh xạ \textbf{164/164 SKU tươi sống} (\code{F0004}--\code{F0793}) của Cửa hàng 18 sang đúng 164 \code{product_id} hợp lệ trong \code{thanh_lam_products.json} (0 sai lệch tên, 0 sai lệch giá niêm yết, 0 tham chiếu SKU cách ly). Ánh xạ mang nhãn giả định mô phỏng (\code{method=auto-v1}) và đi kèm tệp \code{ops_catalog_overrides.json} (164 SKU, 7 nhà cung cấp giả lập). Lưu ý minh bạch rằng 6/164 mã tươi sống có tồn chụp tĩnh bằng 0 ở ngày 15/09/2026 trên \code{thanh_lam_products.json}, trong khi \texttt{ops\_chest} quản lý sổ lô tồn kho động theo từng ngày mô phỏng.
+\end{enumerate}
 
 \begin{table}[H]
 \centering
-\caption{Thống kê các bộ dữ liệu và tập kiểm chuẩn sử dụng trên cả hai kho mã nguồn}
+\caption{Thống kê các bộ dữ liệu và tập kiểm chuẩn trên toàn bộ hệ thống}
 \label{tab:dataset_stats}
 \footnotesize
-\begin{tabularx}{\textwidth}{L{3.5cm} L{2.2cm} L{3.6cm} Y}
+\begin{tabularx}{\textwidth}{L{3.5cm} L{2.1cm} L{3.8cm} Y}
 \toprule
-\textbf{Bộ dữ liệu / Tập kiểm thử} & \textbf{Phân hệ} & \textbf{Quy mô / Phân chia} & \textbf{Vai trò \& Nguồn gốc} \\
+\textbf{Bộ dữ liệu / Tập kiểm chuẩn} & \textbf{Phân hệ} & \textbf{Quy mô \& Cấu trúc} & \textbf{Nguồn gốc \& Vai trò} \\
 \midrule
-Danh mục Thanh Lam Mart (\code{thanh_lam_products}) & \texttt{Retail-AI-} & 3.099 SKU thô (3.081 hợp lệ, 18 cách ly); 699 thương hiệu; 346 nhánh ngành; 3.096 ảnh & Cơ sở dữ liệu gốc cho tìm kiếm, đơn giá quy đổi, popup ảnh sản phẩm và khuyến mãi (15/09/2026) \\
-Kho Tri thức Sản phẩm Đa nguồn (\code{thanh_lam_product_details} + pilot) & \texttt{Retail-AI-} & 2.137/3.099 SKU sạch (1.214+18 thành phần, 1.064+ chi tiết, 1.159 HDSD, 660 bảo quản, 800 xuất xứ) & Crawl SSR Thanh Lam Mart + đối chiếu mã vạch EAN-13/nhãn Kingfoodmart \& Long Châu; qua 8 tầng làm sạch đạt \textbf{0 lỗi QA} \\
-Dữ liệu bán thử (\code{demo_sales.sqlite3}) & \texttt{Retail-AI-} & Lượt bán 30 ngày của 3.099 SKU & Xếp hạng bán chạy xác định tách biệt (hỗ trợ khẩu ngữ), luôn gắn nhãn \texttt{SIMULATED} \\
-Tập SOTA~V2, 100Q Chuyên gia \& Audit Production & \texttt{Retail-AI-} & 100 câu SOTA~V2 (113 lượt) + 100 câu danh mục mới + 12 câu live \texttt{sin1} & Đo độ chính xác, 5 chuẩn SOTA (RAGAS/DeepEval/RAGChecker/$\tau$-bench), TTFT \& bộ đệm ngữ nghĩa \\
-Tập Tiếng nói Đa Mức SNR & \texttt{Retail-AI-} & 8 mẫu người thật + 8 mẫu thương hiệu $\times$ 3 mức SNR (Sạch, 12\,dB, 5\,dB) & So sánh WER 5 cấu hình STT, khử nhiễu nơ-ron và trễ WebSocket \\
-FreshRetailNet-50K (\code{frn})~\cite{freshretailnet50k} & \texttt{ops\_chest} & 50 cửa hàng (2.675 chuỗi); Cửa hàng 18: 164 SKU $\times$ 90 ngày; 200k kiểm tra khôi phục & Hiệu chuẩn nhu cầu tươi sống thực, LightGBM~v3 phân vị và backtest lợi nhuận 37 ngày \\
-Cửa hàng Tổng hợp (\code{--source synthetic}) & \texttt{ops\_chest} & 263 SKU $\times$ 365 ngày & Unit test xác định cho FEFO, trả hàng NCC, kiểm kê mù và HITL \\
+Danh mục Bán lẻ (\code{thanh_lam_products}) & \texttt{Retail-AI-} & 3.099 thô (3.081 hợp lệ, 18 cách ly); 698 thương hiệu; 74 danh mục lá; 346 đường dẫn & Bản chụp 15/09/2026; cơ sở căn cứ tìm kiếm, đơn giá quy đổi và khuyến mãi \\
+Kho Tri thức Sản phẩm (\code{thanh_lam_product_details}) & \texttt{Retail-AI-} & 2.205/3.099 SKU (71,15\%): 1.374 thành phần, 1.403 HDSD, 650 bảo quản, 1.236 xuất xứ & Làm giàu đa nguồn (SSR + EAN-13); qua pipeline làm sạch 8 tầng (4.606 $\to$ 0 lỗi) \\
+Kho Bán thử Tách biệt (\code{demo_sales.sqlite3}) & \texttt{Retail-AI-} & 3.081 bản ghi lượt bán 30 ngày & Xếp hạng bán chạy mô phỏng xác định, luôn gắn nhãn \texttt{SIMULATED} \\
+Bảng Ánh xạ Cầu nối (\code{data/bridge/crosswalk.csv}) & Liên phân hệ & 164/164 SKU tươi sống khớp 100\% \code{product_id}, tên \& giá niêm yết & Đồng bộ định danh giữa \texttt{ops\_chest} và \texttt{Retail-AI-} cho kiểm thử liên thông E2E \\
+Tập Đánh giá Hội thoại \& Ảnh & \texttt{Retail-AI-} & 100Q SOTA~V2 (Dev); 100Q Chuyên gia + 50Q Test Độc lập + 100Q Bán chạy/Tồn; 16+4 ảnh \emph{zero-leakage} & Phân tách tập phát triển và tập kiểm thử độc lập cho độ chính xác, an toàn, ablation và thị giác \\
+Tập Âm thanh Thí điểm & \texttt{Retail-AI-} & 8 câu giọng Việt + 8 cụm thương hiệu $\times$ 3 mức SNR (Sạch, 12\,dB, 5\,dB) & Nghiên cứu thí điểm độ bền ASR hỗ trợ giao diện giọng nói \\
+FreshRetailNet-50K~\cite{freshretailnet50k} & \texttt{ops\_chest} & 4,85\,M dòng (848 cửa hàng train, 50 cửa hàng held-out = 2.675 chuỗi, 259.475 dòng) & Dữ liệu nhu cầu tươi sống thực theo giờ; huấn luyện LightGBM~v3 và backtest lợi nhuận \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\subsection*{Trực quan hóa Dữ liệu Danh mục}
-Hình~\ref{fig:thanh_lam_dist} minh họa phân bố top-10 nhóm ngành hàng và phân bố giá bán tham khảo của 3.099 SKU Thanh Lam Mart, cho thấy mật độ mã hàng tập trung mạnh ở các ngành hàng tiêu dùng thiết yếu hằng ngày và phân bố giá lệch phải tập trung quanh ngưỡng 35.000--45.000\,VND.
+\section{Phân tích Khám phá Dữ liệu (EDA)}
+
+\subsection*{EDA Danh mục Sản phẩm Bán lẻ (\texttt{Retail-AI-})}
+Kiểm tra toàn vẹn trên 3.099 bản ghi cho thấy \textbf{0 mã \code{product_id} trùng lặp}, \textbf{0 mã vạch \code{barcode} trùng lặp}, 30 bản ghi thiếu tên thương hiệu (0,97\%) và 3 bản ghi thiếu URL ảnh (0,10\%). Mười tám dòng lỗi giá (\code{sale_price_vnd > price_vnd}, chiếm 0,58\%) bị cách ly ngay tại bước nạp. Trên 3.081 SKU hợp lệ, giá bán lệch phải mạnh: giá tối thiểu 3.500\,đ, tứ phân vị $Q_1 = 27.200$\,đ, trung vị \textbf{52.400\,đ}, trung bình \textbf{90.853\,đ} (độ lệch chuẩn 126.855\,đ), $Q_3 = 111.800$\,đ, P95 = 264.000\,đ, P99 = 562.920\,đ và cực đại 2.479.000\,đ; có 222 điểm ngoại lai trên ngưỡng $Q_3 + 1{,}5\,\text{IQR}$ (chủ yếu là thùng bia, sữa công thức và đồ gia dụng lớn). Hình~\ref{fig:thanh_lam_dist} trực quan hóa \textbf{top-10 danh mục sản phẩm thực tế} (dẫn đầu bởi \emph{Chăm Sóc Da} 202 SKU, \emph{Kẹo -- Chocolate} 167 SKU và \emph{Nước Ngọt} 159 SKU) cùng phân bố giá bán tham khảo.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.98\textwidth]{Images/fig_catalog_distribution.png}
-    \caption{Phân bố top-10 ngành hàng (trái) và phân bố giá tham khảo (phải) của bản chụp danh mục Thanh Lam Mart ($N = 3.099$ SKU).}
+    \caption{Phân bố top-10 danh mục sản phẩm thực tế (\code{category_name}, trái) và phân bố giá tham khảo kèm trung vị, trung bình và P95 (phải) trên 3.081 SKU hợp lệ.}
     \label{fig:thanh_lam_dist}
 \end{figure}
 
-\section{Tiền xử lý và Làm sạch Dữ liệu}
+\subsection*{EDA Bộ Dữ liệu Nhu cầu Hàng Tươi sống FreshRetailNet-50K (\texttt{ops\_chest})}
+Để làm rõ bản chất bài toán dự báo và cơ sở lựa chọn đặc trưng cũng như ngưỡng định tuyến, nhóm thực hiện phân tích khám phá định lượng trên toàn bộ \textbf{259.475 bản ghi} của 50 cửa hàng kiểm định (2.675 chuỗi $\times$ 97 ngày). Bảng~\ref{tab:frn_eda_summary} và Hình~\ref{fig:frn_eda} tổng hợp tám chiều phân tích cốt lõi:
+\begin{itemize}
+    \item \textbf{Chất lượng dữ liệu:} Không có giá trị khuyết (\textbf{0 missing values} trên toàn bộ 16 cột) và \textbf{0 dòng trùng lặp} theo khóa \code{(store_id, product_id, day)}.
+    \item \textbf{Mức độ kiểm duyệt do đứt hàng và tác động của Demand Recovery:} Có tới \textbf{43,84\%} tổng số ngày--SKU (\textbf{113.754 / 259.475} dòng) xảy ra đứt hàng ít nhất 1 giờ, với thời lượng đứt hàng trung bình \textbf{7,17 giờ/ngày}. Trên các ngày đứt hàng, doanh số thô quan sát chỉ đạt trung bình \textbf{1,03 đơn vị FRN} (trung vị 0,70), trong khi nhu cầu sau khôi phục theo hồ sơ giờ tăng lên trung bình \textbf{1,70 đơn vị} (trung vị 1,13)---tương ứng mức điều chỉnh \textbf{+65,1\%} trên ngày đứt hàng (+29,1\% trên toàn bộ 259.475 dòng, Hình~\ref{fig:frn_eda}a).
+    \item \textbf{Phân bố nhu cầu, ngoại lai và tính gián đoạn:} Nhu cầu ngày lệch phải mạnh (độ lệch \textbf{skewness = 8,54}), trung vị 0,85, IQR $[0{,}50;\,1{,}46]$, P95 = 3,70, P99 = 7,20 và cực đại 49,13 (2.594 quan sát vượt P99). Theo phân loại Syntetos--Boylan~\cite{syntetos2005intermittent}, 82,0\% chuỗi thuộc nhóm đều (\emph{smooth}), \textbf{17,6\%} thuộc nhóm biến động mạnh (\emph{erratic}, $\text{CV}^2 \ge 0{,}49$), và 0,4\% thuộc nhóm gián đoạn/cục bộ (\emph{lumpy}), với tỷ lệ ngày cầu bằng 0 trung bình là 1,21\%.
+    \item \textbf{Sự phân hóa quy mô cửa hàng:} Số lượng SKU tươi sống hoạt động mỗi cửa hàng dao động rộng từ \textbf{14 đến 164 SKU} (trung vị 49 SKU), tách tự nhiên thành \textbf{13 cửa hàng nhỏ ($\le 30$ SKU)} và \textbf{37 cửa hàng vừa/lớn ($> 30$ SKU)} (Hình~\ref{fig:frn_eda}b). Đây là cơ sở dữ liệu trực tiếp giải thích vì sao phương sai đuôi của mô hình phân vị gây đặt dư nghiêm trọng trên nhóm 13 cửa hàng nhỏ.
+    \item \textbf{Tính mùa vụ và xu hướng thời gian:} Nhu cầu cuối tuần (Thứ Bảy 1,55; Chủ Nhật 1,65) cao hơn \textbf{+35,5\%} so với ngày thường (Thứ Hai--Thứ Sáu: 1,11--1,25), còn ngày lễ cao hơn \textbf{+31,5\%} (1,54 so với 1,17, Hình~\ref{fig:frn_eda}c). Xuyên suốt 97 ngày (cuối tháng 3 đến đầu tháng 7), nhu cầu trung bình tăng nhẹ theo xu hướng mùa hè (1,22 ở 30 ngày đầu $\to$ 1,31 ở 30 ngày giữa $\to$ 1,36 ở 37 ngày cuối).
+    \item \textbf{Tương quan đặc trưng và mức đóng góp trong LightGBM:} Phân tích tương quan Pearson trên chuỗi đã khôi phục cho thấy nhu cầu ngày tương quan mạnh nhất với trung bình trượt 7 ngày (\code{mean7}, $r = 0{,}897$), độ trễ cùng thứ tuần trước (\code{lag7}, $r = 0{,}866$), độ trễ ngày hôm trước (\code{lag1}, $r = 0{,}851$), độ lệch chuẩn 28 ngày (\code{std28}, $r = 0{,}630$), tỷ lệ giá sau giảm (\code{discount}, $r = -0{,}377$, giá càng giảm cầu càng tăng) và tần suất đứt hàng quá khứ (\code{stockout28}, $r = +0{,}199$). Kết quả này nhất quán cao với top đặc trưng có mức đóng góp chia nhánh (\emph{split gain}) lớn nhất của LightGBM~v3 (Hình~\ref{fig:frn_eda}d): \code{cat2} (20,5\%), \code{ewma_h} (16,4\%), \code{target_wd} (13,1\%), \code{mean7} (9,5\%), \code{log_level} (7,6\%) và \code{stockout28} (4,9\%).
+\end{itemize}
 
-\subsection*{Cách ly Lỗi Lược đồ và Chuẩn hóa Từ vựng Danh mục (\texttt{Retail-AI-})}
-Mọi bản ghi nạp vào \texttt{Retail-AI-} đều đi qua lớp kiểm định Pydantic chặt chẽ (\code{ThanhLamRow}):
-\begin{enumerate}
-    \item \textbf{Cách ly bất thường giá:} 18 trong số 3.099 dòng thô (0,58\%) bị lỗi giá khuyến mãi cao hơn giá niêm yết; bộ nạp tự động cách ly 18 bản ghi này và đưa 3.081 SKU hợp lệ (99,42\%) vào danh mục truy xuất.
-    \item \textbf{Đánh chỉ mục không dấu và đồng nghĩa:} Tên sản phẩm, thương hiệu và đường dẫn ngành hàng được chuẩn hóa Unicode NFC và lược bỏ dấu tiếng Việt (\code{normalize_category_text}) để dựng bảng chỉ mục đảo sẵn trong \code{SnapshotProductRepository}, rút ngắn tốc độ truy xuất từ $3{,}7\times$ đến $4{,}5\times$.
-    \item \textbf{Trích xuất định lượng và thuộc tính:} Biểu thức chính quy bóc tách trọng lượng/thể tích/quy cách (g, kg, ml, L, gói, lốc, thùng) phục vụ quy đổi đơn giá chuẩn (Công thức~\ref{eq:unit_price}), nhãn đường (\emph{không đường}, \emph{ít đường}) và đối tượng sử dụng.
-    \item \textbf{Hàng rào sửa lỗi ASR neo theo danh mục:} Do đối sánh mờ thô sơ với 3.099 tên hàng từng làm hỏng từ tiếng Việt thông thường (như biến \emph{``vĩnh viễn''} $\to$ \emph{``MINH viền''}, \emph{``anh em''} $\to$ \emph{``Bánh em''}, \emph{``Campuchia''} $\to$ \emph{``Capuchiano''} và \emph{``Home''} $\to$ \emph{``Wmhome''}), mô-đun \code{catalog_transcription.py} áp dụng danh sách bảo vệ \code{_NEVER_CORRECT} song song với cụm sửa thương hiệu đã kiểm chứng (\emph{Thanh Lam Mart hôn} $\to$ \emph{Thanh Lam Home}, \emph{ACFOGS} $\to$ \emph{ACEFOODS}, \emph{khăn mặt proton} $\to$ \emph{khăn mặt cotton}).
-\end{enumerate}
-
-\subsection*{Làm giàu Tri thức Thành phần Đa nguồn và Pipeline Làm sạch 8 Tầng (\texttt{Retail-AI-})}
-Vì bản chụp CSV/JSON gốc của Thanh Lam Mart thiếu trường thành phần, hướng dẫn sử dụng và bảo quản, nhóm xây dựng quy trình thu thập và chuẩn hóa tri thức sản phẩm toàn danh mục (\code{scripts/crawl_thanh_lam_product_details.py}, \code{scripts/enrich_detailed_ingredients.py}, \code{scripts/clean_thanh_lam_product_details.py}) gắn chặt mã băm SHA-256 của \code{thanh_lam_products.json} mà không làm thay đổi tệp catalog gốc:
-\begin{enumerate}
-    \item \textbf{Thu thập toàn bộ 3.099 trang SSR Thanh Lam Mart và đối chiếu nhãn đa nguồn:} Trích xuất dữ liệu \code{__NEXT_DATA__} từ toàn bộ 3.099/3.099 trang Thanh Lam Mart trong 79\,giây, sau đó nâng cấp các SKU thiếu thành phần hoặc chỉ có mô tả tiếp thị chung chung (ví dụ \emph{Tương ớt Chin Su chai 1kg} ban đầu chỉ ghi \emph{``ớt tươi chọn lọc cùng các chất phụ gia''}) bằng cách đối chiếu nguồn nhãn công khai từ \textbf{Kingfoodmart} (10.281 sản phẩm) và \textbf{Nhà thuốc Long Châu} (dược mỹ phẩm \& chăm sóc cá nhân). Cơ chế xác minh hai tầng chỉ chấp nhận \textbf{333 khớp mã vạch EAN-13 chính xác tuyệt đối} (\code{variant.sku == barcode}) và \textbf{226 khớp chặt thương hiệu--dạng bào chế--hương vị} (loại trừ 64 ca nghi vấn lệch dòng/vật liệu như \emph{TH Milk vs.\ Dalat Milk}, \emph{lăn vs.\ xịt khử mùi}, \emph{PVC vs.\ PE}, \emph{sữa thường vs.\ lactose-free}).
-    \item \textbf{Pipeline làm sạch 8 tầng chuẩn Hugging Face \code{datatrove}/FineWeb~\cite{hf_datatrove} \& OpenFoodFacts~\cite{openfoodfacts}:} Chuẩn hóa Unicode NFC, loại bỏ ký tự ẩn (\texttt{U+200B}, \texttt{U+00A0}), xóa ngoặc rỗng \code{()} và lỗi OCR; tự động chèn dấu chấm ngăn tách dòng \code{<li>} bị dính mà vẫn bảo vệ cụm danh từ Việt (\emph{Sữa Rửa Mặt}, \emph{Nước Lau Sàn}); cân bằng cặp ngoặc đơn và cắt sạch tại ranh giới câu thay vì cắt cụt \code{...}; tách lỗi tràn chéo trường (\emph{Hướng dẫn sử dụng}/\emph{Bảo quản} lẫn vào \emph{Thành phần}); cách ly 100\% rác OCR ngoại ngữ và các tuyên bố dị ứng chưa xác minh có rủi ro an toàn thực phẩm (như chuỗi \emph{``NO MILK. SAFE FOR MILK ALLERGIES''} trên bánh quy Oreo); giữ chuẩn danh pháp mỹ phẩm INCI; và áp dụng \textbf{bộ lọc thực thể có ranh giới từ (word-boundary regex)} kiểm tra vế sau cụm \emph{``làm từ/làm bằng''} để loại bỏ triệt để các câu sáo rỗng lặp tên hàng, câu cụt (\emph{``Có trong bánh...''}) cũng như giả dương tính từ ghép (như \emph{``sả''} trong \emph{``sản phẩm''} hay \emph{``tiêu''} trong \emph{``tiêu chí''}).
-    \item \textbf{Kiến trúc 3 tầng ưu tiên bằng chứng (\code{backend/products/knowledge.py}):} Tại thời điểm chạy, hệ thống luôn tuân thủ thứ tự ưu tiên bất biến \texttt{SOURCE\_RECORD} $>$ \texttt{MANUFACTURER\_DECLARATION} (18 SKU công bố hãng chuẩn trong \code{product_knowledge_enrichment_pilot.json}) $>$ \texttt{RETAILER\_LISTING} (\code{thanh_lam_product_details.json}, luôn trích nguồn minh bạch và nhắc khách xem bao bì), và tự động hạ về \texttt{UNKNOWN} với sản phẩm chưa có bảng thành phần xác thực. Kết quả đưa toàn bộ \textbf{4.606 lỗi trên 11 tiêu chí xuống còn 0 lỗi (sạch 100\%)}, nâng tổng độ phủ lên \textbf{2.137/3.099 SKU (69,0\%)} với \textbf{1.214 + 18 SKU} có thành phần sạch (\textbf{1.064+} bảng thành phần định lượng/INCI chi tiết, tăng $2{,}1\times$ so với bản crawl thô Thanh Lam Mart), \textbf{1.159} hướng dẫn sử dụng, \textbf{660} hướng dẫn bảo quản và \textbf{800} xuất xứ (Hình~\ref{fig:catalog_enrichment_cleaning}).
-\end{enumerate}
+\begin{table}[H]
+\centering
+\caption{Tổng hợp kết quả Phân tích Khám phá Dữ liệu (EDA) trên FreshRetailNet-50K (50 cửa hàng kiểm định, $N = 259.475$ dòng)}
+\label{tab:frn_eda_summary}
+\footnotesize
+\begin{tabularx}{\textwidth}{L{4.2cm} L{4.2cm} Y}
+\toprule
+\textbf{Chiều Phân tích EDA} & \textbf{Chỉ số Định lượng} & \textbf{Hàm ý Thiết kế Mô hình} \\
+\midrule
+Khuyết thiếu \& Trùng lặp & 0 missing values; 0 duplicate rows & Dữ liệu bảng sạch cấu trúc, không cần suy diễn khuyết cột tĩnh \\
+Tỷ lệ Đứt hàng (\code{stock_hours>0}) & 43,84\% ngày--SKU (113.754 dòng; TB 7,17\,h) & Không thể dùng doanh số thô; bắt buộc khôi phục nhu cầu trước khi huấn luyện \\
+Trước vs.\ Sau Khôi phục & Ngày OOS: TB $1{,}03 \to 1{,}70$ (+65,1\%); toàn tập $+29{,}1\%$ & Loại bỏ thiên lệch âm hệ thống (kiểm chứng giảm lệch $-32{,}3\% \to -0{,}1\%$) \\
+Phân bố Nhu cầu \& Ngoại lai & Trung vị 0,85; IQR $[0{,}50;\,1{,}46]$; P99 7,20; Skew 8,54 & Lệch phải mạnh $\Rightarrow$ ưu tiên hàm mất mát pinball (phân vị) và đặc trưng \code{log_level} \\
+Phân bố Cỡ Cửa hàng & 14--164 SKU (TB vị 49); 13 nhỏ ($\le 30$), 37 lớn ($>30$) & Hỗ trợ cơ chế định tuyến phân tầng theo quy mô cửa hàng trong \texttt{B-Gate} \\
+Tính Gián đoạn (Syntetos--Boylan) & 82,0\% smooth; 17,6\% erratic; 0,4\% lumpy; 1,21\% ngày 0 & Nhóm \emph{erratic} có đuôi biến động lớn $\Rightarrow$ tách trung vị ML khỏi phương sai EWMA \\
+Mùa vụ \& Xu hướng & Cuối tuần +35,5\%; ngày lễ +31,5\%; xu hướng $1{,}22 \to 1{,}36$ & Giải thích trọng số cao của \code{target_wd}, \code{target_holiday} và \code{trend} \\
+Tương quan Đặc trưng ($r$) & \code{mean7} (0,90), \code{lag7} (0,87), \code{lag1} (0,85), \code{std28} (0,63), \code{discount} ($-0{,}38$) & Khẳng định cơ sở toán học của bộ 29 đặc trưng trễ, neo EWMA và lịch \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{Images/fig_catalog_enrichment_cleaning.png}
-    \caption{Kiểm toán loại bỏ 4.606 lỗi trên 11 tiêu chí về 0 bằng pipeline làm sạch 8 tầng (trái) và tăng trưởng độ phủ tri thức sản phẩm đã xác minh qua các giai đoạn làm giàu đa nguồn (phải).}
-    \label{fig:catalog_enrichment_cleaning}
+    \includegraphics[width=0.98\textwidth]{Images/fig_frn_eda.png}
+    \caption{Phân tích khám phá dữ liệu FreshRetailNet-50K (50 cửa hàng kiểm định, 259.475 dòng): (a)~phân bố doanh số quan sát so với nhu cầu sau khôi phục trên ngày đứt hàng, (b)~phân bố quy mô cửa hàng quanh ngưỡng \code{size_cut=30}, (c)~tính mùa vụ thứ--ngày lễ, và (d)~mức đóng góp chia nhánh top-12 đặc trưng của LightGBM~v3 (\code{q50}).}
+    \label{fig:frn_eda}
 \end{figure}
 
-\subsection*{Tiền xử lý Âm thanh và Tăng cường Tiếng nói (\texttt{Retail-AI-})}
-AudioWorklet trên trình duyệt thu tín hiệu đơn kênh 16\,kHz dạng Float32 theo từng khung 32\,ms (512 mẫu) với AEC, AGC và lọc nhiễu phần cứng. Trên luồng WebSocket, bộ đệm vòng 8 khung (256\,ms) giữ trọn phụ âm đầu của tiếng Việt rồi chuyển sang PCM16 có dấu. Trên luồng REST/cứu hộ (\code{speech_activity.py}, \code{speech_denoiser.py}), đoạn âm thanh được giải mã bằng PyAV về 16\,kHz, cắt gọn theo biên tiếng nói Silero VAD~v6 (đệm $\pm 180/200$\,ms), qua bộ lọc thông cao 85\,Hz (Công thức~\ref{eq:hpf85}) và khử nhiễu có điều kiện bằng \texttt{DPDFNet2} ONNX theo Công thức~\ref{eq:snr_blend}.
+\subsection*{Phân tích Tác động của Phép Quy đổi Đơn vị $K = 10$ trên FreshRetailNet}
+Trong bộ dữ liệu gốc FreshRetailNet-50K, đơn vị bán được chuẩn hóa dưới dạng số thực nhỏ (trung vị nhu cầu trung bình theo SKU chỉ đạt $\bar{\mu}_{\text{FRN}} = 0{,}851$ đơn vị/ngày). Nếu đưa trực tiếp thang đo này vào bộ mô phỏng tồn kho đơn vị nguyên theo lô hạn dùng 1--3 ngày, hai méo lệch nghiêm trọng xảy ra: (i) làm tròn số nguyên (\emph{rounding quantization}) giữa 0, 1 và 2 gói tạo sai số tương đối tới 50--100\% lượng đặt mỗi ngày; và (ii) sàn phương sai Poisson của EWMA ($\sigma_{\text{Poisson}} = \sqrt{\mu}$) cho hệ số biến thiên $\text{CV} = 1/\sqrt{0{,}851} = 1{,}084$, buộc công thức Newsvendor dự trữ tồn kho an toàn phóng đại một cách giả tạo.
 
-\subsection*{Khôi phục Nhu cầu Đứt hàng và Tạo 29 Đặc trưng (\texttt{ops\_chest})}
-Trong \texttt{ops\_chest} (\code{ml_features.py} và \code{forecast.py}), dữ liệu bán hàng thô FreshRetailNet trải qua ba bước tiền xử lý cốt lõi trước khi huấn luyện LightGBM phân vị:
+Khi nhân tuyến tính sản lượng với hằng số $K = 10$, trung vị nhu cầu SKU chuyển sang $\bar{\mu}_{K=10} = 8{,}51$ đơn vị/ngày---phù hợp với tốc độ bán thực tế của mặt hàng tươi sống tại cửa hàng tiện lợi---kéo hệ số biến thiên sàn Poisson xuống mức thực tế $\text{CV} = 1/\sqrt{8{,}51} = 0{,}343$ (giảm $\sqrt{10}\approx 3{,}16$ lần sai số lượng tử hóa). Về mặt toán học, do doanh thu, giá vốn và chi phí hủy hàng đều tỷ lệ tuyến tính với số đơn vị và áp dụng đồng nhất cho cả Baseline~A, \texttt{B-EWMA} lẫn \texttt{B-Gate}, các chỉ số so sánh tương đối (phần trăm tăng lợi nhuận, tỷ lệ hủy\%, tỷ lệ OOS\%) được bảo toàn tính công bằng giữa các phương pháp. Tuy vậy, độ nhạy với độ rời rạc số nguyên khiến cần lưu ý rằng biên độ chênh lệch tuyệt đối theo VND trong mô phỏng phụ thuộc trực tiếp vào giả định thang đo $K=10$ này.
+
+\section{Tiền xử lý, Làm sạch và Quy trình Phân chia Chống Rò rỉ Dữ liệu}
+
+\subsection*{Làm sạch Dữ liệu Danh mục và Tạo 29 Đặc trưng Chuỗi thời gian}
+Trên \texttt{Retail-AI-}, ngoài cách ly 18 dòng lỗi giá, nhóm xây dựng pipeline làm sạch 8 tầng cho kho tri thức sản phẩm (chuẩn hóa Unicode NFC, sửa tách mục \code{<li>}, cân bằng ngoặc đơn, tách tràn chéo trường, cách ly rác OCR và tuyên bố dị ứng chưa xác minh theo chuẩn \code{datatrove}~\cite{hf_datatrove} và OpenFoodFacts~\cite{openfoodfacts}), đưa 4.606 lỗi thô trên 11 tiêu chí về 0 lỗi và mở rộng độ phủ lên \textbf{2.205/3.099 SKU (71,15\%)} (chi tiết từng tầng trình bày ở Phụ lục~A). Trên \texttt{ops\_chest}, sau bước khôi phục nhu cầu theo hồ sơ giờ (Công thức~\ref{eq:wape_recovery}, giảm WAPE ngày đứt hàng từ 32,3\% xuống 20,5\% và thiên lệch từ $-32{,}3\%$ xuống $-0{,}1\%$ trên $n=200.000$ mẫu che khuất), mô-đun \code{ml_features.py} xây dựng \textbf{29 đặc trưng} cho từng chân trời $h \in \{1,\dots,7\}$: 7 độ trễ ngày (\code{lag1}--\code{lag7}), trung bình trượt (\code{mean3}, \code{mean7}, \code{mean14}), cùng thứ (\code{same_wd}, \code{same_wd_last}), phân tán và gián đoạn 28 ngày (\code{std28}, \code{zero28}), lịch sử đứt hàng (\code{stockout28}, \code{stockout7}, \code{days_since_stockout}, \code{stockout_last}), xu hướng/mức log (\code{trend}, \code{log_level}), điểm neo EWMA 56 ngày (\code{ewma_h}, \code{ewma_sigma}), biến lịch/chân trời (\code{h}, \code{target_wd}, \code{origin_wd}, \code{target_holiday}) và phân cấp ngành hàng (\code{mgmt_group}, \code{cat1}, \code{cat2}). Các đặc trưng giảm giá tương lai (gây lệch $-15{,}7\%$ ở v1) và khử co giãn giá (gây lệch 14--31\% ở v2) được loại bỏ có kiểm soát ở phiên bản v3.
+
+\subsection*{Quy trình Phân chia Train / Validation / Test và Ngăn chặn Data Leakage}
+Để bảo đảm tính độc lập của kết quả kiểm chứng, Hình~\ref{fig:data_split_leakage} và Bảng~\ref{tab:split_protocol} đặc tả ranh giới phân chia dữ liệu trên cả hai phân hệ:
 \begin{enumerate}
-    \item \textbf{Khôi phục nhu cầu bị che khuất theo giờ:} Thử nghiệm che các khung giờ cuối ngày trên 200.000 ngày đủ hàng xác nhận việc dùng trực tiếp doanh số thô gây sai số WAPE 32,3\% và thiên lệch âm $-32{,}3\%$, trong khi khôi phục theo hồ sơ giờ (Công thức~\ref{eq:wape_recovery}) hạ WAPE còn \textbf{20,5\%} và gần như triệt tiêu thiên lệch (\textbf{$-0{,}1\%$}).
-    \item \textbf{Quy đổi hệ số đơn vị và điền khuyết ngày đứt hàng:} Sản lượng FreshRetailNet được nhân hệ số $K = 10$ để SKU trung vị đạt khoảng 7 đơn vị/ngày (đảm bảo sàn phương sai Poisson thực tế cho EWMA), và các ngày đứt hàng quá khứ được điền bằng trung bình cùng thứ trong tuần trước khi tính đặc trưng trễ.
-    \item \textbf{Xây dựng 29 đặc trưng dạng bảng:} Với mỗi chân trời dự báo $h \in \{1,\dots,7\}$, hàm \code{build_features} tạo 29 đặc trưng: 7 độ trễ ngày (\code{lag1}--\code{lag7}), trung bình trượt (\code{mean3}, \code{mean7}, \code{mean14}), cùng thứ trong tuần (\code{same_wd}, \code{same_wd_last}), độ phân tán và tính gián đoạn 28 ngày (\code{std28}, \code{zero28}), lịch sử đứt hàng (\code{stockout28}, \code{stockout7}, \code{days_since_stockout}, \code{stockout_last}), xu hướng và mức log, điểm neo EWMA 56 ngày (\code{ewma_h}, \code{ewma_sigma}), biến lịch/chân trời (\code{h}, \code{target_wd}, \code{origin_wd}, \code{target_holiday}) và phân cấp ngành hàng (\code{mgmt_group}, \code{cat1}, \code{cat2}). Đặc biệt, đặc trưng giảm giá ngày mục tiêu đã bị loại bỏ sau khi phiên bản v1 cho thấy giả định không giảm giá tương lai gây thiên lệch dự báo thấp $-15{,}7\%$, còn phép hiệu chỉnh độ co giãn giá ($e \approx 9{,}6$) ở v2 bị loại bỏ do gây lệch 14--31\%; phiên bản v3 huấn luyện trực tiếp trên nhu cầu đã khôi phục neo vào đặc trưng EWMA.
+    \item \textbf{Trên \texttt{ops\_chest} (Chống rò rỉ theo cả Cửa hàng lẫn Thời gian):} Toàn bộ 898 cửa hàng FreshRetailNet-50K được tách ngẫu nhiên cố định ngay từ đầu thành \textbf{848 cửa hàng huấn luyện} (47.325 chuỗi) và \textbf{50 cửa hàng kiểm định độc lập} (2.675 chuỗi, 0\% giao nhau về cửa hàng). Khi huấn luyện LightGBM~v3 cho backtest cuốn chiếu (khởi đầu $T_0 = \text{26/05/2024}$), toàn bộ 6.209.287 mẫu huấn luyện và 2.051.590 mẫu validation chỉ lấy \emph{trước mốc $T_0$} từ 848 cửa hàng train. Để chọn tham số cổng lợi nhuận \texttt{B-Gate} (\code{variant}, \code{size_cut} và danh sách phân khúc dùng ML) mà không rò rỉ dữ liệu cửa hàng đánh giá, 50 cửa hàng độc lập tiếp tục được chia thành \textbf{2 nếp kiểm định chéo cấp cửa hàng} (Fold~0 gồm 25 cửa hàng, Fold~1 gồm 25 cửa hàng, danh sách mã cửa hàng liệt kê đầy đủ tại Phụ lục~C): cổng \texttt{B-Gate} đánh giá trên Fold~0 chỉ được học trên Fold~1 và ngược lại.
+    \item \textbf{Trên \texttt{Retail-AI-} (Tách bạch rõ Dev Set và Independent Test Set):} Vì bộ 100 câu hỏi SOTA~V2 được sử dụng xuyên suốt các vòng phân tích lỗi để cải thiện quy tắc định tuyến và từ điển (59/100 $\to$ 94/100), báo cáo phân loại trung thực bộ này là \textbf{Tập Phát triển / Tinh chỉnh (\emph{Development Set})}, không gọi là tập kiểm thử độc lập. Đánh giá tổng quát hóa được thực hiện trên \textbf{ba tập kiểm thử độc lập không trùng lặp câu hỏi} với Dev Set: (i)~bộ \textbf{100 câu hỏi Đánh giá Chuyên gia Danh mục} (\code{Q01}--\code{Q100}, 0\% trùng SOTA~V2), (ii)~bộ \textbf{50 câu hỏi Test Độc lập} dùng cho nghiên cứu Ablation A1--A4 (0\% trùng cả SOTA~V2 lẫn bộ bán chạy/tồn kho), và (iii)~tập ảnh điện thoại \textbf{16 ảnh OpenFoodFacts + 4 ảnh OOD} chưa từng xuất hiện trong quá trình chưng cất hay chọn ngưỡng của \texttt{MobileNetV3Large-224}.
 \end{enumerate}
 
-\section{Tổng kết Xử lý Dữ liệu}
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=0.45cm and 0.55cm]
+  % Top track: ops_chest
+  \node[font=\bfseries\small, anchor=west, text=teal!70!black] at (-0.2, 2.3) {Phân hệ \texttt{ops\_chest} (FreshRetailNet-50K: 898 cửa hàng, 97 ngày: 28/03--02/07/2024)};
+  \node[procbox, text width=3.5cm] (o_tr) {\textbf{Train + Val LightGBM}\\848 cửa hàng (47.325 chuỗi)\\Trước $T_0$: 6,21M train / 2,05M val};
+  \node[aiagent, text width=3.4cm, right=of o_tr] (o_ho) {\textbf{50 Cửa hàng Độc lập}\\(0\% trùng cửa hàng train)\\2.675 chuỗi, 37 ngày backtest};
+  \node[gatebox, text width=3.2cm, right=of o_ho] (o_f0) {\textbf{2-Fold Store CV}\\Fold~0 (25 CH) $\leftrightarrow$ Fold~1 (25 CH)\\Học \texttt{B-Gate} ngoài mẫu};
+  \node[procbox, draw=teal!70!black, fill=teal!8, text width=2.8cm, right=of o_f0] (o_ev) {\textbf{Đánh giá Cuối}\\WAPE (11.037 điểm)\\Lợi nhuận + 95\% CI};
+  \draw[flowarr] (o_tr) -- node[above, font=\scriptsize] {mô hình cố định} (o_ho);
+  \draw[flowarr] (o_ho) -- (o_f0);
+  \draw[flowarr] (o_f0) -- (o_ev);
 
-Cả hai quy trình xử lý dữ liệu đều thực thi nguyên tắc tách bạch nghiêm ngặt giữa \emph{sự thật đã kiểm chứng} và \emph{giả định vận hành có tài liệu hóa}. Ở tuyến trước, 3.081 SKU Thanh Lam Mart sạch, kho tri thức 2.137 SKU đã qua 8 tầng làm sạch đạt 0 lỗi (1.214+18 SKU có thành phần đã xác minh, 3.096 SKU có URL ảnh hợp lệ), bộ phân tích đơn giá xác định và từ vựng bảo vệ ASR mang lại điểm neo chính xác tuyệt đối cho tác nhân kiosk. Ở tuyến sau, khôi phục nhu cầu theo giờ và 29 đặc trưng bảng biến nhật ký FreshRetailNet-50K thành dữ liệu không thiên lệch cho dự báo phân vị và backtest cổng lợi nhuận. Những thiếu hụt dữ liệu còn lại---khoảng 59\% SKU chưa có bảng thành phần định lượng hoặc calo công khai và giả định giá vốn/hạn dùng trong FreshRetailNet---đều được kiểm soát bằng ranh giới an toàn fail-closed tại thời điểm chạy thay vì che giấu bằng suy đoán của LLM.
+  % Bottom track: Retail-AI-
+  \node[font=\bfseries\small, anchor=west, text=blue!65!black] at (-0.2, -0.25) {Phân hệ \texttt{Retail-AI-} (Danh mục 3.081 SKU hợp lệ: Tách bạch Dev Set và Independent Test Set)};
+  \node[procbox, draw=orange!75!black, fill=orange!8, text width=3.5cm] (r_dev) {\textbf{Development Set}\\100Q SOTA~V2 (113 lượt)\\Dùng phân tích lỗi \& tinh chỉnh};
+  \node[gatebox, text width=3.4cm, right=of r_dev] (r_frz) {\textbf{Đóng băng Hệ thống}\\Không chỉnh luật/từ điển\\theo tập Test độc lập};
+  \node[aiagent, text width=3.2cm, right=of r_frz] (r_tst) {\textbf{Independent Test Sets}\\50Q Ablation (0\% trùng)\\100Q Chuyên gia; 16+4 ảnh};
+  \node[procbox, draw=blue!65!black, fill=blue!8, text width=2.8cm, right=of r_tst] (r_ev) {\textbf{Đánh giá Tổng quát}\\Accuracy, Grounding,\\P50/P95/P99, OOD};
+  \draw[flowarr] (r_dev) -- (r_frz);
+  \draw[flowarr] (r_frz) -- (r_tst);
+  \draw[flowarr] (r_tst) -- (r_ev);
+\end{tikzpicture}%
+}
+\caption{Quy trình phân chia dữ liệu Train / Validation / Test và kiểm soát chống rò rỉ dữ liệu (\emph{anti-leakage}) trên cả hai phân hệ.}
+\label{fig:data_split_leakage}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Tóm tắt quy mô, mốc thời gian và quy tắc chống rò rỉ của các tập dữ liệu đánh giá}
+\label{tab:split_protocol}
+\footnotesize
+\begin{tabularx}{\textwidth}{L{2.8cm} L{2.4cm} L{3.6cm} Y}
+\toprule
+\textbf{Tập Dữ liệu} & \textbf{Vai trò} & \textbf{Quy mô \& Mốc thời gian} & \textbf{Cơ chế Chống Data Leakage} \\
+\midrule
+FRN Train/Val (848 CH) & Train \& Tune LightGBM & 14,91M train / 2,00M val (backtest: 6,21M / 2,05M trước 26/05/2024) & Tách rời hoàn toàn 848 cửa hàng khỏi 50 cửa hàng kiểm định; đặc trưng trễ chỉ dùng quá khứ \\
+FRN Held-Out (50 CH) & Independent Test \& 2-Fold CV & 25 CH Fold~0 + 25 CH Fold~1; tuần eval 26/06--02/07/2024 (11.037 điểm đủ hàng) & LightGBM không thấy 50 cửa hàng này; cổng \texttt{B-Gate} tối ưu chéo giữa Fold~0 và Fold~1 \\
+SOTA~V2 (100Q) & \textbf{Dev Set} & 100 câu (113 lượt), 10 hạng mục & Công bố rõ là tập phát triển/tinh chỉnh (59 $\to$ 94/100), không tính là tập test độc lập \\
+Expert Audit (100Q) \& Ablation (50Q) & \textbf{Independent Test} & 100 câu (174 thẻ) + 50 câu (5 nhóm, 3 lượt chạy = 150 lần đo) & 0\% trùng lặp câu hỏi với SOTA~V2 Dev Set; chạy trên cấu hình hệ thống đã đóng băng \\
+Vision Zero-Leakage & \textbf{Independent Test} & 16 ảnh điện thoại OpenFoodFacts + 4 ảnh OOD ngoài siêu thị & Không xuất hiện khi khớp SVD-256 hay huấn luyện \texttt{MobileNetV3Large-224} \\
+\bottomrule
+\end{tabularx}
+\end{table}

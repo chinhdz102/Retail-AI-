@@ -1,459 +1,246 @@
 \chapter{Phương pháp luận}
 
-Chương này phân tích cách nền tảng tác nhân AI kép giải quyết triệt để các điểm nghẽn tại sàn bán hàng và hậu cần cửa hàng đã nêu ở Chương~1, bao gồm phân tích quy trình nghiệp vụ trước--sau, luồng vận hành tổng thể, kiến trúc hệ thống chi tiết của \texttt{Retail-AI-} và \texttt{ops\_chest}, bốn thuật toán cốt lõi và bảng cấu hình thực nghiệm đầy đủ.
+Chương này trình bày thiết kế khoa học của hệ thống Tác nhân AI Kép, tập trung vào bốn trục chính: quy trình nghiệp vụ trước--sau, kiến trúc chức năng AI và cơ chế phối hợp liên Agent qua cầu nối \code{crosswalk.csv}--API, hai thuật toán cốt lõi do nhóm thiết kế (\emph{Zero-Planner Hybrid Routing} và \emph{Profit-Gated Router \texttt{B-Gate}}), cùng quy trình huấn luyện và cơ sở lựa chọn siêu tham số. Các chi tiết triển khai phần mềm (ngăn xếp giao diện, đóng gói Docker/Vercel, đường dẫn tệp và cấu hình AI biên trình duyệt) được đặt gọn tại Phụ lục~A--C.
 
 \section{Phân tích Quy trình Nghiệp vụ}
 
-Tại một siêu thị hoặc cửa hàng tiện lợi hiện đại ở Việt Nam (như điểm bán Thanh Lam Mart / Thanh Lam Mart quản lý hơn 3.000 SKU hàng khô cùng 150--300 SKU tươi sống nhập mới mỗi ngày), hai vòng lặp vận hành thủ công đang trực tiếp làm giảm trải nghiệm khách hàng và bào mòn lợi nhuận:
-\begin{enumerate}
-    \item \textbf{Vòng lặp Tư vấn Thủ công tại Sàn bán hàng:} Khách hàng muốn tìm đúng quy cách, khuyến mãi, đơn giá tiết kiệm nhất hoặc giỏ nguyên liệu nấu ăn trong ngân sách phải gọi nhân viên quầy---người khó lòng nhớ giá cập nhật của hơn 3.000 mã hàng. Vào khung giờ cao điểm chiều tối, tình trạng thiếu nhân sự khiến khách rời quầy mà không tìm thấy sản phẩm phù hợp hoặc bỏ lỡ khuyến mãi.
-    \item \textbf{Vòng lặp Đặt hàng và Xử lý Cận hạn Thủ công ở Hậu cần:} Mỗi sáng, Cửa hàng trưởng phải tự đi kiểm tra tủ mát tìm lô cận hạn, nhìn doanh số POS ngày hôm qua mà không điều chỉnh ảnh hưởng đứt hàng giữa ngày, ước lượng cảm tính số lượng đặt hàng cho hàng chục SKU tươi sống, giảm giá đồng loạt 30\% vào buổi tối khi đã muộn và gọi điện/nhắn tin đặt hàng thủ công. Nếu mặt hàng hút khách hết từ 17:00, cửa hàng mất cả doanh thu lẫn lưu lượng khách; nếu đặt thừa, hàng hết hạn bị hủy mất trắng 100\% giá vốn.
-\end{enumerate}
-
-Hình~\ref{fig:as_is_to_be} đối chiếu trực diện quy trình thủ công (AS-IS) với quy trình tự động hóa bằng tác nhân AI kép (TO-BE). Hệ thống không thay thế quyền quyết định của con người mà tự động hóa khâu cảm nhận, tính toán tối ưu và soạn thảo phương án, trong khi giữ nguyên căn cứ giá xác định cho khách và phê duyệt quản lý bắt buộc cho mọi khoản chi nhập hàng.
+Tại một cửa hàng bán lẻ hiện đại quản lý hơn 3.000 SKU đa ngành và 150--300 SKU tươi sống, hai vòng lặp thủ công (AS-IS) cùng làm suy giảm chất lượng phục vụ và biên lợi nhuận: (i) khách hàng phải tự so sánh đơn giá, khuyến mãi hoặc chờ nhân viên quầy trong giờ cao điểm; và (ii) cửa hàng trưởng đặt hàng tươi sống theo cảm tính trên doanh số POS chưa khôi phục đứt hàng và giảm giá đồng loạt 30\% vào buổi tối khi đã muộn. Hình~\ref{fig:as_is_to_be} đối chiếu quy trình thủ công với quy trình hỗ trợ bởi hai tác nhân AI phối hợp (TO-BE), trong đó AI đảm nhận khâu cảm nhận, tính toán định lượng và đề xuất có căn cứ, còn con người giữ quyền quyết định cuối cùng.
 
 \begin{figure}[H]
 \centering
 \resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.75cm and 0.9cm]
-  % Top lane: Manual AS-IS
-  \node[font=\bfseries\small, anchor=west, text=red!65!black] (lbl1) at (-0.2, 2.35) {AS-IS: Vận hành Bán lẻ Thủ công (Trễ cao, Dự báo cảm tính, Hao hụt lớn)};
-  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm] (m1) at (1.5, 1.35) {Khách chờ nhân viên; ước lượng giá / khuyến mãi cảm tính};
-  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m1] (m2) {Đi kệ kiểm HSD thủ công \& xem POS thô chưa khôi phục};
-  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m2] (m3) {Lệch do đứt hàng; đặt hàng cảm tính \& giảm giá phẳng 30\%};
-  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m3] (m4) {Đặt NCC thiếu nhật ký; 5,3\% hủy hàng \& 8,7\% OOS hút khách};
-
+\begin{tikzpicture}[node distance=0.7cm and 0.85cm]
+  \node[font=\bfseries\small, anchor=west, text=red!65!black] (lbl1) at (-0.2, 2.35) {AS-IS: Vận hành Thủ công (Trễ cao, Dự báo chưa khôi phục OOS, Hao hụt lớn)};
+  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm] (m1) at (1.5, 1.35) {Khách tự tra cứu hoặc chờ nhân viên tư vấn giá/ưu đãi};
+  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m1] (m2) {Kiểm HSD thủ công \& xem POS thô bị kiểm duyệt};
+  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m2] (m3) {Đặt hàng cảm tính \& giảm giá phẳng 30\% cuối ngày};
+  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m3] (m4) {5,33\% hủy hàng \& 8,69\% OOS nhóm hút khách};
   \draw[flowarr, draw=red!65!black] (m1) -- (m2);
   \draw[flowarr, draw=red!65!black] (m2) -- (m3);
   \draw[flowarr, draw=red!65!black] (m3) -- (m4);
 
-  % Bottom lane: Automated TO-BE
-  \node[font=\bfseries\small, anchor=west, text=teal!70!black] (lbl2) at (-0.2, -0.35) {TO-BE: Nền tảng Tác nhân AI Kép Thống nhất (\texttt{Retail-AI-} + \texttt{ops\_chest})};
-  \node[aiagent, text width=2.85cm] (t1) at (1.5, -1.45) {\textbf{Kiosk Tư vấn (Mai)}\\WS Streaming STT + DPDFNet2 + Zero-Planner SSE};
-  \node[aiagent, text width=2.85cm, right=of t1] (t2) {\textbf{Ops Chest Cảm nhận}\\Khôi phục OOS theo giờ + quét lô FEFO / OCR nhãn};
-  \node[gatebox, text width=2.85cm, right=of t2] (t3) {\textbf{Động cơ Cổng Lợi nhuận}\\LightGBM~v3/EWMA + Newsvendor + trần FEFO};
-  \node[gatebox, text width=2.85cm, right=of t3] (t4) {\textbf{Quản trị HITL}\\Quản lý duyệt đề xuất; +4,9\% lãi, 3,4\% OOS hút khách};
-
+  \node[font=\bfseries\small, anchor=west, text=teal!70!black] (lbl2) at (-0.2, -0.35) {TO-BE: Hệ thống Tác nhân AI Kép Phối hợp (\texttt{Retail-AI-} $\leftrightarrow$ \texttt{ops\_chest})};
+  \node[aiagent, text width=2.85cm] (t1) at (1.5, -1.45) {\textbf{Agent Khách hàng}\\Zero-Planner Routing + Truy xuất căn cứ};
+  \node[aiagent, text width=2.85cm, right=of t1] (t2) {\textbf{Khôi phục Nhu cầu}\\Hồ sơ giờ OOS + 29 đặc trưng chuỗi};
+  \node[gatebox, text width=2.85cm, right=of t2] (t3) {\textbf{Động cơ \texttt{B-Gate}}\\LightGBM~v3/EWMA + Newsvendor--FEFO};
+  \node[gatebox, text width=2.85cm, right=of t3] (t4) {\textbf{Quản trị HITL}\\Quản lý duyệt đề xuất; +4,90\% lãi mô phỏng};
   \draw[flowarr] (t1) -- node[above, font=\scriptsize] {nhu cầu} (t2);
   \draw[flowarr] (t2) -- (t3);
   \draw[flowarr] (t3) -- node[above, font=\scriptsize] {đề xuất} (t4);
-  \draw[flowarr, dashed, draw=blue!65!black] (t4.south) -- ++(0,-0.45) -| node[pos=0.25, below, font=\scriptsize] {Luồng API chỉ đọc tồn kho \& giảm giá đã duyệt (Giao ước C)} (t1.south);
+  \draw[flowarr, dashed, draw=blue!65!black] (t4.south) -- ++(0,-0.5) -| node[pos=0.25, below, font=\scriptsize] {Cầu nối \code{crosswalk.csv} + API chỉ đọc: tồn kho trực tiếp \& giá giảm FEFO đã duyệt} (t1.south);
 \end{tikzpicture}%
 }
-\caption{So sánh quy trình vận hành siêu thị thủ công (AS-IS) với nền tảng tác nhân AI kép (TO-BE).}
+\caption{Đối chiếu quy trình vận hành bán lẻ thủ công (AS-IS) và quy trình hỗ trợ bởi hệ thống Tác nhân AI Kép (TO-BE).}
 \label{fig:as_is_to_be}
 \end{figure}
 
-\section{Luồng Xử lý Tổng thể}
+\section{Kiến trúc Chức năng AI và Cơ chế Phối hợp Liên Agent}
 
-Luồng vận hành thống nhất phối hợp hai tác nhân tự chủ quanh một ranh giới phân quyền rõ ràng: \texttt{Retail-AI-} phục vụ khách hàng tại sàn bán hàng với quyền chỉ đọc danh mục và giỏ hàng phiên, còn \texttt{ops\_chest} phục vụ Cửa hàng trưởng ở hậu cần với quyền chỉ tạo đề xuất (không tự thực thi).
+Thay cho bảng liệt kê thành phần phần mềm/giao diện, Hình~\ref{fig:functional_ai_arch} trình bày \textbf{sơ đồ kiến trúc chức năng AI} tập trung vào bốn yếu tố cốt lõi: luồng dữ liệu, mô hình AI, công cụ xử lý xác định và quyết định của từng Agent, kết nối qua tầng cầu nối liên tác nhân. Hình~\ref{fig:unified_workflow} minh họa luồng tương tác đầu-cuối giữa khách hàng, cửa hàng trưởng và kho trạng thái chia sẻ.
 
 \begin{figure}[H]
 \centering
 \resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.65cm and 0.75cm]
-  % Left: Customer Flow
-  \node[procbox, text width=3.15cm] (u1) {Giọng nói / Văn bản khách\\tại Kiosk Siêu thị};
-  \node[aiagent, text width=3.15cm, below=of u1] (u2) {Silero VAD~v6 + WS Azure STT + Cứu hộ DPDFNet2};
-  \node[gatebox, text width=3.15cm, below=of u2] (u3) {Cổng An toàn / Ngoài lề / Giỏ hàng / Chào hỏi ($<3$\,ms)};
-  \node[aiagent, text width=3.15cm, below=of u3] (u4) {Phát luồng SSE Không Planner\\hoặc Giỏ hàng 1 lượt LLM};
-  \node[procbox, text width=3.15cm, below=of u4] (u5) {Azure TTS theo mệnh đề +\\Avatar 4 lớp + Thẻ sản phẩm};
+\begin{tikzpicture}[node distance=0.55cm and 0.75cm]
+  % Left column: Customer AI Agent
+  \node[procbox, text width=4.8cm] (c_in) {\textbf{Đầu vào Khách hàng}\\Văn bản / Giọng nói (ASR hỗ trợ) / Ảnh};
+  \node[gatebox, text width=4.8cm, below=of c_in] (c_gate) {\textbf{Bộ định tuyến Zero-Planner}\\Cổng An toàn/Y tế/OWASP ($<3$\,ms)\\+ Phân loại ý định ngữ nghĩa};
+  \node[aiagent, text width=4.8cm, below=of c_gate] (c_tool) {\textbf{Công cụ Xác định \& Mô hình AI}\\Chỉ mục đảo (3.081 SKU), Đơn giá, Bán thử,\\Tri thức 2.205 SKU, \texttt{MobileNetV3} TFLite,\\LLM Streaming / Planner có giới hạn};
+  \node[procbox, draw=blue!65!black, fill=blue!10, text width=4.8cm, below=of c_tool] (c_dec) {\textbf{Quyết định Agent Khách hàng}\\Thẻ SKU căn cứ, Giá giảm FEFO,\\Ẩn mã hết hàng, Minh bạch nguồn};
 
-  % Right: Store Manager Flow
-  \node[procbox, text width=3.45cm, right=2.6cm of u1] (o1) {Truy vấn Cửa hàng trưởng /\\Bản tin sáng / Ảnh nhãn HSD};
-  \node[aiagent, text width=3.45cm, below=of o1] (o2) {Tác nhân \texttt{ops\_chest}\\(31 Công cụ + Vision OCR)};
-  \node[gatebox, text width=3.45cm, below=of o2] (o3) {Bộ định tuyến \texttt{B-Gate} +\\Newsvendor / FEFO / Giảm giá};
-  \node[gatebox, text width=3.45cm, below=of o3] (o4) {Lớp Guard (\code{guard.py}) +\\Hàng đợi Đề xuất HITL};
-  \node[procbox, text width=3.45cm, below=of o4] (o5) {Quản lý Duyệt / Sửa $\to$\\Email PO, Đổi giá, Nhật ký};
+  % Middle column: Inter-Agent Coordination Bridge
+  \node[gatebox, draw=purple!70!black, fill=purple!8, text width=3.5cm, right=0.85cm of c_gate, yshift=-0.95cm] (br_cw) {\textbf{Cầu nối Liên Agent}\\(\texttt{ops-retail-bridge})\\\code{crosswalk.csv} (164 SKU)\\\code{BridgedProductRepository}};
+  \node[procbox, draw=purple!60!black, fill=purple!4, text width=3.5cm, below=0.55cm of br_cw] (br_rule) {\textbf{Chính sách Đồng bộ}\\API chỉ đọc (TTL 300\,s)\\Chỉ nhận \texttt{APPROVED/EXECUTED}\\Fail-closed khi quá hạn/lỗi};
 
-  % Middle: Shared Data & Contract
-  \node[procbox, draw=purple!65!black, fill=purple!7, text width=2.45cm] (db) at (4.38, -3.15) {\textbf{Dữ liệu Chuẩn}\\Danh mục Thanh Lam Mart\\+ API Chi nhánh\\(Tồn kho / Giảm giá)};
+  % Right column: Operations AI Agent
+  \node[procbox, text width=4.8cm, right=0.85cm of br_cw, yshift=0.95cm] (o_in) {\textbf{Dữ liệu \& Truy vấn Quản lý}\\POS + Cờ OOS theo giờ (FRN-50K)\\Yêu cầu quản lý / Rà soát ngày};
+  \node[aiagent, text width=4.8cm, below=of o_in] (o_ml) {\textbf{Mô hình Dự báo \& Định tuyến}\\Khôi phục OOS $\to$ 29 đặc trưng\\LightGBM~v3 (P10/P50/P90) vs.\ EWMA\\\textbf{Profit-Gated Router (\texttt{B-Gate})}};
+  \node[gatebox, text width=4.8cm, below=of o_ml] (o_opt) {\textbf{Động cơ Tối ưu \& Tác nhân 31 Công cụ}\\Newsvendor ($SL^*$) + Trần lô FEFO\\22 Đọc + 9 Đề xuất (0 Tự thực thi)\\+ Kiểm duyệt \code{guard.py}};
+  \node[procbox, draw=teal!70!black, fill=teal!10, text width=4.8cm, below=of o_opt] (o_dec) {\textbf{Quyết định HITL Cửa hàng trưởng}\\\texttt{PENDING} $\to$ \texttt{APPROVED} $\to$ \texttt{EXECUTED}\\(Đơn PO, Giảm giá FEFO, Tồn kho)};
+
+  \begin{scope}[on background layer]
+    \node[fit=(c_in)(c_dec), draw=blue!50!black, dashed, rounded corners=8pt, inner sep=9pt, fill=blue!2, label={[font=\bfseries\small, text=blue!60!black]above:Agent 1: Tư vấn Khách hàng (\texttt{Retail-AI-})}] {};
+    \node[fit=(o_in)(o_dec), draw=teal!55!black, dashed, rounded corners=8pt, inner sep=9pt, fill=teal!2, label={[font=\bfseries\small, text=teal!60!black]above:Agent 2: Vận hành Hàng Tươi (\texttt{ops\_chest})}] {};
+  \end{scope}
+
+  \draw[flowarr] (c_in) -- (c_gate);
+  \draw[flowarr] (c_gate) -- (c_tool);
+  \draw[flowarr] (c_tool) -- (c_dec);
+  \draw[flowarr] (o_in) -- (o_ml);
+  \draw[flowarr] (o_ml) -- (o_opt);
+  \draw[flowarr] (o_opt) -- (o_dec);
+  \draw[flowarr] (br_cw) -- (br_rule);
+  \draw[flowarr, thick, draw=purple!70!black] (o_dec.west) -- ++(-0.35,0) |- node[pos=0.75, above, font=\scriptsize, text=purple!70!black] {GET /api/inventory/*} (br_cw.east);
+  \draw[flowarr, thick, draw=purple!70!black] (br_cw.west) -- ++(-0.35,0) |- node[pos=0.75, above, font=\scriptsize, text=purple!70!black] {Giá FEFO / OOS} (c_tool.east);
+\end{tikzpicture}%
+}
+\caption{Kiến trúc chức năng AI của hệ thống Tác nhân Kép, làm rõ luồng dữ liệu, mô hình AI, công cụ xử lý, cầu nối liên Agent và ranh giới ra quyết định.}
+\label{fig:functional_ai_arch}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=0.6cm and 1.15cm]
+  % Left lane
+  \node[procbox, text width=3.35cm] (u1) {Truy vấn Khách hàng\\(Văn bản / Giọng nói / Ảnh)};
+  \node[gatebox, text width=3.35cm, below=of u1] (u2) {Cổng An toàn, Y tế \& OWASP ($<3$\,ms)};
+  \node[aiagent, text width=3.35cm, below=of u2] (u3) {Zero-Planner Router +\\Truy xuất \code{BridgedRepo}};
+  \node[procbox, text width=3.35cm, below=of u3] (u4) {Phản hồi Căn cứ\\(Giá FEFO mới, Ẩn hết hàng)};
+
+  % Center column (explicitly positioned between left and right with wide clearance)
+  \node[procbox, draw=purple!65!black, fill=purple!8, text width=3.1cm, right=1.15cm of u2, yshift=-0.75cm] (db) {\textbf{Kho Trạng thái Cầu nối}\\164 SKU \code{crosswalk.csv}\\Tồn kho trực tiếp \&\\Giảm giá FEFO đã duyệt};
+
+  % Right lane
+  \node[procbox, text width=3.45cm, right=1.15cm of db, yshift=2.25cm] (o1) {Cửa hàng trưởng hỏi\\rủi ro tồn kho / cận hạn};
+  \node[aiagent, text width=3.45cm, below=of o1] (o2) {Dự báo \texttt{B-Gate} +\\Newsvendor / FEFO};
+  \node[gatebox, text width=3.45cm, below=of o2] (o3) {Tác nhân 31 Công cụ +\\\code{guard.py} $\to$ Đề xuất \texttt{PENDING}};
+  \node[procbox, text width=3.45cm, below=of o3] (o4) {Quản lý Duyệt (\texttt{EXECUTED})\\Cập nhật giá \& tồn kho};
 
   \draw[flowarr] (u1) -- (u2);
   \draw[flowarr] (u2) -- (u3);
   \draw[flowarr] (u3) -- (u4);
-  \draw[flowarr] (u4) -- (u5);
 
   \draw[flowarr] (o1) -- (o2);
   \draw[flowarr] (o2) -- (o3);
   \draw[flowarr] (o3) -- (o4);
-  \draw[flowarr] (o4) -- (o5);
 
-  \draw[flowarr, dashed, draw=purple!70!black] (o5.west) -- ++(-0.5,0) |- (db.east);
-  \draw[flowarr, dashed, draw=purple!70!black] (db.west) -| ([xshift=0.35cm]u4.east) -- (u4.east);
+  \draw[flowarr, dashed, thick, draw=purple!70!black] (o4.west) -| node[pos=0.25, below, font=\scriptsize, text=purple!70!black] {Chỉ đẩy \texttt{APPROVED/EXECUTED}} (db.south);
+  \draw[flowarr, dashed, thick, draw=purple!70!black] (db.west) -- ++(-0.45,0) |- (u3.east);
 \end{tikzpicture}%
 }
-\caption{Luồng xử lý tổng thể kết nối tác nhân kiosk khách hàng (\texttt{Retail-AI-}) và trợ lý vận hành hậu cần (\texttt{ops\_chest}).}
+\caption{Luồng xử lý đầu-cuối kết nối tác nhân khách hàng (\texttt{Retail-AI-}) và tác nhân vận hành (\texttt{ops\_chest}) qua kho trạng thái cầu nối.}
 \label{fig:unified_workflow}
 \end{figure}
 
-Trong thực tế sử dụng, khách hàng hỏi \emph{Mai} (avatar tại quầy) để so sánh sản phẩm, tìm khuyến mãi, hỏi mặt hàng bán chạy hoặc lên giỏ nấu ăn theo ngân sách; hệ thống hiển thị thẻ sản phẩm xác thực chỉ trong vài chục mili-giây và phát giọng nói tiếng Việt theo từng mệnh đề song song. Phía sau quầy, Cửa hàng trưởng mở không gian làm việc \texttt{ops\_chest} để rà soát rủi ro buổi sáng (lô cận hạn, nguy cơ đứt hàng, biên lãi âm, hàng bán chậm), chụp ảnh nhãn hạn sử dụng bằng OCR, xem các đề xuất đơn đặt hàng và giảm giá tính từ cổng lợi nhuận rồi phê duyệt hoặc điều chỉnh chỉ với một lần bấm. Thông tin tồn kho và mức giảm giá đã phê duyệt được đưa về lớp kiosk qua giao ước API chỉ đọc (Phụ lục~C) giúp tư vấn tại quầy luôn đồng bộ với thực tế hậu cần.
+\subsection*{Cơ chế Phối hợp và Trao đổi Dữ liệu Liên Agent (\code{backend/services/ops_bridge.py})}
+Để khắc phục hoàn toàn điểm nghẽn tách rời dữ liệu giữa hai kho mã nguồn, nhóm hiện thực hóa cầu nối liên tác nhân ba thành phần tuân thủ nguyên tắc \emph{chỉ đọc} và \emph{fail-closed}:
+\begin{enumerate}
+    \item \textbf{Chỉ mục ánh xạ hai chiều (\code{OpsCrosswalkIndex}):} Đọc bảng \code{data/bridge/crosswalk.csv} ánh xạ 164 SKU tươi sống \code{ops_sku} (\code{F0004}--\code{F0793}) sang 164 \code{product_id} hợp lệ của \texttt{Retail-AI-}.
+    \item \textbf{Khách hàng API chỉ đọc có ranh giới HITL (\code{OpsChestBridgeClient}):} Gọi ba điểm cuối chỉ đọc của \texttt{ops\_chest} (\code{GET /api/inventory/summary}, \code{/api/inventory/items}, \code{/api/inventory/expiring}) kèm bộ đệm thời gian sống \code{freshness_ttl_seconds = 300}. Bộ lọc bắt buộc chỉ tiếp nhận các chương trình giảm giá FEFO có trạng thái \texttt{APPROVED} hoặc \texttt{EXECUTED}, loại bỏ tuyệt đối mọi đề xuất \texttt{PENDING} hay \texttt{REJECTED} nhằm bảo toàn nguyên tắc HITL.
+    \item \textbf{Lớp bao kho danh mục (\code{BridgedProductRepository}):} Phủ trực tiếp dữ liệu tồn kho (\code{stock}, \code{stock_is_current=True}) và giá giảm FEFO đã duyệt (\code{price_vnd}, \code{promotion}) lên \code{ProductSnapshot}. Khi một SKU hết hàng (\code{on_hand == 0}), truy vấn tìm kiếm hàng có sẵn (\code{in_stock=True}) và danh sách khuyến mãi tự động ẩn SKU đó để gợi ý mã thay thế còn tồn, trong khi truy vấn trực tiếp đích danh SKU vẫn trả lời trung thực rằng hàng hiện không còn tồn bán được. Nếu \texttt{ops\_chest} quá hạn TTL hoặc mất kết nối (HTTP~503), lớp cầu nối tự động thoái lui an toàn về bản chụp tĩnh với cảnh báo \code{stock_is_current=False}.
+\end{enumerate}
 
-\section{Kiến trúc Hệ thống}
+\section{Đóng góp 1: Zero-Planner Hybrid Routing cho Agent Khách hàng (\texttt{Retail-AI-})}
 
-\subsection*{Kiến trúc Phân tầng Đa Tác nhân}
-Hình~\ref{fig:dual_architecture} trình bày kiến trúc phân tầng mô-đun của cả hai kho mã nguồn, và Bảng~\ref{tab:arch_layers} ánh xạ chi tiết từng tầng kiến trúc sang các thành phần mã nguồn thực tế.
-
-\begin{figure}[H]
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.5cm and 0.6cm]
-  % Retail-AI- Container
-  \node[procbox, text width=5.95cm] (r_ui) {\textbf{Giao diện Kiosk (\texttt{apps/kiosk-airi})}\\Vue~3 + TypeScript, Silero VAD~v6 AudioWorklet,\\Client WebSocket PCM16, Hàng đợi TTS, Avatar 4 lớp};
-  \node[aiagent, text width=5.95cm, below=of r_ui] (r_api) {\textbf{API Giọng nói \& Phát luồng (\texttt{backend/api})}\\WS \code{/audio/transcribe/stream}, REST \code{/audio/transcribe},\\SSE \code{/agent/respond/stream}, Azure Speech + \texttt{DPDFNet2}};
-  \node[gatebox, text width=5.95cm, below=of r_api] (r_eng) {\textbf{Lõi Tư vấn \& An toàn (\texttt{backend/services})}\\Zero-Planner SSE (\code{streaming_consultation.py}),\\Giỏ hàng 1 lượt, Sửa thương hiệu, Cổng An toàn/OWASP};
-  \node[procbox, text width=5.95cm, below=of r_eng] (r_data) {\textbf{Tầng Dữ liệu Danh mục Căn cứ}\\3.081 SKU Thanh Lam Mart hợp lệ (Chỉ mục đảo) +\\\code{demo_sales.sqlite3} cách ly (\texttt{SIMULATED})};
-
-  % ops_chest Container
-  \node[procbox, text width=5.95cm, right=1.1cm of r_ui] (o_ui) {\textbf{Giao diện Quản lý (\texttt{frontend/src})}\\React~18 + TypeScript + Vite + Tailwind,\\Bản tin sáng, Hộp đề xuất, Biểu mẫu nội tuyến, Biểu đồ};
-  \node[aiagent, text width=5.95cm, below=of o_ui] (o_api) {\textbf{Điều phối Tác nhân \& Vision (\texttt{backend/app/agent})}\\31 Công cụ (22 Đọc/Biểu mẫu + 9 Đề xuất),\\Guard Thời gian thực (\code{guard.py}), Vision OCR, Giả thuyết};
-  \node[gatebox, text width=5.95cm, below=of o_api] (o_eng) {\textbf{Động cơ Tối ưu Hàng Tươi (\texttt{backend/app/engines})}\\LightGBM~v3 Phân vị + Cổng Lợi nhuận (\code{B-Gate}),\\Newsvendor + FEFO, Giảm giá cận hạn, ABC--XYZ};
-  \node[procbox, text width=5.95cm, below=of o_eng] (o_data) {\textbf{Lưu trữ Vận hành \& Sandbox}\\PostgreSQL + SQLAlchemy + 6 Alembic Migrations,\\Nhật ký Đề xuất HITL, Mailpit gửi PO, FRN-50K};
-
-  \begin{scope}[on background layer]
-    \node[fit=(r_ui)(r_data), draw=blue!50!black, dashed, rounded corners=8pt, inner sep=10pt, fill=blue!2, label={[font=\bfseries\small, text=blue!60!black]above:Kho mã nguồn 1: \texttt{Retail-AI-} (Kiosk Khách hàng)}] {};
-    \node[fit=(o_ui)(o_data), draw=teal!55!black, dashed, rounded corners=8pt, inner sep=10pt, fill=teal!2, label={[font=\bfseries\small, text=teal!60!black]above:Kho mã nguồn 2: \texttt{ops\_chest} (Vận hành Cửa hàng)}] {};
-  \end{scope}
-
-  \draw[flowarr] (r_ui) -- (r_api);
-  \draw[flowarr] (r_api) -- (r_eng);
-  \draw[flowarr] (r_eng) -- (r_data);
-  \draw[flowarr] (o_ui) -- (o_api);
-  \draw[flowarr] (o_api) -- (o_eng);
-  \draw[flowarr] (o_eng) -- (o_data);
-  \draw[flowarr, dashed, thick, draw=purple!70!black] (o_data.west) -- node[above, font=\scriptsize, text=purple!70!black] {API chỉ đọc} (r_data.east);
-\end{tikzpicture}%
-}
-\caption{Kiến trúc phân tầng của hệ thống tác nhân AI kép giữa \texttt{Retail-AI-} (trái) và \texttt{ops\_chest} (phải).}
-\label{fig:dual_architecture}
-\end{figure}
-
-\begin{table}[H]
-\centering
-\caption{Phân tách các tầng kiến trúc trên \texttt{Retail-AI-} và \texttt{ops\_chest}}
-\label{tab:arch_layers}
-\footnotesize
-\begin{tabularx}{\textwidth}{L{2.5cm} L{5.7cm} Y}
-\toprule
-\textbf{Tầng kiến trúc} & \textbf{\texttt{Retail-AI-} (Kiosk Giọng nói Khách hàng)} & \textbf{\texttt{ops\_chest} (Trợ lý Vận hành Cửa hàng)} \\
-\midrule
-Giao diện (UI) & Vue~3 + TypeScript (\code{apps/kiosk-airi/}, 29 tệp, responsive di động $\le 768$\,px bottom-sheet kính mờ): avatar video 4 lớp, phụ đề live, chụp/tải ảnh nén 896\,px tại máy khách, thẻ sản phẩm, ngăn kéo giỏ hàng & React~18 + TypeScript + Vite (\code{frontend/src/}, 34 tệp): hộp thoại quản lý, biểu mẫu nhập/kiểm kê/kiểm HSD nội tuyến, hộp duyệt đề xuất \\
-Tri giác (Âm thanh / Thị giác) & Silero VAD~v6 (lọc quạt nền + chống vọng), WS Azure Streaming STT, \texttt{DPDFNet2} ONNX, \texttt{gipformer} ngoại tuyến; \textbf{nhận diện ảnh di động on-demand \texttt{MobileNetV3Large-224} TFLite (7,04\,MB) + Hybrid VLM} (\code{/agent/respond/image}) & Vision OCR đa phương thức (\code{vision.py}) đọc ngày hết hạn và mã lô từ ảnh chụp nhãn thực phẩm \\
-Điều phối Tác nhân & Bộ định tuyến lai: cổng an toàn/chào hỏi $<3$\,ms, Zero-Planner SSE (\code{streaming_consultation.py}), giỏ hàng 1 lượt, planner dự phòng & Bộ điều phối gọi 31 công cụ (\code{orchestrator.py}, \code{tools.py}) có chuyển dự phòng đa nhà cung cấp, học thói quen chỉnh sửa và giả thuyết \\
-Lõi Phân tích \& Tối ưu & Tìm kiếm chỉ mục đảo (\code{SnapshotProductRepository}), quy đổi đơn giá, lọc khuyến mãi và xếp hạng bán chạy \texttt{SIMULATED} & Khôi phục OOS theo giờ, LightGBM~v3 phân vị (29 đặc trưng), cổng lợi nhuận \texttt{B-Gate}, Newsvendor + FEFO, giảm giá và ABC--XYZ \\
-An toàn \& Lưu trữ & Cách ly Pydantic \code{ThanhLamRow}, lọc tiêm lệnh OWASP, cổng từ chối y tế, tách biệt nguồn \code{demo_sales.sqlite3} & Lớp kiểm soát \code{guard.py}, máy trạng thái HITL trên PostgreSQL (Alembic), hộp thư Mailpit gửi PO, nhật ký kiểm toán bất biến \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\subsection*{Chuỗi Giọng nói Song công Thời gian thực và Khử nhiễu (\texttt{Retail-AI-})}
-Để xóa bỏ 2--3 giây chờ sau khi nói của phương thức tải tệp WAV truyền thống đồng thời chống chịu tạp âm siêu thị 5--12\,dB, \texttt{Retail-AI-} triển khai chuỗi xử lý âm thanh hai nhánh (Hình~\ref{fig:voice_pipeline}) hoàn toàn \textbf{không phụ thuộc API Groq}. Ngay khi khách bắt đầu nói, từng khung PCM16 32\,ms được đẩy liên tục qua WebSocket \code{/audio/transcribe/stream} vào bộ nhận dạng Azure AI Speech SDK đã nạp động \code{PhraseListGrammar} Thanh Lam Mart. Phụ đề tạm hiển thị trực tiếp lên màn hình kiosk; khi Silero VAD phát hiện dứt câu, máy khách gửi tín hiệu \texttt{\{"type":"end"\}}, kết quả hoàn chỉnh trả về sau khoảng 260\,ms rồi qua bộ sửa lỗi thương hiệu bảo vệ từ tiếng Việt \code{_NEVER_CORRECT}. Nếu đoạn thu bị nhiễu nặng ($\widehat{\text{SNR}}_{\text{dB}} < 13$\,dB) hoặc kết quả stream rỗng, đoạn âm thanh đệm tự động đi qua bộ lọc HPF 85\,Hz và \texttt{DPDFNet2} ONNX để giải mã cứu hộ; khi mất mạng đám mây, mô hình cục bộ \texttt{gipformer1.5-68M-rnnt} đảm bảo duy trì hoạt động ngoại tuyến.
-
-\begin{figure}[H]
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.55cm and 0.6cm]
-  \node[procbox, text width=2.4cm] (mic) {Micro 16\,kHz\\AEC / AGC / NS};
-  \node[gatebox, text width=2.5cm, right=of mic] (vad) {Silero VAD~v6\\+ Đệm vòng 8 khung (256\,ms)};
-  \node[aiagent, text width=2.85cm, right=of vad] (ws) {WS \code{/audio/transcribe/stream}\\Azure Speech SDK +\\Thanh Lam Mart PhraseList};
-  \node[decbox, right=of ws] (snr) {$\widehat{\text{SNR}}<13$\,dB\\hoặc rỗng?};
-  \node[aiagent, text width=2.65cm, below=0.75cm of snr] (dpdf) {HPF 85\,Hz +\\\texttt{DPDFNet2} ONNX\\(Trộn thích nghi SNR)};
-  \node[gatebox, text width=2.55cm, right=of snr] (rep) {Sửa lỗi Thương hiệu\\(\code{_NEVER_CORRECT})};
-  \node[procbox, text width=2.55cm, below=0.75cm of rep] (sse) {SSE \code{/agent/respond/stream}\\$\to$ Clause TTS +\\Ngắt lời 3 lớp};
-
-  \draw[flowarr] (mic) -- (vad);
-  \draw[flowarr] (vad) -- node[above, font=\scriptsize] {PCM16} (ws);
-  \draw[flowarr] (ws) -- (snr);
-  \draw[flowarr] (snr) -- node[above, font=\scriptsize] {Không} (rep);
-  \draw[flowarr] (snr) -- node[right, font=\scriptsize] {Có} (dpdf);
-  \draw[flowarr] (dpdf) -| (rep);
-  \draw[flowarr] (rep) -- (sse);
-  \draw[flowarr, dashed, draw=orange!75!black] (sse.west) -- ++(-6.9,0) |- node[pos=0.25, left, font=\scriptsize] {Chống vọng} (vad.south);
-\end{tikzpicture}%
-}
-\caption{Chuỗi xử lý giọng nói WebSocket Streaming STT, cứu hộ khử nhiễu \texttt{DPDFNet2} và ngắt lời chống vọng trong \texttt{Retail-AI-}.}
-\label{fig:voice_pipeline}
-\end{figure}
-
-\subsection*{Nhận diện Sản phẩm Bằng Ảnh Trên Di động: \texttt{MobileNetV3Large-224} TFLite On-Demand và Tuyến Hybrid (\texttt{Retail-AI-})}
-Trong thực tế mua sắm tại siêu thị, khách hàng thường gặp các bao bì lạ, chữ tiếng Anh/Hàn/Nhật hoặc muốn hỏi nhanh giá và cách dùng ngay khi cầm sản phẩm trên tay. Một giải pháp gọi thẳng mô hình đa phương thức đám mây (VLM) cho mọi bức ảnh gây độ trễ trung bình 2,5--3,6\,giây và phụ thuộc hoàn toàn vào mạng, trong khi phân loại Softmax đóng 3.093 lớp lại dễ quá khớp với nền trắng studio do mỗi SKU chỉ có đúng 1 ảnh chuẩn trong catalog. Để đáp ứng đồng thời ba yêu cầu \textbf{nhẹ trên điện thoại}, \textbf{nhận diện tốt đa góc chụp thực tế} và \textbf{chỉ chạy đúng lúc người dùng tải ảnh + gửi câu hỏi (\emph{strict on-demand})}, \texttt{Retail-AI-} triển khai kiến trúc truy xuất nhúng mở (\emph{open-set metric learning}) kết hợp định tuyến lai (Hình~\ref{fig:mobile_vision_pipeline}):
+Kiến trúc tác nhân LLM truyền thống (như ReAct đa bước) thường gọi tuần tự 2--4 lượt LLM (lập kế hoạch $\to$ chọn sản phẩm $\to$ duyệt văn bản) cho mọi câu hỏi, gây độ trễ 5--14\,s và tăng nguy cơ sai lệch giá. Thuật toán~\ref{alg:zero_planner_sse} trình bày cơ chế \textbf{Zero-Planner Hybrid Routing} do nhóm thiết kế nhằm phân luồng truy vấn theo mức độ phức tạp và rủi ro:
 \begin{itemize}
-    \item \textbf{Chưng cất kép từ hai mô hình nền tảng HuggingFace trên Kaggle:} Thay vì học đơn độc từ 1 ảnh studio/SKU, hệ thống trích xuất vector mục tiêu từ hai giáo viên bổ trợ là \texttt{openai/clip-vit-base-patch32}~\cite{radford2021clip} (mạnh về logo, chữ thương hiệu và màu bao bì) và \texttt{facebook/dinov2-small}~\cite{oquab2024dinov2} (mạnh về hình học 3D và góc chụp nghiêng), ghép thành không gian 896 chiều rồi chiếu SVD trực giao sang không gian chuẩn hóa $256$-chiều (bảo toàn 88,85\% phương sai, khớp hoàn toàn chỉ trên tập catalog không rò rỉ dữ liệu kiểm thử).
-    \item \textbf{Huấn luyện \texttt{MobileNetV3Large-224} chịu đa góc chụp:} Mạng sinh viên \texttt{MobileNetV3Large-224}~\cite{howard2019mobilenetv3} ghép nối \code{Concat([GAP, GMP]) -> BN -> Dense(256) -> BN -> UnitNormalization} (100\% toán tử TFLite gốc, 0 FlexOps) được huấn luyện với tổ hợp 4 hàm mất mát: căn chỉnh cosin trực tiếp về không gian SVD-256 ($w=6{,}0$), chưng cất ma trận tương đồng theo cặp ($w=3{,}0$), Sub-Center ArcFace ($K=3$, khởi tạo từ prototype giáo viên, $w=0{,}35$)~\cite{deng2020subcenter} và Supervised Contrastive Loss ($w=0{,}50$)~\cite{khosla2020supcon} cùng EMA. Dữ liệu huấn luyện áp dụng tăng cường OpenCV sát thực tế: tách nền trắng theo biên, ghép kệ siêu thị lộn xộn với 2--4 SKU hàng xóm, biến dạng phối cảnh 3D (\emph{perspective homography}), xoay $\pm 26^\circ$, bóng đổ, lóa đèn huỳnh quang, ngón tay che 12--28\% góc ảnh, mờ và nén JPEG (không lật ngang để giữ nguyên chữ thương hiệu).
-    \item \textbf{Xuất TFLite chuẩn Keras~3.13 và cơ chế Lazy On-Demand:} Xuất qua \code{model.export()} tạo ra hai tệp nhẹ cho di động gồm \code{thanh_lam_mobilenetv3_fp16.tflite} (\textbf{7,04\,MB}, độ tương đồng cosin $0{,}99995$ so với Keras), \code{thanh_lam_mobilenetv3_int8.tflite} (\textbf{3,81\,MB}), gallery FP16 2 góc nhìn cho 3.093 SKU (\textbf{1,58\,MB}), cùng bản gương \texttt{.onnx} đồng trị số cho máy chủ CPU Windows Python~3.13~\cite{thanh_lam_tflite_kaggle}. Giao diện di động \code{ChatPanel.vue} tuyệt đối không chạy suy luận nền trên luồng camera, chỉ nén ảnh gallery lớn xuống cạnh dài tối đa 896\,px ($\approx 80$\,KB) ngay tại máy khách và chỉ gọi \code{/agent/respond/image} khi khách bấm gửi; ở backend, \code{LocalProductEmbedder} nạp trễ 100\% (\emph{lazy-load}) ở yêu cầu đầu tiên.
-    \item \textbf{Định tuyến Fast-Path có Cổng Bảo vệ Quy cách Anh em (\emph{Sibling Pack-Size Guard}):} Tại thời điểm suy luận, ảnh được tiền xử lý 2 góc nhìn giữ đúng tỉ lệ (\emph{full letterbox} + \emph{84\% center crop}) để tránh méo ảnh dọc $9{:}16$ từ điện thoại. Nếu điểm tương đồng cosin $\text{sim}_1 \ge 0{,}82$, biên độ $\text{sim}_1 - \text{sim}_2 \ge 0{,}08$ và SKU đầu bảng không có mã anh em trùng thương hiệu khác dung tích/khối lượng (hoặc $\text{sim}_1 \ge 0{,}92$), hệ thống đi thẳng nhánh \textbf{Fast-Path cục bộ trong 23--27\,ms} (không gọi VLM đám mây). Các ca có mã anh em giống hệt mẫu mã (ví dụ \emph{80\,g vs.\ 200\,g}, \emph{ít đường vs.\ nguyên chất}) hoặc điểm trung bình ($0{,}72 \le \text{sim}_1 < 0{,}82$) được chuyển sang \textbf{Hybrid VLM} (\code{deepseek-v4.1-flash:free}) kèm top-4 gợi ý ứng viên cục bộ để đọc chính xác định lượng trên bao bì và chặn tuyệt đối ảnh ngoài danh mục (OOD).
+    \item \textbf{Tầng 1 -- Cổng an toàn và chào hỏi xác định ($<3$\,ms):} Chặn tức thì câu hỏi kê đơn thuốc/chẩn đoán y tế, tiêm lệnh OWASP và sản phẩm ngoài danh mục mà không tốn lượt gọi LLM.
+    \item \textbf{Tầng 2 -- Truy xuất và tính toán xác định (0 lượt gọi LLM):} Giải trực tiếp các truy vấn tra giá đơn SKU, tra bảng thành phần/HDSD đã xác minh (3 tầng bằng chứng), xếp hạng bán chạy mô phỏng (\code{demo_sales.sqlite3}, bắt buộc ghi rõ \texttt{SIMULATED}), và xếp hạng tồn kho snapshot (\code{catalog-stock}, bắt buộc ghi rõ mốc chụp 15/09/2026) cùng bộ đệm ngữ nghĩa Turn-1 (Jaccard $\ge 0{,}88$ trong cùng chữ ký ràng buộc, bỏ qua hoàn toàn truy vấn y tế/dị ứng).
+    \item \textbf{Tầng 3 -- Phát luồng SSE không planner và giỏ hàng 1 lượt:} Với truy vấn duyệt sản phẩm, so sánh đơn giá quy đổi (Công thức~\ref{eq:unit_price}), lọc khuyến mãi hoặc lắp giỏ bữa ăn theo ngân sách $\sum P(p) \le B$, truy xuất danh mục hoàn tất trước và trả thẻ sản phẩm xác thực ngay trong sự kiện SSE đầu tiên, sau đó chỉ gọi 1 lượt LLM sinh lời giải thích gọn nhẹ trên tập ứng viên đã khóa chặt.
+    \item \textbf{Tầng 4 -- Lập kế hoạch có giới hạn cho ca rủi ro cao:} Chỉ các câu hỏi dị ứng đa điều kiện hoặc đa ràng buộc chưa phân giải mới chuyển sang bộ lập kế hoạch JSON có kiểm chứng (\code{customer_consultation.py}).
 \end{itemize}
 
-\begin{figure}[H]
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.55cm and 0.6cm]
-  \node[procbox, text width=2.55cm] (cam) {Camera / Ảnh máy khách\\(Nén 896\,px, 0 suy luận nền)};
-  \node[aiagent, text width=2.85cm, right=of cam] (emb) {\code{LocalProductEmbedder}\\Lazy \texttt{MobileNetV3-224}\\2-View TTA (13,5\,ms)};
-  \node[gatebox, text width=2.65cm, right=of emb] (gal) {Gallery FP16 (1,58\,MB)\\3.093 SKU Cosin\\(0,07--0,36\,ms)};
-  \node[decbox, right=of gal] (grd) {$\text{sim}_1 \ge 0{,}82$,\\$m \ge 0{,}08$ \&\\không trùng size?};
-  \node[procbox, draw=teal!70!black, fill=teal!8, text width=2.75cm, right=of grd] (fp) {\textbf{Fast-Path Cục bộ}\\Trả thẻ Thanh Lam Mart tức thì\\\textbf{23--27\,ms} (0 gọi cloud)};
-  \node[aiagent, text width=3.85cm, below=0.8cm of grd] (hyb) {\textbf{Hybrid VLM / Chặn OOD}\\\code{deepseek-v4.1-flash:free}\\+ Gợi ý Top-4 (nếu $\ge 0{,}72$)};
-  \node[procbox, text width=2.75cm, right=of hyb] (ans) {Thẻ SKU xác thực\\+ Tư vấn hỏi thêm LLM\\+ Lưu bộ nhớ phiên};
-
-  \draw[flowarr] (cam) -- node[above, font=\scriptsize] {Bấm gửi} (emb);
-  \draw[flowarr] (emb) -- (gal);
-  \draw[flowarr] (gal) -- (grd);
-  \draw[flowarr] (grd) -- node[above, font=\scriptsize] {Đạt} (fp);
-  \draw[flowarr] (grd) -- node[right, font=\scriptsize] {Trùng size / thấp} (hyb);
-  \draw[flowarr] (fp) -- (ans);
-  \draw[flowarr] (hyb) -- (ans);
-\end{tikzpicture}%
-}
-\caption{Kiến trúc nhận diện sản phẩm bằng ảnh trên di động chỉ chạy theo yêu cầu (\emph{strict on-demand}) với \texttt{MobileNetV3Large-224} TFLite Fast-Path và cổng bảo vệ quy cách Hybrid VLM.}
-\label{fig:mobile_vision_pipeline}
-\end{figure}
-
-\subsection*{Kiến trúc Dự báo Cổng Lợi nhuận và Quản trị Đề xuất HITL (\texttt{ops\_chest})}
-Hình~\ref{fig:ops_chest_arch} thể hiện cách \texttt{ops\_chest} tách bạch ba tầng trách nhiệm: các động cơ toán học tính dự báo không thiên lệch và lượng nhập có trần FEFO hoàn toàn xác định bằng Python/SQL; tác nhân LLM dùng 31 công cụ để giải thích số liệu và soạn thảo đề xuất; mô-đun \code{guard.py} kiểm soát độ trung thực số liệu và hành vi trước khi hiển thị; và PostgreSQL giữ mọi đề xuất ở trạng thái \texttt{PENDING} chờ Cửa hàng trưởng xác thực phê duyệt.
-
-\begin{figure}[H]
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.55cm and 0.65cm]
-  \node[procbox, text width=2.8cm] (frn) {Nhật ký POS \& OOS\\(FreshRetailNet-50K / Store DB)};
-  \node[aiagent, text width=2.9cm, right=of frn] (rec) {Khôi phục OOS theo giờ\\+ Tạo 29 Đặc trưng};
-  \node[gatebox, text width=3.15cm, right=of rec] (gate) {Bộ định tuyến \texttt{B-Gate}\\$\hat{q}_{50}^{\text{LGBM}} + \sigma_{\text{EWMA}}$ vs.\ EWMA};
-  \node[aiagent, text width=3.0cm, right=of gate] (nv) {Newsvendor ($SL^*$) +\\Trần lô FEFO + Giảm giá};
-
-  \node[aiagent, text width=3.55cm, below=0.85cm of rec] (llm) {Tác nhân Quản lý 31 Công cụ\\(22 Đọc/Biểu mẫu, 9 Đề xuất,\\0 Công cụ Tự thực thi)};
-  \node[gatebox, text width=3.2cm, right=of llm] (grd) {Lớp Guard (\code{guard.py})\\Kiểm số $\ge 1.000$ +\\Chặn \code{FALSE_EXEC}};
-  \node[procbox, draw=teal!70!black, fill=teal!8, text width=3.3cm, right=of grd] (hitl) {Hàng đợi HITL\\\texttt{PENDING} $\to$ \texttt{APPROVED}\\$\to$ \texttt{EXECUTED} + Audit};
-
-  \draw[flowarr] (frn) -- (rec);
-  \draw[flowarr] (rec) -- (gate);
-  \draw[flowarr] (gate) -- (nv);
-  \draw[flowarr] (nv.south) -- ++(0,-0.32) -| (llm.north);
-  \draw[flowarr] (llm) -- (grd);
-  \draw[flowarr] (grd) -- (hitl);
-\end{tikzpicture}%
-}
-\caption{Kiến trúc dự báo theo cổng lợi nhuận, kiểm soát thực thi thời gian thực và quản trị HITL trong \texttt{ops\_chest}.}
-\label{fig:ops_chest_arch}
-\end{figure}
-
-\section{Mô tả các Thuật toán Cốt lõi}
-
-Để bảo đảm tính minh bạch và khả năng tái lập, bốn thuật toán nền tảng điều khiển tư vấn phát luồng, nhận dạng giọng nói truyền luồng, tương tác song công chống vọng và tối ưu tồn kho hàng tươi sống được đặc tả chi tiết dưới đây.
-
 \begin{algorithm}[htbp]
-\caption{Tư vấn Phát luồng SSE Không Planner, Groq LPU, Bộ đệm Ngữ nghĩa và Giỏ hàng 1 Lượt (\texttt{Retail-AI-})}
+\caption{Định tuyến Lai Không Planner có Căn cứ (\emph{Zero-Planner Hybrid Routing}, \texttt{Retail-AI-})}
 \label{alg:zero_planner_sse}
 \footnotesize
 \begin{algorithmic}[1]
-\Require Câu hỏi $u$, ngữ cảnh phiên $S$, danh mục Thanh Lam Mart đã đánh chỉ mục $\mathcal{C}$, kho bán thử $\mathcal{D}_{\text{sim}}$
-\Ensure Chuỗi sự kiện SSE (\code{start}, \code{delta}*, \code{done}) kèm thẻ sản phẩm xác thực $K$ và văn bản tiếng Việt
-\State Chuẩn hóa $u$ qua \code{catalog_transcription.py}; kiểm tra các cổng xác định $<3$\,ms (giỏ hàng/thanh toán, an toàn y tế, ngoài phạm vi, tiêm lệnh OWASP)
-\If{kích hoạt cổng an toàn xác định}
-    \State Phát ngay sự kiện SSE \code{start} + phản hồi an toàn chuẩn + \code{done}; \Return
+\Require Truy vấn $u$, bộ nhớ phiên $S$, kho danh mục có cầu nối $\mathcal{C}_{\text{bridge}}$, kho bán thử $\mathcal{D}_{\text{sim}}$
+\Ensure Phản hồi tiếng Việt có căn cứ kèm danh sách thẻ sản phẩm $K$ và nhãn nguồn gốc dữ liệu
+\State Chuẩn hóa $u$ (sửa thương hiệu neo danh mục, bảo vệ tập từ dừng \code{_NEVER_CORRECT}); chạy các cổng xác định $<3$\,ms (y tế/thuốc, ngoài danh mục, tiêm lệnh OWASP, chào hỏi xã giao)
+\If{kích hoạt cổng an toàn / ngoài phạm vi / chào hỏi}
+    \State Trả ngay phản hồi chuẩn xác định (0 lượt LLM); \Return
 \EndIf
-\If{$u$ thuộc chào hỏi / cảm ơn / tạm biệt xã giao}
-    \State Trả lời tức thì qua \code{smalltalk.py} ($\le 10$\,ms); \Return
+\If{lượt Turn-1 không thuộc nhóm y tế/dị ứng \textbf{và} trúng bộ đệm ngữ nghĩa (chính xác $O(1)$ hoặc Jaccard $\ge 0{,}88$ cùng chữ ký ràng buộc)}
+    \State Sao chép sâu bộ nhớ phiên $S'$ và trả kết quả đệm (0 token LLM); \Return
 \EndIf
-\If{lượt Turn-1 không trạng thái, không y tế/dị ứng \textbf{và} trúng \code{consultation_cache.py} (chính xác $O(1)$ hoặc Jaccard $\ge 0{,}88$ cùng chữ ký ràng buộc)}
-    \State Sao chép sâu bộ nhớ phiên $S'$ và phát phản hồi ngay (11--36\,ms cục bộ / 125--140\,ms HTTPS, \textbf{0 token LLM}); \Return
+\If{$u$ là tra cứu đơn SKU, tri thức nhãn xác minh, bán chạy \texttt{SIMULATED} hoặc xếp hạng tồn kho}
+    \State Thực thi công cụ xác định trên $\mathcal{C}_{\text{bridge}}$ hoặc $\mathcal{D}_{\text{sim}}$; gắn nhãn nguồn gốc (tồn trực tiếp cầu nối, snapshot 15/09/2026 hoặc \texttt{SIMULATED})
+    \State Trả phản hồi mẫu xác định (0 lượt LLM) kèm thẻ $K$; \Return
 \EndIf
-\If{$u$ là tra cứu giá một SKU, hỏi thành phần/cách dùng đã xác minh hoặc hỏi mặt hàng bán chạy xác định}
-    \State Truy xuất SKU từ $\mathcal{C}$, tra 3 tầng tri thức (\code{knowledge.py}) hoặc xếp hạng $\mathcal{D}_{\text{sim}}$ (hỗ trợ khẩu ngữ Việt, công bố rõ nhãn \texttt{SIMULATED})
-    \State Phát phản hồi mẫu tức thì (0 token LLM) kèm thẻ sản phẩm $K$ có \code{image_url}; \Return
-\EndIf
-\If{$u$ yêu cầu giỏ món ăn / combo theo ngân sách (ví dụ: ``bữa tối dưới 150k cho 2 người'')}
-    \State Phân loại khuôn mẫu giỏ $\mathcal{T}$ (ưu tiên nhánh đa món Path~E), chặn snack lọt vào bữa mặn và lấy ứng viên từng nhóm từ $\mathcal{C}$
-    \State Chọn tập sản phẩm khả thi $K_{\text{basket}}$ thỏa $\sum_{p \in K_{\text{basket}}} P(p) \le B$ bằng \code{fast_chat()} trên Groq LPU ($\approx 300$\,ms)
-    \State Phát ngay SSE \code{start} mang $K_{\text{basket}}$; phát luồng tư vấn gọn bằng \textbf{1 lượt gọi Groq LPU} (nén thẻ $\approx 35\%$ token, khóa đại từ \emph{mình/bạn})
-\ElsIf{$u$ là duyệt sản phẩm, so sánh đúng dung tích, khuyến mãi hoặc lọc loại trừ (\emph{không cay/đậu nành/bạc hà})}
-    \State Chạy tìm kiếm lai xác định + lọc loại trừ + xếp hạng đơn giá quy đổi (Công thức~\ref{eq:unit_price}) trên $\mathcal{C}$ để lấy top-$k$ SKU $K$
-    \State Phát ngay SSE \code{start} mang $K$ để giao diện vẽ thẻ kèm ảnh thu nhỏ trước khi có token LLM
-    \State Phát luồng SSE \code{delta} qua tuyến nhanh \textbf{Groq LPU} (\code{qwen/qwen3.8-27b} xoay 4 khóa miễn phí, dự phòng tự động sang TokenHarbor DeepSeek); lưu kết quả Turn-1 vào \code{consultation_cache.py}
+\If{$u$ yêu cầu giỏ món ăn theo ngân sách $B$}
+    \State Phân loại khuôn mẫu giỏ, lấy ứng viên từ $\mathcal{C}_{\text{bridge}}$ (ẩn SKU hết hàng trực tiếp) và chọn tập $K_{\text{basket}}$ thỏa $\sum_{p \in K_{\text{basket}}} P(p) \le B$
+    \State Phát thẻ $K_{\text{basket}}$ ngay; phát luồng lời tư vấn bằng \textbf{1 lượt LLM}
+\ElsIf{$u$ là duyệt, so sánh đơn giá, khuyến mãi hoặc lọc loại trừ tiêu chuẩn}
+    \State Chạy tìm kiếm chỉ mục đảo + lọc loại trừ + xếp hạng đơn giá quy đổi (Công thức~\ref{eq:unit_price}) lấy top-$k$ SKU $K$
+    \State Phát thẻ $K$ trước khi có token; phát luồng văn bản giải thích trên tập $K$ đã khóa cứng; lưu đệm Turn-1
 \Else
-    \State Chuyển các ca y tế/dị ứng phức tạp hoặc JSON nhiều ràng buộc sang planner có giới hạn (\code{customer_consultation.py} trên DeepSeek)
+    \State Chuyển các ca dị ứng/y tế phức tạp hoặc JSON đa ràng buộc sang planner có kiểm chứng (\code{customer_consultation.py})
 \EndIf
-\State Phát sự kiện \code{done} kèm bộ nhớ phiên cập nhật $S'$ và siêu dữ liệu kiểm toán
+\State Cập nhật ngữ cảnh phiên $S'$ và trả kết quả
 \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}[H]
-\caption{Nhận dạng Giọng nói WebSocket Thời gian thực kèm Cứu hộ \texttt{DPDFNet2} và Sửa Thương hiệu}
-\label{alg:ws_streaming_stt}
-\begin{algorithmic}[1]
-\Require Các khung âm thanh 16\,kHz Float32 $f_t$ (32\,ms) từ AudioWorklet; danh sách từ khóa Thanh Lam Mart $\mathcal{P}$
-\Ensure Văn bản tiếng Việt đã chuẩn hóa $\hat{u}$ và phụ đề tạm thời gian thực
-\State Duy trì bộ đệm vòng 8 khung (256\,ms) $B_{\text{pre}}$; chạy Silero VAD~v6 trên mỗi khung
-\If{VAD phát hiện bắt đầu tiếng nói}
-    \State Mở WebSocket \code{/audio/transcribe/stream}; khởi tạo Azure \code{PushAudioInputStream} nạp sẵn $\mathcal{P}$
-    \State Đẩy toàn bộ $B_{\text{pre}}$ dạng PCM16 cùng các khung mới $f_t$ và tích lũy bộ đệm thô $X$
-    \State Chuyển tiếp ngay sự kiện \code{recognizing} từ Azure lên giao diện kiosk thành phụ đề trực tiếp
-\EndIf
-\If{hết thời gian chờ dứt câu VAD (550\,ms)}
-    \State Gửi \texttt{\{"type":"end"\}}; đóng luồng đẩy và nhận giả thuyết cuối $u_{\text{ws}}$
-    \State Ước lượng $\widehat{\text{SNR}}_{\text{dB}}(X)$ theo Công thức~\ref{eq:snr_est}
-    \If{$u_{\text{ws}}$ rỗng \textbf{hoặc} $\widehat{\text{SNR}}_{\text{dB}}(X) < 13$\,dB}
-        \State Áp dụng HPF 85\,Hz pha không (Công thức~\ref{eq:hpf85}) và trộn \texttt{DPDFNet2} ONNX thích nghi (Công thức~\ref{eq:snr_blend}) $\to Y$
-        \State Giải mã cứu hộ $Y$ bằng Azure Speech (hoặc \texttt{gipformer1.5-68M-rnnt} cục bộ nếu mất mạng) $\to u_{\text{rescue}}$
-        \State Chọn bản phiên âm không rỗng có độ tin cậy cao hơn $u_{\text{raw}} \in \{u_{\text{ws}}, u_{\text{rescue}}\}$
-    \Else
-        \State $u_{\text{raw}} \gets u_{\text{ws}}$
-    \EndIf
-    \State Chạy sửa lỗi thương hiệu neo danh mục trên $u_{\text{raw}}$, bỏ qua mọi từ trong \code{_NEVER_CORRECT} $\to \hat{u}$
-    \State \Return $\hat{u}$
-\EndIf
-\end{algorithmic}
-\end{algorithm}
+\subsection*{Các Mô-đun Đa phương thức Bổ trợ (Giọng nói \& Thị giác On-Demand)}
+Nhằm hỗ trợ tương tác tự nhiên tại quầy, \texttt{Retail-AI-} tích hợp hai mô-đun tri giác bổ trợ:
+\begin{itemize}
+    \item \textbf{Giao diện Giọng nói Hỗ trợ:} Kết hợp Silero VAD~v6 cục bộ, nhận dạng truyền luồng Azure Speech với danh sách từ khóa thương hiệu (\code{PhraseListGrammar}), sửa lỗi thương hiệu neo danh mục và khử nhiễu thích nghi SNR (\texttt{DPDFNet2} ONNX trên nhánh máy chủ / \texttt{GTCRN} WASM trên trình duyệt khi chạy serverless; chi tiết kỹ thuật trình bày ở Phụ lục~A.3).
+    \item \textbf{Nhận diện Ảnh Sản phẩm On-Demand (\texttt{MobileNetV3Large-224} TFLite + Sibling Pack-Size Guard):} Do mỗi SKU chỉ có 1 ảnh gốc trong danh mục (không phù hợp phân loại Softmax đóng 3.093 lớp), nhóm chưng cất đặc trưng từ hai mô hình nền tảng \texttt{CLIP-ViT-B/32} (512-d) và \texttt{DINOv2-Small} (384-d)~\cite{radford2021clip,oquab2024dinov2} chiếu SVD trực giao về không gian 256 chiều (giữ 88,85\% phương sai, chỉ khớp trên tập ảnh danh mục) để huấn luyện mạng sinh viên \texttt{MobileNetV3Large-224}~\cite{howard2019mobilenetv3,thanh_lam_tflite_kaggle} (7,04\,MB FP16 + 1,58\,MB gallery 3.093 SKU) bằng tổ hợp 4 hàm mất mát (Direct Cosine, Relational, Sub-Center ArcFace~\cite{deng2020subcenter} và SupCon~\cite{khosla2020supcon}) kèm tăng cường phối cảnh 3D/kệ hàng/lóa sáng. Tại thời điểm suy luận theo yêu cầu, ảnh đi qua 2-View TTA; nếu $\text{sim}_1 \ge 0{,}82$, biên độ $m = \text{sim}_1 - \text{sim}_2 \ge 0{,}08$ và \textbf{Cổng Bảo vệ Quy cách Anh em} xác nhận không có mã cùng thương hiệu khác dung tích (hoặc $\text{sim}_1 \ge 0{,}92$), nhánh cục bộ trả thẻ trong 23--27\,ms; các ca đồng mẫu hoặc độ tin cậy thấp chuyển sang Hybrid VLM kèm top-4 ứng viên gợi ý để đọc chính xác định lượng và loại ảnh ngoài phân phối (OOD).
+\end{itemize}
 
-\begin{algorithm}[H]
-\caption{Ngắt lời Song công Chống vọng 3 Lớp và Hàng đợi TTS Theo Mệnh đề}
-\label{alg:bargein_tts}
-\begin{algorithmic}[1]
-\Require Các mảnh văn bản SSE $\{\Delta_j\}$; khung micro $f_t$ có năng lượng RMS $E_t$ và xác suất VAD $p_t$; văn bản bot đang đọc $U_{\text{bot}}$
-\Ensure Âm thanh phản hồi độ trễ thấp, ngắt lời tự nhiên và không tự kích hoạt do tiếng loa
-\State \textbf{Chiều phát (\code{speech-queue.ts}):} Nối từng $\Delta_j$ vào bộ đệm văn bản chờ $buf$
-\State Bảo vệ dấu chấm ngăn cách hàng nghìn tiếng Việt (như \texttt{29.000đ}) không bị tách câu nhầm
-\If{$|buf| \ge 18$ gặp dấu hết câu, \textbf{hoặc} $|buf| \ge 150$ gặp dấu ngắt mệnh đề sau ký tự thứ 75 (loại bỏ tách cứng tại dấu chấm phẩy \texttt{;})}
-    \State Tách mệnh đề $c$, xin vé Azure Neural TTS dùng một lần (\code{vi-VN-HoaiMyNeural}), nạp trước song song \texttt{Blob URL} âm thanh cho câu kế tiếp giúp chuyển câu liền mạch không khoảng lặng
-    \State Chuyển mượt avatar video 4 lớp (\code{idle} $\leftrightarrow$ \code{speaking}) bằng cặp thẻ video HTML5 đệm kép
-\EndIf
-\State \textbf{Chiều thu (\code{voice-controller.ts}):} Giữ AEC/AGC/NS phần cứng bật suốt thời gian phát; theo dõi nền ồn quạt ổn định (\code{neuralNoiseFloor} + \code{SpeechEnvelopeGate}) để không mở nhầm luồng STT khi chưa có giọng người
-\If{thời gian avatar mới bắt đầu phát $< 450$\,ms}
-    \State Bỏ qua kích hoạt micro (Lớp~1: cửa sổ chống dội đầu phát)
-\ElsIf{$p_t \ge 0{,}78$ \textbf{và} $E_t \ge \max(0{,}065;\, 1{,}85 \cdot E_{\text{ambient}})$ duy trì 5 khung liên tiếp (Lớp~2: cổng năng lượng thích nghi)}
-    \State Hủy ngay âm thanh TTS và luồng SSE hiện tại; chuyển avatar sang \code{listening}; mở WS STT
-\EndIf
-\State Khi nhận phiên âm $\hat{u}$, kiểm tra Lớp~3 trùng lặp từ vựng \code{isLikelyAssistantEcho}$(\hat{u}, H_{\text{bot}})$ trên cửa sổ trượt 4 câu gần nhất (12\,s) kết hợp kiểm duyệt hoạt động tiếng nói phía máy chủ
-\If{phát hiện tự vọng giọng bot}
-    \State Hủy bỏ $\hat{u}$ âm thầm và tiếp tục lắng nghe
-\Else
-    \State Đưa $\hat{u}$ vào Thuật toán~\ref{alg:zero_planner_sse}
-\EndIf
-\end{algorithmic}
-\end{algorithm}
+\section{Đóng góp 2: Profit-Gated Router (\texttt{B-Gate}) và Quản trị HITL (\texttt{ops\_chest})}
 
-\begin{algorithm}[H]
-\caption{Đặt hàng Newsvendor Hàng Tươi sống Định tuyến Lợi nhuận, Trần FEFO \& HITL (\texttt{ops\_chest})}
+Điểm cốt lõi của bài toán quản trị hàng tươi sống là sự lệch pha giữa sai số dự báo thống kê (WAPE) và lợi nhuận thực tế dưới chi phí bất đối xứng của hàng hạn dùng 1--3 ngày. Thử nghiệm ban đầu cho thấy dùng trực tiếp độ rộng khoảng phân vị $(q_{90}-q_{10})$ của LightGBM làm độ lệch chuẩn $\sigma_{\text{daily}}$ trong công thức Newsvendor (Công thức~\ref{eq:order_qty}) làm phóng đại tồn kho an toàn ở các SKU biến động và cửa hàng nhỏ, khiến tỷ lệ hủy tăng và lợi nhuận giảm so với EWMA. Thuật toán~\ref{alg:ops_chest_newsvendor} trình bày phương pháp \textbf{Profit-Gated Router (\texttt{B-Gate})} do nhóm thiết kế: (i) tách ước lượng trung vị điểm của LightGBM ($\hat{q}_{50}$) khỏi ước lượng độ phân tán mượt của EWMA ($\sigma_{\text{EWMA}}$); (ii) học bảng định tuyến phân khúc $g = (\text{bậc doanh số} \times \text{gián đoạn} \times \mathbb{I}[N_s > 30])$ hoàn toàn dựa trên lợi nhuận mô phỏng ngoài mẫu theo Công thức~\ref{eq:profit_gate}; (iii) tính lượng đặt Newsvendor có sàn mức phục vụ và trần tiêu thụ FEFO; và (iv) buộc mọi đề xuất đi qua lớp kiểm duyệt \code{guard.py} và trạng thái chờ duyệt \texttt{PENDING} của Cửa hàng trưởng.
+
+\begin{algorithm}[htbp]
+\caption{Đặt hàng Hàng Tươi sống Định tuyến Cổng Lợi nhuận (\texttt{B-Gate}), Trần FEFO \& HITL (\texttt{ops\_chest})}
 \label{alg:ops_chest_newsvendor}
+\footnotesize
 \begin{algorithmic}[1]
-\Require Cửa hàng $s$ ($N_s$ SKU), SKU $i$ có sổ lô $\mathcal{L}_i$, giá $p$, vốn $c$, thu hồi $v$, chi phí OOS $s_{\text{out}}$, HSD $L$, chu kỳ $R$, sức chứa $C_{\text{room}}$, cổng lợi nhuận $V(g)$
-\Ensure Đề xuất đặt hàng/giảm giá đã kiểm chứng $P$ ở trạng thái \texttt{PENDING} (không tự thực thi)
-\State Khôi phục nhu cầu quá khứ bị che khuất $\hat{D}_{i,t}$ từ hồ sơ giờ (Công thức~\ref{eq:wape_recovery}) và dựng 29 đặc trưng bảng
-\State Tính dự báo EWMA $(\hat{\mu}_{\text{EWMA}}, \sigma_{\text{EWMA}})$ và phân vị LightGBM~v3 $(\hat{q}_{10}, \hat{q}_{50}, \hat{q}_{90})$
+\Require Cửa hàng $s$ ($N_s$ SKU), SKU $i$ có sổ lô $\mathcal{L}_i$, giá $p$, vốn $c$, thu hồi $v$, chi phí OOS $s_{\text{out}}$, HSD $L$, chu kỳ $R$, sức chứa $C_{\text{room}}$, bảng cổng lợi nhuận $V(g)$ học ngoài mẫu
+\Ensure Đề xuất đặt hàng/giảm giá $P$ ở trạng thái \texttt{PENDING} (0 thao tác tự thực thi)
+\State Khôi phục nhu cầu quá khứ $\hat{D}_{i,t}$ từ hồ sơ tỷ trọng bán theo giờ (Công thức~\ref{eq:wape_recovery}) và tạo 29 đặc trưng
+\State Tính cặp dự báo EWMA $(\hat{\mu}_{\text{EWMA}}, \sigma_{\text{EWMA}})$ và phân vị LightGBM~v3 $(\hat{q}_{10}, \hat{q}_{50}, \hat{q}_{90})$
 \State Xác định phân khúc $g = (\text{bậc\_doanh\_số}(i), \text{gián\_đoạn}(i), \mathbb{I}[N_s > 30])$
-\If{$V(g) > 0$ \textbf{và} $N_s > 30$ (Công thức~\ref{eq:profit_gate})}
-    \State Đặt nhu cầu ngày $\hat{\mu} \gets \hat{q}_{50}$, độ lệch chuẩn $\sigma_{\text{daily}} \gets \sigma_{\text{EWMA}}$ (\texttt{B-Gate} / \code{ewma_sigma})
+\If{$V(g) > 0$ (Công thức~\ref{eq:profit_gate}) \textbf{và} $g$ nằm trong tập phân khúc kích hoạt ML của cổng ngoài mẫu}
+    \State Đặt kỳ vọng $\hat{\mu} \gets \hat{q}_{50}^{\text{LGBM}}$ và độ phân tán mượt $\sigma_{\text{daily}} \gets \sigma_{\text{EWMA}}$ (biến thể \code{ewma_sigma})
 \Else
     \State Đặt $(\hat{\mu}, \sigma_{\text{daily}}) \gets (\hat{\mu}_{\text{EWMA}}, \sigma_{\text{EWMA}})$
 \EndIf
-\State Tính mức phục vụ Newsvendor $SL^*$ và $z = \Phi^{-1}(SL^*)$ theo Công thức~\ref{eq:newsvendor} (sàn 0,95 cho nhóm hút khách, 0,90 cho nhóm ABC-A)
-\State Mô phỏng tiêu thụ lô FEFO qua thời gian giao + chu kỳ $R$ và cửa sổ HSD $W = \min(90, L)$ để lấy cầu thiếu $U_R$, tồn cuối $L_R$ và cầu đã phục vụ $S_W$
+\State Tính mức phục vụ $SL^*$ và $z = \Phi^{-1}(SL^*)$ theo Công thức~\ref{eq:newsvendor} với sàn 0,95 (hút khách), 0,90 (ABC-A), 0,50 (khác)
+\State Mô phỏng tiêu thụ lô FEFO qua chu kỳ $R$ và cửa sổ $W = \min(90, L)$ để lấy cầu thiếu $U_R$, tồn cuối $L_R$ và cầu phục vụ $S_W$
 \State Tính lượng đặt có trần $Q^* = \max(0, \min(Q_{\text{raw}}, Q_{\text{cap}}, C_{\text{room}}))$ theo Công thức~\ref{eq:order_qty}
-\State Đánh dấu các lô còn $\le 2$ ngày HSD có lượng tồn vượt sức bán nguyên giá để lập đề xuất giảm giá bậc thang FEFO
-\State Lưu đề xuất $P$ ở trạng thái \texttt{PENDING} qua \code{propose_po} / \code{propose_markdown}; kiểm duyệt văn bản qua \code{guard.py} (căn cứ số liệu + 0 \code{FALSE_EXEC})
-\State Chỉ thực thi gửi email PO (Mailpit/SMTP) hoặc đổi giá kệ sau khi Cửa hàng trưởng xác thực phê duyệt $P$
+\State Xác định lô còn $\le 2$ ngày HSD có tồn vượt cầu nguyên giá để tạo đề xuất giảm giá FEFO giữ lãi đóng góp dương
+\State Lưu đề xuất $P$ ở trạng thái \texttt{PENDING} qua bộ 9 công cụ đề xuất; rà soát văn bản giải thích qua \code{guard.py}
+\State Chỉ chuyển sang \texttt{EXECUTED} và công bố qua cầu nối \code{ops_bridge} sau khi Cửa hàng trưởng xác thực phê duyệt
 \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}[H]
-\caption{Nhận diện Ảnh Sản phẩm Di động On-Demand với \texttt{MobileNetV3} TFLite Fast-Path \& Hybrid VLM (\texttt{Retail-AI-})}
-\label{alg:mobile_vision_hybrid}
-\begin{algorithmic}[1]
-\Require Ảnh/video tải lên $I_{\text{raw}}$ (máy khách \code{media-preprocess.ts} nén ảnh $\le 640$\,px \code{q=0.78} còn 25--45\,KB, hoặc tự trích 5 khung video và chọn 1 khung nét nhất trên canvas $96\times 96$), câu hỏi khách $q$, danh mục $\mathcal{C}$, kho vector FP16 $G \in \mathbb{R}^{3093 \times 256}$
-\Ensure Thẻ sản phẩm Thanh Lam Mart xác thực $K$ (kèm \code{image_url}), câu trả lời tiếng Việt có căn cứ và bộ đo độ trễ từng chặng
-\State Chỉ kích hoạt khi người dùng gửi \code{POST /agent/respond/image} (tuyệt đối 0 suy luận nền lúc mở camera); kiểm tra cache băm SHA-256 trước khi giải mã
-\State \textbf{Nạp trễ \& Giải mã 1 lần:} Ở lượt gọi đầu tiên, tải \texttt{.tflite} và $G$ vào bộ nhớ singleton; giải mã JPEG bằng \code{libjpeg} DCT \code{draft(640)} (nhanh hơn 6--8$\times$), lọc ảnh tối/trống $<3$\,ms, rồi dùng chung ảnh PIL đã xoay EXIF cho cả \textbf{Adaptive 1-Crop} và 2-View TTA ($v_{\text{full}}$ letterbox + $v_{\text{center}}$ 84\%)
-\State Tính nhúng $e = \text{Norm}(0{,}55\,f_\theta(v_{\text{full}}) + 0{,}45\,f_\theta(v_{\text{center}}))$ và điểm cosin $s = G e \in \mathbb{R}^{3093}$; lấy top-5 ứng viên cùng biên độ $m = s_{(1)} - s_{(2)}$
-\State Kiểm tra \textbf{Cổng Bảo vệ Quy cách Anh em (\code{_has_ambiguous_pack_size_sibling})}: xác định liệu mã đầu bảng có SKU cùng thương hiệu khác khối lượng/dung tích trong $\mathcal{C}$ hay không
-\If{$s_{(1)} \ge 0{,}82$ \textbf{và} $m \ge 0{,}08$ \textbf{và} (không có mã anh em khác quy cách \textbf{hoặc} $s_{(1)} \ge 0{,}92$)}
-    \State \textbf{Tuyến Fast-Path (23--27\,ms):} Chọn ngay SKU xác thực $K$ từ $\mathcal{C}$ mà không gọi Vision LLM đám mây
-\Else
-    \State Gửi ảnh $I_{\text{raw}}$ kèm gợi ý top-4 ứng viên cục bộ (chỉ khi $s_{(1)} \ge 0{,}72$) tới \code{deepseek-v4.1-flash:free} để đọc tên, định lượng, mã vạch và loại ảnh OOD
-    \State Xếp hạng lai xác định trên $\mathcal{C}$ (khớp mã vạch chính xác + thương hiệu chuẩn hóa + dung tích/bao bì + điểm cộng đồng thuận thị giác); nếu lỗi mạng mà $s_{(1)} \ge 0{,}72$, hạ cấp an toàn về kết quả cục bộ
-\EndIf
-\If{$K \neq \emptyset$ \textbf{và} $q$ là câu hỏi tư vấn tùy biến (ngoài hỏi tên/giá mặc định)}
-    \State Gọi 1 lượt text LLM ngắn gọn neo theo thông tin $K$ đã xác minh (bỏ qua Vision LLM nếu đã qua Fast-Path)
-\EndIf
-\State Cập nhật bộ nhớ phiên (\code{last_grounded_product}) để các lượt thoại tiếp theo (``thêm vào giỏ đi'', ``có loại to hơn không?'') hiểu ngữ cảnh liên mạch; \Return phản hồi và nhật ký độ trễ
-\end{algorithmic}
-\end{algorithm}
+\section{Quy trình Huấn luyện Mô hình và Cơ sở Lựa chọn Tham số}
 
-\subsection*{Tối ưu Độ trễ Sản xuất Toàn tuyến, Cảnh báo Zalo và Popup Ảnh Di động (\texttt{Retail-AI-})}
-Để đạt phản hồi dưới 1\,giây trên điện thoại quét QR ngoài thực tế ở chi phí mô hình bằng \$0, bốn cải tiến kiến trúc bổ sung đã được triển khai đồng bộ trên Production (\url{https://mai-retail-kiosk.vercel.app}):
-\begin{enumerate}
-    \item \textbf{Định tuyến LLM Phân tầng (Groq LPU Fast-Lane + TokenHarbor Structured JSON):} Luồng phát chữ streaming gọn ($\approx 250$--350 token sau khi nén thẻ sản phẩm $\approx 35\%$, giới hạn \code{max_tokens=200}, khóa nhất quán đại từ \emph{mình/bạn}) và micro-prompt giỏ hàng (\code{fast_chat()}) được định tuyến ưu tiên qua \textbf{Groq LPU miễn phí}~\cite{groq_lpu} (\code{qwen/qwen3.8-27b} $\to$ \code{openai/gpt-oss-20b} $\to$ \code{openai/gpt-oss-120b}, xoay vòng 4 khóa API, timeout 6\,s, tự động failover về TokenHarbor trước token đầu). Ngược lại, các ca có \code{json_schema} phức tạp (y tế, dị ứng, làm rõ) chạy trên TokenHarbor (\code{deepseek-v4.1-flash:free} $\to$ \code{deepseek-v4.1-flash-1017} giá \$0,15/1M token, loại bỏ bản \code{v4-flash:free} chậm 7,2\,s). Khi gặp lỗi HTTP~429 cạn hạn mức dài hạn, hệ thống đặt thời gian nghỉ \textbf{3.600\,giây (1 giờ)} cho khóa hết quota thay vì thử lại sau 5\,giây, kết hợp nhóm kết nối \code{httpx.AsyncClient} keep-alive (20 kết nối duy trì / 50 kết nối tối đa).
-    \item \textbf{Bộ đệm Ngữ nghĩa Turn-1 (\code{consultation_cache.py}):} Bộ đệm LRU có giới hạn (\code{max_entries=256}, \code{TTL=300\,s}) dùng tra cứu chính xác $O(1)$ kết hợp độ tương đồng Jaccard token nội dung ($\ge 0{,}88$) trong cùng chữ ký ràng buộc (ngân sách, mức đường, loại trừ, dung tích), bỏ qua tuyệt đối câu hỏi y tế/dị ứng và sao chép sâu bộ nhớ phiên (\code{memory}) để lượt Turn-2 tiếp theo nối mạch chính xác với 0 token LLM.
-    \item \textbf{Co-location Vùng Serverless Singapore (\texttt{sin1}) \& Khởi động Không chặn:} Toàn bộ Vercel Serverless Function được ghim từ Mỹ (\texttt{iad1}) sang \textbf{Singapore (\texttt{sin1})} trong \code{vercel.json}, bật header \code{Cache-Control: public, max-age=31536000, immutable} cho tài nguyên \code{/assets/*}, đẩy toàn bộ bắt tay TLS/ONNX vào tác vụ nền không chặn \code{_lifespan}, và chạy \code{getCart()} nền song song khi di động khởi tạo phiên \code{bootKiosk()}.
-    \item \textbf{Popup Lightbox Ảnh Sản phẩm Di động \& Cảnh báo Quản lý Zalo Bot:} Bộ định dạng thẻ \code{_product_card()} (\code{backend/api/schemas.py}, \code{main.py}) mở rộng trường \code{image_url} đã kiểm lọc giao thức \code{http(s)} phủ \textbf{3.096/3.099 SKU (99,9\%)} danh mục. Trên giao diện Vue~3 (\code{ChatPanel.vue}), mỗi thẻ sản phẩm chính và liên quan hiển thị ảnh thu nhỏ và cho phép chạm trực tiếp để mở hộp thoại lightbox toàn màn hình (\code{<Teleport to="body">} thoát ngữ cảnh \code{backdrop-filter} của ngăn kéo mobile) hiển thị ảnh lớn trên nền trắng, giá bán/giá gốc/khuyến mãi, số liệu bán mô phỏng 30 ngày và nút hỏi nhanh \emph{``Hỏi thành phần''} (giữ \code{@click.stop} cho mục xem chi tiết giá và nút thêm giỏ). Song song, kênh \textbf{Gọi quản lý qua Zalo Bot} gửi cảnh báo trực tiếp tới điện thoại cửa hàng trưởng với thông điệp giao diện sạch không lộ mã UUID hay trạng thái kỹ thuật nội bộ cho khách hàng.
-\end{enumerate}
-
-\section{Cấu hình, Lựa chọn Mô hình và Thiết lập Đánh giá}
-
-Các Bảng~\ref{tab:voice_config}, \ref{tab:mobile_vision_config}, \ref{tab:llm_config} và \ref{tab:ml_config} tổng hợp toàn bộ siêu tham số và cấu hình mô hình thực tế đã được kiểm chứng trên hai kho mã nguồn.
+Để bảo đảm tính tái lập hoàn toàn của quá trình huấn luyện LightGBM~v3 và tính có căn cứ của mọi ngưỡng hệ thống, Bảng~\ref{tab:lgbm_training_setup} ghi nhận đầy đủ thông số huấn luyện và tìm kiếm siêu tham số từ nhật ký thực nghiệm (\code{data/ops_chest_frn/frn/report.json}), và Bảng~\ref{tab:threshold_justification} giải trình cơ sở lựa chọn các ngưỡng quan trọng trên cả hai phân hệ.
 
 \begin{table}[H]
 \centering
-\caption{Cấu hình chuỗi giọng nói, VAD, khử nhiễu, Streaming STT và TTS (\texttt{Retail-AI-})}
-\label{tab:voice_config}
+\caption{Quy trình huấn luyện, tìm kiếm siêu tham số và thời gian chạy LightGBM~v3 trên FreshRetailNet-50K}
+\label{tab:lgbm_training_setup}
 \footnotesize
-\begin{tabularx}{\textwidth}{L{3.5cm} L{4.2cm} Y}
+\begin{tabularx}{\textwidth}{L{3.7cm} Y}
 \toprule
-\textbf{Thành phần} & \textbf{Mô hình / Công nghệ lựa chọn} & \textbf{Tham số Vận hành Chính} \\
+\textbf{Hạng mục Huấn luyện} & \textbf{Giá trị Thực nghiệm Ghi nhận từ \code{report.json}} \\
 \midrule
-Phát hiện tiếng nói (VAD) & Silero VAD~v6 (ONNX/WASM) + Lọc quạt nền & 16\,kHz, khung 512 mẫu (32\,ms), \code{positiveSpeechThreshold=0.72}, \code{redemptionMs=750}, bộ đệm vòng 8 khung, cổng bao biên độ \code{SpeechEnvelopeGate} \\
-Khử nhiễu nơ-ron & \texttt{DPDFNet2} ONNX (9,77\,MB, CPU cục bộ) & HPF 85\,Hz bậc 4 pha không; bỏ qua mic sạch $\ge 28$\,dB; trộn $w=0{,}85$ (10--28\,dB), $w=0{,}75$ ($<10$\,dB); cứu hộ WS $<13$\,dB \\
-STT truyền luồng chính & Azure AI Speech SDK (\code{vi-VN}) & WebSocket liên tục \code{/audio/transcribe/stream} (chỉ mở khi xác nhận tiếng người); nạp động \code{PhraseListGrammar} Thanh Lam Mart; \textbf{0\% lượt gọi Groq} \\
-STT dự phòng ngoại tuyến & \texttt{gipformer1.5-68M-rnnt} (ONNX, 69,8\,MB) & RNN-Transducer chạy CPU cục bộ, tự động kích hoạt khi mất kết nối đám mây \\
-TTS \& Avatar & Azure \code{vi-VN-HoaiMyNeural} + Video 4 lớp & \code{MIN_CHUNK_CHARS=18}, \code{LONG_CLAUSE_TRIGGER=150}, \code{MIN_CLAUSE=75}, nạp trước \texttt{Blob URL} không khoảng lặng; 24\,fps; RMS ngắt lời $\ge 0{,}065$ thích nghi $1{,}85\times$ nền, cửa sổ chống vọng 4 câu (12\,s) \\
+Tập dữ liệu \& Phân chia & 4.850.000 dòng (848 cửa hàng train / 50 cửa hàng held-out); mô hình chính: \textbf{14.905.752 mẫu train / 2.004.786 mẫu validation}; mô hình backtest (trước $T_0$): \textbf{6.209.287 mẫu train / 2.051.590 mẫu validation} \\
+Hàm mục tiêu \& Đầu ra & 3 mô hình hồi quy phân vị độc lập (\code{objective="quantile"}) cho $q \in \{0{,}10;\,0{,}50;\,0{,}90\}$ trên 29 đặc trưng ($h=1\dots 7$) \\
+Tìm kiếm siêu tham số (7 cấu hình trên \code{valid\_pinball50}) &
+(1) \code{leaves=63, min\_leaf=200}: 0,24970 (234 vòng, 135\,s);
+(2) \textbf{\code{leaves=127, min\_leaf=200}}: \textbf{0,24959} (111 vòng, 107\,s -- \textbf{Chọn});
+(3) \code{leaves=255, min\_leaf=100}: 0,24971;
+(4) \code{leaves=255, min\_leaf=500, l2=10}: 0,24965;
+(5) \code{leaves=511, min\_leaf=300, ff=0.7}: 0,24964;
+(6) \code{leaves=127, min\_leaf=50, ff=0.6}: 0,24961;
+(7) \code{leaves=255, min\_leaf=200, max\_bin=511}: 0,24962 \\
+Số vòng dừng sớm \& Thời gian huấn luyện & \textbf{Mô hình đánh giá chính:} \code{q50} = 502 vòng (1.245\,s), \code{q10} = 677 vòng (1.343\,s), \code{q90} = 310 vòng (960\,s). \textbf{Mô hình backtest:} \code{bt\_q50} = 291 vòng (406\,s), \code{bt\_q10} = 257 vòng (355\,s), \code{bt\_q90} = 270 vòng (359\,s). \textbf{Huấn luyện lại toàn tập:} \code{q50} = 552 vòng (1.013\,s), \code{q10} = 744 vòng (1.169\,s), \code{q90} = 341 vòng (642\,s) \\
+Môi trường \& Khả năng tái lập & Chạy trên Kaggle CPU (\code{ops_chest/ml/kaggle/train_frn.py}); phân chia cửa hàng và kiểm định chéo 2 nếp cố định danh sách 50 cửa hàng (Phụ lục~C); độ quan trọng đặc trưng lưu tại \code{importance_q50} \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \begin{table}[H]
 \centering
-\caption{Cấu hình huấn luyện Kaggle và suy luận on-demand mô hình nhận diện ảnh di động \texttt{MobileNetV3Large-224} TFLite (\texttt{Retail-AI-})}
-\label{tab:mobile_vision_config}
+\caption{Cơ sở lý thuyết và thực nghiệm của các ngưỡng quyết định trọng yếu trong hệ thống}
+\label{tab:threshold_justification}
 \footnotesize
-\begin{tabularx}{\textwidth}{L{3.5cm} L{4.3cm} Y}
+\begin{tabularx}{\textwidth}{L{3.5cm} L{2.3cm} Y}
 \toprule
-\textbf{Hạng mục} & \textbf{Cấu hình / Kiến trúc} & \textbf{Chi tiết Kỹ thuật \& Lý do Lựa chọn} \\
+\textbf{Tham số / Ngưỡng} & \textbf{Giá trị Chọn} & \textbf{Cơ sở Lựa chọn Định lượng / Lý thuyết} \\
 \midrule
-Giáo viên Chưng cất & \texttt{CLIP-ViT-B/32} (512-d) + \texttt{DINOv2-Small} (384-d) & Ghép 896-d (0,50/0,50) $\to$ SVD trực giao 256-d trên 3.093 SKU (giữ 88,85\% phương sai, 0 rò rỉ dữ liệu kiểm thử) \\
-Mạng Sinh viên Di động & \texttt{MobileNetV3Large-224} + \code{Concat[GAP,GMP]} $\to$ 256-d L2 & 3,50\,M tham số, 100\% toán tử TFLite gốc (Keras~3.13 \code{UnitNormalization} + \code{model.export()}); kích thước \textbf{7,04\,MB} FP16 / \textbf{3,81\,MB} INT8 + \textbf{1,58\,MB} gallery \\
-Hàm Mất mát \& Augmentation & Direct Cosine (6,0) + Relational (3,0) + Sub-Center ArcFace $K{=}3$ (0,35) + SupCon (0,50) & Khởi tạo ArcFace từ prototype giáo viên SVD-256; OpenCV ghép kệ 2--4 SKU, phối cảnh 3D, xoay $\pm 26^\circ$, bóng, lóa LED, tay che, mờ, JPEG (không lật ngang) \\
-Định tuyến On-Demand & \code{LocalProductEmbedder} (lazy singleton) + \code{ProductVisionService} & 2-View TTA giữ tỉ lệ (letterbox + 84\% center); Fast-Path $\text{sim}_1 \ge 0{,}82$, $m \ge 0{,}08$ có Cổng Bảo vệ Quy cách Anh em ($\ge 0{,}92$ nếu trùng dòng); Hybrid gợi ý khi $\ge 0{,}72$ \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{Cấu hình điều phối LLM, phát luồng và lớp kiểm soát trên hai kho mã nguồn}
-\label{tab:llm_config}
-\footnotesize
-\begin{tabularx}{\textwidth}{L{3.0cm} L{4.7cm} Y}
-\toprule
-\textbf{Phân hệ} & \textbf{LLM Chính \& Dự phòng} & \textbf{Thiết lập Điều phối \& Ranh giới An toàn} \\
-\midrule
-\texttt{Retail-AI-} & \textbf{Fast-Lane:} Groq LPU (\code{qwen/qwen3.8-27b} $\to$ \code{gpt-oss-20b/120b}, \$0 $\times$ 4 khóa); \textbf{Structured:} DeepSeek (\code{v4.1-flash:free} $\to$ \code{v4.1-flash-1017}) & Zero-Planner SSE + Turn-1 Semantic Cache (256 mục, TTL 300\,s, Jaccard $\ge 0{,}88$); cooldown HTTP~429 3.600\,s; nén thẻ $\approx 35\%$ token; vùng Singapore \texttt{sin1}; cổng an toàn $<3$\,ms \\
-\texttt{ops\_chest} & Bộ chuyển đổi gọi hàm đa nhà cung cấp (OpenAI / DeepSeek / Groq / Gemini failover) & 31 công cụ có kiểu (22 đọc/biểu mẫu + 9 đề xuất, 0 tự thực thi); \code{guard.py} kiểm chứng số $\ge 1.000$ và chặn \code{FALSE_EXEC}; Vision OCR qua mô hình đa phương thức \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{Cấu hình dự báo phân vị LightGBM~v3, cổng lợi nhuận và backtest (\texttt{ops\_chest})}
-\label{tab:ml_config}
-\footnotesize
-\begin{tabularx}{\textwidth}{L{3.6cm} L{4.1cm} Y}
-\toprule
-\textbf{Giai đoạn} & \textbf{Cấu hình Kỹ thuật} & \textbf{Cơ sở Lựa chọn} \\
-\midrule
-Khôi phục nhu cầu & Hồ sơ tỷ trọng bán theo giờ học từ các ngày đủ hàng & Giảm WAPE ngày đứt hàng từ 32,3\% xuống 20,5\% và thiên lệch từ $-32{,}3\%$ xuống $-0{,}1\%$ ($n=200.000$) \\
-LightGBM~v3 Phân vị & 3 mô hình hồi quy phân vị ($q \in \{0{,}10; 0{,}50; 0{,}90\}$), 29 đặc trưng, $h=1\dots 7$ & Bỏ biến giảm giá tương lai ở v1 (gây lệch $-15{,}7\%$) và co giãn giá ở v2; neo thẳng vào đặc trưng EWMA 56 ngày \\
-Cổng Lợi nhuận (\texttt{B-Gate}) & Kiểm định chéo 2 nếp cấp cửa hàng trên 50 cửa hàng FRN; \code{variant=ewma_sigma}, \code{size_cut=30} & Ghép $\hat{q}_{50}$ của LightGBM với $\sigma_{\text{EWMA}}$; tắt ML ở cửa hàng nhỏ ($\le 30$ SKU) nơi phương sai ML làm lỗ $-5{,}6\%$ \\
-Bộ mô phỏng Backtest & Chân trời cuốn chiếu 37 ngày ($T_0 = \text{26/05/2024}$ đến $\text{02/07/2024}$), lão hóa lô FEFO, HSD 1--3 ngày & Đánh giá trực tiếp lãi gộp cửa hàng ($\text{Doanh thu} - \text{Giá vốn} - \text{Hủy}$), tỷ lệ hủy\%, OOS chung\% và OOS nhóm hút khách\% \\
+Ngưỡng cỡ cửa hàng \& biến thể \texttt{B-Gate} & \code{size_cut = 30}, \code{ewma_sigma} & Tìm kiếm lưới 12 ứng viên ($\{\text{sym}, \text{split}, \text{ewma\_sigma}\} \times \{\text{None}, 30, 50, 75\}$): đạt cực đại hàm mục tiêu lợi nhuận \textbf{0,38984} tại \code{ewma_sigma + size_cut=30} (so với 0,30202 khi không cắt hoặc cắt 50/75, và 0,17303 ở \code{sym}) \\
+Sàn mức phục vụ Newsvendor ($SL_{\text{floor}}$) & 0,95 (hút khách), 0,90 (ABC-A), 0,50 (khác) & Phân tích ablation \code{no_floor} trên 20 cửa hàng FRN: bỏ sàn làm lợi nhuận đảo từ $+5{,}46\%$ xuống \textbf{$-0{,}54\%$} và tỷ lệ OOS vọt từ 14,44\% lên \textbf{22,12\%} \\
+Hệ số quy đổi đơn vị FRN & $K = 10$ & Đưa trung vị cầu SKU từ 0,85 lên 8,51 đơn vị/ngày, giảm sàn $\text{CV}_{\text{Poisson}}$ từ 1,084 xuống 0,343 và tránh sai số làm tròn lô FEFO \\
+Ngưỡng SNR âm thanh (\texttt{Retail-AI-}) & Bỏ qua $\ge 28$\,dB; cứu hộ $< 13$\,dB & Phân tách mic sạch (tránh lọc chồng làm méo giọng, hạ chi phí CPU từ 609\,ms xuống 30,9\,ms) khỏi mức nhiễu siêu thị 12\,dB \\
+Ngưỡng Fast-Path Thị giác & $\text{sim}_1 \ge 0{,}82$, $m \ge 0{,}08$ ($\ge 0{,}92$ nếu trùng dòng) & Toàn bộ ảnh OOD thực có $\text{sim}_1 \le 0{,}588 < 0{,}72$; cổng trùng dòng chuyển các mã đồng mẫu sang Hybrid VLM tránh nhầm dung tích \\
+TTL cầu nối liên Agent & \code{TTL = 300\,s} & Cân bằng giữa độ mới của tồn kho/giảm giá FEFO và tải truy vấn; quá hạn tự động fail-closed về cảnh báo snapshot \\
 \bottomrule
 \end{tabularx}
 \end{table}

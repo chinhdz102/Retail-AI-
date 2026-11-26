@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     postgres_command_timeout_seconds: float = Field(default=2.5, gt=0, le=60)
     demo_sales_enabled: bool = False
     demo_sales_database_path: str = "data/demo_sales.sqlite3"
+    ops_chest_api_url: str = ""
+    ops_chest_crosswalk_path: str = "data/bridge/crosswalk.csv"
+    ops_chest_freshness_ttl_seconds: int = Field(default=300, ge=5, le=86400)
     # Experimental dialogue policy: opt in locally until live review passes.
     customer_consultation_enabled: bool = False
     customer_consultation_review_enabled: bool = False

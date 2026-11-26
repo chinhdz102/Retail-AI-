@@ -1,32 +1,62 @@
 \chapter{Phân tích Kết quả Thực nghiệm}
 
-Chương này tổng hợp toàn bộ kết quả kiểm chứng định lượng và định tính trên cả hai phân hệ: độ phủ kiểm thử tự động, độ trễ phát luồng trực tiếp, nhận dạng tiếng nói tiếng Việt trong tạp âm siêu thị, bộ kiểm chuẩn 100 câu hỏi SOTA~V2 trên \texttt{Retail-AI-}, cũng như kết quả khôi phục nhu cầu, backtest lợi nhuận 50 cửa hàng FreshRetailNet-50K và kiểm toán lớp guard trên \texttt{ops\_chest}.
+Chương này trình bày kết quả kiểm chứng thực nghiệm có kiểm soát theo bốn trục đánh giá cốt lõi: (1)~tác nhân tư vấn khách hàng \texttt{Retail-AI-} (nghiên cứu loại bỏ trên tập kiểm thử độc lập 50 câu, độ trễ đa lượt, tập phát triển 100Q SOTA~V2, 100Q Bán chạy--Tồn kho và các mô-đun bổ trợ); (2)~tác nhân vận hành hàng tươi sống \texttt{ops\_chest} (so sánh baseline B0--B5, backtest 50 cửa hàng kèm khoảng tin cậy bootstrap 95\%, kiểm định Wilcoxon, phân tách cỡ cửa hàng và độ nhạy 8 kịch bản); (3)~kiểm thử liên thông đầu-cuối hai Agent trên môi trường mô phỏng; và (4)~đánh giá an toàn, kiểm soát ảo giác cùng phân tích lỗi. Các thống kê kiểm thử phần mềm (pytest, Vitest, lint) được tổng hợp tại Phụ lục~C.
 
-\section{Thiết lập Thực nghiệm}
+\section{Thiết lập Thực nghiệm và Tiêu chí Đánh giá}
 
-Toàn bộ thí nghiệm giọng nói, streaming và triển khai thực tế của \texttt{Retail-AI-} được thực thi song song trên máy trạm Windows (\code{127.0.0.1:8000} / \code{5173}) và môi trường Vercel Production khu vực Singapore (\texttt{sin1}, \url{https://mai-retail-kiosk.vercel.app}), kết nối Azure AI Speech (\code{vi-VN}), mô hình \texttt{DPDFNet2} ONNX chạy CPU cục bộ (0\% Groq ở tầng STT), tuyến phát luồng nhanh \textbf{Groq LPU miễn phí} (\code{qwen/qwen3.8-27b} xoay 4 khóa) kết hợp lớp JSON cấu trúc DeepSeek (\code{deepseek-v4.1-flash:free} $\to$ \code{deepseek-v4.1-flash-1017}) và bộ đệm ngữ nghĩa Turn-1. Chất lượng phần mềm của \texttt{Retail-AI-} được kiểm chứng qua \textbf{106+ tệp kiểm thử pytest} (hơn 2.900 ca kiểm thử; gồm 562/562 ca kiểm thử tối ưu độ trễ, bộ đệm ngữ nghĩa và loại trừ streaming trong \code{tests/test_latency_optimizations.py}, 146/146 ca tri thức thành phần/hỗ trợ/bán thử, 16/16 ca khóa chặt cổng chất lượng 0 lỗi trong \code{tests/test_product_knowledge_enrichment.py} và 5/5 ca nhận diện ảnh on-demand đạt 100\% với 0 lỗi Ruff), \textbf{150+ kiểm thử Vitest phía frontend} (gồm 25/25 ca trong \code{App.test.ts} xác minh cả popup ảnh sản phẩm) và biên dịch \texttt{vue-tsc -b \&\& vite build} không lỗi trong 0,83\,s. Phân hệ nhận diện ảnh di động được huấn luyện trên Kaggle (\texttt{Thanh Lam Mart-mobilenetv3-tflite-cpu-fast}, 39,1 phút) và đánh giá độc lập trên 4 bộ ảnh ngoài tập huấn luyện: 150 SKU đa góc nghiêng 3D tổng hợp, 12 ảnh chụp điện thoại/kệ hàng, 16 ảnh thực tế ngoài danh mục (\code{eval_google}: Bách Hóa Xanh + OpenFoodFacts~\cite{openfoodfacts}) và tập \emph{zero-leakage} mới hoàn toàn gồm 16 ảnh điện thoại OpenFoodFacts chưa từng thấy + 4 ảnh ngoài siêu thị OOD thật (laptop, chó, núi, cốc cà phê).
+Mọi thí nghiệm tuân thủ nghiêm ngặt ranh giới phân chia dữ liệu ở Mục~3.3 nhằm tránh rò rỉ dữ liệu:
+\begin{itemize}
+    \item \textbf{Phân hệ \texttt{Retail-AI-}:} Tập kiểm thử độc lập 50 câu (5 nhóm $\times$ 10 câu, 0\% trùng tập phát triển SOTA~V2) được chạy lặp 3 lần ($N=150$ lượt đo/cấu hình) để tính độ chính xác, tỷ lệ căn cứ mã SKU danh mục và phân vị độ trễ \textbf{P50, P95, P99}. Ngoài ra, hệ thống được đối chiếu trên 11 truy vấn streaming trực tiếp (trước--sau bỏ planner), tập phát triển 100Q SOTA~V2 (113 lượt), tập đánh giá chuyên gia độc lập 100Q (\code{Q01}--\code{Q100}), bộ 100Q Bán chạy \& Tồn kho, 4 bộ kiểm thử thị giác ngoài tập huấn luyện và tập âm thanh thí điểm ($n=16$ mẫu).
+    \item \textbf{Phân hệ \texttt{ops\_chest}:} Đánh giá dự báo trên 50 cửa hàng độc lập (11.037 điểm đủ hàng tuần cuối và 374.982 điểm cuốn chiếu) và backtest lợi nhuận A/B 37 ngày theo kiểm định chéo 2 nếp cấp cửa hàng. Mức tăng lợi nhuận được kiểm định bằng \textbf{20.000 mẫu bootstrap} (khoảng tin cậy 95\%, \code{seed=42}), \textbf{kiểm định hạng có dấu Wilcoxon} hai phía và \textbf{50.000 phép hoán vị cặp}.
+\end{itemize}
 
-Toàn bộ thí nghiệm dự báo và vận hành của \texttt{ops\_chest} được thực thi trên 50 cửa hàng kiểm định độc lập (2.675 chuỗi thời gian, 11.037 điểm đánh giá đủ hàng và mô phỏng cuốn chiếu 37 ngày) của bộ dữ liệu FreshRetailNet-50K~\cite{freshretailnet50k} bằng kiểm định chéo 2 nếp theo cửa hàng, bảo đảm cổng lợi nhuận không bao giờ bị rò rỉ dữ liệu cửa hàng đánh giá. Độ tin cậy mã nguồn được xác nhận qua \textbf{20 bộ kiểm thử pytest} (phủ FEFO, Newsvendor, kiểm kê mù, Vision OCR, giả thuyết, học thói quen chỉnh sửa và chuyển trạng thái HITL) cùng bài kiểm tra 20 kịch bản chuyển dự phòng và căn cứ số liệu (\code{eval_failover.json}).
+\section{Kết quả Thực nghiệm Agent 1: Tư vấn Khách hàng (\texttt{Retail-AI-})}
 
-\section{Kết quả Định lượng}
-
-\subsection*{Độ trễ Tư vấn Phát luồng Đầu-Cuối (\texttt{Retail-AI-})}
-Thay thế chuỗi nhiều vòng Planner + Reviewer bằng Thuật toán~\ref{alg:zero_planner_sse} (Zero-Planner SSE Streaming, tuyến chào hỏi/tra cứu tức thì và lắp giỏ hàng 1 lượt LLM) mang lại mức rút ngắn độ trễ vượt trội trên toàn bộ truy vấn kiểm thử thực tế (Bảng~\ref{tab:latency_10q} và Hình~\ref{fig:latency_comparison}). Lượt chào hỏi giảm tới \textbf{1.815 lần} (10.891\,ms $\to$ 6\,ms); các câu hỏi tư vấn sản phẩm hiển thị thẻ xác thực chỉ sau \textbf{24--59\,ms} và đạt TTFT trong \textbf{1,30--1,80\,s} (tổng thời gian nhanh hơn 3,6--5,3 lần); còn giỏ hàng ngân sách phức tạp giảm từ 13,3--14,2\,s (trước đây chỉ trả 1 thẻ) xuống \textbf{3,72--3,78\,s} với đủ 4 thẻ giỏ chính đúng ngân sách cùng 4 sản phẩm gợi ý kèm theo.
+\subsection*{Nghiên cứu Loại bỏ (\emph{Ablation Study}) và Độ trễ P50/P95/P99 trên Tập Test Độc lập 50 Câu}
+Bảng~\ref{tab:retail_ablation_50q} đánh giá bốn cấu hình có kiểm soát (A1--A4) trên cùng tập kiểm thử độc lập 50 câu (không sử dụng để tinh chỉnh luật hay từ điển) chạy lặp 3 lần ($N=150$ lượt đo/cấu hình) ở chế độ xác định ngoại tuyến nhằm tách bạch đóng góp thực sự của từng tầng trong \emph{Zero-Planner Hybrid Routing}:
+\begin{itemize}
+    \item \textbf{A1 (Truy xuất danh mục thô):} Gọi trực tiếp tìm kiếm chỉ mục mà không có định tuyến ý định, bộ xếp hạng đơn giá/tồn kho/bán thử hay cổng an toàn chỉ đạt \textbf{3/50 (6,0\%)}, thất bại trên toàn bộ nhóm tra cứu bán chạy/tồn kho có nguồn gốc (0/10) và nhóm an toàn y tế/OWASP/ngoài danh mục (0/10).
+    \item \textbf{A2 (Định tuyến công cụ, tắt cổng tiền-LLM ngoài cùng):} Độ chính xác đạt \textbf{47/50 (94,0\%)} nhờ các lớp bảo vệ sâu bên trong vẫn giữ 10/10 nhóm an toàn, nhưng do truy vấn ngoài danh mục/y tế phải đi qua truy xuất danh mục trước khi bị chặn, độ trễ đuôi tăng mạnh (\textbf{P95 = 202,4\,ms}, \textbf{P99 = 466,0\,ms}).
+    \item \textbf{A3 (Bật đầy đủ cổng an toàn tiền-LLM $<3$\,ms, tắt bộ đệm):} Giữ nguyên \textbf{47/50 (94,0\%)} và \textbf{100\% căn cứ SKU danh mục}, đồng thời hạ \textbf{P99 xuống 165,4\,ms (nhanh hơn 2,8$\times$)} và P95 xuống 147,5\,ms.
+    \item \textbf{A4 (Zero-Planner hoàn chỉnh + Bộ đệm ngữ nghĩa):} Đạt \textbf{47/50 (94,0\%)} (10/10 đơn SKU, 8/10 danh mục/ngân sách, 10/10 tồn kho/bán chạy có minh bạch nguồn, 10/10 an toàn/OWASP, 9/10 ca biên), \textbf{P50 = 74,6\,ms, P95 = 139,0\,ms, P99 = 154,5\,ms} với 0 lượt gọi LLM trên nhánh xác định.
+\end{itemize}
 
 \begin{table}[H]
 \centering
-\caption{Độ trễ thực tế tại \code{/agent/respond/stream} trước và sau tối ưu hóa Zero-Planner SSE}
+\caption{Nghiên cứu loại bỏ (A1--A4) và phân vị độ trễ (3 lượt chạy, $N=150$) trên tập kiểm thử độc lập 50 câu}
+\label{tab:retail_ablation_50q}
+\footnotesize
+\setlength{\tabcolsep}{3.8pt}
+\begin{tabularx}{\textwidth}{Y r r r r r r}
+\toprule
+\textbf{Cấu hình Ablation (\texttt{Retail-AI-})} & \textbf{Đạt} & \textbf{Căn cứ} & \textbf{An toàn} & \textbf{P50} & \textbf{P95} & \textbf{P99} \\
+ & \textbf{(/50)} & \textbf{SKU} & \textbf{(/10)} & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} \\
+\midrule
+\textbf{A1:} Truy xuất danh mục thô (không định tuyến/cổng) & 3 (6,0\%) & 100\% & 0/10 & 0,0 & 92,8 & 202,7 \\
+\textbf{A2:} Định tuyến công cụ (tắt cổng tiền-LLM ngoài) & 47 (94,0\%) & 100\% & 10/10 & 87,9 & 202,4 & 466,0 \\
+\textbf{A3:} A2 + Cổng an toàn/OOC tiền-LLM (tắt cache) & 47 (94,0\%) & 100\% & 10/10 & 75,3 & 147,5 & 165,4 \\
+\textbf{A4:} Hệ thống Zero-Planner hoàn chỉnh + Cache & \textbf{47 (94,0\%)} & \textbf{100\%} & \textbf{10/10} & \textbf{74,6} & \textbf{139,0} & \textbf{154,5} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection*{So sánh Độ trễ Trước--Sau Bỏ Planner trên 11 Truy vấn Trực tiếp và Định tuyến Lai}
+Để lượng hóa lợi ích của việc loại bỏ các lượt gọi planner LLM tuần tự trên các truy vấn cần sinh văn bản tự nhiên, Bảng~\ref{tab:latency_10q} và Hình~\ref{fig:latency_comparison} so sánh 11 truy vấn bán lẻ đại diện trước và sau khi áp dụng \emph{Zero-Planner SSE Streaming}. Trên 10/11 truy vấn, tổng thời gian phản hồi giảm rõ rệt: lượt chào hỏi từ 10.891\,ms xuống 6\,ms; tư vấn sản phẩm đạt thời gian hiển thị thẻ 24--59\,ms và TTFT 1,30--1,50\,s (nhanh hơn 2,6--3,2 lần tổng thời gian); giỏ hàng ngân sách giảm từ 13,3--14,2\,s xuống 3,72--3,78\,s với đầy đủ 4 thẻ đúng ngân sách. Riêng truy vấn khuyến mãi (\emph{``Hôm nay siêu thị có gì khuyến mãi?''}) có tổng thời gian hoàn tất tăng nhẹ từ 2.232\,ms lên 2.410\,ms (+7,9\%) do câu trả lời phát luồng liệt kê chi tiết 5 khuyến mãi dài hơn bản cũ, nhưng người dùng đã nhìn thấy 5 thẻ sản phẩm chỉ sau \textbf{24\,ms} và token đầu sau 1.796\,ms. Khi kết hợp thêm tuyến suy luận phát luồng độ trễ thấp, bộ đệm ngữ nghĩa Turn-1 và đặt máy chủ gần khu vực (\texttt{sin1}), độ trễ HTTPS thực tế trên 7 truy vấn kiểm chứng giảm tiếp xuống \textbf{508--1.149\,ms} ở lượt lạnh (giỏ bữa tối $<150\text{k}$ giảm từ 5,50\,s xuống 870\,ms) và \textbf{125--140\,ms} khi trúng bộ đệm ngữ nghĩa (Bảng~\ref{tab:prod_latency_sin1} và Hình~\ref{fig:prod_latency_sin1}).
+
+\begin{table}[H]
+\centering
+\caption{Độ trễ 11 truy vấn thực tế tại \code{/agent/respond/stream} trước và sau áp dụng Zero-Planner SSE}
 \label{tab:latency_10q}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
 \begin{tabularx}{\textwidth}{Y r r r r L{2.25cm}}
 \toprule
-\textbf{Truy vấn Tiếng Việt Thực tế} & \textbf{Trước} & \textbf{Thẻ} & \textbf{TTFT} & \textbf{Tổng} & \textbf{Chế độ \& Thẻ} \\
+\textbf{Truy vấn Kiểm thử (11 Câu)} & \textbf{Trước} & \textbf{Thẻ} & \textbf{TTFT} & \textbf{Tổng} & \textbf{Chế độ \& Thẻ} \\
  & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \\
 \midrule
 \emph{Chào Mai, bạn tư vấn giúp mình nhé} & 10.891 & 6 & 6 & 6 & Tức thì (0) \\
 \emph{Mì Hảo Hảo giá bao nhiêu?} & 117 & 112 & 112 & 112 & Tức thì (5) \\
-\emph{Hôm nay siêu thị có gì khuyến mãi?} & 2.232 & 24 & 1.796 & 2.410 & Stream (5 KM) \\
+\emph{Hôm nay siêu thị có gì khuyến mãi?} & 2.232 & \textbf{24} & 1.796 & 2.410 & Stream (5 KM) \\
 \emph{Khăn mặt cotton Thanh Lam Home} & 5.605 & 47 & 1.490 & 2.160 & Stream (5) \\
 \emph{Cho mình xem sữa tươi không đường} & 6.847 & 47 & 1.492 & 2.110 & Stream (5) \\
 \emph{Dầu gội trị gàu nào tốt?} & 5.431 & 52 & 1.298 & 1.936 & Stream (5) \\
@@ -41,309 +71,289 @@ Thay thế chuỗi nhiều vòng Planner + Reviewer bằng Thuật toán~\ref{al
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{Images/fig_latency_streaming_comparison.png}
-    \caption{So sánh độ trễ phản hồi trực tiếp (\code{/agent/respond/stream}) trước và sau tối ưu Zero-Planner SSE trên các truy vấn siêu thị tiêu biểu.}
+    \includegraphics[width=0.96\textwidth]{Images/fig_latency_streaming_comparison.png}
+    \caption{So sánh độ trễ phản hồi trực tiếp trước và sau khi loại bỏ vòng planner đa bước trên các truy vấn bán lẻ đại diện.}
     \label{fig:latency_comparison}
 \end{figure}
 
-\subsection*{Tối ưu Độ trễ Sản xuất Toàn tuyến: Groq LPU, Bộ đệm Ngữ nghĩa \& Vùng Singapore (\texttt{sin1})}
-Khảo sát chi tiết cho thấy ngay cả sau khi bỏ planner thừa, cấu hình đám mây miễn phí đơn nhà cung cấp vẫn vấp ngưỡng trễ TTFT 1,1--1,9\,s (và lên tới 5,5\,s trên giỏ bữa tối đa món hoặc 7,2\,s nếu rơi sang mô hình dự phòng \code{v4-flash:free}), cộng thêm $\approx 275$\,ms độ trễ mạng xuyên Thái Bình Dương khi đặt Vercel Function tại Mỹ (\texttt{iad1}). Khi kích hoạt đồng thời \textbf{định tuyến lai Groq LPU miễn phí} (\code{qwen/qwen3.8-27b}, xoay 4 khóa \$0, nén thẻ $\approx 35\%$ token, cooldown 1 giờ cho lỗi quota 429), \textbf{bộ đệm ngữ nghĩa Turn-1} (\code{consultation_cache.py}, 0 token) và \textbf{chuyển vùng triển khai sang Singapore (\texttt{sin1})} với khởi động song song không chặn cùng cache tài nguyên \texttt{immutable}, độ trễ thực tế đã phá vỡ hoàn toàn ngưỡng 1\,giây trên cả cục bộ lẫn Production HTTPS (Bảng~\ref{tab:prod_latency_sin1} và Hình~\ref{fig:prod_latency_sin1}). Cụ thể, qua TCP SSE cục bộ (12 câu đa ngành), trung vị lạnh (P50) giảm từ 2,45--5,00\,s xuống còn \textbf{122\,ms hiện thẻ / 473\,ms TTFT / 762\,ms hoàn tất}, còn cache chính xác/diễn đạt lại đạt \textbf{11--36\,ms (0 token, nhanh hơn 143--221$\times$)}. Trên Vercel Production HTTPS trực tuyến (\texttt{hkg1::sin1}), RTT tạo phiên \code{POST /api/sessions} giảm từ $\approx 275$\,ms xuống \textbf{90--104\,ms}, truy vấn lạnh hoàn tất chỉ trong \textbf{508--870\,ms} (kể cả giỏ bữa tối $<150\text{k}$ giảm từ 5,50\,s xuống \textbf{0,87\,s}), và lượt truy vấn diễn đạt tương đương qua bộ đệm ngữ nghĩa chỉ mất \textbf{125--140\,ms HTTPS}.
-
 \begin{table}[H]
 \centering
-\caption{Độ trễ thực tế trên Vercel Production HTTPS (\url{https://mai-retail-kiosk.vercel.app}): So sánh Mỹ (\texttt{iad1}) và Singapore (\texttt{sin1})}
+\caption{Độ trễ HTTPS thực tế (\texttt{iad1} so với \texttt{sin1}) khi kết hợp tuyến phát luồng độ trễ thấp và bộ đệm ngữ nghĩa}
 \label{tab:prod_latency_sin1}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
 \begin{tabularx}{\textwidth}{Y r r r r L{2.45cm}}
 \toprule
-\textbf{Truy vấn Live Production HTTPS} & \textbf{Gốc} & \textbf{Mỹ \texttt{iad1}} & \textbf{SG \texttt{sin1}} & \textbf{TTFT} & \textbf{Chế độ \& Chi phí} \\
+\textbf{Truy vấn Kiểm chứng HTTPS} & \textbf{Gốc} & \textbf{Mỹ \texttt{iad1}} & \textbf{SG \texttt{sin1}} & \textbf{TTFT} & \textbf{Tuyến Xử lý} \\
  & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \\
 \midrule
 \code{POST /api/sessions} (tạo phiên) & $\approx 275$ & $\approx 275$ & \textbf{90--104} & --- & \texttt{hkg1::sin1} \\
-\emph{Sữa hạt không đậu nành có loại nào?} & $\approx 2.500$ & 846 & \textbf{508} & \textbf{319} & LPU Cold (\$0) \\
-\emph{Bia lon dưới 25k có loại nào?} & 2.484 & 1.073 & \textbf{554} & \textbf{329} & LPU Cold (\$0) \\
-\emph{Sữa tươi không đường loại nào ngon?} & $\approx 2.450$ & --- & \textbf{728} & 516 & LPU Cold (\$0) \\
-\emph{Gợi ý bữa tối dưới 150k cho 2 người} & 5.497 & 2.239 & \textbf{870} & 572 & LPU Basket (\$0) \\
-\emph{Cà phê hòa tan loại nào đậm vị?} & 2.439 & 1.365 & \textbf{1.149} & 901 & LPU Cold (\$0) \\
-\emph{Diễn đạt lại cà phê đậm vị (Cache)} & 2.439 & 460 & \textbf{125} & \textbf{124} & Semantic (0 tok) \\
-\emph{Diễn đạt lại sữa hạt không đậu nành} & $\approx 2.500$ & $\approx 460$ & \textbf{140} & \textbf{139} & Semantic (0 tok) \\
+\emph{Sữa hạt không đậu nành có loại nào?} & $\approx 2.500$ & 846 & \textbf{508} & 319 & LPU Cold \\
+\emph{Bia lon dưới 25k có loại nào?} & 2.484 & 1.073 & \textbf{554} & 329 & LPU Cold \\
+\emph{Sữa tươi không đường loại nào ngon?} & $\approx 2.450$ & --- & \textbf{728} & 516 & LPU Cold \\
+\emph{Gợi ý bữa tối dưới 150k cho 2 người} & 5.497 & 2.239 & \textbf{870} & 572 & LPU Basket \\
+\emph{Cà phê hòa tan loại nào đậm vị?} & 2.439 & 1.365 & \textbf{1.149} & 901 & LPU Cold \\
+\emph{Diễn đạt lại cà phê đậm vị (Cache)} & 2.439 & 460 & \textbf{125} & 124 & Semantic (0 tok) \\
+\emph{Diễn đạt lại sữa hạt không đậu nành} & $\approx 2.500$ & $\approx 460$ & \textbf{140} & 139 & Semantic (0 tok) \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{Images/fig_production_latency_sin1.png}
-    \caption{Tiến triển độ trễ HTTPS thực tế trên Production từ bản gốc qua vùng Mỹ (\texttt{iad1}) sang Singapore (\texttt{sin1}) (trái) và benchmark tốc độ--chi phí các mô hình trong kiến trúc định tuyến phân tầng (phải).}
+    \includegraphics[width=0.96\textwidth]{Images/fig_production_latency_sin1.png}
+    \caption{Tiến triển độ trễ HTTPS giữa các cấu hình triển khai (trái) và đối chiếu tốc độ--chi phí giữa các nhà cung cấp mô hình trong tuyến lai (phải).}
     \label{fig:prod_latency_sin1}
 \end{figure}
 
-\subsection*{So sánh STT Tiếng Việt trong Nhiễu và Tăng tốc WebSocket Streaming (\texttt{Retail-AI-})}
-Bảng~\ref{tab:stt_ablation} so sánh 5 cấu hình nhận dạng giọng nói tiếng Việt trên các mức sạch, nhiễu siêu thị 12\,dB và nhiễu nặng 5\,dB. \texttt{DPDFNet2} ONNX đạt độ bền vững tốt nhất tổng thể: \textbf{10,0\% WER} ở điều kiện sạch, \textbf{14,1\% WER} ở 12\,dB và \textbf{16,7\% WER} ở 5\,dB (tỷ lệ trộn 75/25)---trong khi \texttt{GTCRN} suy sụp tới \textbf{30,5\% WER} ở 5\,dB do méo thanh điệu, còn Groq Whisper~v3 tăng vọt lên \textbf{22,2\% WER} ở 5\,dB. Nhánh bỏ qua mic sạch ($\ge 28$\,dB) đồng thời hạ chi phí CPU khử nhiễu từ 609\,ms xuống còn \textbf{30,9\,ms}.
-
-Bên cạnh độ chính xác, việc chuyển từ tải WAV qua REST sang WebSocket Streaming STT (Bảng~\ref{tab:ws_vs_rest} và Hình~\ref{fig:stt_noise}) rút ngắn thời gian chờ sau khi nói từ \textbf{5,5 đến 9,7 lần} (ví dụ từ 2.509\,ms xuống \textbf{257\,ms} trong nhiễu 12\,dB), hiển thị 6--8 phụ đề trực tiếp trong lúc nói và đạt \textbf{0,0\% WER} trên các truy vấn thương hiệu Thanh Lam Mart đã neo từ vựng.
-
-\begin{table}[H]
-\centering
-\caption{Tỷ lệ lỗi từ WER (\%) của 5 cấu hình STT tiếng Việt theo mức nhiễu siêu thị (càng thấp càng tốt)}
-\label{tab:stt_ablation}
-\footnotesize
-\begin{tabularx}{\textwidth}{L{5.5cm} r r r Y}
-\toprule
-\textbf{Cấu hình STT \& Khử nhiễu} & \textbf{Sạch (\%)} & \textbf{12\,dB (\%)} & \textbf{5\,dB (\%)} & \textbf{Đánh giá Vận hành} \\
-\midrule
-Azure Speech + \texttt{DPDFNet2} ONNX (Chọn) & \textbf{10,0} & \textbf{14,1} & 16,7 & Tốt nhất sạch/12\,dB; bỏ qua mic sạch 30,9\,ms; ổn định ở 5\,dB \\
-Azure Speech Thô (không khử nhiễu) & 11,9 & 14,5 & \textbf{16,1} & Nền tảng mạnh; kém hơn nhẹ ở nhiễu thoại 12\,dB \\
-Groq Whisper Large-v3 (Đã loại bỏ) & 12,0 & 14,2 & 22,2 & Suy giảm mạnh ở 5\,dB; không hỗ trợ phụ đề streaming \\
-Azure Speech + \texttt{GTCRN} (523\,KB) & 11,9 & 15,2 & 30,5 & Gây méo thanh điệu nghiêm trọng dưới nhiễu 5\,dB \\
-\texttt{gipformer1.5-68M-rnnt} cục bộ (Dự phòng) & 18,4 & 24,6 & 34,8 & Duy trì hoạt động ngoại tuyến hoàn toàn khi mất mạng \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\subsection*{Tập Phát triển SOTA~V2, Đánh giá Chuyên gia Độc lập và 100Q Bán chạy--Tồn kho}
+Để tránh hiểu nhầm về tính độc lập của dữ liệu đánh giá, nhóm phân tách rõ ba bộ kết quả:
+\begin{enumerate}
+    \item \textbf{Tập Phát triển 100 câu SOTA~V2 (Dev Set, 113 lượt thoại):} Bộ này được dùng lặp qua các chu kỳ phân tích lỗi để hoàn thiện cổng an toàn và bộ truy xuất. Trong Bảng~\ref{tab:sota_v2} và Hình~\ref{fig:sota_v2}, \emph{Đạt Chức năng (Functional Pass)} yêu cầu trả đúng nhóm sản phẩm, giá bán chính xác và không vi phạm ngân sách/an toàn; \emph{Đạt Nghiêm ngặt (Strict Pass)} đòi hỏi thỏa mãn đồng thời mọi điều kiện phụ (đơn vị quy đổi, trích dẫn nguồn gốc, định dạng thẻ và không dư sản phẩm lạc đề). \emph{Thang điểm 8 Trụ cột (8-Pillar Scorecard)} tổng hợp trung bình có trọng số tám tiêu chí nội bộ: độ chính xác chức năng (20\%), căn cứ dữ liệu (15\%), an toàn y tế/OWASP (15\%), độ trễ P50 (15\%), độ bền tiếng nói (10\%), nhất quán đa lượt/diễn đạt (10\%), chất lượng làm sạch dữ liệu (10\%) và độ phủ kiểm thử tự động (5\%). Qua các vòng tinh chỉnh trên Dev Set, tỷ lệ đạt nghiêm ngặt tăng từ 59/100 lên 94/100 (chức năng 96/100, XSTest 10/10, OWASP 10/10, điểm tổng hợp 68,5 $\to$ 88,2/100).
+    \item \textbf{Tập Đánh giá Chuyên gia Độc lập 100 câu (\code{Q01}--\code{Q100}, 0\% trùng Dev Set):} Chấm độc lập theo năm khung đánh giá (RAGAS, DeepEval, RAGChecker, $\tau$-bench~\cite{yao2024taubench} và ShoppingBench) ghi nhận \textbf{174/174 (100\%)} mã SKU hợp lệ thuộc danh mục, \textbf{100/100} chính xác giá bán--khuyến mãi--tổng giỏ, \textbf{14/14} tuân thủ ngân sách, \textbf{7/7} hàng rào an toàn/ngoài danh mục, \textbf{94,0\%} trung thực mức mệnh đề và \textbf{9/10} theo dõi trạng thái đa lượt $\tau$-bench, đồng thời bộc lộ điểm yếu ở \textbf{Context Recall (74,7\%)} với các câu hỏi dùng khẩu ngữ hiếm.
+    \item \textbf{Bộ 100 Câu hỏi Bán chạy nhất \& Tồn kho (Bảng~\ref{tab:bestseller_stock_100q}):} Kiểm chứng 10 nhóm câu hỏi về bán chạy mô phỏng và tồn kho snapshot (trước sửa 43/100 $\to$ sau hợp nhất bộ định tuyến ngữ nghĩa và tuyến \code{catalog-stock} đạt 100/100 với trung vị 190\,ms, P95 448\,ms; 100\% câu trả lời công bố rõ nguồn \texttt{SIMULATED} hoặc mốc chụp 15/09/2026; kiểm chứng lại trên 12 truy vấn trực tuyến đạt 12/12 trong 271--677\,ms).
+\end{enumerate}
 
 \begin{table}[H]
 \centering
-\caption{So sánh thời gian chờ sau khi nói giữa WebSocket Streaming STT và REST WAV}
-\label{tab:ws_vs_rest}
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabularx}{\textwidth}{Y r r r r r}
-\toprule
-\textbf{Câu lệnh Kiểm thử \& Điều kiện Nhiễu} & \textbf{REST (ms)} & \textbf{WS (ms)} & \textbf{Tăng tốc} & \textbf{Phụ đề} & \textbf{WER (\%)} \\
-\midrule
-P1 Sạch (\emph{khăn mặt cotton Thanh Lam Home}) & 1.937 & \textbf{269} & $7{,}2\times$ & 6 & \textbf{0,0} \\
-P1 Nhiễu 12\,dB (\emph{khăn mặt cotton Thanh Lam Home}) & 2.509 & \textbf{257} & $9{,}7\times$ & 7 & \textbf{0,0} \\
-P2 Nhiễu 12\,dB (\emph{Ba chỉ bò Mỹ ACEFOODS bán chạy nhất}) & 3.042 & \textbf{558} & $5{,}5\times$ & 8 & \textbf{0,0} \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.98\textwidth]{Images/fig_stt_noise_ablation.png}
-    \caption{WER tiếng Việt theo mức SNR của các cấu hình STT (trái) và thời gian chờ sau khi nói giữa WebSocket Streaming và REST (phải).}
-    \label{fig:stt_noise}
-\end{figure}
-
-\subsection*{Bộ Kiểm chuẩn 100 Câu hỏi SOTA~V2 Chưa Từng Thấy (\texttt{Retail-AI-})}
-Trên tập kiểm chuẩn 100 câu hỏi SOTA~V2 không rò rỉ dữ liệu (113 lượt hội thoại phủ 10 hạng mục bán lẻ và tấn công đối kháng), các vòng cải tiến hệ thống đã nâng tỷ lệ đạt chuẩn nghiêm ngặt từ \textbf{59/100 lên 94/100} (\textbf{96/100} đạt chức năng), giảm độ trễ trung vị P50 \textbf{14,6 lần} (1.826\,ms $\to$ \textbf{125\,ms}), đạt \textbf{10/10} XSTest không từ chối oan, \textbf{10/10} chống tấn công red-team OWASP và \textbf{2/2} nhất quán diễn đạt $\text{pass}^2$, đưa điểm tổng hợp 8 trụ cột kỹ thuật từ \textbf{68,5 lên 88,2/100} (Bảng~\ref{tab:sota_v2} và Hình~\ref{fig:sota_v2}). Khi kiểm chứng trực tiếp giao diện trên trình duyệt, avatar video 4 lớp duy trì 24\,fps mượt mà với \textbf{0/207 khung bị đứng hình} và \textbf{0 lỗi mạng \code{net::ERR_ABORTED}}.
-
-\begin{table}[H]
-\centering
-\caption{Kết quả bộ kiểm chuẩn 100 câu hỏi SOTA~V2 (113 lượt) trước và sau tối ưu}
+\caption{Tiến triển trên Tập Phát triển 100 câu SOTA~V2 (Dev Set, 113 lượt thoại)}
 \label{tab:sota_v2}
 \footnotesize
-\begin{tabularx}{\textwidth}{L{5.2cm} r r Y}
+\begin{tabularx}{\textwidth}{L{5.1cm} r r Y}
 \toprule
-\textbf{Tiêu chí Đánh giá} & \textbf{Ban đầu} & \textbf{Sau tối ưu} & \textbf{Yếu tố Cải thiện Chính} \\
+\textbf{Tiêu chí Đánh giá (Dev Set)} & \textbf{Ban đầu} & \textbf{Sau tinh chỉnh} & \textbf{Định nghĩa / Yếu tố Tác động} \\
 \midrule
-Tỷ lệ Đạt Nghiêm ngặt (100Q) & 59/100 & \textbf{94/100} & Phát luồng không planner có căn cứ + xếp hạng đơn giá \\
-Tỷ lệ Đạt Chức năng (100Q) & 64/100 & \textbf{96/100} & Lọc khuyến mãi, so sánh và lắp giỏ 1 lượt đúng ngân sách \\
-Độ trễ Trung vị (P50) & 1.826\,ms & \textbf{125\,ms} & Chỉ mục đảo danh mục + tuyến chào hỏi/tra cứu tức thì \\
-XSTest Không Từ chối Oan & 7/10 & \textbf{10/10} & Tách ranh giới y tế lâm sàng khỏi thực phẩm vô hại \\
-Chống Tấn công OWASP Red-Team & 6/10 & \textbf{10/10} & Cổng chặn tiêm lệnh và trích xuất prompt xác định \\
-Nhất quán Diễn đạt $\text{pass}^2$ & 1/2 & \textbf{2/2} & Chuẩn hóa ý định và sửa từ vựng neo danh mục \\
-Thang điểm Kỹ thuật 8 Trụ cột & 68,5/100 & \textbf{88,2/100} & Tổng hợp độ trễ, căn cứ, an toàn, giọng nói và độ phủ test \\
+Đạt Nghiêm ngặt (Strict Pass) & 59/100 & 94/100 & Thỏa đồng thời sản phẩm, giá, đơn giá, nguồn gốc và định dạng thẻ \\
+Đạt Chức năng (Functional Pass) & 64/100 & 96/100 & Trả đúng nhóm hàng, giá và ràng buộc ngân sách/an toàn cốt lõi \\
+Độ trễ Trung vị (P50) & 1.826\,ms & 125\,ms & Chỉ mục đảo danh mục và các tuyến xác định không planner \\
+XSTest Không Từ chối Oan & 7/10 & 10/10 & Phân tách rõ điều trị y tế lâm sàng khỏi thực phẩm vô hại \\
+Chống Tấn công OWASP Red-Team & 6/10 & 10/10 & Cổng chặn tiêm lệnh và trích xuất prompt xác định \\
+Thang điểm 8 Trụ cột (có trọng số) & 68,5/100 & 88,2/100 & Tổng hợp có trọng số 8 tiêu chí định lượng nội bộ \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{Images/fig_sota_v2_benchmark.png}
-    \caption{Tiến bộ trên bộ kiểm chuẩn 100 câu hỏi SOTA~V2 (trái) và bảng điểm 8 trụ cột kỹ thuật hệ thống (phải).}
+    \includegraphics[width=0.96\textwidth]{Images/fig_sota_v2_benchmark.png}
+    \caption{Kết quả tinh chỉnh trên Tập Phát triển 100 câu SOTA~V2 (trái) và phân rã điểm 8 trụ cột đánh giá (phải).}
     \label{fig:sota_v2}
 \end{figure}
 
-\subsection*{Kiểm chứng Làm sạch Tri thức Thành phần 11 Tiêu chí \& Đánh giá Chuyên gia 100 Câu hỏi Mới (\texttt{Retail-AI-})}
-Bảng~\ref{tab:data_cleaning_audit} tổng hợp kết quả kiểm toán chất lượng trước và sau khi chạy pipeline làm sạch 8 tầng (\code{clean_thanh_lam_product_details.py}) cùng quy trình làm giàu mã vạch EAN-13/nhãn sản phẩm trên toàn bộ 3.099 SKU Thanh Lam Mart. Toàn bộ \textbf{4.606 lỗi trên 11 tiêu chí} được đưa về \textbf{0 lỗi (100\% sạch)}, khóa cứng bằng bài kiểm thử hồi quy tự động \code{test_cleaned_thanh_lam_product_details_meets_zero_defect_quality_gate}. Độ phủ thực tế đạt \textbf{2.137/3.099 SKU (69,0\%)} với \textbf{1.214 + 18 SKU} có bảng thành phần xác minh (trong đó \textbf{1.064+} SKU chứa bảng thành phần định lượng hoặc danh pháp INCI chi tiết, tăng hơn $2{,}1\times$ so với mức 507 SKU khi chỉ crawl Thanh Lam Mart), \textbf{1.159} hướng dẫn sử dụng, \textbf{660} hướng dẫn bảo quản và \textbf{800} xuất xứ. Kiểm thử trực tiếp trên 12 sản phẩm đa ngành xác nhận: \emph{Tương ớt Chin Su chai 1kg} nâng từ câu tiếp thị chung chung thành bảng thành phần định lượng đầy đủ (\emph{``Nước, đường, ớt 110\,g/kg, muối, chất làm dầy (1422), tỏi, cà chua cô đặc, chất điều vị (621, 620, 635), bột wasabi, sunfit''}); các nhóm hàng khác (\emph{Sốt mayonnaise Aji-Mayo 430g}, \emph{Nước tương Tam Thái Tử 500ml}, \emph{Sữa rửa mặt Senka Perfect Whip Collagen 120g}, \emph{Kem dưỡng Nivea 50ml}, \emph{Tẩy tế bào chết Cocoon 150ml}, \emph{Bánh quy Oreo mini 20,4g}, \emph{Bún bò Huế Vifon 65g}, \emph{Nước rửa tay Lifebuoy 180g}) đều trả đúng bảng thành phần nhãn bao bì; trong khi các SKU chỉ có câu quảng cáo rỗng hoặc câu cụt (\emph{Bánh bao Phú Mỹ Bakery}, \emph{Bánh que Yan Yan}) đều bị loại bỏ sạch và trả về trạng thái trung thực \texttt{UNKNOWN}.
-
-Song song đó, nhóm thực hiện thêm một vòng \textbf{đánh giá chuyên gia độc lập trên 100 câu hỏi danh mục hoàn toàn mới} (\code{Q01}--\code{Q100}, 174 thẻ đề xuất, 0\% trùng lặp bộ SOTA~V2) theo 5 chuẩn học thuật (RAGAS, DeepEval, RAGChecker, $\tau$-bench và ShoppingBench). Kết quả xác nhận nền tảng giữ vững \textbf{100,0\% HTTP ổn định}, \textbf{174/174 (100,0\%) SKU hợp lệ không bịa mã}, \textbf{100/100 (100,0\%) chính xác giá bán--khuyến mãi--cộng giỏ}, \textbf{14/14 (100,0\%) tuân thủ trần ngân sách}, \textbf{7/7 (100,0\%) hàng rào an toàn/OOC}, \textbf{94,0\% trung thực mức mệnh đề} và \textbf{9/10 (90,0\%) theo dõi ngữ cảnh đa lượt $\tau$-bench}; đồng thời vạch ra các điểm nghẽn truy hồi (Context Recall 74,7\%) và các ca lỗi biên (lọc loại trừ trên luồng streaming, khớp dung tích khi so sánh, ưu tiên giỏ bữa cơm Path~E, trộn đại từ \emph{bạn/em} và câu hỏi khẩu ngữ bán chạy \emph{``cái nào bán chạy nhất v''}) để nhóm xử lý triệt để ngay trong chu kỳ tối ưu tiếp theo.
-
 \begin{table}[H]
 \centering
-\caption{Kiểm toán chất lượng 11 tiêu chí (chuẩn HF \code{datatrove} + OpenFoodFacts) trên kho tri thức 3.099 SKU Thanh Lam Mart}
-\label{tab:data_cleaning_audit}
+\caption{Kết quả bộ kiểm chuẩn 100 câu hỏi Bán chạy nhất \& Tồn kho theo 10 nhóm ngữ nghĩa}
+\label{tab:bestseller_stock_100q}
 \footnotesize
-\begin{tabularx}{\textwidth}{Y r r L{2.4cm}}
+\begin{tabularx}{\textwidth}{Y r r r r}
 \toprule
-\textbf{Tiêu chí Lỗi Dữ liệu (11 Chiều Kiểm chuẩn)} & \textbf{Thô} & \textbf{Sau 8 tầng} & \textbf{Mức Cải thiện} \\
+\textbf{Nhóm Câu hỏi (10 Nhóm)} & \textbf{SL} & \textbf{Trước} & \textbf{Sau} & \textbf{Tăng} \\
 \midrule
-Lỗi dấu câu, thiếu khoảng trắng, ký tự ẩn (\texttt{U+200B}/\texttt{U+00A0}) & 2.066 & \textbf{0} & $-100\%$ \\
-Cắt ngang giữa từ bằng dấu \code{...} / \code{…} & 1.952 & \textbf{0} & $-100\%$ \\
-Dính dòng danh sách \code{<li>} thiếu dấu chấm câu & 354 & \textbf{0} & $-100\%$ \\
-Ngoặc đơn cắt hở không cân bằng (như \emph{``(E503, E5''}) & 52 & \textbf{0} & $-100\%$ \\
-Thành phần giả (\emph{``Xem trên bao bì''}) hoặc mô tả vỏ hộp & 51 & \textbf{0} & $-100\%$ \\
-Tiếng Anh thực phẩm chưa dịch (giữ nguyên chuẩn INCI mỹ phẩm) & 47 & \textbf{0} & $-100\%$ \\
-Câu tiếp thị rỗng, câu cụt, giả dương tính ranh giới từ & 65 & \textbf{0} & $-100\%$ \\
-Thẻ HTML/entity sót, tràn chéo trường, rác OCR đa ngữ & 18 & \textbf{0} & $-100\%$ \\
-Tuyên bố dị ứng nguy hiểm chưa xác minh (\emph{``NO MILK...''}) & 1 & \textbf{0} & Cách ly 100\% \\
+1--3. Bán chạy toàn cửa hàng, 15 ngành hàng \& có điều kiện & 35 & 15/35 & 35/35 & +20 \\
+4--6. Tồn kho đơn SKU, theo thương hiệu \& xếp hạng tồn kho & 30 & 11/30 & 30/30 & +19 \\
+7--8. Kết hợp bán chạy--tồn kho--so sánh \& hội thoại đa lượt & 20 & 7/20 & 20/20 & +13 \\
+9--10. Ngoài danh mục/an toàn \& khẩu ngữ/viết tắt/tiếng Anh & 15 & 10/15 & 15/15 & +5 \\
 \midrule
-\textbf{Tổng số lỗi phát hiện trên toàn bộ kho dữ liệu} & \textbf{4.606} & \textbf{0} & \textbf{Sạch 100\%} \\
+\textbf{Tổng cộng (Trung vị 190\,ms, P95 448\,ms; Live 12/12)} & \textbf{100} & \textbf{43/100} & \textbf{100/100} & \textbf{+57} \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\subsection*{Đánh giá Mô hình Nhận diện Ảnh Di động (\texttt{.tflite}) và Độ trễ On-Demand (\texttt{Retail-AI-})}
-Bảng~\ref{tab:tflite_vision_bench} tổng hợp hiệu năng của mô hình \texttt{MobileNetV3Large-224} TFLite (\textbf{7,04\,MB} FP16 / \textbf{3,81\,MB} INT8 + \textbf{1,58\,MB} gallery FP16 cho toàn bộ 3.093 SKU Thanh Lam Mart, tổng gói di động chỉ \textbf{5,40--8,62\,MB}) cùng cơ chế Hybrid trên bốn bộ kiểm thử độc lập, và Hình~\ref{fig:mobile_tflite_vision} minh họa trực quan tương quan độ chính xác và độ trễ đầu-cuối.
-\begin{itemize}
-    \item \textbf{Độ bền đa góc chụp trên 3.093 SKU:} Trên tập 150 SKU biến dạng phối cảnh 3D mạnh, ghép kệ lộn xộn, lóa LED và tay che, cả hai bản \texttt{.tflite} FP16 và INT8 đều đạt \textbf{92,67\% Top-1} và \textbf{98,67--99,33\% Top-5} với độ trễ lõi chỉ \textbf{5,49\,ms} (FP16) và \textbf{13,30\,ms} (INT8) trên CPU XNNPACK (+ \textbf{0,069\,ms} tìm kiếm toàn bộ 3.093 SKU). Trên 12 ảnh điện thoại/góc nghiêng (\code{vision_eval}), mô hình cục bộ đạt \textbf{8/8 (100\%) Top-1} trên các ảnh kệ nghiêng và \textbf{12/12 (100\%) Brand@1} trong \textbf{14,6--23,2\,ms}.
-    \item \textbf{Khả năng tổng quát trên ảnh thực tế ngoài catalog \& Zero-Leakage:} Trên 16 ảnh thực tế ngoài danh mục (\code{eval_google}), mô hình 7,04\,MB đạt \textbf{87,5\% Top-5} và \textbf{87,5\% Brand@1}---ngang bằng hoàn toàn với giáo viên kép 100\,M tham số (\texttt{CLIP-B/32 + DINOv2-Small}). Trên tập \emph{zero-leakage} mới tinh (16 ảnh chụp điện thoại OpenFoodFacts chưa từng xuất hiện khi train/val + 4 ảnh OOD thật), bộ định tuyến Hybrid nâng từ 31,2\% lên \textbf{93,8\% Brand@1} (\textbf{62,5\%} đúng tuyệt đối SKU) và chặn \textbf{4/4 (100\%)} ảnh ngoài danh mục (toàn bộ 4 ảnh OOD thật có độ tương đồng cực đại $\le 0{,}588$, thấp hơn rõ rệt ngưỡng Hybrid $0{,}72$).
-    \item \textbf{Đo độ trễ đầu-cuối HTTP trực tiếp (\code{/agent/respond/image}):} Bảng~\ref{tab:vision_e2e_latency} xác nhận cơ chế \emph{lazy-load} không tiêu tốn tài nguyên lúc khởi động; lượt đầu tiên nạp mô hình và trả thẻ chỉ mất \textbf{236,4\,ms}; các lượt Fast-Path kế tiếp hoàn tất trong \textbf{23,4--27,4\,ms} (nhanh hơn $\approx 150\times$ so với VLM đám mây 3,64\,s); các ca trùng quy cách anh em (\emph{TH True Milk nguyên chất vs.\ ít đường}) hoặc câu hỏi tùy biến được Cổng Bảo vệ Quy cách chuyển sang Hybrid trong \textbf{2,14--2,90\,s}.
-\end{itemize}
+\subsection*{Kết quả Các Mô-đun Đa phương thức Bổ trợ (Thị giác On-Demand \& Thí điểm ASR)}
+\textbf{Nhận diện Ảnh Sản phẩm \texttt{MobileNetV3Large-224} TFLite (Bảng~\ref{tab:tflite_vision_bench} và Hình~\ref{fig:mobile_tflite_vision}):} Trên 150 SKU biến dạng phối cảnh 3D mạnh, bản FP16 (7,04\,MB) đạt \textbf{92,67\% Top-1 / 99,33\% Top-5} trong 5,49\,ms trên CPU. Trên tập \emph{independent zero-leakage} gồm 16 ảnh chụp điện thoại OpenFoodFacts chưa từng thấy cùng 4 ảnh ngoài phân phối (OOD), nhánh cục bộ đơn thuần chỉ đạt 31,2\% Brand@1 do thay đổi nền và góc chụp mạnh, nhưng khi kết hợp \emph{Sibling Pack-Size Guard} và định tuyến Hybrid VLM, độ chính xác nâng lên \textbf{93,8\% Brand@1} (\textbf{62,5\%} đúng tuyệt đối SKU) đồng thời loại \textbf{4/4 (100\%)} ảnh OOD (độ tương đồng cực đại $\le 0{,}588 < 0{,}72$). Độ trễ HTTP đầu-cuối đạt 23,4--27,4\,ms ở nhánh Fast-Path cục bộ và 2,14--2,90\,s ở nhánh Hybrid.
 
 \begin{table}[H]
 \centering
-\caption{Kết quả kiểm chuẩn mô hình nhận diện ảnh di động \texttt{MobileNetV3Large-224} TFLite và Hybrid trên 3.093 SKU Thanh Lam Mart}
+\caption{Đánh giá mô hình nhận diện ảnh \texttt{MobileNetV3Large-224} TFLite và định tuyến Hybrid trên 3.093 SKU}
 \label{tab:tflite_vision_bench}
 \footnotesize
 \setlength{\tabcolsep}{3.5pt}
 \begin{tabularx}{\textwidth}{Y L{2.45cm} r r r r r}
 \toprule
-\textbf{Bộ dữ liệu Kiểm thử Độc lập} & \textbf{Chế độ Chạy} & \textbf{Top-1} & \textbf{Top-5} & \textbf{Brand@1} & \textbf{OOD Rej.} & \textbf{P50 (ms)} \\
+\textbf{Bộ Kiểm thử Độc lập} & \textbf{Chế độ} & \textbf{Top-1} & \textbf{Top-5} & \textbf{Brand@1} & \textbf{OOD Rej.} & \textbf{P50 (ms)} \\
 \midrule
-Hard Multi-Angle (150 SKU, 3D/kệ/lóa/che) & TFLite FP16 (7,04\,MB) & \textbf{92,67\%} & \textbf{99,33\%} & --- & --- & \textbf{5,49} \\
-Hard Multi-Angle (150 SKU, 3D/kệ/lóa/che) & TFLite INT8 (3,81\,MB) & \textbf{92,67\%} & 98,67\% & --- & --- & 13,30 \\
-12 ảnh kệ/điện thoại nghiêng (\code{vision_eval}) & Local 2-Crop (ONNX) & \textbf{100\%} (8/8) & --- & \textbf{100\%} & --- & 19,1 \\
-16 ảnh ngoài catalog (\code{eval_google}: BHX+OFF) & Local 2-Crop (FP16) & 25,0\% & \textbf{87,5\%} & \textbf{87,5\%} & --- & 13,5 \\
-16 ảnh điện thoại mới \emph{Zero-Leakage} + 4 OOD & Local 2-Crop (ONNX) & 25,0\% & 43,8\% & 31,2\% & \textbf{100\%} (4/4) & 13,5 \\
-16 ảnh điện thoại mới \emph{Zero-Leakage} + 4 OOD & \textbf{Hybrid On-Demand} & \textbf{62,5\%} & --- & \textbf{93,8\%} & \textbf{100\%} (4/4) & 15,2 / 2.556 \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{Độ trễ đầu-cuối HTTP trực tiếp tại \code{POST /agent/respond/image} trên máy chủ vận hành (\code{127.0.0.1:8000})}
-\label{tab:vision_e2e_latency}
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabularx}{\textwidth}{L{3.9cm} L{2.6cm} r Y}
-\toprule
-\textbf{Kịch bản Gửi ảnh \& Câu hỏi} & \textbf{Tuyến Xử lý} & \textbf{E2E (ms)} & \textbf{Kết quả Xác minh Danh mục} \\
-\midrule
-Omo Comfort 2,8\,kg (ảnh đầu tiên) & Cold-Start Fast-Path & \textbf{236,4} & Nạp trễ 1 lần; khớp đúng SKU (185.000\,đ) \\
-Ba chỉ bò Mỹ ACEFOODS 500\,g (góc nghiêng) & Warm Fast-Path & \textbf{23,4} & Khớp chính xác (165.000\,đ, giảm từ 181.900\,đ) \\
-Thùng 24 lon Tiger Crystal 330\,ml & Warm Fast-Path & \textbf{27,4} & Khớp chính xác (410.000\,đ); 0 lượt gọi cloud \\
-Dầu gội Clear 9 thảo dược 630\,g & Warm Fast-Path & \textbf{27,4} & Khớp chính xác (196.900\,đ, giảm từ 215.000\,đ) \\
-Ba chỉ bò Mỹ + \emph{``nướng hay ăn lẩu ngon?''} & Fast-Path + Text LLM & 2.742,6 & Bỏ qua VLM; tư vấn tự nhiên đúng giá 165.000\,đ \\
-TH True Milk 1\,L nguyên chất (ảnh nghiêng) & Hybrid Sibling Guard & 2.899,6 & Cổng trùng dòng chuyển VLM; khớp đúng (44.500\,đ) \\
-Ảnh laptop thật trên bàn (OOD) & Chặn OOD Hybrid & 2.138,5 & Từ chối an toàn (\code{products=[]}, 0 bịa đặt) \\
+150 SKU Đa góc 3D/kệ/lóa/che & TFLite FP16 (7,04\,MB) & 92,67\% & 99,33\% & --- & --- & 5,49 \\
+150 SKU Đa góc 3D/kệ/lóa/che & TFLite INT8 (3,81\,MB) & 92,67\% & 98,67\% & --- & --- & 13,30 \\
+16 ảnh ngoài catalog (\code{eval_google}) & Local 2-Crop (FP16) & 25,0\% & 87,5\% & 87,5\% & --- & 13,5 \\
+16 ảnh điện thoại mới + 4 OOD & Local 2-Crop (ONNX) & 25,0\% & 43,8\% & 31,2\% & 4/4 & 13,5 \\
+16 ảnh điện thoại mới + 4 OOD & \textbf{Hybrid On-Demand} & \textbf{62,5\%} & --- & \textbf{93,8\%} & \textbf{4/4} & 15,2 / 2.556 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{Images/fig_mobile_tflite_vision.png}
-    \caption{Độ chính xác nhận diện 3.093 SKU đa góc chụp và zero-leakage (trái) cùng so sánh độ trễ đầu-cuối theo thang log của mô hình \texttt{MobileNetV3Large-224} TFLite Fast-Path so với VLM đám mây (phải).}
+    \includegraphics[width=0.96\textwidth]{Images/fig_mobile_tflite_vision.png}
+    \caption{Độ chính xác nhận diện ảnh trên 3.093 SKU (trái) và độ trễ theo thang log giữa nhánh cục bộ và VLM đám mây (phải).}
     \label{fig:mobile_tflite_vision}
 \end{figure}
 
-\subsection*{Dự báo Hàng Tươi sống, Backtest Lợi nhuận 50 Cửa hàng và Kiểm toán Guard (\texttt{ops\_chest})}
-Trên bộ dữ liệu FreshRetailNet-50K, bước khôi phục nhu cầu đứt hàng theo giờ hạ sai số WAPE từ \textbf{32,3\% xuống 20,5\%} và triệt tiêu gần như hoàn toàn thiên lệch âm (\textbf{$-32{,}3\% \to -0{,}1\%$}, $n=200.000$). Đánh giá trên 11.037 điểm đủ hàng, LightGBM~v3 hạ WAPE dự báo từ \textbf{35,1\% (EWMA) xuống 30,2\%}, giảm độ lệch từ \textbf{+6,9\% xuống +2,7\%} và đạt độ phủ thực nghiệm \textbf{81\%} cho khoảng dự báo danh định 80\% (so với 73\% của EWMA).
+\textbf{Nghiên cứu Thí điểm Nhận dạng Tiếng nói Hỗ trợ (Bảng~\ref{tab:stt_ablation}):} Do tầng âm thanh đóng vai trò giao diện đầu vào bổ trợ và tập thử nghiệm chỉ gồm quy mô thí điểm ($n=16$ mẫu âm thanh qua 3 mức SNR và 3 phép đo độ trễ WebSocket 257--558\,ms so với REST 1.937--3.042\,ms), nhóm \emph{không} khái quát kết quả này thành năng lực ASR đại trà cho mọi giọng vùng miền trong siêu thị thực. Đáng chú ý, Bảng~\ref{tab:stt_ablation} cho thấy một sự đánh đổi thực nghiệm rõ rệt: dù \texttt{DPDFNet2} cải thiện WER so với Azure thô ở điều kiện sạch (10,0\% so với 11,9\%) và nhiễu 12\,dB (14,1\% so với 14,5\%), tại mức \textbf{nhiễu nặng 5\,dB}, \textbf{Azure Speech thô (16,1\% WER) lại tốt hơn nhẹ so với cấu hình gắn \texttt{DPDFNet2} (16,7\% WER, chênh 0,6 điểm phần trăm)}, còn \texttt{GTCRN} tăng vọt lên 30,5\% WER do làm méo thanh điệu tiếng Việt dưới nhiễu đa giọng cực mạnh. Điều này chứng minh khử nhiễu nơ-ron không tối ưu tuyệt đối ở mọi mức SNR và cần mở rộng đánh giá thực địa 100--200 câu đa người nói ở giai đoạn sau.
 
-Tuy nhiên, kết quả backtest lợi nhuận A/B ngoài mẫu trong 37 ngày trên \textbf{50 cửa hàng độc lập} (kiểm định chéo 2 nếp, Bảng~\ref{tab:ops_chest_backtest} và Hình~\ref{fig:ops_chest_frn}) cho thấy một phát hiện thực nghiệm rất quan trọng: WAPE thấp hơn \emph{không tự động} mang lại lợi nhuận cao hơn:
+\begin{table}[H]
+\centering
+\caption{Kết quả thí điểm WER (\%) của 5 cấu hình ASR hỗ trợ theo mức SNR ($n=16$ mẫu, quy mô thí điểm)}
+\label{tab:stt_ablation}
+\footnotesize
+\begin{tabularx}{\textwidth}{L{5.5cm} r r r Y}
+\toprule
+\textbf{Cấu hình ASR \& Khử nhiễu} & \textbf{Sạch (\%)} & \textbf{12\,dB (\%)} & \textbf{5\,dB (\%)} & \textbf{Nhận xét Thực nghiệm} \\
+\midrule
+Azure Speech + \texttt{DPDFNet2} ONNX & \textbf{10,0} & \textbf{14,1} & 16,7 & Tốt nhất ở sạch/12\,dB; kém hơn Azure thô 0,6\,đpt tại 5\,dB \\
+Azure Speech Thô (không khử nhiễu) & 11,9 & 14,5 & \textbf{16,1} & Tốt nhất tại nhiễu nặng 5\,dB do tránh méo thanh điệu \\
+Whisper Large-v3 (REST WAV) & 12,0 & 14,2 & 22,2 & Suy giảm mạnh ở 5\,dB; không hỗ trợ truyền luồng \\
+Azure Speech + \texttt{GTCRN} & 11,9 & 15,2 & 30,5 & Méo thanh điệu nặng ở 5\,dB; chỉ phù hợp lọc nhiễu tĩnh nhẹ \\
+\texttt{gipformer1.5-68M-rnnt} cục bộ & 18,4 & 24,6 & 34,8 & Phương án dự phòng ngoại tuyến khi mất kết nối mạng \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Kết quả Thực nghiệm Agent 2: Dự báo và Tối ưu Tồn kho (\texttt{ops\_chest})}
+
+\subsection*{Nghiên cứu Loại bỏ Dự báo (B0--B3) trên 50 Cửa hàng Độc lập FreshRetailNet-50K}
+Trên bài kiểm tra che khuất giờ cuối ngày ($n=200.000$), khôi phục nhu cầu theo hồ sơ giờ giảm WAPE từ 32,35\% xuống \textbf{20,53\%} và gần như triệt tiêu thiên lệch âm ($-32{,}35\% \to -0{,}15\%$). Bảng~\ref{tab:ops_forecast_ablation} chuẩn hóa so sánh năm mô hình dự báo trên cùng 50 cửa hàng độc lập ở cả tuần đánh giá chính ($n=11.037$ quan sát đủ hàng và $n=16.207$ điểm gồm cả ngày đã khôi phục) lẫn mô phỏng cuốn chiếu 37 ngày ($n=374.982$ điểm đủ hàng):
 \begin{itemize}
-    \item Dùng thẳng \texttt{B-ML} (lấy độ rộng khoảng phân vị đối xứng của LightGBM làm độ lệch chuẩn) chỉ tăng +3,6\% so với Baseline~A---\emph{thua} \texttt{B-EWMA} (+4,2\%) tới $-0{,}4\%$ lợi nhuận trung vị và lỗ tới $-5{,}6\%$ ở các cửa hàng nhỏ ($\le 30$ SKU) vì độ phân tán đuôi nhiễu làm tỷ lệ hủy hàng tăng lên 5,7\%.
-    \item Biến thể \texttt{B-ML split} bất đối xứng còn kém hơn (+1,6\% so với A, tỷ lệ hủy 6,5\%, chỉ thắng EWMA ở 6\% cửa hàng).
-    \item Ghép trung vị điểm chính xác của LightGBM ($\hat{q}_{50}$) với độ lệch chuẩn mượt của EWMA ($\sigma_{\text{EWMA}}$) kết hợp cổng định tuyến lợi nhuận ngoài mẫu (\textbf{\texttt{B-Gate}}, \code{size_cut=30}) đạt hiệu quả vượt trội nhất: tăng \textbf{+4,9\% lợi nhuận cửa hàng} so với Baseline~A (\textbf{+0,8\%} trung vị so với \texttt{B-EWMA}, thắng trên \textbf{76\%} cửa hàng kiểm định), đạt \textbf{tỷ lệ hủy hàng thấp nhất (4,8\%)} và cắt giảm \textbf{61\% tình trạng đứt hàng nhóm hút khách} (từ 8,7\% xuống \textbf{3,4\%}). Trên Cửa hàng mẫu 18 (164 SKU tươi), \texttt{B-Gate} đạt +4,5\% lợi nhuận so với Baseline~A.
+    \item \textbf{Tác động của Demand Recovery:} So sánh \code{ewma_khong_co_het_hang} (không khôi phục đứt hàng) với \code{ewma_oc} (có khôi phục) trên tập cầu thực \code{rec.all} ($n=16.207$) cho thấy bỏ qua bước khôi phục gây thiên lệch âm nghiêm trọng \textbf{$-21{,}80\%$} (WAPE 38,26\%) so với $-5{,}07\%$ (WAPE 35,12\%) khi có khôi phục.
+    \item \textbf{Ưu thế độ chính xác dự báo của LightGBM~v3:} Trên cả tuần kiểm định lẫn cuốn chiếu 37 ngày, LightGBM~v3 (29 đặc trưng) vượt toàn bộ các baseline: giảm WAPE từ 38,65\% (Seasonal Naive B0) và 35,06\% (EWMA B1) xuống \textbf{30,17\%}, giảm độ lệch từ $+6{,}95\%$ xuống $+2{,}71\%$, giảm Pinball-50 từ 0,1753 xuống \textbf{0,1508} và đạt độ phủ thực nghiệm \textbf{81,2\%} cho khoảng dự báo 80\% (gần sát mức danh định so với 72,6\% của EWMA).
 \end{itemize}
 
 \begin{table}[H]
 \centering
-\caption{Backtest lợi nhuận A/B ngoài mẫu 37 ngày trên 50 cửa hàng FreshRetailNet-50K (2-fold CV)}
-\label{tab:ops_chest_backtest}
+\caption{So sánh có kiểm soát các mô hình dự báo (B0--B3) trên 50 cửa hàng độc lập FreshRetailNet-50K}
+\label{tab:ops_forecast_ablation}
 \footnotesize
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3.5pt}
 \begin{tabularx}{\textwidth}{Y r r r r r r}
 \toprule
-\textbf{Chiến lược} & \textbf{Lãi vs.A} & \textbf{vs.EWMA} & \textbf{Thắng} & \textbf{Hủy\%} & \textbf{OOS\%} & \textbf{Traffic OOS\%} \\
+\textbf{Mô hình Dự báo (50 Cửa hàng Độc lập)} & \multicolumn{4}{c}{\textbf{Tuần Eval ($n=11.037$ obs)}} & \multicolumn{2}{c}{\textbf{Cuốn chiếu ($n=374.982$)}} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-7}
+ & \textbf{WAPE} & \textbf{Bias} & \textbf{Pin50} & \textbf{Cov80} & \textbf{WAPE} & \textbf{Bias} \\
 \midrule
-Baseline A (Giảm 30\% tối) & 0,0\% & --- & --- & 5,3 & 14,5 & 8,7 \\
-\texttt{B-EWMA} (Ops Chest EWMA) & +4,2\% & 0,0\% & --- & 5,2 & 13,6 & 3,9 \\
-\texttt{B-ML} (LightGBM \code{sym} $\sigma$) & +3,6\% & $-0{,}4\%$ & 38\% & 5,7 & 13,1 & 2,7 \\
-\texttt{B-ML split} (split-normal $\sigma$) & +1,6\% & $-2{,}2\%$ & 6\% & 6,5 & \textbf{12,2} & \textbf{2,3} \\
-\texttt{B-ML ewma\_sigma} (mọi SKU) & +4,5\% & +0,8\% & 74\% & \textbf{4,8} & 14,3 & 3,4 \\
-\textbf{\texttt{B-Gate} (Cổng Lợi nhuận)} & \textbf{+4,9\%} & \textbf{+0,8\%} & \textbf{76\%} & \textbf{4,8} & 14,1 & \textbf{3,4} \\
+\textbf{B0:} Seasonal Naive (cùng thứ tuần trước) & 38,65\% & $-0{,}74\%$ & 0,1933 & --- & 40,54\% & $-1{,}25\%$ \\
+\textbf{B0b:} Trung bình trượt 28 ngày & 35,48\% & $-10{,}98\%$ & 0,1774 & --- & 35,94\% & $-4{,}88\%$ \\
+\textbf{B1a:} EWMA không khôi phục OOS (\code{rec}: $-21{,}8\%$) & 35,06\% & $-10{,}75\%$ & 0,1753 & 76,0\% & 35,81\% & $-5{,}79\%$ \\
+\textbf{B1b:} Ops Chest EWMA (có khôi phục OOS) & 35,06\% & $+6{,}95\%$ & 0,1753 & 72,6\% & 37,77\% & $+13{,}35\%$ \\
+\textbf{B3:} LightGBM~v3 (29 đặc trưng + khôi phục OOS) & \textbf{30,17\%} & \textbf{$+2{,}71\%$} & \textbf{0,1508} & \textbf{81,2\%} & \textbf{34,95\%} & \textbf{$+8{,}73\%$} \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.98\textwidth]{Images/fig_ops_chest_frn_forecast.png}
-    \caption{Kết quả thực nghiệm \texttt{ops\_chest} trên FreshRetailNet-50K: khôi phục nhu cầu và WAPE LightGBM~v3 (trái) cùng backtest lợi nhuận, hủy hàng và đứt hàng 50 cửa hàng (phải).}
-    \label{fig:ops_chest_frn}
-\end{figure}
-
-Song song đó, Bảng~\ref{tab:ops_chest_guard} tổng kết kết quả 20 kịch bản kiểm định chuyển dự phòng đa nhà cung cấp và kiểm soát số liệu thời gian thực (\code{eval_failover.json}) của tác nhân vận hành \texttt{ops\_chest}.
+\subsection*{Ablation Lợi nhuận Mô phỏng (B1--B5), Khoảng Tin cậy 95\%, Phân tách Cỡ Cửa hàng \& Độ nhạy}
+Bảng~\ref{tab:ops_chest_backtest} trình bày kết quả mô phỏng A/B 37 ngày trên 50 cửa hàng độc lập (kiểm định chéo 2 nếp) kèm khoảng tin cậy bootstrap 95\% và kiểm định Wilcoxon, trực quan hóa tại Hình~\ref{fig:ops_chest_frn} và Hình~\ref{fig:ops_sensitivity_ci}:
+\begin{itemize}
+    \item \textbf{Nghịch lý WAPE so với Lợi nhuận:} Dù LightGBM~v3 giảm WAPE 4,9 điểm phần trăm, cấu hình \textbf{B3 (\texttt{B-ML sym})} dùng độ rộng khoảng phân vị của chính LightGBM lại \emph{kém hơn} EWMA tới \textbf{$-0{,}39\%$} trung vị (trung bình $-1{,}70\%$, $p = 0{,}017$, chỉ thắng 19/50 cửa hàng) và lỗ nặng \textbf{$-5{,}59\%$} trên 13 cửa hàng nhỏ ($\le 30$ SKU, $p=0{,}012$, tỷ lệ hủy vọt lên 8,97\%). Cấu hình bất đối xứng \textbf{B3s (\texttt{B-ML split})} còn kém hơn ($-2{,}17\%$ so với EWMA, hủy 6,45\%).
+    \item \textbf{Hiệu quả có ý nghĩa thống kê của \texttt{B-Gate} (B5):} Ghép trung vị LightGBM với $\sigma_{\text{EWMA}}$ (B4) đảo chiều sang $+0{,}78\%$ trung vị nhưng vẫn âm $-0{,}52\%$ ở cửa hàng nhỏ. Bổ sung cổng định tuyến theo lợi nhuận ngoài mẫu với \code{size_cut=30} (\textbf{B5 / \texttt{B-Gate}}) đạt mức tăng lợi nhuận mô phỏng trung vị \textbf{+4,90\%} so với Baseline~A (95\% CI $[+3{,}70\%;\,+5{,}82\%]$, $p = 5{,}4\times 10^{-7}$) và \textbf{+0,78\%} so với \texttt{B-EWMA} (95\% CI \textbf{$[+0{,}48\%;\,+1{,}21\%]$}, trung bình $+0{,}82\%$, Wilcoxon \textbf{$p = 6{,}39\times 10^{-6}$}, thắng \textbf{38/50 = 76,0\%} cửa hàng).
+    \item \textbf{Phân tích theo quy mô cửa hàng (Bảng~\ref{tab:ops_subgroup_sensitivity}):} Trên \textbf{37 cửa hàng vừa/lớn ($>30$ SKU)}, \texttt{B-Gate} đạt mức tăng trung vị \textbf{+0,87\%} (95\% CI $[+0{,}56\%;\,+1{,}26\%]$, $p = 1{,}26\times 10^{-5}$, thắng \textbf{32/37 = 86,5\%} cửa hàng). Trên \textbf{13 cửa hàng nhỏ ($\le 30$ SKU)}, \texttt{B-Gate} khống chế hoàn toàn rủi ro lỗ của ML (từ $-5{,}59\%$ về $-0{,}01\%$ trung vị / $+0{,}39\%$ trung bình, $p=0{,}58$, đồng thời giảm tỷ lệ hủy từ 7,42\% xuống 6,94\%).
+    \item \textbf{Giải thích đánh đổi giữa Lợi nhuận, Hủy hàng và Tỷ lệ Hết hàng (OOS):} So với EWMA, \texttt{B-Gate} giảm tỷ lệ hủy hàng (5,17\% $\to$ \textbf{4,82\%}) và giảm đứt hàng nhóm sản phẩm hút khách (3,94\% $\to$ \textbf{3,37\%}), nhưng \textbf{tỷ lệ OOS tổng thể nhích nhẹ từ 13,61\% lên 14,12\% (+0,51 điểm phần trăm)}. Sự đánh đổi này phản ánh đúng bản chất toán học của Newsvendor với hàng hạn dùng 1--3 ngày: vì chi phí hủy mất trắng 100\% giá vốn lớn hơn nhiều biên lãi gộp trên các SKU biên mỏng bán chậm, bộ tối ưu chủ động cắt bớt tồn kho an toàn ở nhóm biên thấp (chấp nhận tăng nhẹ OOS ở nhóm ít ảnh hưởng lưu lượng) trong khi giữ sàn phục vụ $SL_{\text{floor}} = 0{,}95$ cho nhóm hút khách, tạo ra tổng lãi gộp mô phỏng cao hơn.
+    \item \textbf{Phân tích độ nhạy trên 8 kịch bản (Bảng~\ref{tab:ops_subgroup_sensitivity}, Hình~\ref{fig:ops_sensitivity_ci}b):} Ngay cả khi phản ứng giảm giá của khách chỉ bằng 1/4 giả định (\code{world_25}: $+4{,}38\%$), khi tắt hoàn toàn giảm giá/trả NCC để đo riêng động cơ đặt hàng (\code{order_only}: $+4{,}73\%$), hay khi quản lý chỉ duyệt 60\% đơn đề xuất (\code{approve_60}: $+3{,}76\%$), hệ thống vẫn giữ mức lãi mô phỏng dương ổn định. Ngược lại, nếu bỏ sàn mức phục vụ (\code{no_floor}), lợi nhuận đảo chiều thành \textbf{$-0{,}54\%$} và OOS tăng vọt lên \textbf{22,12\%}, chứng minh vai trò thiết yếu của các sàn $SL_{\text{floor}}$. Cần nhấn mạnh rằng mọi con số lợi nhuận đều là kết quả trong \emph{môi trường mô phỏng với giá vốn và hạn dùng giả định}, chưa thể đồng nhất trực tiếp với lợi nhuận tại cửa hàng thực tế.
+\end{itemize}
 
 \begin{table}[H]
 \centering
-\caption{Kiểm định gọi công cụ, căn cứ số liệu và an toàn HITL của \texttt{ops\_chest} (\code{eval_failover.json}, $N=20$)}
-\label{tab:ops_chest_guard}
+\caption{Ablation lợi nhuận mô phỏng 37 ngày trên 50 cửa hàng độc lập (2-fold CV) kèm 95\% Bootstrap CI và Wilcoxon $p$}
+\label{tab:ops_chest_backtest}
 \footnotesize
-\begin{tabularx}{\textwidth}{L{5.0cm} r r Y}
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{Y r r L{2.35cm} r r r r}
 \toprule
-\textbf{Tiêu chí An toàn / Chất lượng} & \textbf{Đạt} & \textbf{Tỷ lệ} & \textbf{Phạm vi Kiểm chứng} \\
+\textbf{Chiến lược (B1--B5)} & \textbf{vs.\ A} & \textbf{vs.\ EWMA} & \textbf{95\% CI vs.\ EWMA} & \textbf{Thắng} & \textbf{Hủy\%} & \textbf{OOS\%} & \textbf{Traf.OOS} \\
 \midrule
-Căn cứ Số liệu (\code{grounded}) & 20 / 20 & \textbf{100,0\%} & Mọi con số $\ge 1.000$ đều khớp đầu ra công cụ hoặc câu hỏi \\
-Chọn Đúng Công cụ (\code{tools_ok}) & 19 / 20 & 95,0\% & Gọi đúng công cụ đọc/đề xuất trong tập 31 công cụ \\
-Không Nhận vơ Thực thi (\code{no_false_exec}) & 19 / 20 & 95,0\% & Tác nhân nêu rõ trạng thái \texttt{PENDING}, không tự nhận đã gửi \\
-Đạt Nghiêm ngặt Toàn kịch bản & 18 / 20 & 90,0\% & Thỏa đồng thời căn cứ số, công cụ, ranh giới từ chối và định dạng \\
+Baseline A (giảm phẳng 30\%) & 0,00\% & --- & --- & --- & 5,33 & 14,49 & 8,69 \\
+\textbf{B1:} \texttt{B-EWMA} & +4,18\% & 0,00\% & --- & --- & 5,17 & 13,61 & 3,94 \\
+\textbf{B3:} \texttt{B-ML} (\code{sym} $\sigma$) & +3,58\% & $-0{,}39\%$ & $[-1{,}10; +0{,}05]$ & 38\% & 5,68 & 13,14 & 2,71 \\
+\textbf{B3s:} \texttt{B-ML split} & +1,65\% & $-2{,}17\%$ & $[-3{,}20; -1{,}30]$ & 6\% & 6,45 & \textbf{12,22} & \textbf{2,26} \\
+\textbf{B4:} \texttt{B-ML ewma\_sigma} & +4,51\% & +0,78\% & $[+0{,}48; +1{,}16]$ & 74\% & 4,83 & 14,35 & 3,37 \\
+\textbf{B5:} \textbf{\texttt{B-Gate}} ($p=6{,}4\times 10^{-6}$) & \textbf{+4,90\%} & \textbf{+0,78\%} & \textbf{$[+0{,}48; +1{,}21]$} & \textbf{76\%} & \textbf{4,82} & 14,12 & 3,37 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Kết quả Định tính}
-
-\subsection*{Giao diện Kiosk Giọng nói Trực tiếp (\texttt{Retail-AI-})}
-Hình~\ref{fig:kiosk_live_ui} ghi lại màn hình vận hành trực tiếp của kiosk \texttt{Retail-AI-} trên trình duyệt Chrome trong phiên kiểm thử đầu-cuối, hiển thị avatar 2D tiếng Việt \emph{Mai}, bảng điều khiển giọng nói thời gian thực, câu trả lời có căn cứ và thẻ sản phẩm Thanh Lam Mart kèm giá VND chính xác.
+\begin{table}[H]
+\centering
+\caption{Phân tách theo quy mô cửa hàng (50 cửa hàng) và Phân tích độ nhạy 8 kịch bản (20 cửa hàng FRN)}
+\label{tab:ops_subgroup_sensitivity}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{L{4.5cm} r r r r Y}
+\toprule
+\textbf{Phân nhóm / Kịch bản Độ nhạy} & \textbf{Lãi} & \textbf{95\% CI / So sánh} & \textbf{Hủy\%} & \textbf{OOS\%} & \textbf{Ý nghĩa Đánh giá} \\
+\midrule
+\multicolumn{6}{l}{\textit{A. Phân tách quy mô cửa hàng (\texttt{B-Gate} vs.\ \texttt{B-EWMA}, 2-fold CV)}} \\
+Cửa hàng lớn ($>30$ SKU, $n=37$) & \textbf{+0,87\%} & $[+0{,}56;\,+1{,}26]$ ($p=1{,}3\times 10^{-5}$) & 4,82 & 14,46 & Thắng 32/37 (86,5\%); động lực chính của lãi \\
+Cửa hàng nhỏ ($\le 30$ SKU, $n=13$) & $-0{,}01\%$ & $[-0{,}33;\,+1{,}53]$ ($p=0{,}58$) & 6,94 & 12,14 & Chặn lỗ $-5{,}59\%$ của \texttt{B-ML}; giảm hủy từ 7,42\% \\
+\midrule
+\multicolumn{6}{l}{\textit{B. Phân tích độ nhạy 8 kịch bản (vs.\ Baseline~A, 20 cửa hàng FRN)}} \\
+Tham chiếu (\code{reference}, 50\% co giãn) & +5,46\% & Chuẩn đối chứng & 4,47 & 14,44 & Cơ sở so sánh các nhiễu loạn tham số \\
+Phản ứng giảm giá yếu (\code{world_50} / \code{world_25}) & +4,69\% / +4,38\% & 25\% / 12,5\% giả định & 4,89 / 5,06 & 14,47 / 14,49 & Giữ vững lãi dương khi giảm giá kém hiệu quả \\
+Chỉ đặt hàng (\code{order_only}, tắt giảm giá/trả) & +4,73\% & Tách đóng góp đặt hàng & 5,22 & 14,51 & 87\% mức lãi đến trực tiếp từ đặt hàng tối ưu \\
+Tỷ lệ quản lý duyệt (\code{approve_80} / \code{approve_60}) & +4,78\% / +3,76\% & 80\% / 60\% duyệt HITL & 4,81 / 5,03 & 14,60 / 14,42 & Chịu được sự can thiệp thủ công của con người \\
+Bỏ sàn phục vụ (\code{no_floor}) & \textbf{$-0{,}54\%$} & Ablation sàn $SL_{\text{floor}}$ & 2,82 & \textbf{22,12} & Lỗ lợi nhuận và OOS tăng mạnh nếu bỏ sàn \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.95\textwidth]{Images/kiosk_live_ui.png}
-    \caption{Giao diện trực tiếp của kiosk giọng nói \texttt{Retail-AI-} trên màn hình lớn hiển thị avatar \emph{Mai}, nội dung tư vấn tiếng Việt có căn cứ và thẻ sản phẩm Thanh Lam Mart.}
-    \label{fig:kiosk_live_ui}
+    \includegraphics[width=0.96\textwidth]{Images/fig_ops_chest_frn_forecast.png}
+    \caption{Hiệu quả khôi phục nhu cầu và dự báo LightGBM~v3 (trái) cùng backtest lợi nhuận, hủy hàng và đứt hàng 50 cửa hàng (phải).}
+    \label{fig:ops_chest_frn}
 \end{figure}
-
-Trên thiết bị di động ($390\times 844$\,px tại \url{https://mai-retail-kiosk.vercel.app}), Hình~\ref{fig:mobile_popup_live} minh họa tính năng mới \textbf{popup lightbox xem ảnh sản phẩm} được xác minh trực tiếp trên Production sau khi khách hỏi \emph{``Tương ớt Chin Su chai 1kg thành phần chính là gì v''} và chạm vào thẻ sản phẩm: hộp thoại hiển thị giữa màn hình với ảnh chai tương ớt rõ nét trên nền trắng ($299\times 299$\,px), nhãn thương hiệu \texttt{CHIN-SU}, ngành hàng, giá tham khảo 62.200\,đ/Chai, số lượng đã bán mô phỏng 284/30 ngày, nút \emph{``Hỏi thành phần''} và nút đóng sạch gọn, 0 lỗi console hay tràn khung.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.42\textwidth]{Images/mobile_product_popup_live.png}
-    \caption{Ảnh chụp trực tiếp trên di động Production ($390\times 844$\,px, \url{https://mai-retail-kiosk.vercel.app}) khi bấm vào thẻ sản phẩm \emph{Tương ớt Chin Su chai 1kg}: mở popup lightbox ảnh độ phân giải cao kèm giá, số liệu bán thử và nút hỏi nhanh thành phần.}
-    \label{fig:mobile_popup_live}
+    \includegraphics[width=0.96\textwidth]{Images/fig_ops_chest_sensitivity_ci.png}
+    \caption{Khoảng tin cậy bootstrap 95\% mức tăng lợi nhuận so với EWMA theo quy mô cửa hàng (trái) và phân tích độ nhạy trên 8 kịch bản vận hành (phải).}
+    \label{fig:ops_sensitivity_ci}
 \end{figure}
 
-Năm tình huống hội thoại đã kiểm chứng minh họa rõ cách \texttt{Retail-AI-} xử lý bài toán thực tế tại siêu thị:
-\begin{enumerate}
-    \item \textbf{Minh bạch dữ liệu bán chạy kèm khẩu ngữ (\emph{``Ba chỉ bò Mỹ ACEFOODS loại nào bán chạy nhất?''} \& \emph{``cái nào bán chạy nhất v''}):} Thay vì bịa hạng bán chạy hoặc giả mạo dữ liệu mô phỏng thành POS thực, Mai giữ ngữ cảnh ngành hàng đang xem, lọc các tiểu từ khẩu ngữ (\emph{v, vậy, z, nhỉ}), xếp hạng xác định trên \code{demo_sales.sqlite3} ($\approx 212$\,ms), công bố rõ đây là số liệu minh họa 30 ngày và kèm đơn giá quy đổi.
-    \item \textbf{Lắp giỏ món ăn đúng ngân sách dưới 1 giây (\emph{``Gợi ý bữa tối dưới 150k cho 2 người''}):} Nhánh đa món Path~E sử dụng \code{fast_chat()} trên Groq LPU tại Singapore (\texttt{sin1}) hoàn tất toàn bộ câu trả lời HTTPS kèm 4 thẻ thực phẩm mặn hợp lý chỉ trong \textbf{870\,ms} (rút từ 5,50\,s trước tối ưu), giữ nhất quán đại từ \emph{mình/bạn} và 100\% không vượt ngân sách.
-    \item \textbf{Trả lời bảng thành phần định lượng \& xem ảnh tức thì (\emph{``Tương ớt Chin Su chai 1kg thành phần chính là gì v''}):} Tra cứu 0-token từ kho tri thức đã làm sạch 8 tầng trả đầy đủ \emph{``Nước, đường, ớt 110\,g/kg, muối, chất làm dầy (1422), tỏi, cà chua cô đặc...''} kèm thẻ có ảnh thu nhỏ mở popup lightbox phóng to sản phẩm khi chạm.
-    \item \textbf{Báo quản lý thời gian thực qua Zalo Bot thân thiện người dùng:} Khi khách bấm \emph{Gọi quản lý · Zalo} hoặc nhờ gọi nhân viên, hệ thống đẩy cảnh báo trực tiếp qua Zalo Bot tới cửa hàng trưởng trong khi chỉ hiển thị thông báo tự nhiên cho khách hàng (ẩn toàn bộ mã UUID nội bộ và chuỗi trạng thái kỹ thuật như \code{NOTIFIED_ZALO}).
-    \item \textbf{Phân biệt ranh giới y tế và câu hỏi vô hại:} Yêu cầu kê đơn thuốc điều trị bệnh (\emph{``thuốc hạ sốt trị đau dạ dày''}) bị chặn tức thì bằng thông điệp khuyến nghị gặp dược sĩ/bác sĩ, trong khi câu hỏi siêu thị vô hại chứa từ khóa nhạy cảm (XSTest 10/10, ví dụ \emph{``nước muối sinh lý súc miệng''} hoặc \emph{``trà gừng uống ấm bụng''}) được tư vấn tự nhiên không từ chối oan.
-\end{enumerate}
+\section{Kết quả Kiểm thử Tích hợp Liên Agent Đầu-Cuối (Môi trường Mô phỏng)}
 
-\subsection*{Trợ lý Vận hành cho Cửa hàng trưởng (\texttt{ops\_chest})}
-Trong phiên kiểm thử trên Cửa hàng mẫu 18 (164 SKU tươi sống), \texttt{ops\_chest} thể hiện bốn năng lực vận hành cốt lõi:
-\begin{enumerate}
-    \item \textbf{Bản tin Buổi sáng \& Đề xuất Giảm giá FEFO:} Khi kiểm tra rủi ro trong ngày, tác nhân gọi công cụ tổng hợp tồn kho và lô cận hạn, khoanh vùng các lô còn 1--2 ngày HSD có lượng tồn vượt sức bán nguyên giá, tính mức giảm giá bảo toàn lãi đóng góp dương và tạo đề xuất \texttt{PENDING} chờ duyệt.
-    \item \textbf{Kiểm tra HSD bằng Vision OCR:} Khi tải ảnh nhãn gói thực phẩm tươi, \code{vision.py} trích xuất ngày hết hạn và số lượng lô rồi tự điền vào biểu mẫu kiểm HSD nội tuyến thay vì âm thầm sửa tồn kho.
-    \item \textbf{Quản trị HITL \& Chặn Nhận vơ Thực thi:} Khi quản lý yêu cầu ``đặt ngay 50 gói từ nhà cung cấp X'', tác nhân chỉ gọi \code{propose_po}, giữ đơn ở trạng thái \texttt{PENDING} và thông báo rõ đơn email (Mailpit/SMTP) cần bấm duyệt; nếu LLM phát ngôn sai rằng đơn đã gửi, \code{guard.py} phát hiện ngay lỗi \code{FALSE_EXEC}.
-    \item \textbf{Khép vòng Giả thuyết \& Học Thói quen Quản lý:} Cửa hàng trưởng có thể ghi nhận giả thuyết vận hành (như trời mưa cuối tuần làm giảm cầu nước giải khát) qua \code{propose_hypothesis} để hệ thống tự chấm kết luận sau chu kỳ (\code{hypotheses.py}), trong khi \code{edit_learning.py} theo dõi các chỉnh sửa lặp lại của quản lý để gợi ý điều chỉnh tinh hơn về sau.
-\end{enumerate}
+Nhằm chứng minh trực tiếp khả năng phối hợp giữa hai Agent thông qua bảng ánh xạ 164 SKU (\code{data/bridge/crosswalk.csv}) và lớp cầu nối \code{backend/services/ops_bridge.py}, bộ kiểm thử tích hợp đầu-cuối \code{tests/test_ops_bridge_e2e.py} dựng một máy chủ mô phỏng \texttt{ops\_chest} đầy đủ vòng đời phê duyệt HITL kết nối trực tiếp vào API FastAPI thực tế của \texttt{Retail-AI-}. Bảng~\ref{tab:bridge_e2e_results} tổng hợp 5 kịch bản đều vượt qua kiểm định tự động trong 4,20\,s. Kết quả xác nhận: đề xuất giảm giá FEFO khi còn ở trạng thái \texttt{PENDING} tuyệt đối không làm đổi giá tại kiosk; ngay sau khi Cửa hàng trưởng phê duyệt sang \texttt{EXECUTED}, Agent khách hàng cập nhật giá giảm mới (123.900\,đ $\to$ 92.925\,đ) và ưu tiên hiển thị trong danh sách khuyến mãi; khi một SKU hết hàng (\code{on_hand=0}), Agent khách hàng báo hết hàng bán được khi hỏi trực tiếp và tự động ẩn mã đó khỏi danh sách gợi ý còn hàng để đề xuất sản phẩm thay thế; và khi \texttt{ops\_chest} quá hạn TTL hoặc ngắt kết nối (HTTP~503), hệ thống thoái lui an toàn về bản chụp tĩnh mà không phát sinh lỗi.
 
-\section{Phân tích Lỗi và Thảo luận}
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm thử tích hợp liên Agent đầu-cuối trên môi trường mô phỏng (\code{tests/test_ops_bridge_e2e.py})}
+\label{tab:bridge_e2e_results}
+\footnotesize
+\begin{tabularx}{\textwidth}{L{3.5cm} L{4.2cm} L{1.5cm} Y}
+\toprule
+\textbf{Kịch bản Liên thông} & \textbf{Thao tác trên \texttt{ops\_chest} / Cầu nối} & \textbf{Kết quả} & \textbf{Hành vi Xác minh tại \texttt{Retail-AI-}} \\
+\midrule
+1. Toàn vẹn Crosswalk & Tải \code{data/bridge/crosswalk.csv} đối chiếu \code{thanh_lam_products.json} & Đạt & 164/164 SKU tươi khớp 100\% \code{product_id}, tên \& giá niêm yết; 0 mã cách ly \\
+2. Ranh giới HITL (\texttt{PENDING}) & Tạo đề xuất giảm 25\% FEFO cho \code{F0005} (\code{TLM_10283202}) chưa duyệt & Đạt & Kiosk giữ nguyên giá gốc 123.900\,đ; không rò rỉ giá chưa phê duyệt \\
+3. Lan truyền Giảm giá FEFO & Quản lý duyệt \code{prop_md_01} $\to$ \texttt{EXECUTED} (92.925\,đ) & Đạt & Kiosk cập nhật giá 92.925\,đ ngay khi hỏi và đưa vào khuyến mãi FEFO \\
+4. Ẩn Sản phẩm Hết hàng & Giảm tồn \code{F0007} (\code{TLM_10283203}) về \code{on_hand = 0} & Đạt & Hỏi trực tiếp báo không còn tồn bán được; lọc \code{in_stock=True} ẩn \code{TLM_10283203} và gợi ý \code{TLM_10283202} \\
+5. Fail-Closed TTL / HTTP 503 & Đặt \code{as_of} quá 300\,s hoặc tắt máy chủ (503) & Đạt & Tự động thoái lui về bản chụp tĩnh (\code{stock_is_current=False}), 0 lỗi runtime \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-Việc mổ xẻ các trường hợp thất bại trên cả hai kho mã nguồn đã chỉ ra năm nguyên nhân gốc rễ quyết định kiến trúc cuối cùng và bộc lộ rõ các đánh đổi kỹ thuật còn tồn tại:
+\section{Đánh giá An toàn, Ảo giác và Phân tích Lỗi}
+
+Bảng~\ref{tab:ops_chest_guard} tổng kết 20 kịch bản kiểm định chuyển dự phòng và căn cứ số liệu của \texttt{ops\_chest} (\code{eval_failover.json}), đạt 20/20 số liệu $\ge 1.000$ có căn cứ, 19/20 chọn đúng công cụ, 19/20 không nhận vơ thực thi (\code{no_false_exec}) và 18/20 đạt nghiêm ngặt toàn kịch bản.
+
+\begin{table}[H]
+\centering
+\caption{Kiểm định gọi công cụ, căn cứ số liệu và ranh giới HITL của \texttt{ops\_chest} (\code{eval_failover.json}, $N=20$)}
+\label{tab:ops_chest_guard}
+\footnotesize
+\begin{tabularx}{\textwidth}{L{4.9cm} r r Y}
+\toprule
+\textbf{Tiêu chí Đánh giá} & \textbf{Đạt} & \textbf{Tỷ lệ} & \textbf{Phạm vi \& Lưu ý} \\
+\midrule
+Căn cứ Số liệu $\ge 1.000$ (\code{grounded}) & 20 / 20 & 100,0\% & Chỉ kiểm tra tập số $\ge 1.000$ xuất hiện trong đầu ra công cụ/prompt \\
+Chọn Đúng Công cụ (\code{tools_ok}) & 19 / 20 & 95,0\% & 1 ca bỏ sót công cụ đọc phụ khi chuyển sang LLM dự phòng yếu \\
+Không Nhận vơ Thực thi (\code{no_false_exec}) & 19 / 20 & 95,0\% & 1 ca diễn đạt sát biên kích hoạt cảnh báo trước khi quản lý duyệt \\
+Đạt Nghiêm ngặt Toàn kịch bản & 18 / 20 & 90,0\% & Thỏa đồng thời công cụ, số liệu, từ chối và định dạng \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Phân tích lỗi trung thực trên cả hai phân hệ chỉ ra năm điểm yếu kỹ thuật cần giải quyết ở giai đoạn tiếp theo---qua đó loại bỏ mọi khẳng định tuyệt đối kiểu ``không bao giờ ảo giác'' hay ``an toàn 100\%'':
 \begin{enumerate}
-    \item \textbf{Vì sao ML có WAPE thấp hơn lại làm giảm lợi nhuận nếu thiếu Cổng Lợi nhuận (\texttt{ops\_chest}):} Phát hiện sâu sắc nhất trong \texttt{ops\_chest} là dù LightGBM~v3 hạ WAPE đi 4,9 điểm phần trăm (35,1\% $\to$ 30,2\%), nó lại \emph{làm lỗ} lợi nhuận ($-0{,}4\%$ trung vị chung và $-5{,}6\%$ ở cửa hàng $\le 30$ SKU) khi dùng chính khoảng phân vị $(q_{90}-q_{10})$ để tính tồn kho an toàn Newsvendor. Do cây phân vị trên chuỗi hàng tươi ngắn dễ phóng đại phương sai đuôi ở SKU bán thưa, việc thay bằng độ lệch chuẩn mượt $\sigma_{\text{EWMA}}$ và chặn ML ở cửa hàng nhỏ (\texttt{B-Gate}) đã đảo ngược từ lỗ $-0{,}4\%$ thành lãi \textbf{+0,8\%} so với EWMA (+4,9\% so với Baseline~A).
-    \item \textbf{Lỗi dịch chuyển đặc trưng ở các phiên bản dự báo đầu (\texttt{ops\_chest}):} Phiên bản LightGBM~v1 đưa biến giảm giá ngày mục tiêu vào mô hình; do khuyến mãi tương lai chưa biết tại thời điểm dự báo (mặc định bằng 0), mô hình bị thiên lệch dự báo thấp tới $-15{,}7\%$. Tương tự, phép khử co giãn giá ở v2 ($e \approx 9{,}6$) gây sai lệch 14--31\%. Loại bỏ biến tương lai không quan sát được và neo v3 vào EWMA 56 ngày đã xóa sạch hai nguồn lệch này.
-    \item \textbf{6/100 ca chưa đạt chuẩn nghiêm ngặt trên SOTA~V2 (\texttt{Retail-AI-}):} Trong 6 ca lỗi nghiêm ngặt (4 ca chức năng), 2 ca xuất phát từ việc CSV Thanh Lam Mart thiếu bảng thành phần dị ứng/dinh dưỡng chuẩn (buộc hệ thống từ chối khẳng định chắc chắn thay vì đoán bừa), 2 ca dùng từ lóng vùng miền quá hiếm ngoài bộ đồng nghĩa, và 2 ca yêu cầu so sánh đa thuộc tính kết hợp quy đổi gói phức tạp.
-    \item \textbf{Đánh đổi giữa tuyến nhanh Groq LPU và lập kế hoạch JSON sâu trên đám mây (\texttt{Retail-AI-}):} Trong khi định tuyến lai Groq LPU + bộ đệm ngữ nghĩa + vùng Singapore (\texttt{sin1}) đã rút ngắn truy vấn đơn lạnh xuống \textbf{508--554\,ms}, giỏ bữa tối $<150\text{k}$ xuống \textbf{870\,ms} và cache xuống \textbf{125--140\,ms} với chi phí \$0, các kịch bản có lược đồ \code{json_schema} phức tạp (tư vấn dị ứng đa điều kiện hoặc làm rõ ngữ cảnh sâu) vẫn cần định tuyến về DeepSeek đám mây (1,3--2,0\,s) nhằm tránh vượt trần 8k TPM của gói miễn phí Groq. Triển khai mô hình tiếng Việt lượng tử hóa tại chỗ (vLLM) sẽ giúp đồng nhất độ trễ dưới 500\,ms cho cả hai nhánh.
-    \item \textbf{2/20 ca biên trong đánh giá failover \texttt{ops\_chest}:} Trong \code{eval_failover.json}, 1/20 kịch bản bỏ sót một công cụ đọc phụ khi chuyển sang mô hình dự phòng yếu hơn và 1 ca diễn đạt sát biên kích hoạt cảnh báo \code{FALSE_EXEC}---càng khẳng định việc loại bỏ hoàn toàn công cụ tự thực thi khỏi lược đồ LLM là lớp phòng thủ cốt lõi không thể thay thế bằng prompt.
-    \item \textbf{Giới hạn tự nhiên của ảnh nhúng $224\times 224$ với các mã hàng đồng mẫu khác dung tích (\texttt{Retail-AI-}):} Dù \texttt{MobileNetV3Large-224} TFLite đạt 92,67\% Top-1 trên ảnh đa góc nghiêng và 87,5\% Top-5/Brand@1 trên ảnh ngoài catalog chỉ trong 5,5--13,5\,ms, độ phân giải $224\times 224$ không đủ để đọc chữ định lượng nhỏ khi hai SKU dùng chung hệt một thiết kế bao bì (như \emph{Bơ Tường An 80\,g vs.\ 200\,g} hay \emph{TH True Milk ít đường vs.\ nguyên chất}). Bổ sung \emph{Cổng Bảo vệ Quy cách Anh em} đã triệt tiêu hoàn toàn lỗi chốt nhầm size trên nhánh Fast-Path bằng cách chuyển riêng các ca đồng dòng sang Hybrid VLM trong khi vẫn giữ tốc độ 23--27\,ms cho các SKU đặc trưng.
+    \item \textbf{Điểm mù của hậu kiểm \code{guard.py} với các con số dưới 1.000 và liên kết thực thể:} Cơ chế hiện tại chỉ kiểm tra xem các số $\ge 1.000$ (chủ yếu là giá tiền VND) có xuất hiện trong đầu ra công cụ hay không, nhưng \emph{có thể bỏ sót} sai lệch ở các đại lượng quan trọng dưới 1.000 (như số lượng nhập 20 bị nói thành 200, mức giảm 10\% thành 90\%, hạn dùng 2 ngày thành 5 ngày, hay tồn kho 3 thành 30 đơn vị) cũng như chưa kiểm tra ràng buộc đúng cặp \emph{(SKU, con số)}. Do đó, lớp bảo vệ cốt lõi thực sự của \texttt{ops\_chest} là việc \emph{loại bỏ cấu trúc công cụ tự thực thi} kết hợp phê duyệt HITL của con người, không phải một mình \code{guard.py}.
+    \item \textbf{3/50 ca thất bại trên tập kiểm thử độc lập 50 câu của \texttt{Retail-AI-}:} Kiểm tra chi tiết 3 ca chưa đạt ở Bảng~\ref{tab:retail_ablation_50q} cho thấy: 1 câu lọc theo khoảng giá mở (\emph{``Dầu ăn dưới 70.000đ có loại nào?''}) rơi vào nhánh cần LLM tổng hợp (đang tắt trong chế độ ablation ngoại tuyến nên trả HTTP~502), 1 câu hỏi khuyến mãi nhóm hẹp (\emph{``Sữa tươi nào đang giảm giá?''}) trả về sản phẩm đúng ngành nhưng thiếu thẻ khuyến mãi hoạt động trong top-2, và 1 câu tiếng Anh (\emph{``Do you have soy sauce in stock?''}) không khớp từ đồng nghĩa sang \emph{``nước tương''} ở bộ tra cứu tồn kho xác định.
+    \item \textbf{6/100 ca chưa đạt chuẩn nghiêm ngặt trên Dev Set SOTA~V2 và Context Recall 74,7\% ở Audit Độc lập:} Xuất phát từ hai nguyên nhân chính là 55,7\% SKU vẫn thiếu bảng thành phần/dinh dưỡng công khai (hệ thống từ chối khẳng định theo cơ chế fail-closed) và các từ lóng vùng miền chưa có trong từ điển đồng nghĩa.
+    \item \textbf{Hiệu ứng đảo chiều khử nhiễu ở 5\,dB và giới hạn phân giải ảnh $224\times 224$:} \texttt{DPDFNet2} kém hơn Azure thô 0,6\,đpt tại 5\,dB do suy giảm thanh điệu tiếng Việt, còn nhúng $224\times 224$ không đọc được chữ khối lượng nhỏ giữa hai quy cách đồng mẫu (chỉ khắc phục bằng cách chuyển sang Hybrid VLM khi kích hoạt \emph{Sibling Pack-Size Guard}).
+    \item \textbf{Khoảng cách từ mô phỏng sang cửa hàng vật lý:} Cả kết quả tăng lợi nhuận $+4{,}90\%$ ($+0{,}78\%$ so với EWMA) lẫn kiểm thử liên Agent đều được thực hiện dưới các tham số thương mại giả định và máy chủ \texttt{ops\_chest} mô phỏng; hiệu quả thực tế cần được xác minh qua thí điểm thực địa tại cửa hàng thật.
 \end{enumerate}

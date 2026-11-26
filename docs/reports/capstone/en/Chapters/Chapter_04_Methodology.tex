@@ -1,459 +1,234 @@
 \chapter{Methodology}
 
-This chapter explains how our unified dual-agent platform resolves the customer-floor and back-office bottlenecks identified in Chapter~1. We analyze the manual versus AI-automated store workflows, define the unified system architecture spanning \texttt{Retail-AI-} and \texttt{ops\_chest}, formalize the four core runtime algorithms, and document all model and experimental configurations.
+This chapter presents the scientific design of the Dual-Agent AI system around four core elements: AS-IS versus TO-BE process analysis, the functional AI architecture and cross-agent \code{crosswalk.csv}--API bridge, our two primary algorithmic designs (\emph{Zero-Planner Hybrid Routing} and \emph{Profit-Gated Router \texttt{B-Gate}}), and complete training and hyperparameter selection specifications. Software engineering details (UI stack, deployment containers, file paths, and supporting client-side speech engineering) are placed in Appendices~A--C.
 
 \section{Business Process Analysis}
 
-In a typical Vietnamese supermarket or convenience store (such as a Thanh Lam Mart or Thanh Lam Mart branch managing 3,000+ dry/ambient SKUs alongside 150--300 daily-replenished fresh SKUs), two labor-intensive operational loops degrade both customer satisfaction and store profitability:
-\begin{enumerate}
-    \item \textbf{Manual Sales-Floor Consultation Loop:} Shoppers searching for specific pack sizes, promotions, unit-price comparisons, or meal-combo ingredients under a budget must locate an associate who rarely knows exact live prices across 3,000+ SKUs. During evening peak hours, associate shortages leave shoppers unassisted, reducing basket conversion and leaving promotional items undiscovered.
-    \item \textbf{Manual Back-Office Replenishment and Expiry Loop:} Each morning, the Store Manager manually walks chilled shelves to spot near-expiry lots, reviews yesterday's POS sales without accounting for mid-day stockouts, guesses replenishment order quantities across dozens of perishable SKUs, applies flat evening markdowns (typically 30\%) too late to clear stock, and manually emails or phones suppliers. When a top traffic-driver item runs out by 17:00, the store loses both direct sales and basket traffic; when over-ordered, perishable stock is discarded at 100\% cost loss.
-\end{enumerate}
-
-Figure~\ref{fig:as_is_to_be} contrasts these manual bottlenecks against our AI-agent automated store process. Rather than replacing human accountability, the platform automates high-frequency sensing, mathematical calculation, and option preparation while preserving deterministic price grounding for customers and explicit human approval for store expenditures.
+In a Vietnamese supermarket managing 3,000+ dry/ambient SKUs alongside 150--300 daily-replenished fresh SKUs, two manual loops (AS-IS) jointly degrade service quality and operating margin: (i)~shoppers manually hunt for pack-size unit value or wait for associates during peak hours; and (ii)~store managers guess fresh orders from right-censored POS logs and apply late flat 30\% evening markdowns. Figure~\ref{fig:as_is_to_be} contrasts this manual baseline with our coordinated dual-agent workflow (TO-BE), where AI handles perception, mathematical optimization, and grounded option generation while humans retain final execution control.
 
 \begin{figure}[H]
 \centering
 \resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.75cm and 0.9cm]
-  % Top lane: Manual AS-IS
-  \node[font=\bfseries\small, anchor=west, text=red!65!black] (lbl1) at (-0.2, 2.35) {AS-IS: Manual Retail Operations (High Latency, Uncalibrated Forecasting, High Shrinkage)};
-  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm] (m1) at (1.5, 1.35) {Shopper waits for staff; ad-hoc price / promo guessing};
-  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m1] (m2) {Manual shelf walk for expiry \& raw POS review};
-  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m2] (m3) {Uncensored OOS bias; heuristic order \& flat 30\% markdown};
-  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m3] (m4) {Unlogged ad-hoc supplier calls; 5.3\% waste \& 8.7\% traffic OOS};
-
+\begin{tikzpicture}[node distance=0.7cm and 0.85cm]
+  \node[font=\bfseries\small, anchor=west, text=red!65!black] (lbl1) at (-0.2, 2.35) {AS-IS: Manual Retail Operations (High Latency, Censored POS Guessing, High Waste)};
+  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm] (m1) at (1.5, 1.35) {Shopper searches manually or waits for store staff};
+  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m1] (m2) {Manual shelf expiry walk \& raw censored POS review};
+  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m2] (m3) {Heuristic ordering \& late flat 30\% evening markdowns};
+  \node[procbox, draw=red!55!black, fill=red!6, text width=2.85cm, right=of m3] (m4) {5.33\% spoilage \& 8.69\% traffic-driver OOS};
   \draw[flowarr, draw=red!65!black] (m1) -- (m2);
   \draw[flowarr, draw=red!65!black] (m2) -- (m3);
   \draw[flowarr, draw=red!65!black] (m3) -- (m4);
 
-  % Bottom lane: Automated TO-BE
-  \node[font=\bfseries\small, anchor=west, text=teal!70!black] (lbl2) at (-0.2, -0.35) {TO-BE: Unified Dual-Agent Store Platform (\texttt{Retail-AI-} + \texttt{ops\_chest})};
-  \node[aiagent, text width=2.85cm] (t1) at (1.5, -1.45) {\textbf{Kiosk Agent (Mai)}\\WS Streaming STT + DPDFNet2 + Zero-Planner SSE};
-  \node[aiagent, text width=2.85cm, right=of t1] (t2) {\textbf{Ops Chest Sensing}\\Hourly OOS recovery + FEFO lot scan / OCR vision};
-  \node[gatebox, text width=2.85cm, right=of t2] (t3) {\textbf{Profit-Gated Engine}\\LightGBM~v3/EWMA + Newsvendor + FEFO caps};
-  \node[gatebox, text width=2.85cm, right=of t3] (t4) {\textbf{HITL Governance}\\Manager approves proposals; +4.9\% profit, 3.4\% traffic OOS};
-
+  \node[font=\bfseries\small, anchor=west, text=teal!70!black] (lbl2) at (-0.2, -0.35) {TO-BE: Coordinated Dual-Agent AI Platform (\texttt{Retail-AI-} $\leftrightarrow$ \texttt{ops\_chest})};
+  \node[aiagent, text width=2.85cm] (t1) at (1.5, -1.45) {\textbf{Customer Agent}\\Zero-Planner Routing + Grounded Retrieval};
+  \node[aiagent, text width=2.85cm, right=of t1] (t2) {\textbf{Demand Recovery}\\Hourly OOS profile + 29 tabular features};
+  \node[gatebox, text width=2.85cm, right=of t2] (t3) {\textbf{\texttt{B-Gate} Engine}\\LightGBM~v3/EWMA + Newsvendor--FEFO};
+  \node[gatebox, text width=2.85cm, right=of t3] (t4) {\textbf{HITL Governance}\\Manager approval; +4.90\% simulated profit};
   \draw[flowarr] (t1) -- node[above, font=\scriptsize] {demand} (t2);
   \draw[flowarr] (t2) -- (t3);
   \draw[flowarr] (t3) -- node[above, font=\scriptsize] {proposals} (t4);
-  \draw[flowarr, dashed, draw=blue!65!black] (t4.south) -- ++(0,-0.45) -| node[pos=0.25, below, font=\scriptsize] {Read-only branch stock \& approved markdown feed (Contract C)} (t1.south);
+  \draw[flowarr, dashed, draw=blue!65!black] (t4.south) -- ++(0,-0.5) -| node[pos=0.25, below, font=\scriptsize] {\code{crosswalk.csv} + Read-Only Bridge: live stock \& approved FEFO markdowns} (t1.south);
 \end{tikzpicture}%
 }
-\caption{Business process comparison between manual supermarket operations (AS-IS) and the unified dual-agent platform (TO-BE).}
+\caption{Comparison between manual store operations (AS-IS) and the coordinated Dual-Agent AI process (TO-BE).}
 \label{fig:as_is_to_be}
 \end{figure}
 
-\section{Overall Workflow}
+\section{Functional AI Architecture and Inter-Agent Coordination}
 
-The unified workflow coordinates both autonomous agents around a clear operational boundary: \texttt{Retail-AI-} serves customers on the sales floor with zero database mutation authority over store procurement, while \texttt{ops\_chest} serves the Store Manager in the back office with proposal-only write authority.
+Replacing implementation-centric software layer tables, Figure~\ref{fig:functional_ai_arch} presents the \textbf{functional AI architecture} focusing strictly on data flow, AI models, deterministic tools, inter-agent coordination, and decision boundaries. Figure~\ref{fig:unified_workflow} details the end-to-end interaction workflow across both agents and the shared bridge state.
 
 \begin{figure}[H]
 \centering
 \resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.65cm and 0.75cm]
-  % Left: Customer Flow
-  \node[procbox, text width=3.1cm] (u1) {Customer Speech / Text\\at Supermarket Kiosk};
-  \node[aiagent, text width=3.1cm, below=of u1] (u2) {Silero VAD~v6 + WS Azure STT + DPDFNet2 Rescue};
-  \node[gatebox, text width=3.1cm, below=of u2] (u3) {Safety / Off-Topic / Cart / Smalltalk Gate ($<3$\,ms)};
-  \node[aiagent, text width=3.1cm, below=of u3] (u4) {Zero-Planner SSE Stream\\or 1-Call Slim Basket};
-  \node[procbox, text width=3.1cm, below=of u4] (u5) {Clause Azure TTS +\\4-Layer Video Avatar + Cards};
+\begin{tikzpicture}[node distance=0.55cm and 0.75cm]
+  \node[procbox, text width=4.8cm] (c_in) {\textbf{Customer Inputs}\\Text / Supporting Speech ASR / Photo};
+  \node[gatebox, text width=4.8cm, below=of c_in] (c_gate) {\textbf{Zero-Planner Router}\\Pre-LLM Safety/OWASP Gates ($<3$\,ms)\\+ Semantic Intent Routing};
+  \node[aiagent, text width=4.8cm, below=of c_gate] (c_tool) {\textbf{Deterministic Tools \& AI Models}\\Inverted Index (3,081 SKUs), Unit Price,\\2,205-SKU Knowledge, \texttt{MobileNetV3} TFLite,\\Streaming LLM / Bounded Planner};
+  \node[procbox, draw=blue!65!black, fill=blue!10, text width=4.8cm, below=of c_tool] (c_dec) {\textbf{Customer Agent Decisions}\\Grounded Cards, Approved FEFO Price,\\OOS Suppression, Provenance Tags};
 
-  % Right: Store Manager Flow
-  \node[procbox, text width=3.4cm, right=2.6cm of u1] (o1) {Store Manager Query /\\Morning Briefing / Label Photo};
-  \node[aiagent, text width=3.4cm, below=of o1] (o2) {\texttt{ops\_chest} Tool Agent\\(31 Typed Tools + Vision OCR)};
-  \node[gatebox, text width=3.4cm, below=of o2] (o3) {Forecast Router (B-Gate) +\\Newsvendor / FEFO / Markdown};
-  \node[gatebox, text width=3.4cm, below=of o3] (o4) {Runtime Guard (\code{guard.py}) +\\HITL Proposal Queue};
-  \node[procbox, text width=3.4cm, below=of o4] (o5) {Manager Approve / Revise $\to$\\PO Email, Price Change, Audit Log};
+  \node[gatebox, draw=purple!70!black, fill=purple!8, text width=3.5cm, right=0.85cm of c_gate, yshift=-0.95cm] (br_cw) {\textbf{Inter-Agent Bridge}\\(\texttt{ops-retail-bridge})\\\code{crosswalk.csv} (164 SKUs)\\\code{BridgedProductRepository}};
+  \node[procbox, draw=purple!60!black, fill=purple!4, text width=3.5cm, below=0.55cm of br_cw] (br_rule) {\textbf{Sync Policy}\\Read-only API (TTL 300\,s)\\\texttt{APPROVED/EXECUTED} only\\Fail-closed on stale/error};
 
-  % Middle: Shared Data & Contract
-  \node[procbox, draw=purple!65!black, fill=purple!7, text width=2.4cm] (db) at (4.35, -3.15) {\textbf{Shared Store Truth}\\Thanh Lam Mart Catalog\\+ Branch API\\(Stock / Markdowns)};
+  \node[procbox, text width=4.8cm, right=0.85cm of br_cw, yshift=0.95cm] (o_in) {\textbf{Manager Inputs \& Logs}\\POS + Hourly OOS Logs (FRN-50K)\\Manager Queries / Daily Review};
+  \node[aiagent, text width=4.8cm, below=of o_in] (o_ml) {\textbf{Forecasting \& Routing Models}\\OOS Recovery $\to$ 29 Features\\LightGBM~v3 (P10/P50/P90) vs.\ EWMA\\\textbf{Profit-Gated Router (\texttt{B-Gate})}};
+  \node[gatebox, text width=4.8cm, below=of o_ml] (o_opt) {\textbf{Optimization \& 31-Tool Agent}\\Newsvendor ($SL^*$) + FEFO Lot Cap\\22 Read + 9 Proposal (0 Direct-Exec)\\+ Runtime \code{guard.py}};
+  \node[procbox, draw=teal!70!black, fill=teal!10, text width=4.8cm, below=of o_opt] (o_dec) {\textbf{Manager HITL Decisions}\\\texttt{PENDING} $\to$ \texttt{APPROVED} $\to$ \texttt{EXECUTED}\\(PO Dispatch, FEFO Markdown, Stock)};
+
+  \begin{scope}[on background layer]
+    \node[fit=(c_in)(c_dec), draw=blue!50!black, dashed, rounded corners=8pt, inner sep=9pt, fill=blue!2, label={[font=\bfseries\small, text=blue!60!black]above:Agent 1: Customer Advisory (\texttt{Retail-AI-})}] {};
+    \node[fit=(o_in)(o_dec), draw=teal!55!black, dashed, rounded corners=8pt, inner sep=9pt, fill=teal!2, label={[font=\bfseries\small, text=teal!60!black]above:Agent 2: Perishable Operations (\texttt{ops\_chest})}] {};
+  \end{scope}
+
+  \draw[flowarr] (c_in) -- (c_gate);
+  \draw[flowarr] (c_gate) -- (c_tool);
+  \draw[flowarr] (c_tool) -- (c_dec);
+  \draw[flowarr] (o_in) -- (o_ml);
+  \draw[flowarr] (o_ml) -- (o_opt);
+  \draw[flowarr] (o_opt) -- (o_dec);
+  \draw[flowarr] (br_cw) -- (br_rule);
+  \draw[flowarr, thick, draw=purple!70!black] (o_dec.west) -- ++(-0.35,0) |- node[pos=0.75, above, font=\scriptsize, text=purple!70!black] {GET /api/inventory/*} (br_cw.east);
+  \draw[flowarr, thick, draw=purple!70!black] (br_cw.west) -- ++(-0.35,0) |- node[pos=0.75, above, font=\scriptsize, text=purple!70!black] {FEFO Price / OOS} (c_tool.east);
+\end{tikzpicture}%
+}
+\caption{Functional AI architecture of the Dual-Agent system highlighting data flow, AI models, deterministic tools, inter-agent bridge, and agent decision boundaries.}
+\label{fig:functional_ai_arch}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=0.6cm and 1.15cm]
+  \node[procbox, text width=3.35cm] (u1) {Customer Query\\(Text / Speech / Photo)};
+  \node[gatebox, text width=3.35cm, below=of u1] (u2) {Safety, Medical \& OWASP Gates ($<3$\,ms)};
+  \node[aiagent, text width=3.35cm, below=of u2] (u3) {Zero-Planner Router +\\\code{BridgedProductRepository}};
+  \node[procbox, text width=3.35cm, below=of u3] (u4) {Grounded Customer Reply\\(Approved FEFO Price, OOS Filter)};
+
+  \node[procbox, draw=purple!65!black, fill=purple!8, text width=3.1cm, right=1.15cm of u2, yshift=-0.75cm] (db) {\textbf{Shared Bridge State}\\164-SKU \code{crosswalk.csv}\\Live Stock \& Approved\\FEFO Markdowns};
+
+  \node[procbox, text width=3.45cm, right=1.15cm of db, yshift=2.25cm] (o1) {Manager Queries Daily\\Stockout / Expiry Risk};
+  \node[aiagent, text width=3.45cm, below=of o1] (o2) {\texttt{B-Gate} Forecast +\\Newsvendor / FEFO};
+  \node[gatebox, text width=3.45cm, below=of o2] (o3) {31-Tool Agent +\\\code{guard.py} $\to$ \texttt{PENDING}};
+  \node[procbox, text width=3.45cm, below=of o3] (o4) {Manager Approves (\texttt{EXECUTED})\\Updates Price \& Stock};
 
   \draw[flowarr] (u1) -- (u2);
   \draw[flowarr] (u2) -- (u3);
   \draw[flowarr] (u3) -- (u4);
-  \draw[flowarr] (u4) -- (u5);
 
   \draw[flowarr] (o1) -- (o2);
   \draw[flowarr] (o2) -- (o3);
   \draw[flowarr] (o3) -- (o4);
-  \draw[flowarr] (o4) -- (o5);
 
-  \draw[flowarr, dashed, draw=purple!70!black] (o5.west) -- ++(-0.5,0) |- (db.east);
-  \draw[flowarr, dashed, draw=purple!70!black] (db.west) -| ([xshift=0.35cm]u4.east) -- (u4.east);
+  \draw[flowarr, dashed, thick, draw=purple!70!black] (o4.west) -| node[pos=0.25, below, font=\scriptsize, text=purple!70!black] {Publishes \texttt{APPROVED/EXECUTED} only} (db.south);
+  \draw[flowarr, dashed, thick, draw=purple!70!black] (db.west) -- ++(-0.45,0) |- (u3.east);
 \end{tikzpicture}%
 }
-\caption{Unified end-to-end dual-agent workflow connecting the customer kiosk (\texttt{Retail-AI-}) and back-office operations copilot (\texttt{ops\_chest}).}
+\caption{End-to-end dual-agent workflow connecting \texttt{Retail-AI-} and \texttt{ops\_chest} through the shared bridge state.}
 \label{fig:unified_workflow}
 \end{figure}
 
-In day-to-day execution, a customer asks \emph{Mai} (the kiosk avatar) for product comparisons, promotions, best-sellers, or a budget meal basket; the kiosk returns grounded product cards within milliseconds and streams spoken Vietnamese clauses in parallel. Behind the counter, the Store Manager opens the \texttt{ops\_chest} workspace to inspect morning risks (near-expiry lots, urgent stockouts, negative margins, slow movers), photographs expiry stickers via vision OCR, reviews profit-gated replenishment POs and markdown proposals, and approves or edits them with one click. Approved branch stock availability and active markdowns feed back to the kiosk layer through read-only API endpoints (Appendix~C) so front-of-house recommendations stay aligned with back-of-house inventory.
+\subsection*{Inter-Agent Data Exchange Mechanism (\code{backend/services/ops_bridge.py})}
+To unify both agents without weakening HITL isolation, we implemented a three-part read-only fail-closed bridge:
+\begin{enumerate}
+    \item \textbf{Bi-directional Crosswalk (\code{OpsCrosswalkIndex}):} Loads \code{data/bridge/crosswalk.csv} mapping all 164 \texttt{ops\_chest} fresh SKUs (\code{F0004}--\code{F0793}) to 164 valid \texttt{Retail-AI-} \code{product_id} entries.
+    \item \textbf{HITL-Guarded Read-Only Client (\code{OpsChestBridgeClient}):} Polls \code{GET /api/inventory/summary}, \code{/api/inventory/items}, and \code{/api/inventory/expiring} under a bounded freshness window (\code{freshness_ttl_seconds = 300}). Only markdown proposals in \texttt{APPROVED} or \texttt{EXECUTED} state are accepted; \texttt{PENDING} and \texttt{REJECTED} proposals are discarded.
+    \item \textbf{Catalog Overlay Decorator (\code{BridgedProductRepository}):} Overlays fresh live stock (\code{stock_is_current=True}) and approved FEFO markdown prices onto \code{ProductSnapshot}. When \code{on_hand == 0}, in-stock searches (\code{in_stock=True}) and promotion feeds suppress the out-of-stock SKU to surface available substitutes, whereas direct SKU inquiries honestly report zero sellable units. Whenever \texttt{ops\_chest} is stale ($>300$\,s) or returns HTTP~503, the decorator fails closed to static snapshot caveats (\code{stock_is_current=False}).
+\end{enumerate}
 
-\section{System Architecture}
+\section{Contribution 1: Zero-Planner Hybrid Routing (\texttt{Retail-AI-})}
 
-\subsection*{Unified Dual-Agent Architecture}
-Figure~\ref{fig:dual_architecture} illustrates the modular multi-layer architecture across both repositories, and Table~\ref{tab:arch_layers} maps every architectural layer to concrete source modules.
-
-\begin{figure}[H]
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.5cm and 0.6cm]
-  % Retail-AI- Container
-  \node[procbox, text width=5.9cm] (r_ui) {\textbf{Kiosk Frontend (\texttt{apps/kiosk-airi})}\\Vue~3 + TypeScript, Silero VAD~v6 AudioWorklet,\\WebSocket PCM16 Client, Clause TTS Queue, 4-Layer Avatar};
-  \node[aiagent, text width=5.9cm, below=of r_ui] (r_api) {\textbf{Voice \& Streaming API (\texttt{backend/api})}\\WS \code{/audio/transcribe/stream}, REST \code{/audio/transcribe},\\SSE \code{/agent/respond/stream}, Azure Speech + \texttt{DPDFNet2} ONNX};
-  \node[gatebox, text width=5.9cm, below=of r_api] (r_eng) {\textbf{Consultation \& Guardrail Core (\texttt{backend/services})}\\Zero-Planner SSE (\code{streaming_consultation.py}),\\1-Call Slim Basket, Brand Repair, Safety/OWASP Gates};
-  \node[procbox, text width=5.9cm, below=of r_eng] (r_data) {\textbf{Grounded Retail Data Layer}\\Thanh Lam Mart 3,081 Valid SKUs (Inverted Index) +\\Isolated \code{demo_sales.sqlite3} (\texttt{SIMULATED})};
-
-  % ops_chest Container
-  \node[procbox, text width=5.9cm, right=1.1cm of r_ui] (o_ui) {\textbf{Manager Workspace (\texttt{frontend/src})}\\React~18 + TypeScript + Vite + Tailwind,\\Briefing, Proposals Inbox, Inline Forms, Analytics Charts};
-  \node[aiagent, text width=5.9cm, below=of o_ui] (o_api) {\textbf{Agent \& Vision Orchestrator (\texttt{backend/app/agent})}\\31-Tool Registry (22 Read/Form + 9 Proposal),\\Runtime Guard (\code{guard.py}), Vision OCR, Hypotheses};
-  \node[gatebox, text width=5.9cm, below=of o_api] (o_eng) {\textbf{Perishable Optimization Engines (\texttt{backend/app/engines})}\\LightGBM~v3 Quantiles + Profit Gate (\code{B-Gate}),\\Newsvendor + FEFO Replenishment, Markdown, ABC-XYZ};
-  \node[procbox, text width=5.9cm, below=of o_eng] (o_data) {\textbf{Operational Persistence \& Sandbox}\\PostgreSQL + SQLAlchemy + 6 Alembic Migrations,\\HITL Proposal Audit Log, Mailpit PO Dispatch, FRN-50K};
-
-  \begin{scope}[on background layer]
-    \node[fit=(r_ui)(r_data), draw=blue!50!black, dashed, rounded corners=8pt, inner sep=10pt, fill=blue!2, label={[font=\bfseries\small, text=blue!60!black]above:Repository 1: \texttt{Retail-AI-} (Customer Kiosk)}] {};
-    \node[fit=(o_ui)(o_data), draw=teal!55!black, dashed, rounded corners=8pt, inner sep=10pt, fill=teal!2, label={[font=\bfseries\small, text=teal!60!black]above:Repository 2: \texttt{ops\_chest} (Store Operations)}] {};
-  \end{scope}
-
-  \draw[flowarr] (r_ui) -- (r_api);
-  \draw[flowarr] (r_api) -- (r_eng);
-  \draw[flowarr] (r_eng) -- (r_data);
-  \draw[flowarr] (o_ui) -- (o_api);
-  \draw[flowarr] (o_api) -- (o_eng);
-  \draw[flowarr] (o_eng) -- (o_data);
-  \draw[flowarr, dashed, thick, draw=purple!70!black] (o_data.west) -- node[above, font=\scriptsize, text=purple!70!black] {Read-only API} (r_data.east);
-\end{tikzpicture}%
-}
-\caption{Layered system architecture of the dual-agent platform across \texttt{Retail-AI-} (left) and \texttt{ops\_chest} (right).}
-\label{fig:dual_architecture}
-\end{figure}
-
-\begin{table}[H]
-\centering
-\caption{Architectural layer breakdown across \texttt{Retail-AI-} and \texttt{ops\_chest}}
-\label{tab:arch_layers}
-\footnotesize
-\begin{tabularx}{\textwidth}{L{2.5cm} L{5.7cm} Y}
-\toprule
-\textbf{Layer} & \textbf{\texttt{Retail-AI-} (Customer Voice Kiosk)} & \textbf{\texttt{ops\_chest} (Store Operations Copilot)} \\
-\midrule
-Presentation / UI & Vue~3 + TypeScript (\code{apps/kiosk-airi/}, 29 files, mobile-first $\le 768$\,px frosted bottom-sheet): 4-layer crossfade video avatar, live captions, camera/upload with 896\,px client-side compression, product cards, cart drawer & React~18 + TypeScript + Vite (\code{frontend/src/}, 34 files): chat copilot, inline receive/count/date-check forms, proposal inbox, KPI charts \\
-Perception / Audio / Vision & Browser Silero VAD~v6 (fan-noise + anti-echo gates), WS Azure Streaming STT, \texttt{DPDFNet2} ONNX denoiser, \texttt{gipformer} fallback; \textbf{strictly on-demand \texttt{MobileNetV3Large-224} TFLite (7.04\,MB) + Hybrid VLM} (\code{/agent/respond/image}) & Multimodal expiry-label OCR (\code{vision.py}) extracting dates/lot codes from smartphone shelf photos \\
-Agent Orchestration & Hybrid tiered router: $<3$\,ms safety/cart/smalltalk gates, Zero-Planner SSE (\code{streaming_consultation.py}), 1-call slim basket, bounded planner fallback & 31-tool function-calling orchestrator (\code{orchestrator.py}, \code{tools.py}) with provider failover, edit-habit learning, and hypothesis tracking \\
-Analytical / Optimization Core & Pre-indexed catalog search (\code{SnapshotProductRepository}), unit-price normalizer, promo \& deterministic \texttt{SIMULATED} sales ranker & Hourly OOS recovery, LightGBM~v3 quantiles (29 features), \texttt{B-Gate} profit router, Newsvendor + FEFO replenishment, markdown \& ABC-XYZ engines \\
-Safety \& Persistence & Pydantic \code{ThanhLamRow} quarantine, OWASP injection filter, clinical refusal gate, \code{demo_sales.sqlite3} provenance isolation & Runtime grounding guard (\code{guard.py}), strict HITL state machine in PostgreSQL (Alembic), Mailpit PO sandbox, immutable audit logs \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\subsection*{Full-Duplex Real-Time Voice and Noise-Resilient STT Pipeline (\texttt{Retail-AI-})}
-To eliminate the 2--3 second post-speech pause inherent to REST WAV uploads while surviving 5--12\,dB supermarket babble, \texttt{Retail-AI-} implements a dual-path acoustic pipeline (Figure~\ref{fig:voice_pipeline}) with \textbf{zero Groq API dependencies}. While the user speaks, 32\,ms PCM16 frames stream continuously over WebSocket \code{/audio/transcribe/stream} to an active Azure AI Speech SDK continuous recognizer biased with a dynamic Thanh Lam Mart \code{PhraseListGrammar}. Live partial Vietnamese captions appear immediately in the kiosk UI. When Silero VAD detects end-of-speech, the client sends \texttt{\{"type":"end"\}}, finalization returns in $\approx 260$\,ms, and \code{catalog_transcription.py} repairs English retail brands while protecting Vietnamese words via \code{_NEVER_CORRECT}. If the clip exhibits severe ambient noise ($\widehat{\text{SNR}}_{\text{dB}} < 13$\,dB) or empty streaming output, the buffered audio is automatically rescued through the 85\,Hz HPF and \texttt{DPDFNet2} ONNX denoiser before re-recognition; if Azure is unreachable, local \texttt{gipformer1.5-68M-rnnt} serves offline transcription.
-
-\begin{figure}[H]
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.55cm and 0.6cm]
-  \node[procbox, text width=2.4cm] (mic) {Mic 16\,kHz\\AEC / AGC / NS};
-  \node[gatebox, text width=2.5cm, right=of mic] (vad) {Silero VAD~v6\\+ 8-frame (256\,ms) Ring Buffer};
-  \node[aiagent, text width=2.8cm, right=of vad] (ws) {WS \code{/audio/transcribe/stream}\\Azure Speech SDK +\\Thanh Lam Mart PhraseList};
-  \node[decbox, right=of ws] (snr) {$\widehat{\text{SNR}}<13$\,dB\\or empty?};
-  \node[aiagent, text width=2.6cm, below=0.75cm of snr] (dpdf) {85\,Hz HPF +\\\texttt{DPDFNet2} ONNX\\(SNR-adaptive blend)};
-  \node[gatebox, text width=2.5cm, right=of snr] (rep) {Catalog Brand Repair\\(\code{_NEVER_CORRECT})};
-  \node[procbox, text width=2.5cm, below=0.75cm of rep] (sse) {SSE \code{/agent/respond/stream}\\$\to$ Clause TTS +\\3-Layer Barge-In};
-
-  \draw[flowarr] (mic) -- (vad);
-  \draw[flowarr] (vad) -- node[above, font=\scriptsize] {PCM16} (ws);
-  \draw[flowarr] (ws) -- (snr);
-  \draw[flowarr] (snr) -- node[above, font=\scriptsize] {No} (rep);
-  \draw[flowarr] (snr) -- node[right, font=\scriptsize] {Yes} (dpdf);
-  \draw[flowarr] (dpdf) -| (rep);
-  \draw[flowarr] (rep) -- (sse);
-  \draw[flowarr, dashed, draw=orange!75!black] (sse.west) -- ++(-6.8,0) |- node[pos=0.25, left, font=\scriptsize] {Echo guard} (vad.south);
-\end{tikzpicture}%
-}
-\caption{Full-duplex real-time WebSocket streaming STT, \texttt{DPDFNet2} noisy-clip rescue, and anti-echo barge-in pipeline in \texttt{Retail-AI-}.}
-\label{fig:voice_pipeline}
-\end{figure}
-
-\subsection*{On-Demand Mobile Visual Product Recognition: \texttt{MobileNetV3Large-224} TFLite and Hybrid Fast-Path (\texttt{Retail-AI-})}
-On the sales floor, shoppers frequently hold unfamiliar packaged items or foreign-language labels and want immediate price, promotion, or usage advice from a quick smartphone photo. Sending every uploaded photo to a remote Vision--Language Model (VLM) incurs 2.5--3.6\,s network latency and full cloud dependency, whereas training a naive 3,093-class closed-set softmax classifier memorizes studio white backgrounds because each catalog SKU has only a single packshot. To satisfy three strict deployment goals simultaneously---\textbf{ultra-light mobile footprint}, \textbf{multi-angle real-world robustness}, and \textbf{strictly on-demand execution triggered only when the shopper submits an image + prompt}---\texttt{Retail-AI-} implements an open-set metric-learning mobile embedder coupled with a latency-optimal hybrid router (Figure~\ref{fig:mobile_vision_pipeline}):
-\begin{itemize}
-    \item \textbf{Dual-Foundation-Teacher SVD Distillation on Kaggle:} Rather than supervising from isolated studio images alone, Stage~1 extracts complementary semantic and 3D-geometric targets across all 3,093 Thanh Lam Mart SKUs using \texttt{openai/clip-vit-base-patch32}~\cite{radford2021clip} (brand typography, logos, packaging colorways) and \texttt{facebook/dinov2-small}~\cite{oquab2024dinov2} (off-axis viewpoint and local instance geometry), concatenating both into an 896-d space and fitting an orthogonal SVD projection to a unit-normalized 256-d target manifold (retaining 88.85\% variance, fitted strictly on catalog packshots with zero evaluation leakage).
-    \item \textbf{Multi-Angle \texttt{MobileNetV3Large-224} Training:} The mobile student \texttt{MobileNetV3Large-224}~\cite{howard2019mobilenetv3} with \code{Concat([GAP, GMP]) -> BN -> Dense(256) -> BN -> UnitNormalization} (100\% native TFLite builtin ops, zero FlexOps) optimizes four joint objectives: direct cosine alignment to the SVD-256 teacher manifold ($w=6.0$), batch pairwise relational affinity distillation ($w=3.0$), teacher-initialized Sub-Center ArcFace ($K=3$, $w=0.35$)~\cite{deng2020subcenter}, and Supervised Contrastive Loss ($w=0.50$)~\cite{khosla2020supcon} with EMA weight smoothing. Heavy OpenCV domain randomization synthesizes border-masked foregrounds over cluttered 2--4 neighbor-SKU shelves, 3D perspective homography warps, $\pm 26^\circ$ rotations, directional shadows, fluorescent LED glare, 12--28\% thumb-grip occlusions, blur, and JPEG compression (without horizontal flips so brand text remains unmirrored).
-    \item \textbf{Keras~3.13 Verified TFLite Export \& Strict Lazy On-Demand Execution:} Official Keras~3.13 \code{model.export()} produces \code{thanh_lam_mobilenetv3_fp16.tflite} (\textbf{7.04\,MB}, cosine parity $0.99995$ vs.\ Keras), \code{thanh_lam_mobilenetv3_int8.tflite} (\textbf{3.81\,MB}), a 2-view FP16 prototype gallery for all 3,093 SKUs (\textbf{1.58\,MB}), and a bit-aligned \texttt{.onnx} mirror for Python~3.13 Windows hosts~\cite{thanh_lam_tflite_kaggle}. The mobile frontend (\code{ChatPanel.vue}) performs zero continuous camera inference, downscales large gallery uploads to $\le 896$\,px ($\approx 80$\,KB) client-side before submission, and invokes \code{POST /agent/respond/image} solely on submit; on the backend, \code{LocalProductEmbedder} is 100\% lazy-loaded on the first image turn.
-    \item \textbf{Sibling-Pack-Size-Guarded Fast-Path vs.\ Hybrid VLM Routing:} Inference uses aspect-preserving 2-view TTA (full letterbox + 84\% center crop) to prevent distortion on tall $9{:}16$ phone photos. When $\text{sim}_1 \ge 0.82$, margin $\text{sim}_1 - \text{sim}_2 \ge 0.08$, and no same-brand sibling SKU exists with a different weight/volume (or $\text{sim}_1 \ge 0.92$), the \textbf{Local Fast-Path returns verified Thanh Lam Mart cards in 23--27\,ms} with zero cloud calls. Ambiguous same-design pack-size siblings (e.g., \emph{80\,g vs.\ 200\,g}, \emph{unsweetened vs.\ low-sugar}) and moderate-similarity photos ($0.72 \le \text{sim}_1 < 0.82$) escalate to \textbf{Hybrid VLM} (\code{deepseek-v4.1-flash:free}) with top-4 local candidate hints to read exact net weight and cleanly reject out-of-distribution (OOD) non-retail images.
-\end{itemize}
-
-\begin{figure}[H]
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.55cm and 0.6cm]
-  \node[procbox, text width=2.55cm] (cam) {Mobile Camera / Upload\\(896\,px compress, 0 bg scan)};
-  \node[aiagent, text width=2.85cm, right=of cam] (emb) {\code{LocalProductEmbedder}\\Lazy \texttt{MobileNetV3-224}\\2-View TTA (13.5\,ms)};
-  \node[gatebox, text width=2.65cm, right=of emb] (gal) {FP16 Gallery (1.58\,MB)\\3,093-SKU Cosine\\(0.07--0.36\,ms)};
-  \node[decbox, right=of gal] (grd) {$\text{sim}_1 \ge 0.82$,\\$m \ge 0.08$ \&\\no size sibling?};
-  \node[procbox, draw=teal!70!black, fill=teal!8, text width=2.75cm, right=of grd] (fp) {\textbf{Local Fast-Path}\\Instant Thanh Lam Mart cards\\\textbf{23--27\,ms} (0 cloud calls)};
-  \node[aiagent, text width=3.85cm, below=0.8cm of grd] (hyb) {\textbf{Hybrid VLM / OOD Gate}\\\code{deepseek-v4.1-flash:free}\\+ Top-4 hints (if $\ge 0.72$)};
-  \node[procbox, text width=2.75cm, right=of hyb] (ans) {Grounded SKU Cards\\+ Custom Text LLM\\+ Session Memory};
-
-  \draw[flowarr] (cam) -- node[above, font=\scriptsize] {Submit} (emb);
-  \draw[flowarr] (emb) -- (gal);
-  \draw[flowarr] (gal) -- (grd);
-  \draw[flowarr] (grd) -- node[above, font=\scriptsize] {Pass} (fp);
-  \draw[flowarr] (grd) -- node[right, font=\scriptsize] {Sibling / low} (hyb);
-  \draw[flowarr] (fp) -- (ans);
-  \draw[flowarr] (hyb) -- (ans);
-\end{tikzpicture}%
-}
-\caption{Strictly on-demand mobile visual product recognition pipeline combining lazy-loaded \texttt{MobileNetV3Large-224} TFLite Fast-Path with sibling-guarded Hybrid VLM escalation.}
-\label{fig:mobile_vision_pipeline}
-\end{figure}
-
-\subsection*{Profit-Gated Forecasting and HITL Proposal Architecture (\texttt{ops\_chest})}
-Figure~\ref{fig:ops_chest_arch} details how \texttt{ops\_chest} decouples analytical computation, LLM dialogue, and operational mutation. Analytical engines compute unbiased forecasts and FEFO-capped quantities deterministically in Python/SQL; the LLM synthesizes explanations and drafts structured proposals through its 31 typed tools; \code{guard.py} enforces numerical and execution-claim integrity on every reply; and PostgreSQL persists proposals in \texttt{PENDING} state until an authenticated Store Manager approves execution.
-
-\begin{figure}[H]
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=0.55cm and 0.65cm]
-  \node[procbox, text width=2.8cm] (frn) {POS + Stockout Logs\\(FreshRetailNet-50K / Store DB)};
-  \node[aiagent, text width=2.9cm, right=of frn] (rec) {Hourly OOS Recovery\\+ 29-Feature Builder};
-  \node[gatebox, text width=3.1cm, right=of rec] (gate) {Profit-Gated Router (\texttt{B-Gate})\\$\hat{q}_{50}^{\text{LGBM}} + \sigma_{\text{EWMA}}$ vs.\ EWMA};
-  \node[aiagent, text width=3.0cm, right=of gate] (nv) {Newsvendor ($SL^*$) +\\FEFO Lot-Cap + Markdown};
-
-  \node[aiagent, text width=3.5cm, below=0.85cm of rec] (llm) {31-Tool Manager Agent\\(22 Read/Form, 9 Proposal,\\0 Direct-Exec Tools)};
-  \node[gatebox, text width=3.2cm, right=of llm] (grd) {Runtime Guard (\code{guard.py})\\Num $\ge 1000$ Check +\\Block \code{FALSE_EXEC}};
-  \node[procbox, draw=teal!70!black, fill=teal!8, text width=3.3cm, right=of grd] (hitl) {HITL Proposal Queue\\\texttt{PENDING} $\to$ \texttt{APPROVED}\\$\to$ \texttt{EXECUTED} + Audit};
-
-  \draw[flowarr] (frn) -- (rec);
-  \draw[flowarr] (rec) -- (gate);
-  \draw[flowarr] (gate) -- (nv);
-  \draw[flowarr] (nv.south) -- ++(0,-0.32) -| (llm.north);
-  \draw[flowarr] (llm) -- (grd);
-  \draw[flowarr] (grd) -- (hitl);
-\end{tikzpicture}%
-}
-\caption{Back-office forecasting, profit-gated routing, runtime guard, and HITL governance architecture in \texttt{ops\_chest}.}
-\label{fig:ops_chest_arch}
-\end{figure}
-
-\section{Algorithm Description}
-
-To make the core problem-solving mechanisms reproducible, we formalize the four algorithms governing streaming consultation, real-time speech recognition, full-duplex kiosk interaction, and perishable inventory optimization.
+Conventional multi-step LLM agent loops execute 2--4 sequential calls (planner $\to$ selector $\to$ reviewer) per query, inflating latency to 5--14\,s. Algorithm~\ref{alg:zero_planner_sse} formalizes our \textbf{Zero-Planner Hybrid Routing} pipeline separating queries across four complexity/risk tiers: (1)~sub-3\,ms deterministic safety, OOC, OWASP, and smalltalk gates; (2)~zero-LLM deterministic tools for single-SKU lookup, verified knowledge attributes, simulated best-sellers (\texttt{SIMULATED}), snapshot/live stock ranking, and Turn-1 semantic cache (Jaccard $\ge 0.88$, bypassing clinical/allergen queries); (3)~zero-planner grounded SSE streaming and 1-call budget baskets emitting verified catalog cards prior to token generation; and (4)~bounded structured planning reserved strictly for complex allergen or unresolved multi-constraint cases.
 
 \begin{algorithm}[htbp]
-\caption{Zero-Planner Grounded SSE Streaming, Groq LPU, Semantic Cache \& 1-Call Basket (\texttt{Retail-AI-})}
+\caption{Zero-Planner Hybrid Routing with Grounded Tools (\texttt{Retail-AI-})}
 \label{alg:zero_planner_sse}
 \footnotesize
 \begin{algorithmic}[1]
-\Require User utterance $u$, session context $S$, indexed Thanh Lam Mart catalog $\mathcal{C}$, isolated demo sales store $\mathcal{D}_{\text{sim}}$
-\Ensure SSE stream of events (\code{start}, \code{delta}*, \code{done}) with grounded cards $K$ and spoken Vietnamese text
-\State Normalize $u$ via \code{catalog_transcription.py}; check sub-3\,ms deterministic gates (cart/checkout, clinical/medical safety, off-topic, OWASP injection)
+\Require User query $u$, session context $S$, bridged catalog $\mathcal{C}_{\text{bridge}}$, isolated demo sales store $\mathcal{D}_{\text{sim}}$
+\Ensure Grounded Vietnamese/EN response with verified product cards $K$ and provenance metadata
+\State Normalize $u$ (catalog-anchored brand repair protecting \code{_NEVER_CORRECT}); evaluate sub-3\,ms deterministic gates (medical/drug refusal, OOC, OWASP injection, social smalltalk)
 \If{deterministic gate triggers}
-    \State Emit immediate SSE \code{start} + safe grounded reply + \code{done}; \Return
+    \State Return immediate deterministic response (0 LLM calls); \Return
 \EndIf
-\If{$u$ matches social smalltalk (greeting / thanks / farewell)}
-    \State Emit instant deterministic greeting (\code{smalltalk.py}, $\le 10$\,ms); \Return
+\If{non-clinical Turn-1 \textbf{and} semantic cache hits (exact $O(1)$ or Jaccard $\ge 0.88$ with matching constraint signature)}
+    \State Deep-copy session memory $S'$ and return cached reply (0 LLM tokens); \Return
 \EndIf
-\If{stateless non-clinical/non-allergen Turn-1 \textbf{and} \code{consultation_cache.py} hits (exact $O(1)$ or Jaccard $\ge 0.88$ with matching constraint signature)}
-    \State Deep-copy session memory $S'$ and emit cached reply immediately (11--36\,ms local / 125--140\,ms HTTPS, \textbf{0 LLM tokens}); \Return
+\If{$u$ is a single-SKU lookup, verified label knowledge query, \texttt{SIMULATED} bestseller, or stock ranking query}
+    \State Execute deterministic tool on $\mathcal{C}_{\text{bridge}}$ or $\mathcal{D}_{\text{sim}}$; attach provenance tag (live bridge, 15 Sep 2026 snapshot, or \texttt{SIMULATED})
+    \State Return deterministic grounded reply (0 LLM calls) with cards $K$; \Return
 \EndIf
-\If{$u$ is a single-SKU price lookup, verified ingredient/usage lookup, or deterministic bestseller query}
-    \State Retrieve exact SKUs from $\mathcal{C}$, resolve 3-tier product knowledge (\code{knowledge.py}), or rank $\mathcal{D}_{\text{sim}}$ (colloquial-aware, explicit \texttt{SIMULATED} disclosure)
-    \State Emit instant template response (0 LLM tokens) with structured product cards $K$ carrying \code{image_url}; \Return
-\EndIf
-\If{$u$ requests a multi-item meal/budget basket (e.g., ``bữa tối dưới 150k cho 2 người'')}
-    \State Classify basket template $\mathcal{T}$ (prioritizing multi-item Path~E), block snacks from savory meals, and retrieve slot candidates from $\mathcal{C}$
-    \State Select cost-feasible subset $K_{\text{basket}}$ satisfying $\sum_{p \in K_{\text{basket}}} P(p) \le B$ via \code{fast_chat()} on Groq LPU ($\approx 300$\,ms)
-    \State Emit SSE \code{start} with $K_{\text{basket}}$ immediately; stream concise advice via \textbf{1 slim Groq LPU call} ($\approx 35\%$ compressed cards, strict \emph{mình/bạn} persona)
-\ElsIf{$u$ is a standard product browse, pack-size comparison, promo, or exclusion query (\emph{no spicy/soy/mint})}
-    \State Execute deterministic hybrid search + exclusion filter + unit-price ranking (Eq.~\ref{eq:unit_price}) over $\mathcal{C}$ to obtain top-$k$ SKUs $K$
-    \State Emit SSE \code{start} carrying $K$ so kiosk cards render thumbnails before LLM tokens arrive
-    \State Stream SSE \code{delta} tokens over the \textbf{Groq LPU fast-lane} (\code{qwen/qwen3.8-27b} rotating 4 free keys, seamless failover to TokenHarbor DeepSeek); store Turn-1 entry in \code{consultation_cache.py}
+\If{$u$ requests a budget-capped meal/combo basket ($\le B$)}
+    \State Retrieve template slot candidates from $\mathcal{C}_{\text{bridge}}$ (suppressing live OOS SKUs) and select $K_{\text{basket}}$ satisfying $\sum_{p \in K_{\text{basket}}} P(p) \le B$
+    \State Emit cards $K_{\text{basket}}$ immediately; stream concise explanation via \textbf{1 LLM call}
+\ElsIf{$u$ is a standard browse, unit-price comparison, promo, or exclusion query}
+    \State Execute inverted-index search + exclusion filter + unit-price ranking (Eq.~\ref{eq:unit_price}) to obtain top-$k$ cards $K$
+    \State Emit cards $K$ prior to token streaming; stream grounded explanation over locked $K$; store Turn-1 cache entry
 \Else
-    \State Escalate complex clinical/allergy/multi-constraint JSON edge cases to bounded planner (\code{customer_consultation.py} on DeepSeek)
+    \State Escalate complex allergy/clinical or unresolved multi-constraint queries to bounded planner (\code{customer_consultation.py})
 \EndIf
-\State Emit SSE \code{done} with updated session memory $S'$ and audit metadata
+\State Persist updated session state $S'$ and return
 \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}[H]
-\caption{Real-Time WebSocket Streaming STT with \texttt{DPDFNet2} Rescue and Brand Repair}
-\label{alg:ws_streaming_stt}
-\begin{algorithmic}[1]
-\Require 16\,kHz Float32 audio frames $f_t$ (32\,ms) from browser AudioWorklet; active Thanh Lam Mart \code{PhraseListGrammar} $\mathcal{P}$
-\Ensure Grounded Vietnamese transcript $\hat{u}$ and live partial captions
-\State Maintain 8-frame (256\,ms) circular pre-roll buffer $B_{\text{pre}}$; run Silero VAD~v6 per frame
-\If{speech onset detected by VAD}
-    \State Open WebSocket \code{/audio/transcribe/stream}; initialize Azure \code{PushAudioInputStream} with $\mathcal{P}$
-    \State Flush $B_{\text{pre}}$ as PCM16 followed by live frames $f_t$ while accumulating raw utterance buffer $X$
-    \State Forward Azure \code{recognizing} callbacks immediately to kiosk UI as partial captions
-\EndIf
-\If{VAD redemption timeout (550\,ms) triggers end-of-speech}
-    \State Send \texttt{\{"type":"end"\}}; close push stream and await final hypothesis $u_{\text{ws}}$
-    \State Estimate clip $\widehat{\text{SNR}}_{\text{dB}}(X)$ via Eq.~\ref{eq:snr_est}
-    \If{$u_{\text{ws}}$ is empty \textbf{or} $\widehat{\text{SNR}}_{\text{dB}}(X) < 13$\,dB}
-        \State Apply 85\,Hz zero-phase HPF (Eq.~\ref{eq:hpf85}) and SNR-adaptive \texttt{DPDFNet2} ONNX blend (Eq.~\ref{eq:snr_blend}) $\to Y$
-        \State Re-transcribe $Y$ via Azure Speech (or local \texttt{gipformer1.5-68M-rnnt} if cloud unreachable) $\to u_{\text{rescue}}$
-        \State Select higher-confidence non-empty transcript $u_{\text{raw}} \in \{u_{\text{ws}}, u_{\text{rescue}}\}$
-    \Else
-        \State $u_{\text{raw}} \gets u_{\text{ws}}$
-    \EndIf
-    \State Apply catalog-anchored brand repair on $u_{\text{raw}}$ skipping \code{_NEVER_CORRECT} tokens $\to \hat{u}$
-    \State \Return $\hat{u}$
-\EndIf
-\end{algorithmic}
-\end{algorithm}
+\subsection*{Supporting Multimodal Interfaces (Speech Front-End \& On-Demand Vision)}
+To support hands-free and visual counter queries, \texttt{Retail-AI-} integrates two auxiliary perception modules:
+\begin{itemize}
+    \item \textbf{Supporting Speech Front-End:} Combines local Silero VAD~v6, streaming Azure Speech with domain \code{PhraseListGrammar}, catalog-anchored brand repair, and SNR-adaptive denoising (\texttt{DPDFNet2} ONNX on server / \texttt{GTCRN} WASM on client serverless deployments; software details in Appendix~A.2).
+    \item \textbf{On-Demand Mobile Visual Recognition (\texttt{MobileNetV3Large-224} TFLite + Sibling Pack-Size Guard):} Because each catalog SKU has only one studio image, we distilled complementary features from \texttt{CLIP-ViT-B/32} (512-d) and \texttt{DINOv2-Small} (384-d)~\cite{radford2021clip,oquab2024dinov2} via catalog-only orthogonal SVD-256 (88.85\% variance retained) into a lightweight \texttt{MobileNetV3Large-224} student~\cite{howard2019mobilenetv3,thanh_lam_tflite_kaggle} (7.04\,MB FP16 + 1.58\,MB gallery across 3,093 SKUs) trained with Direct Cosine, Relational, Sub-Center ArcFace~\cite{deng2020subcenter}, and SupCon~\cite{khosla2020supcon} losses under heavy 3D perspective/shelf/glare augmentation. At on-demand inference, aspect-preserving 2-View TTA routes to a 23--27\,ms local Fast-Path when $\text{sim}_1 \ge 0.82$, margin $m \ge 0.08$, and the \textbf{Sibling Pack-Size Guard} confirms no same-brand sibling with a different weight/volume (or $\text{sim}_1 \ge 0.92$); ambiguous pack-size siblings and low-confidence uploads escalate to Hybrid VLM with top-4 local hints for exact net-weight reading and OOD rejection.
+\end{itemize}
 
-\begin{algorithm}[H]
-\caption{Full-Duplex 3-Layer Anti-Echo Barge-In and Progressive Clause TTS Queue}
-\label{alg:bargein_tts}
-\begin{algorithmic}[1]
-\Require Streaming SSE text deltas $\{\Delta_j\}$; live mic frames $f_t$ with RMS energy $E_t$ and VAD probability $p_t$; active spoken buffer $U_{\text{bot}}$
-\Ensure Low-latency spoken audio with natural human interruption and zero self-triggering
-\State \textbf{Output side (\code{speech-queue.ts}):} Append each $\Delta_j$ to pending text buffer $buf$
-\State Protect Vietnamese thousands separators (e.g., \texttt{29.000đ}) from sentence-boundary splitting
-\If{$|buf| \ge 18$ and sentence end found, \textbf{or} $|buf| \ge 150$ with clause delimiter after char 75 (without forced semicolon splitting)}
-    \State Extract clause $c$, request one-use Azure Neural TTS ticket (\code{vi-VN-HoaiMyNeural}), prefetch next-clause audio \texttt{Blob URL} in parallel for gapless natural prosody
-    \State Crossfade 4-layer preloaded video avatar (\code{idle} $\leftrightarrow$ \code{speaking}) using double-buffered HTML5 video elements
-\EndIf
-\State \textbf{Input side (\code{voice-controller.ts}):} Keep hardware AEC/AGC/NS active while avatar speaks; track stationary fan noise via \code{neuralNoiseFloor} + \code{SpeechEnvelopeGate} so WS STT opens only on confirmed human speech
-\If{avatar playback elapsed time $< 450$\,ms}
-    \State Ignore mic triggers (Layer~1 playback startup grace window)
-\ElsIf{$p_t \ge 0.78$ \textbf{and} $E_t \ge \max(0.065,\, 1.85 \cdot E_{\text{ambient}})$ sustained for 5 frames (Layer~2 adaptive RMS gate)}
-    \State Immediately abort active TTS audio and SSE stream; transition avatar to \code{listening}; open WS STT
-\EndIf
-\State Upon receiving transcript $\hat{u}$, run Layer~3 lexical overlap check \code{isLikelyAssistantEcho}$(\hat{u}, H_{\text{bot}})$ against a rolling 4-turn (12\,s) spoken buffer plus server-side speech activity verification
-\If{echo detected}
-    \State Discard $\hat{u}$ silently and resume listening
-\Else
-    \State Dispatch $\hat{u}$ to Algorithm~\ref{alg:zero_planner_sse}
-\EndIf
-\end{algorithmic}
-\end{algorithm}
+\section{Contribution 2: Profit-Gated Router (\texttt{B-Gate}) and HITL Operations (\texttt{ops\_chest})}
 
-\begin{algorithm}[H]
-\caption{Profit-Gated Perishable Newsvendor, FEFO Replenishment \& HITL Governance (\texttt{ops\_chest})}
+Using LightGBM's raw quantile spread $(q_{90}-q_{10})$ directly as daily demand dispersion $\sigma_{\text{daily}}$ inside Newsvendor (Eq.~\ref{eq:order_qty}) over-estimates tail variance on short perishable series, raising spoilage and losing store profit relative to EWMA. Algorithm~\ref{alg:ops_chest_newsvendor} formalizes our \textbf{Profit-Gated Router (\texttt{B-Gate})}: (i)~it couples LightGBM's accurate point median ($\hat{q}_{50}$) with EWMA's smooth dispersion ($\sigma_{\text{EWMA}}$); (ii)~it selects ML versus EWMA per segment $g = (\text{sales tier} \times \text{intermittency} \times \mathbb{I}[N_s > 30])$ strictly via out-of-sample simulated profit gain (Eq.~\ref{eq:profit_gate}); (iii)~it computes FEFO-capped Newsvendor orders and graduated near-expiry markdowns; and (iv)~it enforces \code{guard.py} inspection and mandatory HITL approval (\texttt{PENDING} $\to$ \texttt{APPROVED} $\to$ \texttt{EXECUTED}).
+
+\begin{algorithm}[htbp]
+\caption{Profit-Gated Perishable Newsvendor (\texttt{B-Gate}), FEFO Caps \& HITL (\texttt{ops\_chest})}
 \label{alg:ops_chest_newsvendor}
+\footnotesize
 \begin{algorithmic}[1]
-\Require Store $s$ (SKU count $N_s$), active SKU $i$ with lot ledger $\mathcal{L}_i$, price $p$, cost $c$, salvage $v$, stockout cost $s_{\text{out}}$, shelf life $L$, review period $R$, capacity $C_{\text{room}}$, learned profit gate $V(g)$
-\Ensure Verified replenishment/markdown proposal $P$ in \texttt{PENDING} state (never auto-executed)
-\State Recover historical uncensored demand $\hat{D}_{i,t}$ from hourly stockout profiles (Eq.~\ref{eq:wape_recovery}) and build 29 tabular features
-\State Compute EWMA baseline $(\hat{\mu}_{\text{EWMA}}, \sigma_{\text{EWMA}})$ and LightGBM~v3 quantiles $(\hat{q}_{10}, \hat{q}_{50}, \hat{q}_{90})$
-\State Determine segment $g = (\text{sales\_tier}(i), \text{intermittency}(i), \mathbb{I}[N_s > 30])$
-\If{$V(g) > 0$ \textbf{and} $N_s > 30$ (Eq.~\ref{eq:profit_gate})}
-    \State Set daily demand $\hat{\mu} \gets \hat{q}_{50}$, daily dispersion $\sigma_{\text{daily}} \gets \sigma_{\text{EWMA}}$ (\texttt{B-Gate} / \code{ewma_sigma})
+\Require Store $s$ ($N_s$ SKUs), SKU $i$ with lot ledger $\mathcal{L}_i$, price $p$, cost $c$, salvage $v$, OOS cost $s_{\text{out}}$, shelf life $L$, review period $R$, capacity $C_{\text{room}}$, out-of-sample profit gate $V(g)$
+\Ensure Verified proposal $P$ in \texttt{PENDING} state (zero direct execution)
+\State Recover historical demand $\hat{D}_{i,t}$ via empirical hourly profile (Eq.~\ref{eq:wape_recovery}) and construct 29 tabular features
+\State Compute EWMA $(\hat{\mu}_{\text{EWMA}}, \sigma_{\text{EWMA}})$ and LightGBM~v3 quantiles $(\hat{q}_{10}, \hat{q}_{50}, \hat{q}_{90})$
+\State Assign segment $g = (\text{sales\_tier}(i), \text{intermittency}(i), \mathbb{I}[N_s > 30])$
+\If{$V(g) > 0$ (Eq.~\ref{eq:profit_gate}) \textbf{and} $g$ is ML-enabled by the out-of-sample profit gate}
+    \State Set expected demand $\hat{\mu} \gets \hat{q}_{50}^{\text{LGBM}}$ and dispersion $\sigma_{\text{daily}} \gets \sigma_{\text{EWMA}}$ (\code{ewma_sigma} variant)
 \Else
     \State Set $(\hat{\mu}, \sigma_{\text{daily}}) \gets (\hat{\mu}_{\text{EWMA}}, \sigma_{\text{EWMA}})$
 \EndIf
-\State Compute Newsvendor service level $SL^*$ and $z = \Phi^{-1}(SL^*)$ via Eq.~\ref{eq:newsvendor} with traffic-driver floor $0.95$ and ABC-A floor $0.90$
-\State Simulate FEFO lot depletion over lead time + review period $R$ and shelf-life window $W = \min(90, L)$ to obtain unmet demand $U_R$, leftover $L_R$, and served demand $S_W$
-\State Compute capped order quantity $Q^* = \max(0, \min(Q_{\text{raw}}, Q_{\text{cap}}, C_{\text{room}}))$ via Eq.~\ref{eq:order_qty}
-\State Flag lots expiring within $\le 2$ days with excess stock over expected full-price sales for graduated FEFO markdown proposals
-\State Persist draft proposal $P$ as \texttt{PENDING} via \code{propose_po} / \code{propose_markdown}; validate agent text via \code{guard.py} (numeric grounding + zero \code{FALSE_EXEC})
-\State Execute PO dispatch (Mailpit/SMTP) or price update \textbf{only} after authenticated Store Manager approves $P$
+\State Compute $SL^*$ and $z = \Phi^{-1}(SL^*)$ (Eq.~\ref{eq:newsvendor}) with floors 0.95 (traffic), 0.90 (ABC-A), 0.50 (other)
+\State Simulate FEFO lot depletion over review period $R$ and window $W = \min(90, L)$ to obtain $U_R$, $L_R$, and $S_W$
+\State Compute shelf-life-capped order $Q^* = \max(0, \min(Q_{\text{raw}}, Q_{\text{cap}}, C_{\text{room}}))$ (Eq.~\ref{eq:order_qty})
+\State Flag lots expiring within $\le 2$ days exceeding full-price demand for graduated FEFO markdown proposals
+\State Persist draft $P$ as \texttt{PENDING} via 9 proposal tools; inspect explanation via \code{guard.py}
+\State Transition to \texttt{EXECUTED} and expose via \code{ops_bridge} \textbf{only} after authenticated manager approval
 \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}[H]
-\caption{Strictly On-Demand Mobile Visual Product Recognition with TFLite Fast-Path \& Hybrid VLM (\texttt{Retail-AI-})}
-\label{alg:mobile_vision_hybrid}
-\begin{algorithmic}[1]
-\Require Uploaded photo/video $I_{\text{raw}}$ (client \code{media-preprocess.ts} compresses photos to $\le 640$\,px \code{q=0.78}, 25--45\,KB, or samples 5 video frames locally selecting the sharpest frame on a $96\times 96$ canvas), user prompt $q$, catalog $\mathcal{C}$, FP16 gallery $G \in \mathbb{R}^{3093 \times 256}$
-\Ensure Verified Thanh Lam Mart product cards $K$ (carrying \code{image_url}), grounded Vietnamese/EN reply, and per-stage latency telemetry
-\State Execute \textbf{only} upon explicit \code{POST /agent/respond/image} submission (zero continuous background camera inference); check SHA-256 response cache before decoding
-\State \textbf{Lazy Initialization \& Single-Pass Decode:} On first image turn only, load \texttt{.tflite} and $G$ into a warm singleton; decode JPEG via \code{libjpeg} DCT \code{draft(640)} ($6$--$8\times$ faster), run $<3$\,ms dark/blank quality gate, and share the EXIF-normalized PIL image across \textbf{Adaptive 1-Crop} and 2-View TTA ($v_{\text{full}}$ letterbox + $v_{\text{center}}$ 84\%)
-\State Compute $e = \text{Norm}(0.55\,f_\theta(v_{\text{full}}) + 0.45\,f_\theta(v_{\text{center}}))$ and cosine vector $s = G e \in \mathbb{R}^{3093}$; extract top-5 candidates and margin $m = s_{(1)} - s_{(2)}$
-\State Evaluate \textbf{Sibling Pack-Size Guard (\code{_has_ambiguous_pack_size_sibling})}: detect whether the top SKU shares brand and core product tokens with another catalog SKU differing in weight/volume
-\If{$s_{(1)} \ge 0.82$ \textbf{and} $m \ge 0.08$ \textbf{and} (no ambiguous size sibling \textbf{or} $s_{(1)} \ge 0.92$)}
-    \State \textbf{Local Fast-Path (23--27\,ms):} Return verified SKU cards $K$ from $\mathcal{C}$ with zero cloud Vision LLM calls
-\Else
-    \State Escalate $I_{\text{raw}}$ with top-4 local hints (only when $s_{(1)} \ge 0.72$) to \code{deepseek-v4.1-flash:free} for exact label/weight/barcode extraction and OOD rejection
-    \State Rerank deterministically over $\mathcal{C}$ (exact barcode + normalized brand + pack size/container + visual agreement bonus); if cloud is offline while $s_{(1)} \ge 0.72$, degrade gracefully to the local match
-\EndIf
-\If{$K \neq \emptyset$ \textbf{and} $q$ asks a custom follow-up beyond default identity/price lookup}
-    \State Synthesize a concise grounded answer via 1 text-only LLM pass over verified SKU facts $K$
-\EndIf
-\State Persist \code{last_grounded_product} in session memory so follow-up voice/text turns resolve seamlessly; \Return response and latency telemetry
-\end{algorithmic}
-\end{algorithm}
+\section{Model Training, Hyperparameter Tuning, and Threshold Selection}
 
-\subsection*{End-to-End Production Latency Engineering, Zalo Alerting \& Mobile Photo Lightbox (\texttt{Retail-AI-})}
-To achieve sub-second mobile QR responses in live production (\url{https://mai-retail-kiosk.vercel.app}) at zero marginal LLM cost, four complementary systems upgrades were deployed across backend and frontend:
-\begin{enumerate}
-    \item \textbf{Tiered LLM Routing (Groq LPU Fast-Lane + TokenHarbor Structured JSON):} Lightweight streaming prose ($\approx 250$--350 input tokens after $\approx 35\%$ card compression, \code{max_tokens=200}, strict \emph{mình/bạn} Vietnamese persona lock) and meal-basket micro-prompts (\code{fast_chat()}) route preferentially to \textbf{free Groq LPU}~\cite{groq_lpu} (\code{qwen/qwen3.8-27b} $\to$ \code{openai/gpt-oss-20b} $\to$ \code{openai/gpt-oss-120b}, rotating 4 keys, 6\,s timeout, automatic failover to TokenHarbor before first token). Complex \code{json_schema} passes (clinical, allergen, clarification) remain on TokenHarbor (\code{deepseek-v4.1-flash:free} $\to$ \code{deepseek-v4.1-flash-1017} at \$0.15/1M tokens, removing the slow 7.2\,s \code{v4-flash:free} fallback). Long-term HTTP~429 allowance exhaustion triggers a \textbf{3,600\,s (1-hour) cooldown} per key rather than futile 5\,s retries, backed by a persistent \code{httpx.AsyncClient} keep-alive pool (20 keep-alive / 50 max connections).
-    \item \textbf{Turn-1 Semantic \& Normalized-Intent Cache (\code{consultation_cache.py}):} A bounded LRU cache (\code{max_entries=256}, \code{TTL=300\,s}) combining $O(1)$ exact lookup with Jaccard content-token similarity ($\ge 0.88$) within identical constraint signatures (budget, sugar level, exclusions, pack size). Clinical/allergen queries bypass caching completely, and hits deep-copy session \code{memory} so Turn-2 follow-ups preserve full multi-turn context at zero LLM token cost.
-    \item \textbf{Singapore Regional Serverless Co-Location (\texttt{sin1}) \& Non-Blocking Boot:} Vercel Functions were pinned from US East (\texttt{iad1}) to \textbf{Singapore (\texttt{sin1})} in \code{vercel.json}, Vite \code{/assets/*} bundles serve \code{Cache-Control: public, max-age=31536000, immutable}, external TLS/ONNX warmups run in a non-blocking background task inside \code{_lifespan}, and mobile \code{bootKiosk()} dispatches \code{getCart()} asynchronously without blocking first interaction.
-    \item \textbf{Mobile-First Product Photo Lightbox \& Zalo Bot Manager Escalation:} \code{_product_card()} (\code{backend/api/schemas.py}, \code{main.py}) exposes sanitized \code{http(s)} \code{image_url} across \textbf{3,096/3,099 SKUs (99.9\%)}. In \code{ChatPanel.vue}, primary and related product cards display compact thumbnails and open a full-viewport \code{<Teleport to="body">} lightbox modal (escaping mobile drawer \code{backdrop-filter} containing blocks) showcasing the high-resolution packshot on a clean white frame, brand/category chips, reference/list/promo pricing, demo 30-day sales, and a one-tap \emph{``Ask ingredients''} button (with \code{@click.stop} guarding nested details and cart controls). In parallel, real-time \textbf{Zalo Bot manager escalation} notifies store managers directly while keeping shopper-facing messages clean of internal UUIDs or raw status enums.
-\end{enumerate}
-
-\section{Configuration, Model Selection and Evaluation Setup}
-
-Tables~\ref{tab:voice_config}, \ref{tab:mobile_vision_config}, \ref{tab:llm_config}, and \ref{tab:ml_config} summarize the exact production hyperparameters and model configurations verified in the repositories.
+Table~\ref{tab:lgbm_training_setup} documents the complete LightGBM~v3 training pipeline logged in \code{data/ops_chest_frn/frn/report.json}, and Table~\ref{tab:threshold_justification} documents the empirical or theoretical rationale behind every major operating threshold.
 
 \begin{table}[H]
 \centering
-\caption{Voice, VAD, denoiser, streaming STT, and TTS configuration (\texttt{Retail-AI-})}
-\label{tab:voice_config}
+\caption{LightGBM~v3 quantile training, hyperparameter search, and runtime specifications on FreshRetailNet-50K}
+\label{tab:lgbm_training_setup}
 \footnotesize
-\begin{tabularx}{\textwidth}{L{3.5cm} L{4.2cm} Y}
+\begin{tabularx}{\textwidth}{L{3.7cm} Y}
 \toprule
-\textbf{Component} & \textbf{Selected Model / Implementation} & \textbf{Key Runtime Parameters} \\
+\textbf{Training Dimension} & \textbf{Verified Specification from \code{report.json}} \\
 \midrule
-Voice Activity Detection & Silero VAD~v6 (ONNX/WASM) + Fan-Noise Gate & 16\,kHz, 512-sample (32\,ms) frame, \code{positiveSpeechThreshold=0.72}, \code{redemptionMs=750}, 8-frame ring buffer, \code{SpeechEnvelopeGate} \\
-Neural Speech Denoiser & \texttt{DPDFNet2} ONNX (9.77\,MB, local CPU) & 85\,Hz 4th-order zero-phase HPF; clean bypass $\ge 28$\,dB; blend $w=0.85$ (10--28\,dB), $w=0.75$ ($<10$\,dB); WS rescue $<13$\,dB \\
-Primary Streaming STT & Azure AI Speech SDK (\code{vi-VN}) & Continuous WebSocket \code{/audio/transcribe/stream} (deferred until verified speech onset); dynamic Thanh Lam Mart \code{PhraseListGrammar}; \textbf{0\% Groq calls} \\
-Offline Fallback STT & \texttt{gipformer1.5-68M-rnnt} (ONNX, 69.8\,MB) & Local CPU RNN-Transducer activated automatically when cloud credentials or network are unavailable \\
-Neural TTS \& Avatar & Azure \code{vi-VN-HoaiMyNeural} + 4-layer video & \code{MIN_CHUNK_CHARS=18}, \code{LONG_CLAUSE_TRIGGER=150}, \code{MIN_CLAUSE=75}, gapless \texttt{Blob URL} prefetch; 24\,fps; barge-in RMS $\ge 0.065$ ($1.85\times$ ambient), 4-turn (12\,s) echo window \\
+Dataset \& Sample Counts & 4,850,000 rows (848 train / 50 held-out stores); main evaluation model: \textbf{14,905,752 train / 2,004,786 validation rows}; pre-$T_0$ backtest model: \textbf{6,209,287 train / 2,051,590 validation rows} \\
+Objective \& Quantiles & Three independent quantile regressors (\code{objective="quantile"}) for $q \in \{0.10, 0.50, 0.90\}$ over 29 features ($h=1\dots 7$) \\
+Hyperparameter Grid (7 candidates on \code{valid\_pinball50}) &
+(1) \code{leaves=63, min\_leaf=200}: 0.24970 (234 rounds, 135\,s);
+(2) \textbf{\code{leaves=127, min\_leaf=200}}: \textbf{0.24959} (111 rounds, 107\,s -- \textbf{Selected});
+(3) \code{leaves=255, min\_leaf=100}: 0.24971;
+(4) \code{leaves=255, min\_leaf=500, l2=10}: 0.24965;
+(5) \code{leaves=511, min\_leaf=300, ff=0.7}: 0.24964;
+(6) \code{leaves=127, min\_leaf=50, ff=0.6}: 0.24961;
+(7) \code{leaves=255, min\_leaf=200, max\_bin=511}: 0.24962 \\
+Early-Stopped Rounds \& Training Time & \textbf{Main eval fit:} \code{q50} = 502 rounds (1,245\,s), \code{q10} = 677 rounds (1,343\,s), \code{q90} = 310 rounds (960\,s). \textbf{Backtest fit:} \code{bt\_q50} = 291 rounds (406\,s), \code{bt\_q10} = 257 rounds (355\,s), \code{bt\_q90} = 270 rounds (359\,s). \textbf{Full retrain:} \code{q50} = 552 (1,013\,s), \code{q10} = 744 (1,169\,s), \code{q90} = 341 (642\,s) \\
+Environment \& Reproducibility & Kaggle CPU runner (\code{ops_chest/ml/kaggle/train_frn.py}); fixed 50-store 2-fold CV split (Appendix~C); gain importances logged in \code{importance_q50} \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \begin{table}[H]
 \centering
-\caption{Kaggle training and strictly on-demand mobile inference configuration for \texttt{MobileNetV3Large-224} TFLite (\texttt{Retail-AI-})}
-\label{tab:mobile_vision_config}
+\caption{Empirical and theoretical justification of key system thresholds}
+\label{tab:threshold_justification}
 \footnotesize
-\begin{tabularx}{\textwidth}{L{3.5cm} L{4.3cm} Y}
+\begin{tabularx}{\textwidth}{L{3.5cm} L{2.3cm} Y}
 \toprule
-\textbf{Dimension} & \textbf{Configuration / Architecture} & \textbf{Technical Details \& Rationale} \\
+\textbf{Parameter / Threshold} & \textbf{Selected Value} & \textbf{Quantitative / Theoretical Justification} \\
 \midrule
-Distillation Teachers & \texttt{CLIP-ViT-B/32} (512-d) + \texttt{DINOv2-Small} (384-d) & Equal-weight 896-d fusion $\to$ catalog-only orthogonal SVD-256 projection (88.85\% variance retained, zero eval leakage) \\
-Mobile Student Backbone & \texttt{MobileNetV3Large-224} + \code{Concat[GAP,GMP]} $\to$ 256-d L2 & 3.50\,M params, 100\% native TFLite builtin ops (Keras~3.13 \code{UnitNormalization} + \code{model.export()}); \textbf{7.04\,MB} FP16 / \textbf{3.81\,MB} INT8 + \textbf{1.58\,MB} gallery \\
-Loss \& Multi-Angle Augs & Direct Cosine (6.0) + Relational (3.0) + Sub-Center ArcFace $K{=}3$ (0.35) + SupCon (0.50) & Teacher-initialized ArcFace prototypes; OpenCV 2--4 neighbor-SKU shelves, 3D perspective warps, $\pm 26^\circ$ rotation, shadow, LED glare, thumb occlusion, blur, JPEG (no h-flip) \\
-On-Demand Routing & \code{LocalProductEmbedder} (lazy singleton) + \code{ProductVisionService} & Aspect-preserving 2-View TTA (letterbox + 84\% center); Fast-Path $\text{sim}_1 \ge 0.82$, $m \ge 0.08$ with Sibling Pack-Size Guard ($\ge 0.92$ if sibling exists); Hybrid hints when $\ge 0.72$ \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{LLM orchestration, streaming, and runtime guardrail configuration across both modules}
-\label{tab:llm_config}
-\footnotesize
-\begin{tabularx}{\textwidth}{L{3.2cm} L{4.5cm} Y}
-\toprule
-\textbf{Module} & \textbf{Primary LLM \& Failover} & \textbf{Orchestration \& Guardrail Settings} \\
-\midrule
-\texttt{Retail-AI-} & \textbf{Fast-Lane:} Groq LPU (\code{qwen/qwen3.8-27b} $\to$ \code{gpt-oss-20b/120b}, \$0 $\times$ 4 keys); \textbf{Structured:} DeepSeek (\code{v4.1-flash:free} $\to$ \code{v4.1-flash-1017}) & Zero-Planner SSE + Turn-1 Semantic Cache (256 entries, 300\,s TTL, Jaccard $\ge 0.88$); 3,600\,s HTTP~429 cooldown; $\approx 35\%$ token compression; Singapore \texttt{sin1}; sub-3\,ms safety gates \\
-\texttt{ops\_chest} & Multi-provider function-calling adapter (OpenAI / DeepSeek / Groq / Gemini failover) & 31 typed tools (22 read/form + 9 proposal, 0 direct-exec); runtime \code{guard.py} verifies all numbers $\ge 1{,}000$ and blocks \code{FALSE_EXEC}; Vision OCR via multimodal adapter \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{LightGBM~v3 quantile forecasting, profit-gate routing, and backtest configuration (\texttt{ops\_chest})}
-\label{tab:ml_config}
-\footnotesize
-\begin{tabularx}{\textwidth}{L{3.7cm} L{4.0cm} Y}
-\toprule
-\textbf{Stage} & \textbf{Configuration} & \textbf{Design Rationale} \\
-\midrule
-Demand Recovery & Empirical hourly sales-share profile (non-stockout days) & Cuts stockout demand WAPE from 32.3\% to 20.5\% and bias from $-32.3\%$ to $-0.1\%$ ($n=200{,}000$) \\
-LightGBM~v3 Quantiles & 3 quantile regressors ($q \in \{0.10, 0.50, 0.90\}$), 29 features, multi-horizon $h=1\dots 7$ & Removed v1 target-day discount ($-15.7\%$ bias) and v2 elasticity deflation; anchored directly to 56-day EWMA features \\
-Profit-Gated Router (\texttt{B-Gate}) & 2-fold out-of-sample store CV over 50 held-out FRN stores; \code{variant=ewma_sigma}, \code{size_cut=30} & Couples LightGBM $\hat{q}_{50}$ with $\sigma_{\text{EWMA}}$; disables ML on small stores ($\le 30$ SKUs) where ML variance lost $-5.6\%$ profit \\
-Backtest Simulator & 37-day rolling horizon ($T_0 = \text{2024-05-26}$ to $\text{2024-07-02}$), FEFO lot aging, 1--3 day shelf lives & Evaluates real store P\&L ($\text{Revenue} - \text{COGS} - \text{WasteCost}$), total waste\%, overall OOS\%, and top-5 traffic-driver OOS\% \\
+\texttt{B-Gate} store-size cut \& variance variant & \code{size_cut = 30}, \code{ewma_sigma} & 12-candidate grid search ($\{\text{sym}, \text{split}, \text{ewma\_sigma}\} \times \{\text{None}, 30, 50, 75\}$): global maximum profit objective \textbf{0.38984} at \code{ewma_sigma + size_cut=30} (vs.\ 0.30202 at None/50/75 and 0.17303 for \code{sym}) \\
+Newsvendor service-level floors ($SL_{\text{floor}}$) & 0.95 (traffic), 0.90 (ABC-A), 0.50 (other) & \code{no_floor} ablation on 20 FRN stores: removing floors flips profit from $+5.46\%$ to \textbf{$-0.54\%$} and spikes OOS from 14.44\% to \textbf{22.12\%} \\
+FRN unit scaling factor & $K = 10$ & Maps median SKU velocity from 0.85 to 8.51 units/day, cutting Poisson floor CV from 1.084 to 0.343 and limiting FEFO rounding error \\
+Speech SNR thresholds (\texttt{Retail-AI-}) & Bypass $\ge 28$\,dB; rescue $< 13$\,dB & Separates clean mics (avoiding double-filtering distortion; CPU drops 609\,ms $\to$ 30.9\,ms) from 12\,dB supermarket noise \\
+Visual Fast-Path thresholds & $\text{sim}_1 \ge 0.82$, $m \ge 0.08$ ($\ge 0.92$ sibling) & All real OOD photos scored $\text{sim}_1 \le 0.588 < 0.72$; sibling guard escalates identical-layout sizes to Hybrid VLM \\
+Bridge freshness TTL & \code{TTL = 300\,s} & Balances stock/markdown freshness against polling overhead; expires fail-closed to static snapshot caveats \\
 \bottomrule
 \end{tabularx}
 \end{table}

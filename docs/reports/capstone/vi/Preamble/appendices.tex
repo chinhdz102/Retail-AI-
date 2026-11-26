@@ -1,39 +1,48 @@
 \appendix
 
-\chapter{Lược đồ Danh mục, Cổng An toàn và Bộ Công cụ của \texttt{Retail-AI-}}
+\chapter{Chi tiết Kỹ thuật, Cấu hình Triển khai và Kiểm thử Phần mềm của \texttt{Retail-AI-}}
 \label{app:retail_ai}
 
-\section*{A.1 Lược đồ Danh mục Chuẩn hóa và Chính sách Cách ly}
-\texttt{Retail-AI-} nạp \code{data/thanh_lam_products.csv} qua mô hình Pydantic \code{ThanhLamRow}~\cite{retail_ai_repo,thanh_lam_snapshot}. Các trường lõi gồm \code{product_id}, \code{name}, \code{brand}, \code{regular_price}, \code{sale_price}, \code{promo_text}, \code{unit}, \code{pack_spec} và \code{category_path} (346 nhánh ngành hàng). Mười tám trên 3.099 bản ghi có \code{sale_price > regular_price} được cách ly sạch, giữ lại 3.081 SKU hợp lệ. Các cột thống kê minh họa (\code{sold_count_30d}, \code{revenue_30d}, \code{is_bestseller}) lưu riêng tại \code{data/demo_sales.sqlite3} với siêu dữ liệu nguồn \texttt{SIMULATED}.
+Phụ lục này tập trung toàn bộ chi tiết kỹ nghệ phần mềm, cấu hình mô hình hỗ trợ, giao diện và kiểm thử tự động của \texttt{Retail-AI-} nhằm giữ các chương chính tập trung vào nội dung nghiên cứu AI.
 
-\section*{A.2 Cổng An toàn Xác định và 7 Năng lực Công cụ Chỉ đọc}
-Trước khi gọi LLM, mọi lượt thoại đi qua các cổng xác định ($<3$\,ms): (i)~xử lý giỏ hàng/thanh toán phiên, (ii)~từ chối tư vấn thuốc và điều trị lâm sàng (giữ nguyên thực phẩm vô hại, XSTest 10/10), (iii)~điều hướng câu hỏi ngoài phạm vi, (iv)~chặn tiêm lệnh và rò rỉ prompt theo chuẩn OWASP (10/10 red-team), và (v)~chào hỏi xã giao tức thì (\code{smalltalk.py}). Bảng~\ref{tab:retail_tools} liệt kê 7 năng lực công cụ chỉ đọc trong lõi tư vấn.
+\section*{A.1 Lược đồ Danh mục, Pipeline Làm sạch 8 Tầng và Bộ Công cụ Tư vấn}
+\texttt{Retail-AI-} nạp \code{data/thanh_lam_products.json} (SHA-256 \code{a0eb16ac1ae2557e...}, 3.099 dòng, 20 cột cấu trúc gồm \code{product_id}, \code{barcode}, \code{name}, \code{brand}, \code{price_vnd}, \code{sale_price_vnd}, \code{discount_promotion}, \code{stock}, \code{shelf}, \code{uom}, \code{image_url}, \code{category_hierarchy}) qua mô hình kiểm định Pydantic \code{ThanhLamRow}, cách ly 18 dòng lỗi giá (\code{sale_price_vnd > price_vnd}) và giữ 3.081 SKU hợp lệ kèm sơ đồ kệ 13 dãy (\code{data/thanh_lam_planogram_assignments.json}).
+
+Pipeline làm giàu tri thức sản phẩm kết hợp crawl 3.099 trang SSR Thanh Lam Mart với đối chiếu nhãn mã vạch EAN-13 (333 khớp mã vạch, 226 khớp thương hiệu--dạng bào chế) và làm sạch 8 tầng theo chuẩn Hugging Face \code{datatrove}~\cite{hf_datatrove} + OpenFoodFacts~\cite{openfoodfacts} (chuẩn hóa Unicode NFC, xóa ký tự ẩn \texttt{U+200B}/\texttt{U+00A0}, khôi phục dấu câu từ thẻ \code{<li>}, cân bằng ngoặc đơn, tách tràn chéo trường, lọc rác OCR và cách ly tuyên bố dị ứng chưa xác minh), đưa 4.606 lỗi thô trên 11 tiêu chí về 0 lỗi (19/19 ca kiểm thử hồi quy) và đạt độ phủ 2.205/3.099 SKU (71,15\%). Bảng~\ref{tab:retail_tools} tóm tắt các công cụ chỉ đọc và hỗ trợ trong lõi tư vấn.
 
 \begin{table}[H]
 \centering
-\caption{Danh mục 7 năng lực công cụ chỉ đọc trong \texttt{Retail-AI-}}
+\caption{Danh mục các năng lực công cụ chỉ đọc và hỗ trợ trong \texttt{Retail-AI-}}
 \label{tab:retail_tools}
 \footnotesize
 \begin{tabularx}{\textwidth}{L{0.7cm} L{4.2cm} Y}
 \toprule
 \textbf{\#} & \textbf{Công cụ / Năng lực} & \textbf{Hành vi Xác định \& Giao ước Căn cứ} \\
 \midrule
-1 & \code{search_products} & Tìm kiếm lai chỉ mục đảo không dấu trên 3.081 SKU Thanh Lam Mart hợp lệ \\
-2 & \code{get_product_detail} & Tra cứu chính xác giá niêm yết, giá khuyến mãi, quy cách và đơn giá quy đổi \\
-3 & \code{compare_products} & So sánh song song giá bán, đơn giá chuẩn (Công thức~\ref{eq:unit_price}), thương hiệu và ưu đãi \\
-4 & \code{list_promotions} & Lọc các mã hàng đang giảm giá theo ngành hàng hoặc mức chiết khấu \\
+1 & \code{search_products} & Tìm kiếm lai chỉ mục đảo không dấu trên 3.081 SKU hợp lệ kèm lọc loại trừ \\
+2 & \code{get_product_detail} & Tra cứu chính xác giá, khuyến mãi, quy cách, vị trí kệ và đơn giá quy đổi \\
+3 & \code{compare_products} & So sánh song song giá bán, đơn giá chuẩn (Công thức~\ref{eq:unit_price}) và ưu đãi \\
+4 & \code{list_promotions} & Lọc 580 mã giảm giá danh mục và ưu tiên khuyến mãi FEFO đã duyệt từ \code{ops_bridge} \\
 5 & \code{rank_bestsellers} & Xếp hạng bán chạy 30 ngày từ \code{demo_sales.sqlite3} kèm nhãn bắt buộc \texttt{SIMULATED} \\
-6 & \code{assemble_budget_basket} & Lắp giỏ món ăn/combo theo nhóm món thỏa ràng buộc $\sum P(p) \le B$ \\
-7 & \code{manage_kiosk_cart} & Thêm/bớt/kiểm tra tổng tiền giỏ hàng phiên cục bộ (không ghi vào ERP) \\
+6 & \code{check_snapshot_stock} & Xếp hạng và tra cứu tồn kho snapshot 15/09/2026 hoặc tồn trực tiếp qua cầu nối \\
+7 & \code{assemble_budget_basket} & Lắp giỏ món ăn theo khuôn mẫu thỏa ràng buộc $\sum P(p) \le B$ \\
+8 & \code{ops_bridge_overlay} & Phủ tồn kho và giá giảm FEFO đã duyệt từ \texttt{ops\_chest} (fail-closed TTL 300\,s) \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\chapter{Danh mục 31 Công cụ, Quy tắc Hàng Tươi và Quản trị HITL của \texttt{ops\_chest}}
+\section*{A.2 Cấu hình Định tuyến LLM, Thị giác On-Demand và Chuỗi Âm thanh Hỗ trợ}
+\begin{itemize}
+    \item \textbf{Định tuyến LLM phân tầng:} Tuyến streaming nhanh ưu tiên Groq LPU (\code{qwen/qwen3.8-27b} $\to$ \code{openai/gpt-oss-20b/120b}, timeout 6\,s, cooldown HTTP~429 3.600\,s), tự động dự phòng về DeepSeek (\code{deepseek-v4.1-flash:free} $\to$ \code{deepseek-v4.1-flash-1017}); các ca JSON cấu trúc (dị ứng/y tế sâu) chạy trên DeepSeek; bộ đệm ngữ nghĩa Turn-1 có dung lượng 256 mục, TTL 300\,s, ngưỡng Jaccard $\ge 0{,}88$ (bỏ qua mọi câu hỏi y tế/dị ứng).
+    \item \textbf{Mô hình thị giác \texttt{MobileNetV3Large-224} TFLite:} Chưng cất từ \texttt{CLIP-ViT-B/32} (512-d) + \texttt{DINOv2-Small} (384-d) $\to$ SVD-256 (88,85\% phương sai); kích thước 7,04\,MB FP16 / 3,81\,MB INT8 + 1,58\,MB gallery 3.093 SKU; huấn luyện trên Kaggle (39,1 phút) với Direct Cosine ($w=6{,}0$), Relational ($w=3{,}0$), Sub-Center ArcFace ($K=3, w=0{,}35$) và SupCon ($w=0{,}50$); nạp trễ (\emph{lazy singleton}) theo yêu cầu tại \code{POST /agent/respond/image}.
+    \item \textbf{Giao diện âm thanh hỗ trợ và triển khai phần mềm:} Tầng giao diện web (Vue~3 + TypeScript) hỗ trợ hai chế độ triển khai: (i) Serverless trên Vercel vùng Singapore (\texttt{sin1}, \url{https://retail-ai-kiosk.vercel.app}) chạy Silero VAD~v6, khử nhiễu biên GTCRN WebAssembly SIMD (192,3\,KB), bảo toàn WebRTC AEC3 bằng \code{captureStream()} thụ động, cơ chế \emph{Speaker Echo Shield} và kết nối trực tiếp Azure Speech WSS (STT/TTS) bằng mã STS 10 phút (\code{/api/audio/azure-speech-token}) cùng phiên ký HMAC không trạng thái; và (ii) đóng gói Docker toàn phần một cổng (\code{Dockerfile} + \code{docker-compose.yml} + Redis~7) bổ sung nhánh WebSocket máy chủ \code{/audio/transcribe/stream}, \texttt{DPDFNet2} ONNX (9,77\,MB) và dự phòng ngoại tuyến \texttt{gipformer1.5-68M-rnnt} (69,8\,MB). Các tính năng nghiệp vụ sản phẩm bổ trợ (duyệt danh mục \code{/catalog-index.json}, giỏ hàng, thanh toán PayOS VietQR HMAC-SHA256 và thông báo Zalo Bot) thuộc phạm vi hoàn thiện phần mềm nguyên mẫu, không tính là đóng góp nghiên cứu AI.
+\end{itemize}
+
+\chapter{Danh mục 31 Công cụ và Kiến trúc HITL của \texttt{ops\_chest}}
 \label{app:ops_chest}
 
-\section*{B.1 Danh mục Đầy đủ 31 Công cụ Tác nhân (0 Công cụ Tự thực thi)}
-Trong \code{backend/app/agent/tools.py}~\cite{ops_chest_repo}, tác nhân Cửa hàng trưởng sở hữu đúng 31 công cụ có kiểu chặt chẽ chia thành 22 công cụ đọc/mở biểu mẫu và 9 công cụ tạo/sửa đề xuất (Bảng~\ref{tab:ops_tools}). Mọi thao tác thực thi trực tiếp ra bên ngoài (gửi email nhà cung cấp, cập nhật giá kệ, xuất hủy lô, gỡ bỏ SKU) đều bị loại bỏ hoàn toàn khỏi lược đồ LLM.
+\section*{B.1 Phân nhóm 31 Công cụ Tác nhân (0 Công cụ Tự thực thi)}
+Trong \code{backend/app/agent/tools.py}~\cite{ops_chest_repo}, tác nhân vận hành sở hữu đúng 31 công cụ có kiểu chặt chẽ chia thành 22 công cụ đọc/mở biểu mẫu và 9 công cụ tạo/sửa đề xuất (Bảng~\ref{tab:ops_tools}). Các tính năng mở rộng giao diện như biểu mẫu OCR nhãn hạn dùng, học thói quen chỉnh sửa (\code{edit_learning.py}) và ghi nhận giả thuyết (\code{hypotheses.py}) tồn tại ở mức nguyên mẫu phần mềm, chưa có thực nghiệm định lượng độc lập nên được ghi nhận tại phụ lục này thay vì mục đóng góp khoa học.
 
 \begin{table}[H]
 \centering
@@ -49,23 +58,19 @@ Trong \code{backend/app/agent/tools.py}~\cite{ops_chest_repo}, tác nhân Cửa 
 Đọc Kế hoạch, Kiểm toán \& Học hỏi & 6 & \code{preview_purchase_order}, \code{list_proposals}, \code{get_kpi_dashboard}, \code{list_hypotheses}, \code{get_edit_patterns}, \code{render_chart} \\
 Mở Biểu mẫu UI Nội tuyến & 5 & \code{open_receive_goods_form}, \code{open_stock_count_form}, \code{open_date_check_form}, \code{open_shelf_pull_form}, \code{open_ocr_label_scan} \\
 Tạo \& Sửa Đề xuất (HITL) & 9 & \code{propose_po}, \code{propose_markdown}, \code{propose_return}, \code{propose_dispose}, \code{propose_write_off}, \code{propose_delist}, \code{revise_proposal}, \code{propose_hypothesis}, \code{propose_adjustment} \\
-\textbf{Công cụ Tự thực thi} & \textbf{0} & \textit{Loại bỏ có chủ đích; thực thi bắt buộc qua API phê duyệt có xác thực của Quản lý} \\
+\textbf{Công cụ Tự thực thi} & \textbf{0} & \textit{Loại bỏ có chủ đích khỏi lược đồ LLM; thực thi bắt buộc qua phê duyệt Quản lý} \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section*{B.2 Máy Trạng thái Đề xuất HITL và Quy tắc Hàng Tươi sống}
-Mọi thay đổi nghiệp vụ được lưu bền vững trong PostgreSQL (bảng \code{proposals}) cùng nhật ký kiểm toán bất biến:
-\begin{itemize}
-    \item \textbf{Chuyển trạng thái:} \texttt{PENDING} $\to$ \texttt{APPROVED} $\to$ \texttt{EXECUTED} (gửi email đơn PO qua Mailpit/SMTP, cập nhật giá giảm cận hạn hoặc ghi sổ điều chỉnh tồn), hoặc \texttt{PENDING} $\to$ \texttt{REJECTED} / \texttt{REVISED}.
-    \item \textbf{Quy tắc bảo vệ nghiệp vụ:} Kiểm kê mù ẩn số tồn sổ sách khi nhân viên đếm thực tế; giá bán có biên lãi âm tự động báo cảnh báo; động cơ giảm giá FEFO chỉ giảm các lô có tồn dự kiến vượt cầu bán nguyên giá trước HSD; và \code{guard.py} chặn mọi con số không căn cứ ($\ge 1.000$) cũng như phát ngôn \code{FALSE_EXEC}.
-\end{itemize}
+\section*{B.2 Máy Trạng thái HITL và Ngăn xếp Phần mềm}
+Mọi đề xuất được lưu bền vững trong PostgreSQL (bảng \code{proposals}, SQLAlchemy + 6 Alembic migrations) theo vòng đời \texttt{PENDING} $\to$ \texttt{APPROVED} $\to$ \texttt{EXECUTED} (gửi email đơn đặt hàng qua Mailpit/SMTP hoặc cập nhật giá giảm FEFO) hoặc \texttt{REJECTED}/\texttt{REVISED}. Kiểm kê mù ẩn số tồn sổ sách khi đếm thực tế; giá có biên lãi âm tự động báo cảnh báo; lớp \code{guard.py} rà soát số liệu $\ge 1.000$ và phát hiện phát ngôn \code{FALSE_EXEC}.
 
-\chapter{Giao ước Tích hợp Liên Phân hệ và Lệnh Tái lập Kiểm chuẩn}
+\chapter{Giao ước Tích hợp Liên Agent và Tài liệu Tái lập Thực nghiệm}
 \label{app:integration}
 
-\section*{C.1 Giao ước API Chỉ đọc Liên kết \texttt{ops\_chest} và \texttt{Retail-AI-}}
-Để đồng bộ gợi ý mua sắm tại sàn bán hàng với trạng thái tồn kho hậu cần mà không phá vỡ ranh giới HITL, \texttt{Retail-AI-} tiêu thụ ba điểm cuối chỉ đọc do \texttt{ops\_chest} cung cấp (Bảng~\ref{tab:cross_contract}).
+\section*{C.1 Giao ước API Chỉ đọc và Hiện vật Đồng bộ Ba Kho Mã nguồn}
+Ba kho mã nguồn (\texttt{Retail-AI-}, \texttt{ops\_chest}, \texttt{ops-retail-bridge}) chia sẻ bảng ánh xạ \code{data/bridge/crosswalk.csv} (164 SKU) và giao ước ba điểm cuối chỉ đọc (Bảng~\ref{tab:cross_contract}), được hiện thực hóa tại \code{backend/services/ops_bridge.py} và kiểm thử đầu-cuối tại \code{tests/test_ops_bridge_e2e.py}.
 
 \begin{table}[H]
 \centering
@@ -74,19 +79,28 @@ Mọi thay đổi nghiệp vụ được lưu bền vững trong PostgreSQL (b�
 \footnotesize
 \begin{tabularx}{\textwidth}{L{4.8cm} L{2.8cm} Y}
 \toprule
-\textbf{Điểm cuối \texttt{ops\_chest}} & \textbf{Chiều dữ liệu} & \textbf{Ứng dụng tại Kiosk \texttt{Retail-AI-}} \\
+\textbf{Điểm cuối \texttt{ops\_chest}} & \textbf{Chiều dữ liệu} & \textbf{Vai trò tại \code{BridgedProductRepository}} \\
 \midrule
-\code{GET /api/inventory/items?sku=...} & \texttt{ops\_chest} $\to$ Kiosk & Ẩn các SKU đang hết hàng khỏi thẻ gợi ý và đề xuất mã thay thế còn kệ \\
-\code{GET /api/inventory/expiring} & \texttt{ops\_chest} $\to$ Kiosk & Đưa các lô giảm giá cận hạn FEFO đã được quản lý duyệt lên mục khuyến mãi \\
-\code{GET /api/inventory/summary} & \texttt{ops\_chest} $\to$ Kiosk & Cung cấp chỉ số tình trạng tươi mới và ưu đãi chi nhánh cho thanh trạng thái \\
+\code{GET /api/inventory/items?sku=...} & \texttt{ops\_chest} $\to$ Kiosk & Phủ tồn kho trực tiếp (\code{stock_is_current=True}); ẩn mã hết hàng khỏi gợi ý còn hàng \\
+\code{GET /api/inventory/expiring} & \texttt{ops\_chest} $\to$ Kiosk & Chỉ nhận giảm giá FEFO ở trạng thái \texttt{APPROVED}/\texttt{EXECUTED} (chặn \texttt{PENDING}) \\
+\code{GET /api/inventory/summary} & \texttt{ops\_chest} $\to$ Kiosk & Cung cấp mốc thời gian \code{as_of} để kiểm tra \code{freshness_ttl_seconds=300} (fail-closed) \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section*{C.2 Lệnh Tái lập Toàn bộ Kết quả Thực nghiệm}
-Mọi chỉ số định lượng trong Chương~5 có thể được tái lập độc lập bằng các lệnh kiểm chuẩn có sẵn trong hai kho mã nguồn:
+\section*{C.2 Danh sách Cửa hàng Kiểm định Chéo 2 Nếp và Thông số Tái lập}
 \begin{itemize}
-    \item \textbf{Kiểm thử Backend \& Giọng nói \texttt{Retail-AI-}:} \code{pytest tests/ -q} (hơn 2.900 ca; nhánh tư vấn/giọng nói 1.038 ca), \code{ruff check backend tests}, và kiểm định trực tiếp độ trễ SSE / WebSocket STT trên \code{127.0.0.1:8000}.
-    \item \textbf{Kiểm thử Frontend \texttt{Retail-AI-}:} \texttt{cd apps/kiosk-airi \&\& npx vitest run \&\& npm run build} (148/148 Vitest đạt, biên dịch TypeScript/Vite sạch lỗi).
-    \item \textbf{Kiểm thử Backend, Backtest \& Guard \texttt{ops\_chest}:} \code{pytest backend/tests/ -q} (20 bộ test), \code{python -m app.sim.frn_backtest} (backtest 50 cửa hàng FreshRetailNet-50K 2-fold CV), và kiểm toán \code{eval_failover.json} (20 lượt đo độ căn cứ).
+    \item \textbf{Phân chia 50 cửa hàng độc lập FreshRetailNet-50K (0\% trùng 848 cửa hàng train):}
+    \begin{itemize}
+        \item \emph{Fold~0 (25 cửa hàng):} 4, 18, 40, 48, 103, 114, 192, 223, 298, 303, 399, 407, 443, 449, 552, 620, 691, 713, 714, 753, 765, 766, 867, 869, 888.
+        \item \emph{Fold~1 (25 cửa hàng):} 104, 143, 193, 243, 245, 258, 264, 390, 415, 420, 432, 488, 494, 513, 532, 548, 583, 629, 663, 701, 710, 752, 786, 803, 879.
+        \item \emph{13 cửa hàng nhỏ ($\le 30$ SKU):} 114, 223, 407, 443, 629, 663, 691, 710, 752, 766, 786, 803, 869.
+    \end{itemize}
+    \item \textbf{Môi trường phần mềm \& mã băm dữ liệu:} Python~3.13.15, NumPy~2.5.4, Pandas~3.1.1, Matplotlib~3.11.2, FastAPI/Pydantic~v2, Pytest~9.1.1; mã băm SHA-256 của \code{data/thanh_lam_products.json} là \code{a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6}; mã băm chuẩn hóa LF là \code{8f2ee3771be548b85a8d8981127b2518b8e8e5868584491df36b96317476cbbc}; seed bootstrap/permutation cố định \code{seed=42} (20.000 mẫu bootstrap, 50.000 hoán vị).
+    \item \textbf{Lệnh tái lập toàn bộ kiểm thử và thực nghiệm:}
+    \begin{itemize}
+        \item \emph{Kiểm thử liên Agent E2E (\texttt{Retail-AI-}):} \code{pytest tests/test_ops_bridge_e2e.py -v} (2/2 kịch bản toàn tuyến đạt).
+        \item \emph{Kiểm thử phần mềm \texttt{Retail-AI-}:} \code{pytest tests/ -q} (3.044 ca trên 114 tệp, gồm 19/19 ca cổng dữ liệu sạch và 100/100 ca bán chạy/tồn kho), \code{ruff check backend tests}, và kiểm thử giao diện \code{npx vitest run} (178/178 ca).
+        \item \emph{Backtest \& kiểm thử \texttt{ops\_chest}:} \code{pytest backend/tests/ -q} (20 bộ), \code{python -m app.sim.frn_backtest} (50 cửa hàng 2-fold CV, 553\,s), và \code{eval_failover.json} (20 kịch bản).
+    \end{itemize}
 \end{itemize}
