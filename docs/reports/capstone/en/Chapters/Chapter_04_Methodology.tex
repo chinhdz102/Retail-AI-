@@ -22,7 +22,7 @@ In a Vietnamese supermarket managing 3,000+ dry/ambient SKUs alongside 150--300 
   \node[font=\bfseries\small, anchor=west, text=teal!70!black] (lbl2) at (-0.2, -0.35) {TO-BE: Coordinated Dual-Agent AI Platform (\texttt{Retail-AI-} $\leftrightarrow$ \texttt{ops\_chest})};
   \node[aiagent, text width=2.85cm] (t1) at (1.5, -1.45) {\textbf{Customer Agent}\\Zero-Planner Routing + Grounded Retrieval};
   \node[aiagent, text width=2.85cm, right=of t1] (t2) {\textbf{Demand Recovery}\\Hourly OOS profile + 29 tabular features};
-  \node[gatebox, text width=2.85cm, right=of t2] (t3) {\textbf{\texttt{B-Gate} Engine}\\LightGBM~v3/EWMA + Newsvendor--FEFO};
+  \node[gatebox, text width=2.95cm, right=of t2] (t3) {\textbf{\texttt{B-Gate} Engine}\\LightGBM~v3 / EWMA + Newsvendor--FEFO};
   \node[gatebox, text width=2.85cm, right=of t3] (t4) {\textbf{HITL Governance}\\Manager approval; +4.90\% simulated profit};
   \draw[flowarr] (t1) -- node[above, font=\scriptsize] {demand} (t2);
   \draw[flowarr] (t2) -- (t3);
@@ -47,8 +47,8 @@ Replacing implementation-centric software layer tables, Figure~\ref{fig:function
   \node[aiagent, text width=4.8cm, below=of c_gate] (c_tool) {\textbf{Deterministic Tools \& AI Models}\\Inverted Index (3,081 SKUs), Unit Price,\\2,205-SKU Knowledge, \texttt{MobileNetV3} TFLite,\\Streaming LLM / Bounded Planner};
   \node[procbox, draw=blue!65!black, fill=blue!10, text width=4.8cm, below=of c_tool] (c_dec) {\textbf{Customer Agent Decisions}\\Grounded Cards, Approved FEFO Price,\\OOS Suppression, Provenance Tags};
 
-  \node[gatebox, draw=purple!70!black, fill=purple!8, text width=3.5cm, right=0.85cm of c_gate, yshift=-0.95cm] (br_cw) {\textbf{Inter-Agent Bridge}\\(\texttt{ops-retail-bridge})\\\code{crosswalk.csv} (164 SKUs)\\\code{BridgedProductRepository}};
-  \node[procbox, draw=purple!60!black, fill=purple!4, text width=3.5cm, below=0.55cm of br_cw] (br_rule) {\textbf{Sync Policy}\\Read-only API (TTL 300\,s)\\\texttt{APPROVED/EXECUTED} only\\Fail-closed on stale/error};
+  \node[gatebox, draw=purple!70!black, fill=purple!8, text width=4.25cm, right=0.8cm of c_gate, yshift=-0.95cm] (br_cw) {\textbf{Inter-Agent Bridge}\\(\texttt{ops-retail-bridge})\\\code{crosswalk.csv} (164 SKUs)\\\code{BridgedProductRepository}};
+  \node[procbox, draw=purple!60!black, fill=purple!4, text width=4.25cm, below=0.55cm of br_cw] (br_rule) {\textbf{Sync Policy}\\Read-only API (TTL 300\,s)\\\texttt{APPROVED/EXECUTED} only\\Fail-closed on stale/error};
 
   \node[procbox, text width=4.8cm, right=0.85cm of br_cw, yshift=0.95cm] (o_in) {\textbf{Manager Inputs \& Logs}\\POS + Hourly OOS Logs (FRN-50K)\\Manager Queries / Daily Review};
   \node[aiagent, text width=4.8cm, below=of o_in] (o_ml) {\textbf{Forecasting \& Routing Models}\\OOS Recovery $\to$ 29 Features\\LightGBM~v3 (P10/P50/P90) vs.\ EWMA\\\textbf{Profit-Gated Router (\texttt{B-Gate})}};
@@ -81,7 +81,7 @@ Replacing implementation-centric software layer tables, Figure~\ref{fig:function
 \begin{tikzpicture}[node distance=0.6cm and 1.15cm]
   \node[procbox, text width=3.35cm] (u1) {Customer Query\\(Text / Speech / Photo)};
   \node[gatebox, text width=3.35cm, below=of u1] (u2) {Safety, Medical \& OWASP Gates ($<3$\,ms)};
-  \node[aiagent, text width=3.35cm, below=of u2] (u3) {Zero-Planner Router +\\\code{BridgedProductRepository}};
+  \node[aiagent, text width=4.15cm, below=of u2] (u3) {Zero-Planner Router +\\\code{BridgedProductRepository}};
   \node[procbox, text width=3.35cm, below=of u3] (u4) {Grounded Customer Reply\\(Approved FEFO Price, OOS Filter)};
 
   \node[procbox, draw=purple!65!black, fill=purple!8, text width=3.1cm, right=1.15cm of u2, yshift=-0.75cm] (db) {\textbf{Shared Bridge State}\\164-SKU \code{crosswalk.csv}\\Live Stock \& Approved\\FEFO Markdowns};
@@ -223,7 +223,7 @@ Environment \& Reproducibility & Kaggle CPU runner (\code{ops_chest/ml/kaggle/tr
 \toprule
 \textbf{Parameter / Threshold} & \textbf{Selected Value} & \textbf{Quantitative / Theoretical Justification} \\
 \midrule
-\texttt{B-Gate} store-size cut \& variance variant & \code{size_cut = 30}, \code{ewma_sigma} & 12-candidate grid search ($\{\text{sym}, \text{split}, \text{ewma\_sigma}\} \times \{\text{None}, 30, 50, 75\}$): global maximum profit objective \textbf{0.38984} at \code{ewma_sigma + size_cut=30} (vs.\ 0.30202 at None/50/75 and 0.17303 for \code{sym}) \\
+\texttt{B-Gate} store-size cut \& variance variant & \code{size_cut = 30}, \code{ewma_sigma} & 12-candidate grid search ($\{\text{sym}, \text{split}, \text{ewma\_sigma}\}$ $\times$ $\{\text{None}, 30, 50, 75\}$): global maximum profit objective \textbf{0.38984} at \code{ewma_sigma + size_cut=30} (vs.\ 0.30202 at None/50/75 and 0.17303 for \code{sym}) \\
 Newsvendor service-level floors ($SL_{\text{floor}}$) & 0.95 (traffic), 0.90 (ABC-A), 0.50 (other) & \code{no_floor} ablation on 20 FRN stores: removing floors flips profit from $+5.46\%$ to \textbf{$-0.54\%$} and spikes OOS from 14.44\% to \textbf{22.12\%} \\
 FRN unit scaling factor & $K = 10$ & Maps median SKU velocity from 0.85 to 8.51 units/day, cutting Poisson floor CV from 1.084 to 0.343 and limiting FEFO rounding error \\
 Speech SNR thresholds (\texttt{Retail-AI-}) & Bypass $\ge 28$\,dB; rescue $< 13$\,dB & Separates clean mics (avoiding double-filtering distortion; CPU drops 609\,ms $\to$ 30.9\,ms) from 12\,dB supermarket noise \\

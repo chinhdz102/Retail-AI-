@@ -22,7 +22,7 @@ Tại một cửa hàng bán lẻ hiện đại quản lý hơn 3.000 SKU đa ng
   \node[font=\bfseries\small, anchor=west, text=teal!70!black] (lbl2) at (-0.2, -0.35) {TO-BE: Hệ thống Tác nhân AI Kép Phối hợp (\texttt{Retail-AI-} $\leftrightarrow$ \texttt{ops\_chest})};
   \node[aiagent, text width=2.85cm] (t1) at (1.5, -1.45) {\textbf{Agent Khách hàng}\\Zero-Planner Routing + Truy xuất căn cứ};
   \node[aiagent, text width=2.85cm, right=of t1] (t2) {\textbf{Khôi phục Nhu cầu}\\Hồ sơ giờ OOS + 29 đặc trưng chuỗi};
-  \node[gatebox, text width=2.85cm, right=of t2] (t3) {\textbf{Động cơ \texttt{B-Gate}}\\LightGBM~v3/EWMA + Newsvendor--FEFO};
+  \node[gatebox, text width=2.95cm, right=of t2] (t3) {\textbf{Động cơ \texttt{B-Gate}}\\LightGBM~v3 / EWMA + Newsvendor--FEFO};
   \node[gatebox, text width=2.85cm, right=of t3] (t4) {\textbf{Quản trị HITL}\\Quản lý duyệt đề xuất; +4,90\% lãi mô phỏng};
   \draw[flowarr] (t1) -- node[above, font=\scriptsize] {nhu cầu} (t2);
   \draw[flowarr] (t2) -- (t3);
@@ -49,8 +49,8 @@ Thay cho bảng liệt kê thành phần phần mềm/giao diện, Hình~\ref{fi
   \node[procbox, draw=blue!65!black, fill=blue!10, text width=4.8cm, below=of c_tool] (c_dec) {\textbf{Quyết định Agent Khách hàng}\\Thẻ SKU căn cứ, Giá giảm FEFO,\\Ẩn mã hết hàng, Minh bạch nguồn};
 
   % Middle column: Inter-Agent Coordination Bridge
-  \node[gatebox, draw=purple!70!black, fill=purple!8, text width=3.5cm, right=0.85cm of c_gate, yshift=-0.95cm] (br_cw) {\textbf{Cầu nối Liên Agent}\\(\texttt{ops-retail-bridge})\\\code{crosswalk.csv} (164 SKU)\\\code{BridgedProductRepository}};
-  \node[procbox, draw=purple!60!black, fill=purple!4, text width=3.5cm, below=0.55cm of br_cw] (br_rule) {\textbf{Chính sách Đồng bộ}\\API chỉ đọc (TTL 300\,s)\\Chỉ nhận \texttt{APPROVED/EXECUTED}\\Fail-closed khi quá hạn/lỗi};
+  \node[gatebox, draw=purple!70!black, fill=purple!8, text width=4.25cm, right=0.8cm of c_gate, yshift=-0.95cm] (br_cw) {\textbf{Cầu nối Liên Agent}\\(\texttt{ops-retail-bridge})\\\code{crosswalk.csv} (164 SKU)\\\code{BridgedProductRepository}};
+  \node[procbox, draw=purple!60!black, fill=purple!4, text width=4.25cm, below=0.55cm of br_cw] (br_rule) {\textbf{Chính sách Đồng bộ}\\API chỉ đọc (TTL 300\,s)\\Chỉ nhận \texttt{APPROVED/EXECUTED}\\Fail-closed khi quá hạn/lỗi};
 
   % Right column: Operations AI Agent
   \node[procbox, text width=4.8cm, right=0.85cm of br_cw, yshift=0.95cm] (o_in) {\textbf{Dữ liệu \& Truy vấn Quản lý}\\POS + Cờ OOS theo giờ (FRN-50K)\\Yêu cầu quản lý / Rà soát ngày};
@@ -235,7 +235,7 @@ Môi trường \& Khả năng tái lập & Chạy trên Kaggle CPU (\code{ops_ch
 \toprule
 \textbf{Tham số / Ngưỡng} & \textbf{Giá trị Chọn} & \textbf{Cơ sở Lựa chọn Định lượng / Lý thuyết} \\
 \midrule
-Ngưỡng cỡ cửa hàng \& biến thể \texttt{B-Gate} & \code{size_cut = 30}, \code{ewma_sigma} & Tìm kiếm lưới 12 ứng viên ($\{\text{sym}, \text{split}, \text{ewma\_sigma}\} \times \{\text{None}, 30, 50, 75\}$): đạt cực đại hàm mục tiêu lợi nhuận \textbf{0,38984} tại \code{ewma_sigma + size_cut=30} (so với 0,30202 khi không cắt hoặc cắt 50/75, và 0,17303 ở \code{sym}) \\
+Ngưỡng cỡ cửa hàng \& biến thể \texttt{B-Gate} & \code{size_cut = 30}, \code{ewma_sigma} & Tìm kiếm lưới 12 ứng viên ($\{\text{sym}, \text{split}, \text{ewma\_sigma}\}$ $\times$ $\{\text{None}, 30, 50, 75\}$): đạt cực đại hàm mục tiêu lợi nhuận \textbf{0,38984} tại \code{ewma_sigma + size_cut=30} (so với 0,30202 khi không cắt hoặc cắt 50/75, và 0,17303 ở \code{sym}) \\
 Sàn mức phục vụ Newsvendor ($SL_{\text{floor}}$) & 0,95 (hút khách), 0,90 (ABC-A), 0,50 (khác) & Phân tích ablation \code{no_floor} trên 20 cửa hàng FRN: bỏ sàn làm lợi nhuận đảo từ $+5{,}46\%$ xuống \textbf{$-0{,}54\%$} và tỷ lệ OOS vọt từ 14,44\% lên \textbf{22,12\%} \\
 Hệ số quy đổi đơn vị FRN & $K = 10$ & Đưa trung vị cầu SKU từ 0,85 lên 8,51 đơn vị/ngày, giảm sàn $\text{CV}_{\text{Poisson}}$ từ 1,084 xuống 0,343 và tránh sai số làm tròn lô FEFO \\
 Ngưỡng SNR âm thanh (\texttt{Retail-AI-}) & Bỏ qua $\ge 28$\,dB; cứu hộ $< 13$\,dB & Phân tách mic sạch (tránh lọc chồng làm méo giọng, hạ chi phí CPU từ 609\,ms xuống 30,9\,ms) khỏi mức nhiễu siêu thị 12\,dB \\

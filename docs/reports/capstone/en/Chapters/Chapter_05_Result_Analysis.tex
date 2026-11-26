@@ -272,22 +272,22 @@ Baseline A (flat 30\% MD) & 0.00\% & --- & --- & --- & 5.33 & 14.49 & 8.69 \\
 \centering
 \caption{Store-size subgroup analysis (50 stores) and 8-scenario sensitivity analysis (20 FRN stores)}
 \label{tab:ops_subgroup_sensitivity}
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabularx}{\textwidth}{L{4.5cm} r r r r Y}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{L{3.55cm} c L{2.35cm} c c Y}
 \toprule
-\textbf{Subgroup / Sensitivity Scenario} & \textbf{Gain} & \textbf{95\% CI / Basis} & \textbf{Waste\%} & \textbf{OOS\%} & \textbf{Interpretation} \\
+\textbf{Subgroup / Scenario} & \textbf{Gain} & \textbf{95\% CI / Basis} & \textbf{Waste\%} & \textbf{OOS\%} & \textbf{Interpretation} \\
 \midrule
 \multicolumn{6}{l}{\textit{A. Store-Size Subgroups (\texttt{B-Gate} vs.\ \texttt{B-EWMA}, 2-fold CV)}} \\
-Large stores ($>30$ SKUs, $n=37$) & \textbf{+0.87\%} & $[+0.56,\,+1.26]$ ($p=1.3\times 10^{-5}$) & 4.82 & 14.46 & Wins 32/37 (86.5\%); primary driver of gain \\
-Small stores ($\le 30$ SKUs, $n=13$) & $-0.01\%$ & $[-0.33,\,+1.53]$ ($p=0.58$) & 6.94 & 12.14 & Neutralizes $-5.59\%$ \texttt{B-ML} loss; cuts waste vs.\ 7.42\% \\
+Large stores ($>30$ SKUs, $n=37$) & \textbf{+0.87\%} & $[+0.56,+1.26]$ ($p=1.3\cdot 10^{-5}$) & 4.82 & 14.46 & Wins 32/37 (86.5\%); primary driver of gain \\
+Small stores ($\le 30$ SKUs, $n=13$) & $-0.01\%$ & $[-0.33,+1.53]$ ($p=0.58$) & 6.94 & 12.14 & Neutralizes $-5.59\%$ \texttt{B-ML} loss; cuts waste vs.\ 7.42\% \\
 \midrule
 \multicolumn{6}{l}{\textit{B. 8-Scenario Sensitivity Analysis (vs.\ Baseline~A, 20 FRN stores)}} \\
-Reference (\code{reference}, 50\% elast.) & +5.46\% & Control baseline & 4.47 & 14.44 & Baseline for parameter stress tests \\
-Weaker MD response (\code{world_50} / \code{world_25}) & +4.69\% / +4.38\% & 25\% / 12.5\% assumed & 4.89 / 5.06 & 14.47 / 14.49 & Gains persist under weak markdown elasticity \\
-Order-only (\code{order_only}, no MD/return) & +4.73\% & Isolates ordering engine & 5.22 & 14.51 & 87\% of profit lift arises from replenishment alone \\
-Partial manager approval (\code{approve_80} / \code{60}) & +4.78\% / +3.76\% & 80\% / 60\% HITL rate & 4.81 / 5.03 & 14.60 / 14.42 & Robust under partial human override \\
-No service-level floor (\code{no_floor}) & \textbf{$-0.54\%$} & Floor ablation & 2.82 & \textbf{22.12} & Profit turns negative and OOS spikes without floors \\
+Reference (\code{reference}) & +5.46\% & 50\% elasticity & 4.47 & 14.44 & Control baseline for stress tests \\
+Weaker MD (\code{world_50/25}) & +4.69 / +4.38\% & 25\% / 12.5\% elast. & 4.89 / 5.06 & 14.47 / 14.49 & Gains persist under weak markdown elasticity \\
+Order-only (\code{order_only}) & +4.73\% & No MD/return & 5.22 & 14.51 & 87\% of profit lift arises from replenishment alone \\
+HITL rate (\code{approve_80/60}) & +4.78 / +3.76\% & 80\% / 60\% HITL & 4.81 / 5.03 & 14.60 / 14.42 & Robust under partial human approval \\
+No floor (\code{no_floor}) & \textbf{$-0.54\%$} & Floor ablation & 2.82 & \textbf{22.12} & Profit turns negative and OOS spikes without floors \\
 \bottomrule
 \end{tabularx}
 \end{table}

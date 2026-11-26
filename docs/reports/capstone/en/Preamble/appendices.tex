@@ -96,7 +96,7 @@ All three repositories (\texttt{Retail-AI-}, \texttt{ops\_chest}, \texttt{ops-re
         \item \emph{Fold~1 (25 stores):} 104, 143, 193, 243, 245, 258, 264, 390, 415, 420, 432, 488, 494, 513, 532, 548, 583, 629, 663, 701, 710, 752, 786, 803, 879.
         \item \emph{13 Small Stores ($\le 30$ SKUs):} 114, 223, 407, 443, 629, 663, 691, 710, 752, 766, 786, 803, 869.
     \end{itemize}
-    \item \textbf{Environment, dataset hashes, and random seeds:} Python~3.13.15, NumPy~2.5.4, Pandas~3.1.1, Matplotlib~3.11.2, FastAPI/Pydantic~v2, Pytest~9.1.1; SHA-256 of \code{data/thanh_lam_products.json}: \code{a0eb16ac1ae2557ea8c272c680a1f17d360934da6138585e09314df5d04f19d6}; canonical LF SHA-256: \code{8f2ee3771be548b85a8d8981127b2518b8e8e5868584491df36b96317476cbbc}; statistical testing seed \code{seed=42} (20,000 bootstrap resamples, 50,000 paired permutations).
+    \item \textbf{Environment, dataset hashes, and random seeds:} Python~3.13.15, NumPy~2.5.4, Pandas~3.1.1, Matplotlib~3.11.2, FastAPI/Pydantic~v2, Pytest~9.1.1; SHA-256 of \code{data/thanh_lam_products.json}: \texttt{\small a0eb16ac1ae2557e\allowbreak a8c272c680a1f17d\allowbreak 360934da6138585e\allowbreak 09314df5d04f19d6}; canonical LF SHA-256: \texttt{\small 8f2ee3771be548b8\allowbreak 5a8d8981127b2518\allowbreak b8e8e5868584491d\allowbreak f36b96317476cbbc}; statistical testing seed \code{seed=42} (20,000 bootstrap resamples, 50,000 paired permutations).
     \item \textbf{Reproducible verification commands:}
     \begin{itemize}
         \item \emph{Inter-agent E2E integration:} \code{pytest tests/test_ops_bridge_e2e.py -v} (2/2 suites passing).

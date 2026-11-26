@@ -272,22 +272,22 @@ Baseline A (giảm phẳng 30\%) & 0,00\% & --- & --- & --- & 5,33 & 14,49 & 8,6
 \centering
 \caption{Phân tách theo quy mô cửa hàng (50 cửa hàng) và Phân tích độ nhạy 8 kịch bản (20 cửa hàng FRN)}
 \label{tab:ops_subgroup_sensitivity}
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabularx}{\textwidth}{L{4.5cm} r r r r Y}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{L{3.55cm} c L{2.35cm} c c Y}
 \toprule
-\textbf{Phân nhóm / Kịch bản Độ nhạy} & \textbf{Lãi} & \textbf{95\% CI / So sánh} & \textbf{Hủy\%} & \textbf{OOS\%} & \textbf{Ý nghĩa Đánh giá} \\
+\textbf{Phân nhóm / Kịch bản} & \textbf{Lãi} & \textbf{95\% CI / Cơ sở} & \textbf{Hủy\%} & \textbf{OOS\%} & \textbf{Ý nghĩa Đánh giá} \\
 \midrule
 \multicolumn{6}{l}{\textit{A. Phân tách quy mô cửa hàng (\texttt{B-Gate} vs.\ \texttt{B-EWMA}, 2-fold CV)}} \\
-Cửa hàng lớn ($>30$ SKU, $n=37$) & \textbf{+0,87\%} & $[+0{,}56;\,+1{,}26]$ ($p=1{,}3\times 10^{-5}$) & 4,82 & 14,46 & Thắng 32/37 (86,5\%); động lực chính của lãi \\
-Cửa hàng nhỏ ($\le 30$ SKU, $n=13$) & $-0{,}01\%$ & $[-0{,}33;\,+1{,}53]$ ($p=0{,}58$) & 6,94 & 12,14 & Chặn lỗ $-5{,}59\%$ của \texttt{B-ML}; giảm hủy từ 7,42\% \\
+Cửa hàng lớn ($>30$ SKU, $n=37$) & \textbf{+0,87\%} & $[+0{,}56;+1{,}26]$ ($p=1{,}3\cdot 10^{-5}$) & 4,82 & 14,46 & Thắng 32/37 (86,5\%); động lực chính của lãi \\
+Cửa hàng nhỏ ($\le 30$ SKU, $n=13$) & $-0{,}01\%$ & $[-0{,}33;+1{,}53]$ ($p=0{,}58$) & 6,94 & 12,14 & Chặn lỗ $-5{,}59\%$ của \texttt{B-ML}; giảm hủy từ 7,42\% \\
 \midrule
 \multicolumn{6}{l}{\textit{B. Phân tích độ nhạy 8 kịch bản (vs.\ Baseline~A, 20 cửa hàng FRN)}} \\
-Tham chiếu (\code{reference}, 50\% co giãn) & +5,46\% & Chuẩn đối chứng & 4,47 & 14,44 & Cơ sở so sánh các nhiễu loạn tham số \\
-Phản ứng giảm giá yếu (\code{world_50} / \code{world_25}) & +4,69\% / +4,38\% & 25\% / 12,5\% giả định & 4,89 / 5,06 & 14,47 / 14,49 & Giữ vững lãi dương khi giảm giá kém hiệu quả \\
-Chỉ đặt hàng (\code{order_only}, tắt giảm giá/trả) & +4,73\% & Tách đóng góp đặt hàng & 5,22 & 14,51 & 87\% mức lãi đến trực tiếp từ đặt hàng tối ưu \\
-Tỷ lệ quản lý duyệt (\code{approve_80} / \code{approve_60}) & +4,78\% / +3,76\% & 80\% / 60\% duyệt HITL & 4,81 / 5,03 & 14,60 / 14,42 & Chịu được sự can thiệp thủ công của con người \\
-Bỏ sàn phục vụ (\code{no_floor}) & \textbf{$-0{,}54\%$} & Ablation sàn $SL_{\text{floor}}$ & 2,82 & \textbf{22,12} & Lỗ lợi nhuận và OOS tăng mạnh nếu bỏ sàn \\
+Tham chiếu (\code{reference}) & +5,46\% & 50\% co giãn & 4,47 & 14,44 & Chuẩn đối chứng cho các nhiễu loạn tham số \\
+Giảm giá yếu (\code{world_50/25}) & +4,69 / +4,38\% & 25\% / 12,5\% co giãn & 4,89 / 5,06 & 14,47 / 14,49 & Giữ vững lãi dương khi giảm giá kém hiệu quả \\
+Chỉ đặt hàng (\code{order_only}) & +4,73\% & Tắt giảm giá/trả & 5,22 & 14,51 & 87\% mức lãi đến trực tiếp từ đặt hàng tối ưu \\
+Duyệt HITL (\code{approve_80/60}) & +4,78 / +3,76\% & 80\% / 60\% duyệt & 4,81 / 5,03 & 14,60 / 14,42 & Chịu được sự can thiệp thủ công của quản lý \\
+Bỏ sàn phục vụ (\code{no_floor}) & \textbf{$-0{,}54\%$} & Bỏ sàn $SL_{\text{floor}}$ & 2,82 & \textbf{22,12} & Lỗ lợi nhuận và OOS tăng mạnh nếu bỏ sàn \\
 \bottomrule
 \end{tabularx}
 \end{table}
