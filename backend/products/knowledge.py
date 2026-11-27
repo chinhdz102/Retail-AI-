@@ -587,6 +587,75 @@ def product_knowledge_facts(
                     )
                 )
                 continue
+            if requested == "nutrition" and isinstance(retailer_record.get("nutrition"), dict) and retailer_record["nutrition"]:
+                nutr_source = (
+                    str(retailer_record.get("nutrition_source") or "").strip()
+                    or "OpenFoodFacts"
+                )
+                nutr_url = (
+                    str(retailer_record.get("nutrition_source_url") or "").strip()
+                    or str(retailer_record.get("source_url") or "").strip()
+                    or _safe_source_url(product)
+                )
+                result.append(
+                    ProductKnowledgeFact(
+                        product_id=product.product_id,
+                        attribute="nutrition",
+                        value=retailer_record["nutrition"],
+                        status=EvidenceStatus.VERIFIED,
+                        evidence_scope=EvidenceScope.RETAILER_LISTING,
+                        source=nutr_source,
+                        source_url=nutr_url,
+                        source_field="retailer.nutrition",
+                        observed_at=retailer_observed_at or product.data_timestamp,
+                        verified_at=retailer_observed_at or product.data_timestamp,
+                        catalog_version=version,
+                        evidence_version=f"thanh_lam-retailer-details-v1:{retailer_sha256}",
+                        product_match_scope="EXACT_VARIANT",
+                        confidence=0.85,
+                        note=(
+                            "Nutrition facts matched by EAN-13 barcode or verified listing; "
+                            "verify exact batch values on the physical package."
+                        ),
+                    )
+                )
+                continue
+            if requested == "calories" and isinstance(retailer_record.get("nutrition"), dict):
+                kcal = retailer_record["nutrition"].get("energy_kcal")
+                basis = str(retailer_record["nutrition"].get("basis") or "100g").strip()
+                if isinstance(kcal, (int, float)) and not isinstance(kcal, bool):
+                    nutr_source = (
+                        str(retailer_record.get("nutrition_source") or "").strip()
+                        or "OpenFoodFacts"
+                    )
+                    nutr_url = (
+                        str(retailer_record.get("nutrition_source_url") or "").strip()
+                        or str(retailer_record.get("source_url") or "").strip()
+                        or _safe_source_url(product)
+                    )
+                    result.append(
+                        ProductKnowledgeFact(
+                            product_id=product.product_id,
+                            attribute="calories",
+                            value={"energy_kcal": kcal, "basis": basis},
+                            status=EvidenceStatus.VERIFIED,
+                            evidence_scope=EvidenceScope.RETAILER_LISTING,
+                            source=nutr_source,
+                            source_url=nutr_url,
+                            source_field="retailer.nutrition.energy_kcal",
+                            observed_at=retailer_observed_at or product.data_timestamp,
+                            verified_at=retailer_observed_at or product.data_timestamp,
+                            catalog_version=version,
+                            evidence_version=f"thanh_lam-retailer-details-v1:{retailer_sha256}",
+                            product_match_scope="EXACT_VARIANT",
+                            confidence=0.85,
+                            note=(
+                                "Energy value matched by EAN-13 barcode or verified listing; "
+                                "verify exact batch values on the physical package."
+                            ),
+                        )
+                    )
+                    continue
             if requested == "description" and isinstance(retailer_record.get("summary"), str):
                 result.append(
                     ProductKnowledgeFact(

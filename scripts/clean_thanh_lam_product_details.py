@@ -689,8 +689,15 @@ def main() -> None:
         if summary_clean:
             entry["summary"] = summary_clean
             stats["summary"] += 1
+        if isinstance(rec.get("nutrition"), dict) and rec["nutrition"]:
+            entry["nutrition"] = rec["nutrition"]
+            stats["nutrition"] += 1
+            if rec.get("nutrition_source"):
+                entry["nutrition_source"] = rec["nutrition_source"]
+            if rec.get("nutrition_source_url"):
+                entry["nutrition_source_url"] = rec["nutrition_source_url"]
 
-        if any(k in entry for k in ("ingredients", "usage", "storage", "origin", "summary")):
+        if any(k in entry for k in ("ingredients", "usage", "storage", "origin", "summary", "nutrition")):
             cleaned_records[pid] = entry
 
     after_metrics = audit_dataset(cleaned_records)
@@ -703,8 +710,12 @@ def main() -> None:
         "schema_version": "1.0",
         "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "cleaned_pipeline": "hf-datatrove-openfoodfacts-sota-v1",
-        "source": payload.get("source", "Thanh Lam Mart Official Product Listing"),
+        "source": payload.get("source", "Thanh Lam Mart Product Catalog"),
         "source_catalog_sha256": payload["source_catalog_sha256"],
+        "source_catalog_canonical_sha256": payload.get(
+            "source_catalog_canonical_sha256",
+            payload["source_catalog_sha256"],
+        ),
         "total_catalog_products": payload["total_catalog_products"],
         "enriched_products": len(cleaned_records),
         "field_counts": dict(stats),

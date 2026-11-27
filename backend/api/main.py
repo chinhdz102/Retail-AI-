@@ -297,26 +297,30 @@ def _sign_session_token(
     kiosk_id: str,
     expires_at: datetime,
     current_settings: Settings | None = None,
+    *,
+    last_product_id: str | None = None,
 ) -> str | None:
     key = _serverless_hmac_secret(current_settings)
     if not key:
         return None
-    payload = {
+    payload: dict[str, Any] = {
         "sid": str(session_id),
         "kid": kiosk_id[:64],
         "exp": int(expires_at.timestamp()),
     }
+    if last_product_id:
+        payload["pid"] = str(last_product_id)[:64]
     raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     b64 = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
     sig = hmac.new(key.encode("utf-8"), b64.encode("ascii"), hashlib.sha256).hexdigest()[:32]
     return f"st1.{b64}.{sig}"
 
 
-def _verify_session_token(
+def _verify_session_token_with_context(
     token: str,
     expected_session_id: UUID,
     current_settings: Settings | None = None,
-) -> tuple[str, datetime] | None:
+) -> tuple[str, datetime, str | None] | None:
     if not token or not token.startswith("st1."):
         return None
     key = _serverless_hmac_secret(current_settings)
@@ -343,7 +347,19 @@ def _verify_session_token(
     if expires_at <= datetime.now(UTC):
         return None
     kiosk_id = str(data.get("kid") or "kiosk-01")[:64]
-    return kiosk_id, expires_at
+    raw_pid = str(data.get("pid") or "").strip()[:64] or None
+    return kiosk_id, expires_at, raw_pid
+
+
+def _verify_session_token(
+    token: str,
+    expected_session_id: UUID,
+    current_settings: Settings | None = None,
+) -> tuple[str, datetime] | None:
+    verified = _verify_session_token_with_context(token, expected_session_id, current_settings)
+    if verified is None:
+        return None
+    return verified[0], verified[1]
 
 
 def _is_streaming_stt_available() -> bool:
@@ -485,7 +501,7 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["*"],
-    expose_headers=["X-Request-ID", "X-Response-Time-Ms"],
+    expose_headers=["X-Request-ID", "X-Response-Time-Ms", "X-Kiosk-Session-Token"],
 )
 
 _RATE_LIMIT_WINDOW_SECONDS = 60.0
@@ -656,12 +672,28 @@ def _session_or_http_error(session_id: UUID):
             status_code=503, detail="Session store is temporarily unavailable"
         ) from exc
     except SessionNotFoundError as exc:
-        verified = _verify_session_token(_CURRENT_SESSION_TOKEN.get(), session_id)
+        verified = _verify_session_token_with_context(_CURRENT_SESSION_TOKEN.get(), session_id)
         rehydrate_fn = getattr(session_store, "rehydrate", None)
         if verified is not None and callable(rehydrate_fn):
-            kiosk_id, expires_at = verified
+            kiosk_id, expires_at, last_pid = verified
             try:
-                return rehydrate_fn(session_id, kiosk_id, expires_at)
+                rec = rehydrate_fn(session_id, kiosk_id, expires_at)
+                if last_pid:
+                    try:
+                        snap = get_product_repository().get_product_snapshot(last_pid)
+                        if snap is not None:
+                            session_store.set_last_grounded_product(
+                                session_id, snap.product_id, snap.name
+                            )
+                            rec = session_store.update_shopping(
+                                session_id,
+                                active_product_id=snap.product_id,
+                                active_category=snap.category,
+                                selected_product_ids=[snap.product_id],
+                            )
+                    except Exception:
+                        pass
+                return rec
             except SessionClosedError as closed_exc:
                 raise HTTPException(status_code=409, detail="Session is closed") from closed_exc
             except SessionExpiredError as exp_exc:
@@ -10411,7 +10443,8 @@ async def agent_respond(
 
             storage_repo = get_product_repository()
             stripped_storage_q = re.sub(
-                r"\b(?:huong dan bao quan|cach bao quan|bao quan|nhu the nao|the nao|"
+                r"\b(?:huong dan bao quan|cach bao quan|bao quan|huong dan su dung|"
+                r"cach su dung|cach dung|su dung|va|cua|nhu the nao|the nao|"
                 r"ra sao|sao|o dau|duoc khong|chai nay|hop nay|goi nay|loai nay|"
                 r"san pham nay|cai nay|cho minh hoi|cho toi hoi|cho tao hoi|hoi ve)\b",
                 " ",
@@ -10423,32 +10456,55 @@ async def agent_respond(
                 hits = storage_repo.search(stripped_storage_q, limit=3)
                 if hits:
                     storage_target = hits[0]
-            elif record.shopping.selected_product_ids:
+            if storage_target is None and record.last_grounded_product_id:
+                storage_target = storage_repo.get_product_snapshot(
+                    record.last_grounded_product_id
+                )
+            if storage_target is None and record.shopping.selected_product_ids:
                 storage_target = storage_repo.get_product_snapshot(
                     record.shopping.selected_product_ids[0]
                 )
             if storage_target is not None:
+                also_wants_usage = bool(
+                    _usage_dosage_question_requested(request.text)
+                    or re.search(r"\b(?:su dung|cach dung)\b", norm_storage_req)
+                )
+                req_attrs = ("usage", "storage") if also_wants_usage else ("storage",)
                 storage_facts = product_knowledge_facts(
                     storage_target,
-                    ("storage",),
+                    req_attrs,
                     source=storage_repo.source_name,
                 )
-                if (
-                    storage_facts
-                    and storage_facts[0].status.value == "VERIFIED"
-                    and isinstance(storage_facts[0].value, str)
-                    and storage_facts[0].value.strip()
-                ):
-                    sto_fact = storage_facts[0]
-                    sto_source = sto_fact.source or "thông tin sản phẩm Thanh Lam Mart"
+                verified_parts: list[str] = []
+                sto_sources: list[str] = []
+                for fact in storage_facts:
+                    if (
+                        fact.status.value == "VERIFIED"
+                        and isinstance(fact.value, str)
+                        and fact.value.strip()
+                    ):
+                        label = "Cách sử dụng" if fact.attribute == "usage" else "Bảo quản"
+                        val_txt = fact.value.strip().rstrip(".")
+                        verified_parts.append(f"{label}: {val_txt}.")
+                        if fact.source and fact.source not in sto_sources:
+                            sto_sources.append(fact.source)
+                if verified_parts:
+                    sto_source = ", ".join(sto_sources) if sto_sources else "thông tin sản phẩm Thanh Lam Mart"
                     sto_reply = (
                         f"Theo {sto_source}, với {storage_target.name}: "
-                        f"{sto_fact.value.strip()} Bạn xem thêm nhãn trên bao bì khi bảo quản nhé."
+                        + " ".join(verified_parts)
+                        + " Bạn xem thêm nhãn trên bao bì nhé."
+                    )
+                    session_store.set_last_grounded_product(
+                        request.session_id,
+                        storage_target.product_id,
+                        storage_target.name,
                     )
                     session_store.update_shopping(
                         request.session_id,
                         selected_product_ids=[storage_target.product_id],
                     )
+                    session_store.add_message(request.session_id, "user", request.text)
                     session_store.add_message(request.session_id, "assistant", sto_reply)
                     return AgentRespondResponse(
                         session_id=request.session_id,
@@ -11436,9 +11492,20 @@ async def agent_respond(
         knowledge_product_id = None
         knowledge_product_name = None
         used_product_search = False
+        stripped_attr_query = re.sub(
+            r"\b(?:co|bao nhieu|may|luong|ham luong|gam|g|gr|mg|ml|duong|calo|kcal|"
+            r"dam|protein|chat beo|beo|natri|muoi|caffeine|cafein|dinh duong|"
+            r"thanh phan|chinh|la gi|nhu the nao|the nao|ra sao|bao quan|huong dan|"
+            r"su dung|cach dung|xuat xu|o dau|cua nuoc nao|trong|nay|do|no|la|gi|va|khong)\b",
+            " ",
+            normalized_unsupported,
+        )
+        has_other_product_target = bool(" ".join(stripped_attr_query.split()))
         if record.last_grounded_product_id and record.last_grounded_product_name and (
             _contextual_product_reference_requested(request.text)
             or _text_mentions_product(request.text, record.last_grounded_product_name)
+            or not _has_specific_product_reference(request.text)
+            or not has_other_product_target
         ):
             knowledge_product_id = record.last_grounded_product_id
             knowledge_product_name = record.last_grounded_product_name
@@ -12951,7 +13018,22 @@ def _recommendation_preview_requested(text: str) -> bool:
 
 
 def _requested_snapshot_fields(text: str) -> tuple[str, ...]:
-    return _parse_snapshot_fields(text)
+    fields = _parse_snapshot_fields(text)
+    if "price_vnd" in fields:
+        norm = " ".join(_normalize_request_text(text).split())
+        asks_price_explicitly = bool(
+            re.search(r"\b(?:gia|tien|dong|vnd|price|cost|bao tien|may dong)\b", norm)
+        )
+        asks_nutrient_quantity = bool(
+            re.search(
+                r"\b(?:bao nhieu|may)\s+(?:gam|g|gr|mg|ml|calo|kcal)?\s*"
+                r"(?:duong|calo|kcal|dam|protein|chat beo|beo|natri|muoi|caffeine|cafein)\b",
+                norm,
+            )
+        )
+        if asks_nutrient_quantity and not asks_price_explicitly:
+            fields = tuple(f for f in fields if f != "price_vnd")
+    return fields
 
 
 def _requested_snapshot_fields_for_catalog(
@@ -15447,9 +15529,22 @@ def _explicit_product_knowledge_lookup_requested(text: str, record) -> bool:
     has_direct_fact_lookup = bool(
         set(snapshot_fields) & {"ingredients", "expiry_at", "stock"}
     )
-    if not (has_knowledge_attr or has_direct_fact_lookup):
+    has_storage_lookup = _storage_condition_requested(text)
+    if not (has_knowledge_attr or has_direct_fact_lookup or has_storage_lookup):
         return False
-    if record.last_grounded_product_id and _contextual_product_reference_requested(text):
+    if record.last_grounded_product_id and (
+        _contextual_product_reference_requested(text)
+        or not _has_specific_product_reference(text)
+        or has_storage_lookup
+        or bool(
+            re.search(
+                r"\b(?:bao nhieu|may)\s+(?:gam|g|gr|mg|ml|calo|kcal)?\s*"
+                r"(?:duong|calo|kcal|dam|protein|chat beo|beo|natri|muoi|caffeine|cafein)\b|"
+                r"\b(?:xuat xu|nguon goc|san xuat o dau|cua nuoc nao|made in|origin)\b",
+                norm_pk,
+            )
+        )
+    ):
         return True
     return bool(
         _has_specific_product_reference(text)
@@ -15500,7 +15595,7 @@ def _product_knowledge_attributes_requested(text: str) -> tuple[str, ...]:
     normalized_tokens = set(normalized.split())
     asks_about_sugar = bool(
         re.search(
-            r"\b(?:luong|ham luong|it|khong|co|bao nhieu)\s+(?:co\s+)?duong\b",
+            r"\b(?:luong|ham luong|it|khong|co|bao nhieu|may)\s+(?:co\s+)?(?:gam|g|gr|mg|ml)?\s*duong\b",
             normalized,
         )
         or re.search(r"\bduong\s+(?:huyet|an)\b", normalized)
@@ -15768,43 +15863,68 @@ def _manufacturer_declaration_value_text(
         labels_by_language = {
             "vi": {
                 "energy_kcal": "năng lượng",
+                "sugar_g": "đường",
                 "protein_g": "đạm",
                 "fat_g": "chất béo",
                 "carbohydrate_g": "carbohydrate",
-                "sugar_g": "đường",
+                "carbs_g": "carbohydrate",
+                "fiber_g": "chất xơ",
                 "sodium_mg_max": "natri tối đa",
+                "sodium_mg": "natri",
+                "salt_g": "muối",
             },
             "en": {
                 "energy_kcal": "energy",
+                "sugar_g": "sugar",
                 "protein_g": "protein",
                 "fat_g": "fat",
                 "carbohydrate_g": "carbohydrate",
-                "sugar_g": "sugar",
+                "carbs_g": "carbohydrate",
+                "fiber_g": "fiber",
                 "sodium_mg_max": "sodium (maximum)",
+                "sodium_mg": "sodium",
+                "salt_g": "salt",
             },
             "zh": {
                 "energy_kcal": "能量",
+                "sugar_g": "糖",
                 "protein_g": "蛋白质",
                 "fat_g": "脂肪",
                 "carbohydrate_g": "碳水化合物",
-                "sugar_g": "糖",
+                "carbs_g": "碳水化合物",
+                "fiber_g": "膳食纤维",
                 "sodium_mg_max": "钠（最高）",
+                "sodium_mg": "钠",
+                "salt_g": "盐",
             },
         }
         labels = labels_by_language[language]
         parts: list[str] = []
+        seen_labels: set[str] = set()
         for key, label in labels.items():
+            if label in seen_labels:
+                continue
             item = value.get(key)
             if not isinstance(item, (int, float)) or isinstance(item, bool):
                 continue
-            unit = "kcal" if key == "energy_kcal" else ("mg" if key == "sodium_mg_max" else "g")
+            seen_labels.add(label)
+            unit = (
+                "kcal"
+                if key == "energy_kcal"
+                else ("mg" if key in {"sodium_mg_max", "sodium_mg"} else "g")
+            )
             parts.append(f"{label} {item:g} {unit}")
         if parts:
             basis = str(value.get("basis") or "").strip()
-            if language == "vi" and basis.casefold() == "per 100 ml":
+            basis_cf = basis.casefold().replace(" ", "")
+            if language == "vi" and basis_cf in {"per100ml", "100ml"}:
                 basis_text = "trên 100 ml"
-            elif language == "zh" and basis.casefold() == "per 100 ml":
+            elif language == "vi" and basis_cf in {"per100g", "100g"}:
+                basis_text = "trên 100 g"
+            elif language == "zh" and basis_cf in {"per100ml", "100ml"}:
                 basis_text = "每 100 毫升"
+            elif language == "zh" and basis_cf in {"per100g", "100g"}:
+                basis_text = "每 100 克"
             else:
                 basis_text = basis
             return ", ".join(parts) + (f" ({basis_text})" if basis_text else "")
@@ -15976,6 +16096,7 @@ def _unsupported_catalog_attribute_requested(text: str, *, include_audience: boo
         )
         or "dinh duong" in normalized
         or "bao nhieu duong" in normalized
+        or bool(re.search(r"\b(?:bao nhieu|may)\s+(?:gam|g|gr|mg|ml)?\s*duong\b", normalized))
         or "luong duong" in normalized
         or "sugar content" in normalized
         or "co duong khong" in normalized

@@ -92,7 +92,16 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 45_000):
       throw new ApiError(detail, response.status)
     }
 
-    return await response.json() as T
+    const refreshedToken = response.headers.get('X-Kiosk-Session-Token')
+    if (refreshedToken) {
+      activeSessionToken = refreshedToken
+    }
+    const payload = await response.json() as T
+    if (refreshedToken && payload && typeof payload === 'object' && 'session_id' in payload) {
+      const sid = String((payload as Record<string, unknown>).session_id ?? '')
+      if (sid) sessionTokens.set(sid, refreshedToken)
+    }
+    return payload
   } catch (error) {
     if (timed.didTimeout()) throw new Error('Kết nối phản hồi quá lâu. Bạn thử lại giúp mình nhé.')
     throw error

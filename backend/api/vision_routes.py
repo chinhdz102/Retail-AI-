@@ -13,7 +13,7 @@ from time import perf_counter
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
 
 from backend.services.product_vision import (
     ALLOWED_IMAGE_CONTENT_TYPES,
@@ -46,6 +46,7 @@ def get_product_vision_service(settings=None) -> ProductVisionService:
 
 @router.post("/agent/respond/image")
 async def respond_to_product_image(
+    response: Response,
     session_id: str = Form(...),
     file: UploadFile = File(...),
     message: str = Form(""),
@@ -216,6 +217,15 @@ async def respond_to_product_image(
             selected_product_ids=list(all_shown_ids),
             seen_product_ids=seen_ids,
         )
+        refreshed_token = api_main._sign_session_token(
+            parsed_session_id,
+            current_rec.kiosk_id,
+            current_rec.expires_at,
+            settings,
+            last_product_id=top.product_id,
+        )
+        if refreshed_token:
+            response.headers["X-Kiosk-Session-Token"] = refreshed_token
 
     elapsed_ms = round((perf_counter() - started) * 1000.0, 1)
     lat = recognition.latency_ms or {}
