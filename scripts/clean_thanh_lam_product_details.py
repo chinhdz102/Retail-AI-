@@ -45,10 +45,35 @@ _CROSS_FIELD_SPLIT_RE = re.compile(
     r"(?i)\b(?:hướng dẫn sử dụng(?:\s+và\s+bảo quản)?|hướng dẫn bảo quản|"
     r"cách(?:\s+sử)?\s+dụng|cách dùng|bảo quản(?:\s+nơi|\s+lạnh|\s*:)|"
     r"ngày sản xuất|hạn sử dụng|năng lượng\s*:|số lượng\s*:|quy cách\s*:|"
-    r"khối lượng\s*:|dung tích\s*:|xuất xứ\s*:|thương hiệu\s*:|lưu ý\s*:|"
+    r"khối lượng\s*:|thể tích\s*:|dung tích\s*:|xuất xứ\s*:|thương hiệu\s*:|lưu ý\s*:|"
     r"cảnh báo\s*:|đối tượng sử dụng\s*:|chiều cao\s*:|độ dày[^:]{0,20}:|"
     r"công suất\s*:|kích thước\s*:|trọng lượng\s*:|màu sắc\s*:|bảo hành\s*:|"
     r"chế độ nấu\s*:|chương trình nấu\s*:)\s*[:：]?"
+)
+
+_NAV_OR_REVIEW_JUNK_RE = re.compile(
+    r"(?:Mẹo\s+vặt\s+Quà\s+tặng|Phong\s+thủy\s+văn\s+phòng|Trang\s+chủ\s+|"
+    r"Giao\s+hàng\s+nhanh|Đóng\s+gói\s+khá\s+cẩn\s+thận|\b\d{2}\.\d{2}\.20\d{2}\b)",
+    re.IGNORECASE,
+)
+_UI_CHROME_TAIL_RE = re.compile(
+    r"(?:\s*\.?\s*)?(?:Xem\s+thêm(?:\s+Video\s+sản\s+phẩm)?(?:\s+Loading\.?)?.*|"
+    r"Loading\.\s*Thông\s+tin\s+bổ\s+ích.*)$",
+    re.IGNORECASE,
+)
+_BROKEN_HEADING_PREFIX_RE = re.compile(
+    r"^(?:và\s+(?:lưu\s+ý(?:\s+(?:về|khi)\s+(?:sử\s+dụng|dùng)[^.:]{0,70})?|"
+    r"sử\s+dụng|cách\s+bảo\s+quản|bảo\s+quản)|"
+    r"với\s+điều\s+kiện|sản\s+phẩm\s*:|giấy\s+đúng\s+cách\s*:)\s*[:.\-–—]?\s*",
+    re.IGNORECASE,
+)
+_MARKETING_FEEL_ING_RE = re.compile(
+    r"(?:đem\s+đến\s+cảm\s+giác|mang\s+đến\s+cảm\s+giác)",
+    re.IGNORECASE,
+)
+_STALE_PROMO_SUMMARY_RE = re.compile(
+    r"^(?:⚠️\s*Lưu\s+ý|Từ\s+\d{2}/\d{2}\s*-\s*\d{2}/\d{2}/20\d{2})",
+    re.IGNORECASE,
 )
 
 # Action verbs that frequently start a new HTML <li> bullet in Vietnamese usage/storage guides.
@@ -359,6 +384,10 @@ def clean_ingredients(
         return None, bleed
 
     s = normalize_typography(raw_ing)
+    if _NAV_OR_REVIEW_JUNK_RE.search(s) or _MARKETING_FEEL_ING_RE.search(s):
+        return None, bleed
+    s = _UI_CHROME_TAIL_RE.sub("", s).strip()
+    s = re.sub(r"\.\s*Ưu\s+điểm\b.*$", "", s, flags=re.IGNORECASE).strip()
     # Quarantine exotic scripts / OpenFoodFacts OCR gibberish (HF FineWeb-2 script filter).
     if _EXOTIC_SCRIPT_RE.search(s):
         return None, bleed
@@ -511,8 +540,13 @@ def clean_usage(raw_usage: str, product_name: str) -> tuple[str | None, str | No
     if not raw_usage:
         return None, None
     s = normalize_typography(raw_usage)
+    if _NAV_OR_REVIEW_JUNK_RE.search(s):
+        return None, None
+    s = _UI_CHROME_TAIL_RE.sub("", s).strip()
     s = strip_title_echo(s, product_name)
-    s = _LEADING_LABEL_RE.sub("", s).strip()
+    for _ in range(2):
+        s = _LEADING_LABEL_RE.sub("", s).strip()
+        s = _BROKEN_HEADING_PREFIX_RE.sub("", s).strip()
     if not s or len(s) < 8 or _PLACEHOLDER_ING_RE.search(s):
         return None, None
 
@@ -552,8 +586,14 @@ def clean_storage(raw_storage: str, product_name: str) -> str | None:
     if not raw_storage:
         return None
     s = normalize_typography(raw_storage)
+    if _NAV_OR_REVIEW_JUNK_RE.search(s):
+        return None
+    s = _UI_CHROME_TAIL_RE.sub("", s).strip()
     s = strip_title_echo(s, product_name)
-    s = _LEADING_LABEL_RE.sub("", s).strip()
+    for _ in range(2):
+        s = _LEADING_LABEL_RE.sub("", s).strip()
+        s = _BROKEN_HEADING_PREFIX_RE.sub("", s).strip()
+    s = re.sub(r"^sản\s+phẩm\s+(?=(?:ở|nơi)\s+)", "Bảo quản sản phẩm ", s, flags=re.IGNORECASE)
     if not s or len(s) < 6 or _PLACEHOLDER_ING_RE.search(s):
         return None
     if not _VALID_STORAGE_CUE_RE.search(s):
@@ -561,7 +601,19 @@ def clean_storage(raw_storage: str, product_name: str) -> str | None:
 
     # Restore clipped "Bảo quản " prefix when section splitter consumed the verb.
     low = s.casefold()
-    if low.startswith(("nơi khô", "khô ráo", "lạnh ", "ở nhiệt độ", "trong tủ", "tránh ánh", "ngăn mát", "ngăn đông")):
+    if low.startswith((
+        "nơi khô",
+        "khô ráo",
+        "ở nơi",
+        "để nơi",
+        "đậy kín",
+        "lạnh ",
+        "ở nhiệt độ",
+        "trong tủ",
+        "tránh ánh",
+        "ngăn mát",
+        "ngăn đông",
+    )):
         s = "Bảo quản " + s
 
     s = _TRAILING_NON_SECTION_RE.sub("", s).strip(" .,:;-–—")
@@ -658,6 +710,8 @@ def clean_summary(raw_summary: str, product_name: str) -> str | None:
     if not raw_summary:
         return None
     s = normalize_typography(raw_summary)
+    if _STALE_PROMO_SUMMARY_RE.search(s) or _NAV_OR_REVIEW_JUNK_RE.search(s):
+        return None
     s = strip_title_echo(s, product_name)
     if not s or len(s) < 20:
         return None
@@ -761,6 +815,11 @@ def main() -> None:
 
         origin_clean = clean_origin(str(rec.get("origin") or ""))
 
+        def _norm_src(val: Any) -> Any:
+            if isinstance(val, str) and val.strip() == "thông tin sản phẩm Nhà thuốc Long Châu":
+                return "thông tin sản phẩm (Nhà thuốc Long Châu)"
+            return val
+
         entry: dict[str, Any] = {
             "product_name": pname,
             "brand": rec.get("brand", ""),
@@ -771,7 +830,7 @@ def main() -> None:
             entry["ingredients"] = ing_clean
             stats["ingredients"] += 1
             if ing_source:
-                entry["ingredients_source"] = ing_source
+                entry["ingredients_source"] = _norm_src(ing_source)
             if rec.get("ingredients_source_url"):
                 entry["ingredients_source_url"] = rec["ingredients_source_url"]
             if rec.get("ingredients_match_method"):
@@ -780,21 +839,21 @@ def main() -> None:
             entry["usage"] = usage_clean
             stats["usage"] += 1
             if rec.get("usage_source"):
-                entry["usage_source"] = rec["usage_source"]
+                entry["usage_source"] = _norm_src(rec["usage_source"])
             if rec.get("usage_source_url"):
                 entry["usage_source_url"] = rec["usage_source_url"]
         if storage_clean:
             entry["storage"] = storage_clean
             stats["storage"] += 1
             if rec.get("storage_source"):
-                entry["storage_source"] = rec["storage_source"]
+                entry["storage_source"] = _norm_src(rec["storage_source"])
             if rec.get("storage_source_url"):
                 entry["storage_source_url"] = rec["storage_source_url"]
         if origin_clean:
             entry["origin"] = origin_clean
             stats["origin"] += 1
             if rec.get("origin_source"):
-                entry["origin_source"] = rec["origin_source"]
+                entry["origin_source"] = _norm_src(rec["origin_source"])
             if rec.get("origin_source_url"):
                 entry["origin_source_url"] = rec["origin_source_url"]
         if summary_clean:
@@ -804,7 +863,7 @@ def main() -> None:
             entry["nutrition"] = rec["nutrition"]
             stats["nutrition"] += 1
             if rec.get("nutrition_source"):
-                entry["nutrition_source"] = rec["nutrition_source"]
+                entry["nutrition_source"] = _norm_src(rec["nutrition_source"])
             if rec.get("nutrition_source_url"):
                 entry["nutrition_source_url"] = rec["nutrition_source_url"]
 

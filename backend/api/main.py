@@ -2426,6 +2426,33 @@ def _non_supermarket_out_of_catalog_requested(text: str) -> bool:
     )
     if pet_food_requested:
         return True
+    ooc_normalized = normalized
+    storage_fridge_context = bool(
+        re.search(
+            r"\b(?:de|cat|bo|giu|bao\s+quan|cho\s+vao|can\s+de|phai\s+de|"
+            r"de\s+vao|de\s+trong|ngoai|trong|ngan\s+mat|ngan\s+da)\s+"
+            r"(?:o\s+)?(?:trong\s+)?tu\s+lanh\b|"
+            r"\btu\s+lanh\s+(?:duoc\s+khong|khong|bao\s+lau)\b",
+            normalized,
+        )
+        and not re.search(r"\b(?:co\s+ban|mua|gia|tim\s+mua|ban)\s+(?:may\s+)?tu\s+lanh\b", normalized)
+    )
+    if storage_fridge_context:
+        ooc_normalized = re.sub(r"\btu\s+lanh\b", " ", ooc_normalized)
+    cooking_airfryer_context = bool(
+        re.search(
+            r"\b(?:chien|nuong|quay|lam|ham|nau|che\s+bien|bo\s+vao|cho\s+vao)"
+            r"\b.{0,25}\bnoi\s+chien\s+khong\s+dau\b|"
+            r"\bnoi\s+chien\s+khong\s+dau\s+(?:duoc\s+khong|bao\s+lau|nhiet\s+do|may\s+phut)\b",
+            normalized,
+        )
+        and not re.search(
+            r"\b(?:co\s+ban|mua|gia|tim\s+mua)\b.{0,30}\bnoi\s+chien\s+khong\s+dau\b",
+            normalized,
+        )
+    )
+    if cooking_airfryer_context:
+        ooc_normalized = re.sub(r"\bnoi\s+chien\s+khong\s+dau\b", " ", ooc_normalized)
     return bool(
         re.search(
             r"\b(?:iphone|macbook|ipad|samsung galaxy|dien thoai|smartphone|laptop|"
@@ -2436,7 +2463,7 @@ def _non_supermarket_out_of_catalog_requested(text: str) -> bool:
             r"ve may bay|ve tau|dat phong khach san|tour du lich|"
             r"may loc khong khi|may dieu hoa|dieu hoa nhiet do|may lanh|tu lanh|"
             r"noi chien khong dau)\b",
-            normalized,
+            ooc_normalized,
         )
     )
 
@@ -3306,6 +3333,7 @@ def _ranking_metric(text: str) -> str:
             r"luot ban (?:cao|nhieu) (?:nhat|nhut)|"
             r"ban dat hang|dat hang|dat khach|chay hang|mua nhieu|"
             r"nhieu nguoi mua|hot nhat|top seller|"
+            r"(?:cai|loai|mon|mau|san pham|sp|hang)\s+nao\s+(?:dang\s+)?chay\s+nhat|"
             r"bestseller|best seller|best selling|most popular|top selling)\b",
             normalized,
         )
@@ -7962,8 +7990,86 @@ async def _handle_product_comparison(
     record,
     queries: tuple[str, str] | None,
     metric: str | None,
+    settings: Settings | None = None,
 ) -> AgentRespondResponse:
     unsupported_dimension = unsupported_comparison_dimension(request.text)
+    if unsupported_dimension == "popularity":
+        sales_settings = settings or get_settings()
+        sales_repo_cmp = get_product_repository(sales_settings)
+        cmp_counts, cmp_sources, cmp_mode = _resolve_active_sales(sales_settings, sales_repo_cmp)
+        if cmp_counts:
+            cmp_candidates: list[ProductSnapshot] = []
+            if queries is not None:
+                for q in queries:
+                    obs = await lookup_product_candidates(q)
+                    if obs.products:
+                        ranked_hits = sorted(
+                            obs.products,
+                            key=lambda p: (-(cmp_counts.get(p.product_id, 0)), p.product_id),
+                        )
+                        cmp_candidates.append(ranked_hits[0])
+            elif len(record.shopping.comparison_product_ids) == 2:
+                loaded = await _comparison_snapshots_by_ids(record.shopping.comparison_product_ids)
+                if loaded:
+                    cmp_candidates = list(loaded)
+            elif len(record.shopping.selected_product_ids) >= 2:
+                cmp_candidates = [
+                    p
+                    for pid in record.shopping.selected_product_ids[:5]
+                    if (p := sales_repo_cmp.get_product_snapshot(pid)) is not None
+                ]
+            cmp_candidates = [p for p in cmp_candidates if p.product_id in cmp_counts]
+            if len(cmp_candidates) >= 2:
+                cmp_candidates.sort(key=lambda p: (-(cmp_counts.get(p.product_id, 0)), p.product_id))
+                is_sim = (cmp_mode or "SIMULATED") == "SIMULATED"
+                if request.language == "en":
+                    prefix = (
+                        "Based on simulated 30-day demo sales"
+                        if is_sim
+                        else "Based on the last 30 days of sales"
+                    )
+                    summary_parts = "; ".join(
+                        f"{p.name} ({cmp_counts[p.product_id]} units/30d, {_comparison_price(p.price_vnd, request.language)})"
+                        for p in cmp_candidates
+                    )
+                    cmp_reply = (
+                        f"{prefix}, {cmp_candidates[0].name} sells best: {summary_parts}."
+                    )
+                elif request.language == "zh":
+                    prefix = "根据近30天演示销量数据" if is_sim else "根据近30天销量数据"
+                    summary_parts = "；".join(
+                        f"{p.name}（{cmp_counts[p.product_id]}件）" for p in cmp_candidates
+                    )
+                    cmp_reply = f"{prefix}，{cmp_candidates[0].name}销量更高：{summary_parts}。"
+                else:
+                    prefix = (
+                        "Theo số liệu bán mô phỏng (demo 30 ngày)"
+                        if is_sim
+                        else "Theo số liệu bán 30 ngày gần nhất"
+                    )
+                    parts = [
+                        f"{p.name} ({cmp_counts[p.product_id]} sản phẩm/30 ngày, giá {_format_vnd(p.price_vnd)})"
+                        for p in cmp_candidates
+                    ]
+                    if cmp_counts[cmp_candidates[0].product_id] == cmp_counts[cmp_candidates[1].product_id]:
+                        verdict = "Các mẫu này hiện có lượt bán ngang nhau."
+                    else:
+                        verdict = f"Trong nhóm này, {cmp_candidates[0].name} bán chạy hơn."
+                    cmp_reply = f"{prefix}: " + " và ".join(parts[:2]) + f". {verdict}"
+                cmp_resp = _record_shopping_turn(
+                    request,
+                    cmp_reply,
+                    model="demo-sales",
+                    tools_used=["compare_products"],
+                    products=cmp_candidates[:2],
+                )
+                for card in cmp_resp.products:
+                    if card.product_id in cmp_counts:
+                        card.demo_units_sold_30d = cmp_counts[card.product_id]
+                        card.sales_data_source = cmp_sources.get(
+                            card.product_id, cmp_mode or "SIMULATED"
+                        )
+                return cmp_resp
     if unsupported_dimension is not None:
         return _record_shopping_turn(
             request,
@@ -8674,7 +8780,12 @@ async def agent_respond(
             model="local-ooc-gate",
             products=[],
         )
-    if _unverified_origin_question_requested(request.text):
+    if (
+        _unverified_origin_question_requested(request.text)
+        and not _has_specific_product_reference(request.text)
+        and not record.last_grounded_product_id
+        and not record.shopping.selected_product_ids
+    ):
         return _record_shopping_turn(
             request,
             _localized_origin_unavailable(request.language),
@@ -9825,15 +9936,26 @@ async def agent_respond(
                     return cmp_response
 
     comparison_queries = parse_comparison_queries(request.text, catalog_hierarchies)
-    if not mission_preemption_requested and (
+    _cmp_dim = unsupported_comparison_dimension(request.text)
+    _can_compare_pop_context = bool(
         comparison_queries is not None
-        or is_comparison_request(request.text, catalog_hierarchies)
+        or len(record.shopping.comparison_product_ids) == 2
+        or _cmp_dim != "popularity"
+    )
+    if (
+        not mission_preemption_requested
+        and _can_compare_pop_context
+        and (
+            comparison_queries is not None
+            or is_comparison_request(request.text, catalog_hierarchies)
+        )
     ):
         return await _handle_product_comparison(
             request,
             record,
             comparison_queries,
             comparison_metric(request.text),
+            settings=settings,
         )
 
     if (
@@ -10018,17 +10140,36 @@ async def agent_respond(
         include_stock_in_sales = bool(
             re.search(r"\b(?:con hang|ton kho|trong kho|con bao nhieu)\b", norm_sales_req)
         )
-        sales_category = explicit_catalog_category or sales_structured_query.product_type
+        sales_category = (
+            sales_structured_query.product_type
+            if (
+                sales_structured_query.product_type
+                and explicit_catalog_category in {None, "meal", "drink", "snack", "dairy"}
+            )
+            else (explicit_catalog_category or sales_structured_query.product_type)
+        )
+        if not sales_category:
+            if re.search(r"\b(?:nuoc\s+suoi|nuoc\s+loc|nuoc\s+tinh\s+khiet)\b", norm_sales_req):
+                sales_category = "Nước tinh khiết"
+            elif re.search(r"\bnuoc\s+khoang\b", norm_sales_req):
+                sales_category = "Nước khoáng"
+            elif re.search(r"\bsua\s+cho\s+be\b", norm_sales_req):
+                sales_category = "dairy"
+            elif re.search(r"\bbanh\b", norm_sales_req) and not re.search(
+                r"\bbanh\s+(?:trang|mi|cuon|xeo)\b", norm_sales_req
+            ):
+                sales_category = "Bánh"
         # Strip ranking wrappers and ask our 0.3ms semantic NLP router for synonym categories
         # like "kẹo cao su" -> "Kẹo gum" or "đồ ăn vặt" -> "Snack".
         stripped_for_route = re.sub(
-            r"\b(?:top\s+\d+|bán\s+chạy(?:\s+nhất)?|đắt\s+khách(?:\s+nhất)?|"
+            r"\b(?:top\s+\d+|bán\s+chạy(?:\s+nhất)?|chạy\s+nhất|đắt\s+khách(?:\s+nhất)?|"
             r"nhiều\s+người\s+mua(?:\s+nhất)?|lượt\s+bán\s+cao\s+nhất|hot\s+nhất|"
             r"best\s*seller|còn\s+hàng(?:\s+không)?|tồn\s+kho(?:\s+bao\s+nhiêu)?|"
             r"dưới\s+\d+[.,\d]*\s*(?:k|đ|đồng|nghìn|ngàn|vnd)?|"
             r"không\s+quá\s+\d+[.,\d]*\s*(?:k|đ|đồng|nghìn|ngàn|vnd)?|"
             r"vừa\s+rẻ|và\s+giá\s+bao\s+nhiêu|giá\s+bao\s+nhiêu|"
-            r"cửa\s+hàng|siêu\s+thị|ở\s+đây|hiện\s+nay|mặt\s+hàng|sản\s+phẩm)\b",
+            r"cửa\s+hàng|siêu\s+thị|ở\s+đây|bên\s+mình|hiện\s+nay|mặt\s+hàng|sản\s+phẩm|"
+            r"sp|mẫu|loại|món|cái|nào|đang|vậy|nhỉ)\b",
             " ",
             sales_norm_text,
             flags=re.IGNORECASE,
@@ -10042,23 +10183,33 @@ async def agent_respond(
             rt_sales = route_query(stripped_for_route, min_confidence=0.45)
             if rt_sales is not None:
                 sales_category = rt_sales.categories[0]
+        explicit_storewide_cue = bool(
+            re.search(r"\b(?:cua hang|sieu thi|o day|toan bo|ben minh)\b", norm_sales_req)
+            or re.fullmatch(
+                r"(?:san pham|sp|mat hang|hang)\s+nao\s+(?:dang\s+)?(?:ban\s+)?chay\s+nhat.*",
+                norm_sales_req,
+            )
+        )
         selected_ids = (
             tuple(record.shopping.selected_product_ids)
             if not sales_category
             and not sales_structured_query.brand_preference
             and len(record.shopping.selected_product_ids) > 1
-            and not re.search(
-                r"\b(?:cua hang|sieu thi|o day|toan bo)\b", norm_sales_req
-            )
+            and not explicit_storewide_cue
             else ()
         )
         if (
             not sales_category
             and not selected_ids
             and not sales_structured_query.brand_preference
-            and not re.search(r"\b(?:cua hang|sieu thi|o day|toan bo)\b", norm_sales_req)
+            and not explicit_storewide_cue
         ):
             sales_category = record.shopping.active_category
+            if not sales_category and len(record.shopping.selected_product_ids) == 1:
+                only_prev = sales_repo.get_product_snapshot(record.shopping.selected_product_ids[0])
+                if only_prev is not None:
+                    leaf_cat = category_leaf(only_prev)
+                    sales_category = leaf_cat or only_prev.category
             if not sales_category and record.shopping.selected_product_ids:
                 selected_ids = tuple(record.shopping.selected_product_ids)
         is_storewide_sales = bool(
@@ -10169,6 +10320,68 @@ async def agent_respond(
                 return _record_shopping_turn(
                     request, ooc_reply, model="local-ooc-gate", tools_used=[]
                 )
+        if sales_category and sales_counts_map:
+            relaxed_sq = sales_structured_query.model_copy(
+                update={
+                    "product_reference": "",
+                    "negative_constraints": (),
+                    "clarification_needed": False,
+                    "ambiguity": (),
+                    "use_case": "",
+                }
+            )
+            relaxed_items = await run_catalog_work(
+                rank_demo_sales,
+                sales_repo,
+                relaxed_sq,
+                sales_category,
+                (),
+                timeout_seconds=4.0,
+                sales_counts=sales_counts_map,
+                allow_storewide=False,
+                top_n=max(3, requested_top_n),
+                prefer_affordable=prefer_affordable_sales,
+            )
+            if relaxed_items:
+                top_it = relaxed_items[0]
+                top_pid = top_it.product.product_id
+                top_source = sales_sources_map.get(top_pid, active_sales_mode or "SIMULATED")
+                obs = ToolObservation(
+                    content={"sales_data_source": top_source},
+                    products=(top_it.product,),
+                    tool_name="recommend_products",
+                    source=sales_repo.source_name,
+                )
+                base_sales_reply = render_demo_sales(
+                    relaxed_items,
+                    request.language,
+                    top_n=requested_top_n,
+                    include_stock=include_stock_in_sales,
+                    storewide=False,
+                    sales_source=active_sales_mode or "SIMULATED",
+                )
+                cat_display_vi = {
+                    "dairy": "Sữa",
+                    "snack": "Snack",
+                    "drink": "Đồ uống",
+                    "meal": "Thực phẩm ăn liền",
+                }.get(sales_category, sales_category)
+                caveat = (
+                    f"Hiện tên sản phẩm trong nhóm {cat_display_vi} chưa ghi đầy đủ tiêu chí riêng bạn nêu; "
+                    if request.language == "vi"
+                    else f"Product titles in {sales_category} do not explicitly filter that criterion; "
+                )
+                resp = _deterministic_tool_response(
+                    request,
+                    record.state,
+                    obs,
+                    f"{caveat}{base_sales_reply}",
+                    model="demo-sales",
+                    tools_used=["get_demo_sales_ranking"],
+                )
+                resp.products[0].demo_units_sold_30d = top_it.units_sold_30d
+                resp.products[0].sales_data_source = top_source
+                return resp
     if _product_ranking_requested(request.text) and _ranking_metric(request.text) != "price":
         requested_category = (
             _explicit_recommendation_category(request.text) or explicit_catalog_category
@@ -10430,13 +10643,17 @@ async def agent_respond(
         )
     if _storage_condition_requested(request.text, catalog_hierarchies):
         norm_storage_req = " ".join(_normalize_request_text(request.text).split())
+        has_named_storage_target = _has_specific_product_reference(request.text)
         is_category_storage_filter = bool(
             re.search(
                 r"\b(?:co loai nao|loai nao|nhung loai nao|cai nao|san pham nao|"
-                r"which ones?|what kinds?|co duoc khong)\b",
+                r"which ones?|what kinds?)\b",
                 norm_storage_req,
             )
-            or re.search(r"\bde ngoai duoc\b", norm_storage_req)
+            or (
+                not has_named_storage_target
+                and re.search(r"\b(?:co duoc khong|de ngoai duoc)\b", norm_storage_req)
+            )
         )
         if not is_category_storage_filter:
             from backend.products.knowledge import product_knowledge_facts
@@ -10444,17 +10661,62 @@ async def agent_respond(
             storage_repo = get_product_repository()
             stripped_storage_q = re.sub(
                 r"\b(?:huong dan bao quan|cach bao quan|bao quan|huong dan su dung|"
-                r"cach su dung|cach dung|su dung|va|cua|nhu the nao|the nao|"
+                r"cach su dung|cach dung|su dung|thanh phan(?:\s+chinh)?|"
+                r"nguyen lieu(?:\s+chinh)?|chat lieu(?:\s+gi)?|lam tu(?:\s+gi)?|"
+                r"xuat xu|nguon goc|co can|can|phai|de(?:\s+o)?(?:\s+trong)?\s+tu lanh|"
+                r"cat\s+tu lanh|bo\s+tu lanh|tu lanh|ngan mat|ngan da|"
+                r"co duoc khong|va|cua|nhu the nao|the nao|"
                 r"ra sao|sao|o dau|duoc khong|chai nay|hop nay|goi nay|loai nay|"
-                r"san pham nay|cai nay|cho minh hoi|cho toi hoi|cho tao hoi|hoi ve)\b",
+                r"san pham nay|cai nay|cho minh hoi|cho toi hoi|cho tao hoi|hoi ve|"
+                r"co|gom|gi|khong)\b",
                 " ",
                 norm_storage_req,
             )
             stripped_storage_q = " ".join(stripped_storage_q.split())
             storage_target: ProductSnapshot | None = None
+            also_wants_ingredients = bool(
+                "ingredients" in requested_fields
+                or re.search(
+                    r"\b(?:thanh phan|nguyen lieu|chat lieu|lam tu gi|lam bang gi)\b",
+                    norm_storage_req,
+                )
+            )
+            also_wants_usage = bool(
+                _usage_dosage_question_requested(request.text)
+                or re.search(r"\b(?:su dung|cach dung)\b", norm_storage_req)
+            )
+            also_wants_origin = bool(
+                re.search(r"\b(?:xuat xu|nguon goc|san xuat o dau|cua nuoc nao)\b", norm_storage_req)
+            )
+            req_attrs_list: list[str] = []
+            if also_wants_ingredients:
+                req_attrs_list.append("ingredients")
+            if also_wants_usage:
+                req_attrs_list.append("usage")
+            req_attrs_list.append("storage")
+            if also_wants_origin:
+                req_attrs_list.append("origin")
+            req_attrs = tuple(req_attrs_list)
+
+            hits: list[ProductSnapshot] = []
             if stripped_storage_q:
-                hits = storage_repo.search(stripped_storage_q, limit=3)
-                if hits:
+                hits = list(storage_repo.search(stripped_storage_q, limit=5))
+            if not hits:
+                fallback_sto_q = _fact_product_query(request.text)
+                if fallback_sto_q and fallback_sto_q != stripped_storage_q:
+                    hits = list(storage_repo.search(fallback_sto_q, limit=5))
+            if hits:
+                for cand in hits[:3]:
+                    probe = product_knowledge_facts(
+                        cand, ("storage",), source=storage_repo.source_name,
+                    )
+                    if any(
+                        f.status.value == "VERIFIED" and isinstance(f.value, str) and f.value.strip()
+                        for f in probe
+                    ):
+                        storage_target = cand
+                        break
+                if storage_target is None:
                     storage_target = hits[0]
             if storage_target is None and record.last_grounded_product_id:
                 storage_target = storage_repo.get_product_snapshot(
@@ -10465,11 +10727,6 @@ async def agent_respond(
                     record.shopping.selected_product_ids[0]
                 )
             if storage_target is not None:
-                also_wants_usage = bool(
-                    _usage_dosage_question_requested(request.text)
-                    or re.search(r"\b(?:su dung|cach dung)\b", norm_storage_req)
-                )
-                req_attrs = ("usage", "storage") if also_wants_usage else ("storage",)
                 storage_facts = product_knowledge_facts(
                     storage_target,
                     req_attrs,
@@ -10477,13 +10734,19 @@ async def agent_respond(
                 )
                 verified_parts: list[str] = []
                 sto_sources: list[str] = []
+                attr_labels = {
+                    "ingredients": "Thành phần",
+                    "usage": "Cách sử dụng",
+                    "storage": "Bảo quản",
+                    "origin": "Xuất xứ",
+                }
                 for fact in storage_facts:
                     if (
                         fact.status.value == "VERIFIED"
                         and isinstance(fact.value, str)
                         and fact.value.strip()
                     ):
-                        label = "Cách sử dụng" if fact.attribute == "usage" else "Bảo quản"
+                        label = attr_labels.get(fact.attribute, "Bảo quản")
                         val_txt = fact.value.strip().rstrip(".")
                         verified_parts.append(f"{label}: {val_txt}.")
                         if fact.source and fact.source not in sto_sources:
@@ -11495,8 +11758,10 @@ async def agent_respond(
         stripped_attr_query = re.sub(
             r"\b(?:co|bao nhieu|may|luong|ham luong|gam|g|gr|mg|ml|duong|calo|kcal|"
             r"dam|protein|chat beo|beo|natri|muoi|caffeine|cafein|dinh duong|"
-            r"thanh phan|chinh|la gi|nhu the nao|the nao|ra sao|bao quan|huong dan|"
-            r"su dung|cach dung|xuat xu|o dau|cua nuoc nao|trong|nay|do|no|la|gi|va|khong)\b",
+            r"thanh phan(?:\s+chinh)?|nguyen lieu(?:\s+chinh)?|chat lieu|lam tu gi|"
+            r"chinh|la gi|nhu the nao|the nao|ra sao|bao quan|huong dan|"
+            r"su dung|cach dung|xuat xu|nguon goc|san xuat tai|san xuat o dau|san xuat o|"
+            r"o dau|cua nuoc nao|nuoc nao|made in|origin|cua|trong|nay|do|no|la|gi|va|khong)\b",
             " ",
             normalized_unsupported,
         )
@@ -11536,9 +11801,56 @@ async def agent_respond(
                         )
                         knowledge_product_name = knowledge_product.name
                     else:
+                        if knowledge_attributes == ("origin",):
+                            from backend.products.knowledge import product_knowledge_facts
+
+                            shared_origins: list[str] = []
+                            shared_sources: list[str] = []
+                            for cand in candidate_observation.products[:5]:
+                                cand_facts = product_knowledge_facts(
+                                    cand,
+                                    ("origin",),
+                                    source=candidate_observation.source,
+                                )
+                                for f in cand_facts:
+                                    if (
+                                        f.status.value == "VERIFIED"
+                                        and isinstance(f.value, str)
+                                        and f.value.strip()
+                                    ):
+                                        shared_origins.append(f.value.strip())
+                                        if f.source:
+                                            shared_sources.append(f.source)
+                            distinct_origins = {
+                                o.rstrip(".").casefold() for o in shared_origins if o
+                            }
+                            if len(shared_origins) >= 2 and len(distinct_origins) == 1:
+                                origin_val = shared_origins[0].rstrip(".")
+                                origin_src = ", ".join(dict.fromkeys(shared_sources)) or "danh mục"
+                                sample_names = "; ".join(
+                                    p.name for p in candidate_observation.products[:3]
+                                )
+                                reply = (
+                                    f"Theo {origin_src}, các sản phẩm phù hợp ({sample_names}) "
+                                    f"đều có xuất xứ: {origin_val}."
+                                    if request.language == "vi"
+                                    else (
+                                        f"According to {origin_src}, the matching items "
+                                        f"({sample_names}) share origin: {origin_val}."
+                                    )
+                                )
+                                return _deterministic_tool_response(
+                                    request,
+                                    record.state,
+                                    candidate_observation,
+                                    reply,
+                                    model="catalog-manufacturer-declaration",
+                                    tools_used=["search_products", "get_product_knowledge"],
+                                )
                         reply = _localized_product_knowledge_disambiguation(
                             candidate_observation.products,
                             request.language,
+                            attributes=knowledge_attributes,
                         )
                         return _deterministic_tool_response(
                             request,
@@ -13503,6 +13815,11 @@ _UNSUPPORTED_ATTRIBUTE_QUERY_PHRASES = tuple(
         (
             "loi ich suc khoe",
             "xuat xu",
+            "xuat xu nuoc nao",
+            "xuat xu o dau",
+            "xuat xu tu dau",
+            "cua nuoc nao",
+            "nuoc nao san xuat",
             "nguon goc",
             "nguon goc san xuat",
             "nguon goc xuat xu",
@@ -13783,8 +14100,14 @@ def _fact_product_query(text: str) -> str:
     normalized = re.sub(
         r"\b(?:dung cho|phu hop voi|danh cho)\s+(?:loai\s+)?"
         r"(?:da|toc|doi tuong|lua tuoi)\s+(?:nao|gi)\b|"
-        r"\b(?:thanh phan|cong dung|tac dung)\s+(?:co\s+)?(?:nhung\s+)?(?:gi|nao)\b|"
-        r"\b(?:co\s+(?:nhung\s+)?thanh phan\s+(?:gi|nao))\b",
+        r"\b(?:co\s+(?:nhung\s+)?)?(?:thanh\s+phan|nguyen\s+lieu|chat\s+lieu)"
+        r"(?:\s+chinh)?(?:\s+(?:gom|co|la|bao\s+gom))?(?:\s+(?:nhung\s+)?(?:gi|nao))?\b|"
+        r"\b(?:duoc\s+)?lam\s+(?:tu|bang)\s+(?:chat\s+lieu\s+)?(?:gi|nao)\b|"
+        r"\b(?:cong\s+dung|tac\s+dung)\s+(?:co\s+)?(?:nhung\s+)?(?:gi|nao)\b|"
+        r"\b(?:nguon\s+goc(?:\s+(?:xuat\s+xu|san\s+xuat))?|"
+        r"xuat\s+xu(?:\s+(?:o\s+dau|nuoc\s+nao|tu\s+dau))?|"
+        r"san\s+xuat\s+(?:o\s+dau|tai\s+dau|tai|o)|"
+        r"cua\s+nuoc\s+nao|nuoc\s+nao(?:\s+san\s+xuat)?|made\s+in)\b",
         " ",
         normalized,
     )
@@ -15315,6 +15638,11 @@ def _product_ranking_requested(text: str) -> bool:
     )
     explicit_ranking = any(
         re.search(rf"(?<!\w){re.escape(cue)}(?!\w)", normalized) for cue in ranking_cues
+    ) or bool(
+        re.search(
+            r"\b(?:cai|loai|mon|mau|san pham|sp|hang)\s+nao\s+(?:dang\s+)?chay\s+nhat\b",
+            normalized,
+        )
     )
     cheap_without_comparison = bool(
         re.search(r"\bre\b", normalized) and not re.search(r"\bre\s+hon\b", normalized)
@@ -15381,6 +15709,13 @@ def _implicit_followup_fields(text: str) -> tuple[str, ...]:
         "het",
         "thanh",
         "phan",
+        "chinh",
+        "nguyen",
+        "chat",
+        "lieu",
+        "bang",
+        "lam",
+        "tu",
         "ingredients",
         "expiry",
         "expiration",
@@ -15718,6 +16053,7 @@ def _localized_product_knowledge_abstention(
 def _localized_product_knowledge_disambiguation(
     products: tuple[ProductSnapshot, ...] | list[ProductSnapshot],
     language: LanguageCode,
+    attributes: tuple[str, ...] = (),
 ) -> str:
     names = [product.name for product in products[:3]]
     options = "; ".join(names)
@@ -15728,6 +16064,11 @@ def _localized_product_knowledge_disambiguation(
         )
     if language == "zh":
         return f"我找到几种相符的商品：{options}。您想查哪一种？"
+    if attributes == ("origin",):
+        return (
+            f"Mình tìm thấy vài sản phẩm phù hợp: {options}. "
+            "Bạn muốn hỏi xuất xứ của loại nào?"
+        )
     trait_parts: list[str] = []
     groups: list[str] = []
     for product in products[:3]:
@@ -15851,13 +16192,23 @@ def _manufacturer_declaration_value_text(
             and not isinstance(energy, bool)
             and basis
         ):
+            basis_cf = basis.casefold().replace(" ", "")
             if language == "en":
-                return f"{energy:g} kcal {basis}"
+                if basis.casefold().startswith("per "):
+                    return f"{energy:g} kcal {basis}"
+                return f"{energy:g} kcal per {basis}"
             if language == "zh":
-                if basis.casefold() == "per 100 ml":
+                if basis_cf in {"per100ml", "100ml"}:
                     return f"每 100 毫升 {energy:g} kcal"
+                if basis_cf in {"per100g", "100g"}:
+                    return f"每 100 克 {energy:g} kcal"
                 return f"{basis}：{energy:g} kcal"
-            basis_text = "trên 100 ml" if basis.casefold() == "per 100 ml" else basis
+            if basis_cf in {"per100ml", "100ml"}:
+                basis_text = "trên 100 ml"
+            elif basis_cf in {"per100g", "100g"}:
+                basis_text = "trên 100 g"
+            else:
+                basis_text = basis
             return f"{energy:g} kcal {basis_text}"
     if attribute == "nutrition" and isinstance(value, dict):
         labels_by_language = {

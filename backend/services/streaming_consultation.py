@@ -120,14 +120,17 @@ _STREAM_DETAIL_QUERY_RE = re.compile(
     r"\b(?:cach\s+(?:su\s+)?dung|huong\s+dan\s+su\s+dung|"
     r"(?:su\s+)?dung\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao)|"
     r"(?:goi|pha|nau|che\s+bien)\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao)|"
-    r"thanh\s+phan|lam\s+tu\s+gi|bao\s+quan|xuat\s+xu|san\s+xuat\s+o\s+dau)\b"
+    r"thanh\s+phan|chat\s+lieu|lam\s+tu\s+gi|lam\s+bang\s+gi|bao\s+quan|"
+    r"xuat\s+xu|nguon\s+goc|san\s+xuat\s+(?:o\s+dau|tai)|cua\s+nuoc\s+nao)\b"
 )
 _STREAM_DETAIL_STRIP_RE = re.compile(
     r"\b(?:cach\s+(?:su\s+)?dung|huong\s+dan\s+su\s+dung|"
     r"(?:su\s+)?dung\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao)|"
     r"(?:goi|pha|nau|che\s+bien)\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao)|"
-    r"thanh\s+phan|lam\s+tu\s+gi|bao\s+quan(?:\s+nhu\s+the\s+nao|\s+the\s+nao|\s+sao)?|"
-    r"xuat\s+xu(?:\s+o\s+dau|\s+tu\s+dau)?|san\s+xuat\s+o\s+dau|"
+    r"thanh\s+phan(?:\s+chinh)?|chat\s+lieu|lam\s+tu\s+gi|lam\s+bang\s+gi|"
+    r"bao\s+quan(?:\s+nhu\s+the\s+nao|\s+the\s+nao|\s+sao)?|"
+    r"xuat\s+xu(?:\s+o\s+dau|\s+tu\s+dau|\s+nuoc\s+nao)?|nguon\s+goc|"
+    r"san\s+xuat\s+(?:o\s+dau|tai)|cua\s+nuoc\s+nao|"
     r"nhu\s+the\s+nao|the\s+nao|ra\s+sao|chai\s+nay|hop\s+nay|goi\s+nay|loai\s+nay|cai\s+nay)\b"
 )
 _STREAM_DETAIL_ATTR_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -139,9 +142,9 @@ _STREAM_DETAIL_ATTR_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             r"(?:goi|pha|nau|che\s+bien)\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao))\b"
         ),
     ),
-    ("ingredients", re.compile(r"\b(?:thanh\s+phan|lam\s+tu\s+gi|co\s+chat\s+gi)\b")),
+    ("ingredients", re.compile(r"\b(?:thanh\s+phan|chat\s+lieu|lam\s+tu\s+gi|lam\s+bang\s+gi|co\s+chat\s+gi)\b")),
     ("storage", re.compile(r"\b(?:bao\s+quan|cat\s+giu|de\s+o\s+dau)\b")),
-    ("origin", re.compile(r"\b(?:xuat\s+xu|san\s+xuat\s+o\s+dau|cua\s+nuoc\s+nao)\b")),
+    ("origin", re.compile(r"\b(?:xuat\s+xu|nguon\s+goc|san\s+xuat\s+(?:o\s+dau|tai)|cua\s+nuoc\s+nao)\b")),
 )
 _DETAIL_ATTR_LABELS_VI: dict[str, str] = {
     "usage": "hướng dẫn sử dụng",

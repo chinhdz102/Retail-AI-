@@ -88,6 +88,8 @@ _SIZE_PREFERENCE_WORDS = frozenset({"nho", "mini", "small", "smaller"})
 _LARGE_SIZE_PREFERENCE_WORDS = frozenset({"to", "dai", "large", "big", "larger"})
 _PACKAGING_EQUIVALENTS: dict[str, frozenset[str]] = {
     "bich": frozenset({"bich", "tui", "goi"}),
+    "jumbo": frozenset({"jumbo", "jumpo"}),
+    "jumpo": frozenset({"jumpo", "jumbo"}),
 }
 _VIETNAMESE_TONE_MARKS = frozenset({"\u0300", "\u0301", "\u0303", "\u0309", "\u0323"})
 _WORD_RE = re.compile(r"[^\W_]+", flags=re.UNICODE)
@@ -1442,6 +1444,10 @@ class SnapshotProductRepository:
                     matched_compound = joined
                     matched_span = span
                     break
+                if all(p in self._known_words for p in span_plain) and any(
+                    len(p) >= 4 for p in span_plain
+                ):
+                    continue
                 if len(joined) >= 4:
                     p_fold = _phonetic_fold(joined)
                     if p_fold in self._phonetic_index:
