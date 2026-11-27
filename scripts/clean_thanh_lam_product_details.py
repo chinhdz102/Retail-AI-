@@ -46,7 +46,9 @@ _CROSS_FIELD_SPLIT_RE = re.compile(
     r"cách(?:\s+sử)?\s+dụng|cách dùng|bảo quản(?:\s+nơi|\s+lạnh|\s*:)|"
     r"ngày sản xuất|hạn sử dụng|năng lượng\s*:|số lượng\s*:|quy cách\s*:|"
     r"khối lượng\s*:|dung tích\s*:|xuất xứ\s*:|thương hiệu\s*:|lưu ý\s*:|"
-    r"cảnh báo\s*:|đối tượng sử dụng\s*:)\s*[:：]?"
+    r"cảnh báo\s*:|đối tượng sử dụng\s*:|chiều cao\s*:|độ dày[^:]{0,20}:|"
+    r"công suất\s*:|kích thước\s*:|trọng lượng\s*:|màu sắc\s*:|bảo hành\s*:|"
+    r"chế độ nấu\s*:|chương trình nấu\s*:)\s*[:：]?"
 )
 
 # Action verbs that frequently start a new HTML <li> bullet in Vietnamese usage/storage guides.
@@ -121,13 +123,19 @@ _TRAILING_NON_SECTION_RE = re.compile(
     re.IGNORECASE,
 )
 _VALID_INCI_RE = re.compile(
-    r"\b(?:sorbitol|hydrated silica|sodium lauryl sulfate|sodium fluoride|"
-    r"glycerin|niacinamide|titanium dioxide|stearic acid|peg-\d+|disodium edta|"
-    r"zinc citrate|cellulose gum|panthenol|tocopherol|selenium sulfide|"
+    r"\b(?:sorbitol|hydrated silica|sodium lauryl sulfate|sodium laureth sulfate|sodium fluoride|"
+    r"glycerin|niacinamide|titanium dioxide|stearic acid|peg-\d+|ppg-\d+|disodium edta|trisodium edta|"
+    r"tetrasodium edta|zinc citrate|cellulose gum|panthenol|tocopherol|selenium sulfide|"
     r"dipotassium glycyrrhizate|ketoconazole|piroctone olamine|zinc pyrithione|"
-    r"polyquaternium|ammonium laureth|dimethicone|cocamidopropyl betaine|"
-    r"menthol|salicylic acid|allantoin|cetyl alcohol|stearyl alcohol|"
-    r"phenoxyethanol|tocopheryl acetate|sodium chloride|citric acid)\b",
+    r"polyquaternium|ammonium laureth|dimethicone|dimethiconol|cocamidopropyl betaine|"
+    r"menthol|salicylic acid|allantoin|cetyl alcohol|stearyl alcohol|cetearyl alcohol|"
+    r"phenoxyethanol|tocopheryl acetate|sodium chloride|citric acid|aluminum chlorohydrate|"
+    r"steareth-\d+|ceteth-\d+|laureth-\d+|myristic acid|palmitic acid|lauric acid|"
+    r"butylene glycol|propylene glycol|caprylyl glycol|ethylhexylglycerin|propanediol|"
+    r"cyclopentasiloxane|potassium hydroxide|sodium hydroxide|carbomer|xanthan gum|"
+    r"linalool|limonene|geraniol|citronellol|hexyl cinnamal|parfum|fragrance|"
+    r"sodium hyaluronate|hyaluronic acid|squalane|ceramide|octocrylene|homosalate|"
+    r"ci\s*\d{5}|persea gratissima|charcoal powder|kaolin|bht)\b",
     re.IGNORECASE,
 )
 _REAL_HTML_JUNK_RE = re.compile(r"</?[a-zA-Z][^>]*>|&(?:amp|nbsp|lt|gt|quot);")
@@ -137,25 +145,39 @@ _REAL_SUBSTANCE_RE = re.compile(
     r"\b(?:(?<!món\s)(?<!đất\s)nước(?:\s+sạch|\s+tinh\s+khiết|\s+mắm|\s+tương|\s+cốt|\s+bão\s+hòa|\s+ép|\s+muối)?|"
     r"đường|muối|bột\s+\w+|dầu\s+\w+|mỡ|sữa|trứng|thịt|cá|tôm|mực|cua|gà|bò|heo|lợn|"
     r"gạo|nếp|đậu|đỗ|ớt|tỏi|tiêu(?!\s*(?:chí|chuẩn|dùng|thụ|hóa|hủy))|hành|gừng|nghệ|sả|quế|hồi|mật\s+ong|mật|"
-    r"trà|chè|cà\s+phê|ca\s+cao|cacao|socola|sô\s+cô\s+la|phô\s+mai|bơ|kem|váng\s+sữa|"
+    r"trà|chè|cà\s+phê|ca\s+cao|cacao|socola|sô\s+cô\s+la|phô\s+mai|phomat|bơ|kem|váng\s+sữa|"
     r"vitamin|canxi|calcium|sắt|kẽm|magiê|kali|natri|sodium|bicarbonate|flouride|fluoride|"
     r"i-ốt|iod|acid|axit|glycerin|aqua|water|extract|chiết\s+xuất|tinh\s+dầu|tinh\s+chất|"
-    r"polyester|cotton|bông|vải|nhựa|pp|pet|pe|abs|inox|thép|nhôm|giấy|bột\s+giấy|gỗ|tre|"
-    r"cao\s+su|silicone|polyurethane|sợi|nylon|than\s+hoạt\s+tính|đất\s+sét|baking\s+soda|"
+    r"polyester|cotton|bông|vải|nhựa|pp|pet|petg|pbt|pe|abs|hdpe|ldpe|pvc|ps|san|tritan|tpe|tpu|eva|pc|"
+    r"inox|thép(?:\s+không\s+gỉ)?|nhôm|hợp\s+kim|kim\s+loại|sắt|đồng|kẽm|nickel\s+silver|"
+    r"thủy\s+tinh|borosilicate|gốm|sứ|melamine|đất\s+nung|"
+    r"ceramic|teflon|chống\s+dính|giấy|bột\s+giấy|bìa\s+cứng|gỗ|tre|nứa|mây|mực|chì|sáp|parafin|"
+    r"cao\s+su|silicone|silicon|polyurethane|polypropylene|polyethylene|polystyrene|cellulose|"
+    r"sợi|nylon|microfiber|spandex|linen|lụa|len|than\s+hoạt\s+tính|đất\s+sét|baking\s+soda|"
+    r"xơ\s+mướp|bọt\s+biển|mút|pin\s+kiềm|alkaline|lithium|"
+    r"transfluthrin|imiprothrin|tetramethrin|cypermethrin|prallethrin|pyrethroid|allethrin|permethrin|deet|"
+    r"dung\s+môi|khí\s+hóa\s+lỏng|chất\s+diệt\s+côn\s+trùng|"
     r"chất\s+điều\s+vị|chất\s+bảo\s+quản|chất\s+ổn\s+định|chất\s+nhũ\s+hóa|chất\s+tạo|"
     r"chất\s+làm|chất\s+chống|chất\s+điều\s+chỉnh|hương\s+liệu|phẩm\s+màu|màu\s+thực\s+phẩm|"
     r"tinh\s+bột|maltodextrin|men|nấm|rau|củ|quả|trái\s+cây|tảo\s+biển|rong\s+biển|"
     r"chanh|cam|dâu|xoài|táo|nho|dừa|mè|vừng|lạc|hạnh\s+nhân|óc\s+chó|yến\s+mạch|lúa\s+mì|"
+    r"mắc\s+ca|macca|macadamia|hạt\s+phỉ|hạt\s+dẻ|hướng\s+dương|hạt\s+bí|việt\s+quất|mâm\s+xôi|"
+    r"anh\s+đào|chà\s+là|mít|sầu\s+riêng|nhãn|vải|ổi|bưởi|quýt|lê|đào|mận|kiwi|dưa\s+hấu|"
+    r"dưa\s+lưới|thanh\s+long|đu\s+đủ|chuối|dứa|cà\s+rốt|củ\s+cải|củ\s+dền|củ\s+đậu|bí\s+đỏ|"
+    r"bí\s+đao|bí\s+xanh|mướp|khổ\s+qua|su\s+su|su\s+hào|bắp\s+cải|súp\s+lơ|cải\s+bó\s+xôi|"
+    r"cải\s+thảo|cải\s+xanh|cải\s+ngọt|cần\s+tây|giá\s+đỗ|rau\s+mầm|rau\s+muống|mồng\s+tơi|"
+    r"xà\s+lách|dưa\s+chuột|dưa\s+leo|đậu\s+bắp|cà\s+tím|mộc\s+nhĩ|"
     r"lúa\s+mạch|ngô|bắp|khoai|sắn|cà\s+chua|xì\s+dầu|giấm|mạch\s+nha|glucose|fructose|"
-    r"sucrose|maltose|lactose|whey|casein|protein|đạm|chất\s+béo|shortening|margarine|"
+    r"sucrose|maltose|lactose|xylitol|maltitol|aspartam|sorbitol|cốt\s+gôm|whey|casein|"
+    r"protein|đạm|chất\s+béo|shortening|margarine|"
     r"collagen|niacinamide|panthenol|tocopherol|ceramide|hyaluronic|salicylic|retinol|"
     r"laureth|sulfate|paraben|citric|benzoate|sorbate|lecithin|pectin|gelatin|agar|xanthan|"
     r"ins\s*\d{3}|e\d{3}|wheat\s+flour|sugar|palm\s+oil|milk|cocoa|rice|soy|bean|starch|"
     r"lô\s+hội|nha\s+đam|bạc\s+hà|oải\s+hương|hoa\s+hồng|hoa\s+cúc|hương\s+thảo|tơ\s+tằm|"
-    r"ngọc\s+trai|yến\s+sào|nhân\s+sâm|linh\s+chi|cốm|hạt\s+sen|hạt\s+chia|hạt\s+điều|macca|"
+    r"ngọc\s+trai|yến\s+sào|tổ\s+yến|nhân\s+sâm|linh\s+chi|cốm|hạt\s+sen|hạt\s+chia|hạt\s+điều|"
     r"hoạt\s+chất|enzyme|enzim|surfactant|alcohol|cồn|ethanol|chlorine|clo|javel|"
     r"selenium|sulfide|glycyrrhizate|ketoconazole|piroctone|pyrithione|polyquaternium|"
-    r"dimethicone|betaine|menthol|allantoin|phenoxyethanol|chlorhexidine|"
+    r"dimethicone|betaine|menthol|allantoin|phenoxyethanol|chlorhexidine|aluminum\s+chlorohydrate|"
     r"caffeine|taurine|inositol|ginseng|probiotic|lợi\s+khuẩn|prebiotic|fos|inulin|dha|epa)\b",
     re.IGNORECASE,
 )
@@ -272,13 +294,20 @@ def balance_parens(text: str) -> str:
         else:
             out.append(ch)
     s = "".join(out)
-    # Then trim any remaining unclosed '(' from the right.
+    # Then resolve any remaining unclosed '(' safely:
+    # - If an unmatched '(' sits BEFORE a later ')', it's a retailer typo inside a valid list
+    #   (e.g. "Phô mai (Sữa bò, INS (331, 341, muối)") — drop only the stray '(', not the whole list.
+    # - Otherwise (tail truncation after the last ')'), trim cleanly from the right.
     while s.count("(") > s.count(")"):
         idx = s.rfind("(")
-        if idx <= 0:
+        last_close = s.rfind(")")
+        if idx < last_close:
+            s = s[:idx] + s[idx + 1 :]
+        elif idx <= 0:
             s = s.replace("(", "", 1)
             break
-        s = s[:idx].rstrip(" ,;:-–—")
+        else:
+            s = s[:idx].rstrip(" ,;:-–—")
     return s
 
 
@@ -365,7 +394,7 @@ def clean_ingredients(
 
     s = strip_title_echo(s, product_name)
     s = _LEADING_LABEL_RE.sub("", s).strip()
-    if not s or len(s) < 10:
+    if not s or len(s) < 6 or (len(s) < 10 and not _REAL_SUBSTANCE_RE.search(s)):
         return None, bleed
 
     # Reject placeholder / packaging-only / broken-fragment entries.
@@ -450,7 +479,7 @@ def clean_ingredients(
     joined = repair_merged_bullets(joined)
     joined = _capitalize_first(normalize_typography(joined))
     joined = trim_clean_sentence(joined, max_len=460)
-    if len(joined) < 12 or not _REAL_SUBSTANCE_RE.search(joined):
+    if len(joined) < 7 or not _REAL_SUBSTANCE_RE.search(joined):
         return None, bleed
     if (
         not _VI_DIACRITIC_RE.search(joined)
