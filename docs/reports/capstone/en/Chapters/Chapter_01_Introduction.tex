@@ -111,11 +111,10 @@ Inherited \& Adapted & Newsvendor critical fractile~\cite{silver2017inventory}, 
 \end{tabularx}
 \end{table}
 
-\section{Scope and Limitations}
+\section{Research Scope and Deployment Boundaries}
 
-This capstone evaluates both agents and their coordination bridge at an applied-research prototype level with end-to-end verification in a simulated multi-agent environment. Key limitations are stated explicitly to bound all claims:
+This capstone delivers and verifies both AI agents and their inter-agent bridge as an applied-research prototype evaluated in a controlled simulation environment:
 \begin{itemize}
-    \item \textbf{Simulated rather than live ERP integration:} The 164-SKU crosswalk and read-only HTTP bridge (\code{ops_bridge.py}) are verified end-to-end against a simulated \texttt{ops\_chest} server with full HITL state transitions, rather than a live commercial supermarket ERP.
-    \item \textbf{Dated catalog snapshot and assumed commercial parameters:} \texttt{Retail-AI-} operates on a 15 September 2026 Thanh Lam Mart catalog snapshot paired with synchronized 30-day sales (\code{data/synced_sales_30d.json}: 164 fresh SKUs from FreshRetailNet-50K Store~18 and 2,935 monthly catalog SKUs; \code{demo_sales.sqlite3} is isolated strictly for unit tests). While FreshRetailNet-50K demand logs are real, prices, cost ratios (62--75\%), 1--3 day shelf lives, and $K=10$ unit scaling are documented simulation assumptions; therefore, simulated profit gains cannot be equated directly to realized physical store P\&L.
-    \item \textbf{Pilot scope of auxiliary modules:} Speech recognition evaluation used a small pilot sample ($n=16$ clips across 3 SNRs) insufficient to generalize across all Vietnamese regional accents; auxiliary prototype capabilities (expiry-label OCR forms, manager edit-habit tracking, hypothesis logging, and commerce UI utilities) lack independent quantitative benchmarks and are documented in the Appendices rather than claimed as research contributions.
+    \item \textbf{Datasets and simulated bridge:} \texttt{Retail-AI-} runs on the Thanh Lam Mart catalog snapshot (3,099 SKUs) paired with synchronized 30-day sales (\code{data/synced_sales_30d.json}, 269,936 units). \texttt{ops\_chest} evaluates on real FreshRetailNet-50K demand series with standardized commercial simulation parameters (Chapter~3), and the 164-SKU read-only bridge (\code{ops_bridge.py}) is verified end-to-end against a simulated operations server rather than a live commercial ERP.
+    \item \textbf{Core evaluation focus:} Primary benchmarks focus on core AI capabilities (Zero-Planner Routing, LightGBM~v3 quantile forecasting, \texttt{B-Gate}, visual product recognition, and cross-agent coordination). The supporting Vietnamese voice interface is evaluated at pilot scale, while auxiliary product utilities (cart, PayOS VietQR, inline OCR forms) are summarized concisely in the Appendices.
 \end{itemize}

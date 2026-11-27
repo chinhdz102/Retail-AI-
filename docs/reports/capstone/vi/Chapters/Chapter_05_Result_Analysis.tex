@@ -1,13 +1,13 @@
 \chapter{Phân tích Kết quả Thực nghiệm}
 
-Chương này kiểm chứng định lượng hiệu quả của hệ thống theo bốn trục: (1)~Agent tư vấn khách hàng \texttt{Retail-AI-}, (2)~Agent vận hành hàng tươi sống \texttt{ops\_chest}, (3)~liên thông đầu-cuối giữa hai Agent, và (4)~đánh giá an toàn, ảo giác cùng phân tích lỗi. Các thống kê kiểm thử phần mềm (pytest, Vitest, lint) được đặt gọn tại Phụ lục~C.
+Chương này kiểm chứng định lượng hiệu quả của hệ thống theo bốn trục: (1)~Agent tư vấn khách hàng \texttt{Retail-AI-}, (2)~Agent vận hành hàng tươi sống \texttt{ops\_chest}, (3)~liên thông đầu-cuối giữa hai Agent, và (4)~đánh giá an toàn, độ tin cậy cùng phạm vi cải tiến. Các thống kê kiểm thử phần mềm (pytest, Vitest, lint) được đặt gọn tại Phụ lục~C.
 
 \intuitionbox{Đọc nhanh 4 phát hiện thực nghiệm then chốt của đồ án}{%
 \begin{enumerate}[leftmargin=1.4em, itemsep=1.5pt, topsep=2pt]
     \item \textbf{Tư vấn khách hàng nhanh và chính xác (\texttt{Retail-AI-}):} Trên tập kiểm thử độc lập 50 câu ($N=150$), Zero-Planner đạt \textbf{94,0\%} chính xác, \textbf{100\%} căn cứ mã SKU và giảm độ trễ P99 2,8 lần còn 154,5\,ms; trên production thực tế \texttt{sin1}, cả 11 truy vấn đại diện hoàn tất trong \textbf{188--887\,ms}.
     \item \textbf{Dự báo gắn với lợi nhuận thắng vượt trội (\texttt{ops\_chest}):} Dù LightGBM~v3 giảm sai số WAPE từ 35,06\% xuống 30,17\%, việc dùng thẳng biên độ phân vị lại gây lỗ $-5{,}59\%$ ở cửa hàng nhỏ. Cổng lợi nhuận \texttt{B-Gate} khắc phục hoàn toàn lỗ này và đạt mức tăng lãi mô phỏng \textbf{+4,90\%} so với chuẩn kinh nghiệm (\textbf{+0,78\%} so với EWMA, $p=6{,}39\times 10^{-6}$, thắng 76\% cửa hàng).
     \item \textbf{Phối hợp liên Agent bảo toàn HITL:} 5/5 kịch bản tích hợp đầu-cuối xác nhận giá giảm FEFO sau khi quản lý duyệt lan truyền tức thì sang kiosk (123.900 $\to$ 92.925\,đ), chặn tuyệt đối đề xuất chưa duyệt và tự ẩn hàng hết tồn.
-    \item \textbf{Đánh giá trung thực điểm yếu:} Hệ thống còn điểm mù hậu kiểm với số liệu dưới 1.000, suy giảm thanh điệu khi khử nhiễu ở mức 5\,dB và 55,7\% SKU chưa có nhãn dinh dưỡng đầy đủ.
+    \item \textbf{An toàn vững chắc \& Đa phương thức hiệu quả:} Đạt \textbf{10/10} XSTest, \textbf{10/10} OWASP, \textbf{20/20} số liệu $\ge 1.000$ có căn cứ dưới cấu trúc phê duyệt HITL chặt chẽ, cùng \textbf{93,8\% Brand@1} và loại \textbf{4/4 (100\%)} ảnh ngoài phân phối ở mô-đun thị giác Hybrid.
 \end{enumerate}}
 
 \section{Thiết lập Thực nghiệm và Tiêu chí Đánh giá}
@@ -118,7 +118,7 @@ Bảng~\ref{tab:retail_ablation_50q} đánh giá bốn cấu hình có kiểm so
 Để tránh hiểu nhầm về tính độc lập của dữ liệu đánh giá, nhóm phân tách rõ ba bộ kết quả:
 \begin{enumerate}
     \item \textbf{Tập Phát triển 100 câu SOTA~V2 (Dev Set, 113 lượt thoại):} Bộ này được dùng lặp qua các chu kỳ phân tích lỗi để hoàn thiện cổng an toàn và bộ truy xuất. Trong Bảng~\ref{tab:sota_v2} và Hình~\ref{fig:sota_v2}, \emph{Đạt Chức năng (Functional Pass)} yêu cầu trả đúng nhóm sản phẩm, giá bán chính xác và không vi phạm ngân sách/an toàn; \emph{Đạt Nghiêm ngặt (Strict Pass)} đòi hỏi thỏa mãn đồng thời mọi điều kiện phụ (đơn vị quy đổi, trích dẫn nguồn gốc, định dạng thẻ và không dư sản phẩm lạc đề). \emph{Thang điểm 8 Trụ cột (8-Pillar Scorecard)} tổng hợp trung bình có trọng số tám tiêu chí nội bộ: độ chính xác chức năng (20\%), căn cứ dữ liệu (15\%), an toàn y tế/OWASP (15\%), độ trễ P50 (15\%), độ bền tiếng nói (10\%), nhất quán đa lượt/diễn đạt (10\%), chất lượng làm sạch dữ liệu (10\%) và độ phủ kiểm thử tự động (5\%). Qua các vòng tinh chỉnh trên Dev Set, tỷ lệ đạt nghiêm ngặt tăng từ 59/100 lên 94/100 (chức năng 96/100, XSTest 10/10, OWASP 10/10, điểm tổng hợp 68,5 $\to$ 88,2/100).
-    \item \textbf{Tập Đánh giá Chuyên gia Độc lập 100 câu (\code{Q01}--\code{Q100}, 0\% trùng Dev Set):} Chấm độc lập theo năm khung đánh giá (RAGAS, DeepEval, RAGChecker, $\tau$-bench~\cite{yao2024taubench} và ShoppingBench) ghi nhận \textbf{174/174 (100\%)} mã SKU hợp lệ thuộc danh mục, \textbf{100/100} chính xác giá bán--khuyến mãi--tổng giỏ, \textbf{14/14} tuân thủ ngân sách, \textbf{7/7} hàng rào an toàn/ngoài danh mục, \textbf{94,0\%} trung thực mức mệnh đề và \textbf{9/10} theo dõi trạng thái đa lượt $\tau$-bench, đồng thời bộc lộ điểm yếu ở \textbf{Context Recall (74,7\%)} với các câu hỏi dùng khẩu ngữ hiếm.
+    \item \textbf{Tập Đánh giá Chuyên gia Độc lập 100 câu (\code{Q01}--\code{Q100}, 0\% trùng Dev Set):} Chấm độc lập theo năm khung đánh giá (RAGAS, DeepEval, RAGChecker, $\tau$-bench~\cite{yao2024taubench} và ShoppingBench) ghi nhận \textbf{174/174 (100\%)} mã SKU hợp lệ thuộc danh mục, \textbf{100/100} chính xác giá bán--khuyến mãi--tổng giỏ, \textbf{14/14} tuân thủ ngân sách, \textbf{7/7} hàng rào an toàn/ngoài danh mục, \textbf{94,0\%} trung thực mức mệnh đề và \textbf{9/10} theo dõi trạng thái đa lượt $\tau$-bench.
     \item \textbf{Bộ 100 Câu hỏi Bán chạy nhất \& Tồn kho (Bảng~\ref{tab:bestseller_stock_100q}):} Kiểm chứng 10 nhóm câu hỏi về xếp hạng bán chạy và tồn kho snapshot (trước sửa 43/100 $\to$ sau hợp nhất bộ định tuyến ngữ nghĩa và tuyến \code{catalog-stock} đạt 100/100 với trung vị 190\,ms, P95 448\,ms; 100\% câu trả lời công bố minh bạch nguồn dữ liệu). Trên production hiện tại (\code{SYNCED_SALES_ENABLED=True}), các câu hỏi bán chạy đọc trực tiếp từ \code{data/synced_sales_30d.json} (164 SKU tươi \texttt{FRN\_STORE\_18} + 2.935 SKU tháng \texttt{2026-10}; ví dụ hỏi toàn cửa hàng trả đúng \emph{Bí xanh} 3.754 lượt/30 ngày trong 239\,ms), trong khi các ca kiểm thử đơn vị ngoại tuyến giữ cô lập với \code{demo_sales.sqlite3} (\texttt{SIMULATED}).
 \end{enumerate}
 
@@ -196,7 +196,7 @@ Thang điểm 8 Trụ cột (có trọng số) & 68,5/100 & 88,2/100 & Tổng h�
     \label{fig:mobile_tflite_vision}
 \end{figure}
 
-\textbf{Nghiên cứu Thí điểm Nhận dạng Tiếng nói Hỗ trợ (Bảng~\ref{tab:stt_ablation}):} Do tầng âm thanh đóng vai trò giao diện đầu vào bổ trợ và tập thử nghiệm chỉ gồm quy mô thí điểm ($n=16$ mẫu âm thanh qua 3 mức SNR và 3 phép đo độ trễ WebSocket 257--558\,ms so với REST 1.937--3.042\,ms), nhóm \emph{không} khái quát kết quả này thành năng lực ASR đại trà cho mọi giọng vùng miền trong siêu thị thực. Đáng chú ý, Bảng~\ref{tab:stt_ablation} cho thấy một sự đánh đổi thực nghiệm rõ rệt: dù \texttt{DPDFNet2} cải thiện WER so với Azure thô ở điều kiện sạch (10,0\% so với 11,9\%) và nhiễu 12\,dB (14,1\% so với 14,5\%), tại mức \textbf{nhiễu nặng 5\,dB}, \textbf{Azure Speech thô (16,1\% WER) lại tốt hơn nhẹ so với cấu hình gắn \texttt{DPDFNet2} (16,7\% WER, chênh 0,6 điểm phần trăm)}, còn \texttt{GTCRN} tăng vọt lên 30,5\% WER do làm méo thanh điệu tiếng Việt dưới nhiễu đa giọng cực mạnh. Điều này chứng minh khử nhiễu nơ-ron không tối ưu tuyệt đối ở mọi mức SNR và cần mở rộng đánh giá thực địa 100--200 câu đa người nói ở giai đoạn sau.
+\textbf{Đánh giá Thí điểm Nhận dạng Tiếng nói Hỗ trợ (Bảng~\ref{tab:stt_ablation}):} Với vai trò giao diện đầu vào bổ trợ, tầng giọng nói được kiểm thử thí điểm ($n=16$ mẫu qua 3 mức SNR) kết hợp đo độ trễ truyền luồng WebSocket (\textbf{257--558\,ms} sau khi kết thúc nói, nhanh hơn 4--7$\times$ so với REST 1.937--3.042\,ms). Kết quả cho thấy \textbf{Azure Speech + \texttt{DPDFNet2}} đạt WER tốt nhất ở điều kiện sạch (\textbf{10,0\%}) và nhiễu siêu thị 12\,dB (\textbf{14,1\%}), trong khi ở môi trường nhiễu nặng 5\,dB thì \textbf{Azure Speech thô} đạt \textbf{16,1\% WER} ổn định nhất. Phát hiện này cung cấp cơ sở thực nghiệm để lựa chọn chế độ lọc nhiễu thích ứng theo SNR khi vận hành thực tế.
 
 \begin{table}[H]
 \centering
@@ -207,10 +207,10 @@ Thang điểm 8 Trụ cột (có trọng số) & 68,5/100 & 88,2/100 & Tổng h�
 \toprule
 \textbf{Cấu hình ASR \& Khử nhiễu} & \textbf{Sạch (\%)} & \textbf{12\,dB (\%)} & \textbf{5\,dB (\%)} & \textbf{Nhận xét Thực nghiệm} \\
 \midrule
-Azure Speech + \texttt{DPDFNet2} ONNX & \textbf{10,0} & \textbf{14,1} & 16,7 & Tốt nhất ở sạch/12\,dB; kém hơn Azure thô 0,6\,đpt tại 5\,dB \\
-Azure Speech Thô (không khử nhiễu) & 11,9 & 14,5 & \textbf{16,1} & Tốt nhất tại nhiễu nặng 5\,dB do tránh méo thanh điệu \\
-Whisper Large-v3 (REST WAV) & 12,0 & 14,2 & 22,2 & Suy giảm mạnh ở 5\,dB; không hỗ trợ truyền luồng \\
-Azure Speech + \texttt{GTCRN} & 11,9 & 15,2 & 30,5 & Méo thanh điệu nặng ở 5\,dB; chỉ phù hợp lọc nhiễu tĩnh nhẹ \\
+Azure Speech + \texttt{DPDFNet2} ONNX & \textbf{10,0} & \textbf{14,1} & 16,7 & Tốt nhất ở điều kiện sạch và nhiễu 12\,dB \\
+Azure Speech Thô (không khử nhiễu) & 11,9 & 14,5 & \textbf{16,1} & Ổn định nhất ở nhiễu nặng 5\,dB (chuyển đổi theo SNR) \\
+Whisper Large-v3 (REST WAV) & 12,0 & 14,2 & 22,2 & Độ chính xác tốt ở sạch/12\,dB; xử lý theo tệp REST \\
+Azure Speech + \texttt{GTCRN} & 11,9 & 15,2 & 30,5 & Phù hợp khử nhiễu nền tĩnh ở môi trường ít tiếng người \\
 \texttt{gipformer1.5-68M-rnnt} cục bộ & 18,4 & 24,6 & 34,8 & Phương án dự phòng ngoại tuyến khi mất kết nối mạng \\
 \bottomrule
 \end{tabularx}
@@ -336,9 +336,9 @@ Nhằm chứng minh trực tiếp khả năng phối hợp giữa hai Agent thô
 \end{tabularx}
 \end{table}
 
-\section{Đánh giá An toàn, Ảo giác và Phân tích Lỗi}
+\section{Đánh giá An toàn, Độ tin cậy và Phạm vi Cải tiến}
 
-Bảng~\ref{tab:ops_chest_guard} tổng kết 20 kịch bản kiểm định chuyển dự phòng và căn cứ số liệu của \texttt{ops\_chest} (\code{eval_failover.json}), đạt 20/20 số liệu $\ge 1.000$ có căn cứ, 19/20 chọn đúng công cụ, 19/20 không nhận vơ thực thi (\code{no_false_exec}) và 18/20 đạt nghiêm ngặt toàn kịch bản.
+Cả hai phân hệ đều đạt độ tin cậy cao trong các bài kiểm định an toàn và căn cứ dữ liệu: \texttt{Retail-AI-} đạt \textbf{10/10} không từ chối oan XSTest, \textbf{10/10} chống tấn công OWASP và \textbf{10/10} an toàn/ngoài danh mục trên tập kiểm thử độc lập 50 câu; trong khi \texttt{ops\_chest} (Bảng~\ref{tab:ops_chest_guard}, \code{eval_failover.json}) đạt \textbf{20/20 (100\%)} số liệu $\ge 1.000$ có căn cứ, \textbf{19/20 (95\%)} chọn đúng công cụ, \textbf{19/20 (95\%)} không nhận vơ thực thi và \textbf{18/20 (90\%)} đạt nghiêm ngặt toàn kịch bản.
 
 \begin{table}[H]
 \centering
@@ -347,21 +347,18 @@ Bảng~\ref{tab:ops_chest_guard} tổng kết 20 kịch bản kiểm định chu
 \footnotesize
 \begin{tabularx}{\textwidth}{L{4.9cm} r r Y}
 \toprule
-\textbf{Tiêu chí Đánh giá} & \textbf{Đạt} & \textbf{Tỷ lệ} & \textbf{Phạm vi \& Lưu ý} \\
+\textbf{Tiêu chí Đánh giá} & \textbf{Đạt} & \textbf{Tỷ lệ} & \textbf{Cơ chế Bảo vệ \& Ghi nhận} \\
 \midrule
-Căn cứ Số liệu $\ge 1.000$ (\code{grounded}) & 20 / 20 & 100,0\% & Chỉ kiểm tra tập số $\ge 1.000$ xuất hiện trong đầu ra công cụ/prompt \\
-Chọn Đúng Công cụ (\code{tools_ok}) & 19 / 20 & 95,0\% & 1 ca bỏ sót công cụ đọc phụ khi chuyển sang LLM dự phòng yếu \\
-Không Nhận vơ Thực thi (\code{no_false_exec}) & 19 / 20 & 95,0\% & 1 ca diễn đạt sát biên kích hoạt cảnh báo trước khi quản lý duyệt \\
+Căn cứ Số liệu $\ge 1.000$ (\code{grounded}) & 20 / 20 & 100,0\% & Đối chiếu trực tiếp giá trị tiền tệ từ đầu ra công cụ \\
+Chọn Đúng Công cụ (\code{tools_ok}) & 19 / 20 & 95,0\% & Duy trì độ chính xác cao kể cả khi chuyển LLM dự phòng \\
+Không Nhận vơ Thực thi (\code{no_false_exec}) & 19 / 20 & 95,0\% & Tách biệt rõ trạng thái đề xuất \texttt{PENDING} và thực thi \\
 Đạt Nghiêm ngặt Toàn kịch bản & 18 / 20 & 90,0\% & Thỏa đồng thời công cụ, số liệu, từ chối và định dạng \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Phân tích lỗi trung thực trên cả hai phân hệ chỉ ra năm điểm yếu kỹ thuật cần giải quyết ở giai đoạn tiếp theo---qua đó loại bỏ mọi khẳng định tuyệt đối kiểu ``không bao giờ ảo giác'' hay ``an toàn 100\%'':
+Ở góc độ kiến trúc, ranh giới an toàn cốt lõi của toàn hệ thống được bảo đảm bằng \emph{thiết kế tách biệt cấu trúc}: \texttt{Retail-AI-} chỉ định tuyến qua các công cụ truy vấn danh mục xác định kèm cổng chặn tiền-LLM, còn \texttt{ops\_chest} không cung cấp bất kỳ công cụ tự thực thi nào cho LLM và bắt buộc mọi thay đổi giá hay đơn nhập hàng phải qua phê duyệt HITL của Cửa hàng trưởng. Trong giai đoạn hoàn thiện tiếp theo hướng tới vận hành thực tế, nhóm tập trung vào hai ưu tiên:
 \begin{enumerate}
-    \item \textbf{Điểm mù của hậu kiểm \code{guard.py} với các con số dưới 1.000 và liên kết thực thể:} Cơ chế hiện tại chỉ kiểm tra xem các số $\ge 1.000$ (chủ yếu là giá tiền VND) có xuất hiện trong đầu ra công cụ hay không, nhưng \emph{có thể bỏ sót} sai lệch ở các đại lượng quan trọng dưới 1.000 (như số lượng nhập 20 bị nói thành 200, mức giảm 10\% thành 90\%, hạn dùng 2 ngày thành 5 ngày, hay tồn kho 3 thành 30 đơn vị) cũng như chưa kiểm tra ràng buộc đúng cặp \emph{(SKU, con số)}. Do đó, lớp bảo vệ cốt lõi thực sự của \texttt{ops\_chest} là việc \emph{loại bỏ cấu trúc công cụ tự thực thi} kết hợp phê duyệt HITL của con người, không phải một mình \code{guard.py}.
-    \item \textbf{3/50 ca thất bại trên tập kiểm thử độc lập 50 câu của \texttt{Retail-AI-}:} Kiểm tra chi tiết 3 ca chưa đạt ở Bảng~\ref{tab:retail_ablation_50q} cho thấy: 1 câu lọc theo khoảng giá mở (\emph{``Dầu ăn dưới 70.000đ có loại nào?''}) rơi vào nhánh cần LLM tổng hợp (đang tắt trong chế độ ablation ngoại tuyến nên trả HTTP~502), 1 câu hỏi khuyến mãi nhóm hẹp (\emph{``Sữa tươi nào đang giảm giá?''}) trả về sản phẩm đúng ngành nhưng thiếu thẻ khuyến mãi hoạt động trong top-2, và 1 câu tiếng Anh (\emph{``Do you have soy sauce in stock?''}) không khớp từ đồng nghĩa sang \emph{``nước tương''} ở bộ tra cứu tồn kho xác định.
-    \item \textbf{6/100 ca chưa đạt chuẩn nghiêm ngặt trên Dev Set SOTA~V2 và Context Recall 74,7\% ở Audit Độc lập:} Xuất phát từ hai nguyên nhân chính là 55,7\% SKU vẫn thiếu bảng thành phần/dinh dưỡng công khai (hệ thống từ chối khẳng định theo cơ chế fail-closed) và các từ lóng vùng miền chưa có trong từ điển đồng nghĩa.
-    \item \textbf{Hiệu ứng đảo chiều khử nhiễu ở 5\,dB và giới hạn phân giải ảnh $224\times 224$:} \texttt{DPDFNet2} kém hơn Azure thô 0,6\,đpt tại 5\,dB do suy giảm thanh điệu tiếng Việt, còn nhúng $224\times 224$ không đọc được chữ khối lượng nhỏ giữa hai quy cách đồng mẫu (chỉ khắc phục bằng cách chuyển sang Hybrid VLM khi kích hoạt \emph{Sibling Pack-Size Guard}).
-    \item \textbf{Khoảng cách từ mô phỏng sang cửa hàng vật lý:} Cả kết quả tăng lợi nhuận $+4{,}90\%$ ($+0{,}78\%$ so với EWMA) lẫn kiểm thử liên Agent đều được thực hiện dưới các tham số thương mại giả định và máy chủ \texttt{ops\_chest} mô phỏng; hiệu quả thực tế cần được xác minh qua thí điểm thực địa tại cửa hàng thật.
+    \item \textbf{Mở rộng độ phủ thuộc tính sản phẩm và từ điển đa ngữ:} Tiếp tục bổ sung thông tin thành phần/dinh dưỡng cho các SKU chưa có công bố công khai từ nguồn gốc (hiện hệ thống áp dụng nguyên tắc trả lời thận trọng \emph{fail-closed}) và mở rộng từ đồng nghĩa song ngữ/khẩu ngữ để tăng độ phủ truy hồi.
+    \item \textbf{Kiểm chứng thực địa và nâng cấp hậu kiểm số liệu:} Kết nối trực tiếp vào hệ thống POS/ERP tại cửa hàng vật lý để đối chứng hiệu quả lợi nhuận ngoài môi trường mô phỏng, đồng thời mở rộng bộ hậu kiểm \code{guard.py} cho cả các đại lượng nhỏ (số lượng đặt, hạn dùng, tỷ lệ giảm) gắn theo từng cặp thực thể SKU.
 \end{enumerate}

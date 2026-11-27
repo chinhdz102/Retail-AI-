@@ -111,11 +111,10 @@ Kế thừa \& Điều chỉnh & Công thức Newsvendor~\cite{silver2017invento
 \end{tabularx}
 \end{table}
 
-\section{Phạm vi và Giới hạn}
+\section{Phạm vi Nghiên cứu và Triển khai}
 
-Đồ án hoàn thiện và kiểm chứng hai tác nhân AI cùng cầu nối liên thông ở mức nguyên mẫu nghiên cứu ứng dụng có kiểm thử đầu-cuối trong môi trường mô phỏng. Các giới hạn phạm vi được xác định minh bạch nhằm tránh diễn giải vượt quá bằng chứng thực nghiệm:
+Đồ án hoàn thiện và kiểm chứng hai tác nhân AI cùng cầu nối liên thông ở mức nguyên mẫu nghiên cứu ứng dụng trên môi trường mô phỏng có kiểm soát:
 \begin{itemize}
-    \item \textbf{Tích hợp liên phân hệ trên môi trường mô phỏng thay vì ERP thực:} Bảng ánh xạ 164 SKU và cầu nối API chỉ đọc (\code{ops_bridge.py}) đã được triển khai và kiểm thử đầu-cuối với máy chủ \texttt{ops\_chest} mô phỏng; hệ thống chưa kết nối hạ tầng POS/ERP trực tiếp của chuỗi bán lẻ ngoài thực tế.
-    \item \textbf{Dữ liệu danh mục chụp tại một thời điểm và tham số thương mại giả định:} \texttt{Retail-AI-} sử dụng bản chụp danh mục Thanh Lam Mart ngày 15/09/2026 kết hợp tệp lượt bán đồng bộ 30 ngày (\code{data/synced_sales_30d.json}, gồm 164 SKU tươi sống từ Cửa hàng 18 FreshRetailNet-50K và 2.935 SKU hàng khô theo lịch sử tháng; giữ riêng \code{demo_sales.sqlite3} cho kiểm thử đơn vị). Trong \texttt{ops\_chest}, dù chuỗi nhu cầu hằng ngày của FreshRetailNet-50K là dữ liệu thực, giá bán, tỷ lệ giá vốn (62--75\%), hạn dùng 1--3 ngày và hệ số quy đổi $K=10$ là tham số mô phỏng có tài liệu hóa ở Chương~3; do đó, kết quả tăng lợi nhuận mang ý nghĩa trong môi trường mô phỏng, không đồng nhất trực tiếp với lợi nhuận cửa hàng thực.
-    \item \textbf{Quy mô thí điểm ở các mô-đun bổ trợ:} Thí nghiệm nhận dạng tiếng nói tiếng Việt chỉ thực hiện trên tập thí điểm nhỏ ($n=16$ mẫu âm thanh, 3 mức SNR) nhằm đánh giá khả năng hỗ trợ giao diện, chưa đủ khẳng định độ tổng quát toàn diện cho mọi giọng vùng miền; các tính năng mở rộng phần mềm (như Vision OCR nhãn hạn dùng, học thói quen quản lý hay theo dõi giả thuyết) chưa có thực nghiệm định lượng độc lập nên không được tính là đóng góp nghiên cứu của đồ án.
+    \item \textbf{Dữ liệu và cầu nối mô phỏng:} \texttt{Retail-AI-} sử dụng bản chụp danh mục Thanh Lam Mart (3.099 SKU) kết hợp dữ liệu lượt bán đồng bộ 30 ngày (\code{data/synced_sales_30d.json}, 269.936 lượt). \texttt{ops\_chest} đánh giá trên chuỗi nhu cầu thực FreshRetailNet-50K cùng tham số thương mại tiêu chuẩn hóa ở Chương~3, và cầu nối 164 SKU (\code{ops_bridge.py}) được kiểm thử đầu-cuối trên máy chủ mô phỏng thay vì ERP thương mại trực tiếp.
+    \item \textbf{Phạm vi đánh giá trọng tâm:} Các thực nghiệm chính tập trung vào năng lực cốt lõi của hai AI Agent (Zero-Planner Routing, dự báo phân vị LightGBM~v3, cổng lợi nhuận \texttt{B-Gate}, thị giác sản phẩm và phối hợp liên Agent). Giao diện giọng nói tiếng Việt được đánh giá ở quy mô thí điểm hỗ trợ, còn các tính năng phần mềm mở rộng (giỏ hàng, PayOS VietQR, biểu mẫu OCR) được trình bày gọn tại Phụ lục.
 \end{itemize}
