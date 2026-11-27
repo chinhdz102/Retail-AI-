@@ -23,7 +23,7 @@ The product knowledge enrichment pipeline combines 3,099 SSR product pages with 
 2 & \code{get_product_detail} & Exact price, promotion, pack size, shelf location, and canonical unit-price lookup \\
 3 & \code{compare_products} & Side-by-side price, unit price (Eq.~\ref{eq:unit_price}), and promotion comparison \\
 4 & \code{list_promotions} & Filters 580 catalog promos and prioritizes manager-approved FEFO markdowns from \code{ops_bridge} \\
-5 & \code{rank_bestsellers} & Deterministic 30-day ranking from \code{demo_sales.sqlite3} with mandatory \texttt{SIMULATED} tag \\
+5 & \code{rank_bestsellers} & Deterministic 30-day ranking from \code{synced_sales_30d.json} (269,936 units; \code{demo_sales.sqlite3} for unit tests) \\
 6 & \code{check_snapshot_stock} & Deterministic stock lookup/ranking citing 15 Sep 2026 snapshot or live bridge stock \\
 7 & \code{assemble_budget_basket} & Template-constrained meal/combo selection satisfying $\sum P(p) \le B$ \\
 8 & \code{ops_bridge_overlay} & Read-only overlay of live stock and approved FEFO markdowns from \texttt{ops\_chest} (TTL 300\,s) \\
@@ -31,12 +31,44 @@ The product knowledge enrichment pipeline combines 3,099 SSR product pages with 
 \end{tabularx}
 \end{table}
 
-\section*{A.2 LLM Tiering, On-Demand Vision, Supporting Speech Interface, and Deployment}
+\section*{A.2 LLM Tiering, On-Demand Vision, Supporting Speech Interface, and Complete Feature Matrix}
 \begin{itemize}
-    \item \textbf{Tiered LLM routing:} Lean streaming prose routes preferentially to Groq LPU (\code{qwen/qwen3.8-27b} $\to$ \code{openai/gpt-oss-20b/120b}, 6\,s timeout, 3,600\,s HTTP~429 cooldown) with failover to DeepSeek (\code{deepseek-v4.1-flash:free} $\to$ \code{deepseek-v4.1-flash-1017}); complex structured JSON passes run on DeepSeek; Turn-1 semantic cache holds up to 256 entries (TTL 300\,s, Jaccard $\ge 0.88$, bypassing clinical/allergen turns).
-    \item \textbf{On-demand \texttt{MobileNetV3Large-224} TFLite:} Distilled from \texttt{CLIP-ViT-B/32} (512-d) + \texttt{DINOv2-Small} (384-d) $\to$ SVD-256 (88.85\% variance); 7.04\,MB FP16 / 3.81\,MB INT8 + 1.58\,MB gallery (3,093 SKUs); Kaggle training (39.1\,min) using Direct Cosine ($w=6.0$), Relational ($w=3.0$), Sub-Center ArcFace ($K=3, w=0.35$), and SupCon ($w=0.50$); lazy-loaded at \code{POST /agent/respond/image}.
-    \item \textbf{Supporting voice interface and deployment stack:} The Vue~3 + TypeScript client supports dual deployment: (i)~Vercel Singapore (\texttt{sin1}, \url{https://retail-ai-kiosk.vercel.app}) running client-side Silero VAD~v6, GTCRN WebAssembly SIMD denoising (192.3\,KB), passive \code{captureStream()} AEC3 preservation, half-duplex \emph{Speaker Echo Shield}, direct browser $\rightleftarrows$ Azure Speech WSS (STT/TTS via 10-minute STS tokens at \code{/api/audio/azure-speech-token}), and stateless HMAC session tokens; and (ii)~single-port multi-stage Docker (\code{Dockerfile} + \code{docker-compose.yml} + Redis~7) adding server WebSocket \code{/audio/transcribe/stream}, \texttt{DPDFNet2} ONNX (9.77\,MB), and offline \texttt{gipformer1.5-68M-rnnt} (69.8\,MB). Auxiliary product features (static edge catalog browser \code{/catalog-index.json}, assisted cart, PayOS VietQR HMAC checkout, and Zalo Bot alerts) are prototype engineering features rather than AI research claims.
+    \item \textbf{Tiered LLM routing:} Lean streaming prose routes preferentially to low-latency streaming models (\code{qwen/qwen3.8-27b} $\to$ \code{openai/gpt-oss-20b/120b}, 6\,s timeout with automatic HTTP~429 failover) backed by DeepSeek (\code{deepseek-v4.1-flash:free} $\to$ \code{deepseek-v4.1-flash-1017}); complex structured JSON turns run on the bounded planner; Turn-1 semantic cache holds up to 256 entries (TTL 300\,s, Jaccard $\ge 0.88$, bypassing clinical/allergen queries).
+    \item \textbf{On-demand \texttt{MobileNetV3Large-224} TFLite:} Distilled from \texttt{CLIP-ViT-B/32} (512-d) + \texttt{DINOv2-Small} (384-d) $\to$ SVD-256 (88.85\% variance); 7.04\,MB FP16 / 3.81\,MB INT8 + 1.58\,MB gallery (3,093 SKUs); Kaggle training (39.1\,min) with 4 losses; lazy-loaded at \code{POST /agent/respond/image}.
+    \item \textbf{Supporting voice interface and deployment stack:} The Vue~3 + TypeScript client supports dual deployment: (i)~Vercel Singapore (\texttt{sin1}, \url{https://retail-ai-kiosk.vercel.app}) running client-side Silero VAD~v6, GTCRN WebAssembly SIMD denoising (192.3\,KB), STT-verified anti-echo barge-in, and direct browser $\rightleftarrows$ Azure Speech WSS (STT/TTS via 9--10 minute STS tokens at \code{/api/audio/azure-speech-token}); and (ii)~single-port Docker adding server WebSocket \code{/audio/transcribe/stream}, \texttt{DPDFNet2} ONNX (9.77\,MB), and offline \texttt{gipformer1.5-68M-rnnt} (69.8\,MB).
 \end{itemize}
+
+Table~\ref{tab:feature_completeness} summarizes the complete inventory of implemented and verified features across all three repositories, explicitly separating core AI research contributions from prototype product engineering.
+
+\begin{table}[H]
+\centering
+\caption{Complete inventory of implemented and verified features across the Dual-Agent platform}
+\label{tab:feature_completeness}
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabularx}{\textwidth}{L{2.2cm} L{3.6cm} L{2.3cm} Y}
+\toprule
+\textbf{Module} & \textbf{Implemented Capability} & \textbf{Category} & \textbf{Verification Evidence} \\
+\midrule
+\texttt{Retail-AI-} & Zero-Planner Hybrid Routing \& Turn-1 Semantic Cache & Core AI Research & 50Q Independent Test (94.0\%, P99 154.5\,ms); Live \texttt{sin1} 188--887\,ms \\
+\texttt{Retail-AI-} & Medical/Drug, OWASP Red-Team \& Out-of-Catalog Safety Gates & Core AI Research & 10/10 XSTest, 10/10 OWASP, 10/10 50Q safety, Live 169--253\,ms \\
+\texttt{Retail-AI-} & Grounded Price, Unit-Value Compare, Promos \& Budget Baskets & Core AI Research & 100/100 price/promo Expert Audit; 11/11 queries Live \texttt{sin1} \\
+\texttt{Retail-AI-} & 8-Stage Cleaned Knowledge Store (ingredients, usage, storage, origin) & AI Data Asset & 2,205/3,099 SKUs (4,606 $\to$ 0 defects); 19/19 SHA-256 regression tests \\
+\texttt{Retail-AI-} & Synchronized 30-Day Bestsellers (\code{synced_sales_30d.json}) & Inter-Agent Sync & 3,099 SKUs (269,936 units); Live \texttt{sin1} 239\,ms; 100/100 test suite \\
+\texttt{Retail-AI-} & On-Demand \texttt{MobileNetV3Large-224} TFLite + Hybrid VLM Vision & Multimodal AI & 92.67\% Hard150; 93.8\% Brand@1 \& 4/4 OOD rejection; 23--27\,ms local \\
+\texttt{Retail-AI-} & Azure Speech Direct WSS, GTCRN WASM, Silero VAD \& Barge-in & Supporting UI & STS Token 200 OK; pilot WER 10.0--16.1\%; 179/179 Vitest tests \\
+\texttt{Retail-AI-} & 3,099-SKU Catalog, 13-Aisle Planogram, Cart, PayOS VietQR, Escalation & Prototype Product & \code{/catalog-index.json} 3,099 SKUs; PayOS enabled; Live shelf \code{A01-B01} \\
+\midrule
+\texttt{ops\_chest} & Hourly Censored-Demand Recovery on Stockout Days & Core AI Research & WAPE 32.35\% $\to$ 20.53\%, bias $-32.35\% \to -0.15\%$ ($n=200\text{k}$) \\
+\texttt{ops\_chest} & 29-Feature LightGBM~v3 Quantile Forecasting vs.\ EWMA & Core AI Research & 50 held-out stores: WAPE 35.06\% $\to$ 30.17\%, 80\% coverage 81.2\% \\
+\texttt{ops\_chest} & Profit-Gated Router (\texttt{B-Gate}) + FEFO--Newsvendor Engine & Core AI Research & 50-store 2-fold CV: +4.90\% vs.\ A, +0.78\% vs.\ EWMA ($p=6.39\cdot 10^{-6}$) \\
+\texttt{ops\_chest} & 31-Tool Typed Agent (0 Direct-Exec), HITL Queue \& \code{guard.py} & AI Safety & 20-scenario \code{eval_failover.json} (20/20 grounded $\ge 1{,}000$) \\
+\midrule
+\texttt{ops-retail-} & Shared 164-SKU Fresh Crosswalk (\code{crosswalk.csv}) & Data Alignment & 164/164 exact \code{product_id}, name \& price match; 0 quarantined \\
+\texttt{bridge} & Fail-Closed Read-Only HTTP Bridge (\code{ops_bridge.py}, TTL 300\,s) & Inter-Agent Sync & 5/5 E2E tests (\code{test_ops_bridge_e2e.py}): blocks \texttt{PENDING}, syncs FEFO \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \chapter{31-Tool Registry and HITL Architecture of \texttt{ops\_chest}}
 \label{app:ops_chest}

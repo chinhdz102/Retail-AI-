@@ -23,7 +23,7 @@ Pipeline làm giàu tri thức sản phẩm kết hợp thu thập 3.099 trang s
 2 & \code{get_product_detail} & Tra cứu chính xác giá, khuyến mãi, quy cách, vị trí kệ và đơn giá quy đổi \\
 3 & \code{compare_products} & So sánh song song giá bán, đơn giá chuẩn (Công thức~\ref{eq:unit_price}) và ưu đãi \\
 4 & \code{list_promotions} & Lọc 580 mã giảm giá danh mục và ưu tiên khuyến mãi FEFO đã duyệt từ \code{ops_bridge} \\
-5 & \code{rank_bestsellers} & Xếp hạng bán chạy 30 ngày từ \code{demo_sales.sqlite3} kèm nhãn bắt buộc \texttt{SIMULATED} \\
+5 & \code{rank_bestsellers} & Xếp hạng bán chạy 30 ngày từ \code{synced_sales_30d.json} (269.936 lượt; \code{demo_sales.sqlite3} cho unit test) \\
 6 & \code{check_snapshot_stock} & Xếp hạng và tra cứu tồn kho snapshot 15/09/2026 hoặc tồn trực tiếp qua cầu nối \\
 7 & \code{assemble_budget_basket} & Lắp giỏ món ăn theo khuôn mẫu thỏa ràng buộc $\sum P(p) \le B$ \\
 8 & \code{ops_bridge_overlay} & Phủ tồn kho và giá giảm FEFO đã duyệt từ \texttt{ops\_chest} (fail-closed TTL 300\,s) \\
@@ -31,12 +31,44 @@ Pipeline làm giàu tri thức sản phẩm kết hợp thu thập 3.099 trang s
 \end{tabularx}
 \end{table}
 
-\section*{A.2 Cấu hình Định tuyến LLM, Thị giác On-Demand và Chuỗi Âm thanh Hỗ trợ}
+\section*{A.2 Cấu hình Định tuyến LLM, Thị giác On-Demand, Chuỗi Âm thanh và Bảng Đầy đủ Tính năng}
 \begin{itemize}
-    \item \textbf{Định tuyến LLM phân tầng:} Tuyến streaming nhanh ưu tiên Groq LPU (\code{qwen/qwen3.8-27b} $\to$ \code{openai/gpt-oss-20b/120b}, timeout 6\,s, cooldown HTTP~429 3.600\,s), tự động dự phòng về DeepSeek (\code{deepseek-v4.1-flash:free} $\to$ \code{deepseek-v4.1-flash-1017}); các ca JSON cấu trúc (dị ứng/y tế sâu) chạy trên DeepSeek; bộ đệm ngữ nghĩa Turn-1 có dung lượng 256 mục, TTL 300\,s, ngưỡng Jaccard $\ge 0{,}88$ (bỏ qua mọi câu hỏi y tế/dị ứng).
-    \item \textbf{Mô hình thị giác \texttt{MobileNetV3Large-224} TFLite:} Chưng cất từ \texttt{CLIP-ViT-B/32} (512-d) + \texttt{DINOv2-Small} (384-d) $\to$ SVD-256 (88,85\% phương sai); kích thước 7,04\,MB FP16 / 3,81\,MB INT8 + 1,58\,MB gallery 3.093 SKU; huấn luyện trên Kaggle (39,1 phút) với Direct Cosine ($w=6{,}0$), Relational ($w=3{,}0$), Sub-Center ArcFace ($K=3, w=0{,}35$) và SupCon ($w=0{,}50$); nạp trễ (\emph{lazy singleton}) theo yêu cầu tại \code{POST /agent/respond/image}.
-    \item \textbf{Giao diện âm thanh hỗ trợ và triển khai phần mềm:} Tầng giao diện web (Vue~3 + TypeScript) hỗ trợ hai chế độ triển khai: (i) Serverless trên Vercel vùng Singapore (\texttt{sin1}, \url{https://retail-ai-kiosk.vercel.app}) chạy Silero VAD~v6, khử nhiễu biên GTCRN WebAssembly SIMD (192,3\,KB), bảo toàn WebRTC AEC3 bằng \code{captureStream()} thụ động, cơ chế \emph{Speaker Echo Shield} và kết nối trực tiếp Azure Speech WSS (STT/TTS) bằng mã STS 10 phút (\code{/api/audio/azure-speech-token}) cùng phiên ký HMAC không trạng thái; và (ii) đóng gói Docker toàn phần một cổng (\code{Dockerfile} + \code{docker-compose.yml} + Redis~7) bổ sung nhánh WebSocket máy chủ \code{/audio/transcribe/stream}, \texttt{DPDFNet2} ONNX (9,77\,MB) và dự phòng ngoại tuyến \texttt{gipformer1.5-68M-rnnt} (69,8\,MB). Các tính năng nghiệp vụ sản phẩm bổ trợ (duyệt danh mục \code{/catalog-index.json}, giỏ hàng, thanh toán PayOS VietQR HMAC-SHA256 và thông báo Zalo Bot) thuộc phạm vi hoàn thiện phần mềm nguyên mẫu, không tính là đóng góp nghiên cứu AI.
+    \item \textbf{Định tuyến LLM phân tầng:} Tuyến phát luồng nhanh ưu tiên mô hình suy luận độ trễ thấp (\code{qwen/qwen3.8-27b} $\to$ \code{openai/gpt-oss-20b/120b}, timeout 6\,s, tự động xoay dự phòng khi gặp HTTP~429), dự phòng sang DeepSeek (\code{deepseek-v4.1-flash:free} $\to$ \code{deepseek-v4.1-flash-1017}); các ca JSON cấu trúc (dị ứng/y tế sâu) chạy trên nhánh planner có kiểm chứng; bộ đệm ngữ nghĩa Turn-1 có dung lượng 256 mục, TTL 300\,s, ngưỡng Jaccard $\ge 0{,}88$ (bỏ qua mọi câu hỏi y tế/dị ứng).
+    \item \textbf{Mô hình thị giác \texttt{MobileNetV3Large-224} TFLite:} Chưng cất từ \texttt{CLIP-ViT-B/32} (512-d) + \texttt{DINOv2-Small} (384-d) $\to$ SVD-256 (88,85\% phương sai); kích thước 7,04\,MB FP16 / 3,81\,MB INT8 + 1,58\,MB gallery 3.093 SKU; huấn luyện trên Kaggle (39,1 phút) với 4 hàm mất mát; nạp trễ (\emph{lazy singleton}) theo yêu cầu tại \code{POST /agent/respond/image}.
+    \item \textbf{Giao diện âm thanh hỗ trợ và triển khai phần mềm:} Tầng giao diện web (Vue~3 + TypeScript) hỗ trợ hai chế độ triển khai: (i) Serverless trên Vercel vùng Singapore (\texttt{sin1}, \url{https://retail-ai-kiosk.vercel.app}) chạy Silero VAD~v6, khử nhiễu biên GTCRN WebAssembly SIMD (192,3\,KB), chống vọng loa có xác minh STT (\emph{barge-in}) và kết nối trực tiếp Azure Speech WSS (STT/TTS) bằng mã STS 9--10 phút (\code{/api/audio/azure-speech-token}); và (ii) đóng gói Docker toàn phần một cổng bổ sung WebSocket máy chủ \code{/audio/transcribe/stream}, \texttt{DPDFNet2} ONNX (9,77\,MB) và dự phòng ngoại tuyến \texttt{gipformer1.5-68M-rnnt} (69,8\,MB).
 \end{itemize}
+
+Bảng~\ref{tab:feature_completeness} tổng hợp toàn bộ danh mục tính năng đã hiện thực và kiểm chứng xuyên suốt cả ba kho mã nguồn, tách bạch rõ nhóm đóng góp nghiên cứu AI với nhóm tính năng hoàn thiện sản phẩm nguyên mẫu.
+
+\begin{table}[H]
+\centering
+\caption{Bảng kiểm tra đầy đủ tính năng đã hiện thực và kiểm chứng trên toàn hệ thống}
+\label{tab:feature_completeness}
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabularx}{\textwidth}{L{2.2cm} L{3.6cm} L{2.3cm} Y}
+\toprule
+\textbf{Phân hệ} & \textbf{Tính năng Đã Hiện thực} & \textbf{Phân loại} & \textbf{Bằng chứng Kiểm chứng} \\
+\midrule
+\texttt{Retail-AI-} & Zero-Planner Hybrid Routing \& Bộ đệm ngữ nghĩa Turn-1 & Đóng góp AI cốt lõi & 50Q Test Độc lập (94,0\%, P99 154,5\,ms); Live \texttt{sin1} 188--887\,ms \\
+\texttt{Retail-AI-} & Cổng an toàn Y tế/Thuốc, OWASP Red-Team \& Ngoài danh mục & Đóng góp AI cốt lõi & 10/10 XSTest, 10/10 OWASP, 10/10 nhóm An toàn 50Q, Live 169--253\,ms \\
+\texttt{Retail-AI-} & Tra cứu giá, so sánh đơn giá, khuyến mãi, lắp giỏ ngân sách & Đóng góp AI cốt lõi & 100/100 giá--khuyến mãi Expert Audit; 11/11 truy vấn Live \texttt{sin1} \\
+\texttt{Retail-AI-} & Kho tri thức sạch 8 tầng (thành phần, HDSD, bảo quản, xuất xứ) & Đóng góp dữ liệu AI & 2.205/3.099 SKU (4.606 $\to$ 0 lỗi); 19/19 ca hồi quy SHA-256 \\
+\texttt{Retail-AI-} & Xếp hạng bán chạy 30 ngày đồng bộ (\code{synced_sales_30d.json}) & Tích hợp liên Agent & 3.099 SKU (269.936 lượt); Live \texttt{sin1} 239\,ms; 100/100 bộ test \\
+\texttt{Retail-AI-} & Nhận diện ảnh \texttt{MobileNetV3Large-224} TFLite + Hybrid VLM & Đóng góp AI đa PT & 92,67\% Hard150; 93,8\% Brand@1 \& 4/4 chặn OOD; 23--27\,ms cục bộ \\
+\texttt{Retail-AI-} & Giọng nói Azure Speech WSS, GTCRN WASM, VAD \& Barge-in & Hỗ trợ giao diện & Token STS 200 OK; thí điểm WER 10,0--16,1\%; 179/179 Vitest \\
+\texttt{Retail-AI-} & Danh mục 3.099 SKU, Sơ đồ kệ 13 dãy, Giỏ hàng, PayOS VietQR, Hỗ trợ nhân viên & Hoàn thiện sản phẩm & \code{/catalog-index.json} 3.099 SKU; PayOS enabled; kệ \code{A01-B01} Live \\
+\midrule
+\texttt{ops\_chest} & Khôi phục nhu cầu bị kiểm duyệt theo giờ đứt hàng & Đóng góp AI cốt lõi & Giảm WAPE 32,35\% $\to$ 20,53\%, bias $-32{,}35\% \to -0{,}15\%$ ($n=200\text{k}$) \\
+\texttt{ops\_chest} & Dự báo phân vị LightGBM~v3 (29 đặc trưng) vs.\ EWMA & Đóng góp AI cốt lõi & 50 CH độc lập: WAPE 35,06\% $\to$ 30,17\%, độ phủ 80\% đạt 81,2\% \\
+\texttt{ops\_chest} & Profit-Gated Router (\texttt{B-Gate}) + Newsvendor--FEFO & Đóng góp AI cốt lõi & 50 CH 2-fold CV: +4,90\% vs.\ A, +0,78\% vs.\ EWMA ($p=6{,}39\cdot 10^{-6}$) \\
+\texttt{ops\_chest} & Tác nhân 31 công cụ (0 tự thực thi), HITL \& \code{guard.py} & Đóng góp AI \& an toàn & 20 kịch bản \code{eval_failover.json} (20/20 grounded $\ge 1.000$) \\
+\midrule
+\texttt{ops-retail-} & Bảng ánh xạ 164 SKU tươi sống (\code{crosswalk.csv}) & Liên thông dữ liệu & 164/164 khớp 100\% \code{product_id}, tên \& giá; 0 SKU cách ly \\
+\texttt{bridge} & Cầu nối API chỉ đọc fail-closed (\code{ops_bridge.py}, TTL 300\,s) & Đóng góp liên Agent & 5/5 kịch bản E2E (\code{test_ops_bridge_e2e.py}): chặn \texttt{PENDING}, đẩy FEFO \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \chapter{Danh mục 31 Công cụ và Kiến trúc HITL của \texttt{ops\_chest}}
 \label{app:ops_chest}

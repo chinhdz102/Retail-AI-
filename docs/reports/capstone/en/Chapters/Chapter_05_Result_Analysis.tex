@@ -1,6 +1,14 @@
 \chapter{Results Analysis}
 
-This chapter reports controlled empirical findings across four evaluation pillars: (1)~the customer advisory agent \texttt{Retail-AI-} (controlled ablation on a strictly independent 50-question test set with P50/P95/P99 latency, 11-query streaming study, SOTA~V2 Dev Set, independent 100Q Expert Audit, 100Q Bestseller/Stock evaluation, and supporting vision/ASR studies); (2)~the perishable operations agent \texttt{ops\_chest} (B0--B5 baselines, 50-store backtest with 95\% bootstrap CIs, Wilcoxon tests, store-size breakdown, and 8-scenario sensitivity); (3)~simulated end-to-end inter-agent integration; and (4)~safety, hallucination, and transparent error analysis. Software testing statistics (pytest, Vitest, lint) are consolidated in Appendix~C.
+This chapter evaluates the system quantitatively across four core pillars: (1)~the customer advisory agent (\texttt{Retail-AI-}), (2)~the perishable store-operations agent (\texttt{ops\_chest}), (3)~end-to-end inter-agent synchronization, and (4)~safety, grounding, and transparent error analysis. Software verification suites (pytest, Vitest, lint) are consolidated in Appendix~C.
+
+\intuitionbox{Four Key Experimental Takeaways at a Glance}{%
+\begin{enumerate}[leftmargin=1.4em, itemsep=1.5pt, topsep=2pt]
+    \item \textbf{Fast, Grounded Customer Advisory (\texttt{Retail-AI-}):} On an independent 50-question held-out suite ($N=150$), Zero-Planner reached \textbf{94.0\%} accuracy with \textbf{100\%} SKU grounding and cut P99 latency $2.8\times$ to 154.5\,ms; live \texttt{sin1} production completed all 11 queries in \textbf{188--887\,ms}.
+    \item \textbf{Profit-Aligned Forecasting Beats Pure WAPE (\texttt{ops\_chest}):} Although LightGBM~v3 reduced WAPE from 35.06\% to 30.17\%, using raw quantile spread lost $-5.59\%$ on small stores. \texttt{B-Gate} eliminated this loss and delivered \textbf{+4.90\%} median simulated profit over the heuristic baseline (\textbf{+0.78\%} over EWMA, $p=6.39\times 10^{-6}$, winning 76\% of stores).
+    \item \textbf{HITL-Safe Inter-Agent Sync:} 5/5 end-to-end scenarios confirmed approved FEFO markdowns propagate immediately to the kiosk (123,900 $\to$ 92,925\,VND) while unapproved drafts stay isolated and zero-stock items are hidden.
+    \item \textbf{Honest Residual Gaps:} Numerical post-checking still has blind spots below 1,000, neural denoising degrades Vietnamese tones at 5\,dB, and 55.7\% of SKUs still lack complete nutrition panels.
+\end{enumerate}}
 
 \section{Experimental Protocol and Metrics}
 
@@ -211,10 +219,10 @@ Local \texttt{gipformer1.5-68M-rnnt} & 18.4 & 24.6 & 34.8 & Offline contingency 
 \section{Results for Agent 2: Forecasting and Store Operations (\texttt{ops\_chest})}
 
 \subsection*{Controlled Forecasting Ablation (B0--B3) Across 50 Held-Out FRN Stores}
-On masked late-day validation ($n=200{,}000$), hourly demand recovery lowered stockout-day WAPE from 32.35\% to \textbf{20.53\%} and cut bias from $-32.35\%$ to \textbf{$-0.15\%$}. Table~\ref{tab:ops_forecast_ablation} compares five forecasting models on the exact same 50 held-out stores across both the 7-day official evaluation week ($n=11{,}037$ full-stock observations) and the 37-day rolling horizon ($n=374{,}982$ full-stock observations):
+On masked late-day validation ($n=200{,}000$), hourly demand recovery reduced stockout-day WAPE from 32.35\% to \textbf{20.53\%} and nearly eliminated downward bias ($-32.35\% \to -0.15\%$). Table~\ref{tab:ops_forecast_ablation} compares five forecasting models on the exact same 50 held-out stores across both the 7-day official evaluation week ($n=11{,}037$ full-stock observations) and the 37-day rolling horizon ($n=374{,}982$ observations):
 \begin{itemize}
-    \item \textbf{Impact of Censored Demand Recovery:} Omitting recovery (\code{ewma_khong_co_het_hang}) induces severe negative bias of \textbf{$-21.80\%$} (WAPE 38.26\%) against recovered truth (\code{rec.all}, $n=16{,}207$), compared to $-5.07\%$ (WAPE 35.12\%) with recovery enabled (\code{ewma_oc}).
-    \item \textbf{Predictive Accuracy of LightGBM~v3:} Across both windows, LightGBM~v3 outperforms all baselines, reducing eval-week WAPE from 38.65\% (Seasonal Naive B0) and 35.06\% (EWMA B1) to \textbf{30.17\%}, cutting bias from $+6.95\%$ to $+2.71\%$, lowering Pinball-50 from 0.1753 to \textbf{0.1508}, and calibrating 80\%-interval coverage to \textbf{81.2\%} (vs.\ 72.6\% for EWMA).
+    \item \textbf{Impact of Censored Demand Recovery:} Omitting stockout recovery causes severe negative bias of \textbf{$-21.80\%$} against recovered demand ($n=16{,}207$, WAPE 38.26\%), compared to only $-5.07\%$ (WAPE 35.12\%) when hourly recovery is enabled.
+    \item \textbf{Predictive Accuracy of LightGBM~v3:} Across both horizons, LightGBM~v3 (29 features) outperforms every baseline: cutting WAPE from 38.65\% (Seasonal Naive) and 35.06\% (EWMA) to \textbf{30.17\%}, reducing bias from $+6.95\%$ to $+2.71\%$, lowering Pinball-50 to \textbf{0.1508}, and calibrating 80\%-interval coverage to \textbf{81.2\%} (vs.\ 72.6\% for EWMA).
 \end{itemize}
 
 \begin{table}[H]

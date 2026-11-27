@@ -117,24 +117,33 @@ To unify both agents without weakening HITL isolation, we implemented a three-pa
 
 \section{Contribution 1: Zero-Planner Hybrid Routing (\texttt{Retail-AI-})}
 
-Conventional multi-step LLM agent loops execute 2--4 sequential calls (planner $\to$ selector $\to$ reviewer) per query, inflating latency to 5--14\,s. Algorithm~\ref{alg:zero_planner_sse} formalizes our \textbf{Zero-Planner Hybrid Routing} pipeline separating queries across four complexity/risk tiers: (1)~sub-3\,ms deterministic safety, OOC, OWASP, and smalltalk gates; (2)~zero-LLM deterministic tools for single-SKU lookup, verified knowledge attributes, simulated best-sellers (\texttt{SIMULATED}), snapshot/live stock ranking, and Turn-1 semantic cache (Jaccard $\ge 0.88$, bypassing clinical/allergen queries); (3)~zero-planner grounded SSE streaming and 1-call budget baskets emitting verified catalog cards prior to token generation; and (4)~bounded structured planning reserved strictly for complex allergen or unresolved multi-constraint cases.
+Conventional multi-step LLM agent loops execute 2--4 sequential calls (planner $\to$ selector $\to$ reviewer) on every turn, inflating latency to 5--14\,s and risking price drift. Algorithm~\ref{alg:zero_planner_sse} formalizes our \textbf{Zero-Planner Hybrid Routing} pipeline across four clear tiers ordered from fastest to strictest:
+\begin{itemize}
+    \item \textbf{Tier 1 -- Sub-3\,ms Deterministic Safety \& Smalltalk Gates:} Instantly blocks medical/medication advice, OWASP prompt-injection attempts, and out-of-catalog items with zero LLM calls.
+    \item \textbf{Tier 2 -- Deterministic Catalog Tools (0 LLM calls):} Directly resolves single-SKU price lookup, 13-aisle shelf locations, verified product knowledge attributes, synchronized 30-day bestsellers (\code{data/synced_sales_30d.json}, with \code{demo_sales.sqlite3} isolated for offline tests), snapshot/bridge stock checks, and Turn-1 semantic cache hits (Jaccard $\ge 0.88$, always bypassing medical/allergen queries).
+    \item \textbf{Tier 3 -- Zero-Planner Grounded SSE Streaming \& 1-Call Baskets:} For browsing, unit-price comparisons (Eq.~\ref{eq:unit_price}), promotions, and budget meal baskets ($\sum P(p) \le B$), catalog retrieval finishes first and emits verified product cards immediately, followed by a \textbf{single} streaming LLM pass locked to those SKUs.
+    \item \textbf{Tier 4 -- Bounded Structured Planner:} Reserved strictly for complex multi-condition allergen or unresolved multi-constraint queries.
+\end{itemize}
+
+\intuitionbox{Step-by-Step Walkthrough: How a Shopper Query Flows Through Zero-Planner}{%
+When a shopper asks \emph{``Cho mình xem sữa tươi không đường''} (Show me unsweetened fresh milk): (1)~\textbf{Tier 1} clears medical/OWASP checks in $<3$\,ms; (2)~\textbf{Tier 3} queries the inverted index across 3,081 Thanh Lam Mart SKUs and streams verified product cards to the screen in \textbf{242\,ms}; (3)~a \textbf{single} streaming LLM pass summarizes the top pick, finishing end-to-end in \textbf{617\,ms} on live production---$11\times$ faster than the 6.85\,s multi-call planner baseline.}
 
 \begin{algorithm}[htbp]
 \caption{Zero-Planner Hybrid Routing with Grounded Tools (\texttt{Retail-AI-})}
 \label{alg:zero_planner_sse}
 \footnotesize
 \begin{algorithmic}[1]
-\Require User query $u$, session context $S$, bridged catalog $\mathcal{C}_{\text{bridge}}$, isolated demo sales store $\mathcal{D}_{\text{sim}}$
+\Require User query $u$, session context $S$, bridged catalog $\mathcal{C}_{\text{bridge}}$, synchronized sales store $\mathcal{D}_{\text{sales}}$
 \Ensure Grounded Vietnamese/EN response with verified product cards $K$ and provenance metadata
-\State Normalize $u$ (catalog-anchored brand repair protecting \code{_NEVER_CORRECT}); evaluate sub-3\,ms deterministic gates (medical/drug refusal, OOC, OWASP injection, social smalltalk)
+\State Normalize $u$ (catalog-anchored brand repair); evaluate sub-3\,ms deterministic gates (medical/drug refusal, OOC, OWASP injection, social smalltalk)
 \If{deterministic gate triggers}
     \State Return immediate deterministic response (0 LLM calls); \Return
 \EndIf
 \If{non-clinical Turn-1 \textbf{and} semantic cache hits (exact $O(1)$ or Jaccard $\ge 0.88$ with matching constraint signature)}
     \State Deep-copy session memory $S'$ and return cached reply (0 LLM tokens); \Return
 \EndIf
-\If{$u$ is a single-SKU lookup, verified label knowledge query, \texttt{SIMULATED} bestseller, or stock ranking query}
-    \State Execute deterministic tool on $\mathcal{C}_{\text{bridge}}$ or $\mathcal{D}_{\text{sim}}$; attach provenance tag (live bridge, 15 Sep 2026 snapshot, or \texttt{SIMULATED})
+\If{$u$ is a single-SKU lookup, shelf location, verified label query, 30-day bestseller, or stock ranking query}
+    \State Execute deterministic tool on $\mathcal{C}_{\text{bridge}}$ or $\mathcal{D}_{\text{sales}}$; attach explicit provenance metadata
     \State Return deterministic grounded reply (0 LLM calls) with cards $K$; \Return
 \EndIf
 \If{$u$ requests a budget-capped meal/combo basket ($\le B$)}
@@ -144,22 +153,32 @@ Conventional multi-step LLM agent loops execute 2--4 sequential calls (planner $
     \State Execute inverted-index search + exclusion filter + unit-price ranking (Eq.~\ref{eq:unit_price}) to obtain top-$k$ cards $K$
     \State Emit cards $K$ prior to token streaming; stream grounded explanation over locked $K$; store Turn-1 cache entry
 \Else
-    \State Escalate complex allergy/clinical or unresolved multi-constraint queries to bounded planner (\code{customer_consultation.py})
+    \State Escalate complex allergy/clinical or unresolved multi-constraint queries to bounded structured planner
 \EndIf
 \State Persist updated session state $S'$ and return
 \end{algorithmic}
 \end{algorithm}
 
 \subsection*{Supporting Multimodal Interfaces (Speech Front-End \& On-Demand Vision)}
-To support hands-free and visual counter queries, \texttt{Retail-AI-} integrates two auxiliary perception modules:
+To support hands-free speech and camera queries at the counter, \texttt{Retail-AI-} integrates two auxiliary perception modules:
 \begin{itemize}
-    \item \textbf{Supporting Speech Front-End:} Combines local Silero VAD~v6, streaming Azure Speech with domain \code{PhraseListGrammar}, catalog-anchored brand repair, and SNR-adaptive denoising (\texttt{DPDFNet2} ONNX on server / \texttt{GTCRN} WASM on client serverless deployments; software details in Appendix~A.2).
-    \item \textbf{On-Demand Mobile Visual Recognition (\texttt{MobileNetV3Large-224} TFLite + Sibling Pack-Size Guard):} Because each catalog SKU has only one studio image, we distilled complementary features from \texttt{CLIP-ViT-B/32} (512-d) and \texttt{DINOv2-Small} (384-d)~\cite{radford2021clip,oquab2024dinov2} via catalog-only orthogonal SVD-256 (88.85\% variance retained) into a lightweight \texttt{MobileNetV3Large-224} student~\cite{howard2019mobilenetv3,retail_tflite_kaggle} (7.04\,MB FP16 + 1.58\,MB gallery across 3,093 SKUs) trained with Direct Cosine, Relational, Sub-Center ArcFace~\cite{deng2020subcenter}, and SupCon~\cite{khosla2020supcon} losses under heavy 3D perspective/shelf/glare augmentation. At on-demand inference, aspect-preserving 2-View TTA routes to a 23--27\,ms local Fast-Path when $\text{sim}_1 \ge 0.82$, margin $m \ge 0.08$, and the \textbf{Sibling Pack-Size Guard} confirms no same-brand sibling with a different weight/volume (or $\text{sim}_1 \ge 0.92$); ambiguous pack-size siblings and low-confidence uploads escalate to Hybrid VLM with top-4 local hints for exact net-weight reading and OOD rejection.
+    \item \textbf{Supporting Speech Front-End:} Combines local Silero VAD~v6, streaming Azure Speech with Thanh Lam Mart brand biasing (\code{PhraseListGrammar}), catalog-anchored brand repair, and SNR-adaptive denoising (client-side \texttt{GTCRN} WASM on serverless deployments or server-side \texttt{DPDFNet2} ONNX; details in Appendix~A.2).
+    \item \textbf{On-Demand Mobile Visual Recognition (\texttt{MobileNetV3Large-224} TFLite + Sibling Pack-Size Guard):} Structured in three intuitive stages:
+    \begin{enumerate}[leftmargin=1.5em, itemsep=1pt]
+        \item \emph{Solving 1-image-per-SKU:} We fuse complementary embeddings from \texttt{CLIP-ViT-B/32} and \texttt{DINOv2-Small}~\cite{radford2021clip,oquab2024dinov2}, project via catalog-only SVD-256 (88.85\% variance retained), and distill into a 7.04\,MB \texttt{MobileNetV3Large-224} student~\cite{howard2019mobilenetv3,retail_tflite_kaggle} (plus 1.58\,MB gallery for 3,093 SKUs) under heavy 3D perspective/glare augmentation~\cite{deng2020subcenter,khosla2020supcon}.
+        \item \emph{Local Fast-Path (23--27\,ms):} On an uploaded photo, if similarity is high ($\text{sim}_1 \ge 0.82$, margin $m \ge 0.08$) and no same-brand pack-size sibling exists (or $\text{sim}_1 \ge 0.92$), the local model returns the grounded SKU card immediately without cloud calls.
+        \item \emph{Sibling Pack-Size Guard (Hybrid VLM):} Identical-layout pack sizes (e.g., 500\,ml vs.\ 900\,ml bottles) or non-retail images (OOD) escalate to a Hybrid VLM seeded with top-4 local candidates to read net weight accurately and reject OOD inputs.
+    \end{enumerate}
 \end{itemize}
 
 \section{Contribution 2: Profit-Gated Router (\texttt{B-Gate}) and HITL Operations (\texttt{ops\_chest})}
 
-Using LightGBM's raw quantile spread $(q_{90}-q_{10})$ directly as daily demand dispersion $\sigma_{\text{daily}}$ inside Newsvendor (Eq.~\ref{eq:order_qty}) over-estimates tail variance on short perishable series, raising spoilage and losing store profit relative to EWMA. Algorithm~\ref{alg:ops_chest_newsvendor} formalizes our \textbf{Profit-Gated Router (\texttt{B-Gate})}: (i)~it couples LightGBM's accurate point median ($\hat{q}_{50}$) with EWMA's smooth dispersion ($\sigma_{\text{EWMA}}$); (ii)~it selects ML versus EWMA per segment $g = (\text{sales tier} \times \text{intermittency} \times \mathbb{I}[N_s > 30])$ strictly via out-of-sample simulated profit gain (Eq.~\ref{eq:profit_gate}); (iii)~it computes FEFO-capped Newsvendor orders and graduated near-expiry markdowns; and (iv)~it enforces \code{guard.py} inspection and mandatory HITL approval (\texttt{PENDING} $\to$ \texttt{APPROVED} $\to$ \texttt{EXECUTED}).
+Using LightGBM's raw quantile spread $(q_{90}-q_{10})$ directly as daily demand dispersion $\sigma_{\text{daily}}$ inside Newsvendor (Eq.~\ref{eq:order_qty}) inflates safety stock on volatile SKUs and small stores, increasing spoilage and lowering profit below EWMA.
+
+Algorithm~\ref{alg:ops_chest_newsvendor} resolves this divergence through our \textbf{Profit-Gated Router (\texttt{B-Gate})} in four steps: (1)~keep LightGBM's accurate median ($\hat{q}_{50}$) while pairing it with EWMA's smooth dispersion ($\sigma_{\text{EWMA}}$); (2)~enable ML only on store--SKU segments that prove positive out-of-sample simulated profit lift (Eq.~\ref{eq:profit_gate}); (3)~compute FEFO-capped Newsvendor orders and graduated near-expiry markdowns; and (4)~hold every draft proposal in \texttt{PENDING} state until the Store Manager explicitly approves it.
+
+\intuitionbox{One-Day Operational Walkthrough: How \texttt{ops\_chest} Coordinates with \emph{Mai}}{%
+At 07:00 in Store~18, \texttt{ops\_chest} flags fresh SKU \code{F0005} (mapped to \code{TLM_10283202}, list price 123,900\,VND) with one day of shelf life left and excess stock. \textbf{Step 1:} \texttt{ops\_chest} creates a 25\% markdown draft in \texttt{PENDING} state; shoppers at the kiosk still see 123,900\,VND (strict HITL isolation). \textbf{Step 2:} The Store Manager approves the proposal (\texttt{EXECUTED}). \textbf{Step 3:} The read-only bridge immediately pushes the approved 92,925\,VND FEFO price to Mai so shoppers see the deal; once stock hits zero (\code{on_hand=0}), Mai automatically hides it from in-stock recommendations.}
 
 \begin{algorithm}[htbp]
 \caption{Profit-Gated Perishable Newsvendor (\texttt{B-Gate}), FEFO Caps \& HITL (\texttt{ops\_chest})}

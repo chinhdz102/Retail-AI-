@@ -123,55 +123,68 @@ Thay cho bảng liệt kê thành phần phần mềm/giao diện, Hình~\ref{fi
 
 \section{Đóng góp 1: Zero-Planner Hybrid Routing cho Agent Khách hàng (\texttt{Retail-AI-})}
 
-Kiến trúc tác nhân LLM truyền thống (như ReAct đa bước) thường gọi tuần tự 2--4 lượt LLM (lập kế hoạch $\to$ chọn sản phẩm $\to$ duyệt văn bản) cho mọi câu hỏi, gây độ trễ 5--14\,s và tăng nguy cơ sai lệch giá. Thuật toán~\ref{alg:zero_planner_sse} trình bày cơ chế \textbf{Zero-Planner Hybrid Routing} do nhóm thiết kế nhằm phân luồng truy vấn theo mức độ phức tạp và rủi ro:
+Kiến trúc tác nhân LLM truyền thống (như ReAct đa bước) thường phải gọi LLM từ 2 đến 4 vòng tuần tự (lập kế hoạch $\to$ chọn sản phẩm $\to$ duyệt văn bản) cho mọi câu hỏi. Cách làm này kéo độ trễ lên 5--14 giây và dễ gây sai lệch giá bán. Thuật toán~\ref{alg:zero_planner_sse} trình bày cơ chế \textbf{Zero-Planner Hybrid Routing} do nhóm thiết kế, chia câu hỏi thành 4 tầng xử lý từ nhanh nhất đến chặt chẽ nhất:
 \begin{itemize}
     \item \textbf{Tầng 1 -- Cổng an toàn và chào hỏi xác định ($<3$\,ms):} Chặn tức thì câu hỏi kê đơn thuốc/chẩn đoán y tế, tiêm lệnh OWASP và sản phẩm ngoài danh mục mà không tốn lượt gọi LLM.
-    \item \textbf{Tầng 2 -- Truy xuất và tính toán xác định (0 lượt gọi LLM):} Giải trực tiếp các truy vấn tra giá đơn SKU, tra bảng thành phần/HDSD đã xác minh (3 tầng bằng chứng), xếp hạng bán chạy mô phỏng (\code{demo_sales.sqlite3}, bắt buộc ghi rõ \texttt{SIMULATED}), và xếp hạng tồn kho snapshot (\code{catalog-stock}, bắt buộc ghi rõ mốc chụp 15/09/2026) cùng bộ đệm ngữ nghĩa Turn-1 (Jaccard $\ge 0{,}88$ trong cùng chữ ký ràng buộc, bỏ qua hoàn toàn truy vấn y tế/dị ứng).
-    \item \textbf{Tầng 3 -- Phát luồng SSE không planner và giỏ hàng 1 lượt:} Với truy vấn duyệt sản phẩm, so sánh đơn giá quy đổi (Công thức~\ref{eq:unit_price}), lọc khuyến mãi hoặc lắp giỏ bữa ăn theo ngân sách $\sum P(p) \le B$, truy xuất danh mục hoàn tất trước và trả thẻ sản phẩm xác thực ngay trong sự kiện SSE đầu tiên, sau đó chỉ gọi 1 lượt LLM sinh lời giải thích gọn nhẹ trên tập ứng viên đã khóa chặt.
-    \item \textbf{Tầng 4 -- Lập kế hoạch có giới hạn cho ca rủi ro cao:} Chỉ các câu hỏi dị ứng đa điều kiện hoặc đa ràng buộc chưa phân giải mới chuyển sang bộ lập kế hoạch JSON có kiểm chứng (\code{customer_consultation.py}).
+    \item \textbf{Tầng 2 -- Truy xuất và tính toán xác định (0 lượt gọi LLM):} Giải trực tiếp các truy vấn tra giá đơn SKU, vị trí kệ, bảng thành phần/HDSD đã xác minh, xếp hạng bán chạy 30 ngày đồng bộ (\code{data/synced_sales_30d.json}, hoặc \code{demo_sales.sqlite3} trong kiểm thử cô lập), xếp hạng tồn kho snapshot/cầu nối và bộ đệm ngữ nghĩa Turn-1 (Jaccard $\ge 0{,}88$, luôn bỏ qua câu hỏi y tế/dị ứng).
+    \item \textbf{Tầng 3 -- Phát luồng SSE không planner và giỏ hàng 1 lượt:} Với truy vấn duyệt sản phẩm, so sánh đơn giá quy đổi (Công thức~\ref{eq:unit_price}), lọc khuyến mãi hoặc lắp giỏ bữa ăn theo ngân sách $\sum P(p) \le B$, hệ thống tra cứu danh mục xong trước và đẩy ngay thẻ sản phẩm lên màn hình, rồi mới gọi đúng \textbf{1 lượt LLM} để giải thích ngắn gọn trên tập sản phẩm đã khóa cứng.
+    \item \textbf{Tầng 4 -- Lập kế hoạch có giới hạn cho ca rủi ro cao:} Chỉ các câu hỏi dị ứng đa điều kiện hoặc nhiều ràng buộc chưa tách rõ mới chuyển sang bộ lập kế hoạch JSON có kiểm chứng.
 \end{itemize}
+
+\intuitionbox{Ví dụ chạy từng bước: Câu hỏi của khách đi qua Zero-Planner như thế nào?}{%
+Khi khách hỏi \emph{``Cho mình xem sữa tươi không đường''}: (1)~\textbf{Tầng 1} xác nhận đây không phải câu hỏi y tế hay tấn công prompt trong $<3$\,ms; (2)~\textbf{Tầng 3} tìm thẳng trong chỉ mục 3.081 SKU Thanh Lam Mart, lọc đúng các mã sữa tươi không đường và gửi ngay thẻ sản phẩm (kèm giá xác thực) tới trình duyệt sau \textbf{242\,ms}; (3)~chỉ \textbf{1 lượt LLM phát luồng} diễn đạt ngắn gọn lựa chọn nổi bật, hoàn tất toàn bộ câu trả lời trong \textbf{617\,ms} (nhanh hơn 11 lần so với 6,85 giây của vòng lặp planner cũ).}
 
 \begin{algorithm}[htbp]
 \caption{Định tuyến Lai Không Planner có Căn cứ (\emph{Zero-Planner Hybrid Routing}, \texttt{Retail-AI-})}
 \label{alg:zero_planner_sse}
 \footnotesize
 \begin{algorithmic}[1]
-\Require Truy vấn $u$, bộ nhớ phiên $S$, kho danh mục có cầu nối $\mathcal{C}_{\text{bridge}}$, kho bán thử $\mathcal{D}_{\text{sim}}$
+\Require Truy vấn $u$, bộ nhớ phiên $S$, kho danh mục có cầu nối $\mathcal{C}_{\text{bridge}}$, kho lượt bán đồng bộ $\mathcal{D}_{\text{sales}}$
 \Ensure Phản hồi tiếng Việt có căn cứ kèm danh sách thẻ sản phẩm $K$ và nhãn nguồn gốc dữ liệu
-\State Chuẩn hóa $u$ (sửa thương hiệu neo danh mục, bảo vệ tập từ dừng \code{_NEVER_CORRECT}); chạy các cổng xác định $<3$\,ms (y tế/thuốc, ngoài danh mục, tiêm lệnh OWASP, chào hỏi xã giao)
+\State Chuẩn hóa $u$ (sửa lỗi chính tả thương hiệu theo danh mục); chạy các cổng xác định $<3$\,ms (y tế/thuốc, ngoài danh mục, tiêm lệnh OWASP, chào hỏi xã giao)
 \If{kích hoạt cổng an toàn / ngoài phạm vi / chào hỏi}
     \State Trả ngay phản hồi chuẩn xác định (0 lượt LLM); \Return
 \EndIf
-\If{lượt Turn-1 không thuộc nhóm y tế/dị ứng \textbf{và} trúng bộ đệm ngữ nghĩa (chính xác $O(1)$ hoặc Jaccard $\ge 0{,}88$ cùng chữ ký ràng buộc)}
-    \State Sao chép sâu bộ nhớ phiên $S'$ và trả kết quả đệm (0 token LLM); \Return
+\If{lượt Turn-1 không thuộc nhóm y tế/dị ứng \textbf{và} trúng bộ đệm ngữ nghĩa (chính xác $O(1)$ hoặc Jaccard $\ge 0{,}88$ cùng ràng buộc)}
+    \State Sao chép bộ nhớ phiên $S'$ và trả kết quả đệm (0 token LLM); \Return
 \EndIf
-\If{$u$ là tra cứu đơn SKU, tri thức nhãn xác minh, bán chạy \texttt{SIMULATED} hoặc xếp hạng tồn kho}
-    \State Thực thi công cụ xác định trên $\mathcal{C}_{\text{bridge}}$ hoặc $\mathcal{D}_{\text{sim}}$; gắn nhãn nguồn gốc (tồn trực tiếp cầu nối, snapshot 15/09/2026 hoặc \texttt{SIMULATED})
-    \State Trả phản hồi mẫu xác định (0 lượt LLM) kèm thẻ $K$; \Return
+\If{$u$ là tra cứu đơn SKU, vị trí kệ, tri thức nhãn xác minh, bán chạy 30 ngày hoặc tồn kho}
+    \State Thực thi công cụ xác định trên $\mathcal{C}_{\text{bridge}}$ hoặc $\mathcal{D}_{\text{sales}}$; gắn nhãn nguồn gốc minh bạch
+    \State Trả phản hồi chuẩn xác định (0 lượt LLM) kèm thẻ $K$; \Return
 \EndIf
 \If{$u$ yêu cầu giỏ món ăn theo ngân sách $B$}
-    \State Phân loại khuôn mẫu giỏ, lấy ứng viên từ $\mathcal{C}_{\text{bridge}}$ (ẩn SKU hết hàng trực tiếp) và chọn tập $K_{\text{basket}}$ thỏa $\sum_{p \in K_{\text{basket}}} P(p) \le B$
+    \State Lấy ứng viên từng nhóm món từ $\mathcal{C}_{\text{bridge}}$ (ẩn SKU hết hàng trực tiếp) và chọn tập $K_{\text{basket}}$ thỏa $\sum_{p \in K_{\text{basket}}} P(p) \le B$
     \State Phát thẻ $K_{\text{basket}}$ ngay; phát luồng lời tư vấn bằng \textbf{1 lượt LLM}
 \ElsIf{$u$ là duyệt, so sánh đơn giá, khuyến mãi hoặc lọc loại trừ tiêu chuẩn}
-    \State Chạy tìm kiếm chỉ mục đảo + lọc loại trừ + xếp hạng đơn giá quy đổi (Công thức~\ref{eq:unit_price}) lấy top-$k$ SKU $K$
+    \State Chạy tìm kiếm chỉ mục đảo + lọc loại trừ + xếp hạng đơn giá (Công thức~\ref{eq:unit_price}) lấy top-$k$ SKU $K$
     \State Phát thẻ $K$ trước khi có token; phát luồng văn bản giải thích trên tập $K$ đã khóa cứng; lưu đệm Turn-1
 \Else
-    \State Chuyển các ca dị ứng/y tế phức tạp hoặc JSON đa ràng buộc sang planner có kiểm chứng (\code{customer_consultation.py})
+    \State Chuyển các ca dị ứng/y tế phức tạp hoặc đa ràng buộc sang planner có kiểm chứng
 \EndIf
 \State Cập nhật ngữ cảnh phiên $S'$ và trả kết quả
 \end{algorithmic}
 \end{algorithm}
 
 \subsection*{Các Mô-đun Đa phương thức Bổ trợ (Giọng nói \& Thị giác On-Demand)}
-Nhằm hỗ trợ tương tác tự nhiên tại quầy, \texttt{Retail-AI-} tích hợp hai mô-đun tri giác bổ trợ:
+Để khách hàng có thể nói trực tiếp hoặc giơ bao bì sản phẩm lên camera tại quầy, \texttt{Retail-AI-} tích hợp hai mô-đun tri giác bổ trợ:
 \begin{itemize}
-    \item \textbf{Giao diện Giọng nói Hỗ trợ:} Kết hợp Silero VAD~v6 cục bộ, nhận dạng truyền luồng Azure Speech với danh sách từ khóa thương hiệu (\code{PhraseListGrammar}), sửa lỗi thương hiệu neo danh mục và khử nhiễu thích nghi SNR (\texttt{DPDFNet2} ONNX trên nhánh máy chủ / \texttt{GTCRN} WASM trên trình duyệt khi chạy serverless; chi tiết kỹ thuật trình bày ở Phụ lục~A.3).
-    \item \textbf{Nhận diện Ảnh Sản phẩm On-Demand (\texttt{MobileNetV3Large-224} TFLite + Sibling Pack-Size Guard):} Do mỗi SKU chỉ có 1 ảnh gốc trong danh mục (không phù hợp phân loại Softmax đóng 3.093 lớp), nhóm chưng cất đặc trưng từ hai mô hình nền tảng \texttt{CLIP-ViT-B/32} (512-d) và \texttt{DINOv2-Small} (384-d)~\cite{radford2021clip,oquab2024dinov2} chiếu SVD trực giao về không gian 256 chiều (giữ 88,85\% phương sai, chỉ khớp trên tập ảnh danh mục) để huấn luyện mạng sinh viên \texttt{MobileNetV3Large-224}~\cite{howard2019mobilenetv3,retail_tflite_kaggle} (7,04\,MB FP16 + 1,58\,MB gallery 3.093 SKU) bằng tổ hợp 4 hàm mất mát (Direct Cosine, Relational, Sub-Center ArcFace~\cite{deng2020subcenter} và SupCon~\cite{khosla2020supcon}) kèm tăng cường phối cảnh 3D/kệ hàng/lóa sáng. Tại thời điểm suy luận theo yêu cầu, ảnh đi qua 2-View TTA; nếu $\text{sim}_1 \ge 0{,}82$, biên độ $m = \text{sim}_1 - \text{sim}_2 \ge 0{,}08$ và \textbf{Cổng Bảo vệ Quy cách Anh em} xác nhận không có mã cùng thương hiệu khác dung tích (hoặc $\text{sim}_1 \ge 0{,}92$), nhánh cục bộ trả thẻ trong 23--27\,ms; các ca đồng mẫu hoặc độ tin cậy thấp chuyển sang Hybrid VLM kèm top-4 ứng viên gợi ý để đọc chính xác định lượng và loại ảnh ngoài phân phối (OOD).
+    \item \textbf{Giao diện Giọng nói Hỗ trợ:} Kết hợp phát hiện tiếng nói cục bộ (Silero VAD~v6), nhận dạng truyền luồng Azure Speech có tăng trọng từ khóa Thanh Lam Mart và thương hiệu bán lẻ (\code{PhraseListGrammar}), sửa lỗi thương hiệu neo danh mục và khử nhiễu thích nghi theo môi trường (chạy \texttt{GTCRN} WASM ngay trên trình duyệt khách khi triển khai serverless, hoặc \texttt{DPDFNet2} ONNX trên nhánh máy chủ; chi tiết tại Phụ lục~A.2).
+    \item \textbf{Nhận diện Ảnh Sản phẩm On-Demand (\texttt{MobileNetV3Large-224} TFLite + Cổng Bảo vệ Quy cách):} Thiết kế gồm ba bước dễ theo dõi:
+    \begin{enumerate}[leftmargin=1.5em, itemsep=1pt]
+        \item \emph{Khắc phục bài toán 1 ảnh/SKU:} Do mỗi mã hàng chỉ có 1 ảnh gốc, nhóm kết hợp đặc trưng từ hai mô hình nền tảng \texttt{CLIP-ViT-B/32} và \texttt{DINOv2-Small}~\cite{radford2021clip,oquab2024dinov2}, nén về 256 chiều bằng SVD (giữ 88,85\% phương sai) rồi chưng cất sang mạng nhẹ \texttt{MobileNetV3Large-224}~\cite{howard2019mobilenetv3,retail_tflite_kaggle} (7,04\,MB FP16 + 1,58\,MB kho vector 3.093 SKU) dưới tăng cường góc chụp 3D/lóa sáng (4 hàm mất mát~\cite{deng2020subcenter,khosla2020supcon}).
+        \item \emph{Nhánh siêu nhanh cục bộ (23--27\,ms):} Khi khách chụp ảnh, nếu độ tương đồng cao ($\text{sim}_1 \ge 0{,}82$, biên độ $m \ge 0{,}08$) và không có sản phẩm anh em cùng thương hiệu khác dung tích (hoặc $\text{sim}_1 \ge 0{,}92$), hệ thống trả thẻ sản phẩm ngay mà không cần gọi mô hình đám mây.
+        \item \emph{Cổng Bảo vệ Quy cách Anh em (Hybrid VLM):} Với các chai cùng mẫu nhưng khác dung tích (ví dụ nước mắm 500\,ml và 900\,ml) hoặc ảnh lạ ngoài siêu thị (OOD), hệ thống chuyển sang VLM kèm top-4 ứng viên gần nhất để đọc chính xác dung lượng trên nhãn và từ chối trung thực ảnh ngoài danh mục.
+    \end{enumerate}
 \end{itemize}
 
 \section{Đóng góp 2: Profit-Gated Router (\texttt{B-Gate}) và Quản trị HITL (\texttt{ops\_chest})}
 
-Điểm cốt lõi của bài toán quản trị hàng tươi sống là sự lệch pha giữa sai số dự báo thống kê (WAPE) và lợi nhuận thực tế dưới chi phí bất đối xứng của hàng hạn dùng 1--3 ngày. Thử nghiệm ban đầu cho thấy dùng trực tiếp độ rộng khoảng phân vị $(q_{90}-q_{10})$ của LightGBM làm độ lệch chuẩn $\sigma_{\text{daily}}$ trong công thức Newsvendor (Công thức~\ref{eq:order_qty}) làm phóng đại tồn kho an toàn ở các SKU biến động và cửa hàng nhỏ, khiến tỷ lệ hủy tăng và lợi nhuận giảm so với EWMA. Thuật toán~\ref{alg:ops_chest_newsvendor} trình bày phương pháp \textbf{Profit-Gated Router (\texttt{B-Gate})} do nhóm thiết kế: (i) tách ước lượng trung vị điểm của LightGBM ($\hat{q}_{50}$) khỏi ước lượng độ phân tán mượt của EWMA ($\sigma_{\text{EWMA}}$); (ii) học bảng định tuyến phân khúc $g = (\text{bậc doanh số} \times \text{gián đoạn} \times \mathbb{I}[N_s > 30])$ hoàn toàn dựa trên lợi nhuận mô phỏng ngoài mẫu theo Công thức~\ref{eq:profit_gate}; (iii) tính lượng đặt Newsvendor có sàn mức phục vụ và trần tiêu thụ FEFO; và (iv) buộc mọi đề xuất đi qua lớp kiểm duyệt \code{guard.py} và trạng thái chờ duyệt \texttt{PENDING} của Cửa hàng trưởng.
+Điểm cốt lõi của bài toán đặt hàng tươi sống là sự lệch pha giữa sai số dự báo (WAPE) và lợi nhuận thực tế. Thử nghiệm ban đầu cho thấy: nếu lấy trực tiếp khoảng phân vị $(q_{90}-q_{10})$ của LightGBM làm độ bất định trong công thức đặt hàng Newsvendor, tồn kho an toàn sẽ bị thổi phồng trên các mã hàng biến động và cửa hàng nhỏ, làm tăng hàng hỏng và giảm lãi so với EWMA.
+
+Để giải quyết vấn đề này, Thuật toán~\ref{alg:ops_chest_newsvendor} trình bày phương pháp \textbf{Profit-Gated Router (\texttt{B-Gate})} gồm bốn bước rõ ràng: (1)~giữ lại điểm dự báo trung vị chính xác của LightGBM ($\hat{q}_{50}$) nhưng mượn độ phân tán mượt của EWMA ($\sigma_{\text{EWMA}}$); (2)~chỉ bật dự báo ML trên các phân khúc cửa hàng--SKU chứng minh được lãi gộp dương ngoài mẫu (Công thức~\ref{eq:profit_gate}); (3)~áp dụng công thức Newsvendor có sàn phục vụ và trần tiêu thụ theo hạn dùng FEFO; và (4)~buộc mọi đề xuất nhập hàng/giảm giá dừng ở trạng thái chờ duyệt \texttt{PENDING} để Cửa hàng trưởng quyết định.
+
+\intuitionbox{Ví dụ vận hành 1 ngày: Cách Agent 2 (\texttt{ops\_chest}) phối hợp với Agent 1 (\emph{Mai})}{%
+Lúc 7h sáng tại Cửa hàng 18, hệ thống phát hiện lô sản phẩm tươi \code{F0005} (ánh xạ tới \code{TLM_10283202}, giá gốc 123.900\,đ) chỉ còn 1 ngày hạn dùng và vượt mức bán nguyên giá. \textbf{Bước 1:} \texttt{ops\_chest} tạo đề xuất giảm 25\% ở trạng thái \texttt{PENDING}; lúc này khách hỏi tại kiosk vẫn chỉ thấy giá gốc 123.900\,đ (không rò rỉ giá chưa duyệt). \textbf{Bước 2:} Cửa hàng trưởng xem và bấm duyệt (\texttt{EXECUTED}). \textbf{Bước 3:} Cầu nối \code{ops_bridge} lập tức cập nhật giá giảm 92.925\,đ sang Mai để ưu tiên giới thiệu cho khách mua hết trong ngày; nếu lô bán hết (\code{on_hand=0}), Mai tự động ẩn mã này khỏi gợi ý còn hàng.}
 
 \begin{algorithm}[htbp]
 \caption{Đặt hàng Hàng Tươi sống Định tuyến Cổng Lợi nhuận (\texttt{B-Gate}), Trần FEFO \& HITL (\texttt{ops\_chest})}

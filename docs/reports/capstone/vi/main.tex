@@ -123,6 +123,26 @@
   flowarr/.style={-{Stealth[length=2.4mm]}, line width=0.8pt, draw=black!75}
 }
 
+% ---------- Intuition & Walkthrough Callout Box (Reader-Friendly Academic Summary) ----------
+\newcommand{\intuitionbox}[2]{%
+  \par\vspace{0.45em}\noindent
+  \begin{tikzpicture}
+    \node[
+      rectangle, rounded corners=4pt,
+      draw=teal!60!black, fill=teal!4, line width=0.6pt,
+      text width=\dimexpr\textwidth-20pt\relax,
+      inner sep=9pt, align=left
+    ] (box) {%
+      {\small\textbf{\color{teal!65!black}#1}}\\[0.25em]
+      {\small #2}%
+    };
+    \fill[teal!70!black, rounded corners=1.5pt]
+      ([xshift=0.3pt,yshift=-0.3pt]box.north west) rectangle
+      ([xshift=3.2pt,yshift=0.3pt]box.south west);
+  \end{tikzpicture}%
+  \par\vspace{0.45em}%
+}
+
 \begin{document}
 
 \input{Preamble/titlepage}

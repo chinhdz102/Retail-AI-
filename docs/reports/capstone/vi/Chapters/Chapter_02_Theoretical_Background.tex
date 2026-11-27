@@ -24,6 +24,14 @@ Hàng tươi sống có hạn sử dụng 1--3 ngày chịu ba đặc trưng c�
 
 \section{Cơ sở Toán học và Công thức Mô hình}
 
+\intuitionbox{Giải thích trực quan ba ý tưởng toán học quan trọng nhất của đồ án}{%
+Trước khi đi vào các phương trình chi tiết, bạn có thể hình dung ba bài toán toán học chính bằng ví dụ siêu thị hằng ngày:
+\begin{enumerate}[leftmargin=1.4em, itemsep=2pt, topsep=2pt]
+    \item \textbf{Khôi phục nhu cầu bị kiểm duyệt (Công thức~\ref{eq:wape_recovery}):} Giả sử rau cải thường bán 50\% lượng cả ngày trước 14h chiều. Nếu hôm nay kệ hết sạch rau lúc 14h sau khi bán 10 bó, nhu cầu thực ước lượng là $10 / 0{,}5 = 20$ bó chứ không phải 10 bó.
+    \item \textbf{Cân bằng Newsvendor cho hàng dễ hỏng (Công thức~\ref{eq:newsvendor}--\ref{eq:order_qty}):} Hàng tươi hết hạn sau 1--3 ngày sẽ mất trắng 100\% tiền vốn, trong khi bán thiếu chỉ mất phần lãi gộp. Vì vậy, công thức tính một \emph{mức phục vụ mục tiêu} $SL^*$ cân bằng hai rủi ro này, đồng thời đặt sàn phục vụ tối thiểu 95\% cho nhóm hàng hút khách để không mất lượt khách vào cửa hàng.
+    \item \textbf{Cổng lợi nhuận \texttt{B-Gate} (Công thức~\ref{eq:profit_gate}):} Một mô hình học máy có sai số trung bình thấp hơn vẫn có thể làm lỗ nếu biên độ dự báo quá rộng gây đặt thừa. Do đó, hệ thống chỉ bật mô hình học máy trên những phân khúc chứng minh được lãi gộp mô phỏng thực sự cao hơn EWMA trên tập cửa hàng huấn luyện.
+\end{enumerate}}
+
 \subsection*{Tiền xử lý Âm thanh Hỗ trợ và Độ đo ASR}
 Trên nhánh khử nhiễu máy chủ, bộ lọc thông cao bậc 4 pha không với tần số cắt $f_c = 85\,\text{Hz}$ loại bỏ nhiễu ù tần số thấp:
 \begin{equation}

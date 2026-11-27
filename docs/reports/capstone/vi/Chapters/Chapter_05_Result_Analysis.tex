@@ -1,6 +1,14 @@
 \chapter{Phân tích Kết quả Thực nghiệm}
 
-Chương này trình bày kết quả kiểm chứng thực nghiệm có kiểm soát theo bốn trục đánh giá cốt lõi: (1)~tác nhân tư vấn khách hàng \texttt{Retail-AI-} (nghiên cứu loại bỏ trên tập kiểm thử độc lập 50 câu, độ trễ đa lượt, tập phát triển 100Q SOTA~V2, 100Q Bán chạy--Tồn kho và các mô-đun bổ trợ); (2)~tác nhân vận hành hàng tươi sống \texttt{ops\_chest} (so sánh baseline B0--B5, backtest 50 cửa hàng kèm khoảng tin cậy bootstrap 95\%, kiểm định Wilcoxon, phân tách cỡ cửa hàng và độ nhạy 8 kịch bản); (3)~kiểm thử liên thông đầu-cuối hai Agent trên môi trường mô phỏng; và (4)~đánh giá an toàn, kiểm soát ảo giác cùng phân tích lỗi. Các thống kê kiểm thử phần mềm (pytest, Vitest, lint) được tổng hợp tại Phụ lục~C.
+Chương này kiểm chứng định lượng hiệu quả của hệ thống theo bốn trục: (1)~Agent tư vấn khách hàng \texttt{Retail-AI-}, (2)~Agent vận hành hàng tươi sống \texttt{ops\_chest}, (3)~liên thông đầu-cuối giữa hai Agent, và (4)~đánh giá an toàn, ảo giác cùng phân tích lỗi. Các thống kê kiểm thử phần mềm (pytest, Vitest, lint) được đặt gọn tại Phụ lục~C.
+
+\intuitionbox{Đọc nhanh 4 phát hiện thực nghiệm then chốt của đồ án}{%
+\begin{enumerate}[leftmargin=1.4em, itemsep=1.5pt, topsep=2pt]
+    \item \textbf{Tư vấn khách hàng nhanh và chính xác (\texttt{Retail-AI-}):} Trên tập kiểm thử độc lập 50 câu ($N=150$), Zero-Planner đạt \textbf{94,0\%} chính xác, \textbf{100\%} căn cứ mã SKU và giảm độ trễ P99 2,8 lần còn 154,5\,ms; trên production thực tế \texttt{sin1}, cả 11 truy vấn đại diện hoàn tất trong \textbf{188--887\,ms}.
+    \item \textbf{Dự báo gắn với lợi nhuận thắng vượt trội (\texttt{ops\_chest}):} Dù LightGBM~v3 giảm sai số WAPE từ 35,06\% xuống 30,17\%, việc dùng thẳng biên độ phân vị lại gây lỗ $-5{,}59\%$ ở cửa hàng nhỏ. Cổng lợi nhuận \texttt{B-Gate} khắc phục hoàn toàn lỗ này và đạt mức tăng lãi mô phỏng \textbf{+4,90\%} so với chuẩn kinh nghiệm (\textbf{+0,78\%} so với EWMA, $p=6{,}39\times 10^{-6}$, thắng 76\% cửa hàng).
+    \item \textbf{Phối hợp liên Agent bảo toàn HITL:} 5/5 kịch bản tích hợp đầu-cuối xác nhận giá giảm FEFO sau khi quản lý duyệt lan truyền tức thì sang kiosk (123.900 $\to$ 92.925\,đ), chặn tuyệt đối đề xuất chưa duyệt và tự ẩn hàng hết tồn.
+    \item \textbf{Đánh giá trung thực điểm yếu:} Hệ thống còn điểm mù hậu kiểm với số liệu dưới 1.000, suy giảm thanh điệu khi khử nhiễu ở mức 5\,dB và 55,7\% SKU chưa có nhãn dinh dưỡng đầy đủ.
+\end{enumerate}}
 
 \section{Thiết lập Thực nghiệm và Tiêu chí Đánh giá}
 
@@ -211,10 +219,10 @@ Azure Speech + \texttt{GTCRN} & 11,9 & 15,2 & 30,5 & Méo thanh điệu nặng �
 \section{Kết quả Thực nghiệm Agent 2: Dự báo và Tối ưu Tồn kho (\texttt{ops\_chest})}
 
 \subsection*{Nghiên cứu Loại bỏ Dự báo (B0--B3) trên 50 Cửa hàng Độc lập FreshRetailNet-50K}
-Trên bài kiểm tra che khuất giờ cuối ngày ($n=200.000$), khôi phục nhu cầu theo hồ sơ giờ giảm WAPE từ 32,35\% xuống \textbf{20,53\%} và gần như triệt tiêu thiên lệch âm ($-32{,}35\% \to -0{,}15\%$). Bảng~\ref{tab:ops_forecast_ablation} chuẩn hóa so sánh năm mô hình dự báo trên cùng 50 cửa hàng độc lập ở cả tuần đánh giá chính ($n=11.037$ quan sát đủ hàng và $n=16.207$ điểm gồm cả ngày đã khôi phục) lẫn mô phỏng cuốn chiếu 37 ngày ($n=374.982$ điểm đủ hàng):
+Trên bài kiểm tra che khuất giờ cuối ngày ($n=200.000$), bước khôi phục nhu cầu theo hồ sơ giờ giúp hạ sai số WAPE từ 32,35\% xuống \textbf{20,53\%} và gần như triệt tiêu thiên lệch âm ($-32{,}35\% \to -0{,}15\%$). Bảng~\ref{tab:ops_forecast_ablation} so sánh năm mô hình dự báo trên cùng 50 cửa hàng độc lập ở cả tuần đánh giá chính ($n=11.037$ quan sát đủ hàng) lẫn mô phỏng cuốn chiếu 37 ngày ($n=374.982$ điểm):
 \begin{itemize}
-    \item \textbf{Tác động của Demand Recovery:} So sánh \code{ewma_khong_co_het_hang} (không khôi phục đứt hàng) với \code{ewma_oc} (có khôi phục) trên tập cầu thực \code{rec.all} ($n=16.207$) cho thấy bỏ qua bước khôi phục gây thiên lệch âm nghiêm trọng \textbf{$-21{,}80\%$} (WAPE 38,26\%) so với $-5{,}07\%$ (WAPE 35,12\%) khi có khôi phục.
-    \item \textbf{Ưu thế độ chính xác dự báo của LightGBM~v3:} Trên cả tuần kiểm định lẫn cuốn chiếu 37 ngày, LightGBM~v3 (29 đặc trưng) vượt toàn bộ các baseline: giảm WAPE từ 38,65\% (Seasonal Naive B0) và 35,06\% (EWMA B1) xuống \textbf{30,17\%}, giảm độ lệch từ $+6{,}95\%$ xuống $+2{,}71\%$, giảm Pinball-50 từ 0,1753 xuống \textbf{0,1508} và đạt độ phủ thực nghiệm \textbf{81,2\%} cho khoảng dự báo 80\% (gần sát mức danh định so với 72,6\% của EWMA).
+    \item \textbf{Tác động của Khôi phục Nhu cầu:} Nếu bỏ qua bước khôi phục đứt hàng, dự báo EWMA bị lệch âm nghiêm trọng \textbf{$-21{,}80\%$} trên tập cầu thực ($n=16.207$, WAPE 38,26\%), so với chỉ $-5{,}07\%$ (WAPE 35,12\%) khi bật khôi phục.
+    \item \textbf{Ưu thế độ chính xác của LightGBM~v3:} Trên cả hai khung thời gian, LightGBM~v3 (29 đặc trưng) vượt mọi mô hình chuẩn: giảm WAPE từ 38,65\% (cùng thứ tuần trước) và 35,06\% (EWMA) xuống \textbf{30,17\%}, giảm độ lệch từ $+6{,}95\%$ xuống $+2{,}71\%$, hạ Pinball-50 còn \textbf{0,1508} và đạt độ phủ thực nghiệm \textbf{81,2\%} cho khoảng dự báo 80\% (sát mức mục tiêu so với 72,6\% của EWMA).
 \end{itemize}
 
 \begin{table}[H]
