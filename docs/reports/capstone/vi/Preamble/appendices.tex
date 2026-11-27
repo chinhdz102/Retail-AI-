@@ -6,7 +6,7 @@
 Phụ lục này tập trung toàn bộ chi tiết kỹ nghệ phần mềm, cấu hình mô hình hỗ trợ, giao diện và kiểm thử tự động của \texttt{Retail-AI-} nhằm giữ các chương chính tập trung vào nội dung nghiên cứu AI.
 
 \section*{A.1 Lược đồ Danh mục, Pipeline Làm sạch 8 Tầng và Bộ Công cụ Tư vấn}
-\texttt{Retail-AI-} nạp tập danh mục Thanh Lam Mart (SHA-256 \code{80c605a5e778f0c4...}, 3.099 dòng, 20 cột cấu trúc gồm \code{product_id}, \code{barcode}, \code{name}, \code{brand}, \code{price_vnd}, \code{sale_price_vnd}, \code{discount_promotion}, \code{stock}, \code{shelf}, \code{uom}, \code{image_url}, \code{category_hierarchy}) qua mô hình kiểm định Pydantic, cách ly 18 dòng lỗi giá (\code{sale_price_vnd > price_vnd}) và giữ 3.081 SKU hợp lệ kèm sơ đồ kệ 13 dãy.
+\texttt{Retail-AI-} nạp tập danh mục Thanh Lam Mart (SHA-256 \code{80c605a5e778f0c4...}, 3.099 dòng, 20 cột cấu trúc gồm \code{product_id}, \code{barcode}, \code{name}, \code{brand}, \code{price_vnd}, \code{sale_price_vnd}, \code{discount_promotion}, \code{stock}, \code{shelf}, \code{uom}, \code{image_url}, \code{category_hierarchy}) qua mô hình kiểm định Pydantic, lọc chuẩn hóa 18 dòng giá bất thường (\code{sale_price_vnd > price_vnd}) và giữ 3.081 SKU hợp lệ kèm sơ đồ kệ 13 dãy.
 
 Pipeline làm giàu tri thức sản phẩm kết hợp thu thập 3.099 trang sản phẩm SSR với đối chiếu nhãn mã vạch EAN-13 (333 khớp mã vạch, 226 khớp thương hiệu--dạng bào chế) và làm sạch 8 tầng theo chuẩn Hugging Face \code{datatrove}~\cite{hf_datatrove} + OpenFoodFacts~\cite{openfoodfacts} (chuẩn hóa Unicode NFC, xóa ký tự ẩn \texttt{U+200B}/\texttt{U+00A0}, khôi phục dấu câu từ thẻ \code{<li>}, cân bằng ngoặc đơn, tách tràn chéo trường, lọc rác OCR và cách ly tuyên bố dị ứng chưa xác minh), đưa 4.606 lỗi thô trên 11 tiêu chí về 0 lỗi (19/19 ca kiểm thử hồi quy) và đạt độ phủ 2.205/3.099 SKU (71,15\%). Bảng~\ref{tab:retail_tools} tóm tắt các công cụ chỉ đọc và hỗ trợ trong lõi tư vấn.
 
@@ -38,7 +38,7 @@ Pipeline làm giàu tri thức sản phẩm kết hợp thu thập 3.099 trang s
     \item \textbf{Giao diện âm thanh hỗ trợ và triển khai phần mềm:} Tầng giao diện web (Vue~3 + TypeScript) hỗ trợ hai chế độ triển khai: (i) Serverless trên Vercel vùng Singapore (\texttt{sin1}, \url{https://retail-ai-kiosk.vercel.app}) chạy Silero VAD~v6, khử nhiễu biên GTCRN WebAssembly SIMD (192,3\,KB), chống vọng loa có xác minh STT (\emph{barge-in}) và kết nối trực tiếp Azure Speech WSS (STT/TTS) bằng mã STS 9--10 phút (\code{/api/audio/azure-speech-token}); và (ii) đóng gói Docker toàn phần một cổng bổ sung WebSocket máy chủ \code{/audio/transcribe/stream}, \texttt{DPDFNet2} ONNX (9,77\,MB) và dự phòng ngoại tuyến \texttt{gipformer1.5-68M-rnnt} (69,8\,MB).
 \end{itemize}
 
-Bảng~\ref{tab:feature_completeness} tổng hợp toàn bộ danh mục tính năng đã hiện thực và kiểm chứng xuyên suốt cả ba kho mã nguồn, tách bạch rõ nhóm đóng góp nghiên cứu AI với nhóm tính năng hoàn thiện sản phẩm nguyên mẫu.
+Bảng~\ref{tab:feature_completeness} tổng hợp toàn bộ danh mục tính năng đã hiện thực và kiểm chứng xuyên suốt cả ba kho mã nguồn, trình bày rõ nhóm đóng góp nghiên cứu AI và nhóm tính năng hoàn thiện hệ thống.
 
 \begin{table}[H]
 \centering
@@ -56,7 +56,7 @@ Bảng~\ref{tab:feature_completeness} tổng hợp toàn bộ danh mục tính n
 \texttt{Retail-AI-} & Kho tri thức sạch 8 tầng (thành phần, HDSD, bảo quản, xuất xứ) & Đóng góp dữ liệu AI & 2.205/3.099 SKU (4.606 $\to$ 0 lỗi); 19/19 ca hồi quy SHA-256 \\
 \texttt{Retail-AI-} & Xếp hạng bán chạy 30 ngày đồng bộ (\code{synced_sales_30d.json}) & Tích hợp liên Agent & 3.099 SKU (269.936 lượt); Live \texttt{sin1} 239\,ms; 100/100 bộ test \\
 \texttt{Retail-AI-} & Nhận diện ảnh \texttt{MobileNetV3Large-224} TFLite + Hybrid VLM & Đóng góp AI đa PT & 92,67\% Hard150; 93,8\% Brand@1 \& 4/4 chặn OOD; 23--27\,ms cục bộ \\
-\texttt{Retail-AI-} & Giọng nói Azure Speech WSS, GTCRN WASM, VAD \& Barge-in & Hỗ trợ giao diện & Token STS 200 OK; thí điểm WER 10,0--16,1\%; 179/179 Vitest \\
+\texttt{Retail-AI-} & Giọng nói Azure Speech WSS, GTCRN WASM, VAD \& Barge-in & Hỗ trợ giao diện & Token STS 200 OK; WER 10,0--16,1\%; 179/179 Vitest \\
 \texttt{Retail-AI-} & Danh mục 3.099 SKU, Sơ đồ kệ 13 dãy, Giỏ hàng, PayOS VietQR, Hỗ trợ nhân viên & Hoàn thiện sản phẩm & \code{/catalog-index.json} 3.099 SKU; PayOS enabled; kệ \code{A01-B01} Live \\
 \midrule
 \texttt{ops\_chest} & Khôi phục nhu cầu bị kiểm duyệt theo giờ đứt hàng & Đóng góp AI cốt lõi & Giảm WAPE 32,35\% $\to$ 20,53\%, bias $-32{,}35\% \to -0{,}15\%$ ($n=200\text{k}$) \\
@@ -74,7 +74,7 @@ Bảng~\ref{tab:feature_completeness} tổng hợp toàn bộ danh mục tính n
 \label{app:ops_chest}
 
 \section*{B.1 Phân nhóm 31 Công cụ Tác nhân (0 Công cụ Tự thực thi)}
-Trong \code{backend/app/agent/tools.py}~\cite{ops_chest_repo}, tác nhân vận hành sở hữu đúng 31 công cụ có kiểu chặt chẽ chia thành 22 công cụ đọc/mở biểu mẫu và 9 công cụ tạo/sửa đề xuất (Bảng~\ref{tab:ops_tools}). Các tính năng mở rộng giao diện như biểu mẫu OCR nhãn hạn dùng, học thói quen chỉnh sửa (\code{edit_learning.py}) và ghi nhận giả thuyết (\code{hypotheses.py}) tồn tại ở mức nguyên mẫu phần mềm, chưa có thực nghiệm định lượng độc lập nên được ghi nhận tại phụ lục này thay vì mục đóng góp khoa học.
+Trong \code{backend/app/agent/tools.py}~\cite{ops_chest_repo}, tác nhân vận hành sở hữu đúng 31 công cụ có kiểu chặt chẽ chia thành 22 công cụ đọc/mở biểu mẫu và 9 công cụ tạo/sửa đề xuất (Bảng~\ref{tab:ops_tools}). Bên cạnh các công cụ tra cứu và đề xuất chính, hệ thống tích hợp thêm các tiện ích vận hành nội tuyến như biểu mẫu OCR nhãn hạn dùng, ghi nhận thói quen chỉnh sửa của quản lý (\code{edit_learning.py}) và theo dõi giả thuyết (\code{hypotheses.py}) để hỗ trợ quy trình làm việc hằng ngày tại cửa hàng.
 
 \begin{table}[H]
 \centering

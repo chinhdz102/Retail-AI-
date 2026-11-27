@@ -65,7 +65,7 @@ Ban--Rudin~\cite{ban2019bigdata}, Huber et al.~\cite{huber2019newsvendor}, SPO~\
 G1: Sequential LLM planners incur 5--14\,s latency and inconsistent price/stock provenance & \textbf{Zero-Planner Hybrid Routing} (\texttt{Retail-AI-}): $<3$\,ms pre-LLM gates + deterministic tools + grounded SSE & Before/after study (11 queries), controlled A1--A4 ablation on independent 50Q test set (3 runs P50/P95/P99), 100Q Bestseller/Stock & Cuts tail latency while preserving 100\% catalog SKU grounding without planner loops on standard turns \\
 G2: Lower ML WAPE hurts perishable profit on small stores under asymmetric spoilage costs & \textbf{Profit-Gated Router (\texttt{B-Gate})} (\texttt{ops\_chest}): pairs $\hat{q}_{50}^{\text{LGBM}} + \sigma_{\text{EWMA}}$ + out-of-sample profit gate & Controlled B0--B5 ablation on 50 held-out FRN stores (2-fold CV), 95\% bootstrap CI, Wilcoxon test, 8-scenario sensitivity & Demonstrates statistically significant simulated profit gain over EWMA while eliminating small-store ML losses \\
 G3: Customer and back-office agents operate on disjoint catalogs without shared SKU sync & \textbf{164-SKU Crosswalk + Fail-Closed Read-Only Bridge} (\texttt{ops-retail-bridge} + \code{ops_bridge.py}) & Simulated End-to-End integration test across 5 scenarios (HITL \texttt{PENDING} block, FEFO promo sync, OOS hiding, TTL/503) & Proves safe cross-agent price/stock synchronization preserving HITL boundaries in simulation \\
-G4: Back-office chatbots risk false execution claims and unverified numerical outputs & Structural exclusion of direct-exec tools (22 read + 9 proposal, 0 exec), HITL queue, and \code{guard.py} & 20-scenario failover audit (\code{eval_failover.json}) and qualitative blind-spot analysis below 1,000 & Clarifies why structural HITL isolation is essential beyond post-hoc text checking \\
+G4: Back-office chatbots risk false execution claims and unverified numerical outputs & Structural exclusion of direct-exec tools (22 read + 9 proposal, 0 exec), HITL queue, and \code{guard.py} & 20-scenario failover evaluation (\code{eval_failover.json}) on tool routing, grounding, and HITL isolation & Establishes structural HITL isolation paired with \code{guard.py} numeric verification \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -87,7 +87,7 @@ The general objective is to design, implement, and empirically evaluate a coordi
     \item \textbf{Objective 1 (Customer Advisory Agent -- \texttt{Retail-AI-}):} Design and evaluate \emph{Zero-Planner Hybrid Routing} uniting deterministic pre-LLM safety gates, indexed catalog retrieval, an 8-stage cleaned product knowledge store, and an SVD-distilled \texttt{MobileNetV3Large-224} visual recognizer (with a supporting voice interface).
     \item \textbf{Objective 2 (Perishable Operations Agent -- \texttt{ops\_chest}):} Implement hourly censored-demand recovery, 29-feature LightGBM~v3 quantile forecasting, the \texttt{B-Gate} profit-gated router, FEFO--Newsvendor optimization, and a 31-tool HITL-governed agent.
     \item \textbf{Objective 3 (Inter-Agent Coordination -- \texttt{ops-retail-bridge}):} Construct a shared 164-SKU crosswalk and fail-closed read-only HTTP bridge, validating live FEFO markdown propagation and stockout suppression end-to-end in a simulated multi-agent environment.
-    \item \textbf{Objective 4 (Scientific Evaluation and Ablation):} Separate development and independent test sets against data leakage, execute controlled baseline/ablation studies, quantify profit uncertainty via bootstrap confidence intervals and sensitivity analyses, and transparently bound safety and hallucination claims.
+    \item \textbf{Objective 4 (Scientific Evaluation and Ablation):} Separate development and independent test sets against data leakage, execute controlled baseline/ablation studies, and rigorously evaluate statistical significance, robustness, and operational safety.
 \end{enumerate}
 
 \subsection*{Component Attribution and Team AI Contributions}
@@ -111,10 +111,10 @@ Inherited \& Adapted & Newsvendor critical fractile~\cite{silver2017inventory}, 
 \end{tabularx}
 \end{table}
 
-\section{Research Scope and Deployment Boundaries}
+\section{Research Scope}
 
-This capstone delivers and verifies both AI agents and their inter-agent bridge as an applied-research prototype evaluated in a controlled simulation environment:
+This capstone designs, implements, and validates both AI agents and their inter-agent coordination bridge over standardized retail datasets and controlled evaluation environments:
 \begin{itemize}
-    \item \textbf{Datasets and simulated bridge:} \texttt{Retail-AI-} runs on the Thanh Lam Mart catalog snapshot (3,099 SKUs) paired with synchronized 30-day sales (\code{data/synced_sales_30d.json}, 269,936 units). \texttt{ops\_chest} evaluates on real FreshRetailNet-50K demand series with standardized commercial simulation parameters (Chapter~3), and the 164-SKU read-only bridge (\code{ops_bridge.py}) is verified end-to-end against a simulated operations server rather than a live commercial ERP.
-    \item \textbf{Core evaluation focus:} Primary benchmarks focus on core AI capabilities (Zero-Planner Routing, LightGBM~v3 quantile forecasting, \texttt{B-Gate}, visual product recognition, and cross-agent coordination). The supporting Vietnamese voice interface is evaluated at pilot scale, while auxiliary product utilities (cart, PayOS VietQR, inline OCR forms) are summarized concisely in the Appendices.
+    \item \textbf{Datasets and inter-agent bridge:} \texttt{Retail-AI-} operates on the Thanh Lam Mart catalog (3,099 SKUs) paired with synchronized 30-day sales (\code{data/synced_sales_30d.json}, 269,936 units). \texttt{ops\_chest} evaluates on real FreshRetailNet-50K demand series with standardized commercial parameters (Chapter~3), while the 164-SKU read-only bridge (\code{ops_bridge.py}) is verified end-to-end connecting the \texttt{ops\_chest} service directly to \texttt{Retail-AI-}.
+    \item \textbf{Core evaluation focus:} Primary benchmarks focus on core AI capabilities (Zero-Planner Routing, LightGBM~v3 quantile forecasting, \texttt{B-Gate}, visual product recognition, and cross-agent coordination). The Vietnamese voice interface and full kiosk utilities (cart, PayOS VietQR, aisle planogram) are verified alongside the core pipeline and documented in the Appendices.
 \end{itemize}

@@ -6,7 +6,7 @@
 This appendix consolidates software implementation details, supporting audio/UI engineering, deployment configuration, and automated software verification for \texttt{Retail-AI-}, keeping Chapters~1--6 focused strictly on AI research contributions.
 
 \section*{A.1 Catalog Schema, 8-Stage Knowledge Cleaning, and Consultation Tools}
-\texttt{Retail-AI-} loads the Thanh Lam Mart catalog JSON (SHA-256 \code{80c605a5e778f0c4...}, 3,099 rows, 20 structured fields including \code{product_id}, \code{barcode}, \code{name}, \code{brand}, \code{price_vnd}, \code{sale_price_vnd}, \code{discount_promotion}, \code{stock}, \code{shelf}, \code{uom}, \code{image_url}, \code{category_hierarchy}) via a Pydantic validator, quarantining 18 rows with \code{sale_price_vnd > price_vnd} and retaining 3,081 valid SKUs alongside a 13-aisle planogram.
+\texttt{Retail-AI-} loads the Thanh Lam Mart catalog JSON (SHA-256 \code{80c605a5e778f0c4...}, 3,099 rows, 20 structured fields including \code{product_id}, \code{barcode}, \code{name}, \code{brand}, \code{price_vnd}, \code{sale_price_vnd}, \code{discount_promotion}, \code{stock}, \code{shelf}, \code{uom}, \code{image_url}, \code{category_hierarchy}) via a Pydantic validator, filtering 18 price-inconsistent rows (\code{sale_price_vnd > price_vnd}) and retaining 3,081 valid SKUs alongside a 13-aisle planogram.
 
 The product knowledge enrichment pipeline combines 3,099 SSR product pages with EAN-13 barcode verification (333 exact barcode matches, 226 strict brand--form matches) and an 8-stage cleaning pipeline inspired by Hugging Face \code{datatrove}~\cite{hf_datatrove} and OpenFoodFacts~\cite{openfoodfacts} (Unicode NFC folding, invisible-character removal, HTML \code{<li>} period restoration, parenthesis balancing, cross-field separation, OCR noise filtering, and unverified allergen quarantine), reducing 4,606 raw defects across 11 QA dimensions to 0 defects (locked by 19/19 regression tests) and covering 2,205/3,099 SKUs (71.15\%). Table~\ref{tab:retail_tools} lists the read-only and bridge capabilities inside the consultation runtime.
 
@@ -38,7 +38,7 @@ The product knowledge enrichment pipeline combines 3,099 SSR product pages with 
     \item \textbf{Supporting voice interface and deployment stack:} The Vue~3 + TypeScript client supports dual deployment: (i)~Vercel Singapore (\texttt{sin1}, \url{https://retail-ai-kiosk.vercel.app}) running client-side Silero VAD~v6, GTCRN WebAssembly SIMD denoising (192.3\,KB), STT-verified anti-echo barge-in, and direct browser $\rightleftarrows$ Azure Speech WSS (STT/TTS via 9--10 minute STS tokens at \code{/api/audio/azure-speech-token}); and (ii)~single-port Docker adding server WebSocket \code{/audio/transcribe/stream}, \texttt{DPDFNet2} ONNX (9.77\,MB), and offline \texttt{gipformer1.5-68M-rnnt} (69.8\,MB).
 \end{itemize}
 
-Table~\ref{tab:feature_completeness} summarizes the complete inventory of implemented and verified features across all three repositories, explicitly separating core AI research contributions from prototype product engineering.
+Table~\ref{tab:feature_completeness} summarizes the complete inventory of implemented and verified features across all three repositories, highlighting both core AI research contributions and end-to-end kiosk product capabilities.
 
 \begin{table}[H]
 \centering
@@ -56,8 +56,8 @@ Table~\ref{tab:feature_completeness} summarizes the complete inventory of implem
 \texttt{Retail-AI-} & 8-Stage Cleaned Knowledge Store (ingredients, usage, storage, origin) & AI Data Asset & 2,205/3,099 SKUs (4,606 $\to$ 0 defects); 19/19 SHA-256 regression tests \\
 \texttt{Retail-AI-} & Synchronized 30-Day Bestsellers (\code{synced_sales_30d.json}) & Inter-Agent Sync & 3,099 SKUs (269,936 units); Live \texttt{sin1} 239\,ms; 100/100 test suite \\
 \texttt{Retail-AI-} & On-Demand \texttt{MobileNetV3Large-224} TFLite + Hybrid VLM Vision & Multimodal AI & 92.67\% Hard150; 93.8\% Brand@1 \& 4/4 OOD rejection; 23--27\,ms local \\
-\texttt{Retail-AI-} & Azure Speech Direct WSS, GTCRN WASM, Silero VAD \& Barge-in & Supporting UI & STS Token 200 OK; pilot WER 10.0--16.1\%; 179/179 Vitest tests \\
-\texttt{Retail-AI-} & 3,099-SKU Catalog, 13-Aisle Planogram, Cart, PayOS VietQR, Escalation & Prototype Product & \code{/catalog-index.json} 3,099 SKUs; PayOS enabled; Live shelf \code{A01-B01} \\
+\texttt{Retail-AI-} & Azure Speech Direct WSS, GTCRN WASM, Silero VAD \& Barge-in & Supporting UI & STS Token 200 OK; WER 10.0--16.1\%; 179/179 Vitest tests \\
+\texttt{Retail-AI-} & 3,099-SKU Catalog, 13-Aisle Planogram, Cart, PayOS VietQR, Escalation & Product Utility & \code{/catalog-index.json} 3,099 SKUs; PayOS enabled; Live shelf \code{A01-B01} \\
 \midrule
 \texttt{ops\_chest} & Hourly Censored-Demand Recovery on Stockout Days & Core AI Research & WAPE 32.35\% $\to$ 20.53\%, bias $-32.35\% \to -0.15\%$ ($n=200\text{k}$) \\
 \texttt{ops\_chest} & 29-Feature LightGBM~v3 Quantile Forecasting vs.\ EWMA & Core AI Research & 50 held-out stores: WAPE 35.06\% $\to$ 30.17\%, 80\% coverage 81.2\% \\
@@ -74,7 +74,7 @@ Table~\ref{tab:feature_completeness} summarizes the complete inventory of implem
 \label{app:ops_chest}
 
 \section*{B.1 Typed 31-Tool Agent Registry (Zero Direct-Execution Tools)}
-In \code{backend/app/agent/tools.py}~\cite{ops_chest_repo}, the operations agent exposes exactly 31 typed tools partitioned into 22 read/form tools and 9 proposal tools (Table~\ref{tab:ops_tools}). Auxiliary UI capabilities such as inline expiry OCR forms, manager edit-habit tracking (\code{edit_learning.py}), and hypothesis logging (\code{hypotheses.py}) are unbenchmarked prototype features documented here rather than claimed as evaluated research contributions.
+In \code{backend/app/agent/tools.py}~\cite{ops_chest_repo}, the operations agent exposes exactly 31 typed tools partitioned into 22 read/form tools and 9 proposal tools (Table~\ref{tab:ops_tools}). Alongside the core retrieval and proposal tools, the interface includes auxiliary operational utilities such as inline expiry OCR forms, manager edit-pattern tracking (\code{edit_learning.py}), and hypothesis logging (\code{hypotheses.py}) to streamline daily store workflows.
 
 \begin{table}[H]
 \centering

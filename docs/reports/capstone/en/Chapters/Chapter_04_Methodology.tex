@@ -112,7 +112,7 @@ To unify both agents without weakening HITL isolation, we implemented a three-pa
 \begin{enumerate}
     \item \textbf{Bi-directional Crosswalk (\code{OpsCrosswalkIndex}):} Loads \code{data/bridge/crosswalk.csv} mapping all 164 \texttt{ops\_chest} fresh SKUs (\code{F0004}--\code{F0793}) to 164 valid \texttt{Retail-AI-} \code{product_id} entries.
     \item \textbf{HITL-Guarded Read-Only Client (\code{OpsChestBridgeClient}):} Polls \code{GET /api/inventory/summary}, \code{/api/inventory/items}, and \code{/api/inventory/expiring} under a bounded freshness window (\code{freshness_ttl_seconds = 300}). Only markdown proposals in \texttt{APPROVED} or \texttt{EXECUTED} state are accepted; \texttt{PENDING} and \texttt{REJECTED} proposals are discarded.
-    \item \textbf{Catalog Overlay Decorator (\code{BridgedProductRepository}):} Overlays fresh live stock (\code{stock_is_current=True}) and approved FEFO markdown prices onto \code{ProductSnapshot}. When \code{on_hand == 0}, in-stock searches (\code{in_stock=True}) and promotion feeds suppress the out-of-stock SKU to surface available substitutes, whereas direct SKU inquiries honestly report zero sellable units. Whenever \texttt{ops\_chest} is stale ($>300$\,s) or returns HTTP~503, the decorator fails closed to static snapshot caveats (\code{stock_is_current=False}).
+    \item \textbf{Catalog Overlay Decorator (\code{BridgedProductRepository}):} Overlays fresh live stock (\code{stock_is_current=True}) and approved FEFO markdown prices onto \code{ProductSnapshot}. When \code{on_hand == 0}, in-stock searches (\code{in_stock=True}) and promotion feeds suppress the out-of-stock SKU to surface available substitutes, whereas direct SKU inquiries honestly report zero sellable units. Whenever \texttt{ops\_chest} is stale ($>300$\,s) or returns HTTP~503, the decorator fails closed to the verified static catalog snapshot (\code{stock_is_current=False}).
 \end{enumerate}
 
 \section{Contribution 1: Zero-Planner Hybrid Routing (\texttt{Retail-AI-})}
@@ -173,9 +173,9 @@ To support hands-free speech and camera queries at the counter, \texttt{Retail-A
 
 \section{Contribution 2: Profit-Gated Router (\texttt{B-Gate}) and HITL Operations (\texttt{ops\_chest})}
 
-Using LightGBM's raw quantile spread $(q_{90}-q_{10})$ directly as daily demand dispersion $\sigma_{\text{daily}}$ inside Newsvendor (Eq.~\ref{eq:order_qty}) inflates safety stock on volatile SKUs and small stores, increasing spoilage and lowering profit below EWMA.
+In perishable replenishment, passing a wide raw quantile spread $(q_{90}-q_{10})$ directly into Newsvendor (Eq.~\ref{eq:order_qty}) can yield overly conservative safety stocks on volatile or sparse store segments.
 
-Algorithm~\ref{alg:ops_chest_newsvendor} resolves this divergence through our \textbf{Profit-Gated Router (\texttt{B-Gate})} in four steps: (1)~keep LightGBM's accurate median ($\hat{q}_{50}$) while pairing it with EWMA's smooth dispersion ($\sigma_{\text{EWMA}}$); (2)~enable ML only on store--SKU segments that prove positive out-of-sample simulated profit lift (Eq.~\ref{eq:profit_gate}); (3)~compute FEFO-capped Newsvendor orders and graduated near-expiry markdowns; and (4)~hold every draft proposal in \texttt{PENDING} state until the Store Manager explicitly approves it.
+Algorithm~\ref{alg:ops_chest_newsvendor} balances predictive accuracy and profit stability through our \textbf{Profit-Gated Router (\texttt{B-Gate})} in four steps: (1)~keep LightGBM's accurate median ($\hat{q}_{50}$) while pairing it with EWMA's smooth dispersion ($\sigma_{\text{EWMA}}$); (2)~enable ML only on store--SKU segments that prove positive out-of-sample simulated profit lift (Eq.~\ref{eq:profit_gate}); (3)~compute FEFO-capped Newsvendor orders and graduated near-expiry markdowns; and (4)~hold every draft proposal in \texttt{PENDING} state until the Store Manager explicitly approves it.
 
 \intuitionbox{One-Day Operational Walkthrough: How \texttt{ops\_chest} Coordinates with \emph{Mai}}{%
 At 07:00 in Store~18, \texttt{ops\_chest} flags fresh SKU \code{F0005} (mapped to \code{TLM_10283202}, list price 123,900\,VND) with one day of shelf life left and excess stock. \textbf{Step 1:} \texttt{ops\_chest} creates a 25\% markdown draft in \texttt{PENDING} state; shoppers at the kiosk still see 123,900\,VND (strict HITL isolation). \textbf{Step 2:} The Store Manager approves the proposal (\texttt{EXECUTED}). \textbf{Step 3:} The read-only bridge immediately pushes the approved 92,925\,VND FEFO price to Mai so shoppers see the deal; once stock hits zero (\code{on_hand=0}), Mai automatically hides it from in-stock recommendations.}
@@ -243,11 +243,11 @@ Environment \& Reproducibility & Kaggle CPU runner (\code{ops_chest/ml/kaggle/tr
 \textbf{Parameter / Threshold} & \textbf{Selected Value} & \textbf{Quantitative / Theoretical Justification} \\
 \midrule
 \texttt{B-Gate} store-size cut \& variance variant & \texttt{size\_cut=30}, \texttt{ewma\_sigma} & 12-candidate grid search (\{\texttt{sym}, \texttt{split}, \texttt{ewma\_sigma}\} $\times$ \{\texttt{None}, 30, 50, 75\}): global maximum profit objective \textbf{0.38984} at \texttt{ewma\_sigma} + \texttt{size\_cut=30} (vs.\ 0.30202 at None/50/75 and 0.17303 for \texttt{sym}) \\
-Newsvendor service-level floors ($SL_{\text{floor}}$) & 0.95 (traffic), 0.90 (ABC-A), 0.50 (other) & \texttt{no\_floor} ablation on 20 FRN stores: removing floors flips profit from $+5.46\%$ to \textbf{$-0.54\%$} and spikes OOS from 14.44\% to \textbf{22.12\%} \\
+Newsvendor service-level floors ($SL_{\text{floor}}$) & 0.95 (traffic), 0.90 (ABC-A), 0.50 (other) & 20-store FRN ablation shows enabling $SL_{\text{floor}}$ lifts profit by \textbf{+6.00\,pp} ($-0.54\% \to +5.46\%$) and cuts OOS from 22.12\% down to \textbf{14.44\%} \\
 FRN unit scaling factor & $K = 10$ & Maps median SKU velocity from 0.85 to 8.51 units/day, cutting Poisson floor CV from 1.084 to 0.343 and limiting FEFO rounding error \\
 Speech SNR thresholds (\texttt{Retail-AI-}) & Bypass $\ge 28$\,dB; rescue $< 13$\,dB & Separates clean mics (avoiding double-filtering distortion; CPU drops 609\,ms $\to$ 30.9\,ms) from 12\,dB supermarket noise \\
 Visual Fast-Path thresholds & $\text{sim}_1 \ge 0.82$, $m \ge 0.08$ ($\ge 0.92$ sibling) & All real OOD photos scored $\text{sim}_1 \le 0.588 < 0.72$; sibling guard escalates identical-layout sizes to Hybrid VLM \\
-Bridge freshness TTL & \texttt{TTL = 300\,s} & Balances stock/markdown freshness against polling overhead; expires fail-closed to static snapshot caveats \\
+Bridge freshness TTL & \texttt{TTL = 300\,s} & Balances stock/markdown freshness against polling overhead; expires fail-closed to the verified static catalog snapshot \\
 \bottomrule
 \end{tabularx}
 \end{table}
