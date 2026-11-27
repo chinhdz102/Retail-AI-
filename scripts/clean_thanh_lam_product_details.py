@@ -119,7 +119,8 @@ _PURE_MARKETING_SENTENCE_RE = re.compile(
 _EXOTIC_SCRIPT_RE = re.compile(r"[\u0400-\u1dff]")
 _TRAILING_NON_SECTION_RE = re.compile(
     r"\b(?:thông tin thương hiệu|đôi nét về thương hiệu|mô tả thương hiệu|"
-    r"thông tin cảnh báo|chỉ tiêu chất lượng|ngày sản xuất|hạn sử dụng)\b.*$",
+    r"thông tin cảnh báo|chỉ tiêu chất lượng|ngày sản xuất|hạn sử dụng|"
+    r"gợi ý món(?:\s+ngon)?|mách bạn|sản phẩm cùng loại)\b.*$",
     re.IGNORECASE,
 )
 _VALID_INCI_RE = re.compile(
@@ -145,7 +146,8 @@ _REAL_SUBSTANCE_RE = re.compile(
     r"\b(?:(?<!món\s)(?<!đất\s)nước(?:\s+sạch|\s+tinh\s+khiết|\s+mắm|\s+tương|\s+cốt|\s+bão\s+hòa|\s+ép|\s+muối)?|"
     r"đường|muối|bột\s+\w+|dầu\s+\w+|mỡ|sữa|trứng|thịt|cá|tôm|mực|cua|gà|bò|heo|lợn|"
     r"gạo|nếp|đậu|đỗ|ớt|tỏi|tiêu(?!\s*(?:chí|chuẩn|dùng|thụ|hóa|hủy))|hành|gừng|nghệ|sả|quế|hồi|mật\s+ong|mật|"
-    r"trà|chè|cà\s+phê|ca\s+cao|cacao|socola|sô\s+cô\s+la|phô\s+mai|phomat|bơ|kem|váng\s+sữa|"
+    r"trà|chè|cà\s+phê|arabica|robusta|liberia|culi|ca\s+cao|cacao|socola|sô\s+cô\s+la|phô\s+mai|phomat|bơ|kem|váng\s+sữa|"
+    r"matcha|oolong|hồng\s+trà|bạc\s+xỉu|sữa\s+đặc|bơ\s+sữa|"
     r"vitamin|canxi|calcium|sắt|kẽm|magiê|kali|natri|sodium|bicarbonate|flouride|fluoride|"
     r"i-ốt|iod|acid|axit|glycerin|aqua|water|extract|chiết\s+xuất|tinh\s+dầu|tinh\s+chất|"
     r"polyester|cotton|bông|vải|nhựa|pp|pet|petg|pbt|pe|abs|hdpe|ldpe|pvc|ps|san|tritan|tpe|tpu|eva|pc|"
@@ -171,7 +173,8 @@ _REAL_SUBSTANCE_RE = re.compile(
     r"sucrose|maltose|lactose|xylitol|maltitol|aspartam|sorbitol|cốt\s+gôm|whey|casein|"
     r"protein|đạm|chất\s+béo|shortening|margarine|"
     r"collagen|niacinamide|panthenol|tocopherol|ceramide|hyaluronic|salicylic|retinol|"
-    r"laureth|sulfate|paraben|citric|benzoate|sorbate|lecithin|pectin|gelatin|agar|xanthan|"
+    r"laureth|lauryl|alkylbenzene|sulfonate|isethionate|ethoxylate|zeolite|sodium\s+carbonate|"
+    r"sodium\s+silicate|phosphonate|sulfate|paraben|citric|benzoate|sorbate|lecithin|pectin|gelatin|agar|xanthan|"
     r"ins\s*\d{3}|e\d{3}|wheat\s+flour|sugar|palm\s+oil|milk|cocoa|rice|soy|bean|starch|"
     r"lô\s+hội|nha\s+đam|bạc\s+hà|oải\s+hương|hoa\s+hồng|hoa\s+cúc|hương\s+thảo|tơ\s+tằm|"
     r"ngọc\s+trai|yến\s+sào|tổ\s+yến|nhân\s+sâm|linh\s+chi|cốm|hạt\s+sen|hạt\s+chia|hạt\s+điều|"
@@ -568,6 +571,89 @@ def clean_storage(raw_storage: str, product_name: str) -> str | None:
     return s if len(s) >= 10 and _VALID_STORAGE_CUE_RE.search(s) else None
 
 
+_CANONICAL_COUNTRIES: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\b(?:việt\s+nam|viet\s*nam)\b", re.I), "Việt Nam"),
+    (re.compile(r"\b(?:thái\s+lan|thailand)\b", re.I), "Thái Lan"),
+    (re.compile(r"\b(?:trung\s+quốc|china)\b", re.I), "Trung Quốc"),
+    (re.compile(r"\b(?:hàn\s+quốc|(?:south\s+)?korea)\b", re.I), "Hàn Quốc"),
+    (re.compile(r"\b(?:nhật\s+bản|japan)\b", re.I), "Nhật Bản"),
+    (re.compile(r"\b(?:đài\s+loan|taiwan)\b", re.I), "Đài Loan"),
+    (re.compile(r"\b(?:hồng\s+kông|hong\s*kong)\b", re.I), "Hồng Kông"),
+    (re.compile(r"\b(?:malaysia)\b", re.I), "Malaysia"),
+    (re.compile(r"\b(?:indonesia)\b", re.I), "Indonesia"),
+    (re.compile(r"\b(?:singapore)\b", re.I), "Singapore"),
+    (re.compile(r"\b(?:philippines)\b", re.I), "Philippines"),
+    (re.compile(r"\b(?:ấn\s+độ|india)\b", re.I), "Ấn Độ"),
+    (re.compile(r"\b(?:new\s*zealand)\b", re.I), "New Zealand"),
+    (re.compile(r"\b(?:úc|australia)\b", re.I), "Úc"),
+    (re.compile(r"\b(?:mỹ|hoa\s+kỳ|usa|united\s+states)\b", re.I), "Mỹ"),
+    (re.compile(r"\b(?:canada)\b", re.I), "Canada"),
+    (re.compile(r"\b(?:anh|uk|united\s+kingdom|england)\b", re.I), "Anh"),
+    (re.compile(r"\b(?:pháp|france)\b", re.I), "Pháp"),
+    (re.compile(r"\b(?:đức|germany)\b", re.I), "Đức"),
+    (re.compile(r"\b(?:ý|italy|italia)\b", re.I), "Ý"),
+    (re.compile(r"\b(?:hà\s+lan|netherlands|holland)\b", re.I), "Hà Lan"),
+    (re.compile(r"\b(?:bỉ|belgium)\b", re.I), "Bỉ"),
+    (re.compile(r"\b(?:áo|austria)\b", re.I), "Áo"),
+    (re.compile(r"\b(?:thụy\s+sĩ|switzerland)\b", re.I), "Thụy Sĩ"),
+    (re.compile(r"\b(?:thụy\s+điển|sweden)\b", re.I), "Thụy Điển"),
+    (re.compile(r"\b(?:tây\s+ban\s+nha|spain)\b", re.I), "Tây Ban Nha"),
+    (re.compile(r"\b(?:bồ\s+đào\s+nha|portugal)\b", re.I), "Bồ Đào Nha"),
+    (re.compile(r"\b(?:ba\s+lan|poland)\b", re.I), "Ba Lan"),
+    (re.compile(r"\b(?:thổ\s+nhĩ\s+kỳ|turkey|türkiye)\b", re.I), "Thổ Nhĩ Kỳ"),
+    (re.compile(r"\b(?:nga|russia)\b", re.I), "Nga"),
+    (re.compile(r"\b(?:na\s+uy|norway)\b", re.I), "Na Uy"),
+    (re.compile(r"\b(?:đan\s+mạch|denmark)\b", re.I), "Đan Mạch"),
+    (re.compile(r"\b(?:ireland|ai-len)\b", re.I), "Ireland"),
+    (re.compile(r"\b(?:scotland)\b", re.I), "Scotland"),
+    (re.compile(r"\b(?:hy\s+lạp|greece)\b", re.I), "Hy Lạp"),
+    (re.compile(r"\b(?:brazil)\b", re.I), "Brazil"),
+    (re.compile(r"\b(?:argentina)\b", re.I), "Argentina"),
+    (re.compile(r"\b(?:chile)\b", re.I), "Chile"),
+    (re.compile(r"\b(?:nam\s+phi|south\s+africa)\b", re.I), "Nam Phi"),
+    (re.compile(r"\b(?:mexico)\b", re.I), "Mexico"),
+    (re.compile(r"\b(?:peru)\b", re.I), "Peru"),
+    (re.compile(r"\b(?:châu\s+âu|eu|europe)\b", re.I), "Châu Âu"),
+]
+_ORIGIN_MFG_CLAUSE_RE = re.compile(
+    r"(?:sản\s+xuất\s+(?:và\s+nhập\s+khẩu\s+)?(?:tại|từ)|nhập\s+khẩu\s+từ|nơi\s+sản\s+xuất)\s*[:：]?\s*(.+)$",
+    re.IGNORECASE,
+)
+
+
+def clean_origin(raw_origin: str) -> str | None:
+    if not raw_origin:
+        return None
+    s = normalize_typography(raw_origin).strip(" \"'“”/,.;:-")
+    if not s or _PLACEHOLDER_ING_RE.search(s):
+        return None
+    # Reject obvious brand-slogan/sentence fluff masquerading as origin
+    if re.search(r"\b(?:luôn là|thiết kế chuyên biệt|sau khi nghiên cứu|đã nổi tiếng|phù hợp với trẻ)\b", s, re.I):
+        return None
+
+    # Prefer explicit manufacturing / import country clause if both brand-origin and manufacture-country exist
+    m_mfg = _ORIGIN_MFG_CLAUSE_RE.search(s)
+    target = m_mfg.group(1) if m_mfg else re.sub(
+        r"^/?(?:thương\s+hiệu|xuất\s+xứ(?:\s+thương\s+hiệu)?)\s*[:：]?\s*", "", s, flags=re.IGNORECASE
+    )
+    # Strip trailing parenthetical brand origin only if another country follows it (e.g. "Heineken (Hà Lan) Việt Nam")
+    after_brand_paren = re.sub(r"^[^\(]{2,30}\([^)]{2,25}\)\s*", "", target).strip()
+    if after_brand_paren:
+        hits_after = [canon for pat, canon in _CANONICAL_COUNTRIES if pat.search(after_brand_paren)]
+        if hits_after:
+            return hits_after[-1] + "."
+
+    # Find canonical country mentions; if multiple (brand origin + mfg), prefer last non-sentence mention
+    matches: list[tuple[int, str]] = []
+    for pat, canon in _CANONICAL_COUNTRIES:
+        for m in pat.finditer(target):
+            matches.append((m.start(), canon))
+    if matches:
+        matches.sort(key=lambda x: x[0])
+        return matches[-1][1] + "."
+    return None
+
+
 def clean_summary(raw_summary: str, product_name: str) -> str | None:
     if not raw_summary:
         return None
@@ -673,11 +759,7 @@ def main() -> None:
 
         summary_clean = clean_summary(str(rec.get("summary") or ""), pname)
 
-        origin_clean = None
-        if rec.get("origin"):
-            o = trim_clean_sentence(_capitalize_first(normalize_typography(str(rec["origin"]))), 120)
-            if len(o) >= 4 and not _PLACEHOLDER_ING_RE.search(o):
-                origin_clean = o
+        origin_clean = clean_origin(str(rec.get("origin") or ""))
 
         entry: dict[str, Any] = {
             "product_name": pname,
