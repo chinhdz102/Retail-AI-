@@ -108,3 +108,88 @@ def test_snapshot_resolves_planogram_for_lf_catalog_checkout(tmp_path: Path) -> 
     assert product is not None
     assert product.shelf == assignment["location_code"]
     assert product.shelf_source == "RECOMMENDED_PLANOGRAM"
+
+
+def test_describe_planogram_location_covers_all_13_aisles_and_fails_closed() -> None:
+    from backend.products.planogram import describe_planogram_location
+
+    for aisle_num in range(1, 14):
+        code = f"A{aisle_num:02d}-B01-L03-P04"
+        details = describe_planogram_location(code)
+        assert details is not None, f"Missing guide for {code}"
+        assert details.aisle == f"A{aisle_num:02d}"
+        assert details.zone_vi
+        assert details.direction_vi
+        assert "ngang tầm mắt" in details.level_phrase("vi")
+        assert code in details.detailed_sentence("Sản phẩm thử nghiệm", "vi")
+        assert "sơ đồ kệ đề xuất" in details.detailed_sentence("Sản phẩm thử nghiệm", "vi").casefold()
+        assert "chưa xác minh" in details.detailed_sentence("Sản phẩm thử nghiệm", "vi").casefold()
+
+    # Check all 5 shelf heights match L1 bottom -> L5 top
+    assert "dưới cùng" in describe_planogram_location("A10-B05-L01-P01").level_phrase("vi")
+    assert "dưới tầm mắt" in describe_planogram_location("A10-B05-L02-P01").level_phrase("vi")
+    assert "ngang tầm mắt" in describe_planogram_location("A10-B05-L03-P01").level_phrase("vi")
+    assert "cao hơn tầm mắt" in describe_planogram_location("A10-B05-L04-P01").level_phrase("vi")
+    assert "trên cùng" in describe_planogram_location("A10-B05-L05-P01").level_phrase("vi")
+
+    # Non-planogram / unmapped codes must fail closed without inventing walking directions
+    for unmapped in (None, "", "A2-L2", "A1-B2", "C1-L3", "A99-B01-L01-P01"):
+        assert describe_planogram_location(unmapped) is None
+
+
+def test_shelf_rendering_and_multi_candidates_explain_directions_clearly() -> None:
+    from backend.api.main import _localized_location_candidates
+    from backend.products.catalog import DEMO_PRODUCTS
+    from backend.services.retail_response_style import render_verified_snapshot
+
+    base = DEMO_PRODUCTS[0]
+    coke = base.model_copy(
+        update={
+            "product_id": "TLM_10194711",
+            "name": "Nước ngọt Coca-Cola Zero chai 600ml",
+            "shelf": "A10-B05-L03-P04",
+            "shelf_source": "RECOMMENDED_PLANOGRAM",
+        }
+    )
+    single_vi = render_verified_snapshot(coke, "vi", ("shelf",))
+    assert "Thực phẩm công nghệ" in single_vi
+    assert "dãy A10" in single_vi
+    assert "khoang 5/8" in single_vi
+    assert "tầng 3" in single_vi and "ngang tầm mắt" in single_vi
+    assert "ô số 4" in single_vi
+    assert "A10-B05-L03-P04" in single_vi
+    assert "sơ đồ kệ đề xuất" in single_vi.casefold()
+    assert "chưa xác minh" in single_vi.casefold()
+
+    single_en = render_verified_snapshot(coke, "en", ("shelf",))
+    assert "Packaged Food & Grocery" in single_en
+    assert "aisle A10" in single_en
+    assert "eye level" in single_en
+    assert "A10-B05-L03-P04" in single_en
+
+    # Same aisle & same bay multi-variant
+    coke2 = coke.model_copy(
+        update={"name": "Nước ngọt Coca-Cola Zero lon 320ml", "shelf": "A10-B05-L02-P02"}
+    )
+    same_bay = _localized_location_candidates((coke, coke2), "vi")
+    assert "Thực phẩm công nghệ" in same_bay
+    assert "dãy A10" in same_bay
+    assert "khoang 5/8" in same_bay
+    assert "A10-B05-L03-P04" in same_bay and "A10-B05-L02-P02" in same_bay
+    assert "chưa được xác minh" in same_bay
+
+    # Same aisle, different bays
+    water = coke.model_copy(
+        update={"name": "Nước khoáng LaVie 500ml", "shelf": "A10-B07-L01-P03"}
+    )
+    same_aisle = _localized_location_candidates((coke, water), "vi")
+    assert "đều nằm ở khu Thực phẩm công nghệ" in same_aisle
+    assert "khoang 5/8" in same_aisle and "khoang 7/8" in same_aisle
+
+    # Different aisles
+    fresh = coke.model_copy(
+        update={"name": "Thịt thăn bò", "shelf": "A13-B05-L03-P01"}
+    )
+    diff_aisle = _localized_location_candidates((coke, fresh), "vi")
+    assert "dãy A10" in diff_aisle and "dãy A13" in diff_aisle
+    assert "Thực phẩm tươi sống, chế biến" in diff_aisle

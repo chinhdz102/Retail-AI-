@@ -16,7 +16,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-PROJECT_ROOT = r"C:\Users\Chinhdz\Desktop\Du an\retail\Retail-AI--main\Retail-AI--main"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(PROJECT_ROOT)
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 NOTEBOOK_PATH = os.path.join(PROJECT_ROOT, "EDA_Thanh_Lam_Bac_Ninh.ipynb")

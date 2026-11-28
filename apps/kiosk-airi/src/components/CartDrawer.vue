@@ -28,6 +28,7 @@ import {
 } from '@phosphor-icons/vue'
 
 import type { AssistedCartItem, AssistedOrderResponse, LanguageCode } from '../types'
+import { formatShelfLocation } from '../utils/shelfLocation'
 
 const props = defineProps<{
   open: boolean
@@ -445,7 +446,7 @@ onUnmounted(() => {
                     <strong>{{ cleanName(item.name) }}</strong>
                     <small>
                       {{ formatVnd(item.unit_price_vnd) }} × {{ item.quantity }}
-                      <template v-if="item.shelf_location"> · Kệ gợi ý: {{ item.shelf_location }}</template>
+                      <template v-if="item.shelf_location"> · Kệ gợi ý: {{ formatShelfLocation(item.shelf_location) }}</template>
                     </small>
                   </div>
                   <span class="cart-receipt-item-total">{{ formatVnd(item.line_total_vnd) }}</span>

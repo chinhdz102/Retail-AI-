@@ -17,6 +17,7 @@ import {
 } from '@phosphor-icons/vue'
 
 import { browseProductCatalog, fetchProductCatalogIndex } from '../api'
+import { formatShelfLocation } from '../utils/shelfLocation'
 import type {
   AssistedCartItem,
   CatalogDepartmentSummary,
@@ -867,7 +868,7 @@ onUnmounted(() => {
               </div>
               <p v-if="detailProduct.promotion" class="product-modal-promo">{{ detailProduct.promotion }}</p>
               <div class="product-modal-meta">
-                <span v-if="detailProduct.shelf">Kệ gợi ý: {{ detailProduct.shelf }}</span>
+                <span v-if="detailProduct.shelf">Kệ gợi ý: {{ formatShelfLocation(detailProduct.shelf, { detailed: true }) }}</span>
                 <span>Giá tham khảo từ catalog siêu thị</span>
               </div>
             </div>

@@ -6,7 +6,7 @@
 Phụ lục này tập trung toàn bộ chi tiết kỹ nghệ phần mềm, cấu hình mô hình hỗ trợ, giao diện và kiểm thử tự động của \texttt{Retail-AI-} nhằm giữ các chương chính tập trung vào nội dung nghiên cứu AI.
 
 \section*{A.1 Lược đồ Danh mục, Pipeline Làm sạch 8 Tầng và Bộ Công cụ Tư vấn}
-\texttt{Retail-AI-} nạp tập danh mục Thanh Lam Mart (SHA-256 \code{80c605a5e778f0c4...}, 3.099 dòng, 20 cột cấu trúc gồm \code{product_id}, \code{barcode}, \code{name}, \code{brand}, \code{price_vnd}, \code{sale_price_vnd}, \code{discount_promotion}, \code{stock}, \code{shelf}, \code{uom}, \code{image_url}, \code{category_hierarchy}) qua mô hình kiểm định Pydantic, lọc chuẩn hóa 18 dòng giá bất thường (\code{sale_price_vnd > price_vnd}) và giữ 3.081 SKU hợp lệ kèm sơ đồ kệ 13 dãy.
+\texttt{Retail-AI-} nạp tập danh mục Thanh Lam Mart (SHA-256 \code{3ab0666cb1b2efdc...}, 3.099 dòng, 20 cột cấu trúc gồm \code{product_id}, \code{barcode}, \code{name}, \code{brand}, \code{price_vnd}, \code{sale_price_vnd}, \code{discount_promotion}, \code{stock}, \code{shelf}, \code{uom}, \code{image_url}, \code{category_hierarchy}) qua mô hình kiểm định Pydantic, lọc chuẩn hóa 18 dòng giá bất thường (\code{sale_price_vnd > price_vnd}) và giữ 3.081 SKU hợp lệ kèm sơ đồ kệ 13 dãy.
 
 Pipeline làm giàu tri thức sản phẩm kết hợp thu thập 3.099 trang sản phẩm SSR với đối chiếu nhãn mã vạch EAN-13 (333 khớp mã vạch, 226 khớp thương hiệu--dạng bào chế) và làm sạch 8 tầng theo chuẩn Hugging Face \code{datatrove}~\cite{hf_datatrove} + OpenFoodFacts~\cite{openfoodfacts} (chuẩn hóa Unicode NFC, xóa ký tự ẩn \texttt{U+200B}/\texttt{U+00A0}, khôi phục dấu câu từ thẻ \code{<li>}, cân bằng ngoặc đơn, tách tràn chéo trường, lọc rác OCR và cách ly tuyên bố dị ứng chưa xác minh), đưa 4.606 lỗi thô trên 11 tiêu chí về 0 lỗi (19/19 ca kiểm thử hồi quy) và đạt độ phủ 2.205/3.099 SKU (71,15\%). Bảng~\ref{tab:retail_tools} tóm tắt các công cụ chỉ đọc và hỗ trợ trong lõi tư vấn.
 
@@ -128,7 +128,7 @@ Ba kho mã nguồn (\texttt{Retail-AI-}, \texttt{ops\_chest}, \texttt{ops-retail
         \item \emph{Fold~1 (25 cửa hàng):} 104, 143, 193, 243, 245, 258, 264, 390, 415, 420, 432, 488, 494, 513, 532, 548, 583, 629, 663, 701, 710, 752, 786, 803, 879.
         \item \emph{13 cửa hàng nhỏ ($\le 30$ SKU):} 114, 223, 407, 443, 629, 663, 691, 710, 752, 766, 786, 803, 869.
     \end{itemize}
-    \item \textbf{Môi trường phần mềm \& mã băm dữ liệu:} Python~3.13.15, NumPy~2.5.4, Pandas~3.1.1, Matplotlib~3.11.2, FastAPI/Pydantic~v2, Pytest~9.1.1; mã băm SHA-256 (raw và chuẩn hóa LF) của tệp danh mục JSON Thanh Lam Mart là \texttt{\small 80c605a5e778f0c4\allowbreak e7a09057d4088ede\allowbreak b8742318bc2e3d40\allowbreak c0b8d907cd03862d}; seed bootstrap/permutation cố định \code{seed=42} (20.000 mẫu bootstrap, 50.000 hoán vị).
+    \item \textbf{Môi trường phần mềm \& mã băm dữ liệu:} Python~3.13.15, NumPy~2.5.4, Pandas~3.1.1, Matplotlib~3.11.2, FastAPI/Pydantic~v2, Pytest~9.1.1; mã băm SHA-256 (raw và chuẩn hóa LF) của tệp danh mục JSON Thanh Lam Mart là \texttt{\small 3ab0666cb1b2efdc\allowbreak 83d137f25b3c24af\allowbreak cc5bd30926830286\allowbreak 9967a8660d3a761a}; seed bootstrap/permutation cố định \code{seed=42} (20.000 mẫu bootstrap, 50.000 hoán vị).
     \item \textbf{Lệnh tái lập toàn bộ kiểm thử và thực nghiệm:}
     \begin{itemize}
         \item \emph{Kiểm thử liên Agent E2E (\texttt{Retail-AI-}):} \code{pytest tests/test_ops_bridge_e2e.py -v} (2/2 kịch bản toàn tuyến đạt).

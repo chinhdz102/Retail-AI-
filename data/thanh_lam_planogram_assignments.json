@@ -2,8 +2,8 @@
   "schema_version": 1,
   "planogram_version": "taxonomy-blocks-v1",
   "source_dataset": "thanh_lam_products.json",
-  "source_dataset_sha256": "80c605a5e778f0c4e7a09057d4088edeb8742318bc2e3d40c0b8d907cd03862d",
-  "source_dataset_canonical_sha256": "80c605a5e778f0c4e7a09057d4088edeb8742318bc2e3d40c0b8d907cd03862d",
+  "source_dataset_sha256": "3ab0666cb1b2efdc83d137f25b3c24afcc5bd309268302869967a8660d3a761a",
+  "source_dataset_canonical_sha256": "3ab0666cb1b2efdc83d137f25b3c24afcc5bd309268302869967a8660d3a761a",
   "source_shelf_note": "The catalog's existing shelf values are crawler-generated placeholders (shelf_source=SIMULATED), not verified store locations.",
   "strategy": {
     "ordering": [

@@ -4908,6 +4908,15 @@ def execute_catalog_tool(
             if field_name == "shelf":
                 data["shelf_source"] = product.shelf_source
                 if product.shelf_source == "RECOMMENDED_PLANOGRAM":
+                    from backend.products.planogram import describe_planogram_location
+
+                    details = describe_planogram_location(
+                        product.shelf,
+                        product_id=product.product_id,
+                        category_hint=product.category_hierarchy or product.category,
+                    )
+                    if details is not None:
+                        data["shelf_details"] = details.to_dict()
                     data["shelf_note"] = (
                         "Taxonomy-based proposed locator; physical placement at the store "
                         "has not been verified."

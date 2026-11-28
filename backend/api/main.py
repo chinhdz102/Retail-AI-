@@ -18,6 +18,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 from uuid import UUID, uuid4
 
 import anyio
@@ -1771,11 +1772,13 @@ def _unverified_retail_information_kind(text: str) -> str | None:
             "thanh_lam_mart la cong ty nao",
             "gioi thieu thanh lam mart",
             "gioi thieu thanh_lam_mart",
-            "thanh lam mart",
-            "cua hang thanh lam",
-            "sieu thi thanh lam",
             "chatvrm",
         )
+    ):
+        return "company"
+    if (
+        not any(loc in normalized for loc in ("gan ", "quanh ", "xung quanh", "near ", "around ", "nearby"))
+        and any(phrase in normalized for phrase in ("thanh lam mart", "cua hang thanh lam", "sieu thi thanh lam"))
     ):
         return "company"
     if any(
@@ -4555,7 +4558,141 @@ def _localized_location_candidates(
     products: tuple[ProductSnapshot, ...],
     language: LanguageCode,
 ) -> str:
+    from backend.products.planogram import describe_planogram_location
+
     listed = [product for product in products[:3] if product.shelf]
+    if not listed:
+        return {
+            "en": "The catalog does not include a suggested shelf location for these products.",
+            "zh": "目录没有记录这些商品的建议货架位置。",
+            "vi": "Catalog chưa ghi vị trí kệ đề xuất cho các mặt hàng này.",
+        }[language]
+
+    described = [
+        (
+            product,
+            describe_planogram_location(
+                product.shelf,
+                product_id=product.product_id,
+                category_hint=product.category_hierarchy or product.category,
+            ),
+        )
+        for product in listed
+    ]
+
+    if all(details is not None for _, details in described):
+        parsed_pairs = [(product, details) for product, details in described if details is not None]
+        first = parsed_pairs[0][1]
+        aisles = list(dict.fromkeys(details.aisle for _, details in parsed_pairs))
+        bays = list(dict.fromkeys((details.aisle, details.bay) for _, details in parsed_pairs))
+
+        if len(bays) == 1:
+            cue = first.category_cue
+            if language == "en":
+                cue_part = (
+                    f" ({cue} section)"
+                    if cue and cue.casefold() != first.zone_en.casefold()
+                    else ""
+                )
+                item_notes = "; ".join(
+                    f"{' '.join(prod.name.split())}: {det.level_phrase('en', short=True)}, slot {det.slot_num} ({det.code})"
+                    for prod, det in parsed_pairs
+                )
+                return (
+                    f"According to the suggested planogram, these items are in the {first.zone_en} zone, "
+                    f"aisle {first.aisle}{cue_part}: {first.direction_en}. "
+                    f"Look at {first.bay_phrase('en')} — specifically: {item_notes}. "
+                    "Actual store placement is unverified. Which type or size do you need?"
+                )
+            if language == "zh":
+                cue_part = f"（{cue}品类）" if cue else ""
+                item_notes = "；".join(
+                    f"{' '.join(prod.name.split())}：{det.level_phrase('zh', short=True)}、第 {det.slot_num} 格（{det.code}）"
+                    for prod, det in parsed_pairs
+                )
+                return (
+                    f"根据建议货架图，这些商品位于 {first.zone_zh} 的 {first.aisle} 通道{cue_part}："
+                    f"{first.direction_zh}。集中在 {first.bay_phrase('zh')}，具体位置：{item_notes}。"
+                    "门店实际摆放尚未核实。您需要哪种规格？"
+                )
+            cue_part = (
+                f" (nhóm {cue})"
+                if cue and cue.casefold() != first.zone_vi.casefold()
+                else ""
+            )
+            item_notes = "; ".join(
+                f"{' '.join(prod.name.split())}: {det.level_phrase('vi', short=True)}, ô số {det.slot_num} ({det.code})"
+                for prod, det in parsed_pairs
+            )
+            return (
+                f"Dạ, theo sơ đồ kệ đề xuất, nhóm này nằm ở khu {first.zone_vi}, "
+                f"dãy {first.aisle}{cue_part}: {first.direction_vi}. "
+                f"Các món tập trung ở {first.bay_phrase('vi')}, cụ thể: {item_notes}. "
+                "Lưu ý đây là vị trí gợi ý trên sơ đồ, cách bày thực tế tại cửa hàng chưa được xác minh. "
+                "Bạn cần loại hay quy cách nào cụ thể?"
+            )
+
+        if len(aisles) == 1:
+            if language == "en":
+                item_notes = "; ".join(
+                    f"{' '.join(prod.name.split())}: {det.shelf_position_clause('en')}"
+                    for prod, det in parsed_pairs
+                )
+                return (
+                    f"According to the suggested planogram, these options are all in the {first.zone_en} zone, "
+                    f"aisle {first.aisle}: {first.direction_en}. "
+                    f"By variant: {item_notes}. "
+                    "Actual store placement has not been verified. Which size or pack do you mean?"
+                )
+            if language == "zh":
+                item_notes = "；".join(
+                    f"{' '.join(prod.name.split())}：{det.shelf_position_clause('zh')}"
+                    for prod, det in parsed_pairs
+                )
+                return (
+                    f"根据建议货架图，这些商品都在 {first.zone_zh} 的 {first.aisle} 通道：{first.direction_zh}。"
+                    f"具体位置：{item_notes}。门店实际摆放尚未核实。您需要哪种规格？"
+                )
+            item_notes = "; ".join(
+                f"{' '.join(prod.name.split())}: {det.shelf_position_clause('vi')}"
+                for prod, det in parsed_pairs
+            )
+            return (
+                f"Dạ, theo sơ đồ kệ đề xuất, các sản phẩm nhóm này đều nằm ở khu {first.zone_vi}, "
+                f"dãy {first.aisle}: {first.direction_vi}. "
+                f"Cụ thể từng loại: {item_notes}. "
+                "Lưu ý đây là vị trí gợi ý trên sơ đồ, cách bày thực tế tại cửa hàng chưa được xác minh. "
+                "Bạn cần quy cách nào để mình chỉ kỹ hơn?"
+            )
+
+        if language == "en":
+            details_text = "; ".join(
+                f"{' '.join(prod.name.split())}: {det.compact_label('en')}"
+                for prod, det in parsed_pairs
+            )
+            return (
+                f"According to the suggested planogram, these options span different aisles: {details_text}. "
+                "Actual shelf placement has not been verified. Which size or pack do you mean?"
+            )
+        if language == "zh":
+            details_text = "；".join(
+                f"{' '.join(prod.name.split())}：{det.compact_label('zh')}"
+                for prod, det in parsed_pairs
+            )
+            return (
+                f"根据建议货架图，这些商品分布在不同通道：{details_text}。"
+                "门店实际摆放尚未核实。您需要哪种规格？"
+            )
+        details_text = "; ".join(
+            f"{' '.join(prod.name.split())}: {det.compact_label('vi')}"
+            for prod, det in parsed_pairs
+        )
+        return (
+            f"Mình thấy vài quy cách nằm ở các dãy khác nhau theo sơ đồ kệ đề xuất: {details_text}. "
+            "Lưu ý cách bày thực tế tại cửa hàng chưa được xác minh. "
+            "Bạn cần loại hay quy cách nào để mình chỉ rõ hơn?"
+        )
+
     codes = [str(product.shelf) for product in listed]
     parts = [code.split("-") for code in codes]
     if parts and all(len(part) == 4 for part in parts):
@@ -4577,8 +4714,6 @@ def _localized_location_candidates(
                 ),
             }[language]
     if language == "en":
-        if not listed:
-            return "The catalog does not include a suggested shelf location for these products."
         details = "; ".join(f"{product.name}: {product.shelf}" for product in listed)
         return (
             f"Suggested planogram locations: {details}. "
@@ -4586,12 +4721,8 @@ def _localized_location_candidates(
             "Which size or pack do you mean?"
         )
     if language == "zh":
-        if not listed:
-            return "目录没有记录这些商品的建议货架位置。"
         details = "；".join(f"{product.name}：{product.shelf}" for product in listed)
         return f"建议货架位置：{details}。门店实际摆放尚未核实。您需要哪种规格？"
-    if not listed:
-        return "Catalog chưa ghi vị trí kệ đề xuất cho các mặt hàng này."
     details = "; ".join(f"{product.name}: {product.shelf}" for product in listed)
     return (
         f"Mình thấy vài quy cách; vị trí theo sơ đồ kệ đề xuất là: {details}. "
@@ -5101,7 +5232,9 @@ Use verified information only. Keep official product names and shelf codes uncha
 invent prices, stock, shelf locations, promotions, ingredients, expiry dates, or product benefits.
 For product search or verified facts, use the catalog tools when available. Search first, then
 call `get_product_snapshot` with only the requested fields. A shelf marked
-`RECOMMENDED_PLANOGRAM` is proposed and has not been physically verified.
+`RECOMMENDED_PLANOGRAM` is proposed and has not been physically verified; when `shelf_details`
+is returned, explain the zone, walking direction from the entrance, aisle, bay position, shelf
+height (L1 bottom to L5 top), slot, and exact locator code clearly instead of only a bare code.
 For benefits, taste, use, or suitability questions about a known product, call
 `get_product_knowledge`. State only `VERIFIED` attributes as facts; qualify `INFERRED` as
 catalog/listing evidence, and say the catalog cannot verify `UNKNOWN` attributes. A
@@ -5166,6 +5299,10 @@ yêu cầu sản phẩm rõ ràng, tiếp tục xử lý bằng dữ liệu và 
 Chỉ nêu đúng thông tin được hỏi; không tự thêm tồn kho hoặc vị trí kệ nếu người dùng chưa hỏi.
 Không tự kết thúc cuộc trò chuyện hoặc nói "tạm biệt" trừ khi người dùng chủ động nói lời tạm biệt.
 Trả lời bằng {language_name}, giữ nguyên tên sản phẩm và mã kệ khi cần.
+Khi khách hỏi vị trí kệ và công cụ trả về `shelf_details` (sơ đồ kệ đề xuất), hãy hướng dẫn rõ ràng
+theo khu vực, hướng đi từ cửa vào, dãy, khoang (đầu/giữa/cuối dãy), tầng kệ (tầng 1 dưới cùng đến
+tầng 5 trên cùng), ô số mấy kèm mã kệ và lưu ý vị trí bày thực tế tại cửa hàng chưa được xác minh
+(có thể trả lời 2–3 câu rõ ràng khi chỉ vị trí).
 Khi cần giá, tồn kho, vị trí kệ, hạn dùng, thành phần, độ cay hoặc tìm sản phẩm, hãy gọi công cụ
 catalog phù hợp nếu công cụ được cung cấp. `search_products` tìm sản phẩm để
 tra cứu, kể cả mặt hàng hết hàng. Gọi `get_product_snapshot` để lấy dữ kiện và

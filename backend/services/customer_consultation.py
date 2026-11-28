@@ -3640,10 +3640,35 @@ def _render(
         details = [f"{p.name} ({p.price_vnd:,}đ)".replace(",", ".") for p in products]
         text += " Bạn có thể xem " + "; ".join(details) + "."
     if products and plan.action == "locate":
-        locations = list(dict.fromkeys(p.shelf for p in products if p.shelf))
-        if locations:
+        from backend.products.planogram import describe_planogram_location
+
+        described_parts: list[str] = []
+        raw_locations: list[str] = []
+        seen_codes: set[str] = set()
+        for p in products:
+            if not p.shelf or p.shelf in seen_codes:
+                continue
+            seen_codes.add(p.shelf)
+            raw_locations.append(p.shelf)
+            det = describe_planogram_location(
+                p.shelf,
+                product_id=p.product_id,
+                category_hint=p.category_hierarchy or p.category,
+            )
+            if det is not None:
+                described_parts.append(f"{p.name}: {det.compact_label('vi')}")
+        if described_parts:
             demo = any(p.shelf_source != "VERIFIED" for p in products)
-            text += f" {'Sơ đồ demo' if demo else 'Vị trí'}: {', '.join(locations[:3])}."
+            if demo:
+                text += (
+                    f" Vị trí theo sơ đồ kệ đề xuất: {'; '.join(described_parts[:3])}. "
+                    "Lưu ý cách bày thực tế tại cửa hàng chưa được xác minh."
+                )
+            else:
+                text += f" Vị trí: {'; '.join(described_parts[:3])}."
+        elif raw_locations:
+            demo = any(p.shelf_source != "VERIFIED" for p in products)
+            text += f" {'Sơ đồ demo' if demo else 'Vị trí'}: {', '.join(raw_locations[:3])}."
     elif products:
         if plan.total_budget_vnd is not None and not had_total and not alternatives:
             text += f" Tổng gợi ý: {total:,}đ.".replace(",", ".")
@@ -3839,6 +3864,8 @@ def _safe_clarification_question(
 
 
 def _location_reply(candidates, plan):
+    from backend.products.planogram import describe_planogram_location
+
     if not candidates:
         return "Mình chưa xác định được kệ của nhóm này. Bạn cho mình tên loại hàng cụ thể nhé?", []
     product = candidates[0]
@@ -3846,13 +3873,22 @@ def _location_reply(candidates, plan):
     group = path[-2] if len(path) > 1 else path[-1]
     if not product.shelf:
         return f"Bạn tìm ở nhóm {group} nhé. Mình chưa có số kệ để chỉ chính xác hơn.", [product]
+    details = describe_planogram_location(
+        product.shelf,
+        product_id=product.product_id,
+        category_hint=product.category_hierarchy or product.category,
+    )
     if product.shelf_source in {"DEMO", "RECOMMENDED_PLANOGRAM"}:
+        if details is not None:
+            return details.detailed_sentence(product.name, "vi", include_caveat=True), [product]
         return (
             f"Bạn tìm ở khu {group} nhé. Trên sơ đồ demo, một vị trí của nhóm này "
             f"là {product.shelf}; mình chưa xác nhận được vị trí thực tế tại cửa hàng."
         ), [
             product,
         ]
+    if details is not None:
+        return details.detailed_sentence(product.name, "vi", include_caveat=False), [product]
     return f"Bạn tìm ở khu {group}, kệ {product.shelf} nhé.", [product]
 
 

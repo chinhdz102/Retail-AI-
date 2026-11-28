@@ -6,6 +6,7 @@ from typing import Literal
 
 from backend.products.catalog import ProductSnapshot
 from backend.products.knowledge import EvidenceScope, EvidenceStatus, product_knowledge_facts
+from backend.products.planogram import describe_planogram_location
 
 Language = Literal["vi", "en", "zh"]
 
@@ -327,6 +328,38 @@ def render_verified_snapshot(
             "mình chưa thể xác nhận đây là dữ liệu mới nhất; thông tin tại cửa hàng có thể khác."
         )
 
+    if fields == ("shelf",):
+        if product.shelf_source == "RECOMMENDED_PLANOGRAM":
+            details = describe_planogram_location(
+                product.shelf,
+                product_id=product.product_id,
+                category_hint=product.category_hierarchy or product.category,
+            )
+            if details is not None:
+                return details.detailed_sentence(product.name, language, include_caveat=True)
+            if language == "en":
+                return (
+                    f"According to the suggested planogram, {product.name} is at "
+                    f"{_format_shelf_location(product, language)}. "
+                    "This is a proposed locator and actual store placement is unverified."
+                )
+            if language == "zh":
+                return (
+                    f"根据建议货架图，{product.name} 位于 "
+                    f"{_format_shelf_location(product, language)}。"
+                    "这是建议位置，门店实际摆放尚未核实。"
+                )
+            return (
+                f"Theo sơ đồ kệ đề xuất, {product.name} ở vị trí "
+                f"{_format_shelf_location(product, language)} nhé. "
+                "Đây là vị trí gợi ý, chưa xác minh cách bày thực tế tại cửa hàng."
+            )
+        if language == "en":
+            return f"{product.name} is on shelf {product.shelf}."
+        if language == "zh":
+            return f"{product.name} 位于货架 {product.shelf}。"
+        return f"{product.name} ở kệ {product.shelf} nhé."
+
     if language == "en":
         facts: list[str] = []
         if "price_vnd" in fields:
@@ -518,9 +551,8 @@ def _shelf_label(product: ProductSnapshot, language: Language) -> str:
                 f"建议货架位置 {_format_shelf_location(product, language)}（尚未核实门店实际摆放）"
             )
         return (
-            "ở vị trí kệ đề xuất "
-            f"{_format_shelf_location(product, language)} "
-            "(chưa xác minh vị trí bày thực tế)"
+            f"ở {_format_shelf_location(product, language)} "
+            "(theo sơ đồ kệ đề xuất, chưa xác minh vị trí bày thực tế)"
         )
     if language == "en":
         return f"shelf {product.shelf}"
@@ -533,6 +565,13 @@ def _format_shelf_location(product: ProductSnapshot, language: Language) -> str:
     location = product.shelf or ""
     if product.shelf_source != "RECOMMENDED_PLANOGRAM":
         return location
+    details = describe_planogram_location(
+        location,
+        product_id=product.product_id,
+        category_hint=product.category_hierarchy or product.category,
+    )
+    if details is not None:
+        return details.compact_label(language)
     match = re.fullmatch(r"A(\d{2})-B(\d{2})-L(\d{2})-P(\d{2})", location)
     if match is None:
         return location
