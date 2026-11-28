@@ -415,7 +415,9 @@ def test_snapshot_disclosure_keys_are_scoped_to_product_source_and_version() -> 
     product = DEMO_PRODUCTS[0]
     first = snapshot_disclosure_keys(product, "demo_product_catalog", ("price_vnd",))
     same_snapshot = snapshot_disclosure_keys(product, "demo_product_catalog", ("price_vnd",))
-    different_source = snapshot_disclosure_keys(product, "thanh_lam_postgres_catalog", ("price_vnd",))
+    different_source = snapshot_disclosure_keys(
+        product, "thanh_lam_postgres_catalog", ("price_vnd",)
+    )
     other_product = snapshot_disclosure_keys(
         DEMO_PRODUCTS[1], "demo_product_catalog", ("price_vnd",)
     )

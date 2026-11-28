@@ -78,7 +78,8 @@ async def test_product_knowledge_qa_regressions(
             r_chinsu = await ask("Tương ớt Chin Su sản xuất ở đâu?")
             assert "Việt Nam" in r_chinsu["text"]
 
-            # 2. Food storage/cooking queries bypass appliance OOC gate; appliance shopping stays blocked
+            # 2. Food storage/cooking queries bypass appliance OOC gate;
+            #    appliance shopping stays blocked
             r_mm = await ask("Kẹo socola M&M's gói 100g có cần để tủ lạnh không?")
             assert r_mm["model"] != "local-ooc-gate"
             assert "khô ráo" in r_mm["text"].casefold()
@@ -87,7 +88,9 @@ async def test_product_knowledge_qa_regressions(
             assert r_milk["model"] != "local-ooc-gate"
             assert "bảo quản" in r_milk["text"].casefold()
 
-            r_ooc = await ask("Ở đây có bán máy lọc không khí Xiaomi hoặc nồi chiên không dầu không?")
+            r_ooc = await ask(
+                "Ở đây có bán máy lọc không khí Xiaomi hoặc nồi chiên không dầu không?"
+            )
             assert r_ooc["model"] == "local-ooc-gate"
 
             assert not api._non_supermarket_out_of_catalog_requested(
@@ -113,7 +116,8 @@ async def test_product_knowledge_qa_regressions(
             assert "Jumpo Vape" in r_vape["text"]
             assert "Transfluthrin" in r_vape["text"]
 
-            # 7. Multi-turn follow-up "thành phần chính là gì?" stays grounded on Pepsi (never Mì chính)
+            # 7. Multi-turn follow-up "thành phần chính là gì?" stays grounded on Pepsi
+            #    (never Mì chính)
             sess = await new_session()
             t1 = await ask("Pepsi 1.5 lít giá bao nhiêu?", session=sess)
             assert "Pepsico" in t1["text"]
@@ -230,7 +234,8 @@ async def test_bestseller_and_sales_comparison_regressions(
             # Ensure session holds 2 compared products even if disambiguated
             if cmp_t1["model"] == "comparison-clarification":
                 cmp_t1 = await ask(
-                    "So sánh Nước giải khát Coca Cola chai 1.5lít và Nước giải khát có gas Pepsico chai 1.5 lít",
+                    "So sánh Nước giải khát Coca Cola chai 1.5lít "
+                    "và Nước giải khát có gas Pepsico chai 1.5 lít",
                     session=sess_cmp,
                 )
             cmp_t2 = await ask("Cái nào bán chạy hơn?", session=sess_cmp)

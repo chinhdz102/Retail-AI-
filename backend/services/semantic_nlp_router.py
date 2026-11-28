@@ -283,7 +283,10 @@ def route_query(
     top_k: int = 3,
     min_confidence: float = 0.45,
 ) -> SemanticRoute | None:
-    """Predict the primary Thanh Lam Mart taxonomy category branch(es) for a shopper query in <1 ms."""
+    """Predict the primary Thanh Lam Mart taxonomy category branch(es) for a shopper query.
+
+    Runs in under 1 ms.
+    """
     if not text or not text.strip():
         return None
     res = _route_cached(text.strip(), top_k)

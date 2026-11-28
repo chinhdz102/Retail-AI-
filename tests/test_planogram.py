@@ -122,8 +122,9 @@ def test_describe_planogram_location_covers_all_13_aisles_and_fails_closed() -> 
         assert details.direction_vi
         assert "ngang tầm mắt" in details.level_phrase("vi")
         assert code in details.detailed_sentence("Sản phẩm thử nghiệm", "vi")
-        assert "sơ đồ kệ đề xuất" in details.detailed_sentence("Sản phẩm thử nghiệm", "vi").casefold()
-        assert "chưa xác minh" in details.detailed_sentence("Sản phẩm thử nghiệm", "vi").casefold()
+        vi_sentence = details.detailed_sentence("Sản phẩm thử nghiệm", "vi").casefold()
+        assert "sơ đồ kệ đề xuất" in vi_sentence
+        assert "chưa xác minh" in vi_sentence
 
     # Check all 5 shelf heights match L1 bottom -> L5 top
     assert "dưới cùng" in describe_planogram_location("A10-B05-L01-P01").level_phrase("vi")

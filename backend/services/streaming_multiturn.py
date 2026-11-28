@@ -368,7 +368,8 @@ async def prepare_special_turn1_streaming(
     """
     budget = parsed.budget_vnd if parsed is not None else _parse_budget_vnd(norm_answer)
 
-    # 1. Frozen ice cream gap: Thanh Lam Mart snapshot only has whipping cream & personal care creams.
+    # 1. Frozen ice cream gap: Thanh Lam Mart snapshot only has whipping cream
+    #    & personal care creams.
     if re.search(
         r"^(?:co\s+(?:nhung\s+)?loai\s+kem\s+nao|cua\s+hang\s+co\s+(?:ban\s+)?kem\s+(?:khong|nao)|"
         r"co\s+kem\s+an\s+khong|kem\s+an\s+co\s+loai\s+nao)\b",
@@ -544,8 +545,8 @@ async def prepare_special_turn1_streaming(
                 memory=mem,
             )
 
-    # 5. Explicit nutrient-ranking question where Thanh Lam Mart lacks nutrition tables ("protein cao
-    # nhất", "ít calo").
+    # 5. Explicit nutrient-ranking question where Thanh Lam Mart lacks nutrition tables
+    # ("protein cao nhất", "ít calo").
     if re.search(r"\b(?:protein cao nhat|nhieu protein nhat|it calo|it calories)\b", norm_answer):
         is_milk = "sua" in norm_answer
         is_snack = bool(re.search(r"\b(?:an vat|snack|banh)\b", norm_answer))

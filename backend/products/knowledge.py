@@ -587,7 +587,11 @@ def product_knowledge_facts(
                     )
                 )
                 continue
-            if requested == "nutrition" and isinstance(retailer_record.get("nutrition"), dict) and retailer_record["nutrition"]:
+            if (
+                requested == "nutrition"
+                and isinstance(retailer_record.get("nutrition"), dict)
+                and retailer_record["nutrition"]
+            ):
                 nutr_source = (
                     str(retailer_record.get("nutrition_source") or "").strip()
                     or "OpenFoodFacts"

@@ -197,7 +197,8 @@ def main() -> int:
     except Exception as exc:
         print(
             "PostgreSQL product search benchmark could not connect or execute. "
-            "Check DATABASE_URL, database availability, and that the Thanh Lam Mart import/migration ran. "
+            "Check DATABASE_URL, database availability, "
+            "and that the Thanh Lam Mart import/migration ran. "
             f"Error type: {type(exc).__name__}.",
             file=sys.stderr,
         )

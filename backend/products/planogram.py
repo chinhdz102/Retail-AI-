@@ -346,7 +346,11 @@ class PlanogramLocationDetails:
             return f"khoang {self.bay_num}"
 
         if total == 1:
-            pos_vi, pos_en, pos_zh = "khoang duy nhất của dãy", "the only bay in the aisle", "唯一货架段"
+            pos_vi, pos_en, pos_zh = (
+                "khoang duy nhất của dãy",
+                "the only bay in the aisle",
+                "唯一货架段",
+            )
         elif total == 2:
             if self.bay_num == 1:
                 pos_vi, pos_en, pos_zh = "đầu dãy", "start of the aisle", "通道前段"
@@ -454,7 +458,9 @@ class PlanogramLocationDetails:
         clean_name = " ".join(product_name.split())
         cue = self.category_cue
         if language == "en":
-            cue_part = f" ({cue} section)" if cue and cue.casefold() != self.zone_en.casefold() else ""
+            cue_part = (
+                f" ({cue} section)" if cue and cue.casefold() != self.zone_en.casefold() else ""
+            )
             text = (
                 f"According to the suggested planogram, {clean_name} is in the "
                 f"{self.zone_en} zone, aisle {self.aisle}{cue_part}: {self.direction_en}. "
@@ -462,7 +468,10 @@ class PlanogramLocationDetails:
                 f"{self.slot_phrase('en')} (locator {self.code})."
             )
             if include_caveat:
-                text += " Please note this is a proposed layout and actual store placement is unverified."
+                text += (
+                    " Please note this is a proposed layout"
+                    " and actual store placement is unverified."
+                )
             return text
         if language == "zh":
             cue_part = f"（{cue}品类）" if cue else ""

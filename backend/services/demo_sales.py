@@ -253,14 +253,20 @@ def rank_demo_sales(
         if normalize_category_text(product.brand) in excluded:
             continue
         norm_pname = normalize_category_text(product.name)
-        norm_hier = normalize_category_text(f"{product.name} {product.brand} {product.category_hierarchy}")
+        norm_hier = normalize_category_text(
+            f"{product.name} {product.brand} {product.category_hierarchy}"
+        )
         if any(ex_phrase in norm_pname for ex_phrase in excluded_name_phrases):
             continue
         if required_title_any_groups and not all(
             any(opt in norm_pname for opt in group) for group in required_title_any_groups
         ):
             continue
-        if exclude_spicy_titles and _TITLE_SPICY_RE.search(norm_pname) and "khong cay" not in norm_pname:
+        if (
+            exclude_spicy_titles
+            and _TITLE_SPICY_RE.search(norm_pname)
+            and "khong cay" not in norm_pname
+        ):
             continue
         if exclude_carbonated_titles and re.search(r"\bco\s+(?:ga|gas)\b", norm_pname):
             continue

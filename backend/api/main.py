@@ -1782,8 +1782,14 @@ def _unverified_retail_information_kind(text: str) -> str | None:
     ):
         return "company"
     if (
-        not any(loc in normalized for loc in ("gan ", "quanh ", "xung quanh", "near ", "around ", "nearby"))
-        and any(phrase in normalized for phrase in ("thanh lam mart", "cua hang thanh lam", "sieu thi thanh lam"))
+        not any(
+            loc in normalized
+            for loc in ("gan ", "quanh ", "xung quanh", "near ", "around ", "nearby")
+        )
+        and any(
+            phrase in normalized
+            for phrase in ("thanh lam mart", "cua hang thanh lam", "sieu thi thanh lam")
+        )
     ):
         return "company"
     if any(
@@ -2443,7 +2449,9 @@ def _non_supermarket_out_of_catalog_requested(text: str) -> bool:
             r"\btu\s+lanh\s+(?:duoc\s+khong|khong|bao\s+lau)\b",
             normalized,
         )
-        and not re.search(r"\b(?:co\s+ban|mua|gia|tim\s+mua|ban)\s+(?:may\s+)?tu\s+lanh\b", normalized)
+        and not re.search(
+            r"\b(?:co\s+ban|mua|gia|tim\s+mua|ban)\s+(?:may\s+)?tu\s+lanh\b", normalized
+        )
     )
     if storage_fridge_context:
         ooc_normalized = re.sub(r"\btu\s+lanh\b", " ", ooc_normalized)
@@ -4600,11 +4608,13 @@ def _localized_location_candidates(
                     else ""
                 )
                 item_notes = "; ".join(
-                    f"{' '.join(prod.name.split())}: {det.level_phrase('en', short=True)}, slot {det.slot_num} ({det.code})"
+                    f"{' '.join(prod.name.split())}: {det.level_phrase('en', short=True)}, "
+                    f"slot {det.slot_num} ({det.code})"
                     for prod, det in parsed_pairs
                 )
                 return (
-                    f"According to the suggested planogram, these items are in the {first.zone_en} zone, "
+                    "According to the suggested planogram, these items are in the "
+                    f"{first.zone_en} zone, "
                     f"aisle {first.aisle}{cue_part}: {first.direction_en}. "
                     f"Look at {first.bay_phrase('en')} — specifically: {item_notes}. "
                     "Actual store placement is unverified. Which type or size do you need?"
@@ -4612,12 +4622,15 @@ def _localized_location_candidates(
             if language == "zh":
                 cue_part = f"（{cue}品类）" if cue else ""
                 item_notes = "；".join(
-                    f"{' '.join(prod.name.split())}：{det.level_phrase('zh', short=True)}、第 {det.slot_num} 格（{det.code}）"
+                    f"{' '.join(prod.name.split())}：{det.level_phrase('zh', short=True)}、"
+                    f"第 {det.slot_num} 格（{det.code}）"
                     for prod, det in parsed_pairs
                 )
                 return (
-                    f"根据建议货架图，这些商品位于 {first.zone_zh} 的 {first.aisle} 通道{cue_part}："
-                    f"{first.direction_zh}。集中在 {first.bay_phrase('zh')}，具体位置：{item_notes}。"
+                    f"根据建议货架图，这些商品位于 {first.zone_zh} 的 "
+                    f"{first.aisle} 通道{cue_part}："
+                    f"{first.direction_zh}。集中在 {first.bay_phrase('zh')}，"
+                    f"具体位置：{item_notes}。"
                     "门店实际摆放尚未核实。您需要哪种规格？"
                 )
             cue_part = (
@@ -4626,14 +4639,16 @@ def _localized_location_candidates(
                 else ""
             )
             item_notes = "; ".join(
-                f"{' '.join(prod.name.split())}: {det.level_phrase('vi', short=True)}, ô số {det.slot_num} ({det.code})"
+                f"{' '.join(prod.name.split())}: {det.level_phrase('vi', short=True)}, "
+                f"ô số {det.slot_num} ({det.code})"
                 for prod, det in parsed_pairs
             )
             return (
                 f"Dạ, theo sơ đồ kệ đề xuất, nhóm này nằm ở khu {first.zone_vi}, "
                 f"dãy {first.aisle}{cue_part}: {first.direction_vi}. "
                 f"Các món tập trung ở {first.bay_phrase('vi')}, cụ thể: {item_notes}. "
-                "Lưu ý đây là vị trí gợi ý trên sơ đồ, cách bày thực tế tại cửa hàng chưa được xác minh. "
+                "Lưu ý đây là vị trí gợi ý trên sơ đồ, "
+                "cách bày thực tế tại cửa hàng chưa được xác minh. "
                 "Bạn cần loại hay quy cách nào cụ thể?"
             )
 
@@ -4644,7 +4659,8 @@ def _localized_location_candidates(
                     for prod, det in parsed_pairs
                 )
                 return (
-                    f"According to the suggested planogram, these options are all in the {first.zone_en} zone, "
+                    "According to the suggested planogram, these options are all in the "
+                    f"{first.zone_en} zone, "
                     f"aisle {first.aisle}: {first.direction_en}. "
                     f"By variant: {item_notes}. "
                     "Actual store placement has not been verified. Which size or pack do you mean?"
@@ -4655,7 +4671,8 @@ def _localized_location_candidates(
                     for prod, det in parsed_pairs
                 )
                 return (
-                    f"根据建议货架图，这些商品都在 {first.zone_zh} 的 {first.aisle} 通道：{first.direction_zh}。"
+                    f"根据建议货架图，这些商品都在 {first.zone_zh} 的 "
+                    f"{first.aisle} 通道：{first.direction_zh}。"
                     f"具体位置：{item_notes}。门店实际摆放尚未核实。您需要哪种规格？"
                 )
             item_notes = "; ".join(
@@ -4666,7 +4683,8 @@ def _localized_location_candidates(
                 f"Dạ, theo sơ đồ kệ đề xuất, các sản phẩm nhóm này đều nằm ở khu {first.zone_vi}, "
                 f"dãy {first.aisle}: {first.direction_vi}. "
                 f"Cụ thể từng loại: {item_notes}. "
-                "Lưu ý đây là vị trí gợi ý trên sơ đồ, cách bày thực tế tại cửa hàng chưa được xác minh. "
+                "Lưu ý đây là vị trí gợi ý trên sơ đồ, "
+                "cách bày thực tế tại cửa hàng chưa được xác minh. "
                 "Bạn cần quy cách nào để mình chỉ kỹ hơn?"
             )
 
@@ -4676,7 +4694,8 @@ def _localized_location_candidates(
                 for prod, det in parsed_pairs
             )
             return (
-                f"According to the suggested planogram, these options span different aisles: {details_text}. "
+                "According to the suggested planogram, these options span different aisles: "
+                f"{details_text}. "
                 "Actual shelf placement has not been verified. Which size or pack do you mean?"
             )
         if language == "zh":
@@ -4693,7 +4712,8 @@ def _localized_location_candidates(
             for prod, det in parsed_pairs
         )
         return (
-            f"Mình thấy vài quy cách nằm ở các dãy khác nhau theo sơ đồ kệ đề xuất: {details_text}. "
+            "Mình thấy vài quy cách nằm ở các dãy khác nhau theo sơ đồ kệ đề xuất: "
+            f"{details_text}. "
             "Lưu ý cách bày thực tế tại cửa hàng chưa được xác minh. "
             "Bạn cần loại hay quy cách nào để mình chỉ rõ hơn?"
         )
@@ -8170,7 +8190,9 @@ async def _handle_product_comparison(
                 ]
             cmp_candidates = [p for p in cmp_candidates if p.product_id in cmp_counts]
             if len(cmp_candidates) >= 2:
-                cmp_candidates.sort(key=lambda p: (-(cmp_counts.get(p.product_id, 0)), p.product_id))
+                cmp_candidates.sort(
+                    key=lambda p: (-(cmp_counts.get(p.product_id, 0)), p.product_id)
+                )
                 is_sim = (cmp_mode or "SIMULATED") == "SIMULATED"
                 if request.language == "en":
                     prefix = (
@@ -8179,7 +8201,8 @@ async def _handle_product_comparison(
                         else "Based on the last 30 days of sales"
                     )
                     summary_parts = "; ".join(
-                        f"{p.name} ({cmp_counts[p.product_id]} units/30d, {_comparison_price(p.price_vnd, request.language)})"
+                        f"{p.name} ({cmp_counts[p.product_id]} units/30d, "
+                        f"{_comparison_price(p.price_vnd, request.language)})"
                         for p in cmp_candidates
                     )
                     cmp_reply = (
@@ -8198,10 +8221,12 @@ async def _handle_product_comparison(
                         else "Theo số liệu bán 30 ngày gần nhất"
                     )
                     parts = [
-                        f"{p.name} ({cmp_counts[p.product_id]} sản phẩm/30 ngày, giá {_format_vnd(p.price_vnd)})"
+                        f"{p.name} ({cmp_counts[p.product_id]} sản phẩm/30 ngày, "
+                        f"giá {_format_vnd(p.price_vnd)})"
                         for p in cmp_candidates
                     ]
-                    if cmp_counts[cmp_candidates[0].product_id] == cmp_counts[cmp_candidates[1].product_id]:
+                    top_count = cmp_counts[cmp_candidates[0].product_id]
+                    if top_count == cmp_counts[cmp_candidates[1].product_id]:
                         verdict = "Các mẫu này hiện có lượt bán ngang nhau."
                     else:
                         verdict = f"Trong nhóm này, {cmp_candidates[0].name} bán chạy hơn."
@@ -10517,9 +10542,11 @@ async def agent_respond(
                     "meal": "Thực phẩm ăn liền",
                 }.get(sales_category, sales_category)
                 caveat = (
-                    f"Hiện tên sản phẩm trong nhóm {cat_display_vi} chưa ghi đầy đủ tiêu chí riêng bạn nêu; "
+                    f"Hiện tên sản phẩm trong nhóm {cat_display_vi} "
+                    "chưa ghi đầy đủ tiêu chí riêng bạn nêu; "
                     if request.language == "vi"
-                    else f"Product titles in {sales_category} do not explicitly filter that criterion; "
+                    else f"Product titles in {sales_category} "
+                    "do not explicitly filter that criterion; "
                 )
                 resp = _deterministic_tool_response(
                     request,
@@ -10836,7 +10863,9 @@ async def agent_respond(
                 or re.search(r"\b(?:su dung|cach dung)\b", norm_storage_req)
             )
             also_wants_origin = bool(
-                re.search(r"\b(?:xuat xu|nguon goc|san xuat o dau|cua nuoc nao)\b", norm_storage_req)
+                re.search(
+                    r"\b(?:xuat xu|nguon goc|san xuat o dau|cua nuoc nao)\b", norm_storage_req
+                )
             )
             req_attrs_list: list[str] = []
             if also_wants_ingredients:
@@ -10861,7 +10890,9 @@ async def agent_respond(
                         cand, ("storage",), source=storage_repo.source_name,
                     )
                     if any(
-                        f.status.value == "VERIFIED" and isinstance(f.value, str) and f.value.strip()
+                        f.status.value == "VERIFIED"
+                        and isinstance(f.value, str)
+                        and f.value.strip()
                         for f in probe
                     ):
                         storage_target = cand
@@ -10902,7 +10933,11 @@ async def agent_respond(
                         if fact.source and fact.source not in sto_sources:
                             sto_sources.append(fact.source)
                 if verified_parts:
-                    sto_source = ", ".join(sto_sources) if sto_sources else "thông tin sản phẩm Thanh Lam Mart"
+                    sto_source = (
+                        ", ".join(sto_sources)
+                        if sto_sources
+                        else "thông tin sản phẩm Thanh Lam Mart"
+                    )
                     sto_reply = (
                         f"Theo {sto_source}, với {storage_target.name}: "
                         + " ".join(verified_parts)
@@ -16080,7 +16115,8 @@ def _product_knowledge_attributes_requested(text: str) -> tuple[str, ...]:
     normalized_tokens = set(normalized.split())
     asks_about_sugar = bool(
         re.search(
-            r"\b(?:luong|ham luong|it|khong|co|bao nhieu|may)\s+(?:co\s+)?(?:gam|g|gr|mg|ml)?\s*duong\b",
+            r"\b(?:luong|ham luong|it|khong|co|bao nhieu|may)\s+"
+            r"(?:co\s+)?(?:gam|g|gr|mg|ml)?\s*duong\b",
             normalized,
         )
         or re.search(r"\bduong\s+(?:huyet|an)\b", normalized)

@@ -73,7 +73,11 @@ def test_brand_detection_requires_the_whole_catalog_name():
     ]
     repo = MemoryCatalog(products)
     assert _catalog_brand_tokens_in_query("tao nhờ m tư vấn giúp mình", repo) == set()
-    assert _catalog_brand_tokens_in_query("tư vấn hàng Thanh Lam Home", repo) == {"thanh", "lam", "home"}
+    assert _catalog_brand_tokens_in_query("tư vấn hàng Thanh Lam Home", repo) == {
+        "thanh",
+        "lam",
+        "home",
+    }
     assert _catalog_brand_tokens_in_query("không lấy Thanh Lam Home", repo) == set()
 
 

@@ -142,9 +142,17 @@ _STREAM_DETAIL_ATTR_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             r"(?:goi|pha|nau|che\s+bien)\s+(?:nhu\s+the\s+nao|the\s+nao|ra\s+sao|sao))\b"
         ),
     ),
-    ("ingredients", re.compile(r"\b(?:thanh\s+phan|chat\s+lieu|lam\s+tu\s+gi|lam\s+bang\s+gi|co\s+chat\s+gi)\b")),
+    (
+        "ingredients",
+        re.compile(
+            r"\b(?:thanh\s+phan|chat\s+lieu|lam\s+tu\s+gi|lam\s+bang\s+gi|co\s+chat\s+gi)\b"
+        ),
+    ),
     ("storage", re.compile(r"\b(?:bao\s+quan|cat\s+giu|de\s+o\s+dau)\b")),
-    ("origin", re.compile(r"\b(?:xuat\s+xu|nguon\s+goc|san\s+xuat\s+(?:o\s+dau|tai)|cua\s+nuoc\s+nao)\b")),
+    (
+        "origin",
+        re.compile(r"\b(?:xuat\s+xu|nguon\s+goc|san\s+xuat\s+(?:o\s+dau|tai)|cua\s+nuoc\s+nao)\b"),
+    ),
 )
 _DETAIL_ATTR_LABELS_VI: dict[str, str] = {
     "usage": "hướng dẫn sử dụng",
