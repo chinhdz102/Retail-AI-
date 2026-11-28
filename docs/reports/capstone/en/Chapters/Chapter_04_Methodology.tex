@@ -23,7 +23,7 @@ In a Vietnamese supermarket managing 3,000+ dry/ambient SKUs alongside 150--300 
   \node[aiagent, text width=2.85cm] (t1) at (1.5, -1.45) {\textbf{Customer Agent}\\Zero-Planner Routing + Grounded Retrieval};
   \node[aiagent, text width=2.85cm, right=of t1] (t2) {\textbf{Demand Recovery}\\Hourly OOS profile + 29 tabular features};
   \node[gatebox, text width=2.95cm, right=of t2] (t3) {\textbf{\texttt{B-Gate} Engine}\\LightGBM~v3 / EWMA + Newsvendor--FEFO};
-  \node[gatebox, text width=2.85cm, right=of t3] (t4) {\textbf{HITL Governance}\\Manager approval; +4.90\% simulated profit};
+  \node[gatebox, text width=2.85cm, right=of t3] (t4) {\textbf{HITL Governance}\\Manager approval; +4.90\% backtest profit};
   \draw[flowarr] (t1) -- node[above, font=\scriptsize] {demand} (t2);
   \draw[flowarr] (t2) -- (t3);
   \draw[flowarr] (t3) -- node[above, font=\scriptsize] {proposals} (t4);
@@ -120,7 +120,7 @@ To unify both agents without weakening HITL isolation, we implemented a three-pa
 Conventional multi-step LLM agent loops execute 2--4 sequential calls (planner $\to$ selector $\to$ reviewer) on every turn, inflating latency to 5--14\,s and risking price drift. Algorithm~\ref{alg:zero_planner_sse} formalizes our \textbf{Zero-Planner Hybrid Routing} pipeline across four clear tiers ordered from fastest to strictest:
 \begin{itemize}
     \item \textbf{Tier 1 -- Sub-3\,ms Deterministic Safety \& Smalltalk Gates:} Instantly blocks medical/medication advice, OWASP prompt-injection attempts, and out-of-catalog items with zero LLM calls.
-    \item \textbf{Tier 2 -- Deterministic Catalog Tools (0 LLM calls):} Directly resolves single-SKU price lookup, 13-aisle shelf locations, verified product knowledge attributes, synchronized 30-day bestsellers (\code{data/synced_sales_30d.json}, with \code{demo_sales.sqlite3} isolated for offline tests), snapshot/bridge stock checks, and Turn-1 semantic cache hits (Jaccard $\ge 0.88$, always bypassing medical/allergen queries).
+    \item \textbf{Tier 2 -- Deterministic Catalog Tools (0 LLM calls):} Directly resolves single-SKU price lookup, 13-aisle shelf locations, verified product knowledge attributes, synchronized 30-day bestsellers (\code{data/synced_sales_30d.json}), snapshot/bridge stock checks, and Turn-1 semantic cache hits (Jaccard $\ge 0.88$, always bypassing medical/allergen queries).
     \item \textbf{Tier 3 -- Zero-Planner Grounded SSE Streaming \& 1-Call Baskets:} For browsing, unit-price comparisons (Eq.~\ref{eq:unit_price}), promotions, and budget meal baskets ($\sum P(p) \le B$), catalog retrieval finishes first and emits verified product cards immediately, followed by a \textbf{single} streaming LLM pass locked to those SKUs.
     \item \textbf{Tier 4 -- Bounded Structured Planner:} Reserved strictly for complex multi-condition allergen or unresolved multi-constraint queries.
 \end{itemize}
@@ -175,7 +175,7 @@ To support hands-free speech and camera queries at the counter, \texttt{Retail-A
 
 In perishable replenishment, passing a wide raw quantile spread $(q_{90}-q_{10})$ directly into Newsvendor (Eq.~\ref{eq:order_qty}) can yield overly conservative safety stocks on volatile or sparse store segments.
 
-Algorithm~\ref{alg:ops_chest_newsvendor} balances predictive accuracy and profit stability through our \textbf{Profit-Gated Router (\texttt{B-Gate})} in four steps: (1)~keep LightGBM's accurate median ($\hat{q}_{50}$) while pairing it with EWMA's smooth dispersion ($\sigma_{\text{EWMA}}$); (2)~enable ML only on store--SKU segments that prove positive out-of-sample simulated profit lift (Eq.~\ref{eq:profit_gate}); (3)~compute FEFO-capped Newsvendor orders and graduated near-expiry markdowns; and (4)~hold every draft proposal in \texttt{PENDING} state until the Store Manager explicitly approves it.
+Algorithm~\ref{alg:ops_chest_newsvendor} balances predictive accuracy and profit stability through our \textbf{Profit-Gated Router (\texttt{B-Gate})} in four steps: (1)~keep LightGBM's accurate median ($\hat{q}_{50}$) while pairing it with EWMA's smooth dispersion ($\sigma_{\text{EWMA}}$); (2)~enable ML only on store--SKU segments that prove positive out-of-sample profit lift (Eq.~\ref{eq:profit_gate}); (3)~compute FEFO-capped Newsvendor orders and graduated near-expiry markdowns; and (4)~hold every draft proposal in \texttt{PENDING} state until the Store Manager explicitly approves it.
 
 \intuitionbox{One-Day Operational Walkthrough: How \texttt{ops\_chest} Coordinates with \emph{Mai}}{%
 At 07:00 in Store~18, \texttt{ops\_chest} flags fresh SKU \code{F0005} (mapped to \code{TLM_10283202}, list price 123,900\,VND) with one day of shelf life left and excess stock. \textbf{Step 1:} \texttt{ops\_chest} creates a 25\% markdown draft in \texttt{PENDING} state; shoppers at the kiosk still see 123,900\,VND (strict HITL isolation). \textbf{Step 2:} The Store Manager approves the proposal (\texttt{EXECUTED}). \textbf{Step 3:} The read-only bridge immediately pushes the approved 92,925\,VND FEFO price to Mai so shoppers see the deal; once stock hits zero (\code{on_hand=0}), Mai automatically hides it from in-stock recommendations.}
@@ -196,7 +196,7 @@ At 07:00 in Store~18, \texttt{ops\_chest} flags fresh SKU \code{F0005} (mapped t
     \State Set $(\hat{\mu}, \sigma_{\text{daily}}) \gets (\hat{\mu}_{\text{EWMA}}, \sigma_{\text{EWMA}})$
 \EndIf
 \State Compute $SL^*$ and $z = \Phi^{-1}(SL^*)$ (Eq.~\ref{eq:newsvendor}) with floors 0.95 (traffic), 0.90 (ABC-A), 0.50 (other)
-\State Simulate FEFO lot depletion over review period $R$ and window $W = \min(90, L)$ to obtain $U_R$, $L_R$, and $S_W$
+\State Evaluate FEFO lot depletion over review period $R$ and window $W = \min(90, L)$ to obtain $U_R$, $L_R$, and $S_W$
 \State Compute shelf-life-capped order $Q^* = \max(0, \min(Q_{\text{raw}}, Q_{\text{cap}}, C_{\text{room}}))$ (Eq.~\ref{eq:order_qty})
 \State Flag lots expiring within $\le 2$ days exceeding full-price demand for graduated FEFO markdown proposals
 \State Persist draft $P$ as \texttt{PENDING} via 9 proposal tools; inspect explanation via \code{guard.py}

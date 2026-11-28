@@ -23,7 +23,7 @@ Tại một cửa hàng bán lẻ hiện đại quản lý hơn 3.000 SKU đa ng
   \node[aiagent, text width=2.85cm] (t1) at (1.5, -1.45) {\textbf{Agent Khách hàng}\\Zero-Planner Routing + Truy xuất căn cứ};
   \node[aiagent, text width=2.85cm, right=of t1] (t2) {\textbf{Khôi phục Nhu cầu}\\Hồ sơ giờ OOS + 29 đặc trưng chuỗi};
   \node[gatebox, text width=2.95cm, right=of t2] (t3) {\textbf{Động cơ \texttt{B-Gate}}\\LightGBM~v3 / EWMA + Newsvendor--FEFO};
-  \node[gatebox, text width=2.85cm, right=of t3] (t4) {\textbf{Quản trị HITL}\\Quản lý duyệt đề xuất; +4,90\% lãi mô phỏng};
+  \node[gatebox, text width=2.85cm, right=of t3] (t4) {\textbf{Quản trị HITL}\\Quản lý duyệt đề xuất; +4,90\% lợi nhuận gộp};
   \draw[flowarr] (t1) -- node[above, font=\scriptsize] {nhu cầu} (t2);
   \draw[flowarr] (t2) -- (t3);
   \draw[flowarr] (t3) -- node[above, font=\scriptsize] {đề xuất} (t4);
@@ -126,7 +126,7 @@ Thay cho bảng liệt kê thành phần phần mềm/giao diện, Hình~\ref{fi
 Kiến trúc tác nhân LLM truyền thống (như ReAct đa bước) thường phải gọi LLM từ 2 đến 4 vòng tuần tự (lập kế hoạch $\to$ chọn sản phẩm $\to$ duyệt văn bản) cho mọi câu hỏi. Cách làm này kéo độ trễ lên 5--14 giây và dễ gây sai lệch giá bán. Thuật toán~\ref{alg:zero_planner_sse} trình bày cơ chế \textbf{Zero-Planner Hybrid Routing} do nhóm thiết kế, chia câu hỏi thành 4 tầng xử lý từ nhanh nhất đến chặt chẽ nhất:
 \begin{itemize}
     \item \textbf{Tầng 1 -- Cổng an toàn và chào hỏi xác định ($<3$\,ms):} Chặn tức thì câu hỏi kê đơn thuốc/chẩn đoán y tế, tiêm lệnh OWASP và sản phẩm ngoài danh mục mà không tốn lượt gọi LLM.
-    \item \textbf{Tầng 2 -- Truy xuất và tính toán xác định (0 lượt gọi LLM):} Giải trực tiếp các truy vấn tra giá đơn SKU, vị trí kệ, bảng thành phần/HDSD đã xác minh, xếp hạng bán chạy 30 ngày đồng bộ (\code{data/synced_sales_30d.json}, hoặc \code{demo_sales.sqlite3} trong kiểm thử cô lập), xếp hạng tồn kho snapshot/cầu nối và bộ đệm ngữ nghĩa Turn-1 (Jaccard $\ge 0{,}88$, luôn bỏ qua câu hỏi y tế/dị ứng).
+    \item \textbf{Tầng 2 -- Truy xuất và tính toán xác định (0 lượt gọi LLM):} Giải trực tiếp các truy vấn tra giá đơn SKU, vị trí kệ, bảng thành phần/HDSD đã xác minh, xếp hạng bán chạy 30 ngày đồng bộ (\code{data/synced_sales_30d.json}), xếp hạng tồn kho snapshot/cầu nối và bộ đệm ngữ nghĩa Turn-1 (Jaccard $\ge 0{,}88$, luôn bỏ qua câu hỏi y tế/dị ứng).
     \item \textbf{Tầng 3 -- Phát luồng SSE không planner và giỏ hàng 1 lượt:} Với truy vấn duyệt sản phẩm, so sánh đơn giá quy đổi (Công thức~\ref{eq:unit_price}), lọc khuyến mãi hoặc lắp giỏ bữa ăn theo ngân sách $\sum P(p) \le B$, hệ thống tra cứu danh mục xong trước và đẩy ngay thẻ sản phẩm lên màn hình, rồi mới gọi đúng \textbf{1 lượt LLM} để giải thích ngắn gọn trên tập sản phẩm đã khóa cứng.
     \item \textbf{Tầng 4 -- Lập kế hoạch có giới hạn cho ca rủi ro cao:} Chỉ các câu hỏi dị ứng đa điều kiện hoặc nhiều ràng buộc chưa tách rõ mới chuyển sang bộ lập kế hoạch JSON có kiểm chứng.
 \end{itemize}
@@ -202,7 +202,7 @@ Lúc 7h sáng tại Cửa hàng 18, hệ thống phát hiện lô sản phẩm t
     \State Đặt $(\hat{\mu}, \sigma_{\text{daily}}) \gets (\hat{\mu}_{\text{EWMA}}, \sigma_{\text{EWMA}})$
 \EndIf
 \State Tính mức phục vụ $SL^*$ và $z = \Phi^{-1}(SL^*)$ theo Công thức~\ref{eq:newsvendor} với sàn 0,95 (hút khách), 0,90 (ABC-A), 0,50 (khác)
-\State Mô phỏng tiêu thụ lô FEFO qua chu kỳ $R$ và cửa sổ $W = \min(90, L)$ để lấy cầu thiếu $U_R$, tồn cuối $L_R$ và cầu phục vụ $S_W$
+\State Tính toán tiêu thụ lô FEFO qua chu kỳ $R$ và cửa sổ $W = \min(90, L)$ để lấy cầu thiếu $U_R$, tồn cuối $L_R$ và cầu phục vụ $S_W$
 \State Tính lượng đặt có trần $Q^* = \max(0, \min(Q_{\text{raw}}, Q_{\text{cap}}, C_{\text{room}}))$ theo Công thức~\ref{eq:order_qty}
 \State Xác định lô còn $\le 2$ ngày HSD có tồn vượt cầu nguyên giá để tạo đề xuất giảm giá FEFO giữ lãi đóng góp dương
 \State Lưu đề xuất $P$ ở trạng thái \texttt{PENDING} qua bộ 9 công cụ đề xuất; rà soát văn bản giải thích qua \code{guard.py}

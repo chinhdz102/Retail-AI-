@@ -23,7 +23,7 @@ Pipeline làm giàu tri thức sản phẩm kết hợp thu thập 3.099 trang s
 2 & \code{get_product_detail} & Tra cứu chính xác giá, khuyến mãi, quy cách, vị trí kệ và đơn giá quy đổi \\
 3 & \code{compare_products} & So sánh song song giá bán, đơn giá chuẩn (Công thức~\ref{eq:unit_price}) và ưu đãi \\
 4 & \code{list_promotions} & Lọc 580 mã giảm giá danh mục và ưu tiên khuyến mãi FEFO đã duyệt từ \code{ops_bridge} \\
-5 & \code{rank_bestsellers} & Xếp hạng bán chạy 30 ngày từ \code{synced_sales_30d.json} (269.936 lượt; \code{demo_sales.sqlite3} cho unit test) \\
+5 & \code{rank_bestsellers} & Xếp hạng bán chạy 30 ngày từ \code{synced_sales_30d.json} (269.936 lượt) \\
 6 & \code{check_snapshot_stock} & Xếp hạng và tra cứu tồn kho snapshot 15/09/2026 hoặc tồn trực tiếp qua cầu nối \\
 7 & \code{assemble_budget_basket} & Lắp giỏ món ăn theo khuôn mẫu thỏa ràng buộc $\sum P(p) \le B$ \\
 8 & \code{ops_bridge_overlay} & Phủ tồn kho và giá giảm FEFO đã duyệt từ \texttt{ops\_chest} (fail-closed TTL 300\,s) \\

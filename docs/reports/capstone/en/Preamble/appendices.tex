@@ -23,7 +23,7 @@ The product knowledge enrichment pipeline combines 3,099 SSR product pages with 
 2 & \code{get_product_detail} & Exact price, promotion, pack size, shelf location, and canonical unit-price lookup \\
 3 & \code{compare_products} & Side-by-side price, unit price (Eq.~\ref{eq:unit_price}), and promotion comparison \\
 4 & \code{list_promotions} & Filters 580 catalog promos and prioritizes manager-approved FEFO markdowns from \code{ops_bridge} \\
-5 & \code{rank_bestsellers} & Deterministic 30-day ranking from \code{synced_sales_30d.json} (269,936 units; \code{demo_sales.sqlite3} for unit tests) \\
+5 & \code{rank_bestsellers} & Deterministic 30-day ranking from \code{synced_sales_30d.json} (269,936 units) \\
 6 & \code{check_snapshot_stock} & Deterministic stock lookup/ranking citing 15 Sep 2026 snapshot or live bridge stock \\
 7 & \code{assemble_budget_basket} & Template-constrained meal/combo selection satisfying $\sum P(p) \le B$ \\
 8 & \code{ops_bridge_overlay} & Read-only overlay of live stock and approved FEFO markdowns from \texttt{ops\_chest} (TTL 300\,s) \\
