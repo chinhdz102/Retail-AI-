@@ -3668,7 +3668,7 @@ def _render(
                 text += f" Vị trí: {'; '.join(described_parts[:3])}."
         elif raw_locations:
             demo = any(p.shelf_source != "VERIFIED" for p in products)
-            text += f" {'Sơ đồ demo' if demo else 'Vị trí'}: {', '.join(raw_locations[:3])}."
+            text += f" {'Sơ đồ kệ gợi ý' if demo else 'Vị trí'}: {', '.join(raw_locations[:3])}."
     elif products:
         if plan.total_budget_vnd is not None and not had_total and not alternatives:
             text += f" Tổng gợi ý: {total:,}đ.".replace(",", ".")
@@ -3882,7 +3882,7 @@ def _location_reply(candidates, plan):
         if details is not None:
             return details.detailed_sentence(product.name, "vi", include_caveat=True), [product]
         return (
-            f"Bạn tìm ở khu {group} nhé. Trên sơ đồ demo, một vị trí của nhóm này "
+            f"Bạn tìm ở khu {group} nhé. Trên sơ đồ kệ gợi ý, một vị trí của nhóm này "
             f"là {product.shelf}; mình chưa xác nhận được vị trí thực tế tại cửa hàng."
         ), [
             product,
@@ -5340,7 +5340,7 @@ def _local_fallback_text(
 
 
 async def _local_consultation_fallback(kwargs: dict, progress: dict) -> ConsultationResult | None:
-    """Serve typed local suggestions for the development demo during provider outage."""
+    """Serve typed local suggestions for local development during provider outage."""
     groq = kwargs.get("groq")
     if not getattr(getattr(groq, "settings", None),
                    "customer_consultation_local_fallback_enabled", False):

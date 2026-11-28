@@ -24,24 +24,24 @@
       "path": "evaluation/cases/retail_ai_semantic_intelligence_v2_dev_rev1_20261028.json",
       "dataset_id": "retail_ai_semantic_intelligence_v2_dev_rev1_20261028",
       "sha256": "8f129beecee14b7c8ff1bbba106fae154a3321a55ef2efaad718e3493de27d3b",
-      "exposure_status": "repo_visible; synthetic catalog and taxonomy templates"
+      "exposure_status": "repo_visible; template catalog and taxonomy cases"
     },
     {
       "path": "evaluation/cases/retail_ai_semantic_intelligence_v2_frozen_20261028.json",
       "dataset_id": "retail_ai_semantic_intelligence_v2_frozen_20261028",
-      "sha256": "0fbfbdcecb83a0cfe2a8fc24bb688526a8a5db4a7ab797a3c73217b677d2e1f1",
-      "exposure_status": "repo_visible; synthetic and previously inspected"
+      "sha256": "0a280f1f0c7ff6c5a667a4b46e74d05e83e9e003be147c5725ac1cd89e7f4d5c",
+      "exposure_status": "repo_visible; template-generated and previously inspected"
     },
     {
       "path": "evaluation/cases/generalized_catalog_consultation_dev_v1.jsonl",
       "dataset_id": "generalized_catalog_consultation_dev_v1",
-      "sha256": "c3a36a094f2c216544bbd3db7294d2716fc85af9b9fda9d8d7b33739f765573f",
+      "sha256": "67829a830ebe85a24e6a6ae99389cc9cba88b51df6ef2fc645313d79849c5d94",
       "exposure_status": "repo_visible; generated catalog query set"
     },
     {
       "path": "evaluation/cases/generalized_catalog_consultation_heldout_v1.jsonl",
       "dataset_id": "generalized_catalog_consultation_heldout_v1",
-      "sha256": "35348f571c46f477f86188982a2e4fc3fff5269fc1b27a54643f0a1123ca19d3",
+      "sha256": "c93d3dc283895d121cbec6c9f67f5e3e53f813c35197e85efdb2170f8a874277",
       "exposure_status": "repo_visible; SKU-disjoint exploratory set, not blind"
     },
     {
@@ -59,7 +59,7 @@
     {
       "path": "evaluation/cases/independent_consultation_v2.json",
       "dataset_id": "independent_vietnamese_retail_consultation_v2",
-      "sha256": "ef7dbc026407793e88bff64b11a3b156ac693c41af90e22c61ffcfdf205727b2",
+      "sha256": "e4f6d4aec642ca28c008f346d938eaacd90df613ff2a583b9d014b8fa873e982",
       "exposure_status": "repo_visible; implementer-authored diagnostic, no external panel"
     },
     {

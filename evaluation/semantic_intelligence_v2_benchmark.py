@@ -1,6 +1,6 @@
 """Reproducible aggregate benchmark for the frozen Retail-AI V2 corpus.
 
-Rows are saved for audit. Synthetic labels stay provisional until human review.
+Rows are saved for audit. Template-generated labels stay provisional until human review.
 The optional live LLM arm is a structured-extraction ablation, not a judge.
 """
 
@@ -573,8 +573,8 @@ def _run_conversation_evaluation(
                 "harness has no assistant-visible ordering; the live session API smoke "
                 "checks the SKU and price."
             ),
-            "Synthetic conversation labels require human review and do not measure response "
-            "naturalness.",
+            "Template-generated conversation labels require human review and do not "
+            "measure response naturalness.",
         ],
         "conversation_results": conversations,
     }

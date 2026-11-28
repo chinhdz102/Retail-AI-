@@ -257,7 +257,7 @@ def lookup_retail_information(
         if settings.catalog_repository != "postgres":
             return RetailInformationResult(
                 "DATA_UNAVAILABLE", kind,
-                reason="Branch information is not available in the active demo repository.",
+                reason="Branch information is not available in the active catalog repository.",
             )
         database_url = settings.database_url
     try:

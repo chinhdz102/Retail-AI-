@@ -1194,7 +1194,7 @@ def test_clarification_style_preserves_speaker_and_one_question():
 def test_location_uses_only_typed_shelf_and_discloses_demo():
     p = product().model_copy(update={"shelf": "A1-B2", "shelf_source": "RECOMMENDED_PLANOGRAM"})
     text, products = _location_reply([p], ConsultationDecision(action="locate"))
-    assert products == [p] and "A1-B2" in text and "demo" in text
+    assert products == [p] and "A1-B2" in text and "sơ đồ kệ" in text
     assert "bên trái" not in text
 
 

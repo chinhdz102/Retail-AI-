@@ -1,4 +1,4 @@
-"""Probe live text-only retail conversations against the active demo catalog.
+"""Probe live text-only retail conversations against the active catalog.
 
 This benchmark uses the real configured Groq models and the local API, but it
 does not touch microphone, transcription, or speech synthesis. One trial is a
@@ -81,7 +81,7 @@ def _reproducibility_metadata(case_payload: bytes) -> dict[str, Any]:
     }
 
 # Queries are intentionally conversational, colloquial, indirect, and multi-turn.
-# Exact facts are checked against the repository's demo catalog in the API.
+# Exact facts are checked against the repository's active catalog in the API.
 CASES: tuple[dict[str, Any], ...] = (
     {
         "case_id": "catalog_coke_price",
@@ -208,7 +208,7 @@ CASES: tuple[dict[str, Any], ...] = (
             "text": "Thêm 1 lon Coca Zero vào giỏ hàng giúp mình nhé.",
             "expected_state": "CART_ACTIVE",
             "expected_cart_items": {"COKE_ZERO_330": 1},
-            "must_contain": ["giỏ demo"],
+            "must_contain": ["giỏ hàng"],
         }],
     },
     {
@@ -249,7 +249,7 @@ CASES: tuple[dict[str, Any], ...] = (
             "expected_support_ticket_status": "RECEIVED_DEMO",
             "expected_support_ticket_issue_type": "PAYMENT_PROBLEM",
             "expected_support_ticket_demo": True,
-            "must_contain": ["hỗ trợ demo mã", "chưa liên hệ nhân viên thật"],
+            "must_contain": ["hỗ trợ mã", "Thanh Lam Mart"],
         }],
     },
     {

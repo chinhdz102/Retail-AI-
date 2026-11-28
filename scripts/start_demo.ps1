@@ -70,7 +70,7 @@ foreach ($demoEndpoint in @('http://127.0.0.1:8000/health', 'http://127.0.0.1:51
         }
     }
     if (-not $demoReady) {
-        throw "Demo did not become ready at $demoEndpoint. Check logs in $demoLogs."
+        throw "Kiosk service did not become ready at $demoEndpoint. Check logs in $demoLogs."
     }
 }
-Write-Output 'Demo: http://127.0.0.1:5173/ | API: http://127.0.0.1:8000/health'
+Write-Output 'Kiosk: http://127.0.0.1:5173/ | API: http://127.0.0.1:8000/health'

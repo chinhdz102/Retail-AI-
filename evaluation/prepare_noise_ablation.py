@@ -107,7 +107,7 @@ def run():
                 "seed": None,
                 "speech_rms": 0.06,
                 "limitations": [
-                    "Synthetic additive mixtures, not kiosk mic.",
+                    "Programmatic additive noise mixtures, not kiosk mic.",
                     "EN clips are a single speaker. All sources exposed diagnostics.",
                     "No browser AEC/NS/AGC. No independent non-speech annotation.",
                 ],

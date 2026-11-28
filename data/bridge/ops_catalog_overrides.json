@@ -2,10 +2,10 @@
   "format": "ops-catalog-overrides",
   "version": 1,
   "generated_at": "2026-11-25T15:11:24+00:00",
-  "disclaimer": "Giả định demo: tên/giá Thanh Lam Mart gán cho mặt hàng FRN qua crosswalk tự đặt; nguồn hàng là nhà cung cấp giả định, email chỉ rơi vào Mailpit (.test).",
+  "disclaimer": "Ánh xạ tên và giá danh mục Thanh Lam Mart cho chuỗi 164 SKU tươi sống qua crosswalk; đồng bộ cung ứng nội bộ Thanh Lam Mart.",
   "source": {
     "thanh_lam_catalog_sha256": "3ab0666cb1b2efdc83d137f25b3c24afcc5bd309268302869967a8660d3a761a",
-    "crosswalk_sha256": "f4715269c7efd2f4b57e0cb0dc05cc64243ea758054dfac59a79c78565c2b523"
+    "crosswalk_sha256": "1c1cf1ab16481b4578355b0e68a25da8018d20a3503e38c304601a29daa24cbb"
   },
   "products": {
     "F0004": {
@@ -831,32 +831,33 @@
   },
   "suppliers": {
     "NCC01": {
-      "name": "Nhà cung cấp Thanh Lam Mart – Bánh mỳ (demo)",
-      "email": "dathang@khotong-demo.test"
+      "name": "Nhà cung cấp Thanh Lam Mart – Bánh mỳ",
+      "email": "dathang@ncc.thanhlammart.local"
     },
     "NCC02": {
-      "name": "Nhà cung cấp Thanh Lam Mart – Thức ăn nấu sẵn (demo)",
-      "email": "dathang@khotong-demo.test"
+      "name": "Nhà cung cấp Thanh Lam Mart – Thức ăn nấu sẵn",
+      "email": "dathang@ncc.thanhlammart.local"
     },
     "NCC03": {
-      "name": "Nhà cung cấp Thanh Lam Mart – Thịt (demo)",
-      "email": "dathang@khotong-demo.test"
+      "name": "Nhà cung cấp Thanh Lam Mart – Thịt",
+      "email": "dathang@ncc.thanhlammart.local"
     },
     "NCC04": {
-      "name": "Nhà cung cấp Thanh Lam Mart – Thủy hải sản (demo)",
-      "email": "dathang@khotong-demo.test"
+      "name": "Nhà cung cấp Thanh Lam Mart – Thủy hải sản",
+      "email": "dathang@ncc.thanhlammart.local"
     },
     "NCC05": {
-      "name": "Nhà cung cấp Thanh Lam Mart – Thủy hải sản 2 (demo)",
-      "email": "dathang@khotong-demo.test"
+      "name": "Nhà cung cấp Thanh Lam Mart – Thủy hải sản 2",
+      "email": "dathang@ncc.thanhlammart.local"
     },
     "NCC06": {
-      "name": "Nhà cung cấp Thanh Lam Mart – Trái cây (demo)",
-      "email": "dathang@khotong-demo.test"
+      "name": "Nhà cung cấp Thanh Lam Mart – Trái cây",
+      "email": "dathang@ncc.thanhlammart.local"
     },
     "NCC07": {
-      "name": "Nhà cung cấp Thanh Lam Mart – Rau củ (demo)",
-      "email": "dathang@khotong-demo.test"
+      "name": "Nhà cung cấp Thanh Lam Mart – Rau củ",
+      "email": "dathang@ncc.thanhlammart.local"
     }
-  }
+  },
+  "crosswalk_sha256": "1c1cf1ab16481b4578355b0e68a25da8018d20a3503e38c304601a29daa24cbb"
 }

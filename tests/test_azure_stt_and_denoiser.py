@@ -292,3 +292,14 @@ async def test_transcribe_endpoint_routes_to_azure_without_touching_groq(
         api.app.dependency_overrides.pop(api.get_settings, None)
         api.app.dependency_overrides.pop(api.get_azure_stt_service, None)
         api.app.dependency_overrides.pop(api.get_groq_service, None)
+
+
+def test_streaming_stt_flag_is_false_without_azure_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Without the optional Azure Speech SDK, find_spec on the dotted name raises
+    # ModuleNotFoundError; POST /sessions must still work and just report False.
+    def missing_parent(name: str, *args: object) -> None:
+        raise ModuleNotFoundError("No module named 'azure'")
+
+    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.setattr(api.importlib.util, "find_spec", missing_parent)
+    assert api._is_streaming_stt_available() is False

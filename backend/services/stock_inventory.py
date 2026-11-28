@@ -389,7 +389,7 @@ def render_sales_or_stock_comparison(
     demo_sales_counts: Mapping[str, int] | None = None,
     sales_source: str = "SIMULATED",
 ) -> tuple[str, tuple[ProductSnapshot, ...], dict[str, int]] | None:
-    """Deterministically compare simulated 30-day sales or snapshot stock for two items."""
+    """Deterministically compare 30-day sales or snapshot stock for two items."""
     hits_a = repository.search(query=req.target_a, limit=40)
     hits_b = repository.search(query=req.target_b, limit=40)
     if not hits_a or not hits_b:
@@ -428,9 +428,9 @@ def render_sales_or_stock_comparison(
         sa = demo_sales_counts.get(prod_a.product_id, 0)
         sb = demo_sales_counts.get(prod_b.product_id, 0)
         is_sim = sales_source == "SIMULATED"
-        sim_tag = " mô phỏng" if is_sim else ""
+        sim_tag = ""
         prefix = (
-            "Theo số liệu bán mô phỏng (demo 30 ngày)"
+            "Theo số liệu bán 30 ngày"
             if is_sim
             else "Theo số liệu bán 30 ngày gần nhất"
         )

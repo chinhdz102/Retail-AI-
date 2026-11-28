@@ -17,7 +17,7 @@ from backend.shared.contracts import SessionState
 
 class UnexpectedGroqService(GroqService):
     async def chat(self, *args, **kwargs):
-        raise AssertionError("Sandbox shopping actions must not call the LLM")
+        raise AssertionError("Shopping actions must not call the LLM")
 
 
 @pytest.fixture(autouse=True)

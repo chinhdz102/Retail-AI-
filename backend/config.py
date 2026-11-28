@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     customer_consultation_enabled: bool = False
     customer_consultation_review_enabled: bool = False
     customer_consultation_review_high_risk_only: bool = True
-    # A deterministic, catalog-only degraded mode for the local demo. It may
+    # A deterministic, catalog-only fallback mode for local environments. It may
     # publish only typed price/category/size facts after the provider is down;
     # production keeps it off until it has a separate acceptance review.
     customer_consultation_local_fallback_enabled: bool = False

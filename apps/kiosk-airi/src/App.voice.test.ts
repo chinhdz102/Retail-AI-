@@ -1005,7 +1005,7 @@ describe('voice transcript integration', () => {
     })
     apiMocks.respond.mockResolvedValueOnce({
       session_id: 'session-test',
-      text: 'Mình đã thêm sản phẩm vào giỏ demo.',
+      text: 'Mình đã thêm sản phẩm vào giỏ hàng.',
       grounded_product_ids: [],
       state: 'BROWSING',
     })

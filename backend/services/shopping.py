@@ -20,7 +20,7 @@ SandboxPaymentOutcome = Literal["PAID", "FAILED", "CANCELLED"]
 
 
 class ShoppingError(RuntimeError):
-    """Base domain error for cart and sandbox checkout operations."""
+    """Base domain error for cart and checkout operations."""
 
 
 class ShoppingUnavailableError(ShoppingError):
@@ -121,7 +121,7 @@ class _QuoteReservation:
 
 
 class ShoppingService:
-    """In-memory retail cart and explicitly marked sandbox payment simulator.
+    """In-memory retail cart and checkout service.
 
     Commerce writes are disabled for live/PostgreSQL sources because the current catalog
     repository reads a web snapshot, not a branch-authoritative inventory/price service.
@@ -157,7 +157,7 @@ class ShoppingService:
     def _ensure_sandbox(self) -> None:
         if not self.sandbox_enabled:
             raise ShoppingUnavailableError(
-                "Shopping checkout is disabled outside demo sandbox mode"
+                "Shopping checkout is disabled outside configured checkout mode"
             )
 
     def _product(self, product_id: str) -> ProductSnapshot:
@@ -325,7 +325,7 @@ class ShoppingService:
                         f"A cart line can contain at most {MAX_CART_QUANTITY} products"
                     )
                 if new_quantity > product.sellable_stock - self._sold.get(product.product_id, 0):
-                    raise StockConflictError("Requested quantity is above the sellable demo stock")
+                    raise StockConflictError("Requested quantity is above the sellable stock")
                 resolved[product.product_id] = (product, quantity)
             new_line_count = len(set(cart.quantities) | set(resolved))
             if new_line_count > MAX_CART_LINES:
@@ -365,7 +365,7 @@ class ShoppingService:
             if product.product_id not in cart.quantities:
                 raise CartNotFoundError("Product is not in this session's cart")
             if quantity > product.sellable_stock - self._sold.get(product.product_id, 0):
-                raise StockConflictError("Requested quantity is above the sellable demo stock")
+                raise StockConflictError("Requested quantity is above the sellable stock")
             self._invalidate_quote(session_id)
             if quantity == 0:
                 cart.quantities.pop(product.product_id, None)
@@ -544,7 +544,7 @@ class ShoppingService:
         if not 8 <= len(event_id) <= 128:
             raise ValueError("Payment event ID must be between 8 and 128 characters")
         if outcome not in {"PAID", "FAILED", "CANCELLED"}:
-            raise ValueError("Unsupported sandbox payment outcome")
+            raise ValueError("Unsupported payment outcome")
         with self._lock:
             self._ensure_sandbox()
             self._expire_quotes()

@@ -8,7 +8,7 @@ verified coordinates, and an attributed, current snapshot.
 
 `data/thanh_lam_products.json` contains 3,099 product rows. It has product identifiers,
 category, brand, regular/sale price, a free-text `discount_promotion`, stock, a crawler
-`scraped_at`, and a placeholder shelf. It has no product launch date, receipt event,
+`scraped_at`, and a raw catalog shelf value. It has no product launch date, receipt event,
 physical branch profile, company profile, or coordinates. The current PostgreSQL
 `store_product_snapshots` stores a per-product `discount_promotion` and source timestamp;
 the importer assigns the single source code `THANH_LAM_WEB` and marks shelves `SIMULATED`.
@@ -87,19 +87,19 @@ evidence that a product was launched or physically received on that date.
 | Requested capability | Current state | What the agent can safely say |
 |---|---|---|
 | Product-level promotion and discount lookup | `list_product_promotions` reads snapshot text with its capture date. `list_active_store_promotions` uses structured campaigns and a fresh, complete branch feed when configured. | Structured campaign results are current only after checking dates, branch scope, and feed status. Snapshot-only text is reported as historical and cannot prove current validity. |
-| Newly listed products | `list_new_catalog_products` compares two imports explicitly marked complete; import completeness requires accepted plus quarantined rows to equal the source row count. Demo data has no import history. | Report only catalog additions when two complete versions are comparable; do not claim a product launch date. |
+| Newly listed products | `list_new_catalog_products` compares two imports explicitly marked complete; import completeness requires accepted plus quarantined rows to equal the source row count. The initial embedded fixture has no import history. | Report only catalog additions when two complete versions are comparable; do not claim a product launch date. |
 | Products newly received into stock | `list_recent_stock_receipts` reads receiving events for the kiosk-mapped branch; the schema stores event, item, quantity, time, step, and source document. | Only event records from a fresh receiving feed are reported. The agent abstains if the branch mapping/feed is missing; an empty result is called “none” only when the feed certifies a complete seven-day window. |
 | Store address, hours, and contact | `get_store_information` reads the verified branch profile mapped from the session kiosk. The current repository has no branch seed data. | Return only current, source-stamped store master fields; otherwise say the kiosk is not mapped to a verified branch. |
 | Company introduction | `get_organization_profile` resolves distinct Thanh Lam Mart, FPT, and ChatVRM project entities. Each claim points to its own source IDs in `data/verified_organization_facts.json`. | Public claims include source links and verification dates. Project claims are marked as team-provided. “Đồ án FPT/ChatVRM” resolves to the project; FPT alone resolves to FPT Corporation. |
 | Nearby places for a specific store | `list_nearby_places_for_store` reads only attributed, unexpired nearby-place snapshots for the kiosk-mapped branch. The current repository has no branch coordinates or POI snapshot. | Require verified branch coordinates and a fresh attributed snapshot. Do not call a public geocoder on every customer turn. |
 
 The PostgreSQL endpoint was unavailable during this check. API behavior and repository guardrails
-were tested with the demo repository and mocked PostgreSQL rows; no live branch, promotion,
-receiving, or nearby-place feed was verified. The demo catalog intentionally has no import
+were tested with the embedded catalog repository and mocked PostgreSQL rows; no live branch, promotion,
+receiving, or nearby-place feed was verified. The embedded catalog intentionally has no import
 history or branch data. Production needs a verified `retail_stores` row, a matching
 `retail_kiosks` row, and source records/feed-health rows before those answers can return facts.
 
-## Public company sources found for the demo
+## Public company sources referenced for Thanh Lam Mart
 
 - Thanh Lam Mart's store profile provides its company overview and service information:
   [About Thanh Lam Mart](https://thanhlammart.vn/about).

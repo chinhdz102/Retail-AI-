@@ -50,7 +50,7 @@ flowchart TD
 | PostgreSQL | Product, inventory, batch, cart/order và audit data | Nhận ghi trực tiếp từ LLM. |
 | Hybrid RAG | Truy xuất tài liệu kiến thức được duyệt, kèm provenance | Trả giá/tồn kho/hạn dùng realtime thay SQL. |
 | Response validator | Kiểm tra số liệu, entity/evidence và intent constraints | Dùng self-confidence của LLM làm bằng chứng duy nhất. |
-| Payment adapter | Tạo checkout sandbox, xác minh callback/status, idempotency | Chuyển `PAID` từ lời nói của customer hoặc output LLM. |
+| Payment adapter | Tạo checkout nội bộ, xác minh callback/status, idempotency | Chuyển `PAID` từ lời nói của customer hoặc output LLM. |
 
 ## 4. Data ownership
 

@@ -797,7 +797,9 @@ async def test_snapshot_product_search_resolves_variants_and_refinements_without
     assert price.json()["grounded_product_ids"] == ["TLM_10161177"]
     assert "185.000đ" in price.json()["text"]
     assert dosage.json()["grounded_product_ids"] == ["TLM_10161177"]
-    assert "chưa có dữ liệu đã xác minh về liều lượng" in dosage.json()["text"].casefold()
+    dosage_text = dosage.json()["text"].casefold()
+    assert "theo thông tin sản phẩm" in dosage_text
+    assert "1 nắp (65ml)" in dosage_text
     assert "185.000đ" not in dosage.json()["text"]
     assert promotion.json()["grounded_product_ids"] == ["TLM_10161177"]
     assert "chưa có thông tin về khuyến mãi" in promotion.json()["text"].casefold()

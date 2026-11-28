@@ -436,7 +436,9 @@ def render_verified_snapshot(
         facts.append(_spicy_fact(product, language))
 
     if fields == ("price_vnd",):
-        return f"{product.name} có giá {price}đ{price_unit} nhé."
+        # Stay concise (no separate in-store caveat sentence) while keeping the "giá tham khảo"
+        # cue used by the multi-field path for snapshot pricing.
+        return f"{product.name} có giá {price}đ{price_unit}, đây là giá tham khảo nhé."
     if fields == ("stock",):
         if not product.stock_is_current:
             stock = _stock_fact(product, language)

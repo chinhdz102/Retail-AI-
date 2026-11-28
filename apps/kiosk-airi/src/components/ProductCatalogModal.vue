@@ -727,7 +727,7 @@ onUnmounted(() => {
                         {{ cleanName(product.name) }}
                       </button>
                       <small v-if="product.sales_data_source && product.demo_units_sold_30d" class="catalog-card-sales">
-                        {{ product.sales_data_source === 'SIMULATED' ? 'Đã bán (demo)' : 'Đã bán' }}: {{ product.demo_units_sold_30d.toLocaleString('vi-VN') }}/30 ngày
+                        Đã bán: {{ product.demo_units_sold_30d.toLocaleString('vi-VN') }}/30 ngày
                       </small>
                     </div>
 

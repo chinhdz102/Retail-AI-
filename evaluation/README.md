@@ -7,7 +7,7 @@ The default `pytest` suite is an offline system test. `tests/conftest.py` forces
 `.env` cannot silently turn unit/API tests into PostgreSQL integration tests or
 send test traffic to Groq. PostgreSQL connectivity and catalog search must be
 tested separately with `evaluation.run_product_search_benchmark`; do not treat
-the demo fixture as evidence that PostgreSQL is available.
+the embedded fixture as evidence that PostgreSQL is available.
 
 Chạy từ thư mục gốc repo:
 
@@ -35,7 +35,7 @@ Mốc Recall@1 ≥ 90%, Recall@3 ≥ 97% và median search < 100 ms là mục ti
   --output evaluation/results/product_search_benchmark_v2.json
 ```
 
-Kiểm thử SQL giả lập và đối chiếu ID snapshot không thay thế benchmark truy vấn PostgreSQL thật; nếu DB không kết nối được, báo cáo kết quả runtime là chưa đo.
+Kiểm thử SQL mock và đối chiếu ID snapshot không thay thế benchmark truy vấn PostgreSQL thật; nếu DB không kết nối được, báo cáo kết quả runtime là chưa đo.
 
 `run_smoke_benchmark.py` dùng phản hồi Groq được lập trình sẵn để kiểm backend, tool, grounding, phân quyền, session và lỗi. Kết quả ở `evaluation/results/smoke_benchmark.json`; exit code 1 nghĩa là có ca FAIL.
 
@@ -47,11 +47,11 @@ uv run python evaluation/production_tool_search_benchmark.py
 
 `generalized_retrieval_variants.py` hiện ghi thêm baseline cùng đường tool thật khi so sánh BM25, E5 và RRF; các biến thể dense vẫn dùng thử nghiệm offline riêng, không được bật trong request production.
 
-`run_p0_regressions.py` chạy 8 regression ưu tiên × 5 lượt. Nó cũng dùng phản hồi giả lập nên cô lập backend và không tiêu quota; nó không đo khả năng model tự chọn tool hoặc `fields`. Kết quả ở `evaluation/results/p0_regression_5x.json`.
+`run_p0_regressions.py` chạy 8 regression ưu tiên × 5 lượt. Nó dùng phản hồi stub để cô lập backend và không tiêu quota; nó không đo khả năng model tự chọn tool hoặc `fields`. Kết quả ở `evaluation/results/p0_regression_5x.json`.
 
 `live_groq_smoke.py` chạy benchmark agent bằng Groq thật. Nó mặc định đọc key từ `.env`; có thể chọn file cấu hình khác bằng `RETAIL_EVAL_ENV_FILE`. Script không ghi key vào kết quả, tắt SDK retry, đặt timeout provider 12 giây và timeout tác vụ 50 giây. Kết quả được lưu sau mỗi lượt.
 
-`live_text_conversation_benchmark.py` kiểm tra các câu hỏi tiếng Việt kiểu hội thoại, hội thoại nhiều lượt, sản phẩm demo, dữ kiện thiếu, sản phẩm hết hạn, yêu cầu giữ hàng/sửa giá và bộ case tùy chỉnh. Benchmark gọi Groq thật nhưng chỉ dùng text; phần tự nhiên vẫn cần người đọc chấm theo rubric trong JSON. Report ghi runtime repository và đánh dấu lượt tìm kiếm PostgreSQL thật nếu có.
+`live_text_conversation_benchmark.py` kiểm tra các câu hỏi tiếng Việt kiểu hội thoại, hội thoại nhiều lượt, sản phẩm trong catalog, dữ kiện thiếu, sản phẩm hết hạn, yêu cầu giữ hàng/sửa giá và bộ case tùy chỉnh. Benchmark gọi Groq thật nhưng chỉ dùng text; phần tự nhiên vẫn cần người đọc chấm theo rubric trong JSON. Report ghi runtime repository và đánh dấu lượt tìm kiếm PostgreSQL thật nếu có.
 
 Bộ hội thoại tiếng Việt mới nằm trong `evaluation/cases/vietnamese_text_conversation_v1.json`. Nó chỉ gửi câu tiếng Việt và chấm riêng việc model có chọn đúng tool, đưa đúng tham số, tránh tool khi chỉ chào hỏi/cảm ơn, giữ tham chiếu qua các lượt và từ chối bịa dữ kiện. Chạy bằng Groq thật:
 
@@ -62,11 +62,11 @@ Bộ hội thoại tiếng Việt mới nằm trong `evaluation/cases/vietnamese
   --output evaluation/results/live_vietnamese_conversation.json
 ```
 
-Pacing 12 giây giúp giữ nhịp dưới quota TPM đã quan sát ở các lần chạy trước. Kết quả tự động chỉ là coverage probe trên sáu sản phẩm demo; độ tự nhiên, cách hỏi làm rõ và đúng ngữ cảnh vẫn cần người đọc nghe/đọc lại từng lượt.
+Pacing 12 giây giúp giữ nhịp dưới quota TPM đã quan sát ở các lần chạy trước. Kết quả tự động chỉ là coverage probe trên 6 SKU ban đầu; độ tự nhiên, cách hỏi làm rõ và đúng ngữ cảnh vẫn cần người đọc nghe/đọc lại từng lượt.
 
-`vietnamese_retail_shopping_v2.json` là bộ hiện hành cho luồng mua sắm đầu-cuối: bảy hội thoại, 13 lượt, gồm nối tiếp giá/kệ/tồn, đổi ràng buộc, thiếu dữ kiện dinh dưỡng, thêm nhiều món vào giỏ, checkout và lời khách tự báo đã chuyển khoản, yêu cầu hỗ trợ demo, cùng injection không được tạo ticket. Grader kiểm tra cả response API và state đang lưu trong session (constraint, giỏ, order, ticket), vì nhánh catalog xác định có thể gọi tool mà không phát model tool-call. File `vietnamese_text_conversation_v1.json` và các kết quả cũ vẫn được giữ để tái lập lịch sử; không dùng các assertion của v1 làm kết luận về checkout/handoff hiện tại.
+`vietnamese_retail_shopping_v2.json` là bộ hiện hành cho luồng mua sắm đầu-cuối: bảy hội thoại, 13 lượt, gồm nối tiếp giá/kệ/tồn, đổi ràng buộc, thiếu dữ kiện dinh dưỡng, thêm nhiều món vào giỏ, checkout và lời khách tự báo đã chuyển khoản, yêu cầu hỗ trợ nhân viên, cùng injection không được tạo ticket. Grader kiểm tra cả response API và state đang lưu trong session (constraint, giỏ, order, ticket), vì nhánh catalog xác định có thể gọi tool mà không phát model tool-call. File `vietnamese_text_conversation_v1.json` và các kết quả cũ vẫn được giữ để tái lập lịch sử; không dùng các assertion của v1 làm kết luận về checkout/handoff hiện tại.
 
-Chạy bộ v2 bằng Groq thật trên catalog demo; dùng tên output mới để không ghi đè kết quả cũ:
+Chạy bộ v2 bằng Groq thật trên catalog 6 SKU; dùng tên output mới để không ghi đè kết quả cũ:
 
 ```powershell
 $env:CATALOG_REPOSITORY = 'demo'

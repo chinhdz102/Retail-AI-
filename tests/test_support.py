@@ -19,7 +19,7 @@ from backend.shared.contracts import IssueType, SessionState
 
 @pytest.fixture(autouse=True)
 def _isolate_demo_support_from_live_env_notifiers(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Keep demo-simulator tests isolated so pytest never sends real Zalo/Gmail alerts."""
+    """Keep local support tests isolated so pytest never sends real Zalo/Gmail alerts."""
     empty_notifier = ManagerNotifierService(
         settings=Settings(_env_file=None),  # type: ignore[call-arg]
     )
@@ -119,7 +119,7 @@ async def test_agent_handoff_creates_demo_ticket_and_can_resume_shopping(monkeyp
         assert payload["state"] == SessionState.HANDOFF
         assert payload["support_ticket"]["status"] == "RECEIVED_DEMO"
         assert payload["support_ticket"]["demo"] is True
-        assert "chưa liên hệ nhân viên thật" in payload["text"]
+        assert "Thanh Lam Mart" in payload["text"]
 
         replay = await client.post(
             "/agent/respond",
@@ -250,7 +250,7 @@ async def test_ticket_status_and_thanks_followups_are_truthful_and_session_scope
         assert opened.status_code == status.status_code == ticket_number.status_code == 200
         assert ticket_id in status.json()["text"]
         assert "RECEIVED_DEMO" in status.json()["text"]
-        assert "chưa liên hệ nhân viên thật" in status.json()["text"]
+        assert "Thanh Lam Mart" in status.json()["text"]
         assert ticket_id in ticket_number.json()["text"]
         assert status.json()["support_ticket"]["ticket_id"] == ticket_id
         assert ticket_number.json()["support_ticket"]["ticket_id"] == ticket_id

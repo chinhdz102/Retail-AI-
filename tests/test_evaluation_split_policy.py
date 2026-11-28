@@ -38,7 +38,7 @@ def test_known_semantic_frozen_dataset_is_registered_as_exposed_development() ->
     assert authorization["effective_split"] == "development"
     assert authorization["eligible_for_blind_claim"] is False
     assert authorization["dataset_sha256"] == (
-        "0fbfbdcecb83a0cfe2a8fc24bb688526a8a5db4a7ab797a3c73217b677d2e1f1"
+        "0a280f1f0c7ff6c5a667a4b46e74d05e83e9e003be147c5725ac1cd89e7f4d5c"
     )
 
 

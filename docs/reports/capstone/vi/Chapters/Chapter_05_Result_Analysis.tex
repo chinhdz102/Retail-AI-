@@ -21,7 +21,7 @@ Mọi thí nghiệm tuân thủ nghiêm ngặt ranh giới phân chia dữ liệ
 \section{Kết quả Thực nghiệm Agent 1: Tư vấn Khách hàng (\texttt{Retail-AI-})}
 
 \subsection*{Nghiên cứu Loại bỏ (\emph{Ablation Study}) và Độ trễ P50/P95/P99 trên Tập Test Độc lập 50 Câu}
-Bảng~\ref{tab:retail_ablation_50q} đánh giá bốn cấu hình có kiểm soát (A1--A4) trên cùng tập kiểm thử độc lập 50 câu (không sử dụng để tinh chỉnh luật hay từ điển) chạy lặp 3 lần ($N=150$ lượt đo/cấu hình) ở chế độ xác định ngoại tuyến nhằm tách bạch đóng góp thực sự của từng tầng trong \emph{Zero-Planner Hybrid Routing}:
+Bảng~\ref{tab:retail_ablation_50q} đánh giá bốn cấu hình có kiểm soát (A1--A4) trên cùng tập kiểm thử độc lập 50 câu (không sử dụng để tinh chỉnh luật hay từ điển) chạy lặp 3 lần ($N=150$ lượt đo/cấu hình) ở chế độ xác định cục bộ nhằm tách bạch đóng góp thực sự của từng tầng trong \emph{Zero-Planner Hybrid Routing}:
 \begin{itemize}
     \item \textbf{A1 (Truy xuất danh mục thô):} Gọi trực tiếp tìm kiếm chỉ mục khi chưa có định tuyến ý định, bộ xếp hạng đơn giá/tồn kho/bán chạy và cổng an toàn chỉ đạt \textbf{3/50 (6,0\%)}, cho thấy nhu cầu thiết yếu của kiến trúc định tuyến có cấu trúc.
     \item \textbf{A2 (Định tuyến công cụ, tắt cổng tiền-LLM ngoài cùng):} Độ chính xác đạt \textbf{47/50 (94,0\%)} nhờ các lớp bảo vệ sâu bên trong vẫn giữ 10/10 nhóm an toàn, với độ trễ đuôi \textbf{P95 = 202,4\,ms}, \textbf{P99 = 466,0\,ms} do truy vấn ngoài danh mục phải đi qua tầng truy xuất trước khi bị chặn.
@@ -211,7 +211,7 @@ Azure Speech + \texttt{DPDFNet2} ONNX & \textbf{10,0} & \textbf{14,1} & 16,7 & T
 Azure Speech Thô (không khử nhiễu) & 11,9 & 14,5 & \textbf{16,1} & Ổn định nhất ở nhiễu nặng 5\,dB (chuyển đổi theo SNR) \\
 Whisper Large-v3 (REST WAV) & 12,0 & 14,2 & 22,2 & Độ chính xác tốt ở sạch/12\,dB; xử lý theo tệp REST \\
 Azure Speech + \texttt{GTCRN} & 11,9 & 15,2 & 30,5 & Phù hợp khử nhiễu nền tĩnh ở môi trường ít tiếng người \\
-\texttt{gipformer1.5-68M-rnnt} cục bộ & 18,4 & 24,6 & 34,8 & Phương án dự phòng ngoại tuyến khi mất kết nối mạng \\
+\texttt{gipformer1.5-68M-rnnt} cục bộ & 18,4 & 24,6 & 34,8 & Phương án dự phòng cục bộ tại biên khi mất kết nối mạng \\
 \bottomrule
 \end{tabularx}
 \end{table}

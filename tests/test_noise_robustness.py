@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def fan_like(seconds: float) -> np.ndarray:
-    # Synthetic fixture, not a real fan recording. Low-frequency colored noise,
+    # Programmatic test fixture, not a real fan recording. Low-frequency colored noise,
     # motor harmonics and slow blade modulation, selected independent of VAD.
     rate = 48000
     rng = np.random.default_rng(117)

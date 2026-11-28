@@ -261,7 +261,7 @@ def classify_support_intent(text: str) -> SupportIntent | None:
 
 
 class SupportTicketStore:
-    """Session-owned support ticket store tracking both demo and live manager notifications."""
+    """Session-owned support ticket store tracking local records and live notifications."""
 
     def __init__(self) -> None:
         self._tickets: dict[UUID, SupportTicket] = {}

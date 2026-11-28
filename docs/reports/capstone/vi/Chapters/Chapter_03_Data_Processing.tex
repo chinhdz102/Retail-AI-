@@ -35,12 +35,12 @@ FreshRetailNet-50K~\cite{freshretailnet50k} & \texttt{ops\_chest} & 4,85\,M dòn
 \section{Phân tích Khám phá Dữ liệu (EDA)}
 
 \subsection*{EDA Danh mục Sản phẩm Bán lẻ (\texttt{Retail-AI-})}
-Kiểm tra toàn vẹn trên 3.099 bản ghi xác nhận \textbf{0 mã \code{product_id} trùng lặp}, \textbf{0 mã vạch \code{barcode} trùng lặp}, tỷ lệ đầy đủ trường thương hiệu đạt 99,03\% và URL ảnh đạt 99,90\%. Sau khi lọc chuẩn hóa 18 bản ghi giá bất thường (\code{sale_price_vnd > price_vnd}, chiếm 0,58\%) tại bước nạp, 3.081 SKU hợp lệ có phân bố giá bán lệch phải đặc trưng của siêu thị đa ngành: giá tối thiểu 3.500\,đ, tứ phân vị $Q_1 = 27.200$\,đ, trung vị \textbf{52.400\,đ}, trung bình \textbf{90.853\,đ} (độ lệch chuẩn 126.855\,đ), $Q_3 = 111.800$\,đ, P95 = 264.000\,đ, P99 = 562.920\,đ và cực đại 2.479.000\,đ; có 222 điểm ngoại lai trên ngưỡng $Q_3 + 1{,}5\,\text{IQR}$ (chủ yếu là thùng bia, sữa công thức và đồ gia dụng lớn). Hình~\ref{fig:catalog_dist} trực quan hóa \textbf{top-10 danh mục sản phẩm thực tế} (dẫn đầu bởi \emph{Chăm Sóc Da} 202 SKU, \emph{Kẹo -- Chocolate} 167 SKU và \emph{Nước Ngọt} 159 SKU) cùng phân bố giá bán tham khảo.
+Kiểm tra toàn vẹn trên 3.099 bản ghi xác nhận \textbf{0 mã \code{product_id} trùng lặp}, \textbf{0 mã vạch \code{barcode} trùng lặp}, tỷ lệ đầy đủ trường thương hiệu đạt 99,03\% và URL ảnh đạt 99,90\%. Sau khi lọc chuẩn hóa 18 bản ghi giá bất thường (\code{sale_price_vnd > price_vnd}, chiếm 0,58\%) tại bước nạp, 3.081 SKU hợp lệ có phân bố giá bán lệch phải đặc trưng của siêu thị đa ngành: giá tối thiểu 3.500\,đ, tứ phân vị $Q_1 = 27.200$\,đ, trung vị \textbf{52.400\,đ}, trung bình \textbf{90.853\,đ} (độ lệch chuẩn 126.855\,đ), $Q_3 = 111.800$\,đ, P95 = 264.000\,đ, P99 = 562.920\,đ và cực đại 2.479.000\,đ; có 222 điểm ngoại lai trên ngưỡng $Q_3 + 1{,}5\,\text{IQR}$ (chủ yếu là thùng bia, sữa công thức và đồ gia dụng lớn). Hình~\ref{fig:catalog_dist} trực quan hóa \textbf{top-10 danh mục sản phẩm thực tế} (dẫn đầu bởi \emph{Chăm Sóc Da} 202 SKU, \emph{Kẹo -- Chocolate} 167 SKU và \emph{Nước Ngọt} 159 SKU) cùng phân bố giá bán niêm yết.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.98\textwidth]{Images/fig_catalog_distribution.png}
-    \caption{Phân bố top-10 danh mục sản phẩm thực tế (\code{category_name}, trái) và phân bố giá tham khảo kèm trung vị, trung bình và P95 (phải, 98,0\% SKU $\le 400\text{k}$) trên 3.081 SKU hợp lệ của Thanh Lam Mart.}
+    \caption{Phân bố top-10 danh mục sản phẩm thực tế (\code{category_name}, trái) và phân bố giá niêm yết kèm trung vị, trung bình và P95 (phải, 98,0\% SKU $\le 400\text{k}$) trên 3.081 SKU hợp lệ của Thanh Lam Mart.}
     \label{fig:catalog_dist}
 \end{figure}
 

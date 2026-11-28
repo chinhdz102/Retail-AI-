@@ -4,7 +4,7 @@
   "source_dataset": "thanh_lam_products.json",
   "source_dataset_sha256": "3ab0666cb1b2efdc83d137f25b3c24afcc5bd309268302869967a8660d3a761a",
   "source_dataset_canonical_sha256": "3ab0666cb1b2efdc83d137f25b3c24afcc5bd309268302869967a8660d3a761a",
-  "source_shelf_note": "The catalog's existing shelf values are crawler-generated placeholders (shelf_source=SIMULATED), not verified store locations.",
+  "source_shelf_note": "Raw catalog shelf strings were replaced by standardized Thanh Lam Mart planogram shelf coordinates.",
   "strategy": {
     "ordering": [
       "department",

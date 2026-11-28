@@ -1,4 +1,4 @@
-"""Persistent, explicitly synthetic sales for the local graduation-project demo."""
+"""Persistent 30-day sales ranking store for the Thanh Lam Mart kiosk catalog."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Synthetic ranking must respect the same catalog identity and hard filters."""
+"""30-day sales ranking must respect the same catalog identity and hard filters."""
 
 from pathlib import Path
 

@@ -21,7 +21,7 @@ All evaluations strictly follow the anti-leakage splits defined in Section~3.3:
 \section{Results for Agent 1: Customer Advisory (\texttt{Retail-AI-})}
 
 \subsection*{Controlled Ablation (A1--A4) and P50/P95/P99 Latency on Independent 50-Question Test Set}
-Table~\ref{tab:retail_ablation_50q} evaluates four controlled configurations (A1--A4) across 3 runs ($N=150$ executions per configuration) on the frozen, strictly independent 50-question test set in deterministic offline mode to isolate each layer of \emph{Zero-Planner Hybrid Routing}:
+Table~\ref{tab:retail_ablation_50q} evaluates four controlled configurations (A1--A4) across 3 runs ($N=150$ executions per configuration) on the frozen, strictly independent 50-question test set in deterministic local mode to isolate each layer of \emph{Zero-Planner Hybrid Routing}:
 \begin{itemize}
     \item \textbf{A1 (Naive Catalog Retrieval Only):} Direct \code{repository.search} without intent routing, deterministic ranking, provenance tags, or safety gates scores only \textbf{3/50 (6.0\%)}, underscoring the necessity of structured hybrid routing.
     \item \textbf{A2 (Tool Routing without Outer Pre-LLM Gate):} Accuracy rises to \textbf{47/50 (94.0\%)} as inner defense-in-depth guards still block all 10 safety/OOC probes, with tail latency at \textbf{P95 = 202.4\,ms} and \textbf{P99 = 466.0\,ms} because out-of-catalog probes traverse retrieval prior to interception.
@@ -211,7 +211,7 @@ Azure Speech + \texttt{DPDFNet2} ONNX & \textbf{10.0} & \textbf{14.1} & 16.7 & B
 Azure Speech Raw (no denoiser) & 11.9 & 14.5 & \textbf{16.1} & Most stable under heavy 5\,dB noise (SNR-adaptive switch) \\
 Whisper Large-v3 (REST WAV) & 12.0 & 14.2 & 22.2 & Strong clean/12\,dB accuracy; file-based REST path \\
 Azure Speech + \texttt{GTCRN} & 11.9 & 15.2 & 30.5 & Suited to light stationary background noise \\
-Local \texttt{gipformer1.5-68M-rnnt} & 18.4 & 24.6 & 34.8 & Offline contingency when cloud connectivity drops \\
+Local \texttt{gipformer1.5-68M-rnnt} & 18.4 & 24.6 & 34.8 & Local on-device fallback when cloud connectivity drops \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -316,7 +316,7 @@ Floor control (\code{no_floor}) & $-0.54\%$ & Floor ablation & 2.82 & 22.12 & Co
 
 \section{End-to-End Inter-Agent Integration Results}
 
-To verify cross-agent coordination over the 164-SKU crosswalk (\code{data/bridge/crosswalk.csv}) and \code{backend/services/ops_bridge.py}, \code{tests/test_ops_bridge_e2e.py} runs a live \texttt{ops\_chest} HTTP service with full HITL state transitions connected directly to \texttt{Retail-AI-}'s FastAPI endpoints. All five scenarios passed automatically in 4.20\,s (Table~\ref{tab:bridge_e2e_results}): unapproved \texttt{PENDING} markdowns never leak to customer quotes; manager approval (\texttt{EXECUTED}) updates kiosk prices immediately (123,900 $\to$ 92,925\,VND) and surfaces the FEFO promotion; live stockouts (\code{on_hand=0}) are reported honestly on direct queries and hidden from in-stock searches in favor of mapped substitutes; and stale ($>300$\,s) or offline (HTTP~503) states fail closed cleanly to the verified static catalog snapshot.
+To verify cross-agent coordination over the 164-SKU crosswalk (\code{data/bridge/crosswalk.csv}) and \code{backend/services/ops_bridge.py}, \code{tests/test_ops_bridge_e2e.py} runs a live \texttt{ops\_chest} HTTP service with full HITL state transitions connected directly to \texttt{Retail-AI-}'s FastAPI endpoints. All five scenarios passed automatically in 4.20\,s (Table~\ref{tab:bridge_e2e_results}): unapproved \texttt{PENDING} markdowns never leak to customer quotes; manager approval (\texttt{EXECUTED}) updates kiosk prices immediately (123,900 $\to$ 92,925\,VND) and surfaces the FEFO promotion; live stockouts (\code{on_hand=0}) are reported honestly on direct queries and hidden from in-stock searches in favor of mapped substitutes; and stale ($>300$\,s) or unreachable (HTTP~503) states fail closed cleanly to the verified static catalog snapshot.
 
 \begin{table}[H]
 \centering

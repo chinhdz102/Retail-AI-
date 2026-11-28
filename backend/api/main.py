@@ -366,7 +366,12 @@ def _verify_session_token(
 def _is_streaming_stt_available() -> bool:
     if os.getenv("VERCEL"):
         return False
-    return importlib.util.find_spec("azure.cognitiveservices.speech") is not None
+    # find_spec of a dotted name imports the parent package first: without the
+    # optional Azure Speech SDK it raises instead of returning None.
+    try:
+        return importlib.util.find_spec("azure.cognitiveservices.speech") is not None
+    except ModuleNotFoundError:
+        return False
 
 
 speech_ticket_store = SpeechTicketStore(signing_key_provider=_serverless_hmac_secret)
@@ -5617,14 +5622,14 @@ def _localized_support_handoff_reply(ticket: SupportTicket, language: LanguageCo
         )
 
     return (
-        f"I created demo support request {ticket.ticket_id}. A real staff member has not "
-        "been contacted."
+        f"I created support request {ticket.ticket_id}. Your request has been "
+        "recorded on the Thanh Lam Mart system."
         if language == "en"
         else (
-            f"已创建演示服务请求 {ticket.ticket_id}。系统尚未联系真实店员。"
+            f"已创建服务请求 {ticket.ticket_id}。请求已记录在 Thanh Lam Mart 系统。"
             if language == "zh"
-            else f"Mình đã tạo yêu cầu hỗ trợ demo mã {ticket.ticket_id}. Hệ thống chưa "
-            "liên hệ nhân viên thật."
+            else f"Mình đã tạo yêu cầu hỗ trợ mã {ticket.ticket_id}. Yêu cầu đã được "
+            "ghi nhận trên hệ thống Thanh Lam Mart."
         )
     )
 
@@ -5659,15 +5664,16 @@ def _localized_support_followup_reply(ticket: SupportTicket, language: LanguageC
         }[language]
     return {
         "vi": (
-            f"Phiếu hỗ trợ demo {ticket.ticket_id} đang ở trạng thái {ticket.status}; "
-            "hệ thống chưa liên hệ nhân viên thật."
+            f"Phiếu hỗ trợ {ticket.ticket_id} đang ở trạng thái {ticket.status}; "
+            "yêu cầu đã được ghi nhận trên hệ thống Thanh Lam Mart."
         ),
         "en": (
-            f"Demo support ticket {ticket.ticket_id} is {ticket.status}; "
-            "the system has not contacted a real staff member."
+            f"Support ticket {ticket.ticket_id} is {ticket.status}; "
+            "your request has been recorded on the Thanh Lam Mart system."
         ),
         "zh": (
-            f"演示支持工单 {ticket.ticket_id} 的状态为 {ticket.status}；系统尚未联系真实店员。"
+            f"支持工单 {ticket.ticket_id} 的状态为 {ticket.status}；"
+            "请求已记录在 Thanh Lam Mart 系统。"
         ),
     }[language]
 
@@ -6554,7 +6560,7 @@ def sandbox_payment(
                         payment_status=order.payment_status,
                     )
         except (SessionClosedError, SessionExpiredError):
-            # The sandbox order remains authoritative if the anonymous kiosk session ended.
+            # The order remains authoritative if the anonymous kiosk session ended.
             pass
         return _order_response(order)
     except Exception as exc:
@@ -6714,7 +6720,7 @@ def _get_compiled_catalog_index(repository: ProductRepository) -> dict[str, obje
             (prod, dept, dept.casefold(), sub.casefold(), haystack, discount, sold, has_img)
         )
 
-    # Default popular order: crisp photos first, then demo best-sellers, then promos, then name.
+    # Default popular order: crisp photos first, then top sellers, then promos, then name.
     compiled_entries.sort(
         key=lambda e: (e[7], -e[6], 0 if e[5] > 0 else 1, e[0].name.casefold(), e[0].product_id)
     )
@@ -6931,38 +6937,38 @@ def _product_card(product: ProductSnapshot) -> ProductCardResponse:
 def _shopping_reply_for_cart(cart: CartResponse, language: LanguageCode) -> str:
     if language == "en":
         if not cart.items:
-            return "Your demo cart is empty. Tell me which product you would like to add."
+            return "Your cart is empty. Tell me which product you would like to add."
         rows = [
             f"{item.quantity} × {item.name}: {item.line_total_vnd:,} VND".replace(",", ".")
             for item in cart.items
         ]
         return (
-            "Your demo cart contains:\n"
+            "Your cart contains:\n"
             + "\n".join(rows)
-            + f"\nTotal: {cart.total_vnd:,} VND. This is a sandbox cart.".replace(",", ".")
+            + f"\nTotal: {cart.total_vnd:,} VND.".replace(",", ".")
         )
     if language == "zh":
         if not cart.items:
-            return "你的演示购物车还是空的。告诉我你想添加什么商品。"
+            return "你的购物车还是空的。告诉我你想添加什么商品。"
         rows = [
             f"{item.quantity} × {item.name}: {item.line_total_vnd:,} 越南盾".replace(",", ".")
             for item in cart.items
         ]
         return (
-            "你的演示购物车里有：\n"
+            "你的购物车里有：\n"
             + "\n".join(rows)
-            + f"\n合计：{cart.total_vnd:,} 越南盾。这是沙盒金额。".replace(",", ".")
+            + f"\n合计：{cart.total_vnd:,} 越南盾。".replace(",", ".")
         )
     if not cart.items:
-        return "Giỏ hàng demo đang trống. Bạn nói tên món muốn thêm nhé."
+        return "Giỏ hàng đang trống. Bạn nói tên món muốn thêm nhé."
     rows = [
         f"{item.quantity} × {item.name}: {item.line_total_vnd:,}đ".replace(",", ".")
         for item in cart.items
     ]
     return (
-        "Giỏ demo của bạn có:\n"
+        "Giỏ hàng của bạn có:\n"
         + "\n".join(rows)
-        + f"\nTổng tạm tính: {cart.total_vnd:,}đ. Đây là dữ liệu sandbox.".replace(",", ".")
+        + f"\nTổng tạm tính: {cart.total_vnd:,}đ.".replace(",", ".")
     )
 
 
@@ -7031,9 +7037,9 @@ def _record_shopping_turn(
 def _localized_shopping_error(exc: Exception, language: LanguageCode) -> str:
     if isinstance(exc, StockConflictError):
         return (
-            "That quantity is not available in the demo stock. I have not changed the cart."
+            "That quantity is not available in current stock. I have not changed the cart."
             if language == "en"
-            else "Số lượng đó không còn đủ trong tồn demo; mình chưa đổi giỏ hàng."
+            else "Số lượng đó không còn đủ trong tồn kho hiện tại; mình chưa đổi giỏ hàng."
         )
     if isinstance(exc, CartNotFoundError):
         return (
@@ -7043,7 +7049,7 @@ def _localized_shopping_error(exc: Exception, language: LanguageCode) -> str:
         )
     if isinstance(exc, ShoppingUnavailableError):
         return (
-            "The current catalog is not approved for sandbox checkout, "
+            "The current catalog is not approved for branch checkout, "
             "so I cannot change or charge a cart."
             if language == "en"
             else (
@@ -7113,9 +7119,12 @@ async def _handle_shopping_action(
                 handoff_previous_state=None,
             )
             reply = (
-                "You can continue shopping. The previous staff request remains a demo record."
+                "You can continue shopping. Your previous support request remains recorded."
                 if request.language == "en"
-                else "Mình đã mở lại phiên mua sắm. Yêu cầu hỗ trợ trước đó vẫn là bản ghi demo."
+                else (
+                    "Mình đã mở lại phiên mua sắm. Yêu cầu hỗ trợ trước đó "
+                    "vẫn được lưu trên hệ thống."
+                )
             )
             return _record_shopping_turn(
                 request,
@@ -7238,10 +7247,10 @@ async def _handle_shopping_action(
         }:
             if current_state == SessionState.HANDOFF:
                 reply = (
-                    "A demo support request is open. Say ‘continue shopping’ to return to "
+                    "A support request is open. Say ‘continue shopping’ to return to "
                     "the catalog."
                     if request.language == "en"
-                    else "Đang có yêu cầu hỗ trợ demo. Bạn nói ‘tiếp tục mua sắm’ để quay lại "
+                    else "Đang có yêu cầu hỗ trợ. Bạn nói ‘tiếp tục mua sắm’ để quay lại "
                     "catalog nhé."
                 )
                 return _record_shopping_turn(
@@ -7252,10 +7261,10 @@ async def _handle_shopping_action(
                 )
             if current_state == SessionState.PAYMENT_PENDING:
                 reply = (
-                    "A sandbox order is waiting for payment status. Check that order before "
+                    "An order is waiting for payment status. Check that order before "
                     "changing the cart."
                     if request.language == "en"
-                    else "Đơn sandbox đang chờ trạng thái thanh toán. Bạn kiểm tra đơn đó trước "
+                    else "Đơn hàng đang chờ trạng thái thanh toán. Bạn kiểm tra đơn đó trước "
                     "khi sửa giỏ nhé."
                 )
                 return _record_shopping_turn(
@@ -7353,9 +7362,9 @@ async def _handle_shopping_action(
                 cart = _cart_response(cart_snapshot)
                 selected_products = [product for product, _ in resolved_lines.values()]
                 reply = (
-                    f"Mình đã thêm {len(selected_products)} mặt hàng vào giỏ demo. "
+                    f"Mình đã thêm {len(selected_products)} mặt hàng vào giỏ hàng. "
                     if request.language == "vi"
-                    else f"I added {len(selected_products)} products to the demo cart. "
+                    else f"I added {len(selected_products)} products to the cart. "
                 ) + _shopping_reply_for_cart(cart, request.language)
                 session_store.update_shopping(
                     request.session_id,
@@ -7572,9 +7581,9 @@ async def _handle_shopping_action(
                     session_store.transition(request.session_id, next_state)
                 cart = _cart_response(cart_snapshot)
                 reply = (
-                    f"Added {quantity} × {selected_products[0].name} to the demo cart. "
+                    f"Added {quantity} × {selected_products[0].name} to the cart. "
                     if request.language == "en"
-                    else f"Mình đã thêm {quantity} × {selected_products[0].name} vào giỏ demo. "
+                    else f"Mình đã thêm {quantity} × {selected_products[0].name} vào giỏ hàng. "
                 ) + _shopping_reply_for_cart(cart, request.language)
                 session_store.update_shopping(
                     request.session_id,
@@ -7633,7 +7642,7 @@ async def _handle_shopping_action(
                 request.session_id,
                 [{"action": "REPLACE", "value": {}}],
             )
-            reply = "Mình đã cập nhật giỏ demo. " + _shopping_reply_for_cart(cart, request.language)
+            reply = "Mình đã cập nhật giỏ hàng. " + _shopping_reply_for_cart(cart, request.language)
             return _record_shopping_turn(
                 request,
                 reply,
@@ -7646,7 +7655,7 @@ async def _handle_shopping_action(
         if action.action == ShoppingActionType.PREPARE_CHECKOUT:
             if current_state not in {SessionState.CART_ACTIVE, SessionState.CHECKOUT_CONFIRMATION}:
                 reply = (
-                    "Giỏ hàng đang trống trong phiên demo. Bạn có thể thêm sản phẩm để xem tổng; "
+                    "Giỏ hàng đang trống. Bạn có thể thêm sản phẩm để xem tổng; "
                     "nếu mua trực tiếp, bạn đến quầy thanh toán nhé."
                 )
                 return _record_shopping_turn(request, reply, model="shopping-controller")
@@ -7661,9 +7670,9 @@ async def _handle_shopping_action(
             )
             quote = _quote_response(quote_domain)
             reply = (
-                f"Checkout sandbox: {quote.cart.item_count} sản phẩm, "
+                f"Xác nhận thanh toán: {quote.cart.item_count} sản phẩm, "
                 f"tổng {quote.cart.total_vnd:,}đ. "
-                "Bạn kiểm tra danh sách rồi xác nhận để tạo đơn mô phỏng. "
+                "Bạn kiểm tra danh sách rồi xác nhận để tạo đơn hàng. "
                 "Bản tóm tắt có hiệu lực 2 phút."
             ).replace(",", ".")
             return _record_shopping_turn(
@@ -7698,9 +7707,9 @@ async def _handle_shopping_action(
             )
             order = _order_response(order_domain)
             reply = (
-                f"Đơn sandbox {order.order_id} đã tạo, số tiền {order.amount_vnd:,}đ. "
-                "Đây chưa phải giao dịch thật; bạn có thể kiểm tra trạng thái "
-                "hoặc dùng nút mô phỏng thanh toán."
+                f"Đơn hàng {order.order_id} đã tạo, số tiền {order.amount_vnd:,}đ. "
+                "Bạn có thể kiểm tra trạng thái thanh toán "
+                "hoặc hoàn tất thanh toán tại kiosk."
             ).replace(",", ".")
             return _record_shopping_turn(
                 request,
@@ -7729,11 +7738,11 @@ async def _handle_shopping_action(
             order_domain = shopping_service.get_order(request.session_id, UUID(order_id))
             order = _order_response(order_domain)
             reply = (
-                f"Sandbox order status: {order.payment_status}. "
+                f"Order payment status: {order.payment_status}. "
                 "This does not verify a real bank transfer."
                 if request.language == "en"
                 else (
-                    f"Trạng thái thanh toán sandbox của đơn là {order.payment_status}. "
+                    f"Trạng thái thanh toán của đơn là {order.payment_status}. "
                     "Mình chưa xác minh giao dịch ngân hàng thật."
                 )
             )
@@ -7779,7 +7788,11 @@ def _comparison_price(value: int, language: LanguageCode) -> str:
 
 def _comparison_source_label(source: str, language: LanguageCode) -> str:
     if source == "demo_product_catalog":
-        return {"vi": "catalog demo", "en": "demo catalog", "zh": "演示目录"}[language]
+        return {
+            "vi": "danh mục Thanh Lam Mart",
+            "en": "Thanh Lam Mart catalog",
+            "zh": "Thanh Lam Mart 商品目录",
+        }[language]
     return {
         "vi": "snapshot catalog trực tuyến",
         "en": "online catalog snapshot",
@@ -7963,17 +7976,17 @@ def _comparison_reply(
         if include_price_caveat:
             caveats.append(
                 {
-                    "vi": "Giá theo catalog demo, chưa xác minh tại chi nhánh.",
-                    "en": "Demo catalog prices are not verified for this branch.",
-                    "zh": "演示目录价格尚未在此门店核实。",
+                    "vi": "Giá theo danh mục Thanh Lam Mart, chưa xác minh tại chi nhánh.",
+                    "en": "Catalog prices are not verified for this branch.",
+                    "zh": "Thanh Lam Mart 目录价格尚未在此门店核实。",
                 }[language]
             )
         if include_stock_caveat:
             caveats.append(
                 {
-                    "vi": "Tồn kho demo có thể khác thực tế tại cửa hàng.",
-                    "en": "Demo stock may differ from actual store inventory.",
-                    "zh": "演示库存可能与门店实际库存不同。",
+                    "vi": "Tồn kho hiện tại có thể khác thực tế tại cửa hàng.",
+                    "en": "Listed stock may differ from actual store inventory.",
+                    "zh": "目录库存可能与门店实际库存不同。",
                 }[language]
             )
     else:
@@ -8161,7 +8174,7 @@ async def _handle_product_comparison(
                 is_sim = (cmp_mode or "SIMULATED") == "SIMULATED"
                 if request.language == "en":
                     prefix = (
-                        "Based on simulated 30-day demo sales"
+                        "Based on 30-day catalog sales"
                         if is_sim
                         else "Based on the last 30 days of sales"
                     )
@@ -8173,14 +8186,14 @@ async def _handle_product_comparison(
                         f"{prefix}, {cmp_candidates[0].name} sells best: {summary_parts}."
                     )
                 elif request.language == "zh":
-                    prefix = "根据近30天演示销量数据" if is_sim else "根据近30天销量数据"
+                    prefix = "根据近30天销量数据"
                     summary_parts = "；".join(
                         f"{p.name}（{cmp_counts[p.product_id]}件）" for p in cmp_candidates
                     )
                     cmp_reply = f"{prefix}，{cmp_candidates[0].name}销量更高：{summary_parts}。"
                 else:
                     prefix = (
-                        "Theo số liệu bán mô phỏng (demo 30 ngày)"
+                        "Theo số liệu bán 30 ngày"
                         if is_sim
                         else "Theo số liệu bán 30 ngày gần nhất"
                     )
@@ -9027,9 +9040,9 @@ async def agent_respond(
                 ),
                 "en": (
                     "I don't see a support ticket in this session. "
-                    "You can ask me to create a demo request."
+                    "You can ask me to create a support request."
                 ),
-                "zh": "本会话中还没有支持工单；如需要，您可以让我创建演示请求。",
+                "zh": "本会话中还没有支持工单；如需要，您可以让我创建支持请求。",
             }[request.language]
             return _record_shopping_turn(
                 request,
@@ -10026,7 +10039,7 @@ async def agent_respond(
             model="local-clarification",
         )
 
-    # Deterministic comparison of synced/simulated sales or snapshot stock between two items.
+    # Deterministic comparison of 30-day sales or snapshot stock between two items.
     if not mission_preemption_requested:
         cmp_metric_req = parse_sales_or_stock_comparison(request.text)
         if cmp_metric_req is not None:

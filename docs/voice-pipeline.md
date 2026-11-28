@@ -81,7 +81,7 @@ The LiveKit comparison and pre-migration measurement contract are in
 6. VAD callbacks carry the microphone generation that created them. Pause, resume, start, and
    segment cleanup are serialized, and a new generation gets a fresh VAD instance. A late event from
    a paused microphone cannot be mistaken for the current visitor's words.
-7. The demo starts an optional local Zipformer30M Vietnamese verifier when its cached model
+7. The startup script launches an optional local Zipformer30M Vietnamese verifier when its cached model
    is available. It processes the original audio after the same acoustic gate. It does not
    rewrite Whisper text. Negation, quantity/unit or large decoder disagreements can require
    confirmation; equivalent spoken/written quantities are normalized for comparison only.
@@ -244,7 +244,7 @@ The turbo measurements are in `evaluation/results/live_groq_stt_turbo_rerun_2026
 The exact repeated transcript reported by the visitor was synthesized and sent through the active
 kiosk API. It returned an empty transcript with `speech_detected=false`. A separate two-second silent
 WAV was rejected the same way; frontend regression tests confirm that neither a provider-marked
-non-speech transcript nor a repeated loop reaches the agent. The live demo is compiled to use API
+non-speech transcript nor a repeated loop reaches the agent. The live kiosk is compiled to use API
 port 8001, which was used for these checks.
 
 Azure Vietnamese TTS was rechecked in five synthesis and streaming trials: 5/5 completed, synthesis
@@ -257,11 +257,11 @@ samples show streaming is working, with occasional first-request/provider latenc
 The new `/audio/synthesize/prewarm` route starts an Azure-key-authenticated voices-list request when the
 mic enters listening/recording, so DNS/TLS setup overlaps the user's turn. The frontend sends only
 the session ID and language; no transcript, response text, or audio is sent, and prewarming is
-best-effort. On the live demo, the cold first audio chunk took 1,009 ms; preconnect took 1,361 ms in
+best-effort. On the live kiosk service, the cold first audio chunk took 1,009 ms; preconnect took 1,361 ms in
 the background, and five subsequent streamed replies returned their first chunk in 142–469 ms
 (median 407 ms). The measurement is recorded in this document; voice playback remains incremental.
 
-These accuracy cases use generated speech, not a human microphone recording. When the demo was
+These accuracy cases use generated speech, not a human microphone recording. When the live service was
 inspected idle, its mic meter read 0.000557 and showed the near-zero-input hint; that idle reading
 does not measure a spoken utterance. A live recording with the visitor speaking is still needed to
 separate room/microphone capture quality from Whisper quality.
@@ -306,7 +306,7 @@ recognized that clip much closer to the label. The dataset label itself may be w
 gate is useful for silence and non-speech; it does not guarantee semantic correctness, so product
 answers must still be grounded in catalog data and uncertain speech may need repetition.
 
-The running `POST /audio/transcribe` endpoint was also sent four synthetic non-speech WAVs. Digital
+The running `POST /audio/transcribe` endpoint was also sent four programmatic non-speech WAVs. Digital
 silence (40.6 ms), low steady noise (146.2 ms), a 440 Hz tone (129.9 ms), and one 10 ms click (30 ms)
 all returned `speech_detected=false` and an empty transcript before Whisper. A 14.8-second public
 Vietnamese speech clip was accepted through the same endpoint in 1,922 ms. These are API/audio-file

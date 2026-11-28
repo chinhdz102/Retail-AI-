@@ -247,7 +247,7 @@ Tool này không trả current price, stock, shelf hoặc expiry.
     "status": "AWAITING_PAYMENT",
     "amount_vnd": 44000,
     "payment_reference": "provider-ref",
-    "qr_payload": "sandbox-payload"
+    "qr_payload": "thanhlammart-qr-payload"
   }
 }
 ```

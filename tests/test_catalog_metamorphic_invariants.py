@@ -167,7 +167,7 @@ def test_new_snapshot_sku_is_indexed_without_product_specific_code(
         "sale_price_vnd": 10_000,
         "stock": 1,
         "uom": "Gói",
-        "description": "Synthetic row used only to test catalog index rebuilding.",
+        "description": "Test fixture row used only to verify catalog index rebuilding.",
         "scraped_at": "2026-10-29T00:00:00+00:00",
     }
     path = tmp_path / "new-catalog-version.json"

@@ -1,4 +1,4 @@
-"""Read-only consultation trace using explicit demo/settings semantics; no secret output."""
+"""Read-only consultation trace using catalog/settings semantics; no secret output."""
 
 from __future__ import annotations
 

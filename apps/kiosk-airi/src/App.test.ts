@@ -361,10 +361,10 @@ describe('kiosk app', () => {
     expect(apiMocks.respond).not.toHaveBeenCalled()
   })
 
-  it('creates and displays a clearly marked demo support request', async () => {
+  it('creates and displays a support request on the Thanh Lam Mart kiosk', async () => {
     apiMocks.respond.mockResolvedValueOnce({
       session_id: 'session-test',
-      text: 'Mình đã tạo yêu cầu hỗ trợ demo mã ticket-demo-1. Hệ thống chưa liên hệ nhân viên thật.',
+      text: 'Mình đã tạo yêu cầu hỗ trợ mã ticket-demo-1. Yêu cầu đã được ghi nhận trên hệ thống Thanh Lam Mart.',
       model: 'support-simulator',
       grounded_product_ids: [],
       tools_used: ['handoff_to_staff'],
@@ -396,7 +396,7 @@ describe('kiosk app', () => {
     ))
     await vi.waitFor(() => expect(wrapper.find('.support-ticket-card').exists()).toBe(true))
     expect(wrapper.get('.support-ticket-card').text()).not.toContain('ticket-demo-1')
-    expect(wrapper.get('.support-ticket-card').text()).toContain('Chỉ là bản demo')
+    expect(wrapper.get('.support-ticket-card').text()).toContain('Yêu cầu đã được ghi nhận trên hệ thống Thanh Lam Mart')
   })
 
   it('calls manager via the floating button and displays delivered Zalo alert card', async () => {
@@ -750,7 +750,7 @@ describe('kiosk app', () => {
     )
   })
 
-  it('adds a catalog-backed product to the demo cart from its product card', async () => {
+  it('adds a catalog-backed product to the cart from its product card', async () => {
     const emptyCart = {
       cart_id: 'cart-test', session_id: 'session-test', items: [], item_count: 0,
       subtotal_vnd: 0, total_vnd: 0, version: 1, sandbox: true, data_source: 'DEMO_CATALOG',
@@ -789,11 +789,11 @@ describe('kiosk app', () => {
       'session-test', product.product_id, 1, expect.any(String),
     ))
     await vi.waitFor(() => expect(wrapper.text()).toContain('13.000đ'))
-    expect(wrapper.text()).toContain('Catalog demo · 19/10/2026')
-    expect(wrapper.text()).toContain('Giỏ hàng demo')
+    expect(wrapper.text()).toContain('Danh mục Thanh Lam Mart · 19/10/2026')
+    expect(wrapper.text()).toContain('Giỏ hàng')
   })
 
-  it('completes the kiosk product-to-sandbox-payment flow through the rendered controls', async () => {
+  it('completes the kiosk product-to-payment flow through the rendered controls', async () => {
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
     const product = {
       product_id: 'COKE_ZERO_330', name: 'Coca-Cola Zero 330ml', category: 'drink',
@@ -849,7 +849,7 @@ describe('kiosk app', () => {
     await wrapper.get('button[data-quick-prompt="Giá Coca Zero"]').trigger('click')
     await vi.waitFor(() => expect(wrapper.text()).toContain(product.name))
     await wrapper.get('.message-product-card .small-action-button').trigger('click')
-    await vi.waitFor(() => expect(wrapper.text()).toContain('Giỏ hàng demo'))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Giỏ hàng'))
     await wrapper.get('.shopping-actions .primary').trigger('click')
     await vi.waitFor(() => expect(apiMocks.prepareCheckout).toHaveBeenCalledWith('session-test'))
     await wrapper.get('.shopping-actions .primary').trigger('click')
@@ -862,7 +862,7 @@ describe('kiosk app', () => {
     ))
     await vi.waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(2))
 
-    await vi.waitFor(() => expect(wrapper.text()).toContain('Thanh toán mô phỏng hoàn tất'))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Thanh toán đã được ghi nhận trên hệ thống kiosk Thanh Lam Mart'))
     expect(wrapper.text()).not.toContain('SANDBOX-ORDERTEST')
     expect(wrapper.findAll('.shopping-cart-line')).toHaveLength(0)
   })

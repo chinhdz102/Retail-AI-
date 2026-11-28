@@ -629,7 +629,7 @@ def describe_planogram_location(
 ) -> PlanogramLocationDetails | None:
     """Parse a valid 13-aisle planogram code (A01..A13-Bxx-Lxx-Pxx) into shopper directions.
 
-    Returns None for non-planogram codes (e.g., demo codes like 'A2-L2' or 'A1-B2')
+    Returns None for non-planogram codes (e.g., legacy codes like 'A2-L2' or 'A1-B2')
     so callers never invent walking directions for unmapped layouts.
     """
     if not location_code:

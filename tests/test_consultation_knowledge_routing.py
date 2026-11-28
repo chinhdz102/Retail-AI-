@@ -1,4 +1,4 @@
-"""Real evidence lookups must work with the demo's consultation layer enabled."""
+"""Real evidence lookups must work with the consultation layer enabled."""
 
 import json
 from pathlib import Path

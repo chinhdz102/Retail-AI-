@@ -126,7 +126,7 @@ class DemoProductRepository:
     def list_catalog_additions(
         self, category: str | None = None, limit: int = 5
     ) -> CatalogAdditions:
-        # The demo catalog has no prior complete import to compare against.
+        # The embedded catalog has no prior complete import to compare against.
         return CatalogAdditions(comparable=False)
 
 

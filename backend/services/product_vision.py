@@ -1116,7 +1116,7 @@ def format_vision_reply(
     if language == "en":
         reply = (
             f"This looks like {top.name} with a reference price of {price_str}. "
-            "You can check the card below or ask me to compare sizes or add it to your demo cart."
+            "You can check the card below or ask me to compare sizes or add it to your cart."
         )
         return reply
 

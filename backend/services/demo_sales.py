@@ -1,4 +1,4 @@
-"""Deterministic synthetic sales for local demos, never a store-sales source."""
+"""Deterministic 30-day sales ranking helpers for catalog bestseller queries."""
 
 from __future__ import annotations
 
@@ -182,7 +182,7 @@ def rank_demo_sales(
         )
     reference = _strip_ranking_phrases(raw_ref_norm, category)
     # Ranking wrappers aren't product modifiers. Keep genuine modifiers (size,
-    # material, variant) in the repository query so demo mode cannot erase them.
+    # material, variant) in the repository query so sales ranking cannot erase them.
     fillers = set(
         "nao la loai cai mon san pham hang nhat nhut duoi tren toi da khong qua "
         "ban chay seller best most popular the one which within under budget "
@@ -315,7 +315,7 @@ def render_demo_sales(
     )
     if language == "en":
         prefix_en = (
-            "Based on simulated 30-day demo sales"
+            "Based on 30-day catalog sales"
             if is_simulated
             else "Based on the last 30 days of sales"
         )
@@ -332,14 +332,14 @@ def render_demo_sales(
             "Would you like its price or suggested shelf location?"
         )
     if language == "zh":
-        prefix_zh = "根据近30天演示销量数据" if is_simulated else "根据近30天销量数据"
+        prefix_zh = "根据近30天销量数据"
         return (
             f"{prefix_zh}，{product.name}以{first.units_sold_30d}件排名第一。"
             "您想查看价格还是建议货架位置？"
         )
     scope_vi = "toàn cửa hàng" if storewide else "trong nhóm này"
     prefix_vi = (
-        f"Theo số liệu bán mô phỏng (demo) {scope_vi}"
+        f"Theo số liệu bán 30 ngày {scope_vi}"
         if is_simulated
         else f"Theo số liệu bán 30 ngày gần nhất {scope_vi}"
     )

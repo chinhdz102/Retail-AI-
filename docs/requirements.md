@@ -23,7 +23,7 @@ Hệ thống hỗ trợ và tự động hóa một phần công việc của nh
 2. Trả lời đúng các dữ kiện thời gian thực gồm giá, tồn kho, vị trí kệ, khuyến mãi và hạn dùng.
 3. Trả lời kiến thức sản phẩm dựa trên tài liệu đã được phê duyệt.
 4. Đề xuất sản phẩm thỏa toàn bộ ràng buộc rõ ràng của khách.
-5. Quản lý giỏ hàng, xác nhận checkout và hiển thị QR thanh toán sandbox.
+5. Quản lý giỏ hàng, xác nhận checkout và hiển thị QR thanh toán tại kiosk.
 6. Chỉ công nhận thanh toán từ callback hoặc kiểm tra backend của nhà cung cấp.
 7. Cô lập hoàn toàn dữ liệu tương tác giữa các shopping session.
 8. Từ chối hành động vượt quyền hoặc không phục vụ mục tiêu hiện tại của khách.
@@ -34,18 +34,18 @@ Hệ thống hỗ trợ và tự động hóa một phần công việc của nh
 
 ### 4.1. Ràng buộc vận hành
 
-- Một kiosk demo.
+- Một kiosk phục vụ tại quầy.
 - Khách hàng ẩn danh theo mặc định.
 - Mỗi lượt mua sắm là một session độc lập, có thời hạn.
-- Catalog demo gồm 100–200 SKU.
+- Catalog Thanh Lam Mart (phiên bản ban đầu gồm 100–200 SKU).
 - Giao tiếp chính bằng tiếng Việt.
-- Thanh toán sử dụng VietQR sandbox/test; không thực hiện giao dịch tiền thật trong MVP.
+- Thanh toán sử dụng VietQR/QR tích hợp kiểm thử cục bộ; không thực hiện giao dịch tiền thật trong MVP.
 - AI phía khách hàng không có quyền quản trị.
 - FastAPI được thiết kế stateless; state phiên nằm ngoài process ứng dụng.
 
 ### 4.2. Chức năng thuộc MVP
 
-#### P0 — Bắt buộc cho luồng demo chính
+#### P0 — Bắt buộc cho luồng kiosk chính
 
 - AIRI avatar/kiosk và trạng thái listening, thinking, speaking.
 - Nhập giọng nói qua microphone và Vietnamese STT.
@@ -58,7 +58,7 @@ Hệ thống hỗ trợ và tự động hóa một phần công việc của nh
 - Gợi ý sản phẩm theo ràng buộc.
 - Xem, thêm, sửa và xóa mặt hàng trong giỏ.
 - Xác nhận checkout trước khi tạo đơn.
-- Hiển thị QR thanh toán sandbox và kiểm tra trạng thái thanh toán.
+- Hiển thị QR thanh toán và kiểm tra trạng thái thanh toán.
 - Policy gateway và response validation cho hành động/dữ kiện quan trọng.
 
 #### P1 — Bắt buộc trước khi nghiệm thu MVP hoàn chỉnh
@@ -91,8 +91,8 @@ Hệ thống hỗ trợ và tự động hóa một phần công việc của nh
 | Customer | Hỏi thông tin, nhận gợi ý, quản lý giỏ và thanh toán tại kiosk. |
 | Store Staff | Nhận handoff hoặc xử lý vấn đề mà hệ thống không thể giải quyết an toàn. |
 | Owner/Admin | Xem dashboard tối thiểu qua cơ chế xác thực và bộ quyền tách biệt. |
-| Payment Provider | Tạo/đối soát giao dịch sandbox và cung cấp trạng thái thanh toán có thẩm quyền. |
-| Approved Data Maintainer | Chuẩn bị catalog, tồn kho, batch và tài liệu kiến thức đã phê duyệt trước demo. |
+| Payment Provider | Tạo/đối soát giao dịch và cung cấp trạng thái thanh toán có thẩm quyền. |
+| Approved Data Maintainer | Chuẩn bị catalog, tồn kho, batch và tài liệu kiến thức đã phê duyệt trước khi vận hành. |
 
 ## 6. Nguồn sự thật có thẩm quyền
 
@@ -161,7 +161,7 @@ Hệ thống hỗ trợ và tự động hóa một phần công việc của nh
 
 ### UC-10 — Xác nhận thanh toán
 
-- Hệ thống tạo/hiển thị QR sandbox gắn với checkout hiện tại.
+- Hệ thống tạo/hiển thị mã QR thanh toán gắn với checkout hiện tại.
 - Câu nói “tôi đã trả tiền” chỉ kích hoạt kiểm tra trạng thái.
 - Chỉ callback hợp lệ hoặc backend verification mới có thể chuyển trạng thái sang `PAID`.
 - Callback trùng lặp không tạo giao dịch hoặc cập nhật thanh toán trùng.
@@ -204,9 +204,9 @@ Hệ thống hỗ trợ và tự động hóa một phần công việc của nh
 ### NFR-REL — Reliability
 
 - NFR-REL-001: FastAPI không phụ thuộc vào in-process session state.
-- NFR-REL-002: Redis hỏng không được làm các phiên trộn dữ liệu; hệ thống phải fail closed hoặc dùng fallback cô lập đã cấu hình rõ cho demo.
+- NFR-REL-002: Redis hỏng không được làm các phiên trộn dữ liệu; hệ thống phải fail closed hoặc dùng fallback cô lập đã cấu hình rõ.
 - NFR-REL-003: Khi Qwen không khả dụng, agent phải báo lỗi provider và không được gắn nhãn Qwen cho câu trả lời deterministic; các thao tác catalog read-only vẫn có thể hoạt động.
-- NFR-REL-004: Demo phải chạy ổn định liên tục trong 20 phút với luồng chính và không cần khởi động lại thủ công.
+- NFR-REL-004: Kiosk phải chạy ổn định liên tục trong 20 phút với luồng chính và không cần khởi động lại thủ công.
 
 ### NFR-PERF — Performance và observability
 
@@ -223,7 +223,7 @@ Hệ thống hỗ trợ và tự động hóa một phần công việc của nh
 ### NFR-TEST — Testability
 
 - NFR-TEST-001: Mỗi feature phải có unit test, integration test, schema validation, error handling, security condition, logging và tài liệu API liên quan.
-- NFR-TEST-002: Các nguồn dữ liệu demo và evaluation dataset phải có phiên bản để tái lập kết quả.
+- NFR-TEST-002: Các nguồn dữ liệu catalog và evaluation dataset phải có phiên bản để tái lập kết quả.
 
 ## 10. Acceptance criteria của bước 1
 
@@ -258,7 +258,7 @@ Bước Freeze Requirements hoàn thành khi:
 
 ### Functional
 
-- Customer nói tiếng Việt và hệ thống hiểu yêu cầu trong bộ test demo.
+- Customer nói tiếng Việt và hệ thống hiểu yêu cầu trong bộ kiểm thử chuẩn.
 - Product lookup trả đúng SKU; giá, tồn kho và hạn dùng khớp dữ liệu nghiệp vụ.
 - Recommendation thỏa mọi constraint được nêu rõ.
 - Cart, checkout, QR và payment-status flow hoạt động đúng end-to-end.

@@ -4,7 +4,7 @@
 
 This is a reproducible **location proposal**, not verified store inventory or an
 installation-ready planogram. The source file's existing `shelf` values are crawler
-placeholders; the catalog importer records them as `shelf_source=SIMULATED`. The
+unstandardized strings; the catalog importer records them as `shelf_source=SIMULATED`. The
 generated locations therefore live in a separate, versioned file and never replace
 those source values.
 

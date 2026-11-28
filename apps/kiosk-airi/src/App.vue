@@ -228,7 +228,7 @@ const languageSettings: Record<LanguageCode, {
     recording: 'Đang ghi âm tiếng Việt',
     transcribing: 'Đang nhận diện tiếng Việt',
     noSpeech: 'Mình chưa nghe thấy câu nói rõ ràng. Bạn nói lại nhé.',
-    virtualMicrophone: 'Tab đang thu từ micro ảo. Nếu mức tín hiệu không nhảy, hãy chọn Microphone Array (AMD Audio Device) hoặc mở demo trong trình duyệt có micro thật.',
+    virtualMicrophone: 'Tab đang thu từ micro ảo. Nếu mức tín hiệu không nhảy, hãy chọn Microphone Array (AMD Audio Device) hoặc mở ứng dụng trong trình duyệt có micro thật.',
     permission: 'Microphone chưa được cấp quyền. Bạn có thể nhập câu hỏi bằng bàn phím.',
     retry: 'Mình sẽ nghe lại sau một chút',
     sessionError: 'Không kết nối được phiên trò chuyện. Bạn có thể thử lại.',
@@ -244,7 +244,7 @@ const languageSettings: Record<LanguageCode, {
     recording: 'Recording English speech',
     transcribing: 'Recognizing English speech',
     noSpeech: 'I could not hear clear speech. Please say that again.',
-    virtualMicrophone: 'This tab is using a virtual microphone. If the signal meter does not move, choose the physical microphone or open the demo in a browser with microphone access.',
+    virtualMicrophone: 'This tab is using a virtual microphone. If the signal meter does not move, choose the physical microphone or open the kiosk in a browser with microphone access.',
     permission: 'Microphone access is blocked. You can type your question instead.',
     retry: "I'll listen again in a moment",
     sessionError: 'Could not connect to the conversation session. Please try again.',
@@ -260,7 +260,7 @@ const languageSettings: Record<LanguageCode, {
     recording: '正在录制中文语音',
     transcribing: '正在识别中文语音',
     noSpeech: '没有听到清楚的话，请再说一次。',
-    virtualMicrophone: '当前标签页正在使用虚拟麦克风。如果信号条不动，请选择实体麦克风，或在能访问实体麦克风的浏览器中打开演示。',
+    virtualMicrophone: '当前标签页正在使用虚拟麦克风。如果信号条不动，请选择实体麦克风，或在能访问实体麦克风的浏览器中打开应用。',
     permission: '麦克风尚未授权。你也可以直接输入问题。',
     retry: '我稍后会再次聆听',
     sessionError: '无法连接对话会话，请重试。',
@@ -1516,7 +1516,7 @@ async function bootKiosk() {
             }
           })
           .catch(() => {
-            // Catalog configuration can disable sandbox carts while text lookup is still available.
+            // Catalog configuration can disable cart actions while text lookup is still available.
             if (generation === sessionGeneration && sessionId.value === session.session_id) {
               cart.value = null
             }
@@ -1826,7 +1826,7 @@ function handleQuickPrompt(value: string) {
 }
 
 function showShoppingError(error: unknown) {
-  errorMessage.value = toErrorMessage(error, 'Chưa cập nhật được giỏ demo. Bạn thử lại nhé.')
+  errorMessage.value = toErrorMessage(error, 'Chưa cập nhật được giỏ hàng. Bạn thử lại nhé.')
   status.value = 'error'
 }
 
@@ -1840,7 +1840,7 @@ async function handleAddProduct(productId: string) {
     checkoutQuote.value = null
     sandboxOrder.value = null
     status.value = 'idle'
-    pushMessage('assistant', 'Mình đã thêm sản phẩm vào giỏ demo. Bạn có thể xem lại số lượng hoặc bắt đầu checkout.')
+    pushMessage('assistant', 'Mình đã thêm sản phẩm vào giỏ hàng. Bạn có thể xem lại số lượng hoặc bắt đầu checkout.')
   } catch (error) {
     if (generation !== sessionGeneration || isUnmounted) return
     showShoppingError(error)
@@ -1916,7 +1916,7 @@ async function handleSandboxPayment(outcome: 'PAID' | 'FAILED') {
     )
     if (generation !== sessionGeneration || isUnmounted) return
     if (order.payment_status === 'PAID') {
-      await resetKioskSession('Thanh toán mô phỏng hoàn tất; không phát sinh giao dịch thật. Kiosk đã mở phiên mới.')
+      await resetKioskSession('Thanh toán đã được ghi nhận trên hệ thống kiosk Thanh Lam Mart. Kiosk đã mở phiên mới.')
       return
     }
     sandboxOrder.value = order

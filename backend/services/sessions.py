@@ -252,7 +252,7 @@ ALLOWED_TRANSITIONS: dict[SessionState, set[SessionState]] = {
 
 
 class InMemorySessionStore:
-    """Isolated single-process adapter for local demo/test use only."""
+    """Isolated single-process adapter for local development and test use."""
 
     def __init__(self, ttl_seconds: int = 1800, max_messages: int = 8) -> None:
         self.ttl = timedelta(seconds=ttl_seconds)

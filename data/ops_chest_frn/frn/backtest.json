@@ -2602,7 +2602,7 @@
     {
       "key": "reference",
       "label": "Tham chiếu",
-      "note": "Khách phản ứng với giảm giá bằng 50% mức engine giả định (FRN không đo được độ co giãn đáng tin)",
+      "note": "Khách phản ứng với giảm giá bằng 50% mức tham chiếu của engine (FRN không đo được độ co giãn đáng tin)",
       "stores": 20,
       "gain": 0.0546,
       "waste_a": 0.0525,
@@ -2613,7 +2613,7 @@
     {
       "key": "world_50",
       "label": "Khách phản ứng bằng nửa tham chiếu",
-      "note": "25% mức engine giả định: giảm giá kém tác dụng hơn",
+      "note": "25% mức tham chiếu của engine: giảm giá kém tác dụng hơn",
       "stores": 20,
       "gain": 0.0469,
       "waste_a": 0.0542,
@@ -2624,7 +2624,7 @@
     {
       "key": "world_25",
       "label": "Khách phản ứng bằng 1/4 tham chiếu",
-      "note": "12,5% mức engine giả định: engine đánh giá quá cao giảm giá",
+      "note": "12,5% mức tham chiếu của engine: engine đánh giá quá cao giảm giá",
       "stores": 20,
       "gain": 0.0438,
       "waste_a": 0.0553,

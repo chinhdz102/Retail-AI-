@@ -447,7 +447,7 @@ async def _run_one_mode(
     repository = api_main.get_product_repository(settings)
     catalog_ids = {product.product_id for product in repository.search(limit=1000)}
     # Snapshot search caps page size, so direct ID checks use dataset rows for
-    # this currently configured Thanh Lam Mart snapshot; demo IDs come from the repo.
+    # this currently configured Thanh Lam Mart snapshot; embedded IDs come from the repo.
     if settings.catalog_repository == "snapshot":
         snapshot_file = Path(settings.catalog_snapshot_path)
         if not snapshot_file.is_absolute():

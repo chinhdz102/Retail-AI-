@@ -35,12 +35,12 @@ FreshRetailNet-50K~\cite{freshretailnet50k} & \texttt{ops\_chest} & 4.85\,M rows
 \section{Exploratory Data Analysis (EDA)}
 
 \subsection*{Retail Catalog EDA (\texttt{Retail-AI-})}
-Integrity checks across all 3,099 raw records confirm \textbf{0 duplicate \code{product_id} values}, \textbf{0 duplicate barcodes}, 99.03\% brand completeness, and 99.90\% image-URL completeness. After filtering 18 price-inconsistent records (\code{sale_price_vnd > price_vnd}, 0.58\%) during ingestion, the 3,081 valid SKUs exhibit a typical right-skewed supermarket price distribution: minimum 3,500\,VND, $Q_1 = 27{,}200$\,VND, median \textbf{52,400\,VND}, mean \textbf{90,853\,VND} (SD 126,855\,VND), $Q_3 = 111{,}800$\,VND, P95 = 264,000\,VND, P99 = 562,920\,VND, and maximum 2,479,000\,VND, with 222 upper IQR outliers ($> Q_3 + 1.5\,\text{IQR}$, predominantly beer cases, infant formula, and cookware). Figure~\ref{fig:catalog_dist} shows the \textbf{true top-10 leaf product categories} (led by \emph{Chăm Sóc Da} 202 SKUs, \emph{Kẹo -- Chocolate} 167, and \emph{Nước Ngọt} 159) alongside the reference price distribution.
+Integrity checks across all 3,099 raw records confirm \textbf{0 duplicate \code{product_id} values}, \textbf{0 duplicate barcodes}, 99.03\% brand completeness, and 99.90\% image-URL completeness. After filtering 18 price-inconsistent records (\code{sale_price_vnd > price_vnd}, 0.58\%) during ingestion, the 3,081 valid SKUs exhibit a typical right-skewed supermarket price distribution: minimum 3,500\,VND, $Q_1 = 27{,}200$\,VND, median \textbf{52,400\,VND}, mean \textbf{90,853\,VND} (SD 126,855\,VND), $Q_3 = 111{,}800$\,VND, P95 = 264,000\,VND, P99 = 562,920\,VND, and maximum 2,479,000\,VND, with 222 upper IQR outliers ($> Q_3 + 1.5\,\text{IQR}$, predominantly beer cases, infant formula, and cookware). Figure~\ref{fig:catalog_dist} shows the \textbf{true top-10 leaf product categories} (led by \emph{Chăm Sóc Da} 202 SKUs, \emph{Kẹo -- Chocolate} 167, and \emph{Nước Ngọt} 159) alongside the listed retail price distribution.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.98\textwidth]{Images/fig_catalog_distribution.png}
-    \caption{True top-10 leaf product categories (\code{category_name}, left) and reference price distribution with median, mean, and P95 markers (right, 98.0\% of SKUs $\le 400\text{k}$\,VND) across 3,081 valid Thanh Lam Mart SKUs.}
+    \caption{True top-10 leaf product categories (\code{category_name}, left) and listed retail price distribution with median, mean, and P95 markers (right, 98.0\% of SKUs $\le 400\text{k}$\,VND) across 3,081 valid Thanh Lam Mart SKUs.}
     \label{fig:catalog_dist}
 \end{figure}
 

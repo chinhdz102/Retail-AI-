@@ -5,7 +5,7 @@
     {
       "key": "reference",
       "label": "Tham chiếu",
-      "note": "A có giờ vàng, khách phản ứng bằng 50% giả định của engine",
+      "note": "A có giờ vàng, khách phản ứng bằng 50% mức tham chiếu của engine",
       "seed": 7,
       "gain": 4091847,
       "gain_pct": 0.0418,
@@ -41,7 +41,7 @@
     {
       "key": "daypart_flat",
       "label": "Giờ giảm giá cố định 18h cho mọi nhóm",
-      "note": "Cách cũ: giờ vàng 18h, giả định 30% khách cho mọi nhóm",
+      "note": "Cách cũ: giờ vàng 18h, kịch bản 30% phản ứng khách cho mọi nhóm",
       "seed": 7,
       "gain": 1807676,
       "gain_pct": 0.0185,
@@ -112,7 +112,7 @@
     },
     {
       "key": "world_100",
-      "label": "Khách phản ứng đúng 100% giả định",
+      "label": "Khách phản ứng đúng 100% mức tham chiếu",
       "note": "Trường hợp tốt nhất cho giảm giá của B",
       "seed": 7,
       "gain": 8617515,
@@ -130,7 +130,7 @@
     },
     {
       "key": "world_25",
-      "label": "Khách chỉ phản ứng 25% giả định",
+      "label": "Khách chỉ phản ứng 25% mức tham chiếu",
       "note": "Engine đánh giá quá cao tác dụng của giảm giá",
       "seed": 7,
       "gain": 1694423,
@@ -257,7 +257,7 @@
     {
       "key": "legacy",
       "label": "Cách so sánh cũ",
-      "note": "A không giảm giá gì, khách phản ứng đúng giả định: thiên vị cho B",
+      "note": "A không giảm giá gì, khách phản ứng đúng mức tham chiếu: thiên vị cho B",
       "seed": 7,
       "gain": 10204106,
       "gain_pct": 0.1052,

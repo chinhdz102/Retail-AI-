@@ -59,7 +59,7 @@ Recognition accuracy is measured by Word Error Rate (WER), and end-to-end voice 
 \end{equation}
 
 \subsection*{Unit-Price Normalization (\texttt{Retail-AI-})}
-To compare heterogeneous package sizes fairly (e.g., per 100\,g, per kg, or per L), reference price $P_{\text{VND}}$ is normalized into canonical base-unit price and percentage discount:
+To compare heterogeneous package sizes fairly (e.g., per 100\,g, per kg, or per L), listed retail price $P_{\text{VND}}$ is normalized into canonical base-unit price and percentage discount:
 \begin{equation}
     P_{\text{unit}} = \frac{P_{\text{VND}}}{Q_{\text{base}}}, \qquad d_{\%} = \max\!\left(0,\, \frac{P_{\text{regular}} - P_{\text{VND}}}{P_{\text{regular}}} \times 100\right).
     \label{eq:unit_price}

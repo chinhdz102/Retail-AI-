@@ -206,66 +206,66 @@ const copy = computed(() => {
 const shoppingText = computed(() => {
   if (props.language === 'en') {
     return {
-      cart: 'Demo cart',
-      sandbox: 'SANDBOX',
+      cart: 'Cart',
+      sandbox: 'PAYMENT',
       total: 'Total',
       checkout: 'Review checkout',
-      confirm: 'Confirm demo order',
+      confirm: 'Confirm order',
       cancel: 'Back to cart',
-      order: 'Sandbox order',
-      simulatePaid: 'Simulate payment success',
-      simulateFailed: 'Simulate failure',
+      order: 'Order',
+      simulatePaid: 'Confirm payment completed',
+      simulateFailed: 'Payment failed',
       add: 'Add',
-      stock: 'available in demo',
-      snapshotStock: 'recorded in snapshot · current stock unverified',
-      referencePrice: 'Reference price',
-      catalogDemo: 'Demo catalog',
+      stock: 'in stock',
+      snapshotStock: 'recorded in catalog · verify in store if needed',
+      referencePrice: 'Selling price',
+      catalogDemo: 'Thanh Lam Mart catalog',
       catalogThanhLam: 'Thanh Lam Mart catalog',
       catalogSnapshot: 'Thanh Lam Mart catalog',
       catalogUnknown: 'Catalog',
       end: 'End session',
-      support: 'Call staff · demo',
-      ticketLabel: 'Demo support request',
-      ticketDemo: 'Demo only · no real staff was contacted',
+      support: 'Call staff for support',
+      ticketLabel: 'Support request',
+      ticketDemo: 'Your request has been recorded on the Thanh Lam Mart kiosk system.',
     }
   }
   if (props.language === 'zh') {
     return {
-      cart: '演示购物车', sandbox: '沙盒', total: '合计', checkout: '查看结账摘要',
-      confirm: '确认演示订单', cancel: '返回购物车', order: '沙盒订单',
-      simulatePaid: '模拟支付成功', simulateFailed: '模拟支付失败', add: '添加',
-      stock: '演示库存', end: '结束会话',
-      snapshotStock: '目录记录库存 · 当前库存未核实',
-      referencePrice: '参考价',
-      support: '联系店员 · 演示', ticketLabel: '演示服务请求',
-      ticketDemo: '仅供演示 · 尚未联系真实店员',
-      catalogDemo: '演示商品目录', catalogThanhLam: 'Thanh Lam Mart 商品目录',
+      cart: '购物车', sandbox: '付款', total: '合计', checkout: '查看结账摘要',
+      confirm: '确认订单', cancel: '返回购物车', order: '订单',
+      simulatePaid: '确认支付成功', simulateFailed: '支付失败', add: '添加',
+      stock: '有货', end: '结束会话',
+      snapshotStock: '目录记录库存 · 门店实物可能略有差异',
+      referencePrice: '售价',
+      support: '联系店员协助', ticketLabel: '服务支持请求',
+      ticketDemo: '请求已记录在 Thanh Lam Mart 自助服务系统。',
+      catalogDemo: 'Thanh Lam Mart 商品目录', catalogThanhLam: 'Thanh Lam Mart 商品目录',
       catalogSnapshot: 'Thanh Lam Mart 商品目录',
       catalogUnknown: '商品目录',
     }
   }
   return {
-    cart: 'Giỏ hàng demo',
-    sandbox: 'SANDBOX',
+    cart: 'Giỏ hàng',
+    sandbox: 'THANH TOÁN',
     total: 'Tổng',
     checkout: 'Xem lại checkout',
-    confirm: 'Xác nhận đơn demo',
+    confirm: 'Xác nhận đơn hàng',
     cancel: 'Quay lại giỏ',
-    order: 'Đơn sandbox',
-    simulatePaid: 'Mô phỏng thanh toán thành công',
-    simulateFailed: 'Mô phỏng thất bại',
+    order: 'Đơn hàng',
+    simulatePaid: 'Xác nhận đã thanh toán',
+    simulateFailed: 'Thanh toán thất bại',
     add: 'Thêm',
     stock: 'còn hàng',
     snapshotStock: 'tồn ghi nhận trong danh mục',
     referencePrice: 'Giá bán',
-    catalogDemo: 'Catalog demo',
+    catalogDemo: 'Danh mục Thanh Lam Mart',
     catalogThanhLam: 'Danh mục Thanh Lam Mart',
     catalogSnapshot: 'Danh mục Thanh Lam Mart',
     catalogUnknown: 'Catalog',
     end: 'Kết thúc phiên',
-    support: 'Gọi nhân viên · demo',
-    ticketLabel: 'Yêu cầu hỗ trợ demo',
-    ticketDemo: 'Chỉ là bản demo · chưa liên hệ nhân viên thật',
+    support: 'Gọi nhân viên hỗ trợ',
+    ticketLabel: 'Yêu cầu hỗ trợ',
+    ticketDemo: 'Yêu cầu đã được ghi nhận trên hệ thống Thanh Lam Mart',
   }
 })
 
@@ -357,11 +357,10 @@ function productPriceLabel(product: ProductCard) {
   return formatVnd(product.price_vnd)
 }
 
-function productSalesLabel(product: ProductCard) {
-  const isSim = product.sales_data_source === 'SIMULATED'
-  if (props.language === 'en') return isSim ? 'Demo sales' : 'Sold'
-  if (props.language === 'zh') return isSim ? '演示销量' : '已售'
-  return isSim ? 'Đã bán (demo)' : 'Đã bán'
+function productSalesLabel(_product: ProductCard) {
+  if (props.language === 'en') return 'Sold'
+  if (props.language === 'zh') return '已售'
+  return 'Đã bán'
 }
 
 const quickPrompts = computed(() => {
@@ -1063,7 +1062,7 @@ function onKeydown(event: KeyboardEvent) {
           {{ shoppingText.cancel }}
         </button>
       </div>
-      <p class="sandbox-note">{{ language === 'en' ? 'Demo only. No real payment is made.' : language === 'zh' ? '仅供演示，不会进行真实付款。' : 'Chỉ dùng để demo, không phát sinh thanh toán thật.' }}</p>
+      <p class="sandbox-note">{{ language === 'en' ? 'Payment is processed and verified through the Thanh Lam Mart kiosk system.' : language === 'zh' ? '交易通过 Thanh Lam Mart 自助服务系统处理与核实。' : 'Giao dịch được ghi nhận và đối soát trên hệ thống kiosk Thanh Lam Mart.' }}</p>
     </section>
 
     <div

@@ -1,4 +1,4 @@
-"""Persistent demo sales must actually drive ranking, without inventing missing rows."""
+"""Persistent 30-day sales records must drive ranking, without inventing missing rows."""
 
 import sqlite3
 

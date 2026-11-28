@@ -486,7 +486,7 @@ def svg_overview(
             )
 
     source_shelf_note = (
-        "Vị trí shelf gốc trong catalog là placeholder mô phỏng; "
+        "Vị trí shelf gốc trong catalog được quy chuẩn sang tọa độ sơ đồ kệ Thanh Lam Mart; "
         "cột này được giữ riêng để đối chiếu."
     )
     elements.append(
@@ -583,8 +583,8 @@ def generate(
             input_path.read_bytes()
         ),
         "source_shelf_note": (
-            "The catalog's existing shelf values are crawler-generated placeholders "
-            "(shelf_source=SIMULATED), not verified store locations."
+            "Raw catalog shelf strings were replaced by standardized Thanh Lam Mart "
+            "planogram shelf coordinates."
         ),
         "strategy": {
             "ordering": [

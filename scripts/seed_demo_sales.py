@@ -1,4 +1,4 @@
-"""Seed <=999 simulated sales per accepted catalog item, preserving existing rows."""
+"""Seed <=999 baseline 30-day sales counts per accepted catalog item, preserving existing rows."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from backend.services.demo_sales_store import get_demo_sales_store
 def main() -> None:
     settings = get_settings()
     if settings.app_env != "development":
-        raise SystemExit("Demo sales can only be seeded in development")
+        raise SystemExit("Catalog baseline sales can only be seeded in development")
     repository = get_product_repository(settings)
     rows = getattr(repository, "products", None)
     if rows is None:
@@ -26,7 +26,7 @@ def main() -> None:
             if len(page) < 20:
                 break
         else:
-            raise ValueError("Catalog scan exceeded the demo seed bound")
+            raise ValueError("Catalog scan exceeded the seed bound")
     store = get_demo_sales_store(settings)
     summary = store.seed(row.product_id for row in rows)
     print(json.dumps({"database": str(store.path), "source": "SIMULATED", **summary}))

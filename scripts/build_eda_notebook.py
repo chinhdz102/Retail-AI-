@@ -139,7 +139,7 @@ print(f"3. df_stores (Mạng lưới 120 điểm bán BN):    {df_stores.shape[0
 print(f"4. df_zones (Doanh thu 8 Phân vùng 6 tháng): {df_zones.shape[0]:,} dòng × {df_zones.shape[1]} cột")
 print("=" * 80)
 
-# Xem 3 dòng dữ liệu mẫu đầu tiên của bảng sản phẩm
+# Xem 3 dòng đầu tiên của bảng sản phẩm
 display(df_products[['product_id', 'barcode', 'name', 'brand', 'category_name', 'department', 'price_vnd', 'lượt bán', 'doanh_thu_vnd', 'rating', 'review_count']].head(3))
 """
 })
@@ -152,7 +152,7 @@ cells_data.append({
     "source": """---
 ## 🔍 GIAI ĐOẠN 1: KIỂM ĐỊNH TÍNH TOÀN VẸN & CHUẨN HÓA DỮ LIỆU (DATA INTEGRITY AUDIT)
 
-Một quy trình EDA chuẩn mực của chuyên gia luôn bắt đầu bằng việc kiểm định các giả định kỹ thuật và các ràng buộc nghiệp vụ cốt lõi:
+Một quy trình EDA chuẩn mực của chuyên gia luôn bắt đầu bằng việc kiểm định các giả thuyết kỹ thuật và các ràng buộc nghiệp vụ cốt lõi:
 1. **Kiểm tra Missing Values (Giá trị khuyết thiếu) & Data Types.**
 2. **Kiểm tra trùng lặp Barcode / Mã SKU.**
 3. **Kiểm định Ràng buộc Nghiệp vụ Bắc Ninh:**

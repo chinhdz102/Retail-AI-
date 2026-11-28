@@ -1,6 +1,6 @@
 """End-to-end integration tests for read-only coordination between ``ops_chest`` and ``Retail-AI-``.
 
-Verifies all inter-agent requirements over a simulated ``ops_chest`` HTTP API + HITL state machine
+Verifies inter-agent requirements over an in-process ``ops_chest`` HTTP API + HITL state machine
 mapped through the shared 164-SKU crosswalk (``data/bridge/crosswalk.csv``):
   1. 164/164 crosswalk SKU integrity against ``data/thanh_lam_products.json``.
   2. HITL isolation: unapproved ``PENDING`` markdown proposals never leak to the customer kiosk.

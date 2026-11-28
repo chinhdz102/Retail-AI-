@@ -224,7 +224,7 @@ async def test_bestseller_and_sales_comparison_regressions(
             store_bs = await ask("sản phẩm nào bán chạy nhất?", session=sess_pepsi)
             assert store_bs["model"] == "demo-sales" and store_bs["products"]
 
-            # 4. 2-turn comparison -> "Cái nào bán chạy hơn?" returns demo-sales comparison
+            # 4. 2-turn comparison -> "Cái nào bán chạy hơn?" returns 30-day sales comparison
             sess_cmp = await new_session()
             cmp_t1 = await ask("So sánh Coca-Cola và Pepsi", session=sess_cmp)
             # Ensure session holds 2 compared products even if disambiguated

@@ -642,7 +642,7 @@ def run(source: Path, cases_path: Path, output_path: Path) -> dict[str, Any]:
             ),
             "Memory peak/process RSS and model download time were not measured.",
             (
-                "RRF uses synthetic title-resolution labels and does not establish semantic "
+                "RRF uses template-derived title-resolution labels and does not establish semantic "
                 "recommendation suitability."
             ),
         ],

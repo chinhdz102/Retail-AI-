@@ -32,8 +32,12 @@ SOURCE = ROOT / 'backend/services/customer_consultation.py'
 
 def parser():
     value = argparse.ArgumentParser(__doc__)
-    value.add_argument('--query', action='append', required=True,
-                       help='Synthetic authored customer prompt; may repeat for fresh sessions.')
+    value.add_argument(
+        '--query',
+        action='append',
+        required=True,
+        help='Authored diagnostic prompt; may repeat for fresh sessions.',
+    )
     value.add_argument('--output', type=Path, required=True,
                        help='New JSON artifact path. Existing files are never overwritten.')
     return value
@@ -265,7 +269,7 @@ async def main():
             try:
                 row['decision'] = json.loads(str(result))
             except ValueError:
-                # Only successful synthetic output is captured; provider errors are never copied.
+                # Only successful generated output is captured; provider errors are never copied.
                 row['unparsed_synthetic_response'] = str(result)
             return result
         finally:
