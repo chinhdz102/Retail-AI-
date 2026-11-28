@@ -108,7 +108,7 @@ history or branch data. Production needs a verified `retail_stores` row, a match
 - FPT's official pages provide its company description and contact information:
   [FPT About Us](https://fpt.com/en/about-us), [FPT Contact](https://fpt.com/en/contact).
 
-These are separate entities. A retail assistant should answer Thanh Lam Mart/Thanh Lam Mart facts
+These are separate entities. A retail assistant should answer Thanh Lam Mart facts
 for the catalog's chain by default and answer FPT or ChatVRM only when the question points
 to those profiles. The project association and team responsibilities come only from the
 user-provided context; they do not establish an FPT sponsorship, ownership, or partnership.

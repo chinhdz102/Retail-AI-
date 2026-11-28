@@ -44,7 +44,7 @@ Replacing implementation-centric software layer tables, Figure~\ref{fig:function
 \begin{tikzpicture}[node distance=0.55cm and 0.75cm]
   \node[procbox, text width=4.8cm] (c_in) {\textbf{Customer Inputs}\\Text / Supporting Speech ASR / Photo};
   \node[gatebox, text width=4.8cm, below=of c_in] (c_gate) {\textbf{Zero-Planner Router}\\Pre-LLM Safety/OWASP Gates ($<3$\,ms)\\+ Semantic Intent Routing};
-  \node[aiagent, text width=4.8cm, below=of c_gate] (c_tool) {\textbf{Deterministic Tools \& AI Models}\\Inverted Index (3,081 SKUs), Unit Price,\\2,205-SKU Knowledge, \texttt{MobileNetV3} TFLite,\\Streaming LLM / Bounded Planner};
+  \node[aiagent, text width=4.8cm, below=of c_gate] (c_tool) {\textbf{Deterministic Tools \& AI Models}\\Inverted Index (3,081 SKUs), Unit Price,\\2,830-SKU Knowledge, \texttt{MobileNetV3} TFLite,\\Streaming LLM / Bounded Planner};
   \node[procbox, draw=blue!65!black, fill=blue!10, text width=4.8cm, below=of c_tool] (c_dec) {\textbf{Customer Agent Decisions}\\Grounded Cards, Approved FEFO Price,\\OOS Suppression, Provenance Tags};
 
   \node[gatebox, draw=purple!70!black, fill=purple!8, text width=4.25cm, right=0.8cm of c_gate, yshift=-0.95cm] (br_cw) {\textbf{Inter-Agent Bridge}\\(\texttt{ops-retail-bridge})\\\code{crosswalk.csv} (164 SKUs)\\\code{BridgedProductRepository}};

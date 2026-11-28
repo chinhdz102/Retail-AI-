@@ -45,7 +45,7 @@ Thay cho bảng liệt kê thành phần phần mềm/giao diện, Hình~\ref{fi
   % Left column: Customer AI Agent
   \node[procbox, text width=4.8cm] (c_in) {\textbf{Đầu vào Khách hàng}\\Văn bản / Giọng nói (ASR hỗ trợ) / Ảnh};
   \node[gatebox, text width=4.8cm, below=of c_in] (c_gate) {\textbf{Bộ định tuyến Zero-Planner}\\Cổng An toàn/Y tế/OWASP ($<3$\,ms)\\+ Phân loại ý định ngữ nghĩa};
-  \node[aiagent, text width=4.8cm, below=of c_gate] (c_tool) {\textbf{Công cụ Xác định \& Mô hình AI}\\Chỉ mục đảo (3.081 SKU), Đơn giá, Bán thử,\\Tri thức 2.205 SKU, \texttt{MobileNetV3} TFLite,\\LLM Streaming / Planner có giới hạn};
+  \node[aiagent, text width=4.8cm, below=of c_gate] (c_tool) {\textbf{Công cụ Xác định \& Mô hình AI}\\Chỉ mục đảo (3.081 SKU), Đơn giá, Bán thử,\\Tri thức 2.830 SKU, \texttt{MobileNetV3} TFLite,\\LLM Streaming / Planner có giới hạn};
   \node[procbox, draw=blue!65!black, fill=blue!10, text width=4.8cm, below=of c_tool] (c_dec) {\textbf{Quyết định Agent Khách hàng}\\Thẻ SKU căn cứ, Giá giảm FEFO,\\Ẩn mã hết hàng, Minh bạch nguồn};
 
   % Middle column: Inter-Agent Coordination Bridge

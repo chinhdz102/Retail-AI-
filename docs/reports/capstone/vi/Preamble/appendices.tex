@@ -8,7 +8,7 @@ Phụ lục này tập trung toàn bộ chi tiết kỹ nghệ phần mềm, c�
 \section*{A.1 Lược đồ Danh mục, Pipeline Làm sạch 8 Tầng và Bộ Công cụ Tư vấn}
 \texttt{Retail-AI-} nạp tập danh mục Thanh Lam Mart (SHA-256 \code{3ab0666cb1b2efdc...}, 3.099 dòng, 20 cột cấu trúc gồm \code{product_id}, \code{barcode}, \code{name}, \code{brand}, \code{price_vnd}, \code{sale_price_vnd}, \code{discount_promotion}, \code{stock}, \code{shelf}, \code{uom}, \code{image_url}, \code{category_hierarchy}) qua mô hình kiểm định Pydantic, lọc chuẩn hóa 18 dòng giá bất thường (\code{sale_price_vnd > price_vnd}) và giữ 3.081 SKU hợp lệ kèm sơ đồ kệ 13 dãy.
 
-Pipeline làm giàu tri thức sản phẩm kết hợp thu thập 3.099 trang sản phẩm SSR với đối chiếu nhãn mã vạch EAN-13 (333 khớp mã vạch, 226 khớp thương hiệu--dạng bào chế) và làm sạch 8 tầng theo chuẩn Hugging Face \code{datatrove}~\cite{hf_datatrove} + OpenFoodFacts~\cite{openfoodfacts} (chuẩn hóa Unicode NFC, xóa ký tự ẩn \texttt{U+200B}/\texttt{U+00A0}, khôi phục dấu câu từ thẻ \code{<li>}, cân bằng ngoặc đơn, tách tràn chéo trường, lọc rác OCR và cách ly tuyên bố dị ứng chưa xác minh), đưa 4.606 lỗi thô trên 11 tiêu chí về 0 lỗi (19/19 ca kiểm thử hồi quy) và đạt độ phủ 2.205/3.099 SKU (71,15\%). Bảng~\ref{tab:retail_tools} tóm tắt các công cụ chỉ đọc và hỗ trợ trong lõi tư vấn.
+Pipeline làm giàu tri thức sản phẩm kết hợp thu thập 3.099 trang sản phẩm SSR với đối chiếu nhãn mã vạch EAN-13 (333 khớp mã vạch, 226 khớp thương hiệu--dạng bào chế) và làm sạch 8 tầng theo chuẩn Hugging Face \code{datatrove}~\cite{hf_datatrove} + OpenFoodFacts~\cite{openfoodfacts} (chuẩn hóa Unicode NFC, xóa ký tự ẩn \texttt{U+200B}/\texttt{U+00A0}, khôi phục dấu câu từ thẻ \code{<li>}, cân bằng ngoặc đơn, tách tràn chéo trường, lọc rác OCR và cách ly tuyên bố dị ứng chưa xác minh), đưa 4.606 lỗi thô đợt 1 về 0 lỗi (19/19 ca kiểm thử hồi quy) và mở rộng qua các đợt bổ sung đạt độ phủ 2.830/3.099 SKU (91,32\%). Bảng~\ref{tab:retail_tools} tóm tắt các công cụ chỉ đọc và hỗ trợ trong lõi tư vấn.
 
 \begin{table}[H]
 \centering
@@ -53,7 +53,7 @@ Bảng~\ref{tab:feature_completeness} tổng hợp toàn bộ danh mục tính n
 \texttt{Retail-AI-} & Zero-Planner Hybrid Routing \& Bộ đệm ngữ nghĩa Turn-1 & Đóng góp AI cốt lõi & 50Q Test Độc lập (94,0\%, P99 154,5\,ms); Live \texttt{sin1} 188--887\,ms \\
 \texttt{Retail-AI-} & Cổng an toàn Y tế/Thuốc, OWASP Red-Team \& Ngoài danh mục & Đóng góp AI cốt lõi & 10/10 XSTest, 10/10 OWASP, 10/10 nhóm An toàn 50Q, Live 169--253\,ms \\
 \texttt{Retail-AI-} & Tra cứu giá, so sánh đơn giá, khuyến mãi, lắp giỏ ngân sách & Đóng góp AI cốt lõi & 100/100 giá--khuyến mãi Expert Audit; 11/11 truy vấn Live \texttt{sin1} \\
-\texttt{Retail-AI-} & Kho tri thức sạch 8 tầng (thành phần, HDSD, bảo quản, xuất xứ) & Đóng góp dữ liệu AI & 2.205/3.099 SKU (4.606 $\to$ 0 lỗi); 19/19 ca hồi quy SHA-256 \\
+\texttt{Retail-AI-} & Kho tri thức sạch 8 tầng (thành phần, HDSD, bảo quản, xuất xứ, dinh dưỡng) & Đóng góp dữ liệu AI & 2.830/3.099 SKU (4.606 lỗi đợt 1 $\to$ 0 lỗi); 19/19 ca hồi quy SHA-256 \\
 \texttt{Retail-AI-} & Xếp hạng bán chạy 30 ngày đồng bộ (\code{synced_sales_30d.json}) & Tích hợp liên Agent & 3.099 SKU (269.936 lượt); Live \texttt{sin1} 239\,ms; 100/100 bộ test \\
 \texttt{Retail-AI-} & Nhận diện ảnh \texttt{MobileNetV3Large-224} TFLite + Hybrid VLM & Đóng góp AI đa PT & 92,67\% Hard150; 93,8\% Brand@1 \& 4/4 chặn OOD; 23--27\,ms cục bộ \\
 \texttt{Retail-AI-} & Giọng nói Azure Speech WSS, GTCRN WASM, VAD \& Barge-in & Hỗ trợ giao diện & Token STS 200 OK; WER 10,0--16,1\%; 179/179 Vitest \\
